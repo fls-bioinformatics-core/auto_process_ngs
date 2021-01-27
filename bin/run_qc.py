@@ -161,6 +161,12 @@ if __name__ == "__main__":
                                                else default_nthreads,))
     # Cellranger options
     cellranger = p.add_argument_group('Cellranger/10xGenomics options')
+    cellranger.add_argument('--cellranger',action='store',
+                            metavar='CELLRANGER_EXE',
+                            dest='cellranger_exe',
+                            help="explicitly specify path to Cellranger "
+                            "executable to use for single library "
+                            "analysis")
     cellranger.add_argument('--10x_transcriptome',action='append',
                             metavar='ORGANISM=REFERENCE',
                             dest='cellranger_transcriptomes',
@@ -579,6 +585,7 @@ if __name__ == "__main__":
                        cellranger_jobinterval=cellranger_jobinterval,
                        cellranger_localcores=cellranger_localcores,
                        cellranger_localmem=cellranger_localmem,
+                       cellranger_exe=args.cellranger_exe,
                        max_jobs=max_jobs,
                        max_slots=max_cores,
                        batch_size=args.batch_size,
