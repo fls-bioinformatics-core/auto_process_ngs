@@ -106,6 +106,7 @@ class QCPipeline(Pipeline):
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
         self.add_param('cellranger_exe',type=str)
+        self.add_param('cellranger_reference_dataset',type=str)
         self.add_param('cellranger_chemistry',type=str)
         self.add_param('cellranger_transcriptomes',type=dict)
         self.add_param('cellranger_premrna_references',type=dict)
@@ -357,12 +358,14 @@ class QCPipeline(Pipeline):
                 multiome_references=self.params.cellranger_arc_references,
                 cellranger_exe=get_cellranger.output.package_exe,
                 cellranger_version=get_cellranger.output.package_version,
-                qc_protocol=qc_protocol
+                qc_protocol=qc_protocol,
+                force_reference_data=self.params.cellranger_reference_dataset
             )
             self.add_task(get_cellranger_reference_data,
                           requires=(get_cellranger,),
                           runner=self.runners['verify_runner'],
                           log_dir=log_dir)
+            check_cellranger_count_requires.append(get_cellranger_reference_data)
             update_qc_metadata_requires.append(get_cellranger_reference_data)
             qc_metadata['cellranger_refdata'] = \
                     get_cellranger_reference_data.output.reference_data_path
@@ -468,6 +471,7 @@ class QCPipeline(Pipeline):
             cellranger_maxjobs=None,cellranger_mempercore=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,cellranger_exe=None,
+            cellranger_reference_dataset=None,
             working_dir=None,log_file=None,
             batch_size=None,max_jobs=1,max_slots=None,poll_interval=5,
             runners=None,default_runner=None,envmodules=None,
@@ -516,9 +520,14 @@ class QCPipeline(Pipeline):
           cellranger_localmem (int): maximum memory cellranger
             can request in jobmode 'local' (default: None)
           cellranger_exe (str): optional, explicitly specify
-            the cellrange executable to use for single
+            the cellranger executable to use for single
             library analysis (default: cellranger executable
             is determined automatically)
+          cellranger_reference_dataset (str): optional,
+            explicitly specify the path to the reference
+            dataset to use for single library analysis
+            (default: reference dataset is determined
+            automatically)
           working_dir (str): optional path to a working
             directory (defaults to temporary directory in
             the current directory)
@@ -596,6 +605,8 @@ class QCPipeline(Pipeline):
                                   'cellranger_localcores': cellranger_localcores,
                                   'cellranger_localmem': cellranger_localmem,
                                   'cellranger_exe': cellranger_exe,
+                                  'cellranger_reference_dataset':
+                                  cellranger_reference_dataset,
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
@@ -1044,7 +1055,8 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
     def init(self,project,organism=None,transcriptomes=None,
              premrna_references=None,atac_references=None,
              multiome_references=None,qc_protocol=None,
-             cellranger_exe=None,cellranger_version=None):
+             cellranger_exe=None,cellranger_version=None,
+             force_reference_data=None):
         """
         Initialise the GetCellrangerReferenceData task
 
@@ -1070,6 +1082,10 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
           cellranger_version (str): the version string for the
             Cellranger package
           qc_protocol (str): QC protocol to use
+          force_reference_data (str): if supplied then
+            will be used as the reference dataset, instead of
+            trying to locate appropriate reference data
+            automatically
 
         Outputs:
           reference_data_path (PipelineParam): pipeline
@@ -1084,6 +1100,13 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
         print("Version    : %s" % self.args.cellranger_version)
         print("QC protocol: %s" % self.args.qc_protocol)
         print("Organism(s): %s" % self.args.organism)
+        # Check pre-determined reference dataset
+        if self.args.force_reference_data:
+            reference_data = self.args.force_reference_data
+            print("Using pre-determined dataset: %s" %
+                  reference_data)
+            self.output.reference_data_path.set(reference_data)
+            return
         # Check that a cellranger exe was supplied
         if self.args.cellranger_exe is None:
             print("No cellranger package supplied")
