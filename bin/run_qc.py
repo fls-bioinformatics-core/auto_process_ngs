@@ -113,15 +113,11 @@ if __name__ == "__main__":
                    nargs="+",
                    help="directory or list of Fastq files to run the "
                    "QC on")
-    p.add_argument('-n','--name',action='store',
-                   help="name for the project (used in report title)")
-    p.add_argument('--organism',metavar='ORGANISM',
-                   action='store',dest='organism',default=None,
-                   help="explicitly specify organism (e.g. 'human', "
-                   "'mouse'). Multiple organisms should be separated "
-                   "by commas (e.g. 'human,mouse')")
     # Reporting options
     reporting = p.add_argument_group('Output and reporting')
+    reporting.add_argument('-n','--name',action='store',
+                           help="name for the project (used in report "
+                           "title)")
     reporting.add_argument('-o','--out_dir',action='store',
                            help="top-level directory for reports and "
                            "QC output subdirectory (default: current "
@@ -134,6 +130,14 @@ if __name__ == "__main__":
     reporting.add_argument('-f','--filename',action='store',
                            help="file name for output QC report (default: "
                            "<OUT_DIR>/<QC_DIR_NAME>_report.html)")
+    # Project metadata
+    metadata = p.add_argument_group('Metadata')
+    metadata.add_argument('--organism',metavar='ORGANISM',
+                          action='store',dest='organism',default=None,
+                          help="explicitly specify organism (e.g. "
+                          "'human', 'mouse'). Multiple organisms "
+                          "should be separated by commas (e.g. "
+                          "'human,mouse')")
     # QC pipeline options
     qc_options = p.add_argument_group('QC options')
     qc_options.add_argument('-p','--protocol',metavar='PROTOCOL',
