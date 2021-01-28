@@ -1331,8 +1331,38 @@ class RunCellrangerCount(PipelineTask):
         cellranger_package = os.path.basename(cellranger_exe)
         cellranger_version = self.args.cellranger_version
         cellranger_major_version = int(cellranger_version.split('.')[0])
-        # Run cellranger for each sample
+        # Expected outputs from cellranger
+        self._top_level_files = ("_cmdline",)
+        if cellranger_package in ("cellranger",):
+            self._outs_files = ("web_summary.html",
+                                "metrics_summary.csv")
+        elif cellranger_package in ("cellranger-atac",
+                                    "cellranger-arc",):
+            self._outs_files = ("web_summary.html",
+                                "summary.csv")
+        # Check output for each sample, and run cellranger if required
         for sample in self.args.samples:
+            # Check final outputs
+            run_cellranger_count = False
+            counts_dir = os.path.abspath(
+                os.path.join(self.args.out_dir,
+                             "cellranger_count",
+                             sample))
+            outs_dir = os.path.join(counts_dir,"outs")
+            for f in self._outs_files:
+                path = os.path.join(outs_dir,f)
+                if not os.path.exists(path):
+                    run_cellranger_count = True
+                    break
+            for f in self._top_level_files:
+                path = os.path.join(counts_dir,f)
+                if not os.path.exists(path):
+                    run_cellranger_count = True
+                    break
+            if not run_cellranger_count:
+                print("Sample '%s': found existing outputs")
+                continue
+            # Create a working directory for this sample
             work_dir = os.path.join(self._working_dir,
                                     "tmp.count.%s" % sample)
             # Build cellranger command
@@ -1405,74 +1435,76 @@ class RunCellrangerCount(PipelineTask):
                   "skipped")
             return
         # Handle outputs from cellranger count
-        # FIX ME check the cellranger exe rather than the protocol?
-        top_level_files = ("_cmdline",)
-        if self.args.qc_protocol in ("10x_scRNAseq",
-                                     "10x_snRNAseq",):
-            outs_files = ("web_summary.html","metrics_summary.csv")
-        elif self.args.qc_protocol in ("10x_scATAC",
-                                       "10x_Multiome_ATAC",
-                                       "10x_Multiome_GEX"):
-            outs_files = ("web_summary.html","summary.csv")
         has_errors = False
         for sample in self.args.samples:
             # Check outputs
             top_dir = os.path.join(self._working_dir,
                                    "tmp.count.%s" % sample,
                                    sample)
+            print("Sample: %s" % sample)
+            if not os.path.exists(top_dir):
+                # Cellranger count wasn't run for this
+                # sample
+                print("'cellranger count' not run for this sample?")
+                continue
             outs_dir = os.path.join(top_dir,"outs")
             missing_files = []
-            for f in outs_files:
+            for f in self._outs_files:
                 path = os.path.join(outs_dir,f)
                 if not os.path.exists(path):
                     print("Missing: %s" % path)
                     missing_files.append(path)
-            for f in top_level_files:
+            for f in self._top_level_files:
                 path = os.path.join(top_dir,f)
                 if not os.path.exists(path):
                     print("Missing: %s" % path)
                     missing_files.append(path)
             if missing_files:
                 # Skip this sample
+                print("Some files missing for this sample, skipping")
                 has_errors = True
             else:
                 # Move count outputs to final destination
                 count_dir = os.path.abspath(
                     os.path.join(self.args.out_dir,
                                  "cellranger_count"))
+                print("Moving %s to %s" % (top_dir,count_dir))
                 if not os.path.exists(count_dir):
                     mkdirs(count_dir)
-                shutil.move(
-                    os.path.join(self._working_dir,
-                                 "tmp.count.%s" % sample,
-                                 sample),
-                    count_dir)
-                # Copy QC outputs to final destination
-                if self.args.qc_dir:
-                    # Update the source locations as we
-                    # moved the outputs in the previous step
-                    top_dir = os.path.join(count_dir,sample)
-                    outs_dir = os.path.join(top_dir,"outs")
-                    # Set location to copy QC outputs to
-                    qc_dir = os.path.abspath(
-                        os.path.join(self.args.qc_dir,
-                                     "cellranger_count",
-                                     sample))
-                    qc_outs_dir = os.path.join(qc_dir,"outs")
-                    # Make directories and copy the files
-                    mkdirs(qc_outs_dir)
-                    for f in outs_files:
-                        path = os.path.join(outs_dir,f)
-                        print("Copying %s from %s to %s" % (f,
-                                                            outs_dir,
-                                                            qc_outs_dir))
-                        shutil.copy(path,qc_outs_dir)
-                    for f in top_level_files:
-                        path = os.path.join(top_dir,f)
-                        print("Copying %s from %s to %s" % (f,
-                                                            top_dir,
-                                                            qc_dir))
-                        shutil.copy(path,qc_dir)
+                shutil.move(top_dir,count_dir)
+        # Also copy outputs to QC directory
+        if self.args.qc_dir:
+            print("Copying outputs to QC directory")
+            # Top level output directory
+            count_dir = os.path.abspath(
+                os.path.join(self.args.out_dir,
+                             "cellranger_count"))
+            for sample in self.args.samples:
+                print("Sample: %s" % sample)
+                # Location of outputs
+                top_dir = os.path.join(count_dir,sample)
+                outs_dir = os.path.join(top_dir,"outs")
+                # Set location to copy QC outputs to
+                qc_dir = os.path.abspath(
+                    os.path.join(self.args.qc_dir,
+                                 "cellranger_count",
+                                 sample))
+                qc_outs_dir = os.path.join(qc_dir,"outs")
+                # Make directories and copy the files
+                mkdirs(qc_outs_dir)
+                for f in self._outs_files:
+                    path = os.path.join(outs_dir,f)
+                    print("Copying %s from %s to %s" % (f,
+                                                        outs_dir,
+                                                        qc_outs_dir))
+                    shutil.copy(path,qc_outs_dir)
+                for f in self._top_level_files:
+                    path = os.path.join(top_dir,f)
+                    print("Copying %s from %s to %s" % (f,
+                                                        top_dir,
+                                                        qc_dir))
+                    shutil.copy(path,qc_dir)
+        # Delayed task failure from earlier errors
         if has_errors:
             self.fail(message="Some outputs missing from cellranger "
                       "count")
