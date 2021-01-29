@@ -151,6 +151,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     # Get scheduler parameters
     if max_jobs is None:
         max_jobs = ap.settings.general.max_concurrent_jobs
+    max_cores = ap.settings.general.max_cores
     if poll_interval is None:
         poll_interval = ap.settings.general.poll_interval
     # Set up a master log directory and file
@@ -196,6 +197,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        log_file=log_file,
                        poll_interval=poll_interval,
                        max_jobs=max_jobs,
+                       max_slots=max_cores,
                        runners=runners,
                        default_runner=default_runner,
                        envmodules=envmodules,
