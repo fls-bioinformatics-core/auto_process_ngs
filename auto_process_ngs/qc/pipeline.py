@@ -1347,6 +1347,9 @@ class RunCellrangerCount(PipelineTask):
             return
         if not self.args.cellranger_exe:
             raise Exception("No cellranger executable provided")
+        if not (self.args.out_dir or self.args.qc_dir):
+            raise Exception("Need to provide at least one of "
+                            "output directory and QC directory")
         # Top-level working directory
         self._working_dir = self.args.working_dir
         # Cellranger details
