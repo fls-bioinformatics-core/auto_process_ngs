@@ -607,6 +607,7 @@ if __name__ == "__main__":
                        cellranger_exe=args.cellranger_exe,
                        cellranger_reference_dataset=\
                        cellranger_reference_dataset,
+                       cellranger_out_dir=out_dir,
                        max_jobs=max_jobs,
                        max_slots=max_cores,
                        batch_size=args.batch_size,
