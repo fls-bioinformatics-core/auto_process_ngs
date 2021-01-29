@@ -1575,9 +1575,9 @@ class MakeFastqs(Pipeline):
             cellranger_maxjobs=None,cellranger_jobinterval=None,
             cellranger_localcores=None,cellranger_localmem=None,
             working_dir=None,log_dir=None,log_file=None,
-            batch_size=None,max_jobs=1,poll_interval=5,
-            runners=None,default_runner=None,envmodules=None,
-            verbose=False):
+            batch_size=None,max_jobs=1,max_slots=None,
+            poll_interval=5,runners=None,default_runner=None,
+            envmodules=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -1635,6 +1635,10 @@ class MakeFastqs(Pipeline):
             one command per job)
           max_jobs (int): optional maximum number of
             concurrent jobs in scheduler (defaults to 1)
+          max_slots (int): optional maximum number of 'slots'
+            (i.e. concurrent threads or maximum number of
+            CPUs) available to the scheduler (defaults to
+            no limit)
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
@@ -1752,6 +1756,7 @@ class MakeFastqs(Pipeline):
                               params=params,
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
+                              max_slots=max_slots,
                               runners=runners,
                               default_runner=default_runner,
                               envmodules=envmodules,
