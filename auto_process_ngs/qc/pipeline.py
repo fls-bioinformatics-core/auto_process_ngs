@@ -385,12 +385,13 @@ class QCPipeline(Pipeline):
                 check_cellranger_count_requires.append(
                     make_cellranger_libraries)
 
-            # Check outputs for cellranger count
+            # Check QC outputs for cellranger count
             check_cellranger_count = CheckCellrangerCountOutputs(
                 "%s: check single library analysis (cellranger)" %
                 project_name,
                 project,
                 fastq_dir=fastq_dir,
+                qc_dir=qc_dir,
                 qc_protocol=qc_protocol,
                 verbose=self.params.VERBOSE
             )
@@ -1201,8 +1202,8 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
     """
     Check the outputs from cellranger(-atac) count
     """
-    def init(self,project,fastq_dir=None,qc_protocol=None,
-             verbose=False):
+    def init(self,project,fastq_dir=None,qc_dir=None,
+             qc_protocol=None,verbose=False):
         """
         Initialise the CheckCellrangerCountOutputs task.
 
@@ -1211,6 +1212,9 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             QC for
           fastq_dir (str): directory holding Fastq files
             (defaults to current fastq_dir in project)
+          qc_dir (str): top-level QC directory to look
+            for 'count' QC outputs (e.g. metrics CSV and
+            summary HTML files)
           qc_protocol (str): QC protocol to use
           verbose (bool): if True then print additional
             information from the task
@@ -1236,7 +1240,8 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
         self.add_call("Check cellranger count outputs for %s"
                       % self.args.project.name,
                       check_outputs,
-                      self.args.project)
+                      self.args.project,
+                      self.args.qc_dir)
     def finish(self):
         # Collect the sample names with missing outputs
         for result in self.result():
