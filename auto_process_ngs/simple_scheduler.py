@@ -106,10 +106,11 @@ class SimpleScheduler(threading.Thread):
             runner = JobRunner.SimpleJobRunner()
         self.__runner = runner
         # Maximum number of concurrent jobs
-        self.__max_concurrent = max_concurrent
+        self.__max_concurrent = \
+            (max_concurrent if max_concurrent != 0 else None)
         # Maximum number of available slots across
         # all runners
-        self.__max_slots = max_slots
+        self.__max_slots = (max_slots if max_slots != 0 else None)
         # Length of time to wait between checking jobs
         self.__poll_interval = poll_interval
         # Length of time to wait before submitting job

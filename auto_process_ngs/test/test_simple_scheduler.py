@@ -230,6 +230,72 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertTrue(sched.is_empty())
         sched.stop()
 
+    def test_simple_scheduler_set_max_concurrent_to_zero(self):
+        """Run several jobs with maximum concurrent jobs set to zero
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01,
+                                max_concurrent=0)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'])
+        job_2 = sched.submit(['sleep','20'])
+        job_3 = sched.submit(['sleep','30'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertEqual(sched.n_finished,0)
+        self.assertFalse(sched.is_empty())
+        # Finish a job, wait for scheduler to catch up
+        job_1.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,2)
+        self.assertEqual(sched.n_finished,1)
+        self.assertFalse(sched.is_empty())
+        # Finish remaining jobs, wait for scheduler to catch up
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,0)
+        self.assertEqual(sched.n_finished,3)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_simple_scheduler_set_max_slots_to_zero(self):
+        """Run several jobs with maximum slots set to zero
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01,
+                                max_slots=0)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'])
+        job_2 = sched.submit(['sleep','20'])
+        job_3 = sched.submit(['sleep','30'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertEqual(sched.n_finished,0)
+        self.assertFalse(sched.is_empty())
+        # Finish a job, wait for scheduler to catch up
+        job_1.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,2)
+        self.assertEqual(sched.n_finished,1)
+        self.assertFalse(sched.is_empty())
+        # Finish remaining jobs, wait for scheduler to catch up
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,0)
+        self.assertEqual(sched.n_finished,3)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
     def test_simple_scheduler_run_multiple_jobs_with_max_slots(self):
         """Run several jobs with limit on maximum slots
 
