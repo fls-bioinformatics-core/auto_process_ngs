@@ -48,6 +48,7 @@ from bcftbx.utils import find_program
 from ..analysis import copy_analysis_project
 from ..applications import Command
 from ..bcl2fastq.pipeline import Get10xPackage
+from ..bcl2fastq.pipeline import FunctionParam
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline
@@ -107,6 +108,7 @@ class QCPipeline(Pipeline):
         self.add_param('fastq_strand_indexes',type=dict)
         self.add_param('cellranger_exe',type=str)
         self.add_param('cellranger_reference_dataset',type=str)
+        self.add_param('cellranger_out_dir',type=str)
         self.add_param('cellranger_chemistry',type=str)
         self.add_param('cellranger_transcriptomes',type=dict)
         self.add_param('cellranger_premrna_references',type=dict)
@@ -400,6 +402,15 @@ class QCPipeline(Pipeline):
                           runner=self.runners['verify_runner'],
                           log_dir=log_dir)
 
+            # Parent directory for cellranger count outputs
+            # Set to project directory unless the 'cellranger_out_dir'
+            # parameter is set
+            cellranger_out_dir = FunctionParam(
+                lambda out_dir,project_dir:
+                out_dir if out_dir is not None else project_dir,
+                self.params.cellranger_out_dir,
+                project.dirn)
+
             # Run cellranger count
             run_cellranger_count = RunCellrangerCount(
                 "%s: run single library analysis (cellranger count)" %
@@ -407,7 +418,7 @@ class QCPipeline(Pipeline):
                 check_cellranger_count.output.samples,
                 check_cellranger_count.output.fastq_dir,
                 get_cellranger_reference_data.output.reference_data_path,
-                project.dirn,
+                cellranger_out_dir,
                 qc_dir=qc_dir,
                 working_dir=self.params.WORKING_DIR,
                 cellranger_exe=get_cellranger.output.package_exe,
@@ -474,6 +485,7 @@ class QCPipeline(Pipeline):
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,cellranger_exe=None,
             cellranger_reference_dataset=None,
+            cellranger_out_dir=None,
             working_dir=None,log_file=None,
             batch_size=None,max_jobs=1,max_slots=None,poll_interval=5,
             runners=None,default_runner=None,envmodules=None,
@@ -530,6 +542,9 @@ class QCPipeline(Pipeline):
             dataset to use for single library analysis
             (default: reference dataset is determined
             automatically)
+          cellranger_out_dir (str): specify directory to
+            put full cellranger outputs into (default:
+            project directory)
           working_dir (str): optional path to a working
             directory (defaults to temporary directory in
             the current directory)
@@ -609,6 +624,7 @@ class QCPipeline(Pipeline):
                                   'cellranger_exe': cellranger_exe,
                                   'cellranger_reference_dataset':
                                   cellranger_reference_dataset,
+                                  'cellranger_out_dir': cellranger_out_dir,
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
@@ -1286,17 +1302,18 @@ class RunCellrangerCount(PipelineTask):
             Fastq files
           reference_data_path (str): path to the cellranger
             compatible reference dataset
-          out_dir (str): top-level directory to put final
-            'count' outputs into
+          out_dir (str): top-level directory to copy all
+            final 'count' outputs into. Outputs won't be
+            copied if no value is supplied
           qc_dir (str): top-level QC directory to put
-            'count' QC ouputs (e.g. metrics CSV and summary
+            'count' QC outputs (e.g. metrics CSV and summary
             HTML files) into. Outputs won't be copied if
             no value is supplied
           cellranger_exe (str): the path to the Cellranger
             software package to use (e.g. 'cellranger',
             'cellranger-atac', 'spaceranger')
-          cellranger_version (str): the version string for the
-            Cellranger package
+          cellranger_version (str): the version string for
+            the Cellranger package
           chemistry (str): assay configuration (set to
             'auto' to let cellranger determine this
             automatically; ignored if not scRNA-seq)
