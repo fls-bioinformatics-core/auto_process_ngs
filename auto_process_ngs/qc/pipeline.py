@@ -433,7 +433,8 @@ class QCPipeline(Pipeline):
             set_cellranger_cell_count = SetCellCountFromCellrangerCount(
                 "%s: set cell count from single library analysis" %
                 project_name,
-                project
+                project,
+                qc_dir
             )
             self.add_task(set_cellranger_cell_count,
                           requires=(run_cellranger_count,),)
@@ -1520,19 +1521,22 @@ class SetCellCountFromCellrangerCount(PipelineTask):
     Update the number of cells in the project metadata from
     'cellranger count' output
     """
-    def init(self,project):
+    def init(self,project,qc_dir=None):
         """
         Initialise the SetCellCountFromCellrangerCount task.
 
         Arguments:
-          project (AnalysisProject): project to update the number
-            of cells for
+          project (AnalysisProject): project to update the
+            number of cells for
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
         """
         pass
     def setup(self):
         # Extract and store the cell count from the cellranger
         # metric file
-        set_cell_count_for_project(self.args.project.dirn)
+        set_cell_count_for_project(self.args.project.dirn,
+                                   self.args.qc_dir)
 
 class ReportQC(PipelineTask):
     """
