@@ -1499,7 +1499,7 @@ class RunCellrangerCount(PipelineTask):
                     mkdirs(count_dir)
                 shutil.move(top_dir,count_dir)
         # Also copy outputs to QC directory
-        if self.args.qc_dir:
+        if self.args.qc_dir and self.args.samples:
             print("Copying outputs to QC directory")
             # Top level output directory
             count_dir = os.path.abspath(
