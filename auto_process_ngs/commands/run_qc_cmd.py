@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
+def run_qc(ap,projects=None,ungzip_fastqs=False,
            fastq_screen_subset=100000,nthreads=None,
            runner=None,fastq_dir=None,qc_dir=None,
            cellranger_chemistry='auto',
@@ -32,6 +32,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
            cellranger_premrna_references=None,
            report_html=None,run_multiqc=True,
            working_dir=None,verbose=None,
+           max_jobs=None,max_cores=None,
            poll_interval=None):
     """Run QC pipeline script for projects
 
@@ -48,9 +49,6 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
       projects (str): specify a pattern to match one or more
         projects to run the QC for (default is to run QC for all
         projects)
-      max_jobs (int): maximum number of jobs that will be
-        scheduled to run at one time (passed to the scheduler;
-        default is 4, set to zero to remove the limit)
       ungzip_fastqs (bool): if True then run the QC script with
         the '--ungzip-fastqs' option to create decompressed
         copies of any fastq.gz inputs (default: False i.e. don't
@@ -83,6 +81,11 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
          temporary directory in the current directory)
       verbose (bool): if True then report additional information
          for pipeline diagnostics
+      max_jobs (int): maximum number of jobs that will be
+        scheduled to run at one time (passed to the scheduler;
+        default: no limit)
+      max_cores (int): maximum number of cores available to
+        the scheduler (default: no limit)
       poll_interval (float): specifies non-default polling
         interval for scheduler used for running QC
 
@@ -148,10 +151,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
             envmodules[name] = ap.settings.modulefiles[name]
         except KeyError:
             envmodules[name] = None
-    # Get scheduler parameters
-    if max_jobs is None:
-        max_jobs = ap.settings.general.max_concurrent_jobs
-    max_cores = ap.settings.general.max_cores
+    # Set scheduler parameters
     if poll_interval is None:
         poll_interval = ap.settings.general.poll_interval
     # Set up a master log directory and file
