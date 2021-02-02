@@ -620,6 +620,7 @@ def add_run_qc_command(cmdparser):
     default_nthreads = __settings.qc.nprocessors
     fastq_screen_subset = __settings.qc.fastq_screen_subset
     max_concurrent_jobs = __settings.general.max_concurrent_jobs
+    max_cores = __settings.general.max_cores
     # Build parser
     p.add_argument('--projects',action='store',
                    dest='project_pattern',default=None,
@@ -678,6 +679,21 @@ def add_run_qc_command(cmdparser):
                    "<QC_DIR>_report.html)")
     add_runner_option(p)
     add_modulefiles_option(p)
+    # Job control options
+    job_control = p.add_argument_group("Job control options")
+    job_control.add_argument('-j','--maxjobs',type=int,action='store',
+                             dest="max_jobs",metavar='NJOBS',
+                             default=max_concurrent_jobs,
+                             help="maxiumum number of jobs to run "
+                             "concurrently (default: %s)"
+                             % (max_concurrent_jobs
+                                if max_concurrent_jobs else 'no limit'))
+    job_control.add_argument('-c','--maxcores',type=int,action='store',
+                             dest='max_cores',metavar='NCORES',
+                             default=max_cores,
+                             help="maximum number of cores available for "
+                             "running jobs (default: %s)"
+                             % (max_cores if max_cores else 'no limit'))
     # Advanced options
     advanced = p.add_argument_group('Advanced/debugging options')
     advanced.add_argument('--verbose',action="store_true",
@@ -1303,7 +1319,6 @@ def run_qc(args):
         runner = None
     # Do the run_qc step
     retcode = d.run_qc(projects=args.project_pattern,
-                       max_jobs=args.max_jobs,
                        ungzip_fastqs=args.ungzip_fastqs,
                        fastq_screen_subset=args.subset,
                        nthreads=args.nthreads,
@@ -1317,6 +1332,8 @@ def run_qc(args):
                        cellranger_premrna_references,
                        report_html=args.html_file,
                        runner=runner,
+                       max_jobs=args.max_jobs,
+                       max_cores=args.max_cores,
                        working_dir=args.working_dir,
                        verbose=args.verbose)
     sys.exit(retcode)
