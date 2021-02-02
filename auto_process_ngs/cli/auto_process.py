@@ -464,24 +464,17 @@ def add_make_fastqs_command(cmdparser):
                                     cellranger_localcores
     if not default_cellranger_localcores:
         default_cellranger_localcores = 1
-    cellranger = p.add_argument_group('Cellranger options (10xGenomics '
-                                      'Chromium SC 3\' and ATAC data only)')
-    cellranger.add_argument("--jobmode",
-                            dest="job_mode",
+    cellranger = p.add_argument_group('Cellranger* options (10xGenomics '
+                                      'data only)')
+    cellranger.add_argument("--10x_jobmode",
+                            dest="cellranger_jobmode",
                             default=__settings['10xgenomics'].\
                             cellranger_jobmode,
                             help="job mode to run cellranger in (default: "
                             "'%s')"
                             % __settings['10xgenomics'].cellranger_jobmode)
-    cellranger.add_argument("--mempercore",
-                            dest="mem_per_core",
-                            default=__settings['10xgenomics'].\
-                            cellranger_mempercore,
-                            help="memory assumed per core (in Gbs; default: "
-                            "%s); NB only used if jobmode is not 'local'" %
-                            __settings['10xgenomics'].cellranger_mempercore)
-    cellranger.add_argument("--localcores",
-                            dest="local_cores",
+    cellranger.add_argument("--10x_localcores",
+                            dest="cellranger_localcores",
                             default=default_cellranger_localcores,
                             help="maximum cores cellranger can request at one"
                             "time for jobmode 'local' (ignored for other "
@@ -489,8 +482,8 @@ def add_make_fastqs_command(cmdparser):
                             ("taken from job runner"
                              if not default_cellranger_localcores
                              else default_cellranger_localcores))
-    cellranger.add_argument("--localmem",
-                            dest="local_mem",
+    cellranger.add_argument("--10x_localmem",
+                            dest="cellranger_localmem",
                             default=__settings['10xgenomics'].\
                             cellranger_localmem,
                             help="maximum total memory cellranger can "
@@ -498,18 +491,27 @@ def add_make_fastqs_command(cmdparser):
                             "(ignored for other jobmodes) (in Gbs; default: "
                             "%s)" %
                             __settings['10xgenomics'].cellranger_localmem)
-    cellranger.add_argument("--maxjobs",type=int,
-                            dest="max_jobs",
+    cellranger.add_argument("--10x_maxjobs",type=int,
+                            dest="cellranger_maxjobs",
                             default=__settings.general.max_concurrent_jobs,
                             help="maxiumum number of concurrent jobs to run "
-                            "(default: %d)"
-                            % __settings.general.max_concurrent_jobs)
-    cellranger.add_argument("--jobinterval",type=int,
-                            dest="job_interval",
+                            " NB only used if jobmode is not 'local' "
+                            "(default: %d)" %
+                            __settings['10xgenomics'].cellranger_maxjobs)
+    cellranger.add_argument("--10x_mempercore",
+                            dest="cellranger_mempercore",
+                            default=__settings['10xgenomics'].\
+                            cellranger_mempercore,
+                            help="memory assumed per core (in Gbs; default: "
+                            "%s); NB only used if jobmode is not 'local'" %
+                            __settings['10xgenomics'].cellranger_mempercore)
+    cellranger.add_argument("--10x_jobinterval",type=int,
+                            dest="cellranger_jobinterval",
                             default=__settings['10xgenomics'].\
                             cellranger_jobinterval,
                             help="how often jobs are submitted (in ms; "
-                            "default: %d)" %
+                            "default: %d); only used if jobmode is not "
+                            "'local'" %
                             __settings['10xgenomics'].cellranger_jobinterval)
     cellranger.add_argument("--ignore-dual-index",
                             action="store_true",
@@ -544,6 +546,24 @@ def add_make_fastqs_command(cmdparser):
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
+    # Job control options
+    job_control = p.add_argument_group("Job control options")
+    job_control.add_argument('-j','--maxjobs',type=int,action='store',
+                             dest="max_jobs",metavar='NJOBS',
+                             default=__settings.general.max_concurrent_jobs,
+                             help="maxiumum number of jobs to run "
+                             "concurrently (default: %s)"
+                             % (__settings.general.max_concurrent_jobs
+                                if __settings.general.max_concurrent_jobs
+                                else 'no limit'))
+    job_control.add_argument('-c','--maxcores',type=int,action='store',
+                             dest='max_cores',metavar='NCORES',
+                             default=__settings.general.max_cores,
+                             help="maximum number of cores available for "
+                             "running jobs (default: %s)"
+                             % (__settings.general.max_cores
+                                if __settings.general.max_cores
+                                else 'no limit'))
     # Advanced options
     advanced = p.add_argument_group('Advanced/debugging options')
     advanced.add_argument('--verbose',action="store_true",
@@ -1229,13 +1249,15 @@ def make_fastqs(args):
         per_lane_stats_file=args.per_lane_stats_file,
         barcode_analysis_dir=args.barcode_analysis_dir,
         create_empty_fastqs=create_empty_fastqs,
-        cellranger_jobmode=args.job_mode,
-        cellranger_mempercore=args.mem_per_core,
-        cellranger_maxjobs=args.max_jobs,
-        cellranger_jobinterval=args.job_interval,
-        cellranger_localcores=args.local_cores,
-        cellranger_localmem=args.local_mem,
+        cellranger_jobmode=args.cellranger_jobmode,
+        cellranger_mempercore=args.cellranger_mempercore,
+        cellranger_maxjobs=args.cellranger_maxjobs,
+        cellranger_jobinterval=args.cellranger_jobinterval,
+        cellranger_localcores=args.cellranger_localcores,
+        cellranger_localmem=args.cellranger_localmem,
         cellranger_ignore_dual_index=args.ignore_dual_index,
+        max_jobs=args.max_jobs,
+        max_cores=args.max_cores,
         working_dir=args.working_dir,
         verbose=args.verbose)
 
