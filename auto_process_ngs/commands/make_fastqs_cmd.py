@@ -63,6 +63,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_localcores=None,
                 cellranger_localmem=None,
                 cellranger_ignore_dual_index=False,
+                max_jobs=None,max_cores=None,
                 verbose=False,working_dir=None):
     """
     Create and summarise FASTQ files
@@ -178,6 +179,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
       cellranger_ignore_dual_index (bool): (optional) on a dual-indexed
          flowcell where the second index was not used for the 10x
          sample, ignore it (10xGenomics Chromium SC data only)
+      max_jobs (int): maximum number of concurrent jobs allowed
+      max_cores (int): maximum number of cores available
       working_dir (str): path to a working directory (defaults to
          temporary directory in the current directory)
       verbose (bool): if True then report additional information for
@@ -358,8 +361,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
     # Other pipeline settings
     poll_interval = ap.settings.general.poll_interval
-    max_jobs = ap.settings.general.max_concurrent_jobs
-    max_cores = ap.settings.general.max_cores
 
     # Construct and run pipeline
     make_fastqs = MakeFastqs(ap.params.data_dir,
