@@ -172,6 +172,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     # Collect the cellranger data and parameters
     cellranger_settings = ap.settings['10xgenomics']
     cellranger_jobmode = cellranger_settings.cellranger_jobmode
+    cellranger_maxjobs = cellranger_settings.cellranger_maxjobs
     cellranger_mempercore = cellranger_settings.cellranger_mempercore
     cellranger_jobinterval = cellranger_settings.cellranger_jobinterval
     cellranger_localcores = cellranger_settings.cellranger_localcores
@@ -189,7 +190,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        cellranger_arc_references=cellranger_multiome_references,
                        cellranger_chemistry=cellranger_chemistry,
                        cellranger_jobmode=cellranger_jobmode,
-                       cellranger_maxjobs=max_jobs,
+                       cellranger_maxjobs=cellranger_maxjobs,
                        cellranger_mempercore=cellranger_mempercore,
                        cellranger_jobinterval=cellranger_jobinterval,
                        cellranger_localcores=cellranger_localcores,
