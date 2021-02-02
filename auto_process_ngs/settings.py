@@ -226,6 +226,7 @@ class Settings(object):
         self['10xgenomics']['cellranger_jobmode'] = config.get('10xgenomics',
                                                                'cellranger_jobmode',
                                                                'local')
+        self['10xgenomics']['cellranger_maxjobs'] = config.getint('10xgenomics','cellranger_maxjobs',24)
         self['10xgenomics']['cellranger_mempercore'] = config.getint('10xgenomics','cellranger_mempercore',5)
         self['10xgenomics']['cellranger_jobinterval'] = config.getint('10xgenomics','cellranger_jobinterval',100)
         self['10xgenomics']['cellranger_localmem'] = config.getint('10xgenomics','cellranger_localmem',5)
