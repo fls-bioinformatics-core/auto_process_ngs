@@ -53,8 +53,6 @@ determine which metrics are run:
 * ``--protocol``: specify the QC protocol (see :doc:`run_qc`
   for a complete list)
 * ``--organism``: specify the organism(s)
-* ``--name``: sets the name for the project (used in the
-  QC report title)
 
 .. note::
 
@@ -78,6 +76,32 @@ The following options can be used to override the defaults:
   written; if this is a relative path then it will be a
   subdirectory of the top-level output directory
 * ``--filename``: name for the HTML report from the QC
+* ``--name``: sets the name for the project (used in the
+  QC report title)
+
+Running 10xGenomics single library analyses
+-------------------------------------------
+
+When running the QC pipeline on 10xGenomics data using an
+:doc:`appropriate protocol <run_qc>`, additional options are
+available for controlling the single library analyses that
+are run using the `count` command of the appropriate
+10xGenomics software package.
+
+The following options can be used to override the defaults
+defined in the configuration:
+
+* ``--cellranger``: explicitly sets the path to the ``cellranger``
+  (or other appropriate 10xGenomics package)
+* ``--cellranger-reference``: sets the path to the reference
+  dataset to use for single library analysis
+
+.. note::
+
+   The full outputs from the single library analyses are
+   copied to the ``cellranger_count`` subdirectory of the
+   top-level output directory, in addition to the metrics
+   and HTML summary files written to the QC directory.
 
 Running on different platforms: ``--local``
 -------------------------------------------
