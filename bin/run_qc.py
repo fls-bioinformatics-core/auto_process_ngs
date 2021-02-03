@@ -193,8 +193,8 @@ if __name__ == "__main__":
                           dest='max_cores',type=int,
                           default=__settings.general.max_cores,
                           help="maximum number of cores available for QC "
-                          "jobs when using --local (default %s, change in
-                          in settings file)" %
+                          "jobs when using --local (default %s, change in "
+                          "in settings file)" %
                           (__settings.general.max_cores
                            if __settings.general.max_cores else 'no limit'))
     pipeline.add_argument('-m','--maxmem',metavar='M',action='store',
