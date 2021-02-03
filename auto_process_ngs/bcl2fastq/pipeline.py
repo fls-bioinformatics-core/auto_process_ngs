@@ -2359,13 +2359,14 @@ class Get10xPackage(PipelineFunctionTask):
     def get_10x_package(self,require_package):
         # Look for 10xGenomics package
         package_exe = find_program(require_package)
+        package_name = os.path.basename(require_package)
         if package_exe:
             # Get information on the version etc
-            if require_package in ('cellranger',
-                                   'cellranger-atac',
-                                   'cellranger-arc',):
+            if package_name in ('cellranger',
+                                'cellranger-atac',
+                                'cellranger-arc',):
                 package_info = cellranger_info(package_exe)
-            elif require_package == 'spaceranger':
+            elif package_name == 'spaceranger':
                 package_info = spaceranger_info(package_exe)
             else:
                 raise Exception("%s: unknown 10xGenomics package" %
@@ -2373,7 +2374,7 @@ class Get10xPackage(PipelineFunctionTask):
         else:
             # Unable to locate appropriate software
             print("No appropriate %s software located" %
-                  os.path.basename(require_package))
+                  package_name)
             package_exe = None
             package_info = (None,None,None)
         # Return the information on the package

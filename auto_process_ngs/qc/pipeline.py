@@ -19,6 +19,7 @@ Pipeline task classes:
 - SetupFastqStrandConf
 - CheckFastqStrandOutputs
 - RunFastqStrand
+- DetermineRequired10xPackage
 - GetCellrangerReferenceData
 - MakeCellrangerArcCountLibraries
 - CheckCellrangerCountOutputs
@@ -47,6 +48,7 @@ from bcftbx.utils import find_program
 from ..analysis import copy_analysis_project
 from ..applications import Command
 from ..bcl2fastq.pipeline import Get10xPackage
+from ..bcl2fastq.pipeline import FunctionParam
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline
@@ -104,6 +106,9 @@ class QCPipeline(Pipeline):
         self.add_param('nthreads',type=int)
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
+        self.add_param('cellranger_exe',type=str)
+        self.add_param('cellranger_reference_dataset',type=str)
+        self.add_param('cellranger_out_dir',type=str)
         self.add_param('cellranger_chemistry',type=str)
         self.add_param('cellranger_transcriptomes',type=dict)
         self.add_param('cellranger_premrna_references',type=dict)
@@ -328,19 +333,19 @@ class QCPipeline(Pipeline):
             check_cellranger_count_requires = []
 
             # Locate cellranger
-            if qc_protocol in ("10x_scRNAseq",
-                               "10x_snRNAseq",):
-                require_cellranger_exe = "cellranger"
-            elif qc_protocol in ("10x_scATAC",):
-                require_cellranger_exe = "cellranger-atac"
-            elif qc_protocol in ("10x_Multiome_ATAC",
-                                 "10x_Multiome_GEX",):
-                require_cellranger_exe = "cellranger-arc"
+            required_cellranger = DetermineRequired10xPackage(
+                "%s: determine required 'cellranger' package" %
+                project_name,
+                qc_protocol,
+                self.params.cellranger_exe)
+            self.add_task(required_cellranger)
 
             get_cellranger = Get10xPackage(
                 "%s: get information on cellranger" % project_name,
-                require_package=require_cellranger_exe)
+                require_package=\
+                required_cellranger.output.require_cellranger)
             self.add_task(get_cellranger,
+                          requires=(required_cellranger,),
                           envmodules=self.envmodules['cellranger'])
 
             # Get reference data for cellranger
@@ -355,12 +360,14 @@ class QCPipeline(Pipeline):
                 multiome_references=self.params.cellranger_arc_references,
                 cellranger_exe=get_cellranger.output.package_exe,
                 cellranger_version=get_cellranger.output.package_version,
-                qc_protocol=qc_protocol
+                qc_protocol=qc_protocol,
+                force_reference_data=self.params.cellranger_reference_dataset
             )
             self.add_task(get_cellranger_reference_data,
                           requires=(get_cellranger,),
                           runner=self.runners['verify_runner'],
                           log_dir=log_dir)
+            check_cellranger_count_requires.append(get_cellranger_reference_data)
             update_qc_metadata_requires.append(get_cellranger_reference_data)
             qc_metadata['cellranger_refdata'] = \
                     get_cellranger_reference_data.output.reference_data_path
@@ -380,12 +387,13 @@ class QCPipeline(Pipeline):
                 check_cellranger_count_requires.append(
                     make_cellranger_libraries)
 
-            # Check outputs for cellranger count
+            # Check QC outputs for cellranger count
             check_cellranger_count = CheckCellrangerCountOutputs(
                 "%s: check single library analysis (cellranger)" %
                 project_name,
                 project,
                 fastq_dir=fastq_dir,
+                qc_dir=qc_dir,
                 qc_protocol=qc_protocol,
                 verbose=self.params.VERBOSE
             )
@@ -394,6 +402,15 @@ class QCPipeline(Pipeline):
                           runner=self.runners['verify_runner'],
                           log_dir=log_dir)
 
+            # Parent directory for cellranger count outputs
+            # Set to project directory unless the 'cellranger_out_dir'
+            # parameter is set
+            cellranger_out_dir = FunctionParam(
+                lambda out_dir,project_dir:
+                out_dir if out_dir is not None else project_dir,
+                self.params.cellranger_out_dir,
+                project.dirn)
+
             # Run cellranger count
             run_cellranger_count = RunCellrangerCount(
                 "%s: run single library analysis (cellranger count)" %
@@ -401,7 +418,7 @@ class QCPipeline(Pipeline):
                 check_cellranger_count.output.samples,
                 check_cellranger_count.output.fastq_dir,
                 get_cellranger_reference_data.output.reference_data_path,
-                project.dirn,
+                cellranger_out_dir,
                 qc_dir=qc_dir,
                 working_dir=self.params.WORKING_DIR,
                 cellranger_exe=get_cellranger.output.package_exe,
@@ -427,7 +444,8 @@ class QCPipeline(Pipeline):
             set_cellranger_cell_count = SetCellCountFromCellrangerCount(
                 "%s: set cell count from single library analysis" %
                 project_name,
-                project
+                project,
+                qc_dir
             )
             self.add_task(set_cellranger_cell_count,
                           requires=(run_cellranger_count,),)
@@ -465,7 +483,10 @@ class QCPipeline(Pipeline):
             cellranger_arc_references=None,cellranger_jobmode='local',
             cellranger_maxjobs=None,cellranger_mempercore=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
-            cellranger_localmem=None,working_dir=None,log_file=None,
+            cellranger_localmem=None,cellranger_exe=None,
+            cellranger_reference_dataset=None,
+            cellranger_out_dir=None,
+            working_dir=None,log_file=None,
             batch_size=None,max_jobs=1,max_slots=None,poll_interval=5,
             runners=None,default_runner=None,envmodules=None,
             verbose=False):
@@ -512,6 +533,18 @@ class QCPipeline(Pipeline):
             (default: None)
           cellranger_localmem (int): maximum memory cellranger
             can request in jobmode 'local' (default: None)
+          cellranger_exe (str): optional, explicitly specify
+            the cellranger executable to use for single
+            library analysis (default: cellranger executable
+            is determined automatically)
+          cellranger_reference_dataset (str): optional,
+            explicitly specify the path to the reference
+            dataset to use for single library analysis
+            (default: reference dataset is determined
+            automatically)
+          cellranger_out_dir (str): specify directory to
+            put full cellranger outputs into (default:
+            project directory)
           working_dir (str): optional path to a working
             directory (defaults to temporary directory in
             the current directory)
@@ -587,7 +620,11 @@ class QCPipeline(Pipeline):
                                   'cellranger_mempercore': cellranger_mempercore,
                                   'cellranger_jobinterval': cellranger_jobinterval,
                                   'cellranger_localcores': cellranger_localcores,
-                                  'cellranger_localmem': cellranger_localmem
+                                  'cellranger_localmem': cellranger_localmem,
+                                  'cellranger_exe': cellranger_exe,
+                                  'cellranger_reference_dataset':
+                                  cellranger_reference_dataset,
+                                  'cellranger_out_dir': cellranger_out_dir,
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
@@ -988,13 +1025,56 @@ class RunFastqStrand(PipelineTask):
             # Add the command
             self.add_cmd(cmd)
 
+class DetermineRequired10xPackage(PipelineTask):
+    """
+    Determine which 10xGenomics software package is required
+
+    By default determines the package name based on the
+    supplied QC protocol, but this can be overridden by
+    explicitly supplying a required package (which can
+    also be a path to an executable).
+
+    The output 'require_cellranger' parameter should be
+    supplied to the 'Get10xPackage' task, which will
+    do the job of actually locating an executable.
+    """
+    def init(self,qc_protocol,require_cellranger=None):
+        """
+        Initialise the DetermineRequired10xPackage task
+
+        Argument:
+          qc_protocol (str): QC protocol to use
+          require_cellranger (str): optional package name
+            or path to an executable; if supplied then
+            overrides the automatic package determination
+
+        Outputs:
+          require_cellranger (pipelineParam): the 10xGenomics
+            software package name or path to use
+        """
+        self.add_output('require_cellranger',Param(type=str))
+    def setup(self):
+        require_cellranger = self.args.require_cellranger
+        if require_cellranger is None:
+            if self.args.qc_protocol in ("10x_scRNAseq",
+                                         "10x_snRNAseq",):
+                require_cellranger = "cellranger"
+            elif self.args.qc_protocol in ("10x_scATAC",):
+                require_cellranger = "cellranger-atac"
+            elif self.args.qc_protocol in ("10x_Multiome_ATAC",
+                                           "10x_Multiome_GEX",):
+                require_cellranger = "cellranger-arc"
+        print("Required 10x package: %s" % require_cellranger)
+        self.output.require_cellranger.set(require_cellranger)
+
 class GetCellrangerReferenceData(PipelineFunctionTask):
     """
     """
     def init(self,project,organism=None,transcriptomes=None,
              premrna_references=None,atac_references=None,
              multiome_references=None,qc_protocol=None,
-             cellranger_exe=None,cellranger_version=None):
+             cellranger_exe=None,cellranger_version=None,
+             force_reference_data=None):
         """
         Initialise the GetCellrangerReferenceData task
 
@@ -1020,6 +1100,10 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
           cellranger_version (str): the version string for the
             Cellranger package
           qc_protocol (str): QC protocol to use
+          force_reference_data (str): if supplied then
+            will be used as the reference dataset, instead of
+            trying to locate appropriate reference data
+            automatically
 
         Outputs:
           reference_data_path (PipelineParam): pipeline
@@ -1034,6 +1118,13 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
         print("Version    : %s" % self.args.cellranger_version)
         print("QC protocol: %s" % self.args.qc_protocol)
         print("Organism(s): %s" % self.args.organism)
+        # Check pre-determined reference dataset
+        if self.args.force_reference_data:
+            reference_data = self.args.force_reference_data
+            print("Using pre-determined dataset: %s" %
+                  reference_data)
+            self.output.reference_data_path.set(reference_data)
+            return
         # Check that a cellranger exe was supplied
         if self.args.cellranger_exe is None:
             print("No cellranger package supplied")
@@ -1128,8 +1219,8 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
     """
     Check the outputs from cellranger(-atac) count
     """
-    def init(self,project,fastq_dir=None,qc_protocol=None,
-             verbose=False):
+    def init(self,project,fastq_dir=None,qc_dir=None,
+             qc_protocol=None,verbose=False):
         """
         Initialise the CheckCellrangerCountOutputs task.
 
@@ -1138,6 +1229,9 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             QC for
           fastq_dir (str): directory holding Fastq files
             (defaults to current fastq_dir in project)
+          qc_dir (str): top-level QC directory to look
+            for 'count' QC outputs (e.g. metrics CSV and
+            summary HTML files)
           qc_protocol (str): QC protocol to use
           verbose (bool): if True then print additional
             information from the task
@@ -1163,7 +1257,8 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
         self.add_call("Check cellranger count outputs for %s"
                       % self.args.project.name,
                       check_outputs,
-                      self.args.project)
+                      self.args.project,
+                      self.args.qc_dir)
     def finish(self):
         # Collect the sample names with missing outputs
         for result in self.result():
@@ -1207,17 +1302,18 @@ class RunCellrangerCount(PipelineTask):
             Fastq files
           reference_data_path (str): path to the cellranger
             compatible reference dataset
-          out_dir (str): top-level directory to put final
-            'count' outputs into
+          out_dir (str): top-level directory to copy all
+            final 'count' outputs into. Outputs won't be
+            copied if no value is supplied
           qc_dir (str): top-level QC directory to put
-            'count' QC ouputs (e.g. metrics CSV and summary
+            'count' QC outputs (e.g. metrics CSV and summary
             HTML files) into. Outputs won't be copied if
             no value is supplied
           cellranger_exe (str): the path to the Cellranger
             software package to use (e.g. 'cellranger',
             'cellranger-atac', 'spaceranger')
-          cellranger_version (str): the version string for the
-            Cellranger package
+          cellranger_version (str): the version string for
+            the Cellranger package
           chemistry (str): assay configuration (set to
             'auto' to let cellranger determine this
             automatically; ignored if not scRNA-seq)
@@ -1251,6 +1347,9 @@ class RunCellrangerCount(PipelineTask):
             return
         if not self.args.cellranger_exe:
             raise Exception("No cellranger executable provided")
+        if not (self.args.out_dir or self.args.qc_dir):
+            raise Exception("Need to provide at least one of "
+                            "output directory and QC directory")
         # Top-level working directory
         self._working_dir = self.args.working_dir
         # Cellranger details
@@ -1258,8 +1357,38 @@ class RunCellrangerCount(PipelineTask):
         cellranger_package = os.path.basename(cellranger_exe)
         cellranger_version = self.args.cellranger_version
         cellranger_major_version = int(cellranger_version.split('.')[0])
-        # Run cellranger for each sample
+        # Expected outputs from cellranger
+        self._top_level_files = ("_cmdline",)
+        if cellranger_package in ("cellranger",):
+            self._outs_files = ("web_summary.html",
+                                "metrics_summary.csv")
+        elif cellranger_package in ("cellranger-atac",
+                                    "cellranger-arc",):
+            self._outs_files = ("web_summary.html",
+                                "summary.csv")
+        # Check output for each sample, and run cellranger if required
         for sample in self.args.samples:
+            # Check final outputs
+            run_cellranger_count = False
+            counts_dir = os.path.abspath(
+                os.path.join(self.args.out_dir,
+                             "cellranger_count",
+                             sample))
+            outs_dir = os.path.join(counts_dir,"outs")
+            for f in self._outs_files:
+                path = os.path.join(outs_dir,f)
+                if not os.path.exists(path):
+                    run_cellranger_count = True
+                    break
+            for f in self._top_level_files:
+                path = os.path.join(counts_dir,f)
+                if not os.path.exists(path):
+                    run_cellranger_count = True
+                    break
+            if not run_cellranger_count:
+                print("Sample '%s': found existing outputs")
+                continue
+            # Create a working directory for this sample
             work_dir = os.path.join(self._working_dir,
                                     "tmp.count.%s" % sample)
             # Build cellranger command
@@ -1332,74 +1461,76 @@ class RunCellrangerCount(PipelineTask):
                   "skipped")
             return
         # Handle outputs from cellranger count
-        # FIX ME check the cellranger exe rather than the protocol?
-        top_level_files = ("_cmdline",)
-        if self.args.qc_protocol in ("10x_scRNAseq",
-                                     "10x_snRNAseq",):
-            outs_files = ("web_summary.html","metrics_summary.csv")
-        elif self.args.qc_protocol in ("10x_scATAC",
-                                       "10x_Multiome_ATAC",
-                                       "10x_Multiome_GEX"):
-            outs_files = ("web_summary.html","summary.csv")
         has_errors = False
         for sample in self.args.samples:
             # Check outputs
             top_dir = os.path.join(self._working_dir,
                                    "tmp.count.%s" % sample,
                                    sample)
+            print("Sample: %s" % sample)
+            if not os.path.exists(top_dir):
+                # Cellranger count wasn't run for this
+                # sample
+                print("'cellranger count' not run for this sample?")
+                continue
             outs_dir = os.path.join(top_dir,"outs")
             missing_files = []
-            for f in outs_files:
+            for f in self._outs_files:
                 path = os.path.join(outs_dir,f)
                 if not os.path.exists(path):
                     print("Missing: %s" % path)
                     missing_files.append(path)
-            for f in top_level_files:
+            for f in self._top_level_files:
                 path = os.path.join(top_dir,f)
                 if not os.path.exists(path):
                     print("Missing: %s" % path)
                     missing_files.append(path)
             if missing_files:
                 # Skip this sample
+                print("Some files missing for this sample, skipping")
                 has_errors = True
             else:
                 # Move count outputs to final destination
                 count_dir = os.path.abspath(
                     os.path.join(self.args.out_dir,
                                  "cellranger_count"))
+                print("Moving %s to %s" % (top_dir,count_dir))
                 if not os.path.exists(count_dir):
                     mkdirs(count_dir)
-                shutil.move(
-                    os.path.join(self._working_dir,
-                                 "tmp.count.%s" % sample,
-                                 sample),
-                    count_dir)
-                # Copy QC outputs to final destination
-                if self.args.qc_dir:
-                    # Update the source locations as we
-                    # moved the outputs in the previous step
-                    top_dir = os.path.join(count_dir,sample)
-                    outs_dir = os.path.join(top_dir,"outs")
-                    # Set location to copy QC outputs to
-                    qc_dir = os.path.abspath(
-                        os.path.join(self.args.qc_dir,
-                                     "cellranger_count",
-                                     sample))
-                    qc_outs_dir = os.path.join(qc_dir,"outs")
-                    # Make directories and copy the files
-                    mkdirs(qc_outs_dir)
-                    for f in outs_files:
-                        path = os.path.join(outs_dir,f)
-                        print("Copying %s from %s to %s" % (f,
-                                                            outs_dir,
-                                                            qc_outs_dir))
-                        shutil.copy(path,qc_outs_dir)
-                    for f in top_level_files:
-                        path = os.path.join(top_dir,f)
-                        print("Copying %s from %s to %s" % (f,
-                                                            top_dir,
-                                                            qc_dir))
-                        shutil.copy(path,qc_dir)
+                shutil.move(top_dir,count_dir)
+        # Also copy outputs to QC directory
+        if self.args.qc_dir and self.args.samples:
+            print("Copying outputs to QC directory")
+            # Top level output directory
+            count_dir = os.path.abspath(
+                os.path.join(self.args.out_dir,
+                             "cellranger_count"))
+            for sample in self.args.samples:
+                print("Sample: %s" % sample)
+                # Location of outputs
+                top_dir = os.path.join(count_dir,sample)
+                outs_dir = os.path.join(top_dir,"outs")
+                # Set location to copy QC outputs to
+                qc_dir = os.path.abspath(
+                    os.path.join(self.args.qc_dir,
+                                 "cellranger_count",
+                                 sample))
+                qc_outs_dir = os.path.join(qc_dir,"outs")
+                # Make directories and copy the files
+                mkdirs(qc_outs_dir)
+                for f in self._outs_files:
+                    path = os.path.join(outs_dir,f)
+                    print("Copying %s from %s to %s" % (f,
+                                                        outs_dir,
+                                                        qc_outs_dir))
+                    shutil.copy(path,qc_outs_dir)
+                for f in self._top_level_files:
+                    path = os.path.join(top_dir,f)
+                    print("Copying %s from %s to %s" % (f,
+                                                        top_dir,
+                                                        qc_dir))
+                    shutil.copy(path,qc_dir)
+        # Delayed task failure from earlier errors
         if has_errors:
             self.fail(message="Some outputs missing from cellranger "
                       "count")
@@ -1410,19 +1541,22 @@ class SetCellCountFromCellrangerCount(PipelineTask):
     Update the number of cells in the project metadata from
     'cellranger count' output
     """
-    def init(self,project):
+    def init(self,project,qc_dir=None):
         """
         Initialise the SetCellCountFromCellrangerCount task.
 
         Arguments:
-          project (AnalysisProject): project to update the number
-            of cells for
+          project (AnalysisProject): project to update the
+            number of cells for
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
         """
         pass
     def setup(self):
         # Extract and store the cell count from the cellranger
         # metric file
-        set_cell_count_for_project(self.args.project.dirn)
+        set_cell_count_for_project(self.args.project.dirn,
+                                   self.args.qc_dir)
 
 class ReportQC(PipelineTask):
     """

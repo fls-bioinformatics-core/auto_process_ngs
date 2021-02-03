@@ -113,15 +113,11 @@ if __name__ == "__main__":
                    nargs="+",
                    help="directory or list of Fastq files to run the "
                    "QC on")
-    p.add_argument('-n','--name',action='store',
-                   help="name for the project (used in report title)")
-    p.add_argument('--organism',metavar='ORGANISM',
-                   action='store',dest='organism',default=None,
-                   help="explicitly specify organism (e.g. 'human', "
-                   "'mouse'). Multiple organisms should be separated "
-                   "by commas (e.g. 'human,mouse')")
     # Reporting options
     reporting = p.add_argument_group('Output and reporting')
+    reporting.add_argument('-n','--name',action='store',
+                           help="name for the project (used in report "
+                           "title)")
     reporting.add_argument('-o','--out_dir',action='store',
                            help="top-level directory for reports and "
                            "QC output subdirectory (default: current "
@@ -134,6 +130,14 @@ if __name__ == "__main__":
     reporting.add_argument('-f','--filename',action='store',
                            help="file name for output QC report (default: "
                            "<OUT_DIR>/<QC_DIR_NAME>_report.html)")
+    # Project metadata
+    metadata = p.add_argument_group('Metadata')
+    metadata.add_argument('--organism',metavar='ORGANISM',
+                          action='store',dest='organism',default=None,
+                          help="explicitly specify organism (e.g. "
+                          "'human', 'mouse'). Multiple organisms "
+                          "should be separated by commas (e.g. "
+                          "'human,mouse')")
     # QC pipeline options
     qc_options = p.add_argument_group('QC options')
     qc_options.add_argument('-p','--protocol',metavar='PROTOCOL',
@@ -161,20 +165,19 @@ if __name__ == "__main__":
                                                else default_nthreads,))
     # Cellranger options
     cellranger = p.add_argument_group('Cellranger/10xGenomics options')
-    cellranger.add_argument('--10x_transcriptome',action='append',
-                            metavar='ORGANISM=REFERENCE',
-                            dest='cellranger_transcriptomes',
-                            help="specify cellranger transcriptome "
-                            "reference datasets to associate with "
-                            "organisms (overrides references defined "
-                            "in config file)")
-    cellranger.add_argument('--10x_premrna_reference',action='append',
-                            metavar='ORGANISM=REFERENCE',
-                            dest='cellranger_premrna_references',
-                            help="specify cellranger pre-mRNA reference "
-                            "datasets to associate with organisms "
-                            "(overrides references defined in config "
-                            "file)")
+    cellranger.add_argument('--cellranger',action='store',
+                            metavar='CELLRANGER_EXE',
+                            dest='cellranger_exe',
+                            help="explicitly specify path to Cellranger "
+                            "executable to use for single library "
+                            "analysis")
+    cellranger.add_argument('--cellranger-reference',action='store',
+                            metavar='REFERENCE',
+                            dest='cellranger_reference_dataset',
+                            help="specify the path to the reference "
+                            "dataset to use when running single libary "
+                            "analysis (overrides the organism-specific "
+                            "references defined in the config file)")
     cellranger.add_argument("--10x_chemistry",
                             choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
                             dest="cellranger_chemistry",default="auto",
@@ -246,6 +249,18 @@ if __name__ == "__main__":
                             action='store',dest='fastq_dir',default=None,
                             help="unsupported: point DIR directly to Fastq "
                             "directory")
+    deprecated.add_argument('--10x_transcriptome',action='append',
+                            metavar='ORGANISM=REFERENCE',
+                            dest='cellranger_transcriptomes',
+                            help="deprecated: use --cellranger-reference "
+                            "to specify reference dataset for single "
+                            "library analysis")
+    deprecated.add_argument('--10x_premrna_reference',action='append',
+                            metavar='ORGANISM=REFERENCE',
+                            dest='cellranger_premrna_references',
+                            help="deprecated: use --cellranger-reference "
+                            "to specify reference dataset for single "
+                            "library analysis")
 
     # Parse the command line
     args = p.parse_args()
@@ -261,6 +276,12 @@ if __name__ == "__main__":
                        "work")
         logger.warning("Environment modules should be set on a per-task "
                        "basis in the config file")
+    if args.cellranger_transcriptomes:
+        logger.warning("'--10x_transcriptome' option is deprecated")
+        logger.warning("Use '--cellranger-reference' instead")
+    if args.cellranger_premrna_references:
+        logger.warning("'--10x_premrna_reference' option is deprecated")
+        logger.warning("Use '--cellranger-reference' instead")
     if args.fastq_dir:
         logger.fatal("'--fastq_dir' option is no longer supported")
         logger.fatal("Point 'DIR' directly to the directory with the "
@@ -398,6 +419,10 @@ if __name__ == "__main__":
             organism,reference =  premrna_reference.split('=')
             cellranger_premrna_references[organism] = reference
     cellranger_atac_references = __settings['10xgenomics_atac_genome_references']
+    cellranger_reference_dataset = args.cellranger_reference_dataset
+    if cellranger_reference_dataset:
+        cellranger_reference_dataset = os.path.abspath(
+            cellranger_reference_dataset)
 
     # Job runners
     announce("Configuring pipeline parameters")
@@ -579,6 +604,10 @@ if __name__ == "__main__":
                        cellranger_jobinterval=cellranger_jobinterval,
                        cellranger_localcores=cellranger_localcores,
                        cellranger_localmem=cellranger_localmem,
+                       cellranger_exe=args.cellranger_exe,
+                       cellranger_reference_dataset=\
+                       cellranger_reference_dataset,
+                       cellranger_out_dir=out_dir,
                        max_jobs=max_jobs,
                        max_slots=max_cores,
                        batch_size=args.batch_size,
