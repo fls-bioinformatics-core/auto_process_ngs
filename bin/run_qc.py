@@ -193,9 +193,13 @@ if __name__ == "__main__":
                           "any runners defined in the configuration or on "
                           "the command line)")
     pipeline.add_argument('-c','--maxcores',metavar='N',action='store',
-                          dest='max_cores',type=int,default=None,
+                          dest='max_cores',type=int,
+                          default=__settings.general.max_cores,
                           help="maximum number of cores available for QC "
-                          "jobs when using --local (default: unlimited)")
+                          "jobs when using --local (default %s, change in "
+                          "in settings file)" %
+                          (__settings.general.max_cores
+                           if __settings.general.max_cores else 'no limit'))
     pipeline.add_argument('-m','--maxmem',metavar='M',action='store',
                           dest='max_mem',type=int,default=None,
                           help="maximum total memory jobs can request at "
@@ -205,9 +209,11 @@ if __name__ == "__main__":
                           dest='max_jobs',type=int,
                           default=__settings.general.max_concurrent_jobs,
                           help="explicitly specify maximum number of "
-                          "concurrent QC jobs to run (default %d, change "
+                          "concurrent QC jobs to run (default %s, change "
                           "in settings file; ignored when using --local)"
-                          % __settings.general.max_concurrent_jobs)
+                          % (__settings.general.max_concurrent_jobs
+                             if __settings.general.max_concurrent_jobs
+                             else 'no limit'))
     # Advanced options
     advanced = p.add_argument_group('Advanced/debugging options')
     advanced.add_argument('--verbose',action="store_true",
