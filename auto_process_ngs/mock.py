@@ -454,7 +454,7 @@ class DirectoryUpdater(object):
             dirn = os.path.join(self._base_dir,
                                 dirn)
         print("Adding directory: %s" % dirn)
-        os.mkdir(dirn)
+        os.makedirs(dirn)
 
     def add_file(self,filen,content=None):
         """
@@ -768,6 +768,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
         self._reload_project()
 
     def add_cellranger_count_outputs(self,qc_dir=None,cellranger='cellranger',
+                                     prefix="cellranger_count",
                                      legacy=False):
         """
         Add mock 'cellranger count' outputs to project
@@ -778,6 +779,9 @@ class UpdateAnalysisProject(DirectoryUpdater):
           cellranger (str): specify the 10xGenomics software
             package to add outputs for (defaults to
             'cellranger'; alternatives are 'cellranger-atac')
+          prefix (str): leading subdirectory for cellranger
+            count outputs (defaults to 'cellranger_count';
+            ignored if 'legacy' style outputs are generated)
           legacy (bool): if True then generate 'legacy'
             style cellranger outputs
         """
@@ -792,8 +796,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
             print("- QC dir: %s" % self._project.qc_dir)
             if not os.path.exists(self._project.qc_dir):
                 self.add_subdir(self._project.qc_dir)
-            self.add_subdir(os.path.join(self._project.qc_dir,
-                                         "cellranger_count"))
+            self.add_subdir(os.path.join(self._project.qc_dir,prefix))
         if cellranger == 'cellranger':
             cellranger_output_files = ("web_summary.html",
                                        "metrics_summary.csv")
@@ -808,7 +811,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
                                           sample.name)
             else:
                 sample_dir = os.path.join(self._project.qc_dir,
-                                          "cellranger_count",
+                                          prefix,
                                           sample.name)
             self.add_subdir(sample_dir)
             self.add_subdir(os.path.join(sample_dir,"outs"))
