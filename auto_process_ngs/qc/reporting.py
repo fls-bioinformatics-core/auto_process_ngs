@@ -21,6 +21,7 @@ from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
+from bcftbx.utils import walk
 from ..analysis import AnalysisFastq
 from ..analysis import run_reference_id
 from ..analysis import split_sample_name
@@ -132,6 +133,7 @@ table.summary th { background-color: grey;
 table.summary td { text-align: center;
                    padding: 2px 5px;
                    border-bottom: solid 1px lightgray; }
+table.summary td.single_library_analyses { text-align: left; }
 table.summary tr td:first-child { text-align: right; }
 table.fastq_summary tr td:first-child {
           background-color: grey;
@@ -588,19 +590,62 @@ class QCProject(object):
                                             "cellranger_count")
         cellranger_samples = []
         if os.path.isdir(cellranger_count_dir):
+            cellranger_name = None
+            versions = set()
+            # Old-style (unversioned)
             for d in filter(
                     lambda f:
                     os.path.isdir(os.path.join(cellranger_count_dir,f)),
                     os.listdir(cellranger_count_dir)):
-                web_summary_html = os.path.join(cellranger_count_dir,
-                                                d,
-                                                "outs",
-                                                "web_summary.html")
-                if os.path.exists(web_summary_html):
+                sample_dir = os.path.join(cellranger_count_dir,d)
+                try:
+                    cellranger = CellrangerCount(sample_dir)
+                    output_files.append(cellranger.web_summary)
                     cellranger_samples.append(d)
-                    output_files.append(web_summary_html)
+                    cellranger_name = cellranger.pipeline_name
+                except OSError:
+                    pass
             if cellranger_samples:
                 outputs.add("cellranger_count")
+            # New-style (versioned)
+            cellranger_versioned_samples = {}
+            for ver in filter(
+                    lambda f:
+                    os.path.isdir(os.path.join(cellranger_count_dir,f)),
+                    os.listdir(cellranger_count_dir)):
+                # Check putative version numbers
+                cellranger_versioned_samples[ver] = {}
+                for ref in filter(
+                        lambda f:
+                        os.path.isdir(os.path.join(cellranger_count_dir,ver,f)),
+                        os.listdir(os.path.join(cellranger_count_dir,ver))):
+                    # Check putative reference dataset names
+                    cellranger_versioned_samples[ver][ref] = []
+                    for smpl in filter(
+                            lambda f:
+                            os.path.isdir(os.path.join(cellranger_count_dir,
+                                                       ver,ref,f)),
+                            os.listdir(os.path.join(cellranger_count_dir,
+                                                    ver,ref))):
+                        sample_dir = os.path.join(cellranger_count_dir,
+                                                  ver,ref,smpl)
+                        try:
+                            cellranger = CellrangerCount(sample_dir)
+                            output_files.append(cellranger.web_summary)
+                            cellranger_versioned_samples[ver][ref].append(smpl)
+                            cellranger_name = cellranger.pipeline_name
+                        except OSError:
+                            pass
+                    # Add outputs, samples and version
+                    if cellranger_versioned_samples[ver][ref]:
+                        outputs.add("cellranger_count")
+                        versions.add(ver)
+                    for smpl in cellranger_versioned_samples[ver][ref]:
+                        if smpl not in cellranger_samples:
+                            cellranger_samples.append(smpl)
+            # Store cellranger versions
+            if cellranger_name and versions:
+                software[cellranger_name] = sorted(list(versions))
         # Look for MultiQC report
         print("Checking for MultiQC report in %s" % self.project.dirn)
         multiqc_report = os.path.join(self.project.dirn,
@@ -740,7 +785,7 @@ class QCReport(Document):
         'boxplot_r3': 'Boxplot[R3]',
         'screens_r3': 'Screens[R3]',
         'strandedness': 'Strand',
-        'cellranger_count': 'Cellranger count',
+        'cellranger_count': 'Single library analyses',
     }
     # Titles for metadata items
     metadata_titles = {
@@ -1109,6 +1154,9 @@ class QCReport(Document):
         # Create the table
         summary_tbl = Table(fields,**self.field_descriptions)
         summary_tbl.add_css_classes('summary','fastq_summary')
+        if "cellranger_count" in fields:
+            summary_tbl.add_css_classes('single_library_analyses',
+                                        column='cellranger_count')
         # Append to the summary section
         summary.add(
             "%d sample%s | %d fastq%s" % (
@@ -1714,14 +1762,35 @@ class QCReportFastqGroup(object):
                     if skip_sample_metrics:
                         value = "&nbsp;"
                     else:
-                        web_summary = self.reporters[read].\
-                                      cellranger_count.web_summary
-                        if relpath:
-                            web_summary = os.path.relpath(web_summary,
-                                                          relpath)
-                        value = Link(
-                            self.reporters[read].cellranger_count.sample_name,
-                            web_summary)
+                        if len(self.reporters[read].cellranger_count) == 1:
+                            # Report single summary
+                            cellranger_count = self.reporters[read].\
+                                               cellranger_count[0]
+                            web_summary = cellranger_count.web_summary
+                            if relpath:
+                                web_summary = os.path.relpath(web_summary,
+                                                              relpath)
+                            value = Link(cellranger_count.sample_name,
+                                         web_summary)
+                        else:
+                            # Report multiple outputs
+                            value = List()
+                            for cellranger_count in self.reporters[read].\
+                                cellranger_count:
+                                web_summary = cellranger_count.web_summary
+                                if relpath:
+                                    web_summary = os.path.relpath(web_summary,
+                                                                  relpath)
+                                pipeline_name = cellranger_count.pipeline_name
+                                version = cellranger_count.version
+                                reference = os.path.basename(
+                                    cellranger_count.reference_data)
+                                cellranger = "%s%s" % (pipeline_name,
+                                                       (' %s' % version
+                                                       if version else ''))
+                                value.add_item(Link("%s %s" % (cellranger,
+                                                               reference),
+                                                    web_summary))
                 else:
                     raise KeyError("'%s': unrecognised field for summary "
                                    "table" % field)
@@ -1848,10 +1917,26 @@ class QCReportFastq(object):
             fastq_screen_versions = WarningIcon(size=20)
         self.program_versions['fastq_screen'] = fastq_screen_versions
         # Cellranger count outputs
-        self.cellranger_count = CellrangerCount(
-            os.path.join(qc_dir,
-                         "cellranger_count",
-                         self.sample_name))
+        self.cellranger_count = []
+        cellranger_count_dir = os.path.join(qc_dir,"cellranger_count")
+        if os.path.isdir(cellranger_count_dir):
+            for d in walk(cellranger_count_dir):
+                if os.path.isdir(d) and \
+                   os.path.basename(d) == self.sample_name:
+                    if not os.path.join(cellranger_count_dir,
+                                    self.sample_name) == d:
+                        # Extract version number and reference from
+                        # the path
+                        reference = d.split(os.sep)[-2]
+                        version = d.split(os.sep)[-3]
+                    else:
+                        # No version or reference in path
+                        reference = None
+                        version = None
+                    self.cellranger_count.append(
+                        CellrangerCount(d,
+                                        version=version,
+                                        reference_data=reference))
 
     def report_fastqc(self,document,relpath=None):
         """
@@ -2048,6 +2133,7 @@ def verify(project,qc_dir=None,qc_protocol=None):
         fastq_strand_conf = None
     logger.debug("verify: fastq_strand conf file : %s" %
                  fastq_strand_conf)
+    cellranger_version = None
     cellranger_refdata = None
     qc_info_file = os.path.join(qc_dir,"qc.info")
     if os.path.exists(qc_info_file):
@@ -2056,11 +2142,16 @@ def verify(project,qc_dir=None,qc_protocol=None):
             cellranger_refdata = qc_info['cellranger_refdata']
         except KeyError:
             pass
+        try:
+            cellranger_version = qc_info['cellranger_version']
+        except KeyError:
+            pass
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
     verified = True
     for f in expected_outputs(project,qc_dir,
                               fastq_strand_conf=fastq_strand_conf,
+                              cellranger_version=cellranger_version,
                               cellranger_refdata=cellranger_refdata,
                               qc_protocol=qc_protocol):
         if not os.path.exists(f):
