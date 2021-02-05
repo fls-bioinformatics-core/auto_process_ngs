@@ -347,6 +347,10 @@ class QCPipeline(Pipeline):
             self.add_task(get_cellranger,
                           requires=(required_cellranger,),
                           envmodules=self.envmodules['cellranger'])
+            check_cellranger_count_requires.append(get_cellranger)
+            update_qc_metadata_requires.append(get_cellranger)
+            qc_metadata['cellranger_version'] = \
+                    get_cellranger.output.package_version
 
             # Get reference data for cellranger
             get_cellranger_reference_data = GetCellrangerReferenceData(
@@ -395,6 +399,9 @@ class QCPipeline(Pipeline):
                 fastq_dir=fastq_dir,
                 qc_dir=qc_dir,
                 qc_protocol=qc_protocol,
+                cellranger_version=get_cellranger.output.package_version,
+                cellranger_ref_data=\
+                get_cellranger_reference_data.output.reference_data_path,
                 verbose=self.params.VERBOSE
             )
             self.add_task(check_cellranger_count,
@@ -691,7 +698,7 @@ class UpdateQCMetadata(PipelineTask):
     Update the metadata stored for this QC run
     """
     def init(self,project,qc_dir,protocol=None,organism=None,
-             cellranger_refdata=None):
+             cellranger_version=None,cellranger_refdata=None):
         """
         Initialise the UpdateQCMetadata task
 
@@ -705,6 +712,8 @@ class UpdateQCMetadata(PipelineTask):
           protocol (str): QC protocol being used
           organism (str): organism(s) associated with the
             run
+          cellranger_version (str): version of cellranger
+            software used
           cellranger_refdata (str): path to reference datasets
             used by cellranger count
         """
@@ -715,6 +724,7 @@ class UpdateQCMetadata(PipelineTask):
         qc_info['protocol'] = self.args.protocol
         qc_info['fastq_dir'] = self.args.project.fastq_dir
         qc_info['organism'] = self.args.organism
+        qc_info['cellranger_version'] = self.args.cellranger_version
         qc_info['cellranger_refdata'] = self.args.cellranger_refdata
         qc_info.save()
 
@@ -1220,7 +1230,8 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
     Check the outputs from cellranger(-atac) count
     """
     def init(self,project,fastq_dir=None,qc_dir=None,
-             qc_protocol=None,verbose=False):
+             qc_protocol=None,cellranger_version=None,
+             cellranger_ref_data=None,verbose=False):
         """
         Initialise the CheckCellrangerCountOutputs task.
 
@@ -1233,6 +1244,10 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             for 'count' QC outputs (e.g. metrics CSV and
             summary HTML files)
           qc_protocol (str): QC protocol to use
+          cellranger_version (str): version number of
+            10xGenomics package
+          cellranger_ref_data (str): name or path to
+            reference dataset for single library analysis
           verbose (bool): if True then print additional
             information from the task
 
@@ -1246,6 +1261,10 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
         self.add_output('fastq_dir',Param(type=str))
         self.add_output('samples',list())
     def setup(self):
+        if not self.args.cellranger_ref_data:
+            # No reference data, nothing to check
+            return
+        # Determine which checking function to use
         if self.args.qc_protocol in ("10x_scRNAseq",
                                      "10x_snRNAseq",):
             check_outputs = check_cellranger_count_outputs
@@ -1254,12 +1273,22 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
         elif self.args.qc_protocol in ("10x_Multiome_ATAC",
                                        "10x_Multiome_GEX",):
             check_outputs = check_cellranger_arc_count_outputs
+        # Set the prefix for cellranger/10x outputs
+        prefix = os.path.join("cellranger_count",
+                              self.args.cellranger_version,
+                              os.path.basename(self.args.cellranger_ref_data))
+        # Check if the outputs exist
         self.add_call("Check cellranger count outputs for %s"
                       % self.args.project.name,
                       check_outputs,
                       self.args.project,
-                      self.args.qc_dir)
+                      self.args.qc_dir,
+                      prefix=prefix)
     def finish(self):
+        if not self.args.cellranger_ref_data:
+            # No reference data, nothing to check
+            print("No reference data to check against")
+            return
         # Collect the sample names with missing outputs
         for result in self.result():
             self.output.samples.extend(result)
@@ -1373,6 +1402,8 @@ class RunCellrangerCount(PipelineTask):
             counts_dir = os.path.abspath(
                 os.path.join(self.args.out_dir,
                              "cellranger_count",
+                             cellranger_version,
+                             os.path.basename(self.args.reference_data_path),
                              sample))
             outs_dir = os.path.join(counts_dir,"outs")
             for f in self._outs_files:
@@ -1469,8 +1500,7 @@ class RunCellrangerCount(PipelineTask):
                                    sample)
             print("Sample: %s" % sample)
             if not os.path.exists(top_dir):
-                # Cellranger count wasn't run for this
-                # sample
+                # Cellranger count wasn't run for this sample
                 print("'cellranger count' not run for this sample?")
                 continue
             outs_dir = os.path.join(top_dir,"outs")
@@ -1493,7 +1523,11 @@ class RunCellrangerCount(PipelineTask):
                 # Move count outputs to final destination
                 count_dir = os.path.abspath(
                     os.path.join(self.args.out_dir,
-                                 "cellranger_count"))
+                                 "cellranger_count",
+                                 self.args.cellranger_version,
+                                 os.path.basename(
+                                     self.args.reference_data_path)
+                                 ))
                 print("Moving %s to %s" % (top_dir,count_dir))
                 if not os.path.exists(count_dir):
                     mkdirs(count_dir)
@@ -1504,7 +1538,10 @@ class RunCellrangerCount(PipelineTask):
             # Top level output directory
             count_dir = os.path.abspath(
                 os.path.join(self.args.out_dir,
-                             "cellranger_count"))
+                             "cellranger_count",
+                             self.args.cellranger_version,
+                             os.path.basename(
+                                 self.args.reference_data_path)))
             for sample in self.args.samples:
                 print("Sample: %s" % sample)
                 # Location of outputs
@@ -1514,6 +1551,9 @@ class RunCellrangerCount(PipelineTask):
                 qc_dir = os.path.abspath(
                     os.path.join(self.args.qc_dir,
                                  "cellranger_count",
+                                 self.args.cellranger_version,
+                                 os.path.basename(
+                                     self.args.reference_data_path),
                                  sample))
                 qc_outs_dir = os.path.join(qc_dir,"outs")
                 # Make directories and copy the files
