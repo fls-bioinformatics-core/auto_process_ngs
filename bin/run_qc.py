@@ -325,6 +325,7 @@ if __name__ == "__main__":
             else:
                 inputs.append(ff)
     # Get list of Fastqs from directory
+    dir_path = None
     if len(inputs) == 1 and os.path.isdir(inputs[0]):
         dir_path = inputs[0]
         if not os.path.isdir(dir_path):
@@ -525,7 +526,10 @@ if __name__ == "__main__":
     # Output directory
     announce("Setting up output destinations")
     if not out_dir:
-        out_dir = os.getcwd()
+        if dir_path:
+            out_dir = dir_path
+        else:
+            out_dir = os.getcwd()
     out_dir = os.path.abspath(out_dir)
     print("Output directory: %s" % out_dir)
     if not os.path.exists(out_dir):
