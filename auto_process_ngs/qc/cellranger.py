@@ -11,7 +11,8 @@ class CellrangerCount(object):
     details of the outputs (such as sample name and file
     paths).
     """
-    def __init__(self,cellranger_count_dir):
+    def __init__(self,cellranger_count_dir,cellranger_exe=None,
+                 version=None,reference_data=None):
         """
         Create a new CellrangerCount instance
 
@@ -19,17 +20,46 @@ class CellrangerCount(object):
           cellranger_count_dir (str): path to the cellranger
             count output directory for a sample (e.g.
             ``.../cellranger_count/SAMPLE``)
+          cellranger_exe (str): the cellranger executable that
+            generated the outputs
+          version (str): the version of cellranger used
+          reference_data (str): the reference dataset
         """
+        # Store path to top-level directory and sample name
         self._cellranger_count_dir = os.path.abspath(
             cellranger_count_dir)
         try:
             self._sample_name = os.path.basename(self.dir)
         except OSError:
             self._sample_name = None
+        # Deal with additional data items
+        if not cellranger_exe:
+            try:
+                cellranger_exe = self.cmdline.split()[0]
+            except Exception:
+                pass
+        self._cellranger_exe = cellranger_exe
+        if not reference_data:
+            try:
+                args = self.cmdline.split()
+                for idx,arg in enumerate(args):
+                    if arg in ('--transcriptome',
+                               '--reference',):
+                        reference_data = args[idx+1]
+                        break
+            except Exception:
+                pass
+        self._reference_data = reference_data
+        self._version = version
+        # Paths to metrics and web summary files
+        metrics_csv = "metrics_summary.csv"
+        if self.pipeline_name in ('cellranger-atac',
+                                  'cellranger-arc'):
+            metrics_csv = "summary.csv"
         try:
             self._metrics_csv = os.path.join(self.dir,
                                              "outs",
-                                             "metrics_summary.csv")
+                                             metrics_csv)
         except OSError:
             self._metrics_csv = None
         try:
@@ -57,6 +87,46 @@ class CellrangerCount(object):
         return self._sample_name
 
     @property
+    def cellranger_exe(self):
+        """
+        Cellranger executable
+        """
+        return self._cellranger_exe
+
+    @property
+    def pipeline_name(self):
+        """
+        Pipeline name i.e. name of the software package
+        """
+        exe = self.cellranger_exe
+        if exe:
+            if exe.endswith("bin/count"):
+                # Special case: 'count' was run directly
+                if "cellranger-cs" in exe.split(os.sep):
+                    return "cellranger"
+                elif "cellranger-atac-cs" in exe.split(os.sep):
+                    return "cellranger-atac"
+            # Default: take name of executable
+            return os.path.basename(exe)
+        else:
+            # Couldn't get the executable
+            return None
+
+    @property
+    def version(self):
+        """
+        Cellranger version
+        """
+        return self._version
+
+    @property
+    def reference_data(self):
+        """
+        Reference dataset
+        """
+        return self._reference_data
+
+    @property
     def metrics_csv(self):
         """
         Path to the cellranger count 'metrics.csv' file
@@ -73,5 +143,18 @@ class CellrangerCount(object):
         if self._web_summary and os.path.isfile(self._web_summary):
             return self._web_summary
         raise OSError("'%s': not a file" % self._web_summary)
+
+    @property
+    def cmdline(self):
+        """
+        Return the command line used to run 'cellranger* count'
+        """
+        try:
+            cmdline_file = os.path.join(self.dir,"_cmdline")
+        except OSError:
+            return None
+        if os.path.exists(cmdline_file):
+            with open(cmdline_file,'rt') as fp:
+                return fp.read().strip()
         
         
