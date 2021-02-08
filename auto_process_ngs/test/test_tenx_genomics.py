@@ -439,13 +439,15 @@ class TestGexSummary(unittest.TestCase):
             shutil.rmtree(self.wd)
             
     def test_gex_summary(self):
-        """GexSummary: check estimated number of cells is extracted
+        """GexSummary: check metrics are extracted from CSV file
         """
         summary_csv = os.path.join(self.wd,"metrics_summary.csv")
         with open(summary_csv,'w') as fp:
             fp.write(METRICS_SUMMARY)
         m = GexSummary(summary_csv)
         self.assertEqual(m.estimated_number_of_cells,2272)
+        self.assertEqual(m.mean_reads_per_cell,107875)
+        self.assertEqual(m.median_genes_per_cell,1282)
 
 class TestAtacSummary(unittest.TestCase):
     """
@@ -461,7 +463,7 @@ class TestAtacSummary(unittest.TestCase):
             shutil.rmtree(self.wd)
 
     def test_atac_summary(self):
-        """AtacSummary: check detected/annotated numbers of cells are extracted
+        """AtacSummary: check metrics are extracted from CSV file
         """
         summary_csv = os.path.join(self.wd,"summary.csv")
         with open(summary_csv,'w') as fp:
@@ -469,6 +471,9 @@ class TestAtacSummary(unittest.TestCase):
         s = AtacSummary(summary_csv)
         self.assertEqual(s.cells_detected,6748)
         self.assertEqual(s.annotated_cells,5682)
+        self.assertEqual(s.median_fragments_per_cell,16119.5)
+        self.assertEqual(s.frac_fragments_overlapping_targets,
+                         0.575082094792)
 
 class TestMultiomeSummary(unittest.TestCase):
     """
@@ -484,13 +489,16 @@ class TestMultiomeSummary(unittest.TestCase):
             shutil.rmtree(self.wd)
 
     def test_atac_summary_multiome(self):
-        """MultiomeSummary: check estimated number of cells are extracted
+        """MultiomeSummary: check metrics are extracted from CSV file
         """
         summary_csv = os.path.join(self.wd,"summary.csv")
         with open(summary_csv,'w') as fp:
             fp.write(MULTIOME_SUMMARY)
         s = MultiomeSummary(summary_csv)
         self.assertEqual(s.estimated_number_of_cells,744)
+        self.assertEqual(
+            s.atac_median_high_quality_fragments_per_cell,8079)
+        self.assertEqual(s.gex_median_cells_per_gene,1490)
 
 class TestMultiomeLibraries(unittest.TestCase):
     """

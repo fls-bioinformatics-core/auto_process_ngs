@@ -205,6 +205,18 @@ class GexSummary(MetricsSummary):
         Return the estimated number of cells
         """
         return self.fetch('Estimated Number of Cells')
+    @property
+    def mean_reads_per_cell(self):
+        """
+        Return the mean reads per cell
+        """
+        return self.fetch('Mean Reads per Cell')
+    @property
+    def median_genes_per_cell(self):
+        """
+        Return the median genes per cell
+        """
+        return self.fetch('Median Genes per Cell')
 
 class AtacSummary(MetricsSummary):
     """
@@ -237,6 +249,18 @@ class AtacSummary(MetricsSummary):
         Return the number of annotated cells
         """
         return self.fetch('annotated_cells')
+    @property
+    def median_fragments_per_cell(self):
+        """
+        Return the median fragments per cell
+        """
+        return self.fetch('median_fragments_per_cell')
+    @property
+    def frac_fragments_overlapping_targets(self):
+        """
+        Return the fraction of fragments overlapping targets
+        """
+        return self.fetch('frac_fragments_overlapping_targets')
 
 class MultiomeSummary(MetricsSummary):
     """
@@ -263,6 +287,20 @@ class MultiomeSummary(MetricsSummary):
         Return the estimated number of cells
         """
         return self.fetch('Estimated number of cells')
+    @property
+    def atac_median_high_quality_fragments_per_cell(self):
+        """
+        Return the median high-quality fragments per cell
+        for ATAC data
+        """
+        return self.fetch(
+            'ATAC Median high-quality fragments per cell')
+    @property
+    def gex_median_cells_per_gene(self):
+        """
+        Return the median genes per cell for GEX data
+        """
+        return self.fetch('GEX Median genes per cell')
 
 class MultiomeLibraries(object):
     """
