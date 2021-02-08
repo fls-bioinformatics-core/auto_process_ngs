@@ -111,14 +111,15 @@ class MetricsSummary(object):
     This class extracts the data values and where
     possible converts them to integers.
     """
-    def __init__(self,s):
+    def __init__(self,f):
         """
         Create a new MetricsSummary instance
 
         Arguments:
-          s (str): contents of a
-            'metrics_summary.csv' file
+          f (str): path to the 'metrics_summary.csv' file
         """
+        with open(f,'rt') as fp:
+            s = fp.read()
         self._data = dict()
         s = s.split('\n')
         fields = self._tokenise(s[0])
@@ -658,9 +659,8 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 return 1
             # Extract cell numbers
             try:
-                with open(metrics_summary_csv,'rt') as fp:
-                    metrics = MetricsSummary(fp.read())
-                    number_of_cells += metrics.estimated_number_of_cells
+                metrics = MetricsSummary(metrics_summary_csv)
+                number_of_cells += metrics.estimated_number_of_cells
                 continue
             except Exception as ex:
                 logger.critical("Failed to add cell count for sample "
