@@ -122,7 +122,8 @@ table.metadata tr td:first-child {
           background-color: grey;
           color: white;
           padding: 2px 5px;
-          font-weight: bold; }
+          font-weight: bold;
+          vertical-align: top; }
 /* Summary table */
 table.summary { border: solid 1px grey;
           background-color: white;
@@ -596,6 +597,7 @@ class QCProject(object):
         cellranger_count_dir = os.path.join(self.qc_dir,
                                             "cellranger_count")
         cellranger_samples = []
+        cellranger_references = set()
         if os.path.isdir(cellranger_count_dir):
             cellranger_name = None
             versions = set()
@@ -610,6 +612,7 @@ class QCProject(object):
                     output_files.append(cellranger.web_summary)
                     cellranger_samples.append(d)
                     cellranger_name = cellranger.pipeline_name
+                    cellranger_references.add(cellranger.reference_data)
                 except OSError:
                     pass
             if cellranger_samples:
@@ -641,6 +644,8 @@ class QCProject(object):
                             output_files.append(cellranger.web_summary)
                             cellranger_versioned_samples[ver][ref].append(smpl)
                             cellranger_name = cellranger.pipeline_name
+                            cellranger_references.add(
+                                cellranger.reference_data)
                         except OSError:
                             pass
                     # Add outputs, samples and version
@@ -684,6 +689,8 @@ class QCProject(object):
             samples.add(s)
         self.samples = sorted(list(samples),
                               key=lambda s: split_sample_name(s))
+        # Single library analyses reference data
+        self.cellranger_references = sorted(list(cellranger_references))
         # QC outputs
         self.outputs = sorted(list(outputs))
         # Software versions
@@ -807,7 +814,7 @@ class QCReport(Document):
         'number_of_cells': 'Number of cells',
         'organism': 'Organism',
         'protocol': 'QC protocol',
-        'cellranger_reference': 'Cellranger reference dataset',
+        'cellranger_reference': 'Cellranger reference datasets',
         'multiqc': 'MultiQC report',
         'icell8_stats': 'ICELL8 statistics',
         'icell8_report': 'ICELL8 processing report',
@@ -1235,15 +1242,18 @@ class QCReport(Document):
                             # Unable to determine run id
                             continue
                     elif item == 'cellranger_reference':
-                        path = project.qc_info.cellranger_refdata
-                        if path is None:
-                            # No reference dataset
-                            continue
-                        if os.path.dirname(path):
-                            value = "...%s%s" % (os.sep,
-                                                 os.path.basename(path))
+                        if len(project.cellranger_references) == 1:
+                            # Single reference dataset
+                            value = os.path.basename(
+                                project.cellranger_references[0])
+                        elif len(project.cellranger_references) > 1:
+                            # Many reference datasets
+                            value = List()
+                            for ref in project.cellranger_references:
+                                value.add_item(os.path.basename(ref))
                         else:
-                            value = path
+                            # No reference datasets
+                            continue
                     elif item == 'multiqc':
                         multiqc_report = "multi%s_report.html" \
                                          % os.path.basename(project.qc_dir)
