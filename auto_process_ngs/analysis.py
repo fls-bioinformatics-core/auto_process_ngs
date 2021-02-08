@@ -643,7 +643,7 @@ class AnalysisProject(object):
                             "for project '%s': directory doesn't exist"
                             % (new_primary_fastq_dir,self.name))
 
-    def use_fastq_dir(self,fastq_dir=None):
+    def use_fastq_dir(self,fastq_dir=None,strict=True):
         """
         Switch fastq directory and repopulate
 
@@ -652,6 +652,17 @@ class AnalysisProject(object):
 
         Relative paths are assumed to be subdirectories
         of the project directory.
+
+        Arguments:
+          fastq_dir (str): path to the fastq dir to switch
+            to; must be a subdirectory of the project,
+            otherwise an exception is raised unless 'strict'
+            is set to False
+          strict (bool): if True (the default) then
+            'fastq_dir' must resolve to a subdirectory of
+            the project; otherwise an exception is raised.
+            Setting 'strict' to False allows the fastq dir
+            to be outside of the project
         """
         if fastq_dir is None:
             fastq_dir = self.info.primary_fastq_dir
@@ -669,9 +680,12 @@ class AnalysisProject(object):
         full_fastq_dir = os.path.normpath(full_fastq_dir)
         if full_fastq_dir not in [os.path.normpath(os.path.join(self.dirn,d))
                                   for d in self.fastq_dirs]:
-            raise Exception("Fastq dir '%s' not found in "
-                            "project '%s' (%s)" %
-                            (fastq_dir,self.name,self.dirn))
+            msg = "Fastq dir '%s' not found in project '%s' (%s)" % \
+                  (fastq_dir,self.name,self.dirn)
+            if strict:
+                raise Exception(msg)
+            else:
+                logger.warning(msg)
         self.populate(fastq_dir=fastq_dir)
 
     def setup_qc_dir(self,qc_dir=None,fastq_dir=None):

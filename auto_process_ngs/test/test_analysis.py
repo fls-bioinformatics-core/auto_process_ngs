@@ -833,6 +833,43 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertRaises(Exception,
                           project.use_fastq_dir,'fastqs.non_existant')
 
+    def test_analysis_project_switch_to_fastq_dir_outside_project_strict(self):
+        """Check AnalysisProject fails when switching to fastqs dir outside the project
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        external_fastqs_dir = os.path.join(self.dirn,"external_fastqs")
+        os.mkdir(external_fastqs_dir)
+        for fq in ('PJB2-A_ACAGTG_L001_R1_001.fastq.gz',
+                   'PJB2-B_ACAGTG_L002_R1_001.fastq.gz',):
+            with open(os.path.join(external_fastqs_dir,fq),'wt') as fp:
+                fp.write("")
+        project = AnalysisProject('PJB',dirn)
+        self.assertRaises(Exception,
+                          project.use_fastq_dir,external_fastqs_dir)
+
+    def test_analysis_project_switch_to_fastq_dir_outside_project_not_strict(self):
+        """Check AnalysisProject ok when switching to fastqs dir outside the project when 'strict' is off
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        external_fastqs_dir = os.path.join(self.dirn,"external_fastqs")
+        os.mkdir(external_fastqs_dir)
+        for fq in ('PJB2-A_ACAGTG_L001_R1_001.fastq.gz',
+                   'PJB2-B_ACAGTG_L002_R1_001.fastq.gz',):
+            with open(os.path.join(external_fastqs_dir,fq),'wt') as fp:
+                fp.write("")
+        project = AnalysisProject('PJB',dirn)
+        project.use_fastq_dir(external_fastqs_dir,strict=False)
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(external_fastqs_dir))
+
     def test_analysis_project_switch_fastq_dir_preserves_qc_dir(self):
         """Check AnalysisProject switch fastqs dirs preserves QC dir
         """
