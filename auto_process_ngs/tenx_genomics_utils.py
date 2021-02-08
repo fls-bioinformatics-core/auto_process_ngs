@@ -11,6 +11,7 @@ Utility classes and functions for processing the outputs from 10xGenomics
 platforms:
 
 - MetricSummary
+- GexSummary
 - AtacSummary
 - MultiomeSummary
 - MultiomeLibraries
@@ -86,22 +87,20 @@ CELLRANGER_ASSAY_CONFIGS = {
 # Classes
 #######################################################################
 
-class MetricsSummary(object):
+class MetricsSummary(TabFile):
     """
-    Extract data from metrics_summary.csv file
+    Base class for extracting data from cellranger* count
+    *summary.csv files
 
-    Utility class for extracting data from a
-    'metrics_summary.csv' file output from running
-    'cellranger count'.
-
-    The file consists of two lines: the first is a
+    The files consists of two lines: the first is a
     header line, the second consists of corresponding
     data values.
 
-    In addition: integer data values are formatted to
-    use commas to separate thousands (e.g. 2,272) and
-    values which contain commas are enclosed in
-    double quotes.
+    In addition: in some variants (e.g.
+    'metrics_summary.csv'), integer data values are formatted
+    to use commas to separate thousands (e.g. 2,272) and
+    values which contain commas are enclosed in double
+    quotes.
 
     For example:
 
@@ -118,17 +117,23 @@ class MetricsSummary(object):
         Arguments:
           f (str): path to the 'metrics_summary.csv' file
         """
+        # Read in data from the file
         with open(f,'rt') as fp:
             s = fp.read()
         self._data = dict()
-        s = s.split('\n')
-        fields = self._tokenise(s[0])
-        line = self._tokenise(s[1])
-        for key,value in zip(fields,line):
-            self._data[key] = value
+        s = s.strip().split('\n')
+        if len(s) != 2:
+            raise Exception("%s: MetricsSummary expects 2 lines"
+                            % f)
+        # Set up the tabfile instance
+        TabFile.__init__(self,
+                         column_names=self._tokenise(s[0]),
+                         delimiter=',')
+        # Add the data
+        self.append(data=self._tokenise(s[1]))
     def _tokenise(self,line):
         """
-        Internal: process line from metrics_summary.csv
+        Internal: process line from *summary.csv
 
         Arguments:
           line (str): line to tokenise
@@ -168,14 +173,40 @@ class MetricsSummary(object):
             except ValueError:
                 pass
         return tokens
+    def fetch(self,field):
+        """
+        Fetch data associated with an arbitrary field
+        """
+        return self[0][field]
+
+class GexSummary(MetricsSummary):
+    """
+    Extract data from metrics_summary.csv file for scRNA-seq
+
+    Utility class for extracting data from a
+    'metrics_summary.csv' file output from running
+    'cellranger count'.
+
+    The file consists of two lines: the first is a
+    header line, the second consists of corresponding
+    data values.
+    """
+    def __init__(self,f):
+        """
+        Create a new GexSummary instance
+
+        Arguments:
+          f (str): path to the 'metrics_summary.csv' file
+        """
+        MetricsSummary.__init__(self,f)
     @property
     def estimated_number_of_cells(self):
         """
         Return the estimated number of cells
         """
-        return self._data['Estimated Number of Cells']
+        return self.fetch('Estimated Number of Cells')
 
-class AtacSummary(TabFile):
+class AtacSummary(MetricsSummary):
     """
     Extract data from summary.csv file for scATAC-seq
 
@@ -193,24 +224,21 @@ class AtacSummary(TabFile):
         Arguments:
           f (str): path to the 'summary.csv' file
         """
-        TabFile.__init__(self,
-                         filen=f,
-                         first_line_is_header=True,
-                         delimiter=',')
+        MetricsSummary.__init__(self,f)
     @property
     def cells_detected(self):
         """
         Return the number of cells detected
         """
-        return self[0]['cells_detected']
+        return self.fetch('cells_detected')
     @property
     def annotated_cells(self):
         """
         Return the number of annotated cells
         """
-        return self[0]['annotated_cells']
+        return self.fetch('annotated_cells')
 
-class MultiomeSummary(TabFile):
+class MultiomeSummary(MetricsSummary):
     """
     Extract data from summary.csv file for multiome GEX-ATAC
 
@@ -228,16 +256,13 @@ class MultiomeSummary(TabFile):
         Arguments:
           f (str): path to the 'summary.csv' file
         """
-        TabFile.__init__(self,
-                         filen=f,
-                         first_line_is_header=True,
-                         delimiter=',')
+        MetricsSummary.__init__(self,f)
     @property
     def estimated_number_of_cells(self):
         """
         Return the estimated number of cells
         """
-        return self[0]['Estimated number of cells']
+        return self.fetch('Estimated number of cells')
 
 class MultiomeLibraries(object):
     """
@@ -659,7 +684,7 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 return 1
             # Extract cell numbers
             try:
-                metrics = MetricsSummary(metrics_summary_csv)
+                metrics = GexSummary(metrics_summary_csv)
                 number_of_cells += metrics.estimated_number_of_cells
                 continue
             except Exception as ex:

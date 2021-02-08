@@ -425,14 +425,26 @@ class TestSpacerangerInfo(unittest.TestCase):
         self.assertEqual(spaceranger_info(name='spaceranger'),
                          (spaceranger,'spaceranger','1.1.0'))
 
-class TestMetricsSummary(unittest.TestCase):
+class TestGexSummary(unittest.TestCase):
     """
-    Tests for the 'MetricsSummary' class
+    Tests for the 'GexSummary' class
     """
-    def test_metrics_summary(self):
-        """MetricsSummary: check estimated number of cells is extracted
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestGexSummary')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+            
+    def test_gex_summary(self):
+        """GexSummary: check estimated number of cells is extracted
         """
-        m = MetricsSummary(METRICS_SUMMARY)
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(METRICS_SUMMARY)
+        m = GexSummary(summary_csv)
         self.assertEqual(m.estimated_number_of_cells,2272)
 
 class TestAtacSummary(unittest.TestCase):
