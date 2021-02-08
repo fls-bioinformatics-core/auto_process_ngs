@@ -450,13 +450,17 @@ class QCProject(object):
         """
         return (self.info['single_cell_platform'] is not None)
 
-    def software_info(self,pkg):
+    def software_info(self,pkg,exclude_processing=False):
         """
         Get information on software package
 
         Arguments:
-          pkg (string): name of software package to
-            get information about
+          pkg (str): name of software package to get
+            information about
+          exclude_processing (bool): if True then don't
+            fall back to processing software information
+            if package is not found (default: False, do
+            fall back to checking processing software)
 
         Returns:
           String: software version information, or
@@ -467,6 +471,9 @@ class QCProject(object):
             if self.software[pkg]:
                 return ','.join(self.software[pkg])
         except KeyError:
+            if exclude_processing:
+                # Don't check processing software
+                return None
             try:
                 return self.processing_software[pkg][2]
             except KeyError:
