@@ -1814,6 +1814,7 @@ class QCReportFastqGroup(object):
                     if skip_sample_metrics:
                         value = "&nbsp;"
                     else:
+                        read = self.reads[0]
                         if len(self.reporters[read].cellranger_count) == 1:
                             # Report single summary
                             cellranger_count = self.reporters[read].\
