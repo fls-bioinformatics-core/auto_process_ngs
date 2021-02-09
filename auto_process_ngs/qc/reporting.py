@@ -1368,77 +1368,39 @@ class QCReport(Document):
             sample_title,
             name=sample_name,
             css_classes=('sample',))
-        # Get Fastq groups
-        fastqs = sorted(list(
-            filter(lambda fq:
-                   project.fastq_attrs(fq).sample_name == sample,
-                   project.fastqs)))
-        fastq_groups = group_fastqs_by_name(fastqs,project.fastq_attrs)
-        # Location of QC artefacts
-        qc_dir = project.qc_dir
-        if self.data_dir:
-            qc_dir = os.path.join(self.data_dir,
-                                  sanitize_name(project.id),
-                                  os.path.basename(qc_dir))
-        # Report number of fastqs and reads
-        reads = QCReportFastqGroup(fastq_groups[0],
-                                   qc_dir=qc_dir,
-                                   project_id=project.id,
-                                   fastq_attrs=project.fastq_attrs).reads
+        reporter = QCReportSample(project,
+                                  sample,
+                                  fastq_attrs=project.fastq_attrs)
+        reads = reporter.reads
+        n_fastq_groups = len(reporter.fastq_groups)
         if len(reads) == 1:
             sample_report.add("%d %s Fastq%s" %
-                              (len(fastq_groups),
+                              (n_fastq_groups,
                                reads[0].upper(),
-                               's' if len(fastq_groups) > 1 else ''))
+                               's' if n_fastq_groups > 1 else ''))
         elif len(reads) == 2:
             sample_report.add("%d %s Fastq pair%s" %
-                              (len(fastq_groups),
+                              (n_fastq_groups,
                                '/'.join([r.upper() for r in reads]),
-                              's' if len(fastq_groups) > 1 else ''))
+                              's' if n_fastq_groups > 1 else ''))
         else:
             sample_report.add("%d %s Fastq group%s" %
-                              (len(fastq_groups),
+                              (n_fastq_groups,
                                '/'.join([r.upper() for r in reads]),
-                              's' if len(fastq_groups) > 1 else ''))
-        # Keep track of the first line in the summary
-        # table, as per-sample metrics (and name)
-        # should only be reported on the first line
-        first_line = True
-        # Report each Fastq group
-        for fastqs in fastq_groups:
-            # Report Fastq pair
-            fastq_group = QCReportFastqGroup(fastqs,
-                                             qc_dir=qc_dir,
-                                             project_id=project.id,
-                                             fastq_attrs=project.fastq_attrs)
-            fastq_group.report(sample_report,
-                               attrs=report_attrs,
-                               relpath=self.relpath)
-            # Add line in summary table
-            if sample is not None:
-                if first_line:
-                    # Only display sample name on first line
-                    idx = summary_table.add_row(
-                        sample=Link(sample,
-                                    sample_report))
-                else:
-                    # Don't display sample name for subsequent
-                    # lines in summary table
-                    idx = summary_table.add_row(sample="&nbsp;")
-            else:
-                idx = summary_table.add_row(sample="&nbsp;")
-            status = fastq_group.update_summary_table(
-                summary_table,idx=idx,
-                fields=summary_fields,
-                relpath=self.relpath,
-                skip_sample_metrics=(not first_line))
-            if not status:
-                # Update flag to indicate problems with the
-                # report
-                self.status = False
-            # Update flag to indicate no longer on
-            # first line for this sample
-            first_line = False
+                              's' if n_fastq_groups_ > 1 else ''))
+        # Report the Fastq groups within the sample
+        reporter.report_fastq_groups(sample_report,
+                                     attrs=report_attrs,
+                                     relpath=self.relpath)
+        # Update the summary table
+        status = reporter.update_summary_table(summary_table,
+                                               sample_report=sample_report,
+                                               fields=summary_fields,
+                                               relpath=self.relpath)
+        if not status:
+            # Update flag to indicate problems with the
+            # report
+            self.status = False
 
     def report_status(self):
         """
@@ -1447,6 +1409,235 @@ class QCReport(Document):
         if self.status:
             # Turn off display of warnings section
             self.warnings.add_css_classes("hide")
+
+class QCReportSample(object):
+    """
+    Utility class for reporting the QC for a sample
+
+    Provides the following properties:
+
+    sample: name of the sample
+    fastqs: list of the Fastqs associated with the sample
+    reads: list of read ids e.g. ['r1','r2']
+    fastq_groups: list of QCReportFastq instances from
+      grouped Fastqs associated with the sample
+    cellranger_count: list of CellrangerCount instances
+      associated with the sample
+
+    Provides the following methods:
+
+    report_fastq_groups: add reports for Fastq groups in
+      the sample to a document section
+    update_summary_table: add lines to summary table for
+      the sample
+    """
+    # Summary fields provided at sample level
+    sample_summary_fields = (
+        'sample',
+        'cellranger_count',
+    )
+    def __init__(self,project,sample,fastq_attrs=AnalysisFastq):
+        """
+        Create a new QCReportSample
+
+        Arguments:
+          project (QCProject): project to report
+          sample (str): name of sample to report
+          fastq_attrs (BaseFastqAttrs): class for extracting
+            data from Fastq names
+        """
+        self.sample = str(sample)
+        self.fastq_groups = []
+        self.cellranger_count = []
+        # Group Fastqs associated with this project
+        self.fastqs = sorted(list(
+            filter(lambda fq:
+                   project.fastq_attrs(fq).sample_name == sample,
+                   project.fastqs)))
+        for fqs in group_fastqs_by_name(self.fastqs,fastq_attrs):
+            self.fastq_groups.append(QCReportFastqGroup(
+                fqs,
+                qc_dir=project.qc_dir,
+                project_id=project.id,
+                fastq_attrs=fastq_attrs))
+        # Reads associated with the sample
+        self.reads = [r for r in self.fastq_groups[0].reads]
+        # 10x single library analyses
+        cellranger_count_dir = os.path.join(project.qc_dir,
+                                            "cellranger_count")
+        if os.path.isdir(cellranger_count_dir):
+            for dirn in walk(cellranger_count_dir):
+                if os.path.isdir(dirn) and \
+                   os.path.basename(dirn) == sample:
+                    if not os.path.join(cellranger_count_dir,
+                                        sample) == dirn:
+                        # Extract version number and reference from
+                        # the path
+                        reference = dirn.split(os.sep)[-2]
+                        version = dirn.split(os.sep)[-3]
+                    else:
+                        # No version or reference in path
+                        reference = None
+                        version = None
+                    self.cellranger_count.append(
+                        CellrangerCount(dirn,
+                                        version=version,
+                                        reference_data=reference))
+
+    def report_fastq_groups(self,sample_report,attrs,relpath=None):
+        """
+        Add reports for all Fastq groups to a document section
+
+        Creates new subsections in 'sample_report' for each
+        Fastq group, to report data on each Fastq file in the
+        group.
+
+        The following 'attributes' that can be reported for
+        each Fastq are those available for the 'report' method
+        of the 'QCReportFastqGroup' class.
+
+        By default all attributes are reported.
+
+        Arguments:
+          sample_report (Section): section to add the reports
+            to
+          attrs (list): optional list of custom 'attributes'
+            to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        # Report each Fastq group
+        for fastq_group in self.fastq_groups:
+            # Report Fastq group in a subsection
+            if attrs:
+                fastq_group.report(sample_report,
+                                   attrs=attrs,
+                                   relpath=relpath)
+
+    def update_summary_table(self,summary_table,fields=None,
+                             sample_report=None,relpath=None):
+        """
+        Add a lines to a summary table reporting a sample
+
+        Creates a new lines in 'summary_table' (or updates an
+        existing line) for the sample (one line per Fastq
+        group), adding content for each specified field.
+
+        See the 'get_value' method for a list of valid fields.
+
+        Arguments:
+          summary_table (Table): table to update
+          fields (list): list of custom fields to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+
+        Returns:
+          Boolean: True if report didn't contain any issues,
+            False otherwise.
+        """
+        # Flag to indicate whether we're writing to the first
+        # line of the summary table for this sample, and only
+        # report name and sample-level metrics on the first line
+        first_line = True
+        # Reporting status
+        has_problems = False
+        # Report each Fastq group
+        for fastq_group in self.fastq_groups:
+            # Add line in summary table
+            if first_line:
+                # Only display sample name on first line
+                if sample_report:
+                    # Link to the sample report section
+                    idx = summary_table.add_row(
+                        sample=Link(self.sample,
+                                    sample_report))
+                else:
+                    # No link
+                    idx = summary_table.add_row(
+                        sample=self.sample)
+                # Add sample-level metrics
+                for field in fields:
+                    if field == "sample":
+                        # Ignore: was already set
+                        continue
+                    elif field not in self.sample_summary_fields:
+                        # Ignore non-sample level fields
+                        continue
+                    try:
+                        value = self.get_value(field,
+                                               relpath=relpath)
+                        summary_table.set_value(idx,field,value)
+                    except KeyError as ex:
+                        # Ignore and carry on
+                        logger.warning("Exception setting '%s' in "
+                                       "summary table "
+                                       "for sample %s: %s" %
+                                       (field,self.sample,ex))
+            else:
+                # Don't report sample name on subsequent
+                # lines in summary table
+                idx = summary_table.add_row(sample="&nbsp;")
+            status = fastq_group.update_summary_table(
+                summary_table,idx=idx,
+                fields=fields,
+                relpath=relpath)
+            if not status:
+                has_problems = True
+            # Update flag to indicate no longer on
+            # first line for this sample
+            first_line = False
+        return (not has_problems)
+
+    def get_value(self,field,relpath=None):
+        """
+        Return the value for the specified field
+
+        The following fields can be reported for each Fastq
+        pair:
+
+        - sample
+        - cellranger_count
+
+        Arguments:
+          field (str): name of the field to report; if the
+            field is not recognised then KeyError is raised
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        if field == "sample":
+            value = self.sample
+        elif field == "cellranger_count":
+            if len(self.cellranger_count) == 1:
+                # Report single summary
+                cellranger_count = self.cellranger_count[0]
+                web_summary = cellranger_count.web_summary
+                if relpath:
+                    web_summary = os.path.relpath(web_summary,
+                                                  relpath)
+                    value = Link(cellranger_count.sample_name,
+                                 web_summary)
+            else:
+                # Report multiple single library outputs
+                value = List()
+                for cellranger_count in self.cellranger_count:
+                    web_summary = cellranger_count.web_summary
+                    if relpath:
+                        web_summary = os.path.relpath(web_summary,
+                                                      relpath)
+                    pipeline_name = cellranger_count.pipeline_name
+                    version = cellranger_count.version
+                    reference = os.path.basename(
+                        cellranger_count.reference_data)
+                    cellranger = "%s%s" % (pipeline_name,
+                                           (' %s' % version
+                                            if version else ''))
+                    value.add_item(Link("%s %s" % (cellranger,
+                                                   reference),
+                                        web_summary))
+        else:
+            raise KeyError("'%s': unrecognised field for summary "
+                           "table" % field)
+        return value
 
 class QCReportFastqGroup(object):
     """
@@ -1685,7 +1876,7 @@ class QCReportFastqGroup(object):
         clear = fastqs_report.add_subsection(css_classes=("clear",))
 
     def update_summary_table(self,summary_table,idx=None,fields=None,
-                             relpath=None,skip_sample_metrics=False):
+                             relpath=None):
         """
         Add a line to a summary table reporting a Fastq group
 
@@ -1693,24 +1884,7 @@ class QCReportFastqGroup(object):
         existing line) for the Fastq pair, adding content for
         each specified field.
 
-        The following fields can be reported for each Fastq
-        pair:
-
-        - fastqs (if paired-end)
-        - fastq (if single-end)
-        - reads
-        - read_lengths
-        - boxplot_r1
-        - boxplot_r2
-        - boxplot_r3
-        - fastqc_r1
-        - fastqc_r2
-        - fastqc_r3
-        - screens_r1
-        - screens_r2
-        - screens_r3
-        - strandedness
-        - cellranger_count
+        See the 'get_value' method for a list of valid fields.
 
         Arguments:
           summary_table (Table): table to add the summary to
@@ -1720,9 +1894,6 @@ class QCReportFastqGroup(object):
           fields (list): list of custom fields to report
           relpath (str): if set then make link paths
             relative to 'relpath'
-          skip_sample_metrics (bool): if True then don't report
-            values for 'sample-level' metrics (e.g. cellranger
-            count outputs)
 
         Returns:
           Boolean: True if report didn't contain any issues,
@@ -1765,89 +1936,12 @@ class QCReportFastqGroup(object):
             idx = summary_table.add_row()
         # Populate with data
         for field in fields:
+            if field in QCReportSample.sample_summary_fields:
+                # Ignore sample-level fields
+                continue
             try:
-                if field == "sample":
-                    logger.debug("'sample' ignored")
-                    continue
-                elif field == "fastq" or field == "fastqs":
-                    value = []
-                    for read in self.reads:
-                        value.append(Link(self.reporters[read].name,
-                                          "#%s" % self.reporters[read].safe_name))
-                    value = "<br />".join([str(x) for x in value])
-                elif field == "reads":
-                    value = pretty_print_reads(
-                        self.reporters[self.reads[0]].fastqc.data.basic_statistics(
-                            'Total Sequences'))
-                elif field == "read_lengths":
-                    value = []
-                    for read in self.reads:
-                        value.append(Link(
-                            self.reporters[read].fastqc.data.basic_statistics(
-                                'Sequence length'),
-                            self.reporters[read].fastqc.summary.link_to_module(
-                                'Sequence Length Distribution',
-                                relpath=relpath)))
-                    value = "<br />".join([str(x) for x in value])
-                elif field.startswith("boxplot_"):
-                    read = field.split('_')[-1]
-                    value = Img(self.reporters[read].uboxplot(),
-                                href="#boxplot_%s" %
-                                self.reporters[read].safe_name)
-                elif field.startswith("fastqc_"):
-                    read = field.split('_')[-1]
-                    value = Img(self.reporters[read].ufastqcplot(),
-                                href="#fastqc_%s" %
-                                self.reporters[read].safe_name,
-                                title=self.reporters[read].fastqc_summary())
-                elif field.startswith("screens_"):
-                    read = field.split('_')[-1]
-                    value = Img(self.reporters[read].uscreenplot(),
-                                href="#fastq_screens_%s" %
-                                self.reporters[read].safe_name)
-                elif field == "strandedness":
-                    value = Img(self.ustrandplot(),
-                                href="#strandedness_%s" %
-                                self.reporters[self.reads[0]].safe_name,
-                                title=self.strandedness())
-                elif field == "cellranger_count":
-                    if skip_sample_metrics:
-                        value = "&nbsp;"
-                    else:
-                        read = self.reads[0]
-                        if len(self.reporters[read].cellranger_count) == 1:
-                            # Report single summary
-                            cellranger_count = self.reporters[read].\
-                                               cellranger_count[0]
-                            web_summary = cellranger_count.web_summary
-                            if relpath:
-                                web_summary = os.path.relpath(web_summary,
-                                                              relpath)
-                            value = Link(cellranger_count.sample_name,
-                                         web_summary)
-                        else:
-                            # Report multiple outputs
-                            value = List()
-                            for cellranger_count in self.reporters[read].\
-                                cellranger_count:
-                                web_summary = cellranger_count.web_summary
-                                if relpath:
-                                    web_summary = os.path.relpath(web_summary,
-                                                                  relpath)
-                                pipeline_name = cellranger_count.pipeline_name
-                                version = cellranger_count.version
-                                reference = os.path.basename(
-                                    cellranger_count.reference_data)
-                                cellranger = "%s%s" % (pipeline_name,
-                                                       (' %s' % version
-                                                       if version else ''))
-                                value.add_item(Link("%s %s" % (cellranger,
-                                                               reference),
-                                                    web_summary))
-                else:
-                    raise KeyError("'%s': unrecognised field for summary "
-                                   "table" % field)
-                # Put value into the table
+                # Populate fields in the table
+                value = self.get_value(field,relpath=relpath)
                 summary_table.set_value(idx,field,value)
             except KeyError as ex:
                 # Assume this is an unrecognised field
@@ -1874,6 +1968,80 @@ class QCReportFastqGroup(object):
         # Return the status
         return (not has_problems)
 
+    def get_value(self,field,relpath=None):
+        """
+        Return the value for the specified field
+
+        The following fields can be reported for each Fastq
+        group:
+
+        - fastqs (if paired-end)
+        - fastq (if single-end)
+        - reads
+        - read_lengths
+        - boxplot_r1
+        - boxplot_r2
+        - boxplot_r3
+        - fastqc_r1
+        - fastqc_r2
+        - fastqc_r3
+        - screens_r1
+        - screens_r2
+        - screens_r3
+        - strandedness
+
+        Arguments:
+          field (str): name of the field to report; if the
+            field is not recognised then KeyError is raised
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        if field == "fastq" or field == "fastqs":
+            value = []
+            for read in self.reads:
+                value.append(Link(self.reporters[read].name,
+                                  "#%s" % self.reporters[read].safe_name))
+            value = "<br />".join([str(x) for x in value])
+        elif field == "reads":
+            value = pretty_print_reads(
+                self.reporters[self.reads[0]].fastqc.data.basic_statistics(
+                    'Total Sequences'))
+        elif field == "read_lengths":
+            value = []
+            for read in self.reads:
+                value.append(Link(
+                    self.reporters[read].fastqc.data.basic_statistics(
+                        'Sequence length'),
+                    self.reporters[read].fastqc.summary.link_to_module(
+                        'Sequence Length Distribution',
+                        relpath=relpath)))
+            value = "<br />".join([str(x) for x in value])
+        elif field.startswith("boxplot_"):
+            read = field.split('_')[-1]
+            value = Img(self.reporters[read].uboxplot(),
+                        href="#boxplot_%s" %
+                        self.reporters[read].safe_name)
+        elif field.startswith("fastqc_"):
+            read = field.split('_')[-1]
+            value = Img(self.reporters[read].ufastqcplot(),
+                        href="#fastqc_%s" %
+                        self.reporters[read].safe_name,
+                        title=self.reporters[read].fastqc_summary())
+        elif field.startswith("screens_"):
+            read = field.split('_')[-1]
+            value = Img(self.reporters[read].uscreenplot(),
+                        href="#fastq_screens_%s" %
+                        self.reporters[read].safe_name)
+        elif field == "strandedness":
+            value = Img(self.ustrandplot(),
+                        href="#strandedness_%s" %
+                        self.reporters[self.reads[0]].safe_name,
+                        title=self.strandedness())
+        else:
+            raise KeyError("'%s': unrecognised field for summary "
+                           "table" % field)
+        return value
+
 class QCReportFastq(object):
     """
     Provides interface to QC outputs for Fastq file
@@ -1891,8 +2059,6 @@ class QCReportFastq(object):
     fastq_screen.SCREEN.txt: associated TXT file for SCREEN
     fastq_screen.SCREEN.version: associated version for SCREEN
     program_versions.NAME: version of package NAME
-    cellranger_count.web_summary: path to cellranger count web_summary.html
-    cellranger_count.metrics_cvs: path to cellranger count metrics.csv
 
     Provides the following methods:
 
@@ -1969,27 +2135,6 @@ class QCReportFastq(object):
         else:
             fastq_screen_versions = WarningIcon(size=20)
         self.program_versions['fastq_screen'] = fastq_screen_versions
-        # Cellranger count outputs
-        self.cellranger_count = []
-        cellranger_count_dir = os.path.join(qc_dir,"cellranger_count")
-        if os.path.isdir(cellranger_count_dir):
-            for d in walk(cellranger_count_dir):
-                if os.path.isdir(d) and \
-                   os.path.basename(d) == self.sample_name:
-                    if not os.path.join(cellranger_count_dir,
-                                    self.sample_name) == d:
-                        # Extract version number and reference from
-                        # the path
-                        reference = d.split(os.sep)[-2]
-                        version = d.split(os.sep)[-3]
-                    else:
-                        # No version or reference in path
-                        reference = None
-                        version = None
-                    self.cellranger_count.append(
-                        CellrangerCount(d,
-                                        version=version,
-                                        reference_data=reference))
 
     def report_fastqc(self,document,relpath=None):
         """
