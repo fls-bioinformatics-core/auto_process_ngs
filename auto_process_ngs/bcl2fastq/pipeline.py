@@ -27,13 +27,6 @@ Pipeline task classes:
 - FastqStatistics
 - ReportProcessingQC
 
-Utility classes:
-
-- BaseParam
-- FunctionParam
-- PathJoinParam
-- PathExistsParam
-
 Utility functions:
 
 - subset
@@ -83,6 +76,9 @@ from ..pipeliner import PipelineFunctionTask
 from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineFailure
 from ..pipeliner import PipelineParam as Param
+from ..pipeliner import FunctionParam
+from ..pipeliner import PathExistsParam
+from ..pipeliner import PathJoinParam
 from ..pipeliner import resolve_parameter
 from ..tenx_genomics_utils import add_cellranger_args
 from ..tenx_genomics_utils import cellranger_info
@@ -3169,157 +3165,6 @@ class ReportProcessingQC(PipelineTask):
         print("Moving processing QC report to final location")
         print("- %s" % self.args.report_html)
         os.rename(self.tmp_report,self.args.report_html)
-
-import uuid
-class BaseParam(object):
-    """
-    Provide base class for PipelineParam-type classes
-    """
-    def __init__(self):
-        """
-        Base class for PipelineParam-type class
-        """
-        self._uuid = uuid.uuid4()
-    @property
-    def uuid(self):
-        """
-        Return the unique identifier (UUID) of the parameter
-        """
-        return self._uuid
-
-class FunctionParam(BaseParam):
-    """
-    Class for deferred function evaluation as pipeline parameter
-
-    This class wraps a function with a set of
-    parameters; the function evaluation is
-    deferred until the 'value' property is invoked.
-
-    Any parameters which are PipelineParam-like
-    instances will be replaced with their values
-    before being passed to the function.
-    """
-    def __init__(self,f,*args,**kws):
-        """
-        Create a new FunctionParam instance
-
-        Arguments:
-          f (object): function-like object to
-            be evaluated
-          args (list): positional arguments to
-            pass to the function on evaluation
-          kws (mapping): keyworded arguments to
-            pass to the function on evaluation
-        """
-        BaseParam.__init__(self)
-        self._f = f
-        self._args = args
-        self._kws = kws
-    @property
-    def value(self):
-        """
-        Return value from evaluated function
-        """
-        args = []
-        for arg in self._args:
-            try:
-                args.append(arg.value)
-            except AttributeError:
-                args.append(arg)
-        kws = {}
-        for kw in self._kws:
-            try:
-                kws[kw] = self._kws[kw].value
-            except AttributeError:
-                kws[kw] = self._kws[kw]
-        return self._f(*args,**kws)
-    
-class PathJoinParam(FunctionParam):
-    """
-    Class for joining file paths as pipeline parameter
-
-    This class implements the pipeline parameter
-    equivalent of the `os.path.join` function, taking
-    a set of path elements on instantiation (which
-    can be strings or PipelineParam-like objects)
-    and returning the joined path elements on
-    evaluation via the `value` property.
-
-    Example usage:
-
-    >>> pth = PathJoinParam("/path","to","file.txt")
-    >>> pth.value
-    "/path/to/file.txt"
-
-    >>> base_dir = PipelineParam(value="/path/to/base")
-    >>> pth = PathJoinParam(base_dir,"file.txt")
-    >>> pth.value
-    "/path/to/base/file.txt"
-    >>> base_dir.set("/path/to/new/base")
-    >>> pth.value
-    "/path/to/new/base/file.txt"
-
-    Note that this class doesn't implement a `set`
-    method (unlike the standard PipelineParam class)
-    so the path elements cannot be changed after
-    initialisation.
-    """
-    def __init__(self,*p):
-        """
-        Create a new PathJoinParam instance
-
-        Arguments:
-          p (iterable): list of path elements
-            to join; can be strings or
-            PipelineParam-like objects
-        """
-        FunctionParam.__init__(self,
-                               os.path.join,
-                               *p)
-
-class PathExistsParam(FunctionParam):
-    """
-    Class for checking file/directory existance as pipeline parameter
-
-    This class implements the pipeline parameter
-    equivalent of the `os.path.exists` function, taking
-    a path on instantiation (which can be a string
-    or PipelineParam-like object) and returning a
-    boolean value indicating whether the path is an
-    existing file system object via the `value`
-    property.
-
-    Example usage:
-
-    >>> exists = PathExistsParam("/path/to/file.txt")
-    >>> exists.value
-    True
-
-    >>> f = PipelineParam(value="/path/to/file.txt")
-    >>> exists = PathExistsParam(f)
-    >>> exists.value
-    True
-    >>> f.set("/path/to/missing.txt")
-    >>> exists.value
-    False
-
-    Note that this class doesn't implement a `set`
-    method (unlike the standard PipelineParam class)
-    so the path elements cannot be changed after
-    initialisation.
-    """
-    def __init__(self,p):
-        """
-        Create a new PathExistsParam instance
-
-        Arguments:
-          p (str): path to check existance of;
-            can be a string or a PipelineParam-like
-            object
-        """
-        FunctionParam.__init__(self,
-                               os.path.exists,
-                               p)
 
 def subset(lanes,**kws):
     """
