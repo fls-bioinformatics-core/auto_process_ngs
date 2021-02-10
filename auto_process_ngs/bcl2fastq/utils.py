@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 #
-#     bcl2fastq_utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2019 Peter Briggs
+#     bcl2fastq/utils.py: utility functions for bcl2fastq conversion
+#     Copyright (C) University of Manchester 2013-2021 Peter Briggs
 #
 ########################################################################
 #
-# bclToFastq.py
+# bcl2fastq/utils.py
 #
 #########################################################################
 
 """
-bcl2fastq_utils.py
+bcl2fastq/utils.py
 
 Utility functions for bcl to fastq conversion operations:
 
@@ -33,13 +33,13 @@ Utility functions for bcl to fastq conversion operations:
 import os
 import re
 import logging
-from .applications import Command
-from .applications import bcl2fastq as bcl2fastq_apps
-from .applications import general as general_apps
-from .simple_scheduler import SchedulerJob
-from .utils import find_executables
-from .utils import parse_version
-from .samplesheet_utils import barcode_is_10xgenomics
+from ..applications import Command
+from ..applications import bcl2fastq as bcl2fastq_apps
+from ..applications import general as general_apps
+from ..simple_scheduler import SchedulerJob
+from ..utils import find_executables
+from ..utils import parse_version
+from ..samplesheet_utils import barcode_is_10xgenomics
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
 import bcftbx.utils as bcf_utils
