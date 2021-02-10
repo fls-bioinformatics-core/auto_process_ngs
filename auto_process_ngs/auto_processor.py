@@ -36,7 +36,7 @@ from .metadata import AnalysisDirMetadata
 from .metadata import ProjectMetadataFile
 from .utils import edit_file
 from .utils import get_numbered_subdir
-from .bcl2fastq_utils import get_sequencer_platform
+from .bcl2fastq.utils import get_sequencer_platform
 from .samplesheet_utils import check_and_warn
 from .settings import Settings
 from .exceptions import MissingParameterFileException

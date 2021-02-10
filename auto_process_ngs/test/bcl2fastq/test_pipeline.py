@@ -19,7 +19,7 @@ from auto_process_ngs.bcl2fastq.pipeline import PathJoinParam
 from auto_process_ngs.bcl2fastq.pipeline import PathExistsParam
 from auto_process_ngs.bcl2fastq.pipeline import FunctionParam
 from auto_process_ngs.bcl2fastq.pipeline import subset
-from auto_process_ngs.bcl2fastq_utils import make_custom_sample_sheet
+from auto_process_ngs.bcl2fastq.utils import make_custom_sample_sheet
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
