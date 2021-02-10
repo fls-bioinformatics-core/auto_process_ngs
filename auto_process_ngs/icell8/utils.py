@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8.utils.py: utility functions for handling ICELL8 data
-#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
 #
 
 """
@@ -43,7 +43,7 @@ from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
 from ..applications import Command
-from ..bcl2fastq_utils import get_bases_mask
+from ..bcl2fastq.utils import get_bases_mask
 from ..fastq_utils import FastqReadCounter
 from ..fastq_utils import pair_fastqs
 from ..fastq_utils import get_read_count

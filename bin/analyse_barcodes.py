@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analyse_barcodes.py: analyse index sequences from Illumina FASTQs
-#     Copyright (C) University of Manchester 2016,2019 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2021 Peter Briggs
 #
 """
 analyse_barcodes.py
@@ -27,8 +27,8 @@ from bcftbx.utils import parse_lanes
 from auto_process_ngs.barcodes.analysis import BarcodeCounter
 from auto_process_ngs.barcodes.analysis import Reporter
 from auto_process_ngs.barcodes.analysis import report_barcodes
-from auto_process_ngs.bcl2fastq_utils import make_custom_sample_sheet
-from auto_process_ngs.bcl2fastq_utils import check_barcode_collisions
+from auto_process_ngs.bcl2fastq.utils import make_custom_sample_sheet
+from auto_process_ngs.bcl2fastq.utils import check_barcode_collisions
 from auto_process_ngs.tenx_genomics_utils import has_10x_indices
 
 from auto_process_ngs import get_version

@@ -56,7 +56,7 @@ from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
 from .analysis import AnalysisProject
-from .bcl2fastq_utils import get_bases_mask
+from .bcl2fastq.utils import get_bases_mask
 from .utils import get_numbered_subdir
 from .utils import ZipArchive
 from . import css_rules

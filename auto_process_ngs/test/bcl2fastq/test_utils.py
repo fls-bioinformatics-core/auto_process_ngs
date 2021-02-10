@@ -1,5 +1,5 @@
 #######################################################################
-# Tests for bcl2fastq_utils.py module
+# Tests for bcl2fastq/utils.py module
 #######################################################################
 
 import unittest
@@ -8,7 +8,7 @@ import os
 import shutil
 from bcftbx.mock import RunInfoXml
 from auto_process_ngs.settings import Settings
-from auto_process_ngs.bcl2fastq_utils import *
+from auto_process_ngs.bcl2fastq.utils import *
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
