@@ -24,6 +24,7 @@ from auto_process_ngs.pipeliner import PipelineParam
 from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
+from auto_process_ngs.pipeliner import BaseParam
 from auto_process_ngs.pipeliner import PathJoinParam
 from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
@@ -1937,6 +1938,32 @@ class TestPipelineCommandWrapper(unittest.TestCase):
         # Add argument and check updated command
         cmd.add_args("there")
         self.assertEqual(str(cmd.cmd()),"echo hello there")
+
+class TestBaseParam(unittest.TestCase):
+
+    def test_baseparam_uuid(self):
+        """
+        BaseParam: check UUID
+        """
+        p = BaseParam()
+        self.assertNotEqual(p.uuid,None)
+
+    def test_associated_task(self):
+        """
+        BaseParam: check associated task
+        """
+        # Define a simple task
+        class SimpleTask(PipelineTask):
+            def init(self,x):
+                pass
+            def setup(self):
+                print(x)
+        t = SimpleTask("Simple task",x=12)
+        # Create and test associated task in a BaseParam
+        p = BaseParam()
+        self.assertEqual(p.associated_task_id,None)
+        p.associate_task(t)
+        self.assertEqual(p.associated_task_id,t.id())
 
 class TestPipelineParam(unittest.TestCase):
 

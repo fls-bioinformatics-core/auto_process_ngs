@@ -966,18 +966,48 @@ class PipelineFailure(object):
 class BaseParam(object):
     """
     Provide base class for PipelineParam-type classes
+
+    Implements core functionality that should be
+    shared across all parameter-like classes, including
+    assigning a UUID and enabling a task ID to be
+    associated with the parameter.
+
+    Provides the following attributes:
+
+    - uuid
+    - associated_task_id
+
+    and the following methods:
+
+    - associate_task
     """
     def __init__(self):
         """
         Base class for PipelineParam-type class
         """
         self._uuid = uuid.uuid4()
+        self._associated_task_id = None
+    def associate_task(self,task):
+        """
+        Associate a task with the parameter
+
+        Arguments:
+          task (PipelineTask): a task object to
+            associate with the parameter
+        """
+        self._associated_task_id = task.id()
     @property
     def uuid(self):
         """
         Return the unique identifier (UUID) of the parameter
         """
         return self._uuid
+    @property
+    def associated_task_id(self):
+        """
+        Return the task ID of the associated task (or None)
+        """
+        return self._associated_task_id
 
 class PipelineParam(BaseParam):
     """
