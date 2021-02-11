@@ -1251,6 +1251,27 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(t3.required_task_ids,
                          sorted([t2.id(),t1.id()]))
 
+    def test_pipelinetask_implied_requirement_from_input_param(self):
+        """
+        PipelineTask: check implied task requirements from inputs
+        """
+        # Define task for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs,**kws):
+                self.add_output('result',PipelineParam(type=list()))
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.value.append(x)
+        # Instantiate tasks
+        t1 = AppendTask("Task1",1,2)
+        t2 = AppendTask("Task2",t1.output.result,4)
+        t3 = AppendTask("Task3",t1.output.result,extras=t2.output.result)
+        # Check requirements on both tasks
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,
+                         sorted([t2.id(),t1.id()]))
+
     def test_pipelinetask_raise_exception_for_non_task_requirement(self):
         """
         PipelineTask: raise exception if requirement is not a task

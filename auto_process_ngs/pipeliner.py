@@ -458,6 +458,9 @@ Note that these two approaches are not exclusive, and can be
 used together on the same task to specify requirements in a
 pipeline.
 
+Additionally, requirements are automatically added implicitly for
+each input that is a parameter-based output from another task.
+
 Scheduling and running jobs
 ---------------------------
 
@@ -844,6 +847,10 @@ the pipeline's ``run`` method to ``False``. For example:
     ppl.add_output('final_result',PipelineParam())
     ...
     ppl.run(finalize_outputs=False)
+
+It is recommended that outputs are defined as ``PipelineParam``
+instances, to take advantage of the implicit task requirement
+gathering mechanism.
 
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
@@ -2179,6 +2186,22 @@ class PipelineTask(object):
             del(self._callargs['self'])
         except KeyError:
             pass
+        # Check for parameter arguments & keywords that have associated
+        # tasks and add these as requirements
+        for arg in self._args:
+            try:
+                task_id = arg.associated_task_id
+                if task_id:
+                    self.requires_id(task_id)
+            except AttributeError as ex:
+                pass
+        for kw in self._kws:
+            try:
+                task_id = self._kws[kw].associated_task_id
+                if task_id:
+                    self.requires_id(task_id)
+            except AttributeError:
+                pass
         # Execute the init method
         self.invoke(self.init,self._args,self._kws)
         if self._exit_code != 0:
@@ -2518,6 +2541,10 @@ class PipelineTask(object):
           value (object): associated object
         """
         self._output[name] = value
+        try:
+            self._output[name].associate_task(self)
+        except AttributeError as ex:
+            pass
 
     @property
     def output(self):
