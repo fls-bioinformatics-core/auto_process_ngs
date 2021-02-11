@@ -2457,9 +2457,19 @@ class PipelineTask(object):
                 task_id = t.id()
             except AttributeError:
                 raise Exception("%s: not a task?" % t)
-            # Add ID if not already a requirement
-            if task_id not in self._required_task_ids:
-                self._required_task_ids.append(task_id)
+            # Add ID
+            self.requires_id(task_id)
+
+    def requires_id(self,task_id):
+        """
+        Add task ID to list of requirements
+
+        Arguments:
+          task_id (str): UUID of the task to be added
+            as a requirement
+        """
+        if task_id not in self._required_task_ids:
+            self._required_task_ids.append(task_id)
         self._required_task_ids = sorted(self._required_task_ids)
 
     @property
