@@ -1191,7 +1191,7 @@ class TestPipelineTask(unittest.TestCase):
         """
         PipelineTask: check task requirements
         """
-        # Define stask for testing
+        # Define task for testing
         class AppendTask(PipelineTask):
             def init(self,*inputs):
                 self.add_output('result',list())
@@ -1199,10 +1199,10 @@ class TestPipelineTask(unittest.TestCase):
                 for x in self.args.inputs:
                     self.output.results.append(x)
         # Instantiate tasks
-        t1 = AppendTask(1,2)
-        t2 = AppendTask(3,4)
-        t3 = AppendTask(5,6)
-        # Check requirements on both tasks
+        t1 = AppendTask("Task1",1,2)
+        t2 = AppendTask("Task2",3,4)
+        t3 = AppendTask("Task3",5,6)
+        # Check requirements on all tasks
         self.assertEqual(t1.required_task_ids,[])
         self.assertEqual(t2.required_task_ids,[])
         self.assertEqual(t3.required_task_ids,[])
