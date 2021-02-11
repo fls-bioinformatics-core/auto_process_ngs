@@ -428,13 +428,35 @@ Notes:
 
 1. Tasks will only be executed once any tasks they depend on have
    completed successfully; these are specified via the ``requires``
-   argument (which must be a list or tuple of task instances).
+   argument of the ``add_task`` method (in which case it must be a
+   list or tuple of task instances), and/or via the ``requires``
+   method of a task instance.
 
 2. Tasks that fail (i.e. complete with non-zero exit status) will
    cause the pipeline to halt at that point.
 
 3. The ``run`` method blocks and returns the exit status of the
    pipeline execution.
+
+Defining relationships between tasks
+------------------------------------
+
+A task in a pipeline may depend on one or more other tasks in
+the pipeline to complete before it can be run; these are referred
+to as "requirements" of the task.
+
+Requirements can be specified in different ways:
+
+1. When a task is added to a pipeline via the ``add_task``
+   method then a list of required tasks can also be specified
+   via the ``requires`` argument;
+
+2. Requirements can also be added directly to a task using
+   its ``requires`` method.
+
+Note that these two approaches are not exclusive, and can be
+used together on the same task to specify requirements in a
+pipeline.
 
 Scheduling and running jobs
 ---------------------------
@@ -1361,8 +1383,9 @@ class Pipeline(object):
             run time (see the ``run`` method of
             PipelineTask for valid options)
         """
-        self._tasks[task.id()] = (task,requires,kws)
+        self._tasks[task.id()] = (task,kws)
         for req in requires:
+            task.requires(req)
             if req.id() not in self.task_list():
                 self.add_task(req,())
         return task
@@ -1491,12 +1514,6 @@ class Pipeline(object):
             that the added pipeline will depend on
         """
         self.report("Importing tasks from pipeline '%s'" % pipeline.name)
-        # Get the starting tasks from the new pipeline
-        ranks = pipeline.rank_tasks()
-        initial_tasks = ranks[0]
-        self.report("Identified initial tasks from imported pipeline:")
-        for task_id in initial_tasks:
-            self.report("- %s" % pipeline.get_task(task_id)[0].name())
         # Store direct references to imported parameters
         self.report("Importing and masking parameters")
         imported_params = pipeline.params
@@ -1536,16 +1553,17 @@ class Pipeline(object):
         for r in pipeline.runners:
             if r not in self.runners:
                 self.add_runner(r)
+        # Get the starting tasks from the new pipeline
+        ranks = pipeline.rank_tasks()
+        initial_tasks = ranks[0]
+        self.report("Identified initial tasks from imported pipeline:")
+        for task_id in initial_tasks:
+            self.report("- %s" % pipeline.get_task(task_id)[0].name())
         # Add the tasks from the new pipeline
-        self.report("Adding tasks")
-        for task_id in pipeline.task_list():
+        self.report("Importing tasks")
+        imported_tasks = pipeline.task_list()
+        for task_id in imported_tasks:
             task,requirements,kws = pipeline.get_task(task_id)
-            if task_id in initial_tasks:
-                if requires:
-                    if requirements:
-                        requirements = list(requirements).extend(requires)
-                    else:
-                        requirements = list(requires)
             # Update the runner for the task
             if 'runner' in kws:
                 name = kws['runner'].name
@@ -1560,6 +1578,13 @@ class Pipeline(object):
                             "task '%s'" % (name,task.name()))
             # Add the task to the source pipeline
             self.add_task(task,requires=requirements,**kws)
+        # Update the requirements on the initial tasks from
+        # the imported pipeline
+        if requires:
+            self.report("Updating dependencies on imported tasks")
+            for task_id in initial_tasks:
+                task = self.get_task(task_id)[0]
+                task.requires(*requires)
 
     def append_pipeline(self,pipeline):
         """
@@ -1625,12 +1650,17 @@ class Pipeline(object):
 
         Returns:
           Tuple: tuple of (task,requirements,kws)
-            where task is a PipelineTask instance,
+            where 'task' is a PipelineTask instance,
             requirements is a list of PipelineTask
             instances that the task depends on,
-            and kws is a keyword mapping.
+            and kws is a keyword mapping
         """
-        return self._tasks[task_id]
+        # Fetch task object and keywords
+        task,kws = self._tasks[task_id]
+        # Fetch dependent tasks
+        requirements = tuple([self.get_task(t)[0]
+                              for t in task.required_task_ids])
+        return (task,requirements,kws)
 
     def rank_tasks(self):
         """
@@ -2088,6 +2118,7 @@ class PipelineTask(object):
         self._kws = kws
         self._commands = []
         self._scripts = []
+        self._required_task_ids = []
         self._task_name = "%s.%s" % (sanitize_name(self._name),
                                      uuid.uuid4())
         self._completed = False
@@ -2407,6 +2438,36 @@ class PipelineTask(object):
              runs
         """
         self._commands.append(pipeline_job)
+
+    def requires(self,*tasks):
+        """
+        Add tasks as requirements
+
+        Each specified task will be added to the list
+        of tasks that need to complete before this
+        task can run.
+
+        Arguments:
+          tasks (List): list of PipelineTask objects
+            to be added to this task as requirements
+        """
+        for t in tasks:
+            # Fetch associated ID
+            try:
+                task_id = t.id()
+            except AttributeError:
+                raise Exception("%s: not a task?" % t)
+            # Add ID if not already a requirement
+            if task_id not in self._required_task_ids:
+                self._required_task_ids.append(task_id)
+        self._required_task_ids = sorted(self._required_task_ids)
+
+    @property
+    def required_task_ids(self):
+        """
+        Return the task IDs for tasks required by this task
+        """
+        return self._required_task_ids
 
     def add_output(self,name,value):
         """

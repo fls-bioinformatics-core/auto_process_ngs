@@ -1187,6 +1187,58 @@ class TestPipelineTask(unittest.TestCase):
                           "a",
                           "b")
 
+    def test_pipelinetask_requirements(self):
+        """
+        PipelineTask: check task requirements
+        """
+        # Define stask for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs):
+                self.add_output('result',list())
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.append(x)
+        # Instantiate tasks
+        t1 = AppendTask(1,2)
+        t2 = AppendTask(3,4)
+        t3 = AppendTask(5,6)
+        # Check requirements on both tasks
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[])
+        self.assertEqual(t3.required_task_ids,[])
+        # Make second task depend on first
+        t2.requires(t1)
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,[])
+        # Make third task depend on first and second
+        t3.requires(t1,t2)
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,
+                         sorted([t2.id(),t1.id()]))
+
+    def test_pipelinetask_raise_exception_for_non_task_requirement(self):
+        """
+        PipelineTask: raise exception if requirement is not a task
+        """
+        # Define stask for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs):
+                self.add_output('result',list())
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.append(x)
+        # Instantiate task
+        t1 = AppendTask(1,2)
+        # Check initial requirements
+        self.assertEqual(t1.required_task_ids,[])
+        # Raise exception by trying to adding a non-task
+        # object as a requirement
+        self.assertRaises(Exception,
+                          t1.requires,
+                          "not_a_task")
+
     def test_pipelinetask_no_commands(self):
         """
         PipelineTask: run task with no commands
