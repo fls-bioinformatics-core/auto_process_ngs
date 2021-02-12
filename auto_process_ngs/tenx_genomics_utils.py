@@ -218,6 +218,12 @@ class GexSummary(MetricsSummary):
         Return the median genes per cell
         """
         return self.fetch('Median Genes per Cell')
+    @property
+    def frac_reads_in_cells(self):
+        """
+        Return the fraction of reads in cells
+        """
+        return self.fetch('Fraction Reads in Cells')
 
 class AtacSummary(MetricsSummary):
     """
