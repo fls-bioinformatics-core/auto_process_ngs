@@ -191,6 +191,13 @@ class GexSummary(MetricsSummary):
     The file consists of two lines: the first is a
     header line, the second consists of corresponding
     data values.
+
+    The following properties are available:
+
+    - estimated_number_of_cells
+    - mean_reads_per_cell
+    - median_genes_per_cell
+    - frac_reads_in_cells
     """
     def __init__(self,f):
         """
@@ -235,6 +242,13 @@ class AtacSummary(MetricsSummary):
     The file consists of two lines: the first is a
     header line, the second consists of corresponding
     data values.
+
+    The following properties are available:
+
+    - cells_detected
+    - annotated_cells
+    - median_fragments_per_cell
+    - frac_fragments_overlapping_targets
     """
     def __init__(self,f):
         """
@@ -279,6 +293,12 @@ class MultiomeSummary(MetricsSummary):
     The file consists of two lines: the first is a
     header line, the second consists of corresponding
     data values.
+
+    The following properties are available:
+
+    - estimated_number_of_cells
+    - atac_median_high_quality_fragments_per_cell
+    - gex_median_cells_per_gene
     """
     def __init__(self,f):
         """
