@@ -2,6 +2,9 @@
 #
 # Handle outputs from cellranger
 import os
+from ..tenx_genomics_utils import GexSummary
+from ..tenx_genomics_utils import AtacSummary
+from ..tenx_genomics_utils import MultiomeSummary
 
 class CellrangerCount(object):
     """
@@ -143,6 +146,19 @@ class CellrangerCount(object):
         if self._web_summary and os.path.isfile(self._web_summary):
             return self._web_summary
         raise OSError("'%s': not a file" % self._web_summary)
+
+    @property
+    def metrics(self):
+        """
+        Return the appropriate 'MetricsSummary' object
+        """
+        if self.pipeline_name == "cellranger":
+            metrics = GexSummary
+        elif self.pipeline_name == "cellranger-atac":
+            metrics = AtacSummary
+        elif self.pipeline_name == "cellranger-arc":
+            metrics = MultiomeSummary
+        return metrics(self.metrics_csv)
 
     @property
     def cmdline(self):
