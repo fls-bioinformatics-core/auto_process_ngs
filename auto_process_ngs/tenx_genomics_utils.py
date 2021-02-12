@@ -58,6 +58,7 @@ from .docwriter import Link
 from .docwriter import Table
 from .analysis import AnalysisProject
 from .bcl2fastq.utils import get_bases_mask
+from .metadata import AnalysisProjectQCDirInfo
 from .utils import get_numbered_subdir
 from .utils import ZipArchive
 from . import css_rules
@@ -704,69 +705,96 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
     else:
         raise NotImplementedError("Not implemented for platform '%s'"
                                   % single_cell_platform)
-    # Loop over samples and collect cell numbers for each
-    number_of_cells = 0
-    for sample in project.samples:
-        outs_dir = os.path.join(qc_dir,
-                                "cellranger_count",
-                                sample.name,
-                                "outs")
-        if pipeline == "cellranger":
-            # Single cell/nuclei RNA-seq output
-            metrics_summary_csv = os.path.join(outs_dir,"metrics_summary.csv")
-            if not os.path.exists(metrics_summary_csv):
-                # Not found
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': missing file '%s'" %
-                                (sample.name,metrics_summary_csv))
-                return 1
-            # Extract cell numbers
-            try:
-                metrics = GexSummary(metrics_summary_csv)
-                number_of_cells += metrics.estimated_number_of_cells
-                continue
-            except Exception as ex:
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': %s" % (sample.name,ex))
-                return 1
-        elif pipeline == "cellranger-atac":
-            # Single cell ATAC-seq output
-            summary_csv = os.path.join(outs_dir,"summary.csv")
-            if not os.path.exists(summary_csv):
-                # Not found
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': missing file '%s'" %
-                                (sample.name,summary_csv))
-                return 1
-            # Extract cell numbers
-            try:
-                number_of_cells += AtacSummary(summary_csv).annotated_cells
-                continue
-            except Exception as ex:
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': %s" % (sample.name,ex))
-                return 1
-        elif pipeline == "cellranger-arc":
-            # Single cell multiome output
-            summary_csv = os.path.join(outs_dir,"summary.csv")
-            if not os.path.exists(summary_csv):
-                # Not found
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': missing file '%s'" %
-                                (sample.name,summary_csv))
-                return 1
-            # Extract cell numbers
-            try:
-                number_of_cells += MultiomeSummary(summary_csv).estimated_number_of_cells
-                continue
-            except Exception as ex:
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': %s" % (sample.name,ex))
-                return 1
-    # Store in the project metadata
-    project.info['number_of_cells'] = number_of_cells
-    project.info.save()
-    return 0
+    # Determine possible locations for outputs
+    count_dirs = []
+    # New-style with version and reference data levels
+    qc_info_file = os.path.join(qc_dir,"qc.info")
+    if os.path.exists(qc_info_file):
+        qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+        try:
+            cellranger_refdata = qc_info['cellranger_refdata']
+        except KeyError:
+            cellranger_refdata = None
+        try:
+            cellranger_version = qc_info['cellranger_version']
+        except KeyError:
+            cellranger_version = None
+        if cellranger_version and cellranger_refdata:
+            count_dirs.append(os.path.join(qc_dir,
+                                           "cellranger_count",
+                                           cellranger_version,
+                                           os.path.basename(
+                                               cellranger_refdata)))
+    # Old-style without additional subdirectories
+    count_dirs.append(os.path.join(qc_dir,
+                                   "cellranger_count"))
+    # Check each putative output location in turn
+    for count_dir in count_dirs:
+        # Check that the directory exists
+        if not os.path.exists(count_dir):
+            logger.warning("%s: not found" % count_dir)
+            continue
+        print("Looking for outputs under %s" % count_dir)
+        # Loop over samples and collect cell numbers for each
+        number_of_cells = 0
+        try:
+            for sample in project.samples:
+                print("- %s" % sample)
+                outs_dir = os.path.join(count_dir,
+                                        sample.name,
+                                        "outs")
+                if pipeline == "cellranger":
+                    # Single cell/nuclei RNA-seq output
+                    metrics_summary_csv = os.path.join(
+                        outs_dir,
+                        "metrics_summary.csv")
+                    if not os.path.exists(metrics_summary_csv):
+                        raise Exception("Failed to add cell count "
+                                        "for sample '%s': missing "
+                                        "file '%s'" %
+                                        (sample.name,
+                                         metrics_summary_csv))
+                    # Extract cell numbers
+                    metrics = GexSummary(metrics_summary_csv)
+                    number_of_cells += \
+                        metrics.estimated_number_of_cells
+                elif pipeline == "cellranger-atac":
+                    # Single cell ATAC-seq output
+                    summary_csv = os.path.join(
+                        outs_dir,
+                        "summary.csv")
+                    if not os.path.exists(summary_csv):
+                        raise Exception("Failed to add cell count "
+                                        "for sample '%s': missing "
+                                        "file '%s'" %
+                                        (sample.name,
+                                         summary_csv))
+                    # Extract cell numbers
+                    number_of_cells += AtacSummary(summary_csv).\
+                                       annotated_cells
+                elif pipeline == "cellranger-arc":
+                    # Single cell multiome output
+                    summary_csv = os.path.join(
+                        outs_dir,
+                        "summary.csv")
+                    if not os.path.exists(summary_csv):
+                        raise Exception("Failed to add cell count "
+                                        "for sample '%s': missing "
+                                        "file '%s'" %
+                                        (sample.name,
+                                         summary_csv))
+                    # Extract cell numbers
+                    number_of_cells += MultiomeSummary(summary_csv).\
+                                       estimated_number_of_cells
+            # Store in the project metadata
+            project.info['number_of_cells'] = number_of_cells
+            project.info.save()
+            return 0
+        except Exception as ex:
+            logger.warning("Unable to set cell count from data in "
+                           "%s: %s" % (count_dir,ex))
+    # Reached the end without setting count
+    return 1
 
 def cellranger_info(path=None,name=None):
     """

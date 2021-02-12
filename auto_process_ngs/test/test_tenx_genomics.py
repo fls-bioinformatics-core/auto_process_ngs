@@ -811,13 +811,20 @@ class TestSetCellCountForProject(unittest.TestCase):
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "5.0.1",
+                                  "refdata-gex-GRCh38-2020-A",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
         metrics_summary_file = os.path.join(counts_dir,
                                             "metrics_summary.csv")
-        with open(metrics_summary_file,'w') as fp:
+        with open(metrics_summary_file,'wt') as fp:
             fp.write(METRICS_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
+Cellranger version\t5.0.1
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -842,13 +849,20 @@ class TestSetCellCountForProject(unittest.TestCase):
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "1.2.0",
+                                  "refdata-cellranger-atac-GRCh38-1.2.0",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
         summary_file = os.path.join(counts_dir,
-                                            "summary.csv")
+                                    "summary.csv")
         with open(summary_file,'w') as fp:
             fp.write(ATAC_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-atac-GRCh38-1.2.0
+Cellranger version\t1.2.0
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -873,6 +887,8 @@ class TestSetCellCountForProject(unittest.TestCase):
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "1.2.0",
+                                  "refdata-cellranger-atac-GRCh38-1.2.0",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
@@ -880,6 +896,11 @@ class TestSetCellCountForProject(unittest.TestCase):
                                             "summary.csv")
         with open(summary_file,'w') as fp:
             fp.write(ATAC_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-atac-GRCh38-1.2.0
+Cellranger version\t1.2.0
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -904,13 +925,20 @@ class TestSetCellCountForProject(unittest.TestCase):
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "1.0.0",
+                                  "refdata-cellranger-arc-GRCh38-2020-A",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
         summary_file = os.path.join(counts_dir,
-                                            "summary.csv")
+                                    "summary.csv")
         with open(summary_file,'w') as fp:
             fp.write(MULTIOME_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-arc-GRCh38-2020-A
+Cellranger version\t1.0.0
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -930,18 +958,25 @@ class TestSetCellCountForProject(unittest.TestCase):
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
             "10xGenomics Single Cell Multiome",
-            "ATAC")
+            "GEX")
         # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "1.0.0",
+                                  "refdata-cellranger-arc-GRCh38-2020-A",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
         summary_file = os.path.join(counts_dir,
-                                            "summary.csv")
+                                    "summary.csv")
         with open(summary_file,'w') as fp:
             fp.write(MULTIOME_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-arc-GRCh38-2020-A
+Cellranger version\t1.0.0
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -957,6 +992,75 @@ class TestSetCellCountForProject(unittest.TestCase):
     def test_set_cell_count_project_missing_library_type(self):
         """
         set_cell_count_for_project: test for scRNA-seq when library not set
+        """
+        # Set up mock project with library type not set
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            None)
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "5.0.1",
+                                  "refdata-gex-GRCh38-2020-A",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        metrics_summary_file = os.path.join(counts_dir,
+                                            "metrics_summary.csv")
+        with open(metrics_summary_file,'w') as fp:
+            fp.write(METRICS_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
+Cellranger version\t5.0.1
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         2272)
+    def test_set_cell_count_for_project_no_subdirs(self):
+        """
+        set_cell_count_for_project: test for scRNA-seq (old-style output)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "scRNA-seq")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        metrics_summary_file = os.path.join(counts_dir,
+                                            "metrics_summary.csv")
+        with open(metrics_summary_file,'w') as fp:
+            fp.write(METRICS_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         2272)
+    def test_set_cell_count_project_missing_library_type_no_subdirs(self):
+        """
+        set_cell_count_for_project: test for scRNA-seq when library not set (old-style output)
         """
         # Set up mock project with library type not set
         project_dir = self._make_mock_analysis_project(
