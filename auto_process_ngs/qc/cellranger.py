@@ -105,10 +105,11 @@ class CellrangerCount(object):
         if exe:
             if exe.endswith("bin/count"):
                 # Special case: 'count' was run directly
-                if "cellranger-cs" in exe.split(os.sep):
-                    return "cellranger"
-                elif "cellranger-atac-cs" in exe.split(os.sep):
-                    return "cellranger-atac"
+                for name in ("cellranger",
+                             "cellranger-atac",
+                             "cellranger-arc",):
+                    if ("%s-cs" % name) in exe.split(os.sep):
+                        return name
             # Default: take name of executable
             return os.path.basename(exe)
         else:
