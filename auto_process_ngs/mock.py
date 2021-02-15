@@ -1500,7 +1500,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         Internal: provides mock 10xGenomics package functionality
         """
         # Store command line
-        cmdline = "%s" % ' '.join(args)
+        cmdline = "%s %s" % (self._path,' '.join(args))
         # Split version
         version = tuple([int(x) for x in self._version.split('.')])
         # Build generic header
