@@ -476,7 +476,7 @@ class QCProject(object):
         # Acquire the value
         try:
             if self.software[pkg]:
-                return ','.join(self.software[pkg])
+                return ', '.join(self.software[pkg])
         except KeyError:
             if exclude_processing:
                 # Don't check processing software
@@ -971,7 +971,7 @@ class QCReport(Document):
                 for package in project.software:
                     print("\t- %s: %s" %
                           (package,
-                           ','.join(project.software[package])))
+                           ', '.join(project.software[package])))
             # Fields to report in summary table
             if not summary_fields:
                 if len(project.reads) > 1:
