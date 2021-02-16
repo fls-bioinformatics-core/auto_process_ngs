@@ -875,6 +875,56 @@ prepend-path PATH %s
                          sorted([task2.id(),task3.id()]))
         self.assertEqual(ranked_tasks[2],[task4.id()])
 
+    def test_pipeline_method_initial_tasks(self):
+        """
+        Pipeline: test the 'initial_tasks' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task4,requires=(task3,))
+        # Check the initial tasks
+        self.assertEqual(ppl.initial_tasks,[task1])
+
+    def test_pipeline_method_final_tasks(self):
+        """
+        Pipeline: test the 'final_tasks' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task4,requires=(task3,))
+        # Check the initial tasks
+        self.assertEqual(ppl.final_tasks,[task2,task4])
+
     def test_pipeline_method_get_dependent_tasks(self):
         """
         Pipeline: test the 'get_dependent_tasks' method

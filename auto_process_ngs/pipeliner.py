@@ -461,6 +461,22 @@ pipeline.
 Additionally, requirements are automatically added implicitly for
 each input that is a parameter-based output from another task.
 
+Requirement specification can be combined with two properties
+that can be useful for when adding tasks to an existing
+pipeline:
+
+* ``initial_tasks`` returns a list of all the tasks in the
+  pipeline that don't have any requirements; it can be used
+  when inserting tasks at the start of a pipeline, as the
+  inserted task can be made into a requirement of the initial
+  tasks using the idiom
+  ``task.required_by(*pipeline.initial_tasks)``, and
+* ``final_tasks`` returns a list of the all the tasks in the
+  pipeline which no other tasks require (essentially they will
+  run at the end of the pipeline); it can be used when appending
+  tasks to the end of a pipeline using the idiom
+  ``task.requires(*pipeline.final_tasks)``.
+
 Scheduling and running jobs
 ---------------------------
 
@@ -1591,11 +1607,10 @@ class Pipeline(object):
             if r not in self.runners:
                 self.add_runner(r)
         # Get the starting tasks from the new pipeline
-        ranks = pipeline.rank_tasks()
-        initial_tasks = ranks[0]
+        initial_tasks = pipeline.initial_tasks
         self.report("Identified initial tasks from imported pipeline:")
-        for task_id in initial_tasks:
-            self.report("- %s" % pipeline.get_task(task_id)[0].name())
+        for t in initial_tasks:
+            self.report("- %s" % t.name())
         # Add the tasks from the new pipeline
         self.report("Importing tasks")
         imported_tasks = pipeline.task_list()
@@ -1619,8 +1634,7 @@ class Pipeline(object):
         # the imported pipeline
         if requires:
             self.report("Updating dependencies on imported tasks")
-            for task_id in initial_tasks:
-                task = self.get_task(task_id)[0]
+            for task in initial_tasks:
                 task.requires(*requires)
 
     def append_pipeline(self,pipeline):
@@ -1642,10 +1656,7 @@ class Pipeline(object):
         """
         self.report("Appending tasks from pipeline '%s'" % pipeline.name)
         # Get the final tasks from the base pipeline
-        final_tasks = []
-        for task_id in self.task_list():
-            if not self.get_dependent_tasks(task_id):
-                final_tasks.append(self.get_task(task_id)[0])
+        final_tasks = self.final_tasks
         self.report("Identified final tasks from base pipeline:")
         for task in final_tasks:
             self.report("-- %s" % task.name())
@@ -1737,6 +1748,35 @@ class Pipeline(object):
                 required[task_id] = new_reqs
             ranks.append(current_rank)
         return ranks
+
+    @property
+    def initial_tasks(self):
+        """
+        Fetch a list of 'initial tasks' for the pipeline
+
+        Returns:
+          List: list of task instances from the pipeline
+            which don't depend on any other tasks (i.e.
+            the tasks that will run first)
+        """
+        ranks = self.rank_tasks()
+        return [self.get_task(t)[0] for t in ranks[0]]
+
+    @property
+    def final_tasks(self):
+        """
+        Fetch a list of 'final tasks' for the pipeline
+
+        Returns:
+          List: list of task instances from the pipeline
+            which don't have any dependent tasks (i.e.
+            the tasks that will run last)
+        """
+        final_tasks = []
+        for task_id in self.task_list():
+            if not self.get_dependent_tasks(task_id):
+                final_tasks.append(self.get_task(task_id)[0])
+        return final_tasks
 
     def get_dependent_tasks(self,task_id):
         """
