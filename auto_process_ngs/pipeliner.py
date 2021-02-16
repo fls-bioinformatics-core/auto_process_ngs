@@ -451,8 +451,11 @@ Requirements can be specified in different ways:
    method then a list of required tasks can also be specified
    via the ``requires`` argument;
 
-2. Requirements can also be added directly to a task using
-   its ``requires`` method.
+2. Requirements can be added directly to a task using its
+   ``requires`` method.
+
+3. A task can be made the requirement of other tasks using
+   its ``required_by`` method.
 
 Note that these two approaches are not exclusive, and can be
 used together on the same task to specify requirements in a
@@ -2552,6 +2555,21 @@ class PipelineTask(object):
                 raise Exception("%s: not a task?" % t)
             # Add ID
             self.requires_id(task_id)
+
+    def required_by(self,*tasks):
+        """
+        Add this task as a requirement of others
+
+        Each specified task will wait for this task
+        to complete before they can run.
+
+        Arguments:
+          tasks (List): list of PipelineTask objects
+            that will have this task added as a
+            requirement
+        """
+        for t in tasks:
+            t.requires(self)
 
     def requires_id(self,task_id):
         """

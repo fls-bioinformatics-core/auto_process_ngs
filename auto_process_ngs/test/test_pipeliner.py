@@ -1301,6 +1301,37 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(t3.required_task_ids,
                          sorted([t2.id(),t1.id()]))
 
+    def test_pipelinetask_required_by(self):
+        """
+        PipelineTask: check tasks required by others
+        """
+        # Define task for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs):
+                self.add_output('result',list())
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.append(x)
+        # Instantiate tasks
+        t1 = AppendTask("Task1",1,2)
+        t2 = AppendTask("Task2",3,4)
+        t3 = AppendTask("Task3",5,6)
+        # Check requirements on all tasks
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[])
+        self.assertEqual(t3.required_task_ids,[])
+        # Make second and third task depend on first
+        t1.required_by(t2,t3)
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,[t1.id()])
+        # Make third task depend on second
+        t2.required_by(t3)
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,
+                         sorted([t2.id(),t1.id()]))
+
     def test_pipelinetask_implied_requirement_from_input_param(self):
         """
         PipelineTask: check implied task requirements from inputs
