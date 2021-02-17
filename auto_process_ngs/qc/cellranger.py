@@ -35,6 +35,12 @@ class CellrangerCount(object):
             self._sample_name = os.path.basename(self.dir)
         except OSError:
             self._sample_name = None
+        # Command line file
+        try:
+            self._cmdline_file = os.path.join(self.dir,
+                                              "_cmdline")
+        except OSError:
+            self._cmdline_file = None
         # Deal with additional data items
         if not cellranger_exe:
             try:
@@ -162,16 +168,21 @@ class CellrangerCount(object):
         return metrics(self.metrics_csv)
 
     @property
+    def cmdline_file(self):
+        """
+        Path to the 'cellranger* count' '_cmdline' file
+        """
+        return self._cmdline_file
+
+    @property
     def cmdline(self):
         """
         Return the command line used to run 'cellranger* count'
         """
-        try:
-            cmdline_file = os.path.join(self.dir,"_cmdline")
-        except OSError:
-            return None
-        if os.path.exists(cmdline_file):
-            with open(cmdline_file,'rt') as fp:
+        if self.cmdline_file:
+            with open(self.cmdline_file,'rt') as fp:
                 return fp.read().strip()
+        else:
+            return None
         
         

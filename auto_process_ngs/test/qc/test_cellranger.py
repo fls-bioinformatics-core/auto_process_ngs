@@ -49,6 +49,8 @@ class TestCellrangerCount(unittest.TestCase):
                          os.path.join(count_dir,"outs","metrics_summary.csv"))
         self.assertEqual(cellranger_count.web_summary,
                          os.path.join(count_dir,"outs","web_summary.html"))
+        self.assertEqual(cellranger_count.cmdline_file,
+                         os.path.join(count_dir,"_cmdline"))
         self.assertEqual(cellranger_count.cmdline,cmdline)
         self.assertEqual(cellranger_count.version,None)
         self.assertEqual(cellranger_count.reference_data,
@@ -74,6 +76,8 @@ class TestCellrangerCount(unittest.TestCase):
                          os.path.join(count_dir,"outs","metrics_summary.csv"))
         self.assertEqual(cellranger_count.web_summary,
                          os.path.join(count_dir,"outs","web_summary.html"))
+        self.assertEqual(cellranger_count.cmdline_file,
+                         os.path.join(count_dir,"_cmdline"))
         self.assertEqual(cellranger_count.cmdline,cmdline)
         self.assertEqual(cellranger_count.version,None)
         self.assertEqual(cellranger_count.reference_data,
@@ -101,6 +105,8 @@ class TestCellrangerCount(unittest.TestCase):
                          os.path.join(count_dir,"outs","summary.csv"))
         self.assertEqual(cellranger_count.web_summary,
                          os.path.join(count_dir,"outs","web_summary.html"))
+        self.assertEqual(cellranger_count.cmdline_file,
+                         os.path.join(count_dir,"_cmdline"))
         self.assertEqual(cellranger_count.cmdline,cmdline)
         self.assertEqual(cellranger_count.version,None)
         self.assertEqual(cellranger_count.reference_data,
@@ -128,6 +134,8 @@ class TestCellrangerCount(unittest.TestCase):
                          os.path.join(count_dir,"outs","summary.csv"))
         self.assertEqual(cellranger_count.web_summary,
                          os.path.join(count_dir,"outs","web_summary.html"))
+        self.assertEqual(cellranger_count.cmdline_file,
+                         os.path.join(count_dir,"_cmdline"))
         self.assertEqual(cellranger_count.cmdline,cmdline)
         self.assertEqual(cellranger_count.version,None)
         self.assertEqual(cellranger_count.reference_data,
@@ -158,6 +166,8 @@ class TestCellrangerCount(unittest.TestCase):
                          os.path.join(count_dir,"outs","metrics_summary.csv"))
         self.assertEqual(cellranger_count.web_summary,
                          os.path.join(count_dir,"outs","web_summary.html"))
+        self.assertEqual(cellranger_count.cmdline_file,
+                         os.path.join(count_dir,"_cmdline"))
         self.assertEqual(cellranger_count.cmdline,cmdline)
         self.assertEqual(cellranger_count.version,"5.0.1")
         self.assertEqual(cellranger_count.reference_data,
@@ -180,6 +190,7 @@ class TestCellrangerCount(unittest.TestCase):
                           getattr,cellranger_count,'metrics_csv')
         self.assertRaises(OSError,
                           getattr,cellranger_count,'web_summary')
+        self.assertEqual(cellranger_count.cmdline_file,None)
         self.assertEqual(cellranger_count.cmdline,None)
         self.assertEqual(cellranger_count.version,None)
         self.assertEqual(cellranger_count.reference_data,None)
