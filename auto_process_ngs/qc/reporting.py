@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 from .constants import FASTQ_SCREENS
 
 QC_REPORT_CSS_STYLES = """/* General styles */
-html { font-family: DejaVu Serif, serif; }
+html { font-family: sans-serif; }
 p { font-size: 85%;
     color: #808080; }
 /* Headers */
