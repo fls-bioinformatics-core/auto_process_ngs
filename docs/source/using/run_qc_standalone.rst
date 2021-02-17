@@ -79,6 +79,14 @@ The following options can be used to override the defaults:
 * ``--name``: sets the name for the project (used in the
   QC report title)
 
+Updating existing QC outputs
+----------------------------
+
+If the output directory for the QC already exists then by
+default ``run_qc.py`` will stop without running the pipeline;
+to override this behaviour and update an existing QC output
+directory, specify the ``-u`` or ``--update`` option.
+
 Running 10xGenomics single library analyses
 -------------------------------------------
 

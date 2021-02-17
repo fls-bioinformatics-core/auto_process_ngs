@@ -130,6 +130,11 @@ if __name__ == "__main__":
     reporting.add_argument('-f','--filename',action='store',
                            help="file name for output QC report (default: "
                            "<OUT_DIR>/<QC_DIR_NAME>_report.html)")
+    reporting.add_argument('-u','--update',action='store_true',
+                           help="force QC pipeline to run even if output "
+                           "QC directory already exists in <OUT_DIR> "
+                           "(default: stop if output QC directory already "
+                           "exists)")
     # Project metadata
     metadata = p.add_argument_group('Metadata')
     metadata.add_argument('--organism',metavar='ORGANISM',
@@ -540,6 +545,14 @@ if __name__ == "__main__":
         qc_dir = 'qc'
     qc_dir = os.path.join(out_dir,qc_dir)
     print("QC directory    : %s" % qc_dir)
+
+    # Check if QC directory already exists
+    if os.path.exists(qc_dir):
+        if not args.update:
+            logger.fatal("QC directory already exists (use --update to "
+                         "run QC anyway)")
+            sys.exit(1)
+        print("Output QC directory already exists, updating")
 
     # Output file name
     if args.filename is None:
