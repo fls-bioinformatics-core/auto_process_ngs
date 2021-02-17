@@ -1763,7 +1763,8 @@ class Pipeline(object):
             the tasks that will run first)
         """
         ranks = self.rank_tasks()
-        return [self.get_task(t)[0] for t in ranks[0]]
+        return sorted([self.get_task(t)[0] for t in ranks[0]],
+                      key=lambd t: t.id())
 
     @property
     def final_tasks(self):
@@ -1779,7 +1780,7 @@ class Pipeline(object):
         for task_id in self.task_list():
             if not self.get_dependent_tasks(task_id):
                 final_tasks.append(self.get_task(task_id)[0])
-        return final_tasks
+        return sorted(final_tasks,key=lambda t: t.id())
 
     def get_dependent_tasks(self,task_id):
         """

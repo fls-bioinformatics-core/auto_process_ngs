@@ -923,7 +923,8 @@ prepend-path PATH %s
         ppl.add_task(task3,requires=(task1,))
         ppl.add_task(task4,requires=(task3,))
         # Check the initial tasks
-        self.assertEqual(ppl.final_tasks,[task2,task4])
+        self.assertEqual(ppl.final_tasks,sorted([task2,task4],
+                                                key=lambda x: x.id()))
 
     def test_pipeline_method_get_dependent_tasks(self):
         """
