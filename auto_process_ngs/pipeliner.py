@@ -1764,7 +1764,7 @@ class Pipeline(object):
         """
         ranks = self.rank_tasks()
         return sorted([self.get_task(t)[0] for t in ranks[0]],
-                      key=lambd t: t.id())
+                      key=lambda t: t.id())
 
     @property
     def final_tasks(self):
