@@ -616,6 +616,8 @@ class QCProject(object):
                 try:
                     cellranger = CellrangerCount(sample_dir)
                     output_files.append(cellranger.web_summary)
+                    output_files.append(cellranger.metrics_csv)
+                    output_files.append(cellranger.cmdline_file)
                     cellranger_samples.append(d)
                     cellranger_name = cellranger.pipeline_name
                     cellranger_references.add(cellranger.reference_data)
@@ -648,6 +650,8 @@ class QCProject(object):
                         try:
                             cellranger = CellrangerCount(sample_dir)
                             output_files.append(cellranger.web_summary)
+                            output_files.append(cellranger.metrics_csv)
+                            output_files.append(cellranger.cmdline_file)
                             cellranger_versioned_samples[ver][ref].append(smpl)
                             cellranger_name = cellranger.pipeline_name
                             cellranger_references.add(
@@ -1448,6 +1452,13 @@ class QCReport(Document):
         else:
             sample_name = "sample_%s" % sample
             sample_title = "Sample: %s" % sample
+        # Determine location of QC artefacts
+        if self.data_dir:
+            qc_dir = os.path.join(self.data_dir,
+                                  sanitize_name(project.id),
+                                  os.path.basename(project.qc_dir))
+        else:
+            qc_dir = project.qc_dir
         # Create a new section
         sample_report = self.add_section(
             sample_title,
@@ -1455,6 +1466,7 @@ class QCReport(Document):
             css_classes=('sample',))
         reporter = QCReportSample(project,
                                   sample,
+                                  qc_dir=qc_dir,
                                   fastq_attrs=project.fastq_attrs)
         reads = reporter.reads
         n_fastq_groups = len(reporter.fastq_groups)
@@ -1505,8 +1517,18 @@ class QCReport(Document):
           fields (list): list of fields to report for each
             analysis in the summary table
         """
+        # Determine location of QC artefacts
+        if self.data_dir:
+            qc_dir = os.path.join(self.data_dir,
+                                  sanitize_name(project.id),
+                                  os.path.basename(project.qc_dir))
+        else:
+            qc_dir = project.qc_dir
         # Get a reporter for the sample
-        reporter = QCReportSample(project,sample)
+        reporter = QCReportSample(project,
+                                  sample,
+                                  qc_dir=qc_dir,
+                                  fastq_attrs=project.fastq_attrs)
         # Update the single library analysis table
         status = reporter.update_single_library_table(
             single_library_analysis_table,
@@ -1554,13 +1576,16 @@ class QCReportSample(object):
         'sample',
         'cellranger_count',
     )
-    def __init__(self,project,sample,fastq_attrs=AnalysisFastq):
+    def __init__(self,project,sample,qc_dir=None,
+                 fastq_attrs=AnalysisFastq):
         """
         Create a new QCReportSample
 
         Arguments:
           project (QCProject): project to report
           sample (str): name of sample to report
+          qc_dir (str): path to the directory holding the
+            QC artefacts
           fastq_attrs (BaseFastqAttrs): class for extracting
             data from Fastq names
         """
@@ -1568,6 +1593,12 @@ class QCReportSample(object):
         self.fastq_groups = []
         self.cellranger_count = []
         self.multiome_libraries = None
+        # Location for QC artefacts
+        if qc_dir:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(project.dirn)
+        else:
+            qc_dir = project.qc_dir
         # Group Fastqs associated with this project
         self.fastqs = sorted(list(
             filter(lambda fq:
@@ -1576,13 +1607,13 @@ class QCReportSample(object):
         for fqs in group_fastqs_by_name(self.fastqs,fastq_attrs):
             self.fastq_groups.append(QCReportFastqGroup(
                 fqs,
-                qc_dir=project.qc_dir,
+                qc_dir=qc_dir,
                 project_id=project.id,
                 fastq_attrs=fastq_attrs))
         # Reads associated with the sample
         self.reads = [r for r in self.fastq_groups[0].reads]
         # 10x single library analyses
-        cellranger_count_dir = os.path.join(project.qc_dir,
+        cellranger_count_dir = os.path.join(qc_dir,
                                             "cellranger_count")
         if os.path.isdir(cellranger_count_dir):
             for dirn in walk(cellranger_count_dir):
@@ -2304,7 +2335,8 @@ class QCReportFastq(object):
     ufastqcplot
     uscreenplot
     """
-    def __init__(self,fastq,qc_dir,project_id=None,fastq_attrs=AnalysisFastq):
+    def __init__(self,fastq,qc_dir,project_id=None,
+                 fastq_attrs=AnalysisFastq):
         """
         Create a new QCReportFastq instance
 
