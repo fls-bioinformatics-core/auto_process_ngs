@@ -187,7 +187,7 @@ def main():
                                     "(%s != %s)" % (fastq_dir,
                                                     qc_info.fastq_dir))
         print("...using Fastqs dir: %s" % p.fastq_dir)
-        p.use_fastq_dir(fastq_dir)
+        p.use_fastq_dir(fastq_dir,strict=False)
         projects.append(p)
 
     # Verify QC for projects
