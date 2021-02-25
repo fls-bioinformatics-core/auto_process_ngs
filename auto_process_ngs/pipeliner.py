@@ -2775,6 +2775,12 @@ class PipelineCommand(object):
                     "echo \"#### START $(date)\""]
         if envmodules:
             shell += " --login"
+            try:
+                modulepath = os.environ['MODULEPATH']
+                if modulepath:
+                    prologue.append("export MODULEPATH=%s" % modulepath)
+            except KeyError:
+                pass
             for module in envmodules:
                 if module is not None:
                     prologue.append("module load %s" % module)
