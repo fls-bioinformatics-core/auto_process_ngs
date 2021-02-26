@@ -24,9 +24,11 @@ from auto_process_ngs.pipeliner import PipelineParam
 from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
+from auto_process_ngs.pipeliner import BaseParam
 from auto_process_ngs.pipeliner import PathJoinParam
 from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
+from auto_process_ngs.pipeliner import PipelineError
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 
@@ -874,6 +876,57 @@ prepend-path PATH %s
                          sorted([task2.id(),task3.id()]))
         self.assertEqual(ranked_tasks[2],[task4.id()])
 
+    def test_pipeline_method_initial_tasks(self):
+        """
+        Pipeline: test the 'initial_tasks' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task4,requires=(task3,))
+        # Check the initial tasks
+        self.assertEqual(ppl.initial_tasks,[task1])
+
+    def test_pipeline_method_final_tasks(self):
+        """
+        Pipeline: test the 'final_tasks' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task4,requires=(task3,))
+        # Check the initial tasks
+        self.assertEqual(ppl.final_tasks,sorted([task2,task4],
+                                                key=lambda x: x.id()))
+
     def test_pipeline_method_get_dependent_tasks(self):
         """
         Pipeline: test the 'get_dependent_tasks' method
@@ -1181,11 +1234,147 @@ class TestPipelineTask(unittest.TestCase):
                             self.args.d,
                             self.args.e)
                 self.output.results.append(result)
-        self.assertRaises(Exception,
+        self.assertRaises(PipelineError,
                           FailInit,
                           "This will fail on init",
                           "a",
                           "b")
+
+    def test_pipelinetask_requirements(self):
+        """
+        PipelineTask: check task requirements
+        """
+        # Define task for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs):
+                self.add_output('result',list())
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.append(x)
+        # Instantiate tasks
+        t1 = AppendTask("Task1",1,2)
+        t2 = AppendTask("Task2",3,4)
+        t3 = AppendTask("Task3",5,6)
+        # Check requirements on all tasks
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[])
+        self.assertEqual(t3.required_task_ids,[])
+        # Make second task depend on first
+        t2.requires(t1)
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,[])
+        # Make third task depend on first and second
+        t3.requires(t1,t2)
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,
+                         sorted([t2.id(),t1.id()]))
+
+    def test_pipelinetask_requirements_as_ids(self):
+        """
+        PipelineTask: check task requirements supplied as IDs
+        """
+        # Define task for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs):
+                self.add_output('result',list())
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.append(x)
+        # Instantiate tasks
+        t1 = AppendTask("Task1",1,2)
+        t2 = AppendTask("Task2",3,4)
+        t3 = AppendTask("Task3",5,6)
+        # Check requirements on all tasks
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[])
+        self.assertEqual(t3.required_task_ids,[])
+        # Make second task depend on first
+        t2.requires_id(t1.id())
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,[])
+        # Make third task depend on first and second
+        t3.requires_id(t1.id())
+        t3.requires_id(t2.id())
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,
+                         sorted([t2.id(),t1.id()]))
+
+    def test_pipelinetask_required_by(self):
+        """
+        PipelineTask: check tasks required by others
+        """
+        # Define task for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs):
+                self.add_output('result',list())
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.append(x)
+        # Instantiate tasks
+        t1 = AppendTask("Task1",1,2)
+        t2 = AppendTask("Task2",3,4)
+        t3 = AppendTask("Task3",5,6)
+        # Check requirements on all tasks
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[])
+        self.assertEqual(t3.required_task_ids,[])
+        # Make second and third task depend on first
+        t1.required_by(t2,t3)
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,[t1.id()])
+        # Make third task depend on second
+        t2.required_by(t3)
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,
+                         sorted([t2.id(),t1.id()]))
+
+    def test_pipelinetask_implied_requirement_from_input_param(self):
+        """
+        PipelineTask: check implied task requirements from inputs
+        """
+        # Define task for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs,**kws):
+                self.add_output('result',PipelineParam(type=list()))
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.value.append(x)
+        # Instantiate tasks
+        t1 = AppendTask("Task1",1,2)
+        t2 = AppendTask("Task2",t1.output.result,4)
+        t3 = AppendTask("Task3",t1.output.result,extras=t2.output.result)
+        # Check requirements on both tasks
+        self.assertEqual(t1.required_task_ids,[])
+        self.assertEqual(t2.required_task_ids,[t1.id()])
+        self.assertEqual(t3.required_task_ids,
+                         sorted([t2.id(),t1.id()]))
+
+    def test_pipelinetask_raise_exception_for_non_task_requirement(self):
+        """
+        PipelineTask: raise exception if requirement is not a task
+        """
+        # Define stask for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs):
+                self.add_output('result',list())
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.append(x)
+        # Instantiate task
+        t1 = AppendTask(1,2)
+        # Check initial requirements
+        self.assertEqual(t1.required_task_ids,[])
+        # Raise exception by trying to adding a non-task
+        # object as a requirement
+        self.assertRaises(PipelineError,
+                          t1.requires,
+                          "not_a_task")
 
     def test_pipelinetask_no_commands(self):
         """
@@ -1854,6 +2043,32 @@ class TestPipelineCommandWrapper(unittest.TestCase):
         cmd.add_args("there")
         self.assertEqual(str(cmd.cmd()),"echo hello there")
 
+class TestBaseParam(unittest.TestCase):
+
+    def test_baseparam_uuid(self):
+        """
+        BaseParam: check UUID
+        """
+        p = BaseParam()
+        self.assertNotEqual(p.uuid,None)
+
+    def test_associated_task(self):
+        """
+        BaseParam: check associated task
+        """
+        # Define a simple task
+        class SimpleTask(PipelineTask):
+            def init(self,x):
+                pass
+            def setup(self):
+                print(x)
+        t = SimpleTask("Simple task",x=12)
+        # Create and test associated task in a BaseParam
+        p = BaseParam()
+        self.assertEqual(p.associated_task_id,None)
+        p.associate_task(t)
+        self.assertEqual(p.associated_task_id,t.id())
+
 class TestPipelineParam(unittest.TestCase):
 
     def test_pipelineparam_no_type(self):
@@ -1867,6 +2082,7 @@ class TestPipelineParam(unittest.TestCase):
         self.assertEqual(p.value,"abc")
         p.set(123)
         self.assertEqual(p.value,123)
+        self.assertEqual(repr(p),"PipelineParam(value='123')")
 
     def test_pipelineparam_with_initial_value(self):
         """
@@ -1877,6 +2093,7 @@ class TestPipelineParam(unittest.TestCase):
         self.assertEqual(p.value,"abc")
         p = PipelineParam(value="def")
         self.assertEqual(p.value,"def")
+        self.assertEqual(repr(p),"PipelineParam(value='def')")
 
     def test_pipelineparam_with_type(self):
         """
@@ -1888,12 +2105,16 @@ class TestPipelineParam(unittest.TestCase):
         self.assertEqual(p.value,"abc")
         p.set(123)
         self.assertEqual(p.value,"123")
+        self.assertEqual(repr(p),
+                         "PipelineParam(value='123',type='%s')" % str(str))
         # Specify type function as 'int'
         p = PipelineParam(type=int)
         p.set(123)
         self.assertEqual(p.value,123)
         p.set("123")
         self.assertEqual(p.value,123)
+        self.assertEqual(repr(p),
+                         "PipelineParam(value='123',type='%s')" % str(int))
         # Exception for bad value
         p.set("abc")
         self.assertRaises(ValueError,lambda: p.value)
@@ -1903,6 +2124,8 @@ class TestPipelineParam(unittest.TestCase):
         self.assertEqual(p.value,1.23)
         p.set("1.23")
         self.assertEqual(p.value,1.23)
+        self.assertEqual(repr(p),
+                         "PipelineParam(value='1.23',type='%s')" % str(float))
         # Exception for bad value
         p.set("abc")
         self.assertRaises(ValueError,lambda: p.value)
@@ -1924,6 +2147,8 @@ class TestPipelineParam(unittest.TestCase):
         # Specify a name
         p = PipelineParam(name="my_param")
         self.assertEqual(p.name,"my_param")
+        self.assertEqual(repr(p),
+                         "PipelineParam(name='my_param',value='None')")
 
     def test_pipelineparam_handles_None_value(self):
         """
@@ -2146,6 +2371,29 @@ class TestFunctionParam(unittest.TestCase):
         py.set("hello")
         pz.set("backwards")
         self.assertEqual(func_param.value,("goodbye","hello","backwards"))
+
+    def test_functionparam_trap_exceptions_from_function(self):
+        """
+        FunctionParam: trap exceptions from function call
+        """
+        # Trap type error
+        exception = False
+        try:
+            FunctionParam(lambda x: int(x),"non integer").value
+        except PipelineError:
+            exception = True
+        except Exception:
+            pass
+        self.assertTrue(exception,"Should have raised exception")
+        # Trap attribute error
+        exception = False
+        try:
+            FunctionParam(lambda x: x.missing,123).value
+        except PipelineError:
+            exception = True
+        except Exception:
+            pass
+        self.assertTrue(exception,"Should have raised exception")
 
 class TestDispatcher(unittest.TestCase):
 

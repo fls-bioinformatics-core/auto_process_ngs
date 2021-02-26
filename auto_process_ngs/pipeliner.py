@@ -26,6 +26,10 @@ Additional supporting classes:
 - PathJoinParam: PipelineParameter-like dynamic file path joiner
 - PathExistsParam: PipelineParameter-like dynamic file existence checker
 
+The following exception classes are defined:
+
+- PipelineError: general pipeline-related exception
+
 There are some underlying classes and functions that are intended for
 internal use:
 
@@ -428,13 +432,57 @@ Notes:
 
 1. Tasks will only be executed once any tasks they depend on have
    completed successfully; these are specified via the ``requires``
-   argument (which must be a list or tuple of task instances).
+   argument of the ``add_task`` method (in which case it must be a
+   list or tuple of task instances), and/or via the ``requires``
+   method of a task instance.
 
 2. Tasks that fail (i.e. complete with non-zero exit status) will
    cause the pipeline to halt at that point.
 
 3. The ``run`` method blocks and returns the exit status of the
    pipeline execution.
+
+Defining relationships between tasks
+------------------------------------
+
+A task in a pipeline may depend on one or more other tasks in
+the pipeline to complete before it can be run; these are referred
+to as "requirements" of the task.
+
+Requirements can be specified in different ways:
+
+1. When a task is added to a pipeline via the ``add_task``
+   method then a list of required tasks can also be specified
+   via the ``requires`` argument;
+
+2. Requirements can be added directly to a task using its
+   ``requires`` method.
+
+3. A task can be made the requirement of other tasks using
+   its ``required_by`` method.
+
+Note that these two approaches are not exclusive, and can be
+used together on the same task to specify requirements in a
+pipeline.
+
+Additionally, requirements are automatically added implicitly for
+each input that is a parameter-based output from another task.
+
+Requirement specification can be combined with two properties
+that can be useful for when adding tasks to an existing
+pipeline:
+
+* ``initial_tasks`` returns a list of all the tasks in the
+  pipeline that don't have any requirements; it can be used
+  when inserting tasks at the start of a pipeline, as the
+  inserted task can be made into a requirement of the initial
+  tasks using the idiom
+  ``task.required_by(*pipeline.initial_tasks)``, and
+* ``final_tasks`` returns a list of the all the tasks in the
+  pipeline which no other tasks require (essentially they will
+  run at the end of the pipeline); it can be used when appending
+  tasks to the end of a pipeline using the idiom
+  ``task.requires(*pipeline.final_tasks)``.
 
 Scheduling and running jobs
 ---------------------------
@@ -823,6 +871,10 @@ the pipeline's ``run`` method to ``False``. For example:
     ...
     ppl.run(finalize_outputs=False)
 
+It is recommended that outputs are defined as ``PipelineParam``
+instances, to take advantage of the implicit task requirement
+gathering mechanism.
+
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
 
@@ -944,18 +996,48 @@ class PipelineFailure(object):
 class BaseParam(object):
     """
     Provide base class for PipelineParam-type classes
+
+    Implements core functionality that should be
+    shared across all parameter-like classes, including
+    assigning a UUID and enabling a task ID to be
+    associated with the parameter.
+
+    Provides the following attributes:
+
+    - uuid
+    - associated_task_id
+
+    and the following methods:
+
+    - associate_task
     """
     def __init__(self):
         """
         Base class for PipelineParam-type class
         """
         self._uuid = uuid.uuid4()
+        self._associated_task_id = None
+    def associate_task(self,task):
+        """
+        Associate a task with the parameter
+
+        Arguments:
+          task (PipelineTask): a task object to
+            associate with the parameter
+        """
+        self._associated_task_id = task.id()
     @property
     def uuid(self):
         """
         Return the unique identifier (UUID) of the parameter
         """
         return self._uuid
+    @property
+    def associated_task_id(self):
+        """
+        Return the task ID of the associated task (or None)
+        """
+        return self._associated_task_id
 
 class PipelineParam(BaseParam):
     """
@@ -1057,12 +1139,14 @@ class PipelineParam(BaseParam):
             instance
         """
         BaseParam.__init__(self)
+        self._name = None
         self._value = None
         self._type = type
         self._default = default
         if value is not None:
             self.set(value)
-        self._name = str(name)
+        if name:
+            self._name = str(name)
         self._replace_with = None
     def set(self,newvalue):
         """
@@ -1126,6 +1210,16 @@ class PipelineParam(BaseParam):
         Return the name of the parameter (if supplied)
         """
         return self._name
+    def __repr__(self):
+        args = []
+        if self._name:
+            args.append("name='%s'" % self._name)
+        args.append("value='%s'" % (self._value,))
+        if self._type:
+            args.append("type='%s'" % self._type)
+        if self._default:
+            args.append("default='%s'" % (self._default,))
+        return "PipelineParam(%s)" % ','.join(args)
 
 class FileCollector(Iterator):
     """
@@ -1361,8 +1455,9 @@ class Pipeline(object):
             run time (see the ``run`` method of
             PipelineTask for valid options)
         """
-        self._tasks[task.id()] = (task,requires,kws)
+        self._tasks[task.id()] = (task,kws)
         for req in requires:
+            task.requires(req)
             if req.id() not in self.task_list():
                 self.add_task(req,())
         return task
@@ -1491,12 +1586,6 @@ class Pipeline(object):
             that the added pipeline will depend on
         """
         self.report("Importing tasks from pipeline '%s'" % pipeline.name)
-        # Get the starting tasks from the new pipeline
-        ranks = pipeline.rank_tasks()
-        initial_tasks = ranks[0]
-        self.report("Identified initial tasks from imported pipeline:")
-        for task_id in initial_tasks:
-            self.report("- %s" % pipeline.get_task(task_id)[0].name())
         # Store direct references to imported parameters
         self.report("Importing and masking parameters")
         imported_params = pipeline.params
@@ -1536,16 +1625,16 @@ class Pipeline(object):
         for r in pipeline.runners:
             if r not in self.runners:
                 self.add_runner(r)
+        # Get the starting tasks from the new pipeline
+        initial_tasks = pipeline.initial_tasks
+        self.report("Identified initial tasks from imported pipeline:")
+        for t in initial_tasks:
+            self.report("- %s" % t.name())
         # Add the tasks from the new pipeline
-        self.report("Adding tasks")
-        for task_id in pipeline.task_list():
+        self.report("Importing tasks")
+        imported_tasks = pipeline.task_list()
+        for task_id in imported_tasks:
             task,requirements,kws = pipeline.get_task(task_id)
-            if task_id in initial_tasks:
-                if requires:
-                    if requirements:
-                        requirements = list(requirements).extend(requires)
-                    else:
-                        requirements = list(requires)
             # Update the runner for the task
             if 'runner' in kws:
                 name = kws['runner'].name
@@ -1560,6 +1649,12 @@ class Pipeline(object):
                             "task '%s'" % (name,task.name()))
             # Add the task to the source pipeline
             self.add_task(task,requires=requirements,**kws)
+        # Update the requirements on the initial tasks from
+        # the imported pipeline
+        if requires:
+            self.report("Updating dependencies on imported tasks")
+            for task in initial_tasks:
+                task.requires(*requires)
 
     def append_pipeline(self,pipeline):
         """
@@ -1580,10 +1675,7 @@ class Pipeline(object):
         """
         self.report("Appending tasks from pipeline '%s'" % pipeline.name)
         # Get the final tasks from the base pipeline
-        final_tasks = []
-        for task_id in self.task_list():
-            if not self.get_dependent_tasks(task_id):
-                final_tasks.append(self.get_task(task_id)[0])
+        final_tasks = self.final_tasks
         self.report("Identified final tasks from base pipeline:")
         for task in final_tasks:
             self.report("-- %s" % task.name())
@@ -1625,12 +1717,17 @@ class Pipeline(object):
 
         Returns:
           Tuple: tuple of (task,requirements,kws)
-            where task is a PipelineTask instance,
+            where 'task' is a PipelineTask instance,
             requirements is a list of PipelineTask
             instances that the task depends on,
-            and kws is a keyword mapping.
+            and kws is a keyword mapping
         """
-        return self._tasks[task_id]
+        # Fetch task object and keywords
+        task,kws = self._tasks[task_id]
+        # Fetch dependent tasks
+        requirements = tuple([self.get_task(t)[0]
+                              for t in task.required_task_ids])
+        return (task,requirements,kws)
 
     def rank_tasks(self):
         """
@@ -1670,6 +1767,36 @@ class Pipeline(object):
                 required[task_id] = new_reqs
             ranks.append(current_rank)
         return ranks
+
+    @property
+    def initial_tasks(self):
+        """
+        Fetch a list of 'initial tasks' for the pipeline
+
+        Returns:
+          List: list of task instances from the pipeline
+            which don't depend on any other tasks (i.e.
+            the tasks that will run first)
+        """
+        ranks = self.rank_tasks()
+        return sorted([self.get_task(t)[0] for t in ranks[0]],
+                      key=lambda t: t.id())
+
+    @property
+    def final_tasks(self):
+        """
+        Fetch a list of 'final tasks' for the pipeline
+
+        Returns:
+          List: list of task instances from the pipeline
+            which don't have any dependent tasks (i.e.
+            the tasks that will run last)
+        """
+        final_tasks = []
+        for task_id in self.task_list():
+            if not self.get_dependent_tasks(task_id):
+                final_tasks.append(self.get_task(task_id)[0])
+        return sorted(final_tasks,key=lambda t: t.id())
 
     def get_dependent_tasks(self,task_id):
         """
@@ -1759,7 +1886,7 @@ class Pipeline(object):
                 if r in self.runners:
                     self.runners[r].set(runners[r])
                 else:
-                    raise Exception("Undefined runner '%s'" % r)
+                    raise PipelineError("Undefined runner '%s'" % r)
         if default_runner:
             self.runners['default'].set(default_runner)
         # Deal with environment modules
@@ -2088,6 +2215,7 @@ class PipelineTask(object):
         self._kws = kws
         self._commands = []
         self._scripts = []
+        self._required_task_ids = []
         self._task_name = "%s.%s" % (sanitize_name(self._name),
                                      uuid.uuid4())
         self._completed = False
@@ -2118,11 +2246,27 @@ class PipelineTask(object):
             del(self._callargs['self'])
         except KeyError:
             pass
+        # Check for parameter arguments & keywords that have associated
+        # tasks and add these as requirements
+        for arg in self._args:
+            try:
+                task_id = arg.associated_task_id
+                if task_id:
+                    self.requires_id(task_id)
+            except AttributeError as ex:
+                pass
+        for kw in self._kws:
+            try:
+                task_id = self._kws[kw].associated_task_id
+                if task_id:
+                    self.requires_id(task_id)
+            except AttributeError:
+                pass
         # Execute the init method
         self.invoke(self.init,self._args,self._kws)
         if self._exit_code != 0:
-            raise Exception("Error running 'init' method for task '%s' "
-                            "(%s)" % (self._name,self.__class__))
+            raise PipelineError("Error running 'init' method for task '%s' "
+                                "(%s)" % (self._name,self.__class__))
 
     @property
     def args(self):
@@ -2408,6 +2552,61 @@ class PipelineTask(object):
         """
         self._commands.append(pipeline_job)
 
+    def requires(self,*tasks):
+        """
+        Add tasks as requirements
+
+        Each specified task will be added to the list
+        of tasks that need to complete before this
+        task can run.
+
+        Arguments:
+          tasks (List): list of PipelineTask objects
+            to be added to this task as requirements
+        """
+        for t in tasks:
+            # Fetch associated ID
+            try:
+                task_id = t.id()
+            except AttributeError:
+                raise PipelineError("%s: not a task?" % t)
+            # Add ID
+            self.requires_id(task_id)
+
+    def required_by(self,*tasks):
+        """
+        Add this task as a requirement of others
+
+        Each specified task will wait for this task
+        to complete before they can run.
+
+        Arguments:
+          tasks (List): list of PipelineTask objects
+            that will have this task added as a
+            requirement
+        """
+        for t in tasks:
+            t.requires(self)
+
+    def requires_id(self,task_id):
+        """
+        Add task ID to list of requirements
+
+        Arguments:
+          task_id (str): UUID of the task to be added
+            as a requirement
+        """
+        if task_id not in self._required_task_ids:
+            self._required_task_ids.append(task_id)
+        self._required_task_ids = sorted(self._required_task_ids)
+
+    @property
+    def required_task_ids(self):
+        """
+        Return the task IDs for tasks required by this task
+        """
+        return self._required_task_ids
+
     def add_output(self,name,value):
         """
         Add an output to the task
@@ -2417,6 +2616,10 @@ class PipelineTask(object):
           value (object): associated object
         """
         self._output[name] = value
+        try:
+            self._output[name].associate_task(self)
+        except AttributeError as ex:
+            pass
 
     @property
     def output(self):
@@ -2922,7 +3125,10 @@ class FunctionParam(BaseParam):
                 kws[kw] = self._kws[kw].value
             except AttributeError:
                 kws[kw] = self._kws[kw]
-        return self._f(*args,**kws)
+        try:
+            return self._f(*args,**kws)
+        except Exception as ex:
+            raise PipelineError("Failed to evaluate function: %s" % ex)
 
 class PathJoinParam(FunctionParam):
     """
@@ -3174,7 +3380,7 @@ class Dispatcher(object):
             else:
                 return result
         else:
-            raise Exception("Pickled output not found")
+            raise PipelineError("Pickled output not found")
 
     def _pickle_object(self,obj,pickle_file=None):
         """
@@ -3209,6 +3415,15 @@ class Dispatcher(object):
         """
         with open(pickle_file,'rb') as fp:
             return self._pickler.loads(fp.read())
+
+######################################################################
+# Custom exceptions
+######################################################################
+
+class PipelineError(Exception):
+    """
+    Base class for pipeline-specific exceptions
+    """
 
 ######################################################################
 # Utility functions
