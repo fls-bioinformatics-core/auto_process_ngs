@@ -2371,6 +2371,27 @@ class TestFunctionParam(unittest.TestCase):
         pz.set("backwards")
         self.assertEqual(func_param.value,("goodbye","hello","backwards"))
 
+    def test_functionparam_trap_exceptions_from_function(self):
+        """
+        FunctionParam: trap exceptions from function call
+        """
+        # Trap type error
+        exception = False
+        try:
+            FunctionParam(lambda x: int(x),"non integer").value
+        except Exception:
+            exception = True
+        self.assertTrue(exception,"Should have raised exception")
+        # Trap attribute error
+        exception = False
+        try:
+            FunctionParam(lambda x: x.missing,123).value
+        except AttributeError:
+            pass
+        except Exception:
+            exception = True
+        self.assertTrue(exception,"Should have raised exception")
+
 class TestDispatcher(unittest.TestCase):
 
     def setUp(self):

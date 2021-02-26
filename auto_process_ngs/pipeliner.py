@@ -3115,7 +3115,10 @@ class FunctionParam(BaseParam):
                 kws[kw] = self._kws[kw].value
             except AttributeError:
                 kws[kw] = self._kws[kw]
-        return self._f(*args,**kws)
+        try:
+            return self._f(*args,**kws)
+        except Exception as ex:
+            raise Exception("Failed to evaluate function: %s" % ex)
 
 class PathJoinParam(FunctionParam):
     """
