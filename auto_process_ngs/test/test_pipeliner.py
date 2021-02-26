@@ -28,6 +28,7 @@ from auto_process_ngs.pipeliner import BaseParam
 from auto_process_ngs.pipeliner import PathJoinParam
 from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
+from auto_process_ngs.pipeliner import PipelineError
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 
@@ -1233,7 +1234,7 @@ class TestPipelineTask(unittest.TestCase):
                             self.args.d,
                             self.args.e)
                 self.output.results.append(result)
-        self.assertRaises(Exception,
+        self.assertRaises(PipelineError,
                           FailInit,
                           "This will fail on init",
                           "a",
@@ -1371,7 +1372,7 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(t1.required_task_ids,[])
         # Raise exception by trying to adding a non-task
         # object as a requirement
-        self.assertRaises(Exception,
+        self.assertRaises(PipelineError,
                           t1.requires,
                           "not_a_task")
 
@@ -2379,17 +2380,19 @@ class TestFunctionParam(unittest.TestCase):
         exception = False
         try:
             FunctionParam(lambda x: int(x),"non integer").value
-        except Exception:
+        except PipelineError:
             exception = True
+        except Exception:
+            pass
         self.assertTrue(exception,"Should have raised exception")
         # Trap attribute error
         exception = False
         try:
             FunctionParam(lambda x: x.missing,123).value
-        except AttributeError:
-            pass
-        except Exception:
+        except PipelineError:
             exception = True
+        except Exception:
+            pass
         self.assertTrue(exception,"Should have raised exception")
 
 class TestDispatcher(unittest.TestCase):

@@ -26,6 +26,10 @@ Additional supporting classes:
 - PathJoinParam: PipelineParameter-like dynamic file path joiner
 - PathExistsParam: PipelineParameter-like dynamic file existence checker
 
+The following exception classes are defined:
+
+- PipelineError: general pipeline-related exception
+
 There are some underlying classes and functions that are intended for
 internal use:
 
@@ -1882,7 +1886,7 @@ class Pipeline(object):
                 if r in self.runners:
                     self.runners[r].set(runners[r])
                 else:
-                    raise Exception("Undefined runner '%s'" % r)
+                    raise PipelineError("Undefined runner '%s'" % r)
         if default_runner:
             self.runners['default'].set(default_runner)
         # Deal with environment modules
@@ -2261,8 +2265,8 @@ class PipelineTask(object):
         # Execute the init method
         self.invoke(self.init,self._args,self._kws)
         if self._exit_code != 0:
-            raise Exception("Error running 'init' method for task '%s' "
-                            "(%s)" % (self._name,self.__class__))
+            raise PipelineError("Error running 'init' method for task '%s' "
+                                "(%s)" % (self._name,self.__class__))
 
     @property
     def args(self):
@@ -2565,7 +2569,7 @@ class PipelineTask(object):
             try:
                 task_id = t.id()
             except AttributeError:
-                raise Exception("%s: not a task?" % t)
+                raise PipelineError("%s: not a task?" % t)
             # Add ID
             self.requires_id(task_id)
 
@@ -3118,7 +3122,7 @@ class FunctionParam(BaseParam):
         try:
             return self._f(*args,**kws)
         except Exception as ex:
-            raise Exception("Failed to evaluate function: %s" % ex)
+            raise PipelineError("Failed to evaluate function: %s" % ex)
 
 class PathJoinParam(FunctionParam):
     """
@@ -3370,7 +3374,7 @@ class Dispatcher(object):
             else:
                 return result
         else:
-            raise Exception("Pickled output not found")
+            raise PipelineError("Pickled output not found")
 
     def _pickle_object(self,obj,pickle_file=None):
         """
@@ -3405,6 +3409,15 @@ class Dispatcher(object):
         """
         with open(pickle_file,'rb') as fp:
             return self._pickler.loads(fp.read())
+
+######################################################################
+# Custom exceptions
+######################################################################
+
+class PipelineError(Exception):
+    """
+    Base class for pipeline-specific exceptions
+    """
 
 ######################################################################
 # Utility functions
