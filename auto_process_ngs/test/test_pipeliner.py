@@ -2081,6 +2081,7 @@ class TestPipelineParam(unittest.TestCase):
         self.assertEqual(p.value,"abc")
         p.set(123)
         self.assertEqual(p.value,123)
+        self.assertEqual(repr(p),"PipelineParam(value='123')")
 
     def test_pipelineparam_with_initial_value(self):
         """
@@ -2091,6 +2092,7 @@ class TestPipelineParam(unittest.TestCase):
         self.assertEqual(p.value,"abc")
         p = PipelineParam(value="def")
         self.assertEqual(p.value,"def")
+        self.assertEqual(repr(p),"PipelineParam(value='def')")
 
     def test_pipelineparam_with_type(self):
         """
@@ -2102,12 +2104,16 @@ class TestPipelineParam(unittest.TestCase):
         self.assertEqual(p.value,"abc")
         p.set(123)
         self.assertEqual(p.value,"123")
+        self.assertEqual(repr(p),
+                         "PipelineParam(value='123',type='<class 'str'>')")
         # Specify type function as 'int'
         p = PipelineParam(type=int)
         p.set(123)
         self.assertEqual(p.value,123)
         p.set("123")
         self.assertEqual(p.value,123)
+        self.assertEqual(repr(p),
+                         "PipelineParam(value='123',type='<class 'int'>')")
         # Exception for bad value
         p.set("abc")
         self.assertRaises(ValueError,lambda: p.value)
@@ -2117,6 +2123,8 @@ class TestPipelineParam(unittest.TestCase):
         self.assertEqual(p.value,1.23)
         p.set("1.23")
         self.assertEqual(p.value,1.23)
+        self.assertEqual(repr(p),
+                         "PipelineParam(value='1.23',type='<class 'float'>')")
         # Exception for bad value
         p.set("abc")
         self.assertRaises(ValueError,lambda: p.value)
@@ -2138,6 +2146,8 @@ class TestPipelineParam(unittest.TestCase):
         # Specify a name
         p = PipelineParam(name="my_param")
         self.assertEqual(p.name,"my_param")
+        self.assertEqual(repr(p),
+                         "PipelineParam(name='my_param',value='None')")
 
     def test_pipelineparam_handles_None_value(self):
         """

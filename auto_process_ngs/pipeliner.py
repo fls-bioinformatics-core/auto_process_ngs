@@ -1135,12 +1135,14 @@ class PipelineParam(BaseParam):
             instance
         """
         BaseParam.__init__(self)
+        self._name = None
         self._value = None
         self._type = type
         self._default = default
         if value is not None:
             self.set(value)
-        self._name = str(name)
+        if name:
+            self._name = str(name)
         self._replace_with = None
     def set(self,newvalue):
         """
@@ -1204,6 +1206,16 @@ class PipelineParam(BaseParam):
         Return the name of the parameter (if supplied)
         """
         return self._name
+    def __repr__(self):
+        args = []
+        if self._name:
+            args.append("name='%s'" % self._name)
+        args.append("value='%s'" % (self._value,))
+        if self._type:
+            args.append("type='%s'" % self._type)
+        if self._default:
+            args.append("default='%s'" % (self._default,))
+        return "PipelineParam(%s)" % ','.join(args)
 
 class FileCollector(Iterator):
     """
