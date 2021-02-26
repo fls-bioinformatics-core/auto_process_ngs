@@ -2106,7 +2106,7 @@ class TestPipelineParam(unittest.TestCase):
         p.set(123)
         self.assertEqual(p.value,"123")
         self.assertEqual(repr(p),
-                         "PipelineParam(value='123',type='<class 'str'>')")
+                         "PipelineParam(value='123',type='%s')" % str(str))
         # Specify type function as 'int'
         p = PipelineParam(type=int)
         p.set(123)
@@ -2114,7 +2114,7 @@ class TestPipelineParam(unittest.TestCase):
         p.set("123")
         self.assertEqual(p.value,123)
         self.assertEqual(repr(p),
-                         "PipelineParam(value='123',type='<class 'int'>')")
+                         "PipelineParam(value='123',type='%s')" % str(int))
         # Exception for bad value
         p.set("abc")
         self.assertRaises(ValueError,lambda: p.value)
@@ -2125,7 +2125,7 @@ class TestPipelineParam(unittest.TestCase):
         p.set("1.23")
         self.assertEqual(p.value,1.23)
         self.assertEqual(repr(p),
-                         "PipelineParam(value='1.23',type='<class 'float'>')")
+                         "PipelineParam(value='1.23',type='%s')" % str(float))
         # Exception for bad value
         p.set("abc")
         self.assertRaises(ValueError,lambda: p.value)
