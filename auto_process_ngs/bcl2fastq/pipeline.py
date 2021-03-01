@@ -843,11 +843,11 @@ class MakeFastqs(Pipeline):
         # Load sample sheet data
         sample_sheet = SampleSheet(self._sample_sheet)
 
-        # Keep track of Fastq generation tasks
-        fastq_generation_tasks = []
-
         # Keep track of bcl2fastq output directories
         bcl2fastq_out_dirs = []
+
+        # Keep track of missing fastqs
+        missing_fastqs = []
 
         # Keep track of lanes to analyse barcodes for
         lanes_for_barcode_analysis = []
@@ -862,6 +862,16 @@ class MakeFastqs(Pipeline):
         get_cellranger_atac = None
         get_cellranger_arc = None
         get_spaceranger = None
+
+        #########################
+        # Merge Fastq directories
+        #########################
+        merge_fastq_dirs = MergeFastqDirs(
+            "Merge bcl2fastq output directories",
+            bcl2fastq_out_dirs,
+            self.params.out_dir
+        )
+        self.add_task(merge_fastq_dirs)
 
         # For each subset, add the appropriate set of
         # tasks for the protocol
@@ -1027,9 +1037,11 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
-                fastq_generation_tasks.append(run_bcl2fastq)
+                merge_fastq_dirs.requires(run_bcl2fastq)
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+                # Add missing Fastqs
+                missing_fastqs.append(run_bcl2fastq.output.missing_fastqs)
 
             # ICELL8 RNA-seq
             if protocol == "icell8":
@@ -1076,9 +1088,11 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
-                fastq_generation_tasks.append(run_bcl2fastq)
+                merge_fastq_dirs.requires(run_bcl2fastq)
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+                # Add missing Fastqs
+                missing_fastqs.append(run_bcl2fastq.output.missing_fastqs)
 
             # ICELL8 ATAC-seq
             if protocol == "icell8_atac":
@@ -1147,9 +1161,10 @@ class MakeFastqs(Pipeline):
                     requires=(run_bcl2fastq,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
-                fastq_generation_tasks.append(demultiplex_fastqs)
+                merge_fastq_dirs.requires(demultiplex_fastqs)
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+                # No missing Fastqs from ICELL ATAC
 
             # 10x RNA-seq
             if protocol == "10x_chromium_sc":
@@ -1204,9 +1219,12 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
-                fastq_generation_tasks.append(run_cellranger_mkfastq)
+                merge_fastq_dirs.requires(run_cellranger_mkfastq)
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+                # Add missing Fastqs
+                missing_fastqs.append(
+                    run_cellranger_mkfastq.output.missing_fastqs)
 
             # 10x ATAC-seq
             if protocol == "10x_atac":
@@ -1264,9 +1282,12 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
-                fastq_generation_tasks.append(run_cellranger_mkfastq)
+                merge_fastq_dirs.requires(run_cellranger_mkfastq)
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+                # Add missing Fastqs
+                missing_fastqs.append(
+                    run_cellranger_mkfastq.output.missing_fastqs)
 
             # 10x Visium
             if protocol == "10x_visium":
@@ -1324,9 +1345,12 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
-                fastq_generation_tasks.append(run_spaceranger_mkfastq)
+                merge_fastq_dirs.requires(run_spaceranger_mkfastq)
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+                # Add missing Fastqs
+                missing_fastqs.append(
+                    run_spaceranger_mkfastq.output.missing_fastqs)
 
             # 10x multiome
             if protocol == "10x_multiome":
@@ -1384,20 +1408,12 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
-                fastq_generation_tasks.append(run_cellranger_mkfastq)
+                merge_fastq_dirs.requires(run_cellranger_mkfastq)
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
-
-        # Merge Fastqs
-        if len(self.subsets) > 1:
-            merge_fastq_dirs = MergeFastqDirs(
-                "Merge bcl2fastq output directories",
-                bcl2fastq_out_dirs,
-                self.params.out_dir
-            )
-            self.add_task(merge_fastq_dirs,
-                          requires=fastq_generation_tasks)
-            fastq_generation_tasks = (merge_fastq_dirs,)
+                # Add missing Fastqs
+                missing_fastqs.append(
+                    run_cellranger_mkfastq.output.missing_fastqs)
 
         if self._fastq_statistics:
             # Generate statistics
@@ -1414,7 +1430,7 @@ class MakeFastqs(Pipeline):
                 nprocessors=self.params.nprocessors)
             self.add_task(fastq_statistics,
                           runner=self.runners['stats_runner'],
-                          requires=fastq_generation_tasks)
+                          requires=(merge_fastq_dirs,))
 
             # Processing QC report
             report_qc = ReportProcessingQC(
@@ -1457,7 +1473,7 @@ class MakeFastqs(Pipeline):
                                   'lanes': Param(
                                       value=lanes_for_barcode_analysis),
                               },
-                              requires=fastq_generation_tasks)
+                              requires=(merge_fastq_dirs,))
 
         # Update outputs associated with primary data
         self.output.acquired_primary_data.set(
@@ -1504,24 +1520,19 @@ class MakeFastqs(Pipeline):
         # Update lists of missing Fastqs
         self.params._missing_fastqs.set(
             FunctionParam(self._merge_missing_fastqs,
-                          fastq_generation_tasks))
+                          missing_fastqs))
 
-    def _merge_missing_fastqs(self,tasks):
+    def _merge_missing_fastqs(self,fastq_sets):
         """
         Internal: merge lists of "missing" Fastqs
 
-        Given a list of task instances, combine the
-        'missing_fastqs' output lists from each task
+        Given a list with lists of Fastqs, combine them
         into a single sorted list of Fastqs.
         """
         missing_fastqs = list()
-        for task in tasks:
-            try:
-                if task.output.missing_fastqs:
-                    missing_fastqs.extend(
-                        task.output.missing_fastqs)
-            except AttributeError:
-                pass
+        for fqs in fastq_sets:
+            if fqs:
+                missing_fastqs.extend(fqs)
         return sorted(missing_fastqs)
 
     def run(self,analysis_dir,out_dir=None,barcode_analysis_dir=None,
