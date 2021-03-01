@@ -838,8 +838,7 @@ class MakeFastqs(Pipeline):
             fetch_primary_data.output.run_dir,
             platform=self._platform
         )
-        self.add_task(identify_platform,
-                      requires=(fetch_primary_data,))
+        self.add_task(identify_platform)
 
         # Load sample sheet data
         sample_sheet = SampleSheet(self._sample_sheet)
@@ -1025,11 +1024,7 @@ class MakeFastqs(Pipeline):
                 self.add_task(run_bcl2fastq,
                               runner=self.runners['bcl2fastq_runner'],
                               envmodules=self.envmodules['bcl2fastq'],
-                              requires=(get_bcl2fastq,
-                                        make_sample_sheet,
-                                        fetch_primary_data,
-                                        identify_platform,
-                                        restore_backup))
+                              requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
                 fastq_generation_tasks.append(run_bcl2fastq)
@@ -1052,8 +1047,7 @@ class MakeFastqs(Pipeline):
                     "Get bases mask for ICELL8",
                     fetch_primary_data.output.run_dir,
                     make_sample_sheet.output.custom_sample_sheet)
-                self.add_task(get_bases_mask,
-                              requires=(fetch_primary_data,))
+                self.add_task(get_bases_mask)
                 # Run standard bcl2fastq
                 run_bcl2fastq = RunBcl2Fastq(
                     "Run bcl2fastq%s" % (" for lanes %s" %
@@ -1079,12 +1073,7 @@ class MakeFastqs(Pipeline):
                 self.add_task(run_bcl2fastq,
                               runner=self.runners['bcl2fastq_runner'],
                               envmodules=self.envmodules['bcl2fastq'],
-                              requires=(get_bcl2fastq,
-                                        get_bases_mask,
-                                        make_sample_sheet,
-                                        fetch_primary_data,
-                                        identify_platform,
-                                        restore_backup,))
+                              requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
                 fastq_generation_tasks.append(run_bcl2fastq)
@@ -1114,8 +1103,7 @@ class MakeFastqs(Pipeline):
                 get_bases_mask = GetBasesMaskIcell8Atac(
                     "Get bases mask for ICELL8",
                     fetch_primary_data.output.run_dir)
-                self.add_task(get_bases_mask,
-                              requires=(fetch_primary_data,))
+                self.add_task(get_bases_mask)
                 # Run standard bcl2fastq
                 run_bcl2fastq = RunBcl2Fastq(
                     "Run bcl2fastq%s" % (" for lanes %s" %
@@ -1140,11 +1128,7 @@ class MakeFastqs(Pipeline):
                 self.add_task(run_bcl2fastq,
                               runner=self.runners['bcl2fastq_runner'],
                               envmodules=self.envmodules['bcl2fastq'],
-                              requires=(get_bcl2fastq,
-                                        get_bases_mask,
-                                        make_sample_sheet,
-                                        fetch_primary_data,
-                                        restore_backup))
+                              requires=(restore_backup,))
                 # Demultiplex ICELL8 ATAC Fastqs
                 demultiplex_fastqs = DemultiplexIcell8Atac(
                     "Demultiplex ICELL8 ATAC fastqs%s" %
@@ -1217,12 +1201,7 @@ class MakeFastqs(Pipeline):
                 self.add_task(run_cellranger_mkfastq,
                               runner=self.runners['cellranger_runner'],
                               envmodules=self.envmodules['cellranger_mkfastq'],
-                              requires=(get_cellranger,
-                                        get_bcl2fastq_for_10x,
-                                        make_sample_sheet,
-                                        fetch_primary_data,
-                                        identify_platform,
-                                        restore_backup,))
+                              requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
                 fastq_generation_tasks.append(run_cellranger_mkfastq)
@@ -1282,12 +1261,7 @@ class MakeFastqs(Pipeline):
                               runner=self.runners['cellranger_runner'],
                               envmodules=\
                               self.envmodules['cellranger_atac_mkfastq'],
-                              requires=(get_cellranger_atac,
-                                        get_bcl2fastq_for_10x_atac,
-                                        make_sample_sheet,
-                                        fetch_primary_data,
-                                        identify_platform,
-                                        restore_backup,))
+                              requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
                 fastq_generation_tasks.append(run_cellranger_mkfastq)
@@ -1347,12 +1321,7 @@ class MakeFastqs(Pipeline):
                               runner=self.runners['spaceranger_runner'],
                               envmodules=\
                               self.envmodules['spaceranger_mkfastq'],
-                              requires=(get_spaceranger,
-                                        get_bcl2fastq_for_10x_visium,
-                                        make_sample_sheet,
-                                        fetch_primary_data,
-                                        identify_platform,
-                                        restore_backup,))
+                              requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
                 fastq_generation_tasks.append(run_spaceranger_mkfastq)
@@ -1412,12 +1381,7 @@ class MakeFastqs(Pipeline):
                               runner=self.runners['cellranger_runner'],
                               envmodules=\
                               self.envmodules['cellranger_arc_mkfastq'],
-                              requires=(get_cellranger_arc,
-                                        get_bcl2fastq_for_10x_multiome,
-                                        make_sample_sheet,
-                                        fetch_primary_data,
-                                        identify_platform,
-                                        restore_backup,))
+                              requires=(restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
                 fastq_generation_tasks.append(run_cellranger_mkfastq)
@@ -1463,8 +1427,7 @@ class MakeFastqs(Pipeline):
                 fastq_statistics.output.per_lane_sample_stats,
                 report_html=self.params.qc_report
             )
-            self.add_task(report_qc,
-                          requires=(fastq_statistics,))
+            self.add_task(report_qc)
 
         # Append pipeline for barcode analysis
         if not self._fastq_statistics:
