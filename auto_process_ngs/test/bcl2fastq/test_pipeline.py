@@ -2851,13 +2851,11 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
-                       "bcl2fastq",):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        self.assertFalse(os.path.exists(
-            os.path.join(analysis_dir,"barcode_analysis")),
-                         "Found subdir: barcode_analysis")
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
@@ -2948,13 +2946,11 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "10X_ILLUMINA_RUN"),
-                       "bcl2fastq",):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        self.assertFalse(os.path.exists(
-            os.path.join(analysis_dir,"barcode_analysis")),
-                         "Found subdir: barcode_analysis")
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
@@ -3066,13 +3062,11 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
-                       "bcl2fastq",):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        self.assertFalse(os.path.exists(
-            os.path.join(analysis_dir,"barcode_analysis")),
-                         "Found subdir: barcode_analysis")
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
@@ -3162,13 +3156,11 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
-                       "bcl2fastq",):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        self.assertFalse(os.path.exists(
-            os.path.join(analysis_dir,"barcode_analysis")),
-                         "Found subdir: barcode_analysis")
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
@@ -3280,13 +3272,11 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
-                       "bcl2fastq",):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        self.assertFalse(os.path.exists(
-            os.path.join(analysis_dir,"barcode_analysis")),
-                         "Found subdir: barcode_analysis")
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
@@ -3376,13 +3366,11 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
-                       "bcl2fastq",):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        self.assertFalse(os.path.exists(
-            os.path.join(analysis_dir,"barcode_analysis")),
-                         "Found subdir: barcode_analysis")
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
@@ -3472,13 +3460,11 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
-                       "bcl2fastq",):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        self.assertFalse(os.path.exists(
-            os.path.join(analysis_dir,"barcode_analysis")),
-                         "Found subdir: barcode_analysis")
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
@@ -3567,13 +3553,11 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
-                       "bcl2fastq",):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        self.assertFalse(os.path.exists(
-            os.path.join(analysis_dir,"barcode_analysis")),
-                         "Found subdir: barcode_analysis")
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
