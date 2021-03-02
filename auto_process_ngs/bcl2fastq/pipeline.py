@@ -873,6 +873,77 @@ class MakeFastqs(Pipeline):
         )
         self.add_task(merge_fastq_dirs)
 
+        ##########################
+        # Statistics and reporting
+        ##########################
+        if self._fastq_statistics:
+            # Generate statistics
+            fastq_statistics = FastqStatistics(
+                "Generate statistics for Fastqs",
+                self.params.out_dir,
+                self._sample_sheet,
+                self.params.analysis_dir,
+                stats_file=self.params.stats_file,
+                stats_full_file=self.params.stats_full,
+                per_lane_stats_file=self.params.per_lane_stats,
+                per_lane_sample_stats_file=\
+                self.params.per_lane_sample_stats,
+                nprocessors=self.params.nprocessors)
+            self.add_task(fastq_statistics,
+                          runner=self.runners['stats_runner'],
+                          requires=(merge_fastq_dirs,))
+            # Processing QC report
+            report_qc = ReportProcessingQC(
+                "Report Processing QC",
+                analysis_dir=self.params.analysis_dir,
+                stats_file=fastq_statistics.output.stats_full,
+                per_lane_stats_file=\
+                fastq_statistics.output.per_lane_stats,
+                per_lane_sample_stats_file=\
+                fastq_statistics.output.per_lane_sample_stats,
+                report_html=self.params.qc_report
+            )
+            self.add_task(report_qc)
+
+        ##################
+        # Barcode analysis
+        ##################
+        if not self._fastq_statistics:
+            do_barcode_analysis = False
+        elif len(self.subsets) == 1 and not self.subsets[0]['lanes']:
+            try:
+                do_barcode_analysis = self.subsets[0]['analyse_barcodes']
+            except KeyError:
+                do_barcode_analysis = self._analyse_barcodes
+        else:
+            # Determine lanes to perform barcode analysis for
+            for subset in self.subsets:
+                if subset['analyse_barcodes']:
+                    if subset['lanes']:
+                        lanes_for_barcode_analysis.extend(subset['lanes'])
+            if lanes_for_barcode_analysis:
+                do_barcode_analysis = True
+                lanes_for_barcode_analysis = sorted(
+                    list(set(lanes_for_barcode_analysis)))
+            else:
+                do_barcode_analysis = False
+        if do_barcode_analysis:
+            # Set up pipeline for barcode analysis
+            self.report("Lanes for barcode analysis: %s" %
+                        lanes_for_barcode_analysis)
+            analyse_barcodes = AnalyseBarcodes(
+                sample_sheet=self._sample_sheet)
+            self.add_pipeline(analyse_barcodes,
+                              params={
+                                  'bcl2fastq_dir': self.params.out_dir,
+                                  'title': Param(
+                                      value="Barcode analysis for %s" %
+                                      os.path.basename(self._run_dir)),
+                                  'lanes': Param(
+                                      value=lanes_for_barcode_analysis),
+                              },
+                              requires=(merge_fastq_dirs,))
+
         # For each subset, add the appropriate set of
         # tasks for the protocol
         for subset in self.subsets:
@@ -1414,66 +1485,6 @@ class MakeFastqs(Pipeline):
                 # Add missing Fastqs
                 missing_fastqs.append(
                     run_cellranger_mkfastq.output.missing_fastqs)
-
-        if self._fastq_statistics:
-            # Generate statistics
-            fastq_statistics = FastqStatistics(
-                "Generate statistics for Fastqs",
-                self.params.out_dir,
-                self._sample_sheet,
-                self.params.analysis_dir,
-                stats_file=self.params.stats_file,
-                stats_full_file=self.params.stats_full,
-                per_lane_stats_file=self.params.per_lane_stats,
-                per_lane_sample_stats_file=\
-                self.params.per_lane_sample_stats,
-                nprocessors=self.params.nprocessors)
-            self.add_task(fastq_statistics,
-                          runner=self.runners['stats_runner'],
-                          requires=(merge_fastq_dirs,))
-
-            # Processing QC report
-            report_qc = ReportProcessingQC(
-                "Report Processing QC",
-                analysis_dir=self.params.analysis_dir,
-                stats_file=fastq_statistics.output.stats_full,
-                per_lane_stats_file=\
-                fastq_statistics.output.per_lane_stats,
-                per_lane_sample_stats_file=\
-                fastq_statistics.output.per_lane_sample_stats,
-                report_html=self.params.qc_report
-            )
-            self.add_task(report_qc)
-
-        # Append pipeline for barcode analysis
-        if not self._fastq_statistics:
-            do_barcode_analysis = False
-        elif len(self.subsets) == 1 and not self.subsets[0]['lanes']:
-            try:
-                do_barcode_analysis = self.subsets[0]['analyse_barcodes']
-            except KeyError:
-                do_barcode_analysis = self._analyse_barcodes
-        else:
-            if lanes_for_barcode_analysis:
-                do_barcode_analysis = True
-                lanes_for_barcode_analysis = sorted(
-                    list(set(lanes_for_barcode_analysis)))
-            else:
-                do_barcode_analysis = False
-        if do_barcode_analysis:
-            self.report("Lanes for barcode analysis: %s" %
-                        lanes_for_barcode_analysis)
-            analyse_barcodes = AnalyseBarcodes(sample_sheet=self._sample_sheet)
-            self.add_pipeline(analyse_barcodes,
-                              params={
-                                  'bcl2fastq_dir': self.params.out_dir,
-                                  'title': Param(
-                                      value="Barcode analysis for %s" %
-                                      os.path.basename(self._run_dir)),
-                                  'lanes': Param(
-                                      value=lanes_for_barcode_analysis),
-                              },
-                              requires=(merge_fastq_dirs,))
 
         # Update outputs associated with primary data
         self.output.acquired_primary_data.set(
