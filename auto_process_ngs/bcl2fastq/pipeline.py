@@ -1048,9 +1048,9 @@ class MakeFastqs(Pipeline):
                 os.path.join(analysis_dir,
                              "%s%s" % (os.path.basename(out_dir),
                                        lanes_id)),
-                    self.params.analysis_dir,
-                    self.params.out_dir,
-                    lanes_id)
+                self.params.analysis_dir,
+                self.params.out_dir,
+                lanes_id)
 
             # Flag if the final output directory exists
             final_output_exists = PathExistsParam(
