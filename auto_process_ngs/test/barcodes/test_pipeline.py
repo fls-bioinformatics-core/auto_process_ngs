@@ -110,6 +110,16 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
                                                     "barcode_analysis",
                                                     "barcodes.html")),
                         "Missing file: barcodes.html")
+        # Check that the report content is non-trivial
+        barcodes_report = os.path.join(self.wd,
+                                       "barcode_analysis",
+                                       "barcodes.report")
+        with open(barcodes_report,'rt') as fp:
+            contents = fp.read()
+            self.assertTrue("Barcode analysis for lane #1" in contents)
+            self.assertTrue("#Rank\tIndex\tSample\tN_seqs\tN_reads\t%reads\t(%Total_reads)" in contents)
+            # Expect 12 lines of content in total
+            self.assertEqual(contents.count('\n'),12)
 
     def test_analyse_barcodes_with_samplesheet(self):
         """
@@ -182,6 +192,16 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
                                                     "barcode_analysis",
                                                     "barcodes.html")),
                         "Missing file: barcodes.html")
+        # Check that the report content is non-trivial
+        barcodes_report = os.path.join(self.wd,
+                                       "barcode_analysis",
+                                       "barcodes.report")
+        with open(barcodes_report,'rt') as fp:
+            contents = fp.read()
+            self.assertTrue("Barcode analysis for lane #1" in contents)
+            self.assertTrue("#Rank\tIndex\tSample\tN_seqs\tN_reads\t%reads\t(%Total_reads)" in contents)
+            # Expect 12 lines of content in total
+            self.assertEqual(contents.count('\n'),12)
 
     def test_analyse_barcodes_with_no_inputs(self):
         """
