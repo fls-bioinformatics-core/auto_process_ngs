@@ -45,7 +45,7 @@ class TestAnalyseBarcodes(unittest.TestCase):
                                     "Missing %s" % fastq)
                     with gzip.open(fastq,'wb') as fp:
                         fp.write(
-                            """@ILLUMINA-545855:49:FC61RLR:2:1:10979:1695 1:N:0:TCCTGA
+                            """@ILLUMINA-545855:49:FC61RLR:1:1:10979:1695 1:N:0:TCCTGA
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
