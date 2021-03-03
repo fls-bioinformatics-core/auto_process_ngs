@@ -425,7 +425,8 @@ mouse = /data/cellranger/transcriptomes/mm10
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
-                                 version="3.1.0")
+                                 version="3.1.0",
+                                 assert_include_introns=False)
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -517,7 +518,8 @@ mouse = /data/cellranger/transcriptomes/mm10_pre_mrna
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
-                                 version="5.0.1")
+                                 version="5.0.1",
+                                 assert_include_introns=True)
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
