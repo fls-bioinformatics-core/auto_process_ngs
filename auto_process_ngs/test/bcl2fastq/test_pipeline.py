@@ -1711,7 +1711,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "5.0.1"))
+                          "6.0.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -1848,7 +1848,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "5.0.1"))
+                          "6.0.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -1994,7 +1994,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "5.0.1"))
+                          "6.0.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -2836,7 +2836,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "5.0.1"))
+                          "6.0.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -2931,7 +2931,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "5.0.1"))
+                          "6.0.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -3047,7 +3047,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "5.0.1"))
+                          "6.0.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
