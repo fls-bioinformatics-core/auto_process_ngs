@@ -591,7 +591,8 @@ class TestQCPipeline(unittest.TestCase):
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
-                                 version="3.1.0")
+                                 version="3.1.0",
+                                 assert_include_introns=False)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -831,7 +832,8 @@ class TestQCPipeline(unittest.TestCase):
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
-                                 version="3.1.0")
+                                 version="3.1.0",
+                                 assert_include_introns=False)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
