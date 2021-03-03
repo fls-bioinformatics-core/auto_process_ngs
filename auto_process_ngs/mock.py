@@ -1362,7 +1362,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._package_name = os.path.basename(self._path)
         if version is None:
             if self._package_name == 'cellranger':
-                self._version = '5.0.1'
+                self._version = '6.0.0'
             elif self._package_name == 'cellranger-atac':
                 self._version = '1.2.0'
             elif self._package_name == 'cellranger-arc':
