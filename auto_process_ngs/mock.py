@@ -1579,8 +1579,9 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             assert(args.use_bases_mask == self._assert_bases_mask)
         # Check --include-introns
         if self._assert_include_introns is not None:
-            print("Checking --include-introns: %s" % args.include_introns)
-            assert(args.include_introns == self._assert_include_introns)
+            print("Checking --include-introns")
+            assert(("--include-introns" in cmdline.split()) ==
+                   self._assert_include_introns)
         # Handle commands
         if args.command == "mkfastq":
             ##################
