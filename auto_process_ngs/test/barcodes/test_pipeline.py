@@ -9,6 +9,7 @@ import os
 import gzip
 from bcftbx.mock import MockIlluminaData
 from bcftbx.IlluminaData import IlluminaData
+from bcftbx.IlluminaData import IlluminaFastq
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.barcodes.pipeline import AnalyseBarcodes
 
@@ -41,15 +42,16 @@ class TestAnalyseBarcodes(unittest.TestCase):
             for s in p.samples:
                 for fq in s.fastq:
                     fastq = os.path.join(s.dirn,fq)
+                    lane = IlluminaFastq(fq).lane_number
                     self.assertTrue(os.path.exists(fastq),
                                     "Missing %s" % fastq)
                     with gzip.open(fastq,'wb') as fp:
-                        fp.write(
-                            """@ILLUMINA-545855:49:FC61RLR:1:1:10979:1695 1:N:0:TCCTGA
+                        data = """@ILLUMINA-545855:49:FC61RLR:%d:1:10979:1695 1:N:0:TCCTGA
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
-                            """.encode())
+                            """ % lane
+                        fp.write(data.encode())
 
     def test_analyse_barcodes_with_bcl2fastq_dir_no_samplesheet(self):
         """
