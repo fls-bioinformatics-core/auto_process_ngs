@@ -11,6 +11,7 @@ Utility classes and functions for processing the outputs from 10xGenomics
 platforms:
 
 - MetricSummary
+- GexSummary
 - AtacSummary
 - MultiomeSummary
 - MultiomeLibraries
@@ -57,6 +58,7 @@ from .docwriter import Link
 from .docwriter import Table
 from .analysis import AnalysisProject
 from .bcl2fastq.utils import get_bases_mask
+from .metadata import AnalysisProjectQCDirInfo
 from .utils import get_numbered_subdir
 from .utils import ZipArchive
 from . import css_rules
@@ -86,22 +88,20 @@ CELLRANGER_ASSAY_CONFIGS = {
 # Classes
 #######################################################################
 
-class MetricsSummary(object):
+class MetricsSummary(TabFile):
     """
-    Extract data from metrics_summary.csv file
+    Base class for extracting data from cellranger* count
+    *summary.csv files
 
-    Utility class for extracting data from a
-    'metrics_summary.csv' file output from running
-    'cellranger count'.
-
-    The file consists of two lines: the first is a
+    The files consists of two lines: the first is a
     header line, the second consists of corresponding
     data values.
 
-    In addition: integer data values are formatted to
-    use commas to separate thousands (e.g. 2,272) and
-    values which contain commas are enclosed in
-    double quotes.
+    In addition: in some variants (e.g.
+    'metrics_summary.csv'), integer data values are formatted
+    to use commas to separate thousands (e.g. 2,272) and
+    values which contain commas are enclosed in double
+    quotes.
 
     For example:
 
@@ -111,23 +111,30 @@ class MetricsSummary(object):
     This class extracts the data values and where
     possible converts them to integers.
     """
-    def __init__(self,s):
+    def __init__(self,f):
         """
         Create a new MetricsSummary instance
 
         Arguments:
-          s (str): contents of a
-            'metrics_summary.csv' file
+          f (str): path to the 'metrics_summary.csv' file
         """
+        # Read in data from the file
+        with open(f,'rt') as fp:
+            s = fp.read()
         self._data = dict()
-        s = s.split('\n')
-        fields = self._tokenise(s[0])
-        line = self._tokenise(s[1])
-        for key,value in zip(fields,line):
-            self._data[key] = value
+        s = s.strip().split('\n')
+        if len(s) != 2:
+            raise Exception("%s: MetricsSummary expects 2 lines"
+                            % f)
+        # Set up the tabfile instance
+        TabFile.__init__(self,
+                         column_names=self._tokenise(s[0]),
+                         delimiter=',')
+        # Add the data
+        self.append(data=self._tokenise(s[1]))
     def _tokenise(self,line):
         """
-        Internal: process line from metrics_summary.csv
+        Internal: process line from *summary.csv
 
         Arguments:
           line (str): line to tokenise
@@ -167,14 +174,65 @@ class MetricsSummary(object):
             except ValueError:
                 pass
         return tokens
+    def fetch(self,field):
+        """
+        Fetch data associated with an arbitrary field
+        """
+        return self[0][field]
+
+class GexSummary(MetricsSummary):
+    """
+    Extract data from metrics_summary.csv file for scRNA-seq
+
+    Utility class for extracting data from a
+    'metrics_summary.csv' file output from running
+    'cellranger count'.
+
+    The file consists of two lines: the first is a
+    header line, the second consists of corresponding
+    data values.
+
+    The following properties are available:
+
+    - estimated_number_of_cells
+    - mean_reads_per_cell
+    - median_genes_per_cell
+    - frac_reads_in_cells
+    """
+    def __init__(self,f):
+        """
+        Create a new GexSummary instance
+
+        Arguments:
+          f (str): path to the 'metrics_summary.csv' file
+        """
+        MetricsSummary.__init__(self,f)
     @property
     def estimated_number_of_cells(self):
         """
         Return the estimated number of cells
         """
-        return self._data['Estimated Number of Cells']
+        return self.fetch('Estimated Number of Cells')
+    @property
+    def mean_reads_per_cell(self):
+        """
+        Return the mean reads per cell
+        """
+        return self.fetch('Mean Reads per Cell')
+    @property
+    def median_genes_per_cell(self):
+        """
+        Return the median genes per cell
+        """
+        return self.fetch('Median Genes per Cell')
+    @property
+    def frac_reads_in_cells(self):
+        """
+        Return the fraction of reads in cells
+        """
+        return self.fetch('Fraction Reads in Cells')
 
-class AtacSummary(TabFile):
+class AtacSummary(MetricsSummary):
     """
     Extract data from summary.csv file for scATAC-seq
 
@@ -184,6 +242,13 @@ class AtacSummary(TabFile):
     The file consists of two lines: the first is a
     header line, the second consists of corresponding
     data values.
+
+    The following properties are available:
+
+    - cells_detected
+    - annotated_cells
+    - median_fragments_per_cell
+    - frac_fragments_overlapping_targets
     """
     def __init__(self,f):
         """
@@ -192,24 +257,33 @@ class AtacSummary(TabFile):
         Arguments:
           f (str): path to the 'summary.csv' file
         """
-        TabFile.__init__(self,
-                         filen=f,
-                         first_line_is_header=True,
-                         delimiter=',')
+        MetricsSummary.__init__(self,f)
     @property
     def cells_detected(self):
         """
         Return the number of cells detected
         """
-        return self[0]['cells_detected']
+        return self.fetch('cells_detected')
     @property
     def annotated_cells(self):
         """
         Return the number of annotated cells
         """
-        return self[0]['annotated_cells']
+        return self.fetch('annotated_cells')
+    @property
+    def median_fragments_per_cell(self):
+        """
+        Return the median fragments per cell
+        """
+        return self.fetch('median_fragments_per_cell')
+    @property
+    def frac_fragments_overlapping_targets(self):
+        """
+        Return the fraction of fragments overlapping targets
+        """
+        return self.fetch('frac_fragments_overlapping_targets')
 
-class MultiomeSummary(TabFile):
+class MultiomeSummary(MetricsSummary):
     """
     Extract data from summary.csv file for multiome GEX-ATAC
 
@@ -219,6 +293,12 @@ class MultiomeSummary(TabFile):
     The file consists of two lines: the first is a
     header line, the second consists of corresponding
     data values.
+
+    The following properties are available:
+
+    - estimated_number_of_cells
+    - atac_median_high_quality_fragments_per_cell
+    - gex_median_cells_per_gene
     """
     def __init__(self,f):
         """
@@ -227,16 +307,27 @@ class MultiomeSummary(TabFile):
         Arguments:
           f (str): path to the 'summary.csv' file
         """
-        TabFile.__init__(self,
-                         filen=f,
-                         first_line_is_header=True,
-                         delimiter=',')
+        MetricsSummary.__init__(self,f)
     @property
     def estimated_number_of_cells(self):
         """
         Return the estimated number of cells
         """
-        return self[0]['Estimated number of cells']
+        return self.fetch('Estimated number of cells')
+    @property
+    def atac_median_high_quality_fragments_per_cell(self):
+        """
+        Return the median high-quality fragments per cell
+        for ATAC data
+        """
+        return self.fetch(
+            'ATAC Median high-quality fragments per cell')
+    @property
+    def gex_median_cells_per_gene(self):
+        """
+        Return the median genes per cell for GEX data
+        """
+        return self.fetch('GEX Median genes per cell')
 
 class MultiomeLibraries(object):
     """
@@ -640,70 +731,96 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
     else:
         raise NotImplementedError("Not implemented for platform '%s'"
                                   % single_cell_platform)
-    # Loop over samples and collect cell numbers for each
-    number_of_cells = 0
-    for sample in project.samples:
-        outs_dir = os.path.join(qc_dir,
-                                "cellranger_count",
-                                sample.name,
-                                "outs")
-        if pipeline == "cellranger":
-            # Single cell/nuclei RNA-seq output
-            metrics_summary_csv = os.path.join(outs_dir,"metrics_summary.csv")
-            if not os.path.exists(metrics_summary_csv):
-                # Not found
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': missing file '%s'" %
-                                (sample.name,metrics_summary_csv))
-                return 1
-            # Extract cell numbers
-            try:
-                with open(metrics_summary_csv,'rt') as fp:
-                    metrics = MetricsSummary(fp.read())
-                    number_of_cells += metrics.estimated_number_of_cells
-                continue
-            except Exception as ex:
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': %s" % (sample.name,ex))
-                return 1
-        elif pipeline == "cellranger-atac":
-            # Single cell ATAC-seq output
-            summary_csv = os.path.join(outs_dir,"summary.csv")
-            if not os.path.exists(summary_csv):
-                # Not found
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': missing file '%s'" %
-                                (sample.name,summary_csv))
-                return 1
-            # Extract cell numbers
-            try:
-                number_of_cells += AtacSummary(summary_csv).annotated_cells
-                continue
-            except Exception as ex:
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': %s" % (sample.name,ex))
-                return 1
-        elif pipeline == "cellranger-arc":
-            # Single cell multiome output
-            summary_csv = os.path.join(outs_dir,"summary.csv")
-            if not os.path.exists(summary_csv):
-                # Not found
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': missing file '%s'" %
-                                (sample.name,summary_csv))
-                return 1
-            # Extract cell numbers
-            try:
-                number_of_cells += MultiomeSummary(summary_csv).estimated_number_of_cells
-                continue
-            except Exception as ex:
-                logger.critical("Failed to add cell count for sample "
-                                "'%s': %s" % (sample.name,ex))
-                return 1
-    # Store in the project metadata
-    project.info['number_of_cells'] = number_of_cells
-    project.info.save()
-    return 0
+    # Determine possible locations for outputs
+    count_dirs = []
+    # New-style with version and reference data levels
+    qc_info_file = os.path.join(qc_dir,"qc.info")
+    if os.path.exists(qc_info_file):
+        qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+        try:
+            cellranger_refdata = qc_info['cellranger_refdata']
+        except KeyError:
+            cellranger_refdata = None
+        try:
+            cellranger_version = qc_info['cellranger_version']
+        except KeyError:
+            cellranger_version = None
+        if cellranger_version and cellranger_refdata:
+            count_dirs.append(os.path.join(qc_dir,
+                                           "cellranger_count",
+                                           cellranger_version,
+                                           os.path.basename(
+                                               cellranger_refdata)))
+    # Old-style without additional subdirectories
+    count_dirs.append(os.path.join(qc_dir,
+                                   "cellranger_count"))
+    # Check each putative output location in turn
+    for count_dir in count_dirs:
+        # Check that the directory exists
+        if not os.path.exists(count_dir):
+            logger.warning("%s: not found" % count_dir)
+            continue
+        print("Looking for outputs under %s" % count_dir)
+        # Loop over samples and collect cell numbers for each
+        number_of_cells = 0
+        try:
+            for sample in project.samples:
+                print("- %s" % sample)
+                outs_dir = os.path.join(count_dir,
+                                        sample.name,
+                                        "outs")
+                if pipeline == "cellranger":
+                    # Single cell/nuclei RNA-seq output
+                    metrics_summary_csv = os.path.join(
+                        outs_dir,
+                        "metrics_summary.csv")
+                    if not os.path.exists(metrics_summary_csv):
+                        raise Exception("Failed to add cell count "
+                                        "for sample '%s': missing "
+                                        "file '%s'" %
+                                        (sample.name,
+                                         metrics_summary_csv))
+                    # Extract cell numbers
+                    metrics = GexSummary(metrics_summary_csv)
+                    number_of_cells += \
+                        metrics.estimated_number_of_cells
+                elif pipeline == "cellranger-atac":
+                    # Single cell ATAC-seq output
+                    summary_csv = os.path.join(
+                        outs_dir,
+                        "summary.csv")
+                    if not os.path.exists(summary_csv):
+                        raise Exception("Failed to add cell count "
+                                        "for sample '%s': missing "
+                                        "file '%s'" %
+                                        (sample.name,
+                                         summary_csv))
+                    # Extract cell numbers
+                    number_of_cells += AtacSummary(summary_csv).\
+                                       annotated_cells
+                elif pipeline == "cellranger-arc":
+                    # Single cell multiome output
+                    summary_csv = os.path.join(
+                        outs_dir,
+                        "summary.csv")
+                    if not os.path.exists(summary_csv):
+                        raise Exception("Failed to add cell count "
+                                        "for sample '%s': missing "
+                                        "file '%s'" %
+                                        (sample.name,
+                                         summary_csv))
+                    # Extract cell numbers
+                    number_of_cells += MultiomeSummary(summary_csv).\
+                                       estimated_number_of_cells
+            # Store in the project metadata
+            project.info['number_of_cells'] = number_of_cells
+            project.info.save()
+            return 0
+        except Exception as ex:
+            logger.warning("Unable to set cell count from data in "
+                           "%s: %s" % (count_dir,ex))
+    # Reached the end without setting count
+    return 1
 
 def cellranger_info(path=None,name=None):
     """

@@ -108,6 +108,18 @@ class TestCellrangerCountOutputFunction(unittest.TestCase):
                          ('cellranger_count/PJB2/outs/metrics_summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
 
+    def test_cellranger_count_output_with_prefix(self):
+        """cellranger_count_output: check for project and prefix
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        prefix = "cellranger_count/5.0.1/refdata-gex-mm10-2020-A"
+        self.assertEqual(cellranger_count_output(project,
+                                                 prefix=prefix),
+                         ('%s/PJB1/outs/metrics_summary.csv' % prefix,
+                          '%s/PJB1/outs/web_summary.html' % prefix,
+                          '%s/PJB2/outs/metrics_summary.csv' % prefix,
+                          '%s/PJB2/outs/web_summary.html' % prefix))
+
 class TestCellrangerAtacCountOutputFunction(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
@@ -146,24 +158,36 @@ class TestCellrangerAtacCountOutputFunction(unittest.TestCase):
                          ('cellranger_count/PJB2/outs/summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
 
+    def test_cellranger_atac_count_output_with_prefix(self):
+        """cellranger_atac_count_output: check for project and prefix
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        prefix = "cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0"
+        self.assertEqual(cellranger_atac_count_output(project,
+                                                      prefix=prefix),
+                         ('%s/PJB1/outs/summary.csv' % prefix,
+                          '%s/PJB1/outs/web_summary.html' % prefix,
+                          '%s/PJB2/outs/summary.csv' % prefix,
+                          '%s/PJB2/outs/web_summary.html' % prefix))
+
 class TestCellrangerArcCountOutputFunction(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.wd = tempfile.mkdtemp(suffix='TestCellrangerArcCountOutput')
         # Make mock analysis project
-        p = MockAnalysisProject("PJB_ATAC",("PJB1_S1_R1_001.fastq.gz",
-                                            "PJB1_S1_R2_001.fastq.gz",
-                                            "PJB1_S1_R3_001.fastq.gz",
-                                            "PJB2_S2_R1_001.fastq.gz",
-                                            "PJB2_S2_R2_001.fastq.gz",
-                                            "PJB2_S2_R3_001.fastq.gz",),
+        p = MockAnalysisProject("PJB_ARC",("PJB1_S1_R1_001.fastq.gz",
+                                           "PJB1_S1_R2_001.fastq.gz",
+                                           "PJB1_S1_R3_001.fastq.gz",
+                                           "PJB2_S2_R1_001.fastq.gz",
+                                           "PJB2_S2_R2_001.fastq.gz",
+                                           "PJB2_S2_R3_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
 
     def test_cellranger_arc_count_output(self):
         """cellranger_arc_count_output: check for project
         """
-        project = AnalysisProject(os.path.join(self.wd,"PJB_ATAC"))
+        project = AnalysisProject(os.path.join(self.wd,"PJB_ARC"))
         self.assertEqual(cellranger_arc_count_output(project),
                          ('cellranger_count/PJB1/outs/summary.csv',
                           'cellranger_count/PJB1/outs/web_summary.html',
@@ -173,11 +197,23 @@ class TestCellrangerArcCountOutputFunction(unittest.TestCase):
     def test_cellranger_arc_count_output_with_sample(self):
         """cellranger_arc_count_output: check for project and sample
         """
-        project = AnalysisProject(os.path.join(self.wd,"PJB_ATAC"))
+        project = AnalysisProject(os.path.join(self.wd,"PJB_ARC"))
         self.assertEqual(cellranger_arc_count_output(project,
-                                                 sample_name="PJB2"),
+                                                     sample_name="PJB2"),
                          ('cellranger_count/PJB2/outs/summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
+
+    def test_cellranger_arc_count_output_with_prefix(self):
+        """cellranger_arc_count_output: check for project and prefix
+        """
+        project = AnalysisProject(os.path.join(self.wd,"PJB_ARC"))
+        prefix = "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A"
+        self.assertEqual(cellranger_arc_count_output(project,
+                                                     prefix=prefix),
+                         ('%s/PJB1/outs/summary.csv' % prefix,
+                          '%s/PJB1/outs/web_summary.html' % prefix,
+                          '%s/PJB2/outs/summary.csv' % prefix,
+                          '%s/PJB2/outs/web_summary.html' % prefix))
 
 class TestCheckIlluminaQcOutputs(unittest.TestCase):
     """
@@ -572,6 +608,30 @@ class TestCheckCellrangerCountOutputs(unittest.TestCase):
         # Check the outputs
         self.assertEqual(check_cellranger_count_outputs(project),[])
 
+    def test_check_cellranger_count_outputs_singlecell_present_with_prefix(self):
+        """
+        check_cellranger_count_outputs: cellranger count output present with prefix (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        cellranger_count_prefix = "cellranger_count/5.0.1/refdata-gex-mm10-2020-A"
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="singlecell",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs(
+            prefix=cellranger_count_prefix)
+        # Check the outputs
+        self.assertEqual(
+            check_cellranger_count_outputs(project,
+                                           prefix=cellranger_count_prefix),[])
+
     def test_check_cellranger_count_outputs_10x_scRNAseq_missing(self):
         """
         check_cellranger_count_outputs: cellranger count output missing (10x_scRNAseq)
@@ -611,6 +671,30 @@ class TestCheckCellrangerCountOutputs(unittest.TestCase):
         # Check the outputs
         self.assertEqual(check_cellranger_count_outputs(project),[])
 
+    def test_check_cellranger_count_outputs_10x_scRNAseq_present_with_prefix(self):
+        """
+        check_cellranger_count_outputs: cellranger count output present with prefix (10x_scRNAseq)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        cellranger_count_prefix = "cellranger_count/5.0.1/refdata-gex-mm10-2020-A"
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_scRNAseq",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs(
+            prefix=cellranger_count_prefix)
+        # Check the outputs
+        self.assertEqual(
+            check_cellranger_count_outputs(project,
+                                           prefix=cellranger_count_prefix),[])
+
     def test_check_cellranger_count_outputs_10x_snRNAseq_missing(self):
         """
         check_cellranger_count_outputs: cellranger count output missing (10x_snRNAseq)
@@ -648,6 +732,31 @@ class TestCheckCellrangerCountOutputs(unittest.TestCase):
             include_multiqc=False)
         UpdateAnalysisProject(project).add_cellranger_count_outputs()
         # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),[])
+
+    def test_check_cellranger_count_outputs_10x_snRNAseq_present_with_prefix(self):
+        """
+        check_cellranger_count_outputs: cellranger count output present with prefix (10x_snRNAseq)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        cellranger_count_prefix = "cellranger_count/3.1.0/refdata-cellranger-GRCh38-3.0.0_premRNA_patch"
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_snRNAseq",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs(
+            prefix=cellranger_count_prefix)
+        # Check the outputs
+        self.assertEqual(
+            check_cellranger_count_outputs(project,
+                                           prefix=cellranger_count_prefix),[])
 
 class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
     """
@@ -701,6 +810,32 @@ class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
             cellranger="cellranger-atac")
         # Check the outputs
         self.assertEqual(check_cellranger_atac_count_outputs(project),[])
+
+    def test_check_cellranger_atac_count_outputs_10x_scATAC_present_with_prefix(self):
+        """
+        check_cellranger_atac_count_outputs: cellranger-atac count output present with prefix (10x_scATAC)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Single Cell ATAC" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        cellranger_count_prefix = "cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0"
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_scATAC",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs(
+            cellranger="cellranger-atac",
+            prefix=cellranger_count_prefix)
+        # Check the outputs
+        self.assertEqual(
+            check_cellranger_atac_count_outputs(project,
+                                                prefix=cellranger_count_prefix),
+            [])
 
 class TestCheckCellrangerArcCountOutputs(unittest.TestCase):
     """
@@ -782,6 +917,35 @@ class TestCheckCellrangerArcCountOutputs(unittest.TestCase):
             fp.write("")
         # Check the outputs
         self.assertEqual(check_cellranger_arc_count_outputs(project),[])
+
+    def test_check_cellranger_arc_count_outputs_10x_multiome_present_with_prefix(self):
+        """
+        check_cellranger_arc_count_outputs: cellranger-arc count output present with prefix (10x_Multiome_*)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Single Cell Multiome",
+                                           'Library type': 'GEX' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject(os.path.join(self.wd,"PJB"))
+        cellranger_count_prefix = "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A"
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_Multiome_GEX",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs(
+            cellranger="cellranger-arc",
+            prefix=cellranger_count_prefix)
+        # Add libraries.csv
+        with open(os.path.join(project.qc_dir,"libraries.PJB1.csv"),'wt') as fp:
+            fp.write("")
+        # Check the outputs
+        self.assertEqual(
+            check_cellranger_arc_count_outputs(project,
+                                           prefix=cellranger_count_prefix),[])
 
 class TestExpectedOutputs(unittest.TestCase):
     """
@@ -1083,6 +1247,56 @@ class TestExpectedOutputs(unittest.TestCase):
             self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
                             "%s not found in expected" % r)
 
+    def test_expected_outputs_10x_scRNA_seq_with_cellranger_and_versioning(self):
+        """
+        expected_outputs: 10xGenomics scRNA-seq with cellranger (including versioning)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        # Make mock fastq_strand
+        mock_fastq_strand_conf = os.path.join(self.wd,
+                                              p.name,
+                                              "fastq_strand.conf")
+        with open(mock_fastq_strand_conf,'w') as fp:
+            fp.write("")
+        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
+                             "qc/PJB1_S1_R1_001_fastqc.html",
+                             "qc/PJB1_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_S1_R2_001_fastqc",
+                             "qc/PJB1_S1_R2_001_fastqc.html",
+                             "qc/PJB1_S1_R2_001_fastqc.zip",
+                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
+                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
+                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
+                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
+                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
+                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R2_001_fastq_strand.txt",
+                             "qc/cellranger_count/5.0.1/refdata-gex-GRCh38-2020-A/PJB1/outs/metrics_summary.csv",
+                             "qc/cellranger_count/5.0.1/refdata-gex-GRCh38-2020-A/PJB1/outs/web_summary.html",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    fastq_strand_conf=mock_fastq_strand_conf,
+                                    cellranger_version="5.0.1",
+                                    cellranger_refdata=
+                                    "/data/refdata-gex-GRCh38-2020-A",
+                                    qc_protocol="10x_scRNAseq")
+        for e in expected:
+            print(e)
+            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
+                                  for r in reference_outputs],
+                            "%s not found in reference" % e)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
+                            "%s not found in expected" % r)
+
     def test_expected_outputs_10x_scATAC_with_cellranger_atac(self):
         """
         expected_outputs: 10xGenomics scATAC-seq with cellranger-atac
@@ -1133,6 +1347,69 @@ class TestExpectedOutputs(unittest.TestCase):
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
+                                    cellranger_refdata=
+                                    "/data/refdata-cellranger-atac-GRCh38-1.2.0",
+                                    qc_protocol="10x_scATAC")
+        for e in expected:
+            print(e)
+            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
+                                  for r in reference_outputs],
+                            "%s not found in reference" % e)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
+                            "%s not found in expected" % r)
+
+    def test_expected_outputs_10x_scATAC_with_cellranger_atac_with_versioning(self):
+        """
+        expected_outputs: 10xGenomics scATAC-seq with cellranger-atac (including versioning)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB1_S1_R3_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Single Cell ATAC" })
+        p.create(top_dir=self.wd)
+        # Make mock fastq_strand
+        mock_fastq_strand_conf = os.path.join(self.wd,
+                                              p.name,
+                                              "fastq_strand.conf")
+        with open(mock_fastq_strand_conf,'w') as fp:
+            fp.write("")
+        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
+                             "qc/PJB1_S1_R1_001_fastqc.html",
+                             "qc/PJB1_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_S1_R1_001_fastqc",
+                             "qc/PJB1_S1_R1_001_fastqc.html",
+                             "qc/PJB1_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_S1_R1_001_model_organisms_screen.png",
+                             "qc/PJB1_S1_R1_001_model_organisms_screen.txt",
+                             "qc/PJB1_S1_R1_001_other_organisms_screen.png",
+                             "qc/PJB1_S1_R1_001_other_organisms_screen.txt",
+                             "qc/PJB1_S1_R1_001_rRNA_screen.png",
+                             "qc/PJB1_S1_R1_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R1_001_fastq_strand.txt",
+                             "qc/PJB1_S1_R3_001_fastqc",
+                             "qc/PJB1_S1_R3_001_fastqc.html",
+                             "qc/PJB1_S1_R3_001_fastqc.zip",
+                             "qc/PJB1_S1_R3_001_fastqc",
+                             "qc/PJB1_S1_R3_001_fastqc.html",
+                             "qc/PJB1_S1_R3_001_fastqc.zip",
+                             "qc/PJB1_S1_R3_001_model_organisms_screen.png",
+                             "qc/PJB1_S1_R3_001_model_organisms_screen.txt",
+                             "qc/PJB1_S1_R3_001_other_organisms_screen.png",
+                             "qc/PJB1_S1_R3_001_other_organisms_screen.txt",
+                             "qc/PJB1_S1_R3_001_rRNA_screen.png",
+                             "qc/PJB1_S1_R3_001_rRNA_screen.txt",
+                             "qc/cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB1/outs/summary.csv",
+                             "qc/cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB1/outs/web_summary.html",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    fastq_strand_conf=mock_fastq_strand_conf,
+                                    cellranger_version="1.2.0",
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-atac-GRCh38-1.2.0",
                                     qc_protocol="10x_scATAC")

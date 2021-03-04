@@ -425,15 +425,29 @@ class TestSpacerangerInfo(unittest.TestCase):
         self.assertEqual(spaceranger_info(name='spaceranger'),
                          (spaceranger,'spaceranger','1.1.0'))
 
-class TestMetricsSummary(unittest.TestCase):
+class TestGexSummary(unittest.TestCase):
     """
-    Tests for the 'MetricsSummary' class
+    Tests for the 'GexSummary' class
     """
-    def test_metrics_summary(self):
-        """MetricsSummary: check estimated number of cells is extracted
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestGexSummary')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+            
+    def test_gex_summary(self):
+        """GexSummary: check metrics are extracted from CSV file
         """
-        m = MetricsSummary(METRICS_SUMMARY)
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(METRICS_SUMMARY)
+        m = GexSummary(summary_csv)
         self.assertEqual(m.estimated_number_of_cells,2272)
+        self.assertEqual(m.mean_reads_per_cell,107875)
+        self.assertEqual(m.median_genes_per_cell,1282)
 
 class TestAtacSummary(unittest.TestCase):
     """
@@ -449,7 +463,7 @@ class TestAtacSummary(unittest.TestCase):
             shutil.rmtree(self.wd)
 
     def test_atac_summary(self):
-        """AtacSummary: check detected/annotated numbers of cells are extracted
+        """AtacSummary: check metrics are extracted from CSV file
         """
         summary_csv = os.path.join(self.wd,"summary.csv")
         with open(summary_csv,'w') as fp:
@@ -457,6 +471,9 @@ class TestAtacSummary(unittest.TestCase):
         s = AtacSummary(summary_csv)
         self.assertEqual(s.cells_detected,6748)
         self.assertEqual(s.annotated_cells,5682)
+        self.assertEqual(s.median_fragments_per_cell,16119.5)
+        self.assertEqual(s.frac_fragments_overlapping_targets,
+                         0.575082094792)
 
 class TestMultiomeSummary(unittest.TestCase):
     """
@@ -472,13 +489,16 @@ class TestMultiomeSummary(unittest.TestCase):
             shutil.rmtree(self.wd)
 
     def test_atac_summary_multiome(self):
-        """MultiomeSummary: check estimated number of cells are extracted
+        """MultiomeSummary: check metrics are extracted from CSV file
         """
         summary_csv = os.path.join(self.wd,"summary.csv")
         with open(summary_csv,'w') as fp:
             fp.write(MULTIOME_SUMMARY)
         s = MultiomeSummary(summary_csv)
         self.assertEqual(s.estimated_number_of_cells,744)
+        self.assertEqual(
+            s.atac_median_high_quality_fragments_per_cell,8079)
+        self.assertEqual(s.gex_median_cells_per_gene,1490)
 
 class TestMultiomeLibraries(unittest.TestCase):
     """
@@ -791,13 +811,20 @@ class TestSetCellCountForProject(unittest.TestCase):
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "5.0.1",
+                                  "refdata-gex-GRCh38-2020-A",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
         metrics_summary_file = os.path.join(counts_dir,
                                             "metrics_summary.csv")
-        with open(metrics_summary_file,'w') as fp:
+        with open(metrics_summary_file,'wt') as fp:
             fp.write(METRICS_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
+Cellranger version\t5.0.1
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -822,13 +849,20 @@ class TestSetCellCountForProject(unittest.TestCase):
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "1.2.0",
+                                  "refdata-cellranger-atac-GRCh38-1.2.0",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
         summary_file = os.path.join(counts_dir,
-                                            "summary.csv")
+                                    "summary.csv")
         with open(summary_file,'w') as fp:
             fp.write(ATAC_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-atac-GRCh38-1.2.0
+Cellranger version\t1.2.0
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -853,6 +887,8 @@ class TestSetCellCountForProject(unittest.TestCase):
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "1.2.0",
+                                  "refdata-cellranger-atac-GRCh38-1.2.0",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
@@ -860,6 +896,11 @@ class TestSetCellCountForProject(unittest.TestCase):
                                             "summary.csv")
         with open(summary_file,'w') as fp:
             fp.write(ATAC_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-atac-GRCh38-1.2.0
+Cellranger version\t1.2.0
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -884,13 +925,20 @@ class TestSetCellCountForProject(unittest.TestCase):
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "1.0.0",
+                                  "refdata-cellranger-arc-GRCh38-2020-A",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
         summary_file = os.path.join(counts_dir,
-                                            "summary.csv")
+                                    "summary.csv")
         with open(summary_file,'w') as fp:
             fp.write(MULTIOME_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-arc-GRCh38-2020-A
+Cellranger version\t1.0.0
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -910,18 +958,25 @@ class TestSetCellCountForProject(unittest.TestCase):
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
             "10xGenomics Single Cell Multiome",
-            "ATAC")
+            "GEX")
         # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
                                   "qc",
                                   "cellranger_count",
+                                  "1.0.0",
+                                  "refdata-cellranger-arc-GRCh38-2020-A",
                                   "PJB1",
                                   "outs")
         mkdirs(counts_dir)
         summary_file = os.path.join(counts_dir,
-                                            "summary.csv")
+                                    "summary.csv")
         with open(summary_file,'w') as fp:
             fp.write(MULTIOME_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-arc-GRCh38-2020-A
+Cellranger version\t1.0.0
+""")
         # Check initial cell count
         print("Checking number of cells")
         self.assertEqual(AnalysisProject("PJB1",
@@ -937,6 +992,75 @@ class TestSetCellCountForProject(unittest.TestCase):
     def test_set_cell_count_project_missing_library_type(self):
         """
         set_cell_count_for_project: test for scRNA-seq when library not set
+        """
+        # Set up mock project with library type not set
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            None)
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "5.0.1",
+                                  "refdata-gex-GRCh38-2020-A",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        metrics_summary_file = os.path.join(counts_dir,
+                                            "metrics_summary.csv")
+        with open(metrics_summary_file,'w') as fp:
+            fp.write(METRICS_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
+Cellranger version\t5.0.1
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         2272)
+    def test_set_cell_count_for_project_no_subdirs(self):
+        """
+        set_cell_count_for_project: test for scRNA-seq (old-style output)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "scRNA-seq")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        metrics_summary_file = os.path.join(counts_dir,
+                                            "metrics_summary.csv")
+        with open(metrics_summary_file,'w') as fp:
+            fp.write(METRICS_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         2272)
+    def test_set_cell_count_project_missing_library_type_no_subdirs(self):
+        """
+        set_cell_count_for_project: test for scRNA-seq when library not set (old-style output)
         """
         # Set up mock project with library type not set
         project_dir = self._make_mock_analysis_project(

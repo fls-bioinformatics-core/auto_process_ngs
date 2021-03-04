@@ -643,6 +643,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     fastq_dir: the name of the associated Fastq subdirectory
     protocol: the QC protocol used
     organism: the organism(s) that the QC was run with
+    cellranger_version: version of cellranger/10x software used
     cellranger_refdata: reference datasets used with cellranger
     """
     def __init__(self,filen=None):
@@ -657,6 +658,8 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                                   'fastq_dir':'Fastq dir',
                                   'protocol':'QC protocol',
                                   'organism':'Organism',
+                                  'cellranger_version':
+                                  'Cellranger version',
                                   'cellranger_refdata':
                                   'Cellranger reference datasets',
                               },

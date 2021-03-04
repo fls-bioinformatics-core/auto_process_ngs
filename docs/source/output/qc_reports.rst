@@ -52,7 +52,6 @@ The following data are shown:
 * :ref:`qc_report_fastqc_summary_plots`
 * :ref:`qc_report_fastq_screen_summary_plots`
 * :ref:`qc_report_strandedness`
-* :ref:`qc_report_cellranger_count`
 
 One purpose of this table is to help pick up on trends and identify
 any outliers within the dataset as a whole; hence the main function
@@ -65,6 +64,16 @@ The sample and Fastq names in the table link through to the
 full QC outputs for the sample or Fastqs in question; other items
 (e.g. the quality boxplots) link to the relevant parts of the full
 QC outputs section (see :ref:`qc_report_qc_outputs_per_fastq`).
+
+An additional summary table may appear after this one with details
+of outputs from 10xGenomics single library analyses (see
+:ref:`qc_report_single_library_analyses`).
+
+.. note::
+
+   In earlier versions of the QC reports, links to single library
+   analyses were appended directly to the main summary table, and
+   no separate sigle library analyses table was present.
 
 .. _qc_report_quality_boxplots:
 
@@ -150,23 +159,32 @@ Some examples:
 More detailed information about the strandedness statistics
 is given in the :ref:`qc_report_qc_outputs_per_fastq` section.
 
-.. _qc_report_cellranger_count:
+.. _qc_report_single_library_analyses:
 
-Cellranger count/single library analyses
-----------------------------------------
+Single library analyses
+-----------------------
 
-For 10xGenomics scRNA-seq and scATAC-seq data the ``cellranger count``
-or ``cellranger-atac count`` commands are run as appropriate to
-perform the single library analysis on each sample.
+For 10xGenomics datasets single library analyses may also have
+been performed for each sample using the ``count`` command of the
+appropriate 10xGenomics pipeline (e.g. ``cellranger`` for scRNA-seq
+data, ``cellranger-atac`` for scATAC-seq data etc).
 
-The resulting HTML reports for each sample are then linked from the
-QC summary table.
+In these cases an additional summary table will appear in the report
+with appropriate metrics for each sample along with links to the HTML
+reports from the ``count`` command. For example, for an scRNA-seq
+dataset:
 
-Details of the report contents can be found in the appropriate
-``cellranger`` documentation:
+.. image:: ../images/qc/qc_report_single_library_summary.png
+   :align: center
 
- * scRNA-seq data: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/summary
- * scATAC-seq data: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/output/summary
+The reported metrics will depend on the pipeline and type of data.
+
+Details of the contents of the linked ``web_summary.html`` report can
+be found in the appropriate documentation for the 10xGenomics pipeline:
+
+ * ``cellranger``: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/summary
+ * ``cellranger-atac``: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/output/summary
+ * ``cellranger-arc``: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/output/summary
 
 .. note::
 

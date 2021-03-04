@@ -21,9 +21,11 @@ from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
+from bcftbx.utils import walk
 from ..analysis import AnalysisFastq
 from ..analysis import run_reference_id
 from ..analysis import split_sample_name
+from ..analysis import split_sample_reference
 from ..docwriter import Document
 from ..docwriter import Section
 from ..docwriter import Table
@@ -49,6 +51,7 @@ from .plots import ufastqcplot
 from .plots import uboxplot
 from .plots import ustrandplot
 from .plots import encode_png
+from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
 
@@ -62,7 +65,7 @@ logger = logging.getLogger(__name__)
 from .constants import FASTQ_SCREENS
 
 QC_REPORT_CSS_STYLES = """/* General styles */
-html { font-family: DejaVu Serif, serif; }
+html { font-family: sans-serif; }
 p { font-size: 85%;
     color: #808080; }
 /* Headers */
@@ -84,6 +87,9 @@ h3, h4 { background-color: grey;
          margin: 0;
          border-top-left-radius: 20px;
          border-bottom-right-radius: 20px; }
+.single_library_summary h3, .single_library_summary h4 {
+     background-color: white;
+     color: #808080; }
 /* Summary section */
 div.summary { margin: 10 10;
               border: solid 2px #8CC63F;
@@ -121,23 +127,26 @@ table.metadata tr td:first-child {
           background-color: grey;
           color: white;
           padding: 2px 5px;
-          font-weight: bold; }
+          font-weight: bold;
+          vertical-align: top; }
 /* Summary table */
 table.summary { border: solid 1px grey;
-          background-color: white;
-          font-size: 80%; }
+                background-color: white;
+                margin: 10 10;
+                font-size: 80%; }
 table.summary th { background-color: grey;
                    color: white;
                    padding: 2px 5px; }
 table.summary td { text-align: center;
                    padding: 2px 5px;
                    border-bottom: solid 1px lightgray; }
+table.summary td.single_library_analyses { text-align: left; }
 table.summary tr td:first-child { text-align: right; }
-table.fastq_summary tr td:first-child {
+table.summary tr td:first-child {
           background-color: grey;
           color: white;
           font-weight: bold; }
-table.fastq_summary tr td:first-child a {
+table.summary tr td:first-child a {
           color: white;
           font-weight: bold; }
 /* Warnings section */
@@ -448,13 +457,17 @@ class QCProject(object):
         """
         return (self.info['single_cell_platform'] is not None)
 
-    def software_info(self,pkg):
+    def software_info(self,pkg,exclude_processing=False):
         """
         Get information on software package
 
         Arguments:
-          pkg (string): name of software package to
-            get information about
+          pkg (str): name of software package to get
+            information about
+          exclude_processing (bool): if True then don't
+            fall back to processing software information
+            if package is not found (default: False, do
+            fall back to checking processing software)
 
         Returns:
           String: software version information, or
@@ -463,8 +476,11 @@ class QCProject(object):
         # Acquire the value
         try:
             if self.software[pkg]:
-                return ','.join(self.software[pkg])
+                return ', '.join(self.software[pkg])
         except KeyError:
+            if exclude_processing:
+                # Don't check processing software
+                return None
             try:
                 return self.processing_software[pkg][2]
             except KeyError:
@@ -587,20 +603,71 @@ class QCProject(object):
         cellranger_count_dir = os.path.join(self.qc_dir,
                                             "cellranger_count")
         cellranger_samples = []
+        cellranger_references = set()
         if os.path.isdir(cellranger_count_dir):
+            cellranger_name = None
+            versions = set()
+            # Old-style (unversioned)
             for d in filter(
                     lambda f:
                     os.path.isdir(os.path.join(cellranger_count_dir,f)),
                     os.listdir(cellranger_count_dir)):
-                web_summary_html = os.path.join(cellranger_count_dir,
-                                                d,
-                                                "outs",
-                                                "web_summary.html")
-                if os.path.exists(web_summary_html):
+                sample_dir = os.path.join(cellranger_count_dir,d)
+                try:
+                    cellranger = CellrangerCount(sample_dir)
+                    output_files.append(cellranger.web_summary)
+                    output_files.append(cellranger.metrics_csv)
+                    output_files.append(cellranger.cmdline_file)
                     cellranger_samples.append(d)
-                    output_files.append(web_summary_html)
+                    cellranger_name = cellranger.pipeline_name
+                    cellranger_references.add(cellranger.reference_data)
+                except OSError:
+                    pass
             if cellranger_samples:
                 outputs.add("cellranger_count")
+            # New-style (versioned)
+            cellranger_versioned_samples = {}
+            for ver in filter(
+                    lambda f:
+                    os.path.isdir(os.path.join(cellranger_count_dir,f)),
+                    os.listdir(cellranger_count_dir)):
+                # Check putative version numbers
+                cellranger_versioned_samples[ver] = {}
+                for ref in filter(
+                        lambda f:
+                        os.path.isdir(os.path.join(cellranger_count_dir,ver,f)),
+                        os.listdir(os.path.join(cellranger_count_dir,ver))):
+                    # Check putative reference dataset names
+                    cellranger_versioned_samples[ver][ref] = []
+                    for smpl in filter(
+                            lambda f:
+                            os.path.isdir(os.path.join(cellranger_count_dir,
+                                                       ver,ref,f)),
+                            os.listdir(os.path.join(cellranger_count_dir,
+                                                    ver,ref))):
+                        sample_dir = os.path.join(cellranger_count_dir,
+                                                  ver,ref,smpl)
+                        try:
+                            cellranger = CellrangerCount(sample_dir)
+                            output_files.append(cellranger.web_summary)
+                            output_files.append(cellranger.metrics_csv)
+                            output_files.append(cellranger.cmdline_file)
+                            cellranger_versioned_samples[ver][ref].append(smpl)
+                            cellranger_name = cellranger.pipeline_name
+                            cellranger_references.add(
+                                cellranger.reference_data)
+                        except OSError:
+                            pass
+                    # Add outputs, samples and version
+                    if cellranger_versioned_samples[ver][ref]:
+                        outputs.add("cellranger_count")
+                        versions.add(ver)
+                    for smpl in cellranger_versioned_samples[ver][ref]:
+                        if smpl not in cellranger_samples:
+                            cellranger_samples.append(smpl)
+            # Store cellranger versions
+            if cellranger_name and versions:
+                software[cellranger_name] = sorted(list(versions))
         # Look for MultiQC report
         print("Checking for MultiQC report in %s" % self.project.dirn)
         multiqc_report = os.path.join(self.project.dirn,
@@ -632,6 +699,8 @@ class QCProject(object):
             samples.add(s)
         self.samples = sorted(list(samples),
                               key=lambda s: split_sample_name(s))
+        # Single library analyses reference data
+        self.cellranger_references = sorted(list(cellranger_references))
         # QC outputs
         self.outputs = sorted(list(outputs))
         # Software versions
@@ -740,7 +809,19 @@ class QCReport(Document):
         'boxplot_r3': 'Boxplot[R3]',
         'screens_r3': 'Screens[R3]',
         'strandedness': 'Strand',
-        'cellranger_count': 'Cellranger count',
+        'cellranger_count': 'Single library analyses',
+        '10x_cells': '#cells',
+        '10x_reads_per_cell': '#reads/cell',
+        '10x_genes_per_cell': '#genes/cell',
+        '10x_frac_reads_in_cell': '%reads in cells',
+        '10x_fragments_per_cell': '#fragments/cell',
+        '10x_fragments_overlapping_targets': '%fragments overlapping targets',
+        '10x_atac_fragments_per_cell': '#ATAC fragments/cell',
+        '10x_gex_cells_per_gene': '#GEX cells/gene',
+        '10x_pipeline': 'Pipeline',
+        '10x_reference': 'Reference dataset',
+        '10x_web_summary': 'HTML report',
+        'linked_sample': 'Linked sample',
     }
     # Titles for metadata items
     metadata_titles = {
@@ -755,7 +836,7 @@ class QCReport(Document):
         'number_of_cells': 'Number of cells',
         'organism': 'Organism',
         'protocol': 'QC protocol',
-        'cellranger_reference': 'Cellranger reference dataset',
+        'cellranger_reference': 'Cellranger reference datasets',
         'multiqc': 'MultiQC report',
         'icell8_stats': 'ICELL8 statistics',
         'icell8_report': 'ICELL8 processing report',
@@ -809,6 +890,9 @@ class QCReport(Document):
         self.multi_project = (len(projects) > 1)
         # Flag to indicate if any project has single cell data
         self.has_single_cell = any([p.is_single_cell for p in projects])
+        # Flag to indicate if we should make a separate single library
+        # analysis table
+        self.use_single_library_table = True
         # Primary project
         primary_project = projects[0]
         # Set up title
@@ -836,7 +920,7 @@ class QCReport(Document):
         self.software = []
         for pkg in self.software_packages:
             for project in projects:
-                if project.software_info(pkg):
+                if project.software_info(pkg,exclude_processing=True):
                     self.software.append(pkg)
                     break
         # Use data directory?
@@ -853,7 +937,8 @@ class QCReport(Document):
         self.status = True
         # Initialise tables
         self._init_metadata_table(projects)
-        self._init_software_table()
+        self._init_processing_software_table()
+        self._init_qc_software_table()
         # Initialise report sections
         self.preamble = self._init_preamble_section()
         self.warnings = self._init_warnings_section()
@@ -890,7 +975,7 @@ class QCReport(Document):
                 for package in project.software:
                     print("\t- %s: %s" %
                           (package,
-                           ','.join(project.software[package])))
+                           ', '.join(project.software[package])))
             # Fields to report in summary table
             if not summary_fields:
                 if len(project.reads) > 1:
@@ -911,7 +996,8 @@ class QCReport(Document):
                         summary_fields_.append('boxplot_%s' % read)
                     if ('screens_%s' % read) in project.outputs:
                         summary_fields_.append('screens_%s' % read)
-                if 'cellranger_count' in project.outputs:
+                if 'cellranger_count' in project.outputs and \
+                   not self.use_single_library_table:
                     summary_fields_.append('cellranger_count')
             # Attributes to report for each sample
             if report_attrs is None:
@@ -922,14 +1008,69 @@ class QCReport(Document):
             # Add data for this project to the report
             print("Adding project '%s' to the report..." % project.name)
             self.report_metadata(project)
-            self.report_software(project)
+            self.report_processing_software(project)
+            self.report_qc_software(project)
             self.report_comments(project)
+            # Create a summary subsection for multi-project reporting
+            if self.multi_project:
+                project_summary = self.summary.add_subsection(
+                    project.id,
+                    name=sanitize_name(project.id))
+            else:
+                project_summary = self.summary
             # Create a new summary table
-            summary_table = self.add_summary_table(project,summary_fields_)
+            summary_table = self.add_summary_table(project,
+                                                   summary_fields_,
+                                                   section=project_summary)
             # Report each sample
             for sample in project.samples:
                 self.report_sample(project,sample,report_attrs_,
                                    summary_table,summary_fields_)
+            # Report single library analyses
+            if 'cellranger_count' in project.outputs and \
+               self.use_single_library_table:
+                # Set up fields for reporting
+                if 'cellranger' in project.software:
+                    pkg = 'cellranger'
+                    single_library_fields = ['sample',
+                                             '10x_cells',
+                                             '10x_frac_reads_in_cell',
+                                             '10x_reads_per_cell',
+                                             '10x_genes_per_cell']
+                elif 'cellranger-atac' in project.software:
+                    pkg = 'cellranger-atac'
+                    single_library_fields = ['sample',
+                                             '10x_cells',
+                                             '10x_fragments_per_cell',
+                                             '10x_fragments_overlapping_targets']
+                elif 'cellranger-arc' in project.software:
+                    pkg = 'cellranger-arc'
+                    single_library_fields = ['sample',
+                                             'linked_sample',
+                                             '10x_cells',
+                                             '10x_atac_fragments_per_cell',
+                                             '10x_gex_cells_per_gene']
+                # Add column for multiple versions
+                if len(project.software[pkg]) > 1:
+                    single_library_fields.append('10x_pipeline')
+                # Add column for multiple reference datasets
+                if len(project.cellranger_references) > 1:
+                    single_library_fields.append('10x_reference')
+                # Always link to web summary
+                single_library_fields.append('10x_web_summary')
+                # Create a new table
+                single_library_analysis_table = \
+                    self.add_single_library_analysis_table(
+                        project,
+                        single_library_fields,
+                        section=project_summary)
+                # Report analyses for each sample
+                for sample in project.samples:
+                    self.report_single_library_analyses(
+                        project,
+                        sample,
+                        single_library_analysis_table,
+                        single_library_fields)
         # Report the status
         self.report_status()
 
@@ -977,9 +1118,22 @@ class QCReport(Document):
         self.metadata_table = metadata_table
         self.metadata_items = metadata_items
 
-    def _init_software_table(self):
+    def _init_processing_software_table(self):
         """
-        Internal: set up a table for software information
+        Internal: set up a table for processing software information
+
+        Associated CSS class is 'metadata'
+        """
+        # Determine what software packages were used across
+        # all projects
+        software_table = Table(('program','version',))
+        software_table.no_header()
+        software_table.add_css_classes('metadata')
+        self.processing_software_table = software_table
+
+    def _init_qc_software_table(self):
+        """
+        Internal: set up a table for QC software information
 
         Associated CSS class is 'metadata'
         """
@@ -992,7 +1146,7 @@ class QCReport(Document):
             software_table.add_row(
                 program=self.software_names[pkg],
                 version=None)
-        self.software_table = software_table
+        self.qc_software_table = software_table
 
     def _init_preamble_section(self):
         """
@@ -1018,9 +1172,13 @@ class QCReport(Document):
         general_info = info.add_subsection("General information",
                                            css_classes=("info",))
         general_info.add(self.metadata_table)
-        software_info = info.add_subsection("Software",
-                                           css_classes=("info",))
-        software_info.add(self.software_table)
+        processing_software_info = info.add_subsection(
+            "Processing software",
+            css_classes=("info",))
+        processing_software_info.add(self.processing_software_table)
+        qc_software_info = info.add_subsection("QC software",
+                                               css_classes=("info",))
+        qc_software_info.add(self.qc_software_table)
         # Add an empty section to clear HTML floats
         clear = summary.add_subsection(css_classes=("clear",))
         # Add additional subsections for comments etc
@@ -1093,32 +1251,44 @@ class QCReport(Document):
         # Update the list of files
         self.output_files = output_files
 
-    def add_summary_table(self,project,fields):
+    def add_summary_table(self,project,fields,section):
         """
         Create a new table for summarising samples from a project
 
         Associated CSS classes are 'summary' and 'fastq_summary'
         """
-        # Add header For multi-project
-        if self.multi_project:
-            summary = self.summary.add_subsection(
-                project.id,
-                name=sanitize_name(project.id))
-        else:
-            summary = self.summary
         # Create the table
         summary_tbl = Table(fields,**self.field_descriptions)
         summary_tbl.add_css_classes('summary','fastq_summary')
+        if "cellranger_count" in fields:
+            summary_tbl.add_css_classes('single_library_analyses',
+                                        column='cellranger_count')
         # Append to the summary section
-        summary.add(
+        section.add(
             "%d sample%s | %d fastq%s" % (
                 len(project.samples),
                 ('s' if len(project.samples) != 1 else ''),
                 len(project.fastqs),
                 ('s' if len(project.fastqs) != 1 else ''))
         )
-        summary.add(summary_tbl)
+        section.add(summary_tbl)
         return summary_tbl
+
+    def add_single_library_analysis_table(self,project,fields,section):
+        """
+        Create a new table for summarising 10x single library analyses
+        """
+        # Add title
+        section = section.add_subsection(
+            "Single library analysis",
+            name="single_library_analysis_%s" % sanitize_name(project.id),
+            css_classes=('single_library_summary',))
+        # Create the table
+        single_library_tbl = Table(fields,**self.field_descriptions)
+        single_library_tbl.add_css_classes('summary','single_library_summary')
+        # Append to the summary section
+        section.add(single_library_tbl)
+        return single_library_tbl
 
     def report_metadata(self,project):
         """
@@ -1161,15 +1331,18 @@ class QCReport(Document):
                             # Unable to determine run id
                             continue
                     elif item == 'cellranger_reference':
-                        path = project.qc_info.cellranger_refdata
-                        if path is None:
-                            # No reference dataset
-                            continue
-                        if os.path.dirname(path):
-                            value = "...%s%s" % (os.sep,
-                                                 os.path.basename(path))
+                        if len(project.cellranger_references) == 1:
+                            # Single reference dataset
+                            value = os.path.basename(
+                                project.cellranger_references[0])
+                        elif len(project.cellranger_references) > 1:
+                            # Many reference datasets
+                            value = List()
+                            for ref in project.cellranger_references:
+                                value.add_item(os.path.basename(ref))
                         else:
-                            value = path
+                            # No reference datasets
+                            continue
                     elif item == 'multiqc':
                         multiqc_report = "multi%s_report.html" \
                                          % os.path.basename(project.qc_dir)
@@ -1193,24 +1366,40 @@ class QCReport(Document):
                                           project.id,
                                           value)
 
-    def report_software(self,project):
+    def report_processing_software(self,project):
         """
-        Report the software versions used in the processing & QC
+        Report the software versions used in the processing
 
-        Adds entries for the software versions to the "software"
-        table in the report
+        Adds entries for the software versions to the
+        "processing software" table in the report
+        """
+        # Report processing software packages
+        for pkg in project.processing_software:
+            # Acquire the value
+            value = project.processing_software[pkg][2]
+            self.processing_software_table.add_row(
+                program=self.software_names[pkg],
+                version=value)
+
+    def report_qc_software(self,project):
+        """
+        Report the software versions used in the QC
+
+        Adds entries for the software versions to the
+        "qc_software" table in the report
         """
         # Report software packages
         for pkg in self.software_packages:
             # Acquire the value
-            value = project.software_info(pkg)
+            value = project.software_info(pkg,
+                                          exclude_processing=True)
             if value is None:
                 continue
             # Get row index in the metadata table
             idx = self.software.index(pkg)
-            self.software_table.set_value(idx,
-                                          "version",
-                                          value)
+            self.qc_software_table.set_value(idx,
+                                             "version",
+                                             value)
 
     def report_comments(self,project):
         """
@@ -1263,82 +1452,92 @@ class QCReport(Document):
         else:
             sample_name = "sample_%s" % sample
             sample_title = "Sample: %s" % sample
+        # Determine location of QC artefacts
+        if self.data_dir:
+            qc_dir = os.path.join(self.data_dir,
+                                  sanitize_name(project.id),
+                                  os.path.basename(project.qc_dir))
+        else:
+            qc_dir = project.qc_dir
         # Create a new section
         sample_report = self.add_section(
             sample_title,
             name=sample_name,
             css_classes=('sample',))
-        # Get Fastq groups
-        fastqs = sorted(list(
-            filter(lambda fq:
-                   project.fastq_attrs(fq).sample_name == sample,
-                   project.fastqs)))
-        fastq_groups = group_fastqs_by_name(fastqs,project.fastq_attrs)
-        # Location of QC artefacts
-        qc_dir = project.qc_dir
+        reporter = QCReportSample(project,
+                                  sample,
+                                  qc_dir=qc_dir,
+                                  fastq_attrs=project.fastq_attrs)
+        reads = reporter.reads
+        n_fastq_groups = len(reporter.fastq_groups)
+        if len(reads) == 1:
+            sample_report.add("%d %s Fastq%s" %
+                              (n_fastq_groups,
+                               reads[0].upper(),
+                               's' if n_fastq_groups > 1 else ''))
+        elif len(reads) == 2:
+            sample_report.add("%d %s Fastq pair%s" %
+                              (n_fastq_groups,
+                               '/'.join([r.upper() for r in reads]),
+                              's' if n_fastq_groups > 1 else ''))
+        else:
+            sample_report.add("%d %s Fastq group%s" %
+                              (n_fastq_groups,
+                               '/'.join([r.upper() for r in reads]),
+                              's' if n_fastq_groups > 1 else ''))
+        # Report the Fastq groups within the sample
+        reporter.report_fastq_groups(sample_report,
+                                     attrs=report_attrs,
+                                     relpath=self.relpath)
+        # Update the summary table
+        status = reporter.update_summary_table(summary_table,
+                                               sample_report=sample_report,
+                                               fields=summary_fields,
+                                               relpath=self.relpath)
+        if not status:
+            # Update flag to indicate problems with the
+            # report
+            self.status = False
+
+    def report_single_library_analyses(self,project,sample,
+                                       single_library_analysis_table,
+                                       fields):
+        """
+        Report the single library analyses for a sample
+
+        Writes lines to the single library analysis summary
+        table for each analysis found that is associated
+        with the specified sample.
+
+        Arguments:
+          project (QCProject): project to report
+          sample (str): name of sample to report
+          single_library_analysis_table (Table): summary table
+            to report each analysis in
+          fields (list): list of fields to report for each
+            analysis in the summary table
+        """
+        # Determine location of QC artefacts
         if self.data_dir:
             qc_dir = os.path.join(self.data_dir,
                                   sanitize_name(project.id),
-                                  os.path.basename(qc_dir))
-        # Report number of fastqs and reads
-        reads = QCReportFastqGroup(fastq_groups[0],
-                                   qc_dir=qc_dir,
-                                   project_id=project.id,
-                                   fastq_attrs=project.fastq_attrs).reads
-        if len(reads) == 1:
-            sample_report.add("%d %s Fastq%s" %
-                              (len(fastq_groups),
-                               reads[0].upper(),
-                               's' if len(fastq_groups) > 1 else ''))
-        elif len(reads) == 2:
-            sample_report.add("%d %s Fastq pair%s" %
-                              (len(fastq_groups),
-                               '/'.join([r.upper() for r in reads]),
-                              's' if len(fastq_groups) > 1 else ''))
+                                  os.path.basename(project.qc_dir))
         else:
-            sample_report.add("%d %s Fastq group%s" %
-                              (len(fastq_groups),
-                               '/'.join([r.upper() for r in reads]),
-                              's' if len(fastq_groups) > 1 else ''))
-        # Keep track of the first line in the summary
-        # table, as per-sample metrics (and name)
-        # should only be reported on the first line
-        first_line = True
-        # Report each Fastq group
-        for fastqs in fastq_groups:
-            # Report Fastq pair
-            fastq_group = QCReportFastqGroup(fastqs,
-                                             qc_dir=qc_dir,
-                                             project_id=project.id,
-                                             fastq_attrs=project.fastq_attrs)
-            fastq_group.report(sample_report,
-                               attrs=report_attrs,
-                               relpath=self.relpath)
-            # Add line in summary table
-            if sample is not None:
-                if first_line:
-                    # Only display sample name on first line
-                    idx = summary_table.add_row(
-                        sample=Link(sample,
-                                    sample_report))
-                else:
-                    # Don't display sample name for subsequent
-                    # lines in summary table
-                    idx = summary_table.add_row(sample="&nbsp;")
-            else:
-                idx = summary_table.add_row(sample="&nbsp;")
-            status = fastq_group.update_summary_table(
-                summary_table,idx=idx,
-                fields=summary_fields,
-                relpath=self.relpath,
-                skip_sample_metrics=(not first_line))
-            if not status:
-                # Update flag to indicate problems with the
-                # report
-                self.status = False
-            # Update flag to indicate no longer on
-            # first line for this sample
-            first_line = False
+            qc_dir = project.qc_dir
+        # Get a reporter for the sample
+        reporter = QCReportSample(project,
+                                  sample,
+                                  qc_dir=qc_dir,
+                                  fastq_attrs=project.fastq_attrs)
+        # Update the single library analysis table
+        status = reporter.update_single_library_table(
+            single_library_analysis_table,
+            fields,
+            relpath=self.relpath)
+        if not status:
+            # Update flag to indicate problems with the
+            # report
+            self.status = False
 
     def report_status(self):
         """
@@ -1347,6 +1546,364 @@ class QCReport(Document):
         if self.status:
             # Turn off display of warnings section
             self.warnings.add_css_classes("hide")
+
+class QCReportSample(object):
+    """
+    Utility class for reporting the QC for a sample
+
+    Provides the following properties:
+
+    sample: name of the sample
+    fastqs: list of the Fastqs associated with the sample
+    reads: list of read ids e.g. ['r1','r2']
+    fastq_groups: list of QCReportFastq instances from
+      grouped Fastqs associated with the sample
+    cellranger_count: list of CellrangerCount instances
+      associated with the sample
+    multiome_libraries: MultiomeLibraries instance with
+      data for 10xGenomics libraries for the project (or
+      None, if the libraries file doesn't exist)
+
+    Provides the following methods:
+
+    report_fastq_groups: add reports for Fastq groups in
+      the sample to a document section
+    update_summary_table: add lines to summary table for
+      the sample
+    """
+    # Summary fields provided at sample level
+    sample_summary_fields = (
+        'sample',
+        'cellranger_count',
+    )
+    def __init__(self,project,sample,qc_dir=None,
+                 fastq_attrs=AnalysisFastq):
+        """
+        Create a new QCReportSample
+
+        Arguments:
+          project (QCProject): project to report
+          sample (str): name of sample to report
+          qc_dir (str): path to the directory holding the
+            QC artefacts
+          fastq_attrs (BaseFastqAttrs): class for extracting
+            data from Fastq names
+        """
+        self.sample = str(sample)
+        self.fastq_groups = []
+        self.cellranger_count = []
+        self.multiome_libraries = None
+        # Location for QC artefacts
+        if qc_dir:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(project.dirn)
+        else:
+            qc_dir = project.qc_dir
+        # Group Fastqs associated with this project
+        self.fastqs = sorted(list(
+            filter(lambda fq:
+                   project.fastq_attrs(fq).sample_name == sample,
+                   project.fastqs)))
+        for fqs in group_fastqs_by_name(self.fastqs,fastq_attrs):
+            self.fastq_groups.append(QCReportFastqGroup(
+                fqs,
+                qc_dir=qc_dir,
+                project_id=project.id,
+                fastq_attrs=fastq_attrs))
+        # Reads associated with the sample
+        self.reads = [r for r in self.fastq_groups[0].reads]
+        # 10x single library analyses
+        cellranger_count_dir = os.path.join(qc_dir,
+                                            "cellranger_count")
+        if os.path.isdir(cellranger_count_dir):
+            for dirn in walk(cellranger_count_dir):
+                if os.path.isdir(dirn) and \
+                   os.path.basename(dirn) == sample:
+                    if not os.path.join(cellranger_count_dir,
+                                        sample) == dirn:
+                        # Extract version number and reference from
+                        # the path
+                        reference = dirn.split(os.sep)[-2]
+                        version = dirn.split(os.sep)[-3]
+                    else:
+                        # No version or reference in path
+                        reference = None
+                        version = None
+                    self.cellranger_count.append(
+                        CellrangerCount(dirn,
+                                        version=version,
+                                        reference_data=reference))
+        # 10x multiome libraries
+        multiome_libraries_file = os.path.join(
+            project.dirn,
+            "10x_multiome_libraries.info")
+        if os.path.exists(multiome_libraries_file):
+            self.multiome_libraries = MultiomeLibraries(
+                multiome_libraries_file)
+
+    def report_fastq_groups(self,sample_report,attrs,relpath=None):
+        """
+        Add reports for all Fastq groups to a document section
+
+        Creates new subsections in 'sample_report' for each
+        Fastq group, to report data on each Fastq file in the
+        group.
+
+        The following 'attributes' that can be reported for
+        each Fastq are those available for the 'report' method
+        of the 'QCReportFastqGroup' class.
+
+        By default all attributes are reported.
+
+        Arguments:
+          sample_report (Section): section to add the reports
+            to
+          attrs (list): optional list of custom 'attributes'
+            to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        # Report each Fastq group
+        for fastq_group in self.fastq_groups:
+            # Report Fastq group in a subsection
+            if attrs:
+                fastq_group.report(sample_report,
+                                   attrs=attrs,
+                                   relpath=relpath)
+
+    def update_summary_table(self,summary_table,fields=None,
+                             sample_report=None,relpath=None):
+        """
+        Add lines to a summary table reporting a sample
+
+        Creates new lines in 'summary_table' for the sample
+        (one line per Fastq group), adding content for each
+        specified field.
+
+        See the 'get_value' method for a list of valid fields.
+
+        Arguments:
+          summary_table (Table): table to update
+          fields (list): list of custom fields to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+
+        Returns:
+          Boolean: True if report didn't contain any issues,
+            False otherwise.
+        """
+        # Flag to indicate whether we're writing to the first
+        # line of the summary table for this sample, and only
+        # report name and sample-level metrics on the first line
+        first_line = True
+        # Reporting status
+        has_problems = False
+        # Report each Fastq group
+        for fastq_group in self.fastq_groups:
+            # Add line in summary table
+            if first_line:
+                # Only display sample name on first line
+                if sample_report:
+                    # Link to the sample report section
+                    idx = summary_table.add_row(
+                        sample=Link(self.sample,
+                                    sample_report))
+                else:
+                    # No link
+                    idx = summary_table.add_row(
+                        sample=self.sample)
+                # Add sample-level metrics
+                for field in fields:
+                    if field == "sample":
+                        # Ignore: was already set
+                        continue
+                    elif field not in self.sample_summary_fields:
+                        # Ignore non-sample level fields
+                        continue
+                    try:
+                        value = self.get_value(field,
+                                               relpath=relpath)
+                        summary_table.set_value(idx,field,value)
+                    except KeyError as ex:
+                        # Ignore and carry on
+                        logger.warning("Exception setting '%s' in "
+                                       "summary table "
+                                       "for sample %s: %s" %
+                                       (field,self.sample,ex))
+            else:
+                # Don't report sample name on subsequent
+                # lines in summary table
+                idx = summary_table.add_row(sample="&nbsp;")
+            status = fastq_group.update_summary_table(
+                summary_table,idx=idx,
+                fields=fields,
+                relpath=relpath)
+            if not status:
+                has_problems = True
+            # Update flag to indicate no longer on
+            # first line for this sample
+            first_line = False
+        return (not has_problems)
+
+    def update_single_library_table(self,single_library_table,fields=None,
+                                    relpath=None):
+        """
+        Add lines to a table reporting single library analyses
+
+        Creates new lines in 'single_library_table' for the
+        sample (one line per single library analysis group),
+        adding content for each specified field.
+
+        Valid fields are:
+
+        - 10x_cells
+        - 10x_genes_per_cell
+        - 10x_frac_reads_in_cell
+        - 10x_fragments_per_cell
+        - 10x_fragments_overlapping_targets
+        - 10x_atac_fragments_per_cell
+        - 10x_gex_cells_per_gene
+        - 10x_pipeline
+        - 10x_reference
+        - 10x_web_summary
+        - linked_sample
+
+        Arguments:
+          summary_table (Table): table to update
+          fields (list): list of custom fields to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+
+        Returns:
+          Boolean: True if report didn't contain any issues,
+            False otherwise.
+        """
+        # Flag to indicate whether we're writing to the first
+        # line of the single library table for this sample, and
+        # only report name on the first line
+        first_line = True
+        # Reporting status
+        has_problems = False
+        # Report each single library analysis
+        for cellranger_count in self.cellranger_count:
+            # Shortcut to metrics
+            metrics = cellranger_count.metrics
+            # Add line in summary table
+            if first_line:
+                # Only display sample name on first line
+                idx = single_library_table.add_row(
+                    sample=self.sample)
+                first_line = False
+            else:
+                idx = single_library_table.add_row()
+            # Set values for fields
+            for field in fields:
+                if field == "sample":
+                    continue
+                if field == "linked_sample":
+                    try:
+                        value = ','.join(
+                            [split_sample_reference(s)[2]
+                             for s in self.multiome_libraries.linked_samples(
+                                     self.sample)])
+                    except AttributeError:
+                        value = '?'
+                elif field == "10x_cells":
+                    try:
+                        value = metrics.estimated_number_of_cells
+                    except AttributeError:
+                        value = metrics.annotated_cells
+                    value = pretty_print_reads(value)
+                elif field == "10x_reads_per_cell":
+                    value = pretty_print_reads(metrics.mean_reads_per_cell)
+                elif field == "10x_genes_per_cell":
+                    value = pretty_print_reads(metrics.median_genes_per_cell)
+                elif field == "10x_frac_reads_in_cell":
+                    value = metrics.frac_reads_in_cells
+                elif field == "10x_fragments_per_cell":
+                    value = pretty_print_reads(
+                        metrics.median_fragments_per_cell)
+                elif field == "10x_fragments_overlapping_targets":
+                    value = "%.1f%%" % \
+                            (metrics.frac_fragments_overlapping_targets*100.0,)
+                elif field == "10x_atac_fragments_per_cell":
+                    value = pretty_print_reads(
+                        metrics.atac_median_high_quality_fragments_per_cell)
+                elif field == "10x_gex_cells_per_gene":
+                    value = pretty_print_reads(
+                        metrics.gex_median_cells_per_gene)
+                elif field == "10x_pipeline":
+                    if cellranger_count.version:
+                        value = "%s %s" % (cellranger_count.pipeline_name,
+                                           cellranger_count.version)
+                    else:
+                        value = cellranger_count.pipeline_name
+                elif field == "10x_reference":
+                    value = os.path.basename(cellranger_count.\
+                                             reference_data)
+                elif field == "10x_web_summary":
+                    web_summary = cellranger_count.web_summary
+                    if relpath:
+                        web_summary = os.path.relpath(web_summary,
+                                                      relpath)
+                    value = Link(self.sample,web_summary)
+                else:
+                    raise KeyError("'%s': unrecognised field for single "
+                                   "library analysis table" % field)
+                single_library_table.set_value(idx,field,value)
+        # Finished
+        return (not has_problems)
+
+    def get_value(self,field,relpath=None):
+        """
+        Return the value for the specified field
+
+        The following fields can be reported for each Fastq
+        pair:
+
+        - sample
+        - cellranger_count
+
+        Arguments:
+          field (str): name of the field to report; if the
+            field is not recognised then KeyError is raised
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        if field == "sample":
+            value = self.sample
+        elif field == "cellranger_count":
+            if len(self.cellranger_count) == 1:
+                # Report single summary
+                cellranger_count = self.cellranger_count[0]
+                web_summary = cellranger_count.web_summary
+                if relpath:
+                    web_summary = os.path.relpath(web_summary,
+                                                  relpath)
+                    value = Link(cellranger_count.sample_name,
+                                 web_summary)
+            else:
+                # Report multiple single library outputs
+                value = List()
+                for cellranger_count in self.cellranger_count:
+                    web_summary = cellranger_count.web_summary
+                    if relpath:
+                        web_summary = os.path.relpath(web_summary,
+                                                      relpath)
+                    pipeline_name = cellranger_count.pipeline_name
+                    version = cellranger_count.version
+                    reference = os.path.basename(
+                        cellranger_count.reference_data)
+                    cellranger = "%s%s" % (pipeline_name,
+                                           (' %s' % version
+                                            if version else ''))
+                    value.add_item(Link("%s %s" % (cellranger,
+                                                   reference),
+                                        web_summary))
+        else:
+            raise KeyError("'%s': unrecognised field for summary "
+                           "table" % field)
+        return value
 
 class QCReportFastqGroup(object):
     """
@@ -1585,7 +2142,7 @@ class QCReportFastqGroup(object):
         clear = fastqs_report.add_subsection(css_classes=("clear",))
 
     def update_summary_table(self,summary_table,idx=None,fields=None,
-                             relpath=None,skip_sample_metrics=False):
+                             relpath=None):
         """
         Add a line to a summary table reporting a Fastq group
 
@@ -1593,24 +2150,7 @@ class QCReportFastqGroup(object):
         existing line) for the Fastq pair, adding content for
         each specified field.
 
-        The following fields can be reported for each Fastq
-        pair:
-
-        - fastqs (if paired-end)
-        - fastq (if single-end)
-        - reads
-        - read_lengths
-        - boxplot_r1
-        - boxplot_r2
-        - boxplot_r3
-        - fastqc_r1
-        - fastqc_r2
-        - fastqc_r3
-        - screens_r1
-        - screens_r2
-        - screens_r3
-        - strandedness
-        - cellranger_count
+        See the 'get_value' method for a list of valid fields.
 
         Arguments:
           summary_table (Table): table to add the summary to
@@ -1620,9 +2160,6 @@ class QCReportFastqGroup(object):
           fields (list): list of custom fields to report
           relpath (str): if set then make link paths
             relative to 'relpath'
-          skip_sample_metrics (bool): if True then don't report
-            values for 'sample-level' metrics (e.g. cellranger
-            count outputs)
 
         Returns:
           Boolean: True if report didn't contain any issues,
@@ -1665,67 +2202,12 @@ class QCReportFastqGroup(object):
             idx = summary_table.add_row()
         # Populate with data
         for field in fields:
+            if field in QCReportSample.sample_summary_fields:
+                # Ignore sample-level fields
+                continue
             try:
-                if field == "sample":
-                    logger.debug("'sample' ignored")
-                    continue
-                elif field == "fastq" or field == "fastqs":
-                    value = []
-                    for read in self.reads:
-                        value.append(Link(self.reporters[read].name,
-                                          "#%s" % self.reporters[read].safe_name))
-                    value = "<br />".join([str(x) for x in value])
-                elif field == "reads":
-                    value = pretty_print_reads(
-                        self.reporters[self.reads[0]].fastqc.data.basic_statistics(
-                            'Total Sequences'))
-                elif field == "read_lengths":
-                    value = []
-                    for read in self.reads:
-                        value.append(Link(
-                            self.reporters[read].fastqc.data.basic_statistics(
-                                'Sequence length'),
-                            self.reporters[read].fastqc.summary.link_to_module(
-                                'Sequence Length Distribution',
-                                relpath=relpath)))
-                    value = "<br />".join([str(x) for x in value])
-                elif field.startswith("boxplot_"):
-                    read = field.split('_')[-1]
-                    value = Img(self.reporters[read].uboxplot(),
-                                href="#boxplot_%s" %
-                                self.reporters[read].safe_name)
-                elif field.startswith("fastqc_"):
-                    read = field.split('_')[-1]
-                    value = Img(self.reporters[read].ufastqcplot(),
-                                href="#fastqc_%s" %
-                                self.reporters[read].safe_name,
-                                title=self.reporters[read].fastqc_summary())
-                elif field.startswith("screens_"):
-                    read = field.split('_')[-1]
-                    value = Img(self.reporters[read].uscreenplot(),
-                                href="#fastq_screens_%s" %
-                                self.reporters[read].safe_name)
-                elif field == "strandedness":
-                    value = Img(self.ustrandplot(),
-                                href="#strandedness_%s" %
-                                self.reporters[self.reads[0]].safe_name,
-                                title=self.strandedness())
-                elif field == "cellranger_count":
-                    if skip_sample_metrics:
-                        value = "&nbsp;"
-                    else:
-                        web_summary = self.reporters[read].\
-                                      cellranger_count.web_summary
-                        if relpath:
-                            web_summary = os.path.relpath(web_summary,
-                                                          relpath)
-                        value = Link(
-                            self.reporters[read].cellranger_count.sample_name,
-                            web_summary)
-                else:
-                    raise KeyError("'%s': unrecognised field for summary "
-                                   "table" % field)
-                # Put value into the table
+                # Populate fields in the table
+                value = self.get_value(field,relpath=relpath)
                 summary_table.set_value(idx,field,value)
             except KeyError as ex:
                 # Assume this is an unrecognised field
@@ -1752,6 +2234,80 @@ class QCReportFastqGroup(object):
         # Return the status
         return (not has_problems)
 
+    def get_value(self,field,relpath=None):
+        """
+        Return the value for the specified field
+
+        The following fields can be reported for each Fastq
+        group:
+
+        - fastqs (if paired-end)
+        - fastq (if single-end)
+        - reads
+        - read_lengths
+        - boxplot_r1
+        - boxplot_r2
+        - boxplot_r3
+        - fastqc_r1
+        - fastqc_r2
+        - fastqc_r3
+        - screens_r1
+        - screens_r2
+        - screens_r3
+        - strandedness
+
+        Arguments:
+          field (str): name of the field to report; if the
+            field is not recognised then KeyError is raised
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        if field == "fastq" or field == "fastqs":
+            value = []
+            for read in self.reads:
+                value.append(Link(self.reporters[read].name,
+                                  "#%s" % self.reporters[read].safe_name))
+            value = "<br />".join([str(x) for x in value])
+        elif field == "reads":
+            value = pretty_print_reads(
+                self.reporters[self.reads[0]].fastqc.data.basic_statistics(
+                    'Total Sequences'))
+        elif field == "read_lengths":
+            value = []
+            for read in self.reads:
+                value.append(Link(
+                    self.reporters[read].fastqc.data.basic_statistics(
+                        'Sequence length'),
+                    self.reporters[read].fastqc.summary.link_to_module(
+                        'Sequence Length Distribution',
+                        relpath=relpath)))
+            value = "<br />".join([str(x) for x in value])
+        elif field.startswith("boxplot_"):
+            read = field.split('_')[-1]
+            value = Img(self.reporters[read].uboxplot(),
+                        href="#boxplot_%s" %
+                        self.reporters[read].safe_name)
+        elif field.startswith("fastqc_"):
+            read = field.split('_')[-1]
+            value = Img(self.reporters[read].ufastqcplot(),
+                        href="#fastqc_%s" %
+                        self.reporters[read].safe_name,
+                        title=self.reporters[read].fastqc_summary())
+        elif field.startswith("screens_"):
+            read = field.split('_')[-1]
+            value = Img(self.reporters[read].uscreenplot(),
+                        href="#fastq_screens_%s" %
+                        self.reporters[read].safe_name)
+        elif field == "strandedness":
+            value = Img(self.ustrandplot(),
+                        href="#strandedness_%s" %
+                        self.reporters[self.reads[0]].safe_name,
+                        title=self.strandedness())
+        else:
+            raise KeyError("'%s': unrecognised field for summary "
+                           "table" % field)
+        return value
+
 class QCReportFastq(object):
     """
     Provides interface to QC outputs for Fastq file
@@ -1769,8 +2325,6 @@ class QCReportFastq(object):
     fastq_screen.SCREEN.txt: associated TXT file for SCREEN
     fastq_screen.SCREEN.version: associated version for SCREEN
     program_versions.NAME: version of package NAME
-    cellranger_count.web_summary: path to cellranger count web_summary.html
-    cellranger_count.metrics_cvs: path to cellranger count metrics.csv
 
     Provides the following methods:
 
@@ -1781,7 +2335,8 @@ class QCReportFastq(object):
     ufastqcplot
     uscreenplot
     """
-    def __init__(self,fastq,qc_dir,project_id=None,fastq_attrs=AnalysisFastq):
+    def __init__(self,fastq,qc_dir,project_id=None,
+                 fastq_attrs=AnalysisFastq):
         """
         Create a new QCReportFastq instance
 
@@ -1847,11 +2402,6 @@ class QCReportFastq(object):
         else:
             fastq_screen_versions = WarningIcon(size=20)
         self.program_versions['fastq_screen'] = fastq_screen_versions
-        # Cellranger count outputs
-        self.cellranger_count = CellrangerCount(
-            os.path.join(qc_dir,
-                         "cellranger_count",
-                         self.sample_name))
 
     def report_fastqc(self,document,relpath=None):
         """
@@ -2048,6 +2598,7 @@ def verify(project,qc_dir=None,qc_protocol=None):
         fastq_strand_conf = None
     logger.debug("verify: fastq_strand conf file : %s" %
                  fastq_strand_conf)
+    cellranger_version = None
     cellranger_refdata = None
     qc_info_file = os.path.join(qc_dir,"qc.info")
     if os.path.exists(qc_info_file):
@@ -2056,11 +2607,16 @@ def verify(project,qc_dir=None,qc_protocol=None):
             cellranger_refdata = qc_info['cellranger_refdata']
         except KeyError:
             pass
+        try:
+            cellranger_version = qc_info['cellranger_version']
+        except KeyError:
+            pass
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
     verified = True
     for f in expected_outputs(project,qc_dir,
                               fastq_strand_conf=fastq_strand_conf,
+                              cellranger_version=cellranger_version,
                               cellranger_refdata=cellranger_refdata,
                               qc_protocol=qc_protocol):
         if not os.path.exists(f):
