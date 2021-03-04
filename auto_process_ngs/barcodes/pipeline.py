@@ -32,6 +32,7 @@ from ..applications import Command
 from ..bcl2fastq.utils import get_nmismatches
 from ..bcl2fastq.utils import bases_mask_is_valid
 from ..bcl2fastq.utils import check_barcode_collisions
+from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..pipeliner import Pipeline
 from ..pipeliner import PipelineTask
 from ..pipeliner import PipelineCommandWrapper
@@ -116,8 +117,6 @@ class AnalyseBarcodes(Pipeline):
             # Load data from sample sheet
             try:
                 s = SampleSheet(self._sample_sheet)
-                # Check any empty barcode sequences
-                self._check_sample_sheet_indexes(s)
                 # List of unique project names
                 projects = list(set(
                     [d[s.sample_project_column]
@@ -128,6 +127,8 @@ class AnalyseBarcodes(Pipeline):
                 raise Exception("Sample sheet '%s' supplied but can't "
                                 "get a list of project names" %
                                 self._sample_sheet)
+            # Check any empty barcode sequences
+            self._check_sample_sheet_indexes(self._sample_sheet)
         else:
             raise Exception("Need to supply either unaligned (bcl2fastq "
                             "output) dir or sample sheet")
@@ -207,14 +208,17 @@ class AnalyseBarcodes(Pipeline):
         self.add_output('xls_file',report_barcodes.output.xls_file)
         self.add_output('html_file',report_barcodes.output.html_file)
 
-    def _check_sample_sheet_indexes(self,sample_sheet):
+    def _check_sample_sheet_indexes(self,sample_sheet_file):
         """
         Check that empty indexes are correctly specified in samplesheet
         """
         # Split sample sheet into sub-sheets by lane
+        sample_sheet = SampleSheet(sample_sheet_file)
         if sample_sheet.has_lanes:
-            sample_sheet = [make_custom_sample_sheet(s,lanes=(i,))
-                            for i in sample_sheet.lanes]
+            lanes = list(set([line['Lane'] for line in sample_sheet]))
+            sample_sheet = [make_custom_sample_sheet(sample_sheet_file,
+                                                     lanes=(i,))
+                            for i in lanes]
         else:
             sample_sheet = [sample_sheet]
         # Check for empty indexes in each lane
@@ -319,8 +323,7 @@ class AnalyseBarcodes(Pipeline):
 
         # Check any empty barcode sequences
         if sample_sheet:
-            s = SampleSheet(sample_sheet)
-            self._check_sample_sheet_indexes(s)
+            self._check_sample_sheet_indexes(sample_sheet)
 
         # Barcode analysis and counts directories
         barcode_analysis_dir = os.path.abspath(barcode_analysis_dir)
