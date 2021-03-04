@@ -277,6 +277,16 @@ class AnalyseBarcodes(Pipeline):
                 raise Exception("No bcl2fastq output directory specified")
         bcl2fastq_dir = os.path.abspath(bcl2fastq_dir)
 
+        # Input sample sheet
+        if self._sample_sheet is not None:
+            if sample_sheet is None:
+                sample_sheet = self._sample_sheet
+            else:
+                raise Exception("Samplesheet already set")
+        else:
+            if sample_sheet is not None:
+                sample_sheet = os.path.abspath(sample_sheet)
+
         # Barcode analysis and counts directories
         barcode_analysis_dir = os.path.abspath(barcode_analysis_dir)
         counts_dir = os.path.join(barcode_analysis_dir,"counts")
