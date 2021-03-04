@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes.pipeline.py: pipelines for analysing barcodes
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 
 """
@@ -32,6 +32,7 @@ from ..applications import Command
 from ..bcl2fastq.utils import get_nmismatches
 from ..bcl2fastq.utils import bases_mask_is_valid
 from ..bcl2fastq.utils import check_barcode_collisions
+from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..pipeliner import Pipeline
 from ..pipeliner import PipelineTask
 from ..pipeliner import PipelineCommandWrapper
@@ -41,6 +42,7 @@ from bcftbx.utils import AttributeDictionary
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import SampleSheet
+from bcftbx.IlluminaData import samplesheet_index_sequence
 
 ######################################################################
 # Pipeline classes
@@ -123,7 +125,10 @@ class AnalyseBarcodes(Pipeline):
                      for d in s]))
             except Exception as ex:
                 raise Exception("Sample sheet '%s' supplied but can't "
-                                "get a list of project names")
+                                "get a list of project names" %
+                                self._sample_sheet)
+            # Check any empty barcode sequences
+            self._check_sample_sheet_indexes(self._sample_sheet)
         else:
             raise Exception("Need to supply either unaligned (bcl2fastq "
                             "output) dir or sample sheet")
@@ -203,6 +208,35 @@ class AnalyseBarcodes(Pipeline):
         self.add_output('xls_file',report_barcodes.output.xls_file)
         self.add_output('html_file',report_barcodes.output.html_file)
 
+    def _check_sample_sheet_indexes(self,sample_sheet_file):
+        """
+        Check that empty indexes are correctly specified in samplesheet
+        """
+        # Split sample sheet into sub-sheets by lane
+        sample_sheet = SampleSheet(sample_sheet_file)
+        if sample_sheet.has_lanes:
+            lanes = list(set([line['Lane'] for line in sample_sheet]))
+            sample_sheet = [make_custom_sample_sheet(sample_sheet_file,
+                                                     lanes=(i,))
+                            for i in lanes]
+        else:
+            sample_sheet = [sample_sheet]
+        # Check for empty indexes in each lane
+        for s in sample_sheet:
+            for line in s:
+                if not samplesheet_index_sequence(line):
+                    # Lane contains an empty index
+                    # Only valid if this is the only line
+                    if len(s.data) > 1:
+                        if s.has_lanes:
+                            raise Exception("Invalid sample sheet: "
+                                            "empty index must be the "
+                                            "only line for this lane")
+                        else:
+                            raise Exception("Invalid sample sheet: "
+                                            "empty index must be the "
+                                            "only line")
+
     def run(self,barcode_analysis_dir,bcl2fastq_dir=None,title=None,
             lanes=None,mismatches=None,bases_mask=None,cutoff=None,
             sample_sheet=None,force=False,working_dir=None,log_file=None,
@@ -276,6 +310,20 @@ class AnalyseBarcodes(Pipeline):
             if bcl2fastq_dir is None:
                 raise Exception("No bcl2fastq output directory specified")
         bcl2fastq_dir = os.path.abspath(bcl2fastq_dir)
+
+        # Input sample sheet
+        if self._sample_sheet is not None:
+            if sample_sheet is None:
+                sample_sheet = self._sample_sheet
+            else:
+                raise Exception("Samplesheet already set")
+        else:
+            if sample_sheet is not None:
+                sample_sheet = os.path.abspath(sample_sheet)
+
+        # Check any empty barcode sequences
+        if sample_sheet:
+            self._check_sample_sheet_indexes(sample_sheet)
 
         # Barcode analysis and counts directories
         barcode_analysis_dir = os.path.abspath(barcode_analysis_dir)

@@ -530,28 +530,11 @@ class MakeFastqs(Pipeline):
                 # ICELL8 single-cell ATAC-seq
                 self._update_subset(s,
                                     create_fastq_for_index_read=True)
-            elif protocol == '10x_chromium_sc':
-                # 10xGenomics Chromium SC
-                # Turn off barcode analysis
-                self._update_subset(s,
-                                    analyse_barcodes=False)
-            elif protocol == '10x_atac':
-                # 10xGenomics ATAC-seq
-                # Turn off barcode analysis
-                self._update_subset(s,
-                                    analyse_barcodes=False)
-            elif protocol == '10x_visium':
-                # 10xGenomics Visium
-                # Turn off barcode analysis
-                self._update_subset(s,
-                                    analyse_barcodes=False)
             elif protocol == '10x_multiome':
                 # 10xGenomics multiome
-                # Turn off barcode analysis and
-                # disable adapter trimming
+                # Disable adapter trimming
                 self._update_subset(s,
-                                    trim_adapters=False,
-                                    analyse_barcodes=False)
+                                    trim_adapters=False)
             
         # Finally update parameters for user-defined
         # lane subsets (overriding both pipeline and
@@ -1471,7 +1454,7 @@ class MakeFastqs(Pipeline):
         # Append pipeline for barcode analysis
         if not self._fastq_statistics:
             do_barcode_analysis = False
-        elif len(self.subsets) == 1:
+        elif len(self.subsets) == 1 and not self.subsets[0]['lanes']:
             try:
                 do_barcode_analysis = self.subsets[0]['analyse_barcodes']
             except KeyError:
@@ -1490,9 +1473,11 @@ class MakeFastqs(Pipeline):
             self.add_pipeline(analyse_barcodes,
                               params={
                                   'bcl2fastq_dir': self.params.out_dir,
+                                  'title': Param(
+                                      value="Barcode analysis for %s" %
+                                      os.path.basename(self._run_dir)),
                                   'lanes': Param(
                                       value=lanes_for_barcode_analysis),
-                                  'mismatches': run_bcl2fastq.output.mismatches
                               },
                               requires=fastq_generation_tasks)
 

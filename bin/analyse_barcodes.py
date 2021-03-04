@@ -211,6 +211,7 @@ if __name__ == '__main__':
         reporter = Reporter()
         for lane in lanes:
             # Report for each lane
+            print("Reporting barcodes for lane %d" % lane)
             if lane not in counts.lanes:
                 logging.error("Requested analysis for lane %d but "
                               "only have counts for lanes %s" %
@@ -220,6 +221,7 @@ if __name__ == '__main__':
                 continue
             mismatches = args.mismatches
             # Deal with sample sheet if supplied
+            use_sample_sheet = sample_sheet
             if sample_sheet:
                 with tempfile.NamedTemporaryFile() as fp:
                     # Make a temporary sample sheet with just the
@@ -227,44 +229,51 @@ if __name__ == '__main__':
                     s = SampleSheet(sample_sheet)
                     if s.has_lanes:
                         use_lanes = (lane,)
-                        s = make_custom_sample_sheet(sample_sheet,
-                                                     fp.name,
-                                                     lanes=(lane,))
                     else:
-                        s = make_custom_sample_sheet(sample_sheet,
-                                                     fp.name)
+                        use_lanes = None
+                    s = make_custom_sample_sheet(sample_sheet,
+                                                 fp.name,
+                                                 lanes=use_lanes)
                     if has_10x_indices(fp.name):
+                        # Don't pass the sample sheet to the reporter
+                        # for lanes with 10x indices
+                        use_sample_sheet = None
                         logging.warning("Lane %s has 10xGenomics-style "
                                         "indices in sample sheet; not "
                                         "matching against samplesheet for "
                                         "this lane" % lane)
-                        continue
-                    # If mismatches not set then determine from
-                    # the barcode lengths in the temporary
-                    # samplesheet
-                    if mismatches is None:
-                        barcode_length = None
-                        for line in s:
-                            index_sequence = samplesheet_index_sequence(line)
-                            if index_sequence is None:
-                                # Empty barcode sequence in samplesheet
-                                length = 0
-                            else:
-                                length = len(index_sequence)
-                            if barcode_length is None:
-                                barcode_length = length
-                            elif length != barcode_length:
-                                logging.error("Lane %s has a mixture of "
-                                              "barcode lengths" % lane)
-                                barcode_length = min(barcode_length,length)
-                        if barcode_length >= 6:
-                            mismatches = 1
-                        else:
-                            mismatches = 0
-                        # Check for collisions
-                        while mismatches and check_barcode_collisions(
-                                fp.name,mismatches):
-                            mismatches = mismatches - 1
+                    else:
+                        # If mismatches not set then determine from
+                        # the barcode lengths in the temporary
+                        # samplesheet
+                        if mismatches is None:
+                            barcode_length = None
+                            for line in s:
+                                index_sequence = \
+                                    samplesheet_index_sequence(line)
+                                if index_sequence is None:
+                                    # Empty barcode sequence in
+                                    # samplesheet
+                                    length = 0
+                                else:
+                                    length = len(index_sequence)
+                                if barcode_length is None:
+                                    barcode_length = length
+                                elif length != barcode_length:
+                                    logging.error("Lane %s has a mixture "
+                                                  "of barcode lengths" %
+                                                  lane)
+                                    barcode_length = min(barcode_length,
+                                                         length)
+                                if barcode_length >= 6:
+                                    mismatches = 1
+                                else:
+                                    mismatches = 0
+                                # Check for collisions
+                                while mismatches and \
+                                      check_barcode_collisions(
+                                          fp.name,mismatches):
+                                    mismatches = mismatches - 1
             # Check mismatches
             if mismatches is None:
                 # Set according to barcode lengths found in counts
@@ -277,7 +286,7 @@ if __name__ == '__main__':
             report_barcodes(counts,
                             lane=lane,
                             cutoff=cutoff,
-                            sample_sheet=sample_sheet,
+                            sample_sheet=use_sample_sheet,
                             mismatches=mismatches,
                             reporter=reporter,
                             minimum_read_fraction=
