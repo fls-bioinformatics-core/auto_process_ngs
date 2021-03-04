@@ -2091,7 +2091,7 @@ class Pipeline(object):
                     # Terminate all tasks and stop immediately
                     self.report("Following tasks failed:")
                     for task in failed:
-                        msg = "- '%s'" % task.name
+                        msg = "- '%s'" % task.name()
                         if verbose:
                             msg += " (%s)" % task.id()
                         self.report(msg)
