@@ -1473,6 +1473,9 @@ class MakeFastqs(Pipeline):
             self.add_pipeline(analyse_barcodes,
                               params={
                                   'bcl2fastq_dir': self.params.out_dir,
+                                  'title': Param(
+                                      value="Barcode analysis for %s" %
+                                      os.path.basename(self._run_dir)),
                                   'lanes': Param(
                                       value=lanes_for_barcode_analysis),
                               },
