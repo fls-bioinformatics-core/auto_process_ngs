@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes.pipeline.py: pipelines for analysing barcodes
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 
 """
