@@ -530,6 +530,21 @@ class MakeFastqs(Pipeline):
                 # ICELL8 single-cell ATAC-seq
                 self._update_subset(s,
                                     create_fastq_for_index_read=True)
+            elif protocol == '10x_chromium_sc':
+                # 10xGenomics Chromium SC
+                # Disable adapter trimming
+                self._update_subset(s,
+                                    trim_adapters=False)
+            elif protocol == '10x_atac':
+                # 10xGenomics ATAC-seq
+                # Disable adapter trimming
+                self._update_subset(s,
+                                    trim_adapters=False)
+            elif protocol == '10x_visium':
+                # 10xGenomics Visium
+                # Disable adapter trimming
+                self._update_subset(s,
+                                    trim_adapters=False)
             elif protocol == '10x_multiome':
                 # 10xGenomics multiome
                 # Disable adapter trimming
