@@ -2408,8 +2408,14 @@ class DemultiplexIcell8Atac(PipelineTask):
           skip_demultiplex (bool): if True then
             skip running the demultiplexing
         """
+        # Internal variables
         self.tmp_out_dirs = {}
         self.illumina_data = None
+        # Outputs
+        # NB 'missing_fastqs' is a dummy output
+        # included for compatibility with other
+        # tasks in the pipeline
+        self.add_output('missing_fastqs',list())
     def setup(self):
         # Check if demultiplexing should be skipped
         if self.args.skip_demultiplex:
