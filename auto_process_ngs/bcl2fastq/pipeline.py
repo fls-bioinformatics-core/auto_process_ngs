@@ -2559,6 +2559,7 @@ class Run10xMkfastq(PipelineTask):
         self.lanes = None
         self.mkfastq_out_dir = None
         self.mro_file = None
+        self.expect_qc_summary_json = True
         # Outputs
         self.add_output('missing_fastqs',list())
     def setup(self):
@@ -2672,8 +2673,16 @@ class Run10xMkfastq(PipelineTask):
                               "mkfastq",
                               "--run",self.args.run_dir,
                               "--samplesheet",self.args.sample_sheet,
-                              "--output-dir",self.tmp_out_dir,
-                              "--qc")
+                              "--output-dir",self.tmp_out_dir)
+        include_qc_argument = True
+        if self.pkg == "cellranger":
+            pkg_major_version = int(self.args.pkg_version.split('.')[0])
+            if pkg_major_version >= 6:
+                # --qc removed in cellranger 6.0.0
+                include_qc_argument = False
+                self.expect_qc_summary_json = False
+        if include_qc_argument:
+            mkfastq_cmd.add_args("--qc")
         if self.lanes:
             mkfastq_cmd.add_args("--lanes",
                                  ','.join([str(l) for l in self.lanes]))
@@ -2746,26 +2755,29 @@ class Run10xMkfastq(PipelineTask):
             if not os.path.isdir(self.mkfastq_out_dir):
                 raise Exception("No output directory '%s'" %
                                 self.mkfastq_out_dir)
-            json_file = os.path.join(self.mkfastq_out_dir,
-                                     "outs",
-                                     "qc_summary.json")
-            if not os.path.exists(json_file):
-                raise Exception("%s mkfastq failed to make JSON QC summary "
-                                "file (%s not found)" % (self.pkg,
-                                                         json_file))
-            # Make HTML QC summary
-            html_file = "%s_qc_summary%s.html" % \
-                        (self.pkg,
-                         "_%s" % ''.join([str(l) for l in self.lanes])
-                         if self.lanes is not None else "")
-            make_qc_summary_html(json_file,html_file)
+            if self.expect_qc_summary_json:
+                json_file = os.path.join(self.mkfastq_out_dir,
+                                         "outs",
+                                         "qc_summary.json")
+                if not os.path.exists(json_file):
+                    raise Exception("%s mkfastq failed to make JSON "
+                                    "QC summary file (%s not found)"
+                                    % (self.pkg,json_file))
+                # Make HTML QC summary
+                html_file = "%s_qc_summary%s.html" % \
+                            (self.pkg,
+                             "_%s" %
+                             ''.join([str(l) for l in self.lanes])
+                             if self.lanes is not None else "")
+                make_qc_summary_html(json_file,html_file)
+                print("Moving QC report '%s'" % html_file)
+                os.rename(html_file,
+                          os.path.join(
+                              os.path.dirname(self.args.out_dir),
+                              os.path.basename(html_file)))
             # Move outputs to final location
             print("Moving output to final location")
             os.rename(self.tmp_out_dir,self.args.out_dir)
-            print("Moving QC report '%s'" % html_file)
-            os.rename(html_file,
-                      os.path.join(os.path.dirname(self.args.out_dir),
-                                   os.path.basename(html_file)))
 
 class MergeFastqDirs(PipelineFunctionTask):
     """
