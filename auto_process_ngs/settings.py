@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2021 Peter Briggs
 #
 #########################################################################
 #
@@ -140,8 +140,6 @@ class Settings(object):
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
         self.modulefiles['publish_qc'] = config.get('modulefiles','publish_qc')
         self.modulefiles['process_icell8'] = config.get('modulefiles','process_icell8')
-        self.modulefiles['process_10xgenomics'] = config.get('modulefiles',
-                                                             'process_10xgenomics')
         self.modulefiles['illumina_qc'] = config.get('modulefiles','illumina_qc')
         self.modulefiles['fastq_strand'] = config.get('modulefiles','fastq_strand')
         self.modulefiles['cellranger'] = config.get('modulefiles','cellranger')

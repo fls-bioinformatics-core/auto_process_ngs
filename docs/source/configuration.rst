@@ -326,7 +326,6 @@ These can be defined for the following stages:
  * ``run_qc``
  * ``publish_qc``
  * ``process_icell8``
- * ``process_10xgenomics``
 
 (see :ref:`software_dependencies` for details of what software is required
 for each of these stages.)
