@@ -1,200 +1,51 @@
-Processing 10xGenomics Chromium SC 3'v2 single-cell data
-========================================================
+Processing 10xGenomics single cell data
+=======================================
 
 Background
 ----------
 
-The 10xGenomics Chromium SC 3'v2 system prepares single cell (SC) samples
-which are then sequenced as part of an Illumina sequencing run. 10xGenomics
-provide the ``cellranger`` and ``cellranger-atac`` software packages to
-perform Fastq generation and subsequent analyses:
+10xGenomics provides a range of platforms for various types of single
+cell samples including gene expression, ATAC-seq and spatial
+transcriptomics.
 
-* ``cellranger`` is used for single cell RNA-seq data
-* ``cellranger-atac`` is used for single cell ATAC-seq data
+The ``auto_process`` pipeline has integrated support for Fastq generation
+and QC (in the ``make_fastqs`` and ``run_qc`` commands) for the following
+platforms:
 
-The auto-process package currently provides a utility script called
-``process_10xgenomics.py`` which wraps a subset of the ``cellranger``
-and ``cellranger-atac`` commands, whilst also providing a degree of
-integration with the ``auto_process`` pipeline.
+* Chromium SC 3'v2/v3 (single cell/single nuclei RNA-seq)
+* Single cell/single nuclei ATAC-seq
+* Visuim spatial transcriptomics
+* Single cell multiome gene expression/ATAC
 
-Processing protocol for 10xGenomics Chromium data
--------------------------------------------------
+.. warning::
 
-The recommended steps are:
+   The ``process_10xgenomics.py`` utility present in previous versions
+   of ``auto_process`` is no longer supported and has now been removed
+   from the package.
 
-1. Generate the Fastqs as described in
-   :ref:`make_fastqs-10x_chromium_sc-protocol` or
-   :ref:`make_fastqs-10x_atac-protocol`
-2. Set up analysis directories and run initial QC as per the standard
-   protocol
-3. Perform initial single library analysis by running the
-   ``process_10xgenomics.py`` utility, as described in
-   :ref:`10xgenomics-initial-single-library-analysis`
+Fastq generation
+----------------
 
-.. _10xgenomics-initial-single-library-analysis:
+The :doc:`make_fastqs <../using/make_fastqs>` command can be used
+to generate Fastqs from sequencing data generated from 10xGenomics
+samples, by specifying the appropriate protocol via the
+``--protocol`` option.
 
-Perform initial single-library analysis
----------------------------------------
+See :ref:`make_fastqs-protocols` for more details.
 
-Initial single-library analysis can be performed by using
-``process_10xgenomics.py count`` (for scRNA-seq data) or
-``process_10xgenomics.py count-atac`` (for scATAC-seq data) commands.
-These are wrappers which run ``cellranger count`` or
-``cellranger-atac count`` on all the samples in the Chromium-based
-projects.
+Single library analyses
+-----------------------
 
-.. _10xgenomics-count-options:
+Single library analyses are performed automatically as part of the
+QC pipeline, provided that the appropriate 10xGenomics software and
+references are available.
 
-Single-library analysis for scRNA-seq data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The general invocation for running the single-library analysis on
-single cell RNA-seq data is:
-
-::
-
-       process_10xgenomics.py count \
-           -t /path/to/refdata-cellranger-mm10-1.2.0
-	   PROJECT1 [ PROJECT2 ... ]
-
-where ``PROJECT1`` etc represent the projects with Chromium
-RNA-seq datasets.
-
-The ``count`` command supports the following options::
-
-    -u : specify the name of the output directory from 'mkfastq'
-    -t : specify the path to the directory with the appropriate
-         10xGenomics transcriptome data
-    -c : specify the assay configuration (aka chemistry)
-
-in addition to the options outlined in the section
-:ref:`10xgenomics-additional-options`.
-
-.. note::
-
-   If a project metadata defines an organism name which matches one
-   of the entries in the ``10xgenomics_transcriptomes`` section of
-   the configuration file then the ``-t`` option isn't required;
-   instead the matching reference data will be used automatically
-   for the single-library analysis.
-
-See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
-for more details on the single-library analysis for scRNA-seq.
-
-.. _10xgenomics-count-atac-options:
-
-Single-library analysis for sATAC-seq data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The general invocation for running the single-library analysis on
-single cell ATAC-seq data is:
-
-::
-
-       process_10xgenomics.py count-atac \
-           -r /path/to/refdata-cellranger-atac-mm10-1.0.1
-	   PROJECT1 [ PROJECT2 ... ]
-
-where ``PROJECT1`` etc represent the projects with Chromium
-ATAC-seq datasets.
-
-The ``count-atac`` command supports the following options::
-
-    -u : specify the name of the output directory from 'mkfastq'
-    -r : specify the path to the directory with the appropriate
-         10xGenomics ATAC genome reference data
-
-in addition to the options outlined in the section
-:ref:`10xgenomics-additional-options`.
-
-.. note::
-
-   If a project metadata defines an organism name which matches one
-   of the entries in the ``10xgenomics_atac_genome_references``
-   section of the configuration file then the ``-r`` option isn't
-   required; instead the matching reference data will be used
-   automatically for the single-library analysis.
-
-See https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/using/count
-for more details on the single-library analysis for scATAC-seq.
-
-.. _10xgenomics-additional-options:
-
-Options for controlling cellranger
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``process_10xgenomics.py`` has a number of additional options for
-controlling how the ``cellranger`` pipeline is run::
-
-    --jobmode JOB_MODE : job mode to run cellranger in
-    --jobinterval JOB_INTERVAL : how often jobs are submitted (in ms)
-    --maxjobs MAX_JOBS : maxiumum number of concurrent jobs to run
-
-The default ``JOB_MODE`` is ``local``, which runs the ``cellranger``
-pipelines on the local system. In this case the following additional
-options can be used to control the resources used by the pipeline::
-
-    --localcores LOCAL_CORES : maximum number of cores the pipeline
-                               can request
-    --localmem LOCAL_MEM     : maximum memory the pipeline can
-                               request (in Gbs)
-
-If ``cellranger`` is configured to use additional job submission
-systems (e.g. Grid Engine) then ``JOB_MODE`` can specify one of these
-(e.g. ``sge``). In this case the following additional options can
-be used::
-
-    --mempercore MEM_PER_CORE : memory assumed per core (in Gbs)
-
-Note that all the above options  map onto the equivalent ``cellranger``
-options; there are also the following general non-``cellranger`` options::
-
-   --modulefiles MODULEFILES : comma-separated list of environment
-                               modules to load before executing commands
-
-.. _10xgenomics-outputs:
-
-Outputs and reports
-*******************
-
-After running the ``process_10xgenomics.py counts`` command, the project
-directory will contain the following output directories:
-
- ========================== =================================================
- **Directory**              **Description and contents**
- -------------------------- -------------------------------------------------
- ``fastqs``                 FASTQs from ``cellranger mkfastq``/``bcl2fastq``
- ``qc``                     The standard QC outputs
- ``cellranger_fastq_path``  Bcl2fastq-like directory with links to FASTQs
- ``cellranger_count``       Single-library analyses from ``cellranger count``
- ========================== =================================================
-
-The ``cellranger_count`` directories each further contain one
-subdirectory for each sample, within which there is the ``outs``
-directory produced by ``cellranger_count``.
-
-.. note::
-
-   By default these ``outs`` directories only contain the
-   ``web_summary.html`` files; to collect all the outputs from
-   ``cellranger count`` (i.e. the ``.cloupe``, ``BAM``, and gene
-   matrix files required for subsequent analyses), use the
-   ``--all-outputs`` option.
-
-The ``cellranger_fastq_path`` directory is a facsimile of the bcl2fastq
-output directory produced by ``cellranger mkfastq``, which can be supplied
-as the input to one of the ``cellranger`` analysis commands if desired.
-
-The directory will also contain:
-
- * The report from ``cellranger count`` (``cellranger_count_report.html``)
-   which links to the ``web_summary.html`` file for each sample
- * A ZIP archive file with the report plus the summaries for each sample,
-   for viewing elsewhere
- * A ``README.info`` file
+See the documentation on the :doc:`run_qc command <../using/run_qc>`
+and the :doc:`standalone run_qc.py utility <../using/run_qc_standalone>`
+for more details.
 
 Troubleshooting
-***************
+---------------
 
 Single-library analyses fail for low read counts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
