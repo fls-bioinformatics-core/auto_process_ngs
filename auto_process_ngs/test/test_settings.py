@@ -40,7 +40,6 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.run_qc,None)
         self.assertEqual(s.modulefiles.publish_qc,None)
         self.assertEqual(s.modulefiles.process_icell8,None)
-        self.assertEqual(s.modulefiles.process_10xgenomics,None)
         self.assertEqual(s.modulefiles.bcl2fastq,None)
         self.assertEqual(s.modulefiles.cellranger_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
