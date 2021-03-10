@@ -21,7 +21,6 @@ platforms:
 - cellranger_info
 - spaceranger_info
 - make_qc_summary_html
-- build_fastq_path_dir
 - set_cell_count_for_project
 - add_cellranger_args
 """
@@ -644,46 +643,6 @@ def make_qc_summary_html(json_file,html_file):
         sample_qc.add(tbl)
     # Write the report
     qc_summary.write(html_file)
-
-def build_fastq_path_dir(project_dir):
-    """
-    Create directory mimicking output from cellranger mkfastq
-
-    This function creates and populates a 'cellranger mkfastq'
-    style 'fastq_path' directory from an autoprocess analysis
-    project, which can then be used as input to 'cellranger
-    count'.
-
-    The new directory will be called 'cellranger_fastq_path'
-    and will created in the project directory, and will be
-    populated by links to the Fastq files in the project.
-
-    Arguments:
-      project_dir (str): path to the project directory in
-        which to create the 'fastq_path' directory
-
-    Returns:
-      String: path to the 'cellranger_fastq_path' directory.
-    """
-    project = AnalysisProject(os.path.basename(project_dir.rstrip(os.sep)),
-                              os.path.abspath(project_dir))
-    fastq_path_dir = os.path.join(project.dirn,
-                                  "cellranger_fastq_path")
-    mkdirs(fastq_path_dir)
-    mkdirs(os.path.join(fastq_path_dir,"Reports"))
-    mkdirs(os.path.join(fastq_path_dir,"Stats"))
-    fq_dir = os.path.join(fastq_path_dir,project.name)
-    mkdirs(fq_dir)
-    for fastq in project.fastqs:
-        print(fastq)
-        link_name = os.path.join(fq_dir,os.path.basename(fastq))
-        if os.path.exists(link_name):
-            logger.warning("%s: already exists" % link_name)
-            continue
-        target = os.path.relpath(fastq,fq_dir)
-        logger.debug("Linking: %s -> %s" % (link_name,target))
-        os.symlink(target,link_name)
-    return fastq_path_dir
 
 def set_cell_count_for_project(project_dir,qc_dir=None):
     """
