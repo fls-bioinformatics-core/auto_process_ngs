@@ -81,6 +81,7 @@ doesn't have single cell data:
 ===================================== ==============================
 Single cell platform                  Library types
 ===================================== ==============================
+``10xGenomics Chromium 3'``           ``scRNA-seq``, ``snRNA-seq``
 ``10xGenomics Chromium 3'v3``         ``scRNA-seq``, ``snRNA-seq``
 ``10xGenomics Chromium 3'v2``         ``scRNA-seq``, ``snRNA-seq``
 ``10xGenomics Single Cell ATAC``      ``scATAC-seq``, ``snATAC-seq``
