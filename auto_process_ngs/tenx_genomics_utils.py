@@ -673,15 +673,16 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
         qc_dir = project.qc_dir
     qc_dir = os.path.abspath(qc_dir)
     # Determine which 10x pipeline was used
+    pipeline = None
     single_cell_platform = project.info.single_cell_platform
-    if single_cell_platform in ("10xGenomics Chromium 3'v2",
-                                "10xGenomics Chromium 3'v3",):
-        pipeline = "cellranger"
-    elif single_cell_platform == "10xGenomics Single Cell ATAC":
-        pipeline = "cellranger-atac"
-    elif single_cell_platform == "10xGenomics Single Cell Multiome":
-        pipeline = "cellranger-arc"
-    else:
+    if single_cell_platform:
+        if single_cell_platform.startswith("10xGenomics Chromium 3'"):
+            pipeline = "cellranger"
+        elif single_cell_platform == "10xGenomics Single Cell ATAC":
+            pipeline = "cellranger-atac"
+        elif single_cell_platform == "10xGenomics Single Cell Multiome":
+            pipeline = "cellranger-arc"
+    if not pipeline:
         raise NotImplementedError("Not implemented for platform '%s'"
                                   % single_cell_platform)
     # Determine possible locations for outputs

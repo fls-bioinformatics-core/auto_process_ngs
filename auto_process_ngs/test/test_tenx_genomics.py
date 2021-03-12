@@ -920,3 +920,41 @@ Cellranger version\t5.0.1
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          2272)
+    def test_set_cell_count_fails_for_project_with_no_metadata(self):
+        """
+        set_cell_count_for_project: raises exception for project with no metadata
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(None,None)
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "5.0.1",
+                                  "refdata-gex-GRCh38-2020-A",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        metrics_summary_file = os.path.join(counts_dir,
+                                            "metrics_summary.csv")
+        with open(metrics_summary_file,'wt') as fp:
+            fp.write(METRICS_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
+Cellranger version\t5.0.1
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Attempting to update the cell counts should raise
+        # NotImplementedError
+        self.assertRaises(NotImplementedError,
+                          set_cell_count_for_project,
+                          project_dir)
+        # Check cell count wasn't updated
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
