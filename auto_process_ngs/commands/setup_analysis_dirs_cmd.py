@@ -100,15 +100,13 @@ def setup_analysis_dirs(ap,
     # Validate the single cell data
     for line in project_metadata:
         sc_platform = line['SC_Platform']
-        if sc_platform:
-            if sc_platform not in ('.',
-                                   '10xGenomics Chromium 3\'v2',
-                                   '10xGenomics Chromium 3\'v3',
-                                   '10xGenomics Single Cell ATAC',
+        if sc_platform and sc_platform != '.':
+            if not sc_platform in ('10xGenomics Single Cell ATAC',
                                    '10xGenomics Visium',
                                    '10xGenomics Single Cell Multiome',
                                    'ICELL8',
-                                   'ICELL8 ATAC'):
+                                   'ICELL8 ATAC') \
+                and not sc_platform.startswith('10xGenomics Chromium 3\''):
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")

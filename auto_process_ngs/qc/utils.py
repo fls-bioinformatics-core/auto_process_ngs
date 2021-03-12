@@ -51,8 +51,7 @@ def determine_qc_protocol(project):
         protocol = "singlecell"
         single_cell_platform = project.info.single_cell_platform
         library_type = project.info.library_type
-        if single_cell_platform in ('10xGenomics Chromium 3\'v2',
-                                    '10xGenomics Chromium 3\'v3',):
+        if single_cell_platform.startswith('10xGenomics Chromium 3\''):
             if library_type == "scRNA-seq":
                 # 10xGenomics scATAC-seq
                 protocol = "10x_scRNAseq"

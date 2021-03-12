@@ -536,7 +536,7 @@ For standard runs there will additional outputs:
   reports with analysis of the barcode index sequences (see the
   section on :doc:`Barcode analysis <../output/barcode_analysis>`)
 
-If the run included 10xGenomics Chromium 3'v2 data then there will
+If the run included 10xGenomics Chromium 3' data then there will
 be some additional outputs:
 
 * A report in the top-level analysis directory called
