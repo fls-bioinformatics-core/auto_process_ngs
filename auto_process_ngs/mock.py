@@ -1362,7 +1362,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._package_name = os.path.basename(self._path)
         if version is None:
             if self._package_name == 'cellranger':
-                self._version = '5.0.1'
+                self._version = '6.0.0'
             elif self._package_name == 'cellranger-atac':
                 self._version = '1.2.0'
             elif self._package_name == 'cellranger-arc':
@@ -1534,7 +1534,6 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         mkfastq.add_argument("--samplesheet",action="store")
         mkfastq.add_argument("--run",action="store")
         mkfastq.add_argument("--output-dir",action="store")
-        mkfastq.add_argument("--qc",action="store_true")
         mkfastq.add_argument("--lanes",action="store")
         mkfastq.add_argument("--use-bases-mask",action="store")
         mkfastq.add_argument("--minimum-trimmed-read-length",action="store")
@@ -1547,6 +1546,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         mkfastq.add_argument("--maxjobs",action="store")
         mkfastq.add_argument("--jobinterval",action="store")
         mkfastq.add_argument("--disable-ui",action="store_true")
+        include_qc_arg = True
+        if self._package_name == "cellranger" and version[0] >= 6:
+            # --qc removed in cellranger 6.0.0
+            include_qc_arg = False
+        if include_qc_arg:
+            mkfastq.add_argument("--qc",action="store_true")
         # count subparser
         count = sp.add_parser("count")
         count.add_argument("--id",action="store")
@@ -1579,8 +1584,9 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             assert(args.use_bases_mask == self._assert_bases_mask)
         # Check --include-introns
         if self._assert_include_introns is not None:
-            print("Checking --include-introns: %s" % args.include_introns)
-            assert(args.include_introns == self._assert_include_introns)
+            print("Checking --include-introns")
+            assert(("--include-introns" in cmdline.split()) ==
+                   self._assert_include_introns)
         # Handle commands
         if args.command == "mkfastq":
             ##################
@@ -1667,10 +1673,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             outs_dir = os.path.join(flow_cell_dir,"outs")
             os.mkdir(outs_dir)
             # Add qc metric files
-            if args.qc:
-                json_file = os.path.join(outs_dir,"qc_summary.json")
-                with open(json_file,'w') as fp:
-                    fp.write(mock10xdata.QC_SUMMARY_JSON)
+            if include_qc_arg:
+                if args.qc:
+                    json_file = os.path.join(outs_dir,"qc_summary.json")
+                    with open(json_file,'w') as fp:
+                        fp.write(mock10xdata.QC_SUMMARY_JSON)
         elif args.command == "count":
             ###############
             # count command
