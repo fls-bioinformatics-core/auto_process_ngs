@@ -210,7 +210,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_snRNAseq")
 
-    def test_determine_qc_protocol_10xchromium3v2_atac_seq(self):
+    def test_determine_qc_protocol_10x_single_cell_atac_seq(self):
         """determine_qc_protocol: single-cell ATAC-seq (10xGenomics Single Cell ATAC)
         """
         # Make mock analysis project
@@ -228,7 +228,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_scATAC")
 
-    def test_determine_qc_protocol_10xchromium3v2_single_nuclei_atac_seq(self):
+    def test_determine_qc_protocol_10x_single_nuclei_atac_seq(self):
         """determine_qc_protocol: single-nuclei ATAC-seq (10xGenomics Single Cell ATAC)
         """
         # Make mock analysis project
