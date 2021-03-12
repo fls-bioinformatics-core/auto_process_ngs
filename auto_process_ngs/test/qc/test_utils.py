@@ -72,6 +72,22 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "singlecell")
 
+    def test_determine_qc_protocol_10xchromium3(self):
+        """determine_qc_protocol: single-cell run (10xGenomics Chromium 3')
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Chromium 3'"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "singlecell")
+
     def test_determine_qc_protocol_10xchromium3v2(self):
         """determine_qc_protocol: single-cell run (10xGenomics Chromium 3'v2)
         """
@@ -103,6 +119,24 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
                          "singlecell")
+
+    def test_determine_qc_protocol_10xchromium3_rna_seq(self):
+        """determine_qc_protocol: single-cell RNA-seq (10xGenomics Chromium 3')
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Chromium 3'",
+                                          'Library type':
+                                          "scRNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_scRNAseq")
 
     def test_determine_qc_protocol_10xchromium3v2_rna_seq(self):
         """determine_qc_protocol: single-cell RNA-seq (10xGenomics Chromium 3'v2)
@@ -139,6 +173,24 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
                          "10x_scRNAseq")
+
+    def test_determine_qc_protocol_10xchromium3_sn_rna_seq(self):
+        """determine_qc_protocol: single-nuclei RNA-seq (10xGenomics Chromium 3')
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Chromium 3'",
+                                          'Library type':
+                                          "snRNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_snRNAseq")
 
     def test_determine_qc_protocol_10xchromium3v3_sn_rna_seq(self):
         """determine_qc_protocol: single-nuclei RNA-seq (10xGenomics Chromium 3'v3)
