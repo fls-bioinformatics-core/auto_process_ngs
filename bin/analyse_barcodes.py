@@ -193,9 +193,12 @@ if __name__ == '__main__':
         counts = count_barcodes(extra_args)
     # Determine subset of lanes to examine
     if args.lanes is not None:
+        print("Lanes supplied on command line: %s" % args.lanes)
         lanes = parse_lanes(args.lanes)
     else:
+        print("Taking lanes from counts")
         lanes = counts.lanes
+    lanes = sorted(list(set(lanes)))
     # Deal with cutoff
     if args.cutoff == 0.0:
         cutoff = None
@@ -206,6 +209,11 @@ if __name__ == '__main__':
         sample_sheet = os.path.abspath(args.sample_sheet)
     else:
         sample_sheet = None
+    # Report settings
+    print("Sample sheet: %s" % sample_sheet)
+    print("Lanes       : %s" % lanes)
+    print("Cutoff      : %s" % cutoff)
+    print("Mismatches  : %s" % args.mismatches)
     # Report the counts
     if not args.no_report:
         reporter = Reporter()

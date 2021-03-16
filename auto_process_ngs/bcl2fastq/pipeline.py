@@ -1006,16 +1006,6 @@ class MakeFastqs(Pipeline):
             well_list = subset['icell8_well_list']
             swap_i1_and_i2 = subset['icell8_atac_swap_i1_and_i2']
             reverse_complement = subset['icell8_atac_reverse_complement']
-
-            ###################
-            # Barcode analysis
-            ###################
-            do_barcode_analysis = subset['analyse_barcodes']
-            if lanes and do_barcode_analysis:
-                lanes_for_barcode_analysis.extend(lanes)
-            self.report("  Analyse barcodes: %s" % (('yes'
-                                                     if do_barcode_analysis
-                                                     else 'no'),))
             
             ###################
             # Make samplesheet
