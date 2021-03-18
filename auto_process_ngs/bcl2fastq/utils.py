@@ -219,6 +219,61 @@ def bcl_to_fastq_info(path=None):
     # Return what we found
     return (bcl2fastq_path,package_name,package_version)
 
+def bclconvert_info(path=None):
+    """
+    Retrieve information on the bcl-convert software
+
+    If called without any arguments this will locate the first
+    bcl-concert executable that is available on the user's PATH.
+
+    Alternatively if the path to an executable is supplied then
+    the package name and version will be determined from that
+    instead.
+
+    If no package is identified then the script path is still
+    returned, but without any version info.
+
+    Returns:
+      Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
+        is the full path for the bcl-convert program, and PACKAGE
+        and VERSION the package/version that it belongs to (PACKAGE
+        will be 'BCL Convert' if a matching executable is located).
+        If any value can't be determined then it will be returned
+        as an empty string.
+
+    """
+    # Initialise
+    bclconvert_path = ''
+    package_name = ''
+    package_version = ''
+    # Locate the bcl-convert program
+    if not path:
+        bclconvert_path = bcf_utils.find_program('bcl-convert')
+    else:
+        bclconvert_path = os.path.abspath(path)
+    # Identify the version
+    if bclconvert_path:
+        # Run the program to get the version
+        version_cmd = Command('bcl-convert','-V')
+        output = version_cmd.subprocess_check_output()[1]
+        print(output)
+        for line in output.split('\n'):
+            if line.startswith('bcl-convert'):
+                # Extract version from line of the form
+                # bcl-convert Version 00.000.000.3.7.5
+                package_name = 'BCL Convert'
+                try:
+                    package_version = '.'.join(line.split('.')[-3:])
+                except ex:
+                    logger.warning("Unable to get version from '%s': %s" %
+                                   (line,ex))
+    else:
+        # No package supplied or located
+        logger.warning("Unable to identify BCLConvert package from '%s'" %
+                       bclconvert_path)
+    # Return what we found
+    return (bclconvert_path,package_name,package_version)
+
 def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
                              lanes=None,adapter=None,adapter_read2=None,
                              fmt=None):

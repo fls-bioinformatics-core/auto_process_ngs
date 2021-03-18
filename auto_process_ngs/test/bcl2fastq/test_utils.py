@@ -13,37 +13,33 @@ from auto_process_ngs.bcl2fastq.utils import *
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
-class MockBcl2fastq(object):
+class MockBaseExe(object):
     """
-    Class for setting up fake bcl2fastq conversion installs
+    Base class for mock BCL to Fastq converters
 
-    Usage:
+    Implements common methods for creating mock
+    versions of Casava, bcl2fastq/bcl2fastq2 and
+    BCL Convert:
 
-    Create a new MockBcl2fastq instance:
+    _makedirs: create subdirectory tree
+    _make_exe: create an executable file
 
-    >>> m = MockBcl2fastq()
+    Additional methods:
 
-    Set up mock bcl2fastq 1.8.3 and 1.8.4 installations:
+    set_path: sets PATH environment var to executables
 
-    >>> m.bcl2fastq_183()
-    >>> m.bcl2fastq_184()
+    Also implements the following methods:
 
-    Get a list of the executables that are defined:
+    paths: list of paths pointing to executables
+    exes: list of full paths to executables
 
-    >>> exes = m.exes
-
-    Prepend the paths for these installations to the PATH
-    environment variable:
-
-    >>> m.set_path(prepend=True)
-
-    Remove the base directory and contents:
-
-    >>> del(m)
-
+    Also implements the __del__ method to clean
+    when instances are garbage collected.
     """
-    def __init__(self):
-        self.dirn = tempfile.mkdtemp(suffix='mockbcl2fastq')
+    def __init__(self,name):
+        """
+        """
+        self.dirn = tempfile.mkdtemp(suffix=name)
         self._exes = []
 
     def __del__(self):
@@ -128,6 +124,37 @@ class MockBcl2fastq(object):
         """
         return [x for x in self._exes]
 
+class MockBcl2fastq(MockBaseExe):
+    """
+    Class for setting up fake bcl2fastq conversion installs
+
+    Usage:
+
+    Create a new MockBcl2fastq instance:
+
+    >>> m = MockBcl2fastq()
+
+    Set up mock bcl2fastq 1.8.3 and 1.8.4 installations:
+
+    >>> m.bcl2fastq_183()
+    >>> m.bcl2fastq_184()
+
+    Get a list of the executables that are defined:
+
+    >>> exes = m.exes
+
+    Prepend the paths for these installations to the PATH
+    environment variable:
+
+    >>> m.set_path(prepend=True)
+
+    Remove the base directory and contents:
+
+    >>> del(m)
+    """
+    def __init__(self):
+        MockBaseExe.__init__(self,name='mockbcl2fastq')
+
     def casava_no_version(self):
         """
         Add a mock CASAVA installation with no discernible version
@@ -187,6 +214,46 @@ class MockBcl2fastq(object):
         self._makedirs('bcl2fastq','2.20.0.422','etc','bcl2fastq-2.20.0.422')
         self._make_exe('bcl2fastq','2.20.0.422','bin','bcl2fastq',
                        content="#!/bin/bash\nif [ \"$1\" == \"--version\" ] ; then cat >&2 <<EOF\nBCL to FASTQ file converter\nbcl2fastq v2.20.0.422\nCopyright (c) 2007-2017 Illumina, Inc.\n\nEOF\nfi")
+
+class MockBclConvert(MockBaseExe):
+    """
+    Class for setting up fake bcl-convert installs
+
+    Usage:
+
+    Create a new MockBclConvert instance:
+
+    >>> m = MockBclConvert()
+
+    Set up mock bcl-convert 3.7.5 installation:
+
+    >>> m.bclconvert_375()
+
+    Get a list of the executables that are defined:
+
+    >>> exes = m.exes
+
+    Prepend the paths for these installations to the PATH
+    environment variable:
+
+    >>> m.set_path(prepend=True)
+
+    Remove the base directory and contents:
+
+    >>> del(m)
+    """
+    def __init__(self):
+        MockBaseExe.__init__(self,name='mockbclconvert')
+
+    def bclconvert_375(self):
+        """
+        Add a mock bcl-convert 3.7.5 installation
+
+        """
+        # bclconvert 3.7.5
+        self._makedirs('BCLConvert','3.7.5','bin')
+        self._make_exe('BCLConvert','3.7.5','bin','bcl-convert',
+                       content="#!/bin/bash\nif [ \"$1\" == \"-V\" ] ; then cat >&2 <<EOF\nbcl-convert Version 00.000.000.3.7.5\nCopyright (c) 2014-2018 Illumina, Inc.\nEOF\nfi")
 
 class TestGetSequencerPlatform(unittest.TestCase):
     """
@@ -657,6 +724,35 @@ class TestBclToFastqInfo(unittest.TestCase):
         self.assertEqual(path,exe)
         self.assertEqual(name,'')
         self.assertEqual(version,'')
+
+class TestBclConvertInfo(unittest.TestCase):
+    """
+    Tests for the bclconvert_info function
+
+    """
+    def setUp(self):
+        # Make some fake directories for different
+        # software versions
+        self.mockbclconvert = MockBclConvert()
+        self.original_path = os.environ['PATH']
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        os.environ['PATH'] = self.original_path
+        del(self.mockbclconvert)
+
+    def test_bclconvert_3_7_5(self):
+        """
+        Collect info for BCL Convert 3.7.5
+        """
+        # bcl-convert 3.7.5
+        self.mockbclconvert.bclconvert_375()
+        self.mockbclconvert.set_path()
+        exe = self.mockbclconvert.exes[0]
+        path,name,version = bclconvert_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'BCL Convert')
+        self.assertEqual(version,'3.7.5')
 
 class TestMakeCustomSampleSheet(unittest.TestCase):
     """Tests for the make_custom_sample_sheet function
