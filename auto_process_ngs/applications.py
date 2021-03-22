@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013-17,2019-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2021 Peter Briggs
 #
 ########################################################################
 #
@@ -60,6 +60,7 @@ class bcl2fastq(object):
 
     configureBclToFastq
     bcl2fastq2
+    bclconvert
 
     """
 
@@ -238,6 +239,76 @@ class bcl2fastq(object):
         if  writing_threads is not None:
             bcl2fastq_cmd.add_args('-w',writing_threads)
         return bcl2fastq_cmd
+
+    @staticmethod
+    def bclconvert(run_dir,output_dir,sample_sheet=None,
+                   lane=None,no_lane_splitting=False,
+                   sampleproject_subdirectories=False,
+                   num_parallel_tiles=None,
+                   num_conversion_threads=None,
+                   num_compression_threads=None,
+                   num_decompression_threads=None,
+                   bclconvert_exe=None):
+        """
+        Generate Command instance for 'bcl-convert' program (v3.*)
+
+        Creates a Command instance to run the Illumina 'bcl-convert'
+        program (for versions 3.*).
+
+        Arguments:
+          run: path to the top-level directory for the run
+          output_dir: path to the output directory
+          sample_sheet: optional, path to the sample sheet file to use
+            (must be present in top-level of input directory if not
+            specified here)
+          lane (integer): restrict processing to single lane (sample
+            sheet must only contain this lane) (--bcl-only-lane)
+          no_lane_splitting: optional, if True then don't split FASTQ
+            files by lane (--no-lane-splitting) (default is False)
+          sampleproject_subdirectories: optional, if True then create
+            subdirectories with project names in output (default is
+            False) (--bcl-sampleproject-subdirectories)
+          num_parallel_tiles: optional, specify the number of tiles
+            being converted to Fastqs in parallel
+            (--bcl-num-parallel-tiles)
+          num_conversion_threads: optional, specify the number of threads
+            to use for conversion per tile (--bcl-num-conversion-threads)
+          num_compression_threads: optional, specify the number of
+            threads for compressing output Fastq files
+            (--bcl-num-compression-threads)
+          num_decompression_threads: optional, specify the number of
+            threads for decompression input bcl files
+            (--bcl-num-decompression-threads)
+          bclconvert_exe: optional, if set then specifies the name/path
+            of the bcl-convert executable to use
+
+        Returns:
+          Command object.
+        """
+        if bclconvert_exe is None:
+            bclconvert_exe = 'bcl-convert'
+        bclconvert_cmd = Command(bclconvert_exe,
+                                 '--bcl-input-directory',run_dir,
+                                 '--output-dir',output_dir)
+        if sample_sheet is not None:
+            bclconvert_cmd.add_args('--sample-sheet',sample_sheet)
+        if no_lane_splitting:
+            bclconvert_cmd.add_args('--no-lane-splitting')
+        if sampleproject_subdirectories:
+            bclconvert_cmd.add_args('--bcl-sampleproject-subdirectories')
+        if num_parallel_tiles is not None:
+            bclconvert_cmd.add_args('--bcl-num-parallel-tiles',
+                                    num_parallel_tiles)
+        if num_conversion_threads is not None:
+            bclconvert_cmd.add_args('--bcl-num-conversion-threads',
+                                    num_conversion_threads)
+        if num_compression_threads is not None:
+            bclconvert_cmd.add_args('--bcl-num-compression-threads',
+                                    num_compression_threads)
+        if num_decompression_threads is not None:
+            bclconvert_cmd.add_args('--bcl-num-decompression-threads',
+                                    num_decompression_threads)
+        return bclconvert_cmd
 
 class general(object):
     """General command line applications (e.g. rsync, make)

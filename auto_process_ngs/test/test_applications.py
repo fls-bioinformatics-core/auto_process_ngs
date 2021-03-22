@@ -102,6 +102,44 @@ class TestBcl2Fastq(unittest.TestCase):
                           '--output-dir','Unaligned',
                           '--sample-sheet','SampleSheet.csv'])
 
+    def test_bclconvert(self):
+        """Construct 'bcl-convert' command lines for BCL Convert v3.*
+        """
+        self.assertEqual(bcl2fastq.bclconvert(
+            '/runs/150107_NB123000_0001_ABCX',
+            '/output/bclconvert').command_line,
+                         ['bcl-convert',
+                          '--bcl-input-directory',
+                          '/runs/150107_NB123000_0001_ABCX',
+                          '--output-dir','/output/bclconvert'])
+        self.assertEqual(bcl2fastq.bclconvert(
+            '/runs/150107_NB123000_0001_ABCX',
+            '/output/bclconvert',
+            sample_sheet='SampleSheet.csv').command_line,
+                         ['bcl-convert',
+                          '--bcl-input-directory',
+                          '/runs/150107_NB123000_0001_ABCX',
+                          '--output-dir','/output/bclconvert',
+                          '--sample-sheet','SampleSheet.csv'])
+        self.assertEqual(bcl2fastq.bclconvert(
+            '/runs/150107_NB123000_0001_ABCX',
+            '/output/bclconvert',
+            no_lane_splitting=True).command_line,
+                         ['bcl-convert',
+                          '--bcl-input-directory',
+                          '/runs/150107_NB123000_0001_ABCX',
+                          '--output-dir','/output/bclconvert',
+                          '--no-lane-splitting'])
+        self.assertEqual(bcl2fastq.bclconvert(
+            '/runs/150107_NB123000_0001_ABCX',
+            '/output/bclconvert',
+            sampleproject_subdirectories=True).command_line,
+                         ['bcl-convert',
+                          '--bcl-input-directory',
+                          '/runs/150107_NB123000_0001_ABCX',
+                          '--output-dir','/output/bclconvert',
+                          '--bcl-sampleproject-subdirectories'])
+
 class TestGeneral(unittest.TestCase):
 
     def test_rsync(self):
