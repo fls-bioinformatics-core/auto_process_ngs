@@ -446,7 +446,7 @@ def bases_mask_is_valid(bases_mask):
     except AttributeError:
         return False
 
-def get_nmismatches(bases_mask):
+def get_nmismatches(bases_mask,multi_index=False):
     """
     Determine number of mismatches from bases mask
 
@@ -464,19 +464,26 @@ def get_nmismatches(bases_mask):
 
     Arguments:
       bases_mask: bases mask string of the form e.g. 'y101,I6,y101'
+      multi_index: boolean flag, if False (default) then use the
+        total length of all indices and return a single integer
+        number of allowed mismatches; if True then return a list
+        with the number of mismatches for each index (so a dual
+        index will be a pair of allowed mismatches)
 
     Returns:
       Integer value of number of mismatches. (If the bases mask doesn't
-      contain any index reads then returns zero.)
+        contain any index reads then returns zero for single-index mode,
+        or an empty list for multi-read mode.)
 
     """
     # Check mask is valid
     if not bases_mask_is_valid(bases_mask):
         raise Exception("'%s': not a valid bases mask" % bases_mask)
-    # Total the length of all index reads
-    index_length = 0
+    # Get the lengths of each index read
+    index_lengths = []
     for read in bases_mask.upper().split(','):
         if read.startswith('I'):
+            index_length = 0
             try:
                 i = read.index('N')
                 read = read[:i]
@@ -486,11 +493,19 @@ def get_nmismatches(bases_mask):
                 index_length += int(read[1:])
             except ValueError:
                 index_length += len(read)
-    # Return number of mismatches
-    if index_length >= 6:
-        return 1
+            index_lengths.append(index_length)
+    if multi_index:
+        # Return list of mismatches
+        return [1 if index_length >= 6 else 0
+                for index_length in index_lengths]
     else:
-        return 0
+        # Total the length of all index reads
+        index_length = sum(index_lengths)
+        # Return number of mismatches
+        if index_length >= 6:
+            return 1
+        else:
+            return 0
 
 def check_barcode_collisions(sample_sheet_file,nmismatches):
     """

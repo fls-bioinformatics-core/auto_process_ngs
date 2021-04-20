@@ -1274,7 +1274,9 @@ class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 
     """
-    def test_n_mismatches(self):
+    def test_get_nmismatches(self):
+        """get_nmismatches: fetch mismatches in default mode
+        """
         self.assertEqual(get_nmismatches('y50'),0)
         self.assertEqual(get_nmismatches('y50,I4'),0)
         self.assertEqual(get_nmismatches('y50,I6'),1)
@@ -1289,6 +1291,38 @@ class TestGetNmismatches(unittest.TestCase):
         self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIN4'),0)
         self.assertEqual(get_nmismatches('y250,I4,I4,y250'),1)
 
-    def test_n_mismatches_invalid_input(self):
+    def test_get_nmismatches_multi_index(self):
+        """get_nmismatches: fetch mismatches in 'multi-index' mode
+        """
+        self.assertEqual(get_nmismatches('y50',
+                                         multi_index=True),[])
+        self.assertEqual(get_nmismatches('y50,I4',
+                                         multi_index=True),[0])
+        self.assertEqual(get_nmismatches('y50,I6',
+                                         multi_index=True),[1])
+        self.assertEqual(get_nmismatches('y101,I6,y101',
+                                         multi_index=True),[1])
+        self.assertEqual(get_nmismatches('y250,I8,I8,y250',
+                                         multi_index=True),[1,1])
+        self.assertEqual(get_nmismatches('y250,I6nn,I6nn,y250',
+                                         multi_index=True),[1,1])
+        self.assertEqual(get_nmismatches('y250,I6n2,I6n2,y250',
+                                         multi_index=True),[1,1])
+        self.assertEqual(get_nmismatches('y250,I16',
+                                         multi_index=True),[1])
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIII',
+                                         multi_index=True),[1])
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIINN',
+                                         multi_index=True),[0])
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIII',
+                                         multi_index=True),[0])
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIN4',
+                                         multi_index=True),[0])
+        self.assertEqual(get_nmismatches('y250,I4,I4,y250',
+                                         multi_index=True),[0,0])
+
+    def test_get_nmismatches_invalid_input(self):
+        """get_nmismatches: raise exception for invalid inputs
+        """
         self.assertRaises(Exception,get_nmismatches,'auto')
         self.assertRaises(Exception,get_nmismatches,123)
