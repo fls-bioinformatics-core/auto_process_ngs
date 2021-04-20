@@ -1326,3 +1326,147 @@ class TestGetNmismatches(unittest.TestCase):
         """
         self.assertRaises(Exception,get_nmismatches,'auto')
         self.assertRaises(Exception,get_nmismatches,123)
+
+class TestCheckBarcodeCollisions(unittest.TestCase):
+    """Tests for the check_barcode_collisions function
+    """
+    def setUp(self):
+        # Create a temporary working dir
+        self.wd = tempfile.mkdtemp()
+
+    def tearDown(self):
+        # Remove working dir
+        if self.wd is not None:
+            shutil.rmtree(self.wd)
+
+    def test_check_barcode_collisions_single_index(self):
+        """
+        check_barcode_collisions: single index, no indices collide
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTA,AB,
+AB2,AB2,,,D702,ATTCAG,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # No collisions for one or zero mismatches
+        self.assertEqual(check_barcode_collisions(sample_sheet,1),[])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0),[])
+
+    def test_check_barcode_collisions_single_index_with_collision(self):
+        """
+        check_barcode_collisions: single index, indices collide
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTA,AB,
+AB2,AB2,,,D702,CGTGTT,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Collisions for one mismatch, no collisions for zero
+        self.assertEqual(check_barcode_collisions(sample_sheet,1),
+                         [("CGTGTA","CGTGTT")])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0),
+                         [])
+
+    def test_check_barcode_collisions_dual_index(self):
+        """
+        check_barcode_collisions: dual index, no indices collide
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description1,
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+AB2,AB2,,,D701,TCGTGTAG,D501,CGACCTGT,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # No collisions for one or zero mismatches
+        self.assertEqual(check_barcode_collisions(sample_sheet,1),[])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0),[])
+
+    def test_check_barcode_collisions_dual_index_with_collision(self):
+        """
+        check_barcode_collisions: dual index, indices collide
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description1,
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+AB2,AB2,,,D701,TGTGTAGG,D501,TACCTGTA,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Collisions for one and two mismatches
+        self.assertEqual(check_barcode_collisions(sample_sheet,2),
+                         [("CGTGTAGGGACCTGTA","TGTGTAGGTACCTGTA")])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1),
+                         [("CGTGTAGGGACCTGTA","TGTGTAGGTACCTGTA")])
+        # No collisions for zero mismatches
+        self.assertEqual(check_barcode_collisions(sample_sheet,0),[])
+
+    def test_check_barcode_collisions_dual_index_only_i7_collides(self):
+        """
+        check_barcode_collisions: dual index (only i7 collides)
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description1,
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+AB2,AB2,,,D701,TGTGTAGG,D501,TAGGGTTC,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Collisions for one and two mismatches in i7
+        self.assertEqual(check_barcode_collisions(sample_sheet,2,use_index=1),
+                         [("CGTGTAGG","TGTGTAGG")])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1,use_index=1),
+                         [("CGTGTAGG","TGTGTAGG")])
+        # No collisions for zero mismatches in i7
+        self.assertEqual(check_barcode_collisions(sample_sheet,0,use_index=1),
+                         [])
+        # No collisions for two, one or zero mismatches in i5
+        self.assertEqual(check_barcode_collisions(sample_sheet,2,use_index=2),
+                         [])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1,use_index=2),
+                         [])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0,use_index=2),
+                         [])
+
+    def test_check_barcode_collisions_dual_index_only_i5_collides(self):
+        """
+        check_barcode_collisions: dual index (only i5 collides)
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description1,
+AB1,AB1,,,D701,GACCTGTA,D501,CGTGTAGG,AB,
+AB2,AB2,,,D701,TAGGGTTC,D501,TGTGTAGG,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # No collisions for one and two mismatches in i7
+        self.assertEqual(check_barcode_collisions(sample_sheet,2,use_index=1),
+                         [])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1,use_index=1),
+                         [])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0,use_index=1),
+                         [])
+        # Collisions for two or one mismatches in i5
+        self.assertEqual(check_barcode_collisions(sample_sheet,2,use_index=2),
+                         [("CGTGTAGG","TGTGTAGG")])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1,use_index=2),
+                         [("CGTGTAGG","TGTGTAGG")])
+        # No collisions for zero mismatches in i5
+        self.assertEqual(check_barcode_collisions(sample_sheet,0,use_index=2),
+                         [])

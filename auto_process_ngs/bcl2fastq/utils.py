@@ -507,7 +507,8 @@ def get_nmismatches(bases_mask,multi_index=False):
         else:
             return 0
 
-def check_barcode_collisions(sample_sheet_file,nmismatches):
+def check_barcode_collisions(sample_sheet_file,nmismatches,
+                             use_index='all'):
     """
     Check sample sheet for barcode collisions
 
@@ -529,6 +530,10 @@ def check_barcode_collisions(sample_sheet_file,nmismatches):
       sample_sheet_file (str): path to a SampleSheet.csv file
         to analyse for barcode collisions
       nmismatches (int): maximum number of mismatches to allow
+      use_index (str): flag indicating how to treat index
+        sequences: 'all' (the default) combines indexes into a
+        single sequence before checking for collisions, '1' only
+        checks index 1 (i7), and '2' only checks index 2 (i5)
 
     Returns:
       List: list of pairs of colliding barcodes (with each pair
@@ -538,6 +543,8 @@ def check_barcode_collisions(sample_sheet_file,nmismatches):
     """
     # Load the sample sheet data
     sample_sheet = IlluminaData.SampleSheet(sample_sheet_file)
+    # Convert index flag to string
+    use_index = str(use_index)
     # List of index sequences (barcodes)
     barcodes = {}
     has_lanes = sample_sheet.has_lanes
@@ -547,22 +554,39 @@ def check_barcode_collisions(sample_sheet_file,nmismatches):
             lane = line['Lane']
         else:
             lane = 1
-        # Index sequence
+        # Extract i7 index sequence
+        indx_i7 = None
         try:
-            # Try dual-indexed IEM4 format
-            indx = "%s%s" %(line['index'].strip(),
-                            line['index2'].strip())
+            # IEM4 format
+            indx_i7 = line['index'].strip()
         except KeyError:
-            # Try single indexed IEM4 (no index2)
+            # CASAVA format
             try:
-                indx = line['index'].strip()
+                indx_i7 = line['Index'].strip()
             except KeyError:
-                # Try CASAVA format
-                try:
-                    indx = line['Index'].strip()
-                except KeyError:
-                    # No index columns
-                    indx = ""
+                pass
+        # Extract i5 index sequence
+        indx_i5 = None
+        try:
+            # IEM4 format
+            indx_i5 = line['index2'].strip()
+        except KeyError:
+            # No i5 for CASAVA
+            pass
+        # Assemble index sequence to check for mismatches
+        if use_index == "all":
+            # Combine i5 and i7 into a single sequence
+            indx = "%s%s" % (indx_i7 if indx_i7 else '',
+                             indx_i5 if indx_i5 else '')
+        elif use_index == "1":
+            # Only use i7
+            indx = indx_i7
+        elif use_index == "2":
+            # Only use i5
+            indx = indx_i5
+        else:
+            # Undefined index type
+            raise Exception("Unrecognised index: '%s'" % use_index)
         # Explicitly set empty index to None
         if not indx:
             indx = None
