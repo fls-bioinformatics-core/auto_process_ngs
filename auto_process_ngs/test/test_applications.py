@@ -129,7 +129,7 @@ class TestBcl2Fastq(unittest.TestCase):
                           '--bcl-input-directory',
                           '/runs/150107_NB123000_0001_ABCX',
                           '--output-dir','/output/bclconvert',
-                          '--no-lane-splitting'])
+                          '--no-lane-splitting','true'])
         self.assertEqual(bcl2fastq.bclconvert(
             '/runs/150107_NB123000_0001_ABCX',
             '/output/bclconvert',
@@ -138,7 +138,7 @@ class TestBcl2Fastq(unittest.TestCase):
                           '--bcl-input-directory',
                           '/runs/150107_NB123000_0001_ABCX',
                           '--output-dir','/output/bclconvert',
-                          '--bcl-sampleproject-subdirectories'])
+                          '--bcl-sampleproject-subdirectories','true'])
 
 class TestGeneral(unittest.TestCase):
 

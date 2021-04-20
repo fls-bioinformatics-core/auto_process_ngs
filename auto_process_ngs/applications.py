@@ -293,9 +293,11 @@ class bcl2fastq(object):
         if sample_sheet is not None:
             bclconvert_cmd.add_args('--sample-sheet',sample_sheet)
         if no_lane_splitting:
-            bclconvert_cmd.add_args('--no-lane-splitting')
+            bclconvert_cmd.add_args('--no-lane-splitting',
+                                    'true')
         if sampleproject_subdirectories:
-            bclconvert_cmd.add_args('--bcl-sampleproject-subdirectories')
+            bclconvert_cmd.add_args('--bcl-sampleproject-subdirectories',
+                                    'true')
         if num_parallel_tiles is not None:
             bclconvert_cmd.add_args('--bcl-num-parallel-tiles',
                                     num_parallel_tiles)
