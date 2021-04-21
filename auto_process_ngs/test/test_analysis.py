@@ -208,6 +208,22 @@ class TestAnalysisDir(unittest.TestCase):
         self.assertEqual(analysis_dir.n_projects,2)
         self.assertTrue(analysis_dir.paired_end)
 
+    def test_analysisdir_no_metadata_info(self):
+        """Check AnalysisDir with missing metadata.info file
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        os.remove(os.path.join(mockdir.dirn,"metadata.info"))
+        analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
+        self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.n_sequencing_data,1)
+        self.assertEqual(analysis_dir.n_projects,2)
+        self.assertTrue(analysis_dir.paired_end)
+
     def test_handle_non_project_dir(self):
         """Check AnalysisDir with non-project directory
         """
