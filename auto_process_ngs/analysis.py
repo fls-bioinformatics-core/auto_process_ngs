@@ -272,6 +272,8 @@ class AnalysisDir(object):
         try:
             self.run_name = self.metadata.run_name
         except AttributeError:
+            self.run_name = None
+        if not self.run_name:
             self.run_name = self._analysis_dir[0:-len('_analysis')]
         self.run_name = os.path.basename(self.run_name)
         self.date_stamp,\
