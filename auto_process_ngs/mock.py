@@ -1368,7 +1368,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
             if self._package_name == 'cellranger':
                 self._version = '6.0.0'
             elif self._package_name == 'cellranger-atac':
-                self._version = '1.2.0'
+                self._version = '2.0.0'
             elif self._package_name == 'cellranger-arc':
                 self._version = '1.0.0'
             elif self._package_name == 'spaceranger':
@@ -1553,6 +1553,9 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         include_qc_arg = True
         if self._package_name == "cellranger" and version[0] >= 6:
             # --qc removed in cellranger 6.0.0
+            include_qc_arg = False
+        elif self._package_name == "cellranger-atac" and version[0] >= 2:
+            # --qc removed in cellranger-atc 2.0.0
             include_qc_arg = False
         if include_qc_arg:
             mkfastq.add_argument("--qc",action="store_true")
