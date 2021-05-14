@@ -292,6 +292,8 @@ class bcl2fastq(object):
                                  '--output-dir',output_dir)
         if sample_sheet is not None:
             bclconvert_cmd.add_args('--sample-sheet',sample_sheet)
+        if lane is not None:
+            bclconvert_cmd.add_args('--bcl-only-lane',lane)
         if no_lane_splitting:
             bclconvert_cmd.add_args('--no-lane-splitting',
                                     'true')
