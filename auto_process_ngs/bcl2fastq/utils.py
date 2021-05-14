@@ -16,6 +16,7 @@ Utility functions for bcl to fastq conversion operations:
 
 - available_bcl2fastq_versions: list available bcl2fastq converters
 - bcl_to_fastq_info: retrieve information on the bcl2fastq software
+- bclconvert_info: retrieve information on the BCL Convert software
 - make_custom_sample_sheet: create a corrected copy of a sample sheet file
 - get_required_samplesheet_format: fetch format required by bcl2fastq version
 - get_nmismatches: determine number of mismatches from bases mask
