@@ -1002,8 +1002,8 @@ class TestQCPipeline(unittest.TestCase):
                                                         "PJB",f)),
                             "Missing %s" % f)
 
-    def test_qcpipeline_with_cellranger_atac_count(self):
-        """QCPipeline: single cell ATAC QC run with 'cellranger-atac count'
+    def test_qcpipeline_with_cellranger_atac_count_1_2_0(self):
+        """QCPipeline: single cell ATAC QC run with 'cellranger-atac count' (1.2.0)
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
@@ -1058,6 +1058,67 @@ class TestQCPipeline(unittest.TestCase):
                   "cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB2/_cmdline",
                   "cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB2/outs/web_summary.html",
                   "cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB2/outs/summary.csv",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+
+    def test_qcpipeline_with_cellranger_atac_count_2_0_0(self):
+        """QCPipeline: single cell ATAC QC run with 'cellranger-atac count' (2.0.0)
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
+                                 version="2.0.0")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB1_S1_R3_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",
+                                       "PJB2_S2_R3_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Single Cell ATAC',
+                                           'Library type': 'scATAC-seq' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          multiqc=True)
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_atac_references=
+                           { 'human':
+                             '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1/outs/summary.csv",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2/outs/summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1/outs/summary.csv",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2/outs/summary.csv",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
