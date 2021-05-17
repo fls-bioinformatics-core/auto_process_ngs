@@ -16,6 +16,7 @@ from auto_process_ngs.mock import MockAnalysisDir
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
+from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_LIBRARIES
 from auto_process_ngs.tenx_genomics_utils import *
@@ -500,18 +501,43 @@ class TestAtacSummary(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
 
-    def test_atac_summary(self):
-        """AtacSummary: check metrics are extracted from CSV file
+    def test_atac_summary_pre_2_0_0(self):
+        """AtacSummary: get metrics from summary.csv (Cellranger ATAC pre-2.0.0)
         """
         summary_csv = os.path.join(self.wd,"summary.csv")
         with open(summary_csv,'w') as fp:
             fp.write(ATAC_SUMMARY)
         s = AtacSummary(summary_csv)
+        self.assertEqual(s.version,"1.0.1")
         self.assertEqual(s.cells_detected,6748)
         self.assertEqual(s.annotated_cells,5682)
         self.assertEqual(s.median_fragments_per_cell,16119.5)
         self.assertEqual(s.frac_fragments_overlapping_targets,
                          0.575082094792)
+        self.assertEqual(s.frac_fragments_overlapping_peaks,
+                         0.556428090013)
+        self.assertRaises(AttributeError,
+                          getattr,
+                          s,'estimated_number_of_cells')
+
+    def test_atac_summary_2_0_0(self):
+        """AtacSummary: get metrics from summary.csv (Cellranger ATAC 2.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(ATAC_SUMMARY_2_0_0)
+        s = AtacSummary(summary_csv)
+        self.assertEqual(s.version,"2.0.0")
+        self.assertEqual(s.estimated_number_of_cells,3582)
+        self.assertEqual(s.median_fragments_per_cell,51354.5)
+        self.assertEqual(s.frac_fragments_overlapping_targets,0.291)
+        self.assertEqual(s.frac_fragments_overlapping_peaks,0.4856)
+        self.assertRaises(AttributeError,
+                          getattr,
+                          s,'cells_detected')
+        self.assertRaises(AttributeError,
+                          getattr,
+                          s,'annotated_cells')
 
 class TestMultiomeSummary(unittest.TestCase):
     """
