@@ -1714,7 +1714,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             elif self._package_name in "cellranger-atac":
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
-                    fp.write(mock10xdata.ATAC_SUMMARY)
+                    if version[0] < 2:
+                        # Format for cellranger-atac < 2.0.0
+                        fp.write(mock10xdata.ATAC_SUMMARY)
+                    else:
+                        # Format for cellranger-atac >= 2.0.0
+                        fp.write(mock10xdata.ATAC_SUMMARY_2_0_0)
             elif self._package_name == "cellranger-arc":
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
