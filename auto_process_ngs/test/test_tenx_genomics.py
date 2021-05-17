@@ -794,6 +794,44 @@ Cellranger version\t1.2.0
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          5682)
+    def test_set_cell_count_for_atac_project_2_0_0(self):
+        """
+        set_cell_count_for_project: test for scATAC-seq (Cellranger ATAC 2.0.0)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell ATAC",
+            "scATAC-seq")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "2.0.0",
+                                  "refdata-cellranger-atac-GRCh38-2020-A-2.0.0",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                    "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(ATAC_SUMMARY_2_0_0)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+Cellranger version\t2.0.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         3582)
     def test_set_cell_count_for_multiome_atac_project(self):
         """
         set_cell_count_for_project: test for single cell multiome ATAC

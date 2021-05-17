@@ -807,8 +807,15 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                                         (sample.name,
                                          summary_csv))
                     # Extract cell numbers
-                    number_of_cells += AtacSummary(summary_csv).\
-                                       annotated_cells
+                    try:
+                        # Cellranger ATAC pre-2.0.0 uses 'annotated_cells'
+                        number_of_cells += AtacSummary(summary_csv).\
+                                           annotated_cells
+                    except AttributeError:
+                        # Cellranger ATAC 2.0.0 uses 'Estimated number of
+                        # cells'
+                        number_of_cells += AtacSummary(summary_csv).\
+                                           estimated_number_of_cells
                 elif pipeline == "cellranger-arc":
                     # Single cell multiome output
                     summary_csv = os.path.join(
