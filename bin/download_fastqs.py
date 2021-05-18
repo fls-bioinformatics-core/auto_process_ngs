@@ -122,7 +122,7 @@ if __name__ == "__main__":
     index_page = str(urlopen(args.url).read())
     print_("Locating chksum file",end='')
     for line in index_page.split('\n'):
-        chksum_file = re.search('[A-Za-z0-9_]*\.chksums',line)
+        chksum_file = re.search('[A-Za-z0-9_\-]*\.chksums',line)
         if chksum_file:
             break
     if not chksum_file:
