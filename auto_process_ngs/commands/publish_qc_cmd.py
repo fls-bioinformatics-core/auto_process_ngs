@@ -13,6 +13,7 @@ import os
 import time
 import string
 import ast
+import glob
 from .. import fileops
 from ..simple_scheduler import SimpleScheduler
 from ..docwriter import Document
@@ -74,7 +75,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
 
     The reports include:
 
-    - processing QC report
+    - processing QC reports
     - 'cellranger mkfastq' QC report
     - barcode analysis report
 
@@ -184,20 +185,22 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         raise Exception("Target directory '%s' doesn't exist" %
                         location)
     # Collect processing statistics
-    print("Checking for processing QC report")
-    processing_qc_html = os.path.join(ap.analysis_dir,
-                                      "processing_qc.html")
-    processing_qc_warnings = False
-    if os.path.exists(processing_qc_html):
-        print("...found %s" % os.path.basename(processing_qc_html))
-        # Check for warnings
-        processing_qc_warnings = detect_processing_qc_warnings(
-            processing_qc_html)
-        if processing_qc_warnings:
-            print("...processing QC report contains warnings")
+    print("Checking for processing QC reports")
+    processing_qc_reports = [f for
+                             f in glob.glob(os.path.join(ap.analysis_dir,
+                             "processing_qc*.html"))]
+    print(processing_qc_reports)
+    processing_qc_warnings = []
+    if processing_qc_reports:
+        for html_report in processing_qc_reports:
+            print("...found %s" % os.path.basename(html_report))
+            # Check for warnings
+            has_warnings = detect_processing_qc_warnings(html_report)
+            if has_warnings:
+                print("...processing QC report contains warnings")
+            processing_qc_warnings.append(has_warnings)
     else:
-        print("...no processing QC report found")
-        processing_qc_html = None
+        print("...no processing QC reports found")
     # Collect barcode analysis artefacts
     print("Checking for barcode analysis")
     if ap.params.barcode_analysis_dir is not None:
@@ -446,15 +449,22 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     params_tbl.add_row(param="Reference",
                        value=ap.run_reference_id)
     general_info.add(params_tbl)
-    # Processing QC report
-    if processing_qc_html:
-        fileops.copy(processing_qc_html,dirn)
+    # Processing QC reports
+    if processing_qc_reports:
         processing_stats = index_page.add_section("Processing Statistics")
-        if processing_qc_warnings:
+        if True in processing_qc_warnings:
             processing_stats.add(
                 Para(WarningIcon(),"Processing QC detected some issues"))
-        processing_stats.add(Link("Processing QC report",
-                                  os.path.basename(processing_qc_html)))
+        for html_report,has_warnings in zip(processing_qc_reports,
+                                            processing_qc_warnings):
+            fileops.copy(html_report,dirn)
+            if has_warnings:
+                warning_mark = WarningIcon()
+            else:
+                warning_mark = ''
+            processing_stats.add(Para(warning_mark,
+                                      Link("Processing QC report",
+                                           os.path.basename(html_report))))
     # Barcode analysis
     if barcodes_files:
         # Create section
