@@ -224,6 +224,8 @@ def add_make_fastqs_command(cmdparser):
     add_modulefiles_option(p)
     add_no_save_option(p)
     add_debug_option(p)
+    p.add_argument('--id',action='store',dest='name',default=None,
+                   help="identifier for output files")
     # Primary data management
     primary_data = p.add_argument_group('Primary data management')
     primary_data.add_argument('--force-copy',action='store_true',
@@ -1254,6 +1256,7 @@ def make_fastqs(args):
         runner = None
     # Do the make_fastqs step
     d.make_fastqs(
+        name=args.name,
         protocol=args.protocol,
         nprocessors=args.nprocessors,
         runner=runner,
