@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     publish_qc_cmd.py: implement auto process publish_qc command
-#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
 #
 #########################################################################
 
