@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     update_fastq_stats_cmd.py: implement update_fastq_stats command
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 #########################################################################
 
