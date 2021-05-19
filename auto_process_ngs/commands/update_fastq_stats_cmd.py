@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     update_fastq_stats_cmd.py: implement update_fastq_stats command
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 #########################################################################
 
@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
-                       unaligned_dir=None,add_data=False,force=False,
-                       nprocessors=None,runner=None):
+def update_fastq_stats(ap,sample_sheet=None,name=None,stats_file=None,
+                       per_lane_stats_file=None,unaligned_dir=None,
+                       add_data=False,force=False,nprocessors=None,
+                       runner=None):
     """Update statistics for Fastq files
 
     Updates the statistics for all Fastq files found in the
@@ -35,6 +36,10 @@ def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
     Arguments
       ap (AutoProcessor): autoprocessor pointing to the analysis
         directory to create Fastqs for
+      sample_sheet (str): path to sample sheet file used in
+        bcl-to-fastq conversion (defaults to the sample sheet
+        stored in the analysis directory parameters)
+      name (str): identifier to use for output stats files
       stats_file (str): path of a non-default file to write the
         statistics to (defaults to 'statistics.info' unless
         over-ridden by local settings)
@@ -58,6 +63,8 @@ def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
     ap.set_log_dir(ap.get_log_subdir("update_fastq_stats"))
     fastq_statistics(ap,
                      unaligned_dir=unaligned_dir,
+                     sample_sheet=sample_sheet,
+                     name=name,
                      stats_file=stats_file,
                      per_lane_stats_file=per_lane_stats_file,
                      add_data=add_data,
@@ -66,8 +73,9 @@ def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
                      runner=runner)
 
 def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
-                     unaligned_dir=None,sample_sheet=None,add_data=False,
-                     force=False,nprocessors=None,runner=None):
+                     unaligned_dir=None,sample_sheet=None,
+                     name=None,add_data=False,force=False,
+                     nprocessors=None,runner=None):
     """Generate statistics for Fastq files
 
     Generates statistics for all Fastq files found in the
@@ -87,6 +95,7 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         conversion
       sample_sheet (str): path to sample sheet file used in
         bcl-to-fastq conversion
+      name (str): identifier to use for output stats files
       add_data (bool): if True then add stats to the existing
         stats files (default is to overwrite existing stats
         files)
@@ -101,15 +110,29 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     """
     # Get file names for output files
     if stats_file is None:
-        if ap.params['stats_file'] is not None:
-            stats_file = ap.params['stats_file']
+        if not name:
+            if ap.params['stats_file'] is not None:
+                stats_file = ap.params['stats_file']
+            else:
+                stats_file = 'statistics.info'
         else:
-            stats_file='statistics.info'
-        if per_lane_stats_file is None:
+            stats_file = 'statistics.%s.info' % name
+    if per_lane_stats_file is None:
+        if not name:
             if ap.params['per_lane_stats_file'] is not None:
                 per_lane_stats_file = ap.params['per_lane_stats_file']
             else:
-                per_lane_stats_file='per_lane_statistics.info'
+                per_lane_stats_file = 'per_lane_statistics.info'
+        else:
+            per_lane_stats_file = 'per_lane_statistics.%s.info' % name
+    if not name:
+        per_lane_sample_stats_file = 'per_lane_sample_stats.info'
+        full_stats_file = 'statistics_full.info'
+        processing_qc_html = 'processing_qc.html'
+    else:
+        per_lane_sample_stats_file = 'per_lane_sample_stats.%s.info' % name
+        full_stats_file = 'statistics_full.%s.info' % name
+        processing_qc_html = 'processing_qc_%s.html' % name
     # Sort out unaligned_dir
     if unaligned_dir is None:
         if ap.params.unaligned_dir is None:
@@ -120,6 +143,9 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     # Check for sample sheet
     if sample_sheet is None:
         sample_sheet = ap.params['sample_sheet']
+    if not os.path.exists(sample_sheet):
+        logger.error("Sample sheet '%s' not found" % sample_sheet)
+        raise Exception("Missing sample sheet")
     # Check if any Fastqs are newer than stats files
     newest_mtime = 0
     for f in (stats_file,per_lane_stats_file,):
@@ -169,6 +195,10 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         '--output',os.path.join(ap.params.analysis_dir,stats_file),
         '--per-lane-stats',os.path.join(ap.params.analysis_dir,
                                         per_lane_stats_file),
+        '--per-lane-sample-stats',os.path.join(ap.params.analysis_dir,
+                                               per_lane_sample_stats_file),
+        '--full-stats',os.path.join(ap.params.analysis_dir,
+                                    full_stats_file),
         ap.params.analysis_dir,
         '--nprocessors',nprocessors
     )
@@ -199,7 +229,7 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     print("Statistics generation completed: %s" % ap.params.stats_file)
     print("Generating processing QC report")
     processing_qc_html = os.path.join(ap.analysis_dir,
-                                      "processing_qc.html")
+                                      processing_qc_html)
     report_processing_qc(ap,processing_qc_html)
 
 def report_processing_qc(ap,html_file):
