@@ -68,6 +68,36 @@ class TestAutoProcessUpdateFastqStats(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,filen)),
                              "%s: missing" % filen)
 
+    def test_update_fastq_stats_with_name(self):
+        """update_fastq_stats: specify id for output statistics files
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '190104_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "190104" },
+            top_dir=self.wd)
+        mockdir.create(no_project_dirs=True)
+        # Statistics files
+        stats_files = (
+            "statistics.test.info",
+            "statistics_full.test.info",
+            "per_lane_statistics.test.info",
+            "per_lane_sample_stats.test.info",
+        )
+        # Check stats files don't already exist
+        for filen in stats_files:
+            self.assertFalse(os.path.exists(os.path.join(mockdir.dirn,filen)),
+                             "%s: file exists, but shouldn't" %
+                             filen)
+        # Update (i.e. generate) stats
+        ap = AutoProcess(mockdir.dirn)
+        update_fastq_stats(ap,name="test")
+        # Check files now exist
+        for filen in stats_files:
+            self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,filen)),
+                             "%s: missing" % filen)
+
     def test_update_fastq_stats_missing_samplesheet(self):
         """update_fastq_stats: raises exception if sample sheet is missing
         """

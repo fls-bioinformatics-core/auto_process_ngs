@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def update_fastq_stats(ap,sample_sheet=None,stats_file=None,
+def update_fastq_stats(ap,sample_sheet=None,name=None,stats_file=None,
                        per_lane_stats_file=None,unaligned_dir=None,
                        add_data=False,force=False,nprocessors=None,
                        runner=None):
@@ -39,6 +39,7 @@ def update_fastq_stats(ap,sample_sheet=None,stats_file=None,
       sample_sheet (str): path to sample sheet file used in
         bcl-to-fastq conversion (defaults to the sample sheet
         stored in the analysis directory parameters)
+      name (str): identifier to use for output stats files
       stats_file (str): path of a non-default file to write the
         statistics to (defaults to 'statistics.info' unless
         over-ridden by local settings)
@@ -63,6 +64,7 @@ def update_fastq_stats(ap,sample_sheet=None,stats_file=None,
     fastq_statistics(ap,
                      unaligned_dir=unaligned_dir,
                      sample_sheet=sample_sheet,
+                     name=name,
                      stats_file=stats_file,
                      per_lane_stats_file=per_lane_stats_file,
                      add_data=add_data,
@@ -71,8 +73,9 @@ def update_fastq_stats(ap,sample_sheet=None,stats_file=None,
                      runner=runner)
 
 def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
-                     unaligned_dir=None,sample_sheet=None,add_data=False,
-                     force=False,nprocessors=None,runner=None):
+                     unaligned_dir=None,sample_sheet=None,
+                     name=None,add_data=False,force=False,
+                     nprocessors=None,runner=None):
     """Generate statistics for Fastq files
 
     Generates statistics for all Fastq files found in the
@@ -92,6 +95,7 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         conversion
       sample_sheet (str): path to sample sheet file used in
         bcl-to-fastq conversion
+      name (str): identifier to use for output stats files
       add_data (bool): if True then add stats to the existing
         stats files (default is to overwrite existing stats
         files)
@@ -106,15 +110,27 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     """
     # Get file names for output files
     if stats_file is None:
-        if ap.params['stats_file'] is not None:
-            stats_file = ap.params['stats_file']
+        if not name:
+            if ap.params['stats_file'] is not None:
+                stats_file = ap.params['stats_file']
+            else:
+                stats_file = 'statistics.info'
         else:
-            stats_file='statistics.info'
-        if per_lane_stats_file is None:
+            stats_file = 'statistics.%s.info' % name
+    if per_lane_stats_file is None:
+        if not name:
             if ap.params['per_lane_stats_file'] is not None:
                 per_lane_stats_file = ap.params['per_lane_stats_file']
             else:
-                per_lane_stats_file='per_lane_statistics.info'
+                per_lane_stats_file = 'per_lane_statistics.info'
+        else:
+            per_lane_stats_file = 'per_lane_statistics.%s.info' % name
+    if not name:
+        per_lane_sample_stats_file = 'per_lane_sample_stats.info'
+        full_stats_file = 'statistics_full.info'
+    else:
+        per_lane_sample_stats_file = 'per_lane_sample_stats.%s.info' % name
+        full_stats_file = 'statistics_full.%s.info' % name
     # Sort out unaligned_dir
     if unaligned_dir is None:
         if ap.params.unaligned_dir is None:
@@ -177,6 +193,10 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         '--output',os.path.join(ap.params.analysis_dir,stats_file),
         '--per-lane-stats',os.path.join(ap.params.analysis_dir,
                                         per_lane_stats_file),
+        '--per-lane-sample-stats',os.path.join(ap.params.analysis_dir,
+                                               per_lane_sample_stats_file),
+        '--full-stats',os.path.join(ap.params.analysis_dir,
+                                    full_stats_file),
         ap.params.analysis_dir,
         '--nprocessors',nprocessors
     )
