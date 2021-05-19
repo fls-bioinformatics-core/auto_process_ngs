@@ -68,6 +68,21 @@ class TestAutoProcessUpdateFastqStats(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,filen)),
                              "%s: missing" % filen)
 
+    def test_update_fastq_stats_missing_samplesheet(self):
+        """update_fastq_stats: raises exception if sample sheet is missing
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '190104_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "190104" },
+            top_dir=self.wd)
+        mockdir.create(no_project_dirs=True)
+        # Check exception is raised
+        self.assertRaises(Exception,
+                          update_fastq_stats,
+                          sample_sheet="doesnt_exist.csv")
+
 class TestReportProcessingQC(unittest.TestCase):
     """
     Tests for report_processing_qc function

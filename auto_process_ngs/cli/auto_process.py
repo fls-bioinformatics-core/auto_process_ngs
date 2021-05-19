@@ -1007,6 +1007,11 @@ def add_update_fastq_stats_command(cmdparser):
                    dest='unaligned_dir',default='bcl2fastq',
                    help="explicitly set the (sub)directory with "
                    "bcl-to-fastq outputs")
+    p.add_argument('--sample-sheet',action="store",
+                   dest="sample_sheet",default=None,
+                   help="explicitly specify the sample sheet to use "
+                   "(defaults to the sample sheet stored in the "
+                   "analysis directory parameters)")
     p.add_argument('--stats-file',action='store',
                    dest='stats_file',default=None,
                    help="specify output file for fastq statistics")
@@ -1522,6 +1527,7 @@ def update_fastq_stats(args):
     # Do the update
     d.update_fastq_stats(
         unaligned_dir=args.unaligned_dir,
+        sample_sheet=args.sample_sheet,
         stats_file=args.stats_file,
         per_lane_stats_file=args.per_lane_stats_file,
         add_data=args.add_data,

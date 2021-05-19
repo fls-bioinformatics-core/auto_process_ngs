@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
-                       unaligned_dir=None,add_data=False,force=False,
-                       nprocessors=None,runner=None):
+def update_fastq_stats(ap,sample_sheet=None,stats_file=None,
+                       per_lane_stats_file=None,unaligned_dir=None,
+                       add_data=False,force=False,nprocessors=None,
+                       runner=None):
     """Update statistics for Fastq files
 
     Updates the statistics for all Fastq files found in the
@@ -35,6 +36,9 @@ def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
     Arguments
       ap (AutoProcessor): autoprocessor pointing to the analysis
         directory to create Fastqs for
+      sample_sheet (str): path to sample sheet file used in
+        bcl-to-fastq conversion (defaults to the sample sheet
+        stored in the analysis directory parameters)
       stats_file (str): path of a non-default file to write the
         statistics to (defaults to 'statistics.info' unless
         over-ridden by local settings)
@@ -58,6 +62,7 @@ def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
     ap.set_log_dir(ap.get_log_subdir("update_fastq_stats"))
     fastq_statistics(ap,
                      unaligned_dir=unaligned_dir,
+                     sample_sheet=sample_sheet,
                      stats_file=stats_file,
                      per_lane_stats_file=per_lane_stats_file,
                      add_data=add_data,
@@ -120,6 +125,9 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     # Check for sample sheet
     if sample_sheet is None:
         sample_sheet = ap.params['sample_sheet']
+    if not os.path.exists(sample_sheet):
+        logger.error("Sample sheet '%s' not found" % sample_sheet)
+        raise Exception("Missing sample sheet")
     # Check if any Fastqs are newer than stats files
     newest_mtime = 0
     for f in (stats_file,per_lane_stats_file,):
