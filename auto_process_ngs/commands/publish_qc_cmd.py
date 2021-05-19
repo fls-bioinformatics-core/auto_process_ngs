@@ -189,7 +189,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     processing_qc_reports = [f for
                              f in glob.glob(os.path.join(ap.analysis_dir,
                              "processing_qc*.html"))]
-    print(processing_qc_reports)
     processing_qc_warnings = []
     if processing_qc_reports:
         for html_report in processing_qc_reports:
