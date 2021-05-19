@@ -54,6 +54,7 @@ class TestAutoProcessUpdateFastqStats(unittest.TestCase):
             "statistics_full.info",
             "per_lane_statistics.info",
             "per_lane_sample_stats.info",
+            "processing_qc.html",
         )
         # Check stats files don't already exist
         for filen in stats_files:
@@ -84,6 +85,7 @@ class TestAutoProcessUpdateFastqStats(unittest.TestCase):
             "statistics_full.test.info",
             "per_lane_statistics.test.info",
             "per_lane_sample_stats.test.info",
+            "processing_qc_test.html",
         )
         # Check stats files don't already exist
         for filen in stats_files:

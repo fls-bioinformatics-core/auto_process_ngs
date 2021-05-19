@@ -128,9 +128,11 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     if not name:
         per_lane_sample_stats_file = 'per_lane_sample_stats.info'
         full_stats_file = 'statistics_full.info'
+        processing_qc_html = 'processing_qc.html'
     else:
         per_lane_sample_stats_file = 'per_lane_sample_stats.%s.info' % name
         full_stats_file = 'statistics_full.%s.info' % name
+        processing_qc_html = 'processing_qc_%s.html' % name
     # Sort out unaligned_dir
     if unaligned_dir is None:
         if ap.params.unaligned_dir is None:
@@ -227,7 +229,7 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     print("Statistics generation completed: %s" % ap.params.stats_file)
     print("Generating processing QC report")
     processing_qc_html = os.path.join(ap.analysis_dir,
-                                      "processing_qc.html")
+                                      processing_qc_html)
     report_processing_qc(ap,processing_qc_html)
 
 def report_processing_qc(ap,html_file):
