@@ -507,11 +507,15 @@ class UpdateAnalysisDir(DirectoryUpdater):
         self._ap = ap
         DirectoryUpdater.__init__(self,ap.analysis_dir)
 
-    def add_processing_report(self):
+    def add_processing_report(self,name="processing_qc.html"):
         """
         Add a 'processing_qc.html' file
+
+        Arguments:
+          name (str): optionally, specify a non-standard
+            report name (default: 'processing_qc.html')
         """
-        self.add_file("processing_qc.html")
+        self.add_file(name)
 
     def add_barcode_analysis(self,
                              barcode_analysis_dir="barcode_analysis"):

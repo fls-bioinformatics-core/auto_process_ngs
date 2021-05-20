@@ -107,6 +107,38 @@ poll_interval = 0.5
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
 
+    def test_publish_qc_multiple_processing_qc(self):
+        """publish_qc: handle multiple processing QC reports
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add multiple processing reports with non-standard names
+        UpdateAnalysisDir(ap).add_processing_report("processing_qc_v1.html")
+        UpdateAnalysisDir(ap).add_processing_report("processing_qc_v2.html")
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish QC
+        publish_qc(ap,location=publication_dir)
+        # Check outputs
+        outputs = ("index.html",
+                   "processing_qc_v1.html",
+                   "processing_qc_v2.html",)
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
     def test_publish_qc_barcode_analysis(self):
         """publish_qc: barcode analysis outputs
         """
@@ -135,6 +167,44 @@ poll_interval = 0.5
                    os.path.join("barcodes","barcodes.report"),
                    os.path.join("barcodes","barcodes.xls"),
                    os.path.join("barcodes","barcodes.html"))
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_multiple_barcode_analyses(self):
+        """publish_qc: handle multiple barcode analyses outputs
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing and multiple barcode analysis reports
+        UpdateAnalysisDir(ap).add_processing_report()
+        UpdateAnalysisDir(ap).add_barcode_analysis("barcode_analysis_v1")
+        UpdateAnalysisDir(ap).add_barcode_analysis("barcode_analysis_v2")
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish QC
+        publish_qc(ap,location=publication_dir)
+        # Check outputs
+        outputs = ("index.html",
+                   "processing_qc.html",
+                   os.path.join("barcode_analysis_v1","barcodes.report"),
+                   os.path.join("barcode_analysis_v1","barcodes.xls"),
+                   os.path.join("barcode_analysis_v1","barcodes.html"),
+                   os.path.join("barcode_analysis_v2","barcodes.report"),
+                   os.path.join("barcode_analysis_v2","barcodes.xls"),
+                   os.path.join("barcode_analysis_v2","barcodes.html"))
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",

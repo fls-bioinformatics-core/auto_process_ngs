@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     publish_qc_cmd.py: implement auto process publish_qc command
-#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
 #
 #########################################################################
 
@@ -13,6 +13,7 @@ import os
 import time
 import string
 import ast
+import glob
 from .. import fileops
 from ..simple_scheduler import SimpleScheduler
 from ..docwriter import Document
@@ -74,7 +75,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
 
     The reports include:
 
-    - processing QC report
+    - processing QC reports
     - 'cellranger mkfastq' QC report
     - barcode analysis report
 
@@ -184,47 +185,51 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         raise Exception("Target directory '%s' doesn't exist" %
                         location)
     # Collect processing statistics
-    print("Checking for processing QC report")
-    processing_qc_html = os.path.join(ap.analysis_dir,
-                                      "processing_qc.html")
-    processing_qc_warnings = False
-    if os.path.exists(processing_qc_html):
-        print("...found %s" % os.path.basename(processing_qc_html))
-        # Check for warnings
-        processing_qc_warnings = detect_processing_qc_warnings(
-            processing_qc_html)
-        if processing_qc_warnings:
-            print("...processing QC report contains warnings")
+    print("Checking for processing QC reports")
+    processing_qc_reports = sorted([f for
+                                    f in glob.glob(os.path.join(
+                                        ap.analysis_dir,
+                                        "processing_qc*.html"))],
+                                   key=lambda f: os.path.basename(f))
+    processing_qc_warnings = []
+    if processing_qc_reports:
+        for html_report in processing_qc_reports:
+            print("...found %s" % os.path.basename(html_report))
+            # Check for warnings
+            has_warnings = detect_processing_qc_warnings(html_report)
+            if has_warnings:
+                print("...processing QC report contains warnings")
+            processing_qc_warnings.append(has_warnings)
     else:
-        print("...no processing QC report found")
-        processing_qc_html = None
-    # Collect barcode analysis artefacts
-    print("Checking for barcode analysis")
-    if ap.params.barcode_analysis_dir is not None:
-        barcode_analysis_dir = ap.params.barcode_analysis_dir
-    else:
-        barcode_analysis_dir = 'barcode_analysis'
-    if not os.path.isabs(barcode_analysis_dir):
-        barcode_analysis_dir = os.path.join(ap.analysis_dir,
-                                            barcode_analysis_dir)
+        print("...no processing QC reports found")
+    # Check for barcode analysis artefacts
+    print("Checking for barcode analyses")
+    barcode_analysis_dirs = sorted(
+        [d for d in glob.glob(os.path.join(ap.analysis_dir,"*"))
+         if os.path.exists(os.path.join(d,"barcodes.report"))
+         or os.path.exists(os.path.join(d,"barcodes.xls"))
+         or os.path.exists(os.path.join(d,"barcodes.html"))],
+        key=lambda d: os.path.basename(d))
     barcodes_files = []
-    barcodes_warnings = False
-    if os.path.exists(barcode_analysis_dir):
-        print("...found barcode analysis dir: %s" % barcode_analysis_dir)
-        for filen in ('barcodes.report',
+    barcodes_warnings = []
+    if barcode_analysis_dirs:
+        for barcode_analysis_dir in barcode_analysis_dirs:
+            print("...found barcode analysis dir: %s" % barcode_analysis_dir)
+            for f in ('barcodes.report',
                       'barcodes.xls',
                       'barcodes.html'):
-            filen = os.path.join(barcode_analysis_dir,filen)
-            if os.path.exists(filen):
-                print("...found %s" % os.path.basename(filen))
-                barcodes_files.append(filen)
-        # Check for warnings
-        barcodes_warnings = detect_barcodes_warnings(
-            os.path.join(barcode_analysis_dir,'barcodes.report'))
-        if barcodes_warnings:
-            print("...barcode analysis contains warnings")
-    if not barcodes_files:
-        print("...no barcode analysis found")
+                filen = os.path.join(barcode_analysis_dir,f)
+                if os.path.exists(filen):
+                    print("...found %s" % os.path.basename(filen))
+                    barcodes_files.append(filen)
+            # Check for warnings
+            has_warnings = detect_barcodes_warnings(
+                os.path.join(barcode_analysis_dir,'barcodes.report'))
+            if has_warnings:
+                print("...barcode analysis contains warnings")
+            barcodes_warnings.append(has_warnings)
+    else:
+        print("...no barcode analyses found")
     # Collect 10xGenomics cellranger QC summaries
     print("Checking for 10xGenomics mkfastq QC summaries")
     cellranger_qc_html = []
@@ -446,34 +451,73 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     params_tbl.add_row(param="Reference",
                        value=ap.run_reference_id)
     general_info.add(params_tbl)
-    # Processing QC report
-    if processing_qc_html:
-        fileops.copy(processing_qc_html,dirn)
+    # Processing QC reports
+    if processing_qc_reports:
         processing_stats = index_page.add_section("Processing Statistics")
-        if processing_qc_warnings:
-            processing_stats.add(
-                Para(WarningIcon(),"Processing QC detected some issues"))
-        processing_stats.add(Link("Processing QC report",
-                                  os.path.basename(processing_qc_html)))
+        for html_report,has_warnings in zip(processing_qc_reports,
+                                            processing_qc_warnings):
+            # Set name for the report
+            title = os.path.basename(html_report).split('.')[0]
+            if title.startswith("processing_qc_"):
+                title = title[len("processing_qc_"):].replace('_',
+                                                              ' ').title()
+            # Add title and link to the index page
+            p = Para()
+            if title:
+                p.add("%s:" % title)
+            p.add(Link("Processing QC report",
+                       os.path.basename(html_report)))
+            # Append a warning mark if there are issues
+            if has_warnings:
+                p.add(WarningIcon())
+            processing_stats.add(p)
+            # Copy report to webserver
+            fileops.copy(html_report,dirn)
     # Barcode analysis
-    if barcodes_files:
+    if barcode_analysis_dirs:
         # Create section
         barcodes = index_page.add_section("Barcode Analysis")
-        if barcodes_warnings:
-            barcodes.add(
-                Para(WarningIcon(),"Barcode analysis detected some issues"))
-        barcodes.add(
-            Para("Plain text report:",
-                 Link("barcodes.report","barcodes/barcodes.report"),
-                 "| XLS:",
-                 Link("barcodes.xls","barcodes/barcodes.xls"),
-                 "| HTML:",
-                 Link("barcodes.html","barcodes/barcodes.html")))
-        # Create subdir and copy files
-        barcodes_dirn = os.path.join(dirn,'barcodes')
-        fileops.mkdir(barcodes_dirn)
-        for filen in barcodes_files:
-            fileops.copy(filen,barcodes_dirn)
+        # Add individual analyses
+        for barcode_dir,has_warnings in zip(barcode_analysis_dirs,
+                                            barcodes_warnings):
+            # Set name for the report
+            title = os.path.basename(barcode_dir)
+            if title.startswith("barcode_analysis_"):
+                title = title[len("barcode_analysis_"):].replace('_',
+                                                                 ' ').title()
+            if not title:
+                title = "Barcodes"
+            # Collect files and set destination dir
+            barcode_files = []
+            if len(barcode_analysis_dirs) == 1:
+                # Old style
+                dest_dir = "barcodes"
+            else:
+                # New style (multiple analyses)
+                dest_dir = os.path.basename(barcode_dir)
+            # Make a new subsection
+            p = Para()
+            p.add("%s:" % title)
+            # Add links to reports in different formats
+            for f,desc in (("barcodes.report","Plain text report"),
+                           ("barcodes.xls","XLS"),
+                           ("barcodes.html","HTML")):
+                filen = os.path.join(barcode_dir,f)
+                if os.path.exists(filen):
+                    if len(barcode_files):
+                        # Add a spacer
+                        p.add("|")
+                    p.add(Link(desc,os.path.join(dest_dir,f)))
+                    barcode_files.append(filen)
+            # Append a warning mark if there are issues
+            if has_warnings:
+                p.add(WarningMark())
+            barcodes.add(p)
+            # Create subdir and copy files
+            dest_barcode_dir = os.path.join(dirn,dest_dir)
+            fileops.mkdir(dest_barcode_dir)
+            for filen in barcodes_files:
+                fileops.copy(filen,dest_barcode_dir)
     # 10xGenomics mkfastq QC summaries
     if cellranger_qc_html:
         cellranger_qc = index_page.add_section(
