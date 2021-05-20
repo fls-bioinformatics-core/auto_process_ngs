@@ -454,30 +454,40 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     # Processing QC reports
     if processing_qc_reports:
         processing_stats = index_page.add_section("Processing Statistics")
-        if True in processing_qc_warnings:
-            processing_stats.add(
-                Para(WarningIcon(),"Processing QC detected some issues"))
         for html_report,has_warnings in zip(processing_qc_reports,
                                             processing_qc_warnings):
-            fileops.copy(html_report,dirn)
+            # Set name for the report
+            title = os.path.basename(html_report).split('.')[0]
+            if title.startswith("processing_qc_"):
+                title = title[len("processing_qc_"):].replace('_',
+                                                              ' ').title()
+            # Add title and link to the index page
+            p = Para()
+            if title:
+                p.add("%s:" % title)
+            p.add(Link("Processing QC report",
+                       os.path.basename(html_report)))
+            # Append a warning mark if there are issues
             if has_warnings:
-                warning_mark = WarningIcon()
-            else:
-                warning_mark = ''
-            processing_stats.add(Para(warning_mark,
-                                      Link("Processing QC report",
-                                           os.path.basename(html_report))))
+                p.add(WarningIcon())
+            processing_stats.add(p)
+            # Copy report to webserver
+            fileops.copy(html_report,dirn)
     # Barcode analysis
-    ##if barcodes_files:
     if barcode_analysis_dirs:
         # Create section
         barcodes = index_page.add_section("Barcode Analysis")
-        if True in barcodes_warnings:
-            barcodes.add(
-                Para(WarningIcon(),"Barcode analysis detected some issues"))
         # Add individual analyses
         for barcode_dir,has_warnings in zip(barcode_analysis_dirs,
                                             barcodes_warnings):
+            # Set name for the report
+            title = os.path.basename(barcode_dir)
+            if title.startswith("barcode_analysis_"):
+                title = title[len("barcode_analysis_"):].replace('_',
+                                                                 ' ').title()
+            if not title:
+                title = "Barcodes"
+            # Collect files and set destination dir
             barcode_files = []
             if len(barcode_analysis_dirs) == 1:
                 # Old style
@@ -487,11 +497,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 dest_dir = os.path.basename(barcode_dir)
             # Make a new subsection
             p = Para()
-            barcodes.add(p)
-            # Add a warning mark if there are issues
-            if has_warnings:
-                p.add(WarningMark())
-            p.add("<b>%s:</b>" % str(dest_dir).title())
+            p.add("%s:" % title)
             # Add links to reports in different formats
             for f,desc in (("barcodes.report","Plain text report"),
                            ("barcodes.xls","XLS"),
@@ -503,6 +509,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                         p.add("|")
                     p.add(Link(desc,os.path.join(dest_dir,f)))
                     barcode_files.append(filen)
+            # Append a warning mark if there are issues
+            if has_warnings:
+                p.add(WarningMark())
+            barcodes.add(p)
             # Create subdir and copy files
             dest_barcode_dir = os.path.join(dirn,dest_dir)
             fileops.mkdir(dest_barcode_dir)
