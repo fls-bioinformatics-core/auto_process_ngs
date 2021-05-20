@@ -186,9 +186,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                         location)
     # Collect processing statistics
     print("Checking for processing QC reports")
-    processing_qc_reports = [f for
-                             f in glob.glob(os.path.join(ap.analysis_dir,
-                             "processing_qc*.html"))]
+    processing_qc_reports = sorted([f for
+                                    f in glob.glob(os.path.join(
+                                        ap.analysis_dir,
+                                        "processing_qc*.html"))],
+                                   key=lambda f: os.path.basename(f))
     processing_qc_warnings = []
     if processing_qc_reports:
         for html_report in processing_qc_reports:
@@ -202,11 +204,12 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         print("...no processing QC reports found")
     # Check for barcode analysis artefacts
     print("Checking for barcode analyses")
-    barcode_analysis_dirs = \
+    barcode_analysis_dirs = sorted(
         [d for d in glob.glob(os.path.join(ap.analysis_dir,"*"))
          if os.path.exists(os.path.join(d,"barcodes.report"))
          or os.path.exists(os.path.join(d,"barcodes.xls"))
-         or os.path.exists(os.path.join(d,"barcodes.html"))]
+         or os.path.exists(os.path.join(d,"barcodes.html"))],
+        key=lambda d: os.path.basename(d))
     barcodes_files = []
     barcodes_warnings = []
     if barcode_analysis_dirs:
