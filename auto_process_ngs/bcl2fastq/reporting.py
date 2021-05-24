@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report processing QC from Fastq generation
-#     Copyright (C) University of Manchester 2020 Peter Briggs
+#     Copyright (C) University of Manchester 2020-2021 Peter Briggs
 #
 
 """
@@ -53,7 +53,7 @@ class ProcessingQCReport(Document):
     >>> report.write("processing_qc_report.html")
     """
     def __init__(self,analysis_dir,stats_file,per_lane_stats_file,
-                 per_lane_sample_stats_file):
+                 per_lane_sample_stats_file,name=None):
         """
         Create a new ProcessingQCReport instance
 
@@ -66,10 +66,16 @@ class ProcessingQCReport(Document):
             'per_lane_statistics.info' statistics file
           per_lane_sample_stats_file (str): path to the
             'per_lane_sample_stats.info' statistics file
+          name (str): optional identifier to add to the
+            report title
         """
+        # Set the title
+        title = "Processing report for %s" % \
+                os.path.basename(analysis_dir)
+        if name:
+            title += " (%s)" % name
         # Initialise HTML report
-        Document.__init__(self,"Processing report for %s" %
-                          os.path.basename(analysis_dir))
+        Document.__init__(self,title)
         # Store locations of data files
         self._stats_file = stats_file
         self._per_lane_stats_file = per_lane_stats_file
