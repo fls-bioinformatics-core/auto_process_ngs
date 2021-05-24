@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analyse_barcodes_cmd.py: implement analyse_barcodes command
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019,2021 Peter Briggs
 #
 #########################################################################
 
@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
                      mismatches=None,cutoff=None,
                      barcode_analysis_dir=None,
-                     sample_sheet=None,runner=None,
-                     force=False):
+                     sample_sheet=None,name=None,
+                     runner=None,force=False):
     """Analyse the barcode sequences for Fastqs for each specified lane
 
     Run 'analyse_barcodes.py' for one or more lanes, to analyse the
@@ -46,13 +46,15 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
         of associated reads than specified cutoff from reporting (e.g.
         '0.001' excludes barcodes with < 0.1% of reads); default is to
         include all barcodes
-      sample_sheet (str): if set then use this as the input samplesheet
-        to check barcode sequences against (by default will use the
-        sample sheet defined in the parameter file for the run)
       barcode_analysis_dir (str): (optional) explicitly specify the
         subdirectory to use for barcode analysis. Counts will be
         written to and read from the 'counts' subdirectory of this
         directory (defaults to 'barcode_analysis')
+      sample_sheet (str): if set then use this as the input samplesheet
+        to check barcode sequences against (by default will use the
+        sample sheet defined in the parameter file for the run)
+      name (str): (optional) identifier for output directory (if
+        'barcode_analysis_dir' not explicitly set) and report title
       runner (JobRunner): (optional) specify a non-default job runner
         to use for barcode analysis
       force (bool): if True then forces regeneration of any existing
@@ -73,6 +75,8 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
     if barcode_analysis_dir is not None:
         # Create a subdirectory for barcode analysis
         ap.params['barcode_analysis_dir'] = barcode_analysis_dir
+    elif name is not None:
+        ap.params['barcode_analysis_dir'] = 'barcode_analysis_%s' % name
     elif ap.params['barcode_analysis_dir'] is None:
         ap.params['barcode_analysis_dir'] = 'barcode_analysis'
     barcode_analysis_dir = ap.params['barcode_analysis_dir']
@@ -81,6 +85,8 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
                                             barcode_analysis_dir)
     # Report title
     title = "Barcode analysis for %s" % ap.metadata.run_name
+    if name:
+        title = title + " (%s)" % name
     # Create a pipeline for barcode analysis
     barcode_analysis = AnalyseBarcodes(os.path.join(
         ap.params['analysis_dir'],ap.params['unaligned_dir']))
