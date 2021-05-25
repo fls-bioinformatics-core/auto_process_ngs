@@ -174,8 +174,15 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
             if not force:
                 # Don't rerun the stats, just regenerate the report
                 processing_qc_html = os.path.join(ap.analysis_dir,
-                                                  "processing_qc.html")
-                report_processing_qc(ap,processing_qc_html)
+                                                  processing_qc_html)
+                report_processing_qc(ap,
+                                     processing_qc_html,
+                                     full_stats_file=full_stats_file,
+                                     per_lane_stats_file=\
+                                     per_lane_stats_file,
+                                     per_lane_sample_stats_file=\
+                                     per_lane_sample_stats_file,
+                                     name=name)
                 return
     # Set up runner
     if runner is None:
@@ -230,9 +237,19 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     print("Generating processing QC report")
     processing_qc_html = os.path.join(ap.analysis_dir,
                                       processing_qc_html)
-    report_processing_qc(ap,processing_qc_html)
+    report_processing_qc(ap,
+                         processing_qc_html,
+                         full_stats_file=full_stats_file,
+                         per_lane_stats_file=\
+                         per_lane_stats_file,
+                         per_lane_sample_stats_file=\
+                         per_lane_sample_stats_file,
+                         name=name)
 
-def report_processing_qc(ap,html_file):
+def report_processing_qc(ap,html_file,name=None,
+                         full_stats_file=None,
+                         per_lane_stats_file=None,
+                         per_lane_sample_stats_file=None):
     """
     Generate HTML report for processing statistics
 
@@ -241,32 +258,45 @@ def report_processing_qc(ap,html_file):
         processing from
       html_file (str): destination path and file name for
         HTML report
+      name (str): identifier to insert into report title
+      full_stats_file (str): path of full stats file (defaults
+        to 'statistics_full.info')
+      per_lane_stats_file (str): path of per-lane statistics
+        file (defaults to 'per_lane_statistics.info')
+      per_lane_sample_stats_file (str): path of per-lane sample
+        statistics file (defaults to 'per_lane_sample_stats.info')
     """
-    # Per-lane statistics
-    per_lane_stats_file = ap.params.per_lane_stats_file
-    if per_lane_stats_file is None:
-        per_lane_stats_file = "per_lane_statistics.info"
-    per_lane_stats_file = get_absolute_file_path(per_lane_stats_file,
-                                                 base=ap.analysis_dir)
-    # Per lane by sample statistics
-    per_lane_sample_stats_file = get_absolute_file_path(
-        "per_lane_sample_stats.info",
-        base=ap.analysis_dir)
-    # Per fastq statistics
-    stats_file = get_absolute_file_path("statistics_full.info",
+    # Per Fastq statistics
+    if not full_stats_file:
+        full_stats_file = "statistics_full.info"
+    stats_file = get_absolute_file_path(full_stats_file,
                                         base=ap.analysis_dir)
     if not os.path.exists(stats_file):
-        if ap.params.stats_file is not None:
+        # Fall back for legacy datasets (no full stats file)
+        if ap.params.stats_file:
             stats_file = ap.params.stats_file
         else:
             stats_file = "statistics.info"
     stats_file = get_absolute_file_path(stats_file,
                                         base=ap.analysis_dir)
+    # Per-lane statistics
+    if not per_lane_stats_file:
+        per_lane_stats_file = ap.params.per_lane_stats_file
+        if not per_lane_stats_file:
+            per_lane_stats_file = "per_lane_statistics.info"
+    per_lane_stats_file = get_absolute_file_path(per_lane_stats_file,
+                                                 base=ap.analysis_dir)
+    # Per lane by sample statistics
+    if not per_lane_sample_stats_file:
+        per_lane_sample_stats_file = get_absolute_file_path(
+            "per_lane_sample_stats.info",
+            base=ap.analysis_dir)
     # Generate the report
     ProcessingQCReport(ap.analysis_dir,
                        stats_file,
                        per_lane_stats_file,
-                       per_lane_sample_stats_file).write(html_file)
+                       per_lane_sample_stats_file,
+                       name=name).write(html_file)
 
 def get_absolute_file_path(p,base=None):
     """

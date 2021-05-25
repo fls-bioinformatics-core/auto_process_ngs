@@ -940,6 +940,11 @@ def add_analyse_barcodes_command(cmdparser):
                    dest="sample_sheet",default=None,
                    help="use an alternative sample sheet to the default "
                    "'custom_SampleSheet.csv' created on setup.")
+    p.add_argument('--id',action='store',
+                   dest='name',default=None,
+                   help="specify an identifier to be written into the "
+                   "default output barcode analysis directory name (e.g. "
+                   "'barcode_analysis_NAME') and report title")
     p.add_argument('--barcode-analysis-dir',action="store",
                    dest="barcode_analysis_dir",default=None,
                    help="specify subdirectory where barcode analysis will "
@@ -1491,6 +1496,7 @@ def analyse_barcodes(args):
                        cutoff=args.cutoff,
                        sample_sheet=args.sample_sheet,
                        barcode_analysis_dir=args.barcode_analysis_dir,
+                       name=args.name,
                        runner=runner,
                        force=args.force)
 

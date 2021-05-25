@@ -210,7 +210,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
          or os.path.exists(os.path.join(d,"barcodes.xls"))
          or os.path.exists(os.path.join(d,"barcodes.html"))],
         key=lambda d: os.path.basename(d))
-    barcodes_files = []
     barcodes_warnings = []
     if barcode_analysis_dirs:
         for barcode_analysis_dir in barcode_analysis_dirs:
@@ -221,7 +220,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 filen = os.path.join(barcode_analysis_dir,f)
                 if os.path.exists(filen):
                     print("...found %s" % os.path.basename(filen))
-                    barcodes_files.append(filen)
             # Check for warnings
             has_warnings = detect_barcodes_warnings(
                 os.path.join(barcode_analysis_dir,'barcodes.report'))
@@ -516,7 +514,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             # Create subdir and copy files
             dest_barcode_dir = os.path.join(dirn,dest_dir)
             fileops.mkdir(dest_barcode_dir)
-            for filen in barcodes_files:
+            for filen in barcode_files:
                 fileops.copy(filen,dest_barcode_dir)
     # 10xGenomics mkfastq QC summaries
     if cellranger_qc_html:
