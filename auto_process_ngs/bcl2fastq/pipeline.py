@@ -328,6 +328,7 @@ class MakeFastqs(Pipeline):
         self.add_param('no_lane_splitting',value=False,type=bool)
         self.add_param('create_fastq_for_index_read',value=False,type=bool)
         self.add_param('create_empty_fastqs',value=False,type=bool)
+        self.add_param('name',type=str)
         self.add_param('stats_file',type=str)
         self.add_param('stats_full',type=str)
         self.add_param('per_lane_stats',type=str)
@@ -895,6 +896,7 @@ class MakeFastqs(Pipeline):
             # Processing QC report
             report_qc = ReportProcessingQC(
                 "Report Processing QC",
+                name=self.params.name,
                 analysis_dir=self.params.analysis_dir,
                 stats_file=fastq_statistics.output.stats_full,
                 per_lane_stats_file=\
@@ -936,9 +938,13 @@ class MakeFastqs(Pipeline):
             self.add_pipeline(analyse_barcodes,
                               params={
                                   'bcl2fastq_dir': self.params.out_dir,
-                                  'title': Param(
-                                      value="Barcode analysis for %s" %
-                                      os.path.basename(self._run_dir)),
+                                  'title': FunctionParam(
+                                      lambda run_dir,name:
+                                      "Barcode analysis for %s%s" %
+                                      (os.path.basename(run_dir),
+                                       ' (%s)' % name if name else ''),
+                                      self._run_dir,
+                                      self.params.name),
                                   'lanes': Param(
                                       value=lanes_for_barcode_analysis),
                               },
@@ -1683,6 +1689,7 @@ class MakeFastqs(Pipeline):
             'no_lane_splitting': no_lane_splitting,
             'create_fastq_for_index_read': create_fastq_for_index_read,
             'create_empty_fastqs': create_empty_fastqs,
+            'name': name,
             'stats_file': stats_file,
             'stats_full': stats_full,
             'per_lane_stats': per_lane_stats,
@@ -3107,12 +3114,13 @@ class ReportProcessingQC(PipelineTask):
     """
     Generate HTML report on the processing QC
     """
-    def init(self,analysis_dir,stats_file,per_lane_stats_file,
+    def init(self,name,analysis_dir,stats_file,per_lane_stats_file,
              per_lane_sample_stats_file,report_html):
         """
         Initialise the ReportProcessingQC task
 
         Arguments:
+          name (str): identifier for report title
           analysis_dir (str): directory with the
             statistics files
           stats_file (str): path to full statistics
@@ -3133,7 +3141,8 @@ class ReportProcessingQC(PipelineTask):
             self.args.analysis_dir,
             self.args.stats_file,
             self.args.per_lane_stats_file,
-            self.args.per_lane_sample_stats_file).\
+            self.args.per_lane_sample_stats_file,
+            name=self.args.name).\
             write(self.tmp_report)
     def finish(self):
         print("Moving processing QC report to final location")
