@@ -214,7 +214,7 @@ poll_interval = 0.5
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
-                                    "002_make_fastqs"),
+                                    "002_make_fastqs_test"),
                        "bcl2fastq_test",
                        "barcode_analysis_test",):
             self.assertTrue(os.path.isdir(
