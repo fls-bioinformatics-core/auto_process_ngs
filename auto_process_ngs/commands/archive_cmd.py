@@ -223,8 +223,9 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         excludes = ['--exclude=primary_data',
                     '--exclude=save.*',
                     '--exclude=*.bak',
+                    '--exclude=*.tmp',
                     '--exclude=tmp.*',
-                    '--exclude=__qc.*.tmp',]
+                    '--exclude=__*',]
         if not include_bcl2fastq:
             # Determine whether bcl2fastq dir should be included implicitly
             # because there are links from the analysis directories

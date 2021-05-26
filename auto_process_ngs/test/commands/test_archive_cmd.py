@@ -720,7 +720,7 @@ poll_interval = 0.5
         self.assertFalse(os.path.exists(final_archive_dir))
 
     def test_archive_to_staging_ignores_bak_projects(self):
-        """archive: check staging ignores .bak directories
+        """archive: check staging ignores .bak etc directories
         """
         # Make a mock auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -745,6 +745,15 @@ poll_interval = 0.5
         # Add a .bak project directory
         shutil.copytree(os.path.join(mockdir.dirn,"AB"),
                         os.path.join(mockdir.dirn,"AB.bak"))
+        # Add a .tmp project directory
+        shutil.copytree(os.path.join(mockdir.dirn,"AB"),
+                        os.path.join(mockdir.dirn,"AB.tmp"))
+        # Add a save. project directory
+        shutil.copytree(os.path.join(mockdir.dirn,"AB"),
+                        os.path.join(mockdir.dirn,"save.AB"))
+        # Add a __ project directory
+        shutil.copytree(os.path.join(mockdir.dirn,"AB"),
+                        os.path.join(mockdir.dirn,"__AB"))
         # Do archiving op
         status = archive(ap,
                          archive_dir=archive_dir,
@@ -771,14 +780,14 @@ poll_interval = 0.5
         for f in files:
             f = os.path.join(staging_dir,f)
             self.assertTrue(os.path.exists(f))
-        # Check .bak directory wasn't copied
-        dirs = ("AB.bak",)
+        # Check .bak etc directories weresn't copied
+        dirs = ("AB.bak","AB.tmp","save.AB","__AB",)
         for d in dirs:
             d = os.path.join(staging_dir,d)
-            self.assertFalse(os.path.exists(d))
+            self.assertFalse(os.path.exists(d),"Found '%s'" % d)
 
     def test_archive_to_final_ignores_bak_projects(self):
-        """archive: check final archiving ignores .bak directories
+        """archive: check final archiving ignores .bak etc directories
         """
         # Make a mock auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -803,6 +812,15 @@ poll_interval = 0.5
         # Add a .bak project directory
         shutil.copytree(os.path.join(mockdir.dirn,"AB"),
                         os.path.join(mockdir.dirn,"AB.bak"))
+        # Add a .tmp project directory
+        shutil.copytree(os.path.join(mockdir.dirn,"AB"),
+                        os.path.join(mockdir.dirn,"AB.tmp"))
+        # Add a save. project directory
+        shutil.copytree(os.path.join(mockdir.dirn,"AB"),
+                        os.path.join(mockdir.dirn,"save.AB"))
+        # Add a __ project directory
+        shutil.copytree(os.path.join(mockdir.dirn,"AB"),
+                        os.path.join(mockdir.dirn,"__AB"))
         # Do archiving op
         status = archive(ap,
                          archive_dir=archive_dir,
@@ -842,10 +860,10 @@ poll_interval = 0.5
                 self.assertTrue(os.access(fq,os.R_OK))
                 self.assertFalse(os.access(fq,os.W_OK))
         # Check .bak directory wasn't copied
-        dirs = ("AB.bak",)
+        dirs = ("AB.bak","AB.tmp","save.AB","__AB",)
         for d in dirs:
             d = os.path.join(final_archive_dir,d)
-            self.assertFalse(os.path.exists(d))
+            self.assertFalse(os.path.exists(d),"Found '%s'" % d)
 
     def test_archive_force_stage_no_projects(self):
         """archive: force staging of run with no projects
