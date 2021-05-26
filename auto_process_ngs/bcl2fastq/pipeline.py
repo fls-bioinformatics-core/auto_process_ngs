@@ -328,6 +328,7 @@ class MakeFastqs(Pipeline):
         self.add_param('no_lane_splitting',value=False,type=bool)
         self.add_param('create_fastq_for_index_read',value=False,type=bool)
         self.add_param('create_empty_fastqs',value=False,type=bool)
+        self.add_param('name',type=str)
         self.add_param('stats_file',type=str)
         self.add_param('stats_full',type=str)
         self.add_param('per_lane_stats',type=str)
@@ -895,6 +896,7 @@ class MakeFastqs(Pipeline):
             # Processing QC report
             report_qc = ReportProcessingQC(
                 "Report Processing QC",
+                name=self.params.name,
                 analysis_dir=self.params.analysis_dir,
                 stats_file=fastq_statistics.output.stats_full,
                 per_lane_stats_file=\
@@ -936,9 +938,13 @@ class MakeFastqs(Pipeline):
             self.add_pipeline(analyse_barcodes,
                               params={
                                   'bcl2fastq_dir': self.params.out_dir,
-                                  'title': Param(
-                                      value="Barcode analysis for %s" %
-                                      os.path.basename(self._run_dir)),
+                                  'title': FunctionParam(
+                                      lambda run_dir,name:
+                                      "Barcode analysis for %s%s" %
+                                      (os.path.basename(run_dir),
+                                       ' (%s)' % name if name else ''),
+                                      self._run_dir,
+                                      self.params.name),
                                   'lanes': Param(
                                       value=lanes_for_barcode_analysis),
                               },
@@ -1497,8 +1503,8 @@ class MakeFastqs(Pipeline):
     def run(self,analysis_dir,out_dir=None,barcode_analysis_dir=None,
             primary_data_dir=None,force_copy_of_primary_data=False,
             no_lane_splitting=None,create_fastq_for_index_read=None,
-            create_empty_fastqs=None,stats_file=None,stats_full=None,
-            per_lane_stats=None,per_lane_sample_stats=None,
+            create_empty_fastqs=None,name=None,stats_file=None,
+            stats_full=None,per_lane_stats=None,per_lane_sample_stats=None,
             nprocessors=None,require_bcl2fastq=None,
             cellranger_jobmode='local',cellranger_mempercore=None,
             cellranger_maxjobs=None,cellranger_jobinterval=None,
@@ -1530,6 +1536,8 @@ class MakeFastqs(Pipeline):
             (--create-fastq-for-index-read)
           create_empty_fastqs (bool): if True then create empty
             "placeholder" Fastqs if not created by bcl2fastq
+          name (str): optional identifier for output
+            stats and report files
           stats_file (str): path to statistics output file
           stats_full (str): path to full statistics output file
           per_lane_stats (str): path to per-lane statistics
@@ -1610,29 +1618,51 @@ class MakeFastqs(Pipeline):
         # Statistics files
         # Basic stats
         if stats_file is None:
-            stats_file = "statistics.info"
+            if name:
+                stats_file = "statistics.%s.info" % name
+            else:
+                stats_file = "statistics.info"
         if not os.path.isabs(stats_file):
             stats_file = os.path.join(analysis_dir,stats_file)
         # Full stats
         if stats_full is None:
-            stats_full = "statistics_full.info"
+            if name:
+                stats_full = "statistics_full.%s.info" % name
+            else:
+                stats_full = "statistics_full.info"
         if not os.path.isabs(stats_full):
             stats_full = os.path.join(analysis_dir,stats_full)
         # Per-lane stats
         if per_lane_stats is None:
-            per_lane_stats = "per_lane_statistics.info"
+            if name:
+                per_lane_stats = "per_lane_statistics.%s.info" % name
+            else:
+                per_lane_stats = "per_lane_statistics.info"
         if not os.path.isabs(per_lane_stats):
             per_lane_stats = os.path.join(analysis_dir,per_lane_stats)
         # Per-lane per-sample stats
         if per_lane_sample_stats is None:
-            per_lane_sample_stats = "per_lane_sample_stats.info"
+            if name:
+                per_lane_sample_stats = "per_lane_sample_stats.%s.info" % name
+            else:
+                per_lane_sample_stats = "per_lane_sample_stats.info"
         if not os.path.isabs(per_lane_sample_stats):
             per_lane_sample_stats = os.path.join(analysis_dir,
                                                  per_lane_sample_stats)
 
+        # QC report
+        if name:
+            qc_report = "processing_qc_%s.html" % name
+        else:
+            qc_report = "processing_qc.html"
+        qc_report = os.path.join(analysis_dir,qc_report)
+
         # Barcode analysis directory
         if barcode_analysis_dir is None:
-            barcode_analysis_dir = "barcode_analysis"
+            if name:
+                barcode_analysis_dir = "barcode_analysis_%s" % name
+            else:
+                barcode_analysis_dir = "barcode_analysis"
         if not os.path.isabs(barcode_analysis_dir):
             barcode_analysis_dir = os.path.join(analysis_dir,
                                                 barcode_analysis_dir)
@@ -1654,12 +1684,12 @@ class MakeFastqs(Pipeline):
             'primary_data_dir': primary_data_dir,
             'barcode_analysis_dir': barcode_analysis_dir,
             'counts_dir': os.path.join(barcode_analysis_dir,"counts"),
-            'qc_report': os.path.join(analysis_dir,
-                                      "processing_qc.html"),
+            'qc_report': qc_report,
             'force_copy_of_primary_data': force_copy_of_primary_data,
             'no_lane_splitting': no_lane_splitting,
             'create_fastq_for_index_read': create_fastq_for_index_read,
             'create_empty_fastqs': create_empty_fastqs,
+            'name': name,
             'stats_file': stats_file,
             'stats_full': stats_full,
             'per_lane_stats': per_lane_stats,
@@ -3084,12 +3114,13 @@ class ReportProcessingQC(PipelineTask):
     """
     Generate HTML report on the processing QC
     """
-    def init(self,analysis_dir,stats_file,per_lane_stats_file,
+    def init(self,name,analysis_dir,stats_file,per_lane_stats_file,
              per_lane_sample_stats_file,report_html):
         """
         Initialise the ReportProcessingQC task
 
         Arguments:
+          name (str): identifier for report title
           analysis_dir (str): directory with the
             statistics files
           stats_file (str): path to full statistics
@@ -3110,7 +3141,8 @@ class ReportProcessingQC(PipelineTask):
             self.args.analysis_dir,
             self.args.stats_file,
             self.args.per_lane_stats_file,
-            self.args.per_lane_sample_stats_file).\
+            self.args.per_lane_sample_stats_file,
+            name=self.args.name).\
             write(self.tmp_report)
     def finish(self):
         print("Moving processing QC report to final location")

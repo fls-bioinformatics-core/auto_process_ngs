@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
 #
 #########################################################################
 
@@ -39,7 +39,7 @@ BCL2FASTQ_DEFAULTS = {
 
 def make_fastqs(ap,protocol='standard',platform=None,
                 unaligned_dir=None,sample_sheet=None,
-                lanes=None,lane_subsets=None,
+                name=None,lanes=None,lane_subsets=None,
                 icell8_well_list=None,
                 nprocessors=None,require_bcl2fastq_version=None,
                 bases_mask=None,no_lane_splitting=False,
@@ -94,6 +94,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         for bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
         an alternative is already specified in the config file)
       sample_sheet (str): if set then use this as the input samplesheet
+      name (str): (optional) identifier for outputs that are not
+        set explicitly
       lanes (list): (optional) specify a list of lane numbers to
         use in the processing; lanes not in the list will be excluded
         (default is to include all lanes)
@@ -193,6 +195,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                         "%s)" % (protocol,','.join(PROTOCOLS)))
 
     # Output (unaligned) dir
+    if not unaligned_dir and name:
+        unaligned_dir = 'bcl2fastq_%s' % name
     if unaligned_dir is not None:
         ap.params['unaligned_dir'] = unaligned_dir
     elif ap.params['unaligned_dir'] is None:
@@ -227,6 +231,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                                 "in samplesheet" % l)
 
     # Barcode analysis
+    if not barcode_analysis_dir and name:
+        barcode_analysis_dir = 'barcode_analysis_%s' % name
     if barcode_analysis_dir is not None:
         ap.params['barcode_analysis_dir'] = barcode_analysis_dir
     elif ap.params.barcode_analysis_dir is None:
@@ -238,18 +244,24 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
     # Statistics files
     if stats_file is None:
-        if ap.params['stats_file'] is not None:
+        if name:
+            stats_file='statistics.%s.info' % name
+        elif ap.params['stats_file'] is not None:
             stats_file = ap.params['stats_file']
         else:
             stats_file='statistics.info'
     if per_lane_stats_file is None:
-        if ap.params['per_lane_stats_file'] is not None:
+        if name:
+            per_lane_stats_file='per_lane_statistics.%s.info' % name
+        elif ap.params['per_lane_stats_file'] is not None:
             per_lane_stats_file = ap.params['per_lane_stats_file']
         else:
             per_lane_stats_file='per_lane_statistics.info'
 
     # Log dir
     log_dir = 'make_fastqs'
+    if name:
+        log_dir += "_%s" % name
     if protocol != 'standard':
         log_dir += "_%s" % protocol
     if lanes:
@@ -346,18 +358,18 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
     # Set up pipeline environment modules
     envmodules = {}
-    for name in ('bcl2fastq',
-                 'cellranger_mkfastq',
-                 'cellranger_atac_mkfastq',
-                 'cellranger_arc_mkfastq',
-                 'spaceranger_mkfastq',):
+    for envmod in ('bcl2fastq',
+                   'cellranger_mkfastq',
+                   'cellranger_atac_mkfastq',
+                   'cellranger_arc_mkfastq',
+                   'spaceranger_mkfastq',):
         try:
-            envmodules[name] = ap.settings.modulefiles[name]
+            envmodules[envmod] = ap.settings.modulefiles[envmod]
         except KeyError:
             try:
-                envmodules[name] = ap.settings.modulefiles['make_fastqs']
+                envmodules[envmod] = ap.settings.modulefiles['make_fastqs']
             except KeyError:
-                envmodules[name] = None
+                envmodules[envmod] = None
 
     # Other pipeline settings
     poll_interval = ap.settings.general.poll_interval
@@ -386,6 +398,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              fastq_statistics=generate_stats,
                              analyse_barcodes=analyse_barcodes)
     status = make_fastqs.run(ap.analysis_dir,
+                             name=name,
                              out_dir=ap.params.unaligned_dir,
                              barcode_analysis_dir=barcode_analysis_dir,
                              primary_data_dir=ap.params.primary_data_dir,
