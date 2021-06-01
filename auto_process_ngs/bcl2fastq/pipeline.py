@@ -2701,6 +2701,12 @@ class Run10xMkfastq(PipelineTask):
                 # --qc removed in cellranger 6.0.0
                 include_qc_argument = False
                 self.expect_qc_summary_json = False
+        elif self.pkg == "cellranger-atac":
+            pkg_major_version = int(self.args.pkg_version.split('.')[0])
+            if pkg_major_version >= 2:
+                # --qc removed in cellranger-atac 2.0.0
+                include_qc_argument = False
+                self.expect_qc_summary_json = False
         if include_qc_argument:
             mkfastq_cmd.add_args("--qc")
         if self.lanes:

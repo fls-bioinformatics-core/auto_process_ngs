@@ -255,26 +255,83 @@ class AtacSummary(MetricsSummary):
     def cells_detected(self):
         """
         Return the number of cells detected
+
+        Only supported for Cellranger ATAC < 2.0.0; raises
+        AttributeError otherwise.
         """
-        return self.fetch('cells_detected')
+        if self.version != "2.0.0":
+            # Only supported for pre-2.0.0
+            return self.fetch('cells_detected')
+        else:
+            # Not supported
+            raise AttributeError
     @property
     def annotated_cells(self):
         """
         Return the number of annotated cells
+
+        Only supported for Cellranger ATAC < 2.0.0; raises
+        AttributeError otherwise.
         """
-        return self.fetch('annotated_cells')
+        if self.version != "2.0.0":
+            # Only supported for pre-2.0.0
+            return self.fetch('annotated_cells')
+        else:
+            # Not supported
+            raise AttributeError
+    @property
+    def estimated_number_of_cells(self):
+        """
+        Return the estimated number of cells
+
+        Only supported for Cellranger ATAC < 2.0.0; raises
+        AttributeError otherwise.
+        """
+        if self.version == "2.0.0":
+            # Only supported for 2.0.0
+            return self.fetch('Estimated number of cells')
+        else:
+            # Not supported
+            raise AttributeError
     @property
     def median_fragments_per_cell(self):
         """
         Return the median fragments per cell
         """
-        return self.fetch('median_fragments_per_cell')
+        try:
+            return self.fetch('median_fragments_per_cell')
+        except KeyError:
+            return self.fetch('Median high-quality fragments per cell')
     @property
     def frac_fragments_overlapping_targets(self):
         """
         Return the fraction of fragments overlapping targets
         """
-        return self.fetch('frac_fragments_overlapping_targets')
+        try:
+            return self.fetch('frac_fragments_overlapping_targets')
+        except KeyError:
+            return self.fetch('Fraction of high-quality fragments overlapping TSS')
+    @property
+    def frac_fragments_overlapping_peaks(self):
+        """
+        Return the fraction of fragments overlapping targets
+        """
+        try:
+            return self.fetch('frac_fragments_overlapping_peaks')
+        except KeyError:
+            return self.fetch('Fraction of high-quality fragments overlapping peaks')
+    @property
+    def version(self):
+        """
+        Return the pipeline version
+        """
+        try:
+            version = self.fetch('cellranger-atac_version')
+        except KeyError:
+            version = self.fetch('Pipeline version')
+        if version.startswith('cellranger-atac-'):
+            version = version[len('cellranger-atac-'):]
+        return version
 
 class MultiomeSummary(MetricsSummary):
     """
@@ -750,8 +807,15 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                                         (sample.name,
                                          summary_csv))
                     # Extract cell numbers
-                    number_of_cells += AtacSummary(summary_csv).\
-                                       annotated_cells
+                    try:
+                        # Cellranger ATAC pre-2.0.0 uses 'annotated_cells'
+                        number_of_cells += AtacSummary(summary_csv).\
+                                           annotated_cells
+                    except AttributeError:
+                        # Cellranger ATAC 2.0.0 uses 'Estimated number of
+                        # cells'
+                        number_of_cells += AtacSummary(summary_csv).\
+                                           estimated_number_of_cells
                 elif pipeline == "cellranger-arc":
                     # Single cell multiome output
                     summary_csv = os.path.join(

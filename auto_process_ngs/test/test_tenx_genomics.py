@@ -16,6 +16,7 @@ from auto_process_ngs.mock import MockAnalysisDir
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
+from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_LIBRARIES
 from auto_process_ngs.tenx_genomics_utils import *
@@ -326,6 +327,13 @@ class TestCellrangerInfo(unittest.TestCase):
             fp.write("#!/bin/bash\ncat <<EOF\ncellranger-atac  (1.0.1)\nCopyright (c) 2018 10x Genomics, Inc.  All rights reserved.\n-------------------------------------------------------------------------------\n\nUsage:\n    cellranger-atac mkfastq\n\n    cellranger-atac count\n\n    cellranger-atac testrun\n    cellranger-atac upload\n    cellranger-atac sitecheckEOF")
         os.chmod(cellranger_atac_101,0o775)
         return cellranger_atac_101
+    def _make_mock_cellranger_atac_200(self):
+        # Make a fake cellranger-atac 2.0.0 executable
+        cellranger_atac_200 = os.path.join(self.wd,"cellranger-atac")
+        with open(cellranger_atac_200,'w') as fp:
+            fp.write("#!/bin/bash\necho -n cellranger-atac cellranger-atac-2.0.0")
+        os.chmod(cellranger_atac_200,0o775)
+        return cellranger_atac_200
     def _make_mock_cellranger_arc_100(self):
         # Make a fake cellranger-atac 1.0.0 executable
         cellranger_arc_100 = os.path.join(self.wd,"cellranger-arc")
@@ -381,6 +389,23 @@ class TestCellrangerInfo(unittest.TestCase):
         cellranger_atac = self._make_mock_cellranger_atac_101()
         self.assertEqual(cellranger_info(name='cellranger-atac'),
                          (cellranger_atac,'cellranger-atac','1.0.1'))
+
+    def test_cellranger_atac_200(self):
+        """cellranger_info: collect info for cellranger-atac 2.0.0
+        """
+        cellranger_atac = self._make_mock_cellranger_atac_200()
+        self.assertEqual(cellranger_info(path=cellranger_atac),
+                         (cellranger_atac,'cellranger-atac','2.0.0'))
+
+    def test_cellranger_atac_200_on_path(self):
+        """cellranger_info: collect info for cellranger-atac 2.0.0 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        cellranger_atac = self._make_mock_cellranger_atac_200()
+        self.assertEqual(cellranger_info(name='cellranger-atac'),
+                         (cellranger_atac,'cellranger-atac','2.0.0'))
 
     def test_cellranger_arc_100(self):
         """cellranger_info: collect info for cellranger-arc 1.0.0
@@ -476,18 +501,43 @@ class TestAtacSummary(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
 
-    def test_atac_summary(self):
-        """AtacSummary: check metrics are extracted from CSV file
+    def test_atac_summary_pre_2_0_0(self):
+        """AtacSummary: get metrics from summary.csv (Cellranger ATAC pre-2.0.0)
         """
         summary_csv = os.path.join(self.wd,"summary.csv")
         with open(summary_csv,'w') as fp:
             fp.write(ATAC_SUMMARY)
         s = AtacSummary(summary_csv)
+        self.assertEqual(s.version,"1.0.1")
         self.assertEqual(s.cells_detected,6748)
         self.assertEqual(s.annotated_cells,5682)
         self.assertEqual(s.median_fragments_per_cell,16119.5)
         self.assertEqual(s.frac_fragments_overlapping_targets,
                          0.575082094792)
+        self.assertEqual(s.frac_fragments_overlapping_peaks,
+                         0.556428090013)
+        self.assertRaises(AttributeError,
+                          getattr,
+                          s,'estimated_number_of_cells')
+
+    def test_atac_summary_2_0_0(self):
+        """AtacSummary: get metrics from summary.csv (Cellranger ATAC 2.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(ATAC_SUMMARY_2_0_0)
+        s = AtacSummary(summary_csv)
+        self.assertEqual(s.version,"2.0.0")
+        self.assertEqual(s.estimated_number_of_cells,3582)
+        self.assertEqual(s.median_fragments_per_cell,51354.5)
+        self.assertEqual(s.frac_fragments_overlapping_targets,0.291)
+        self.assertEqual(s.frac_fragments_overlapping_peaks,0.4856)
+        self.assertRaises(AttributeError,
+                          getattr,
+                          s,'cells_detected')
+        self.assertRaises(AttributeError,
+                          getattr,
+                          s,'annotated_cells')
 
 class TestMultiomeSummary(unittest.TestCase):
     """
@@ -744,6 +794,44 @@ Cellranger version\t1.2.0
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          5682)
+    def test_set_cell_count_for_atac_project_2_0_0(self):
+        """
+        set_cell_count_for_project: test for scATAC-seq (Cellranger ATAC 2.0.0)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell ATAC",
+            "scATAC-seq")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "2.0.0",
+                                  "refdata-cellranger-atac-GRCh38-2020-A-2.0.0",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                    "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(ATAC_SUMMARY_2_0_0)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+Cellranger version\t2.0.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         3582)
     def test_set_cell_count_for_multiome_atac_project(self):
         """
         set_cell_count_for_project: test for single cell multiome ATAC
