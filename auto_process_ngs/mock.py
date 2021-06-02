@@ -33,6 +33,7 @@ It is also possible to make mock executables which mimick some of
 the external software required for parts of the pipeline:
 
 - MockBcl2fastq2Exe
+- MockBclConvertExe
 - Mock10xPackageExe
 - MockIlluminaQCSh
 - MockMultiQC
@@ -1349,6 +1350,371 @@ bcl2fastq v%s
                                     exclude_fastqs=self._missing_fastqs)
         # Move to final location
         os.rename(os.path.join(tmpname,"bcl2fastq"),
+                  output_dir)
+        shutil.rmtree(tmpname)
+        return self._exit_code
+
+class MockBclConvertExe(object):
+    """
+    Create mock bcl-convert executable
+
+    This class can be used to create a mock bcl-convert
+    executable, which in turn can be used in place of
+    the actual BCLConvert software for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockBclConvertExe.create("/tmpbin/bcl-convert")
+
+    The resulting executable will generate mock outputs
+    when run on actual or mock Illumina sequencer output
+    directories (mock versions can be produced using the
+    'mock.IlluminaRun' class in the genomics-bcftbx
+    package).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - Fastqs can be removed from the output by
+      specifying their names in the `missing_fastqs`
+      argument
+
+    The executable can also be configured to check
+    supplied values:
+
+    - the masking of cycles can be checked via the
+      `assert_override_cycles` argument
+    - lane splitting can be checked via the
+      `assert_no_lane_splitting` argument
+    - creation of Fastqs for index reads can
+      be checked via the
+      `assert_create_fastq_for_index_read`
+      argument
+    - adapter trimming and masking can be
+      checked via the
+      `assert_minimum_trimmed_read_length`
+      and `assert_mask_short_reads`
+      arguments
+    - adapater sequences can be checked via
+      the `assert_adapter1` and
+      `assert_adapter2` arguments
+    """
+
+    @staticmethod
+    def create(path,exit_code=0,missing_fastqs=None,
+               platform=None,assert_override_cycles=None,
+               assert_no_lane_splitting=None,
+               assert_create_fastq_for_index_read=None,
+               assert_minimum_trimmed_read_length=None,
+               assert_mask_short_reads=None,
+               assert_adapter1=None,assert_adapter2=None,
+               version='3.7.5'):
+        """
+        Create a "mock" bcl-convert executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+          missing_fastqs (list): list of Fastq
+            names that will not be created
+          platform (str): platform for primary
+            data (if it cannot be determined from
+            the directory/instrument name)
+          assert_override_cycles (str): if set then
+            assert that the 'OverrideCycles' setting
+            matches the supplied string
+          assert_lane_splitting (bool): if set
+            then assert that --no-lane-splitting
+            matches the supplied boolean value
+          assert_create_fastq_for_index_read
+            (bool): if set then assert that
+            --create-fastq-for-index-read
+            matches the supplied boolean value
+          assert_minimum_trimmed_read_length (int):
+            if set then assert that
+            --minimum-trimmed-read-length matches
+            the supplied value
+          assert_mask_short_reads (int):
+            if set then assert that
+            --mask-short-adapter-reads matches
+            the supplied value
+          assert_adapter1 (str): if set then
+            assert that the adapter sequence
+            in the sample sheet matches the
+            supplied value
+          assert_adapter2 (str): if set then
+            assert that the adapter sequence
+            for read2 in the sample sheet matches
+            the supplied value
+          version (str): version of BCLConvert
+            to imitate
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockBclConvertExe
+sys.exit(MockBclConvertExe(exit_code=%s,
+                           missing_fastqs=%s,
+                           platform=%s,
+                           assert_override_cycles=%s,
+                           assert_no_lane_splitting=%s,
+                           assert_create_fastq_for_index_read=%s,
+                           assert_minimum_trimmed_read_length=%s,
+                           assert_mask_short_reads=%s,
+                           assert_adapter1=%s,
+                           assert_adapter2=%s,
+                           version=%s).main(sys.argv[1:]))
+            """ % (exit_code,
+                   missing_fastqs,
+                   ("\"%s\"" % platform
+                    if platform is not None
+                    else None),
+                   ("\"%s\"" % assert_override_cycles
+                    if assert_override_cycles is not None
+                    else None),
+                   assert_no_lane_splitting,
+                   assert_create_fastq_for_index_read,
+                   assert_minimum_trimmed_read_length,
+                   assert_mask_short_reads,
+                   ("\"%s\"" % assert_adapter1
+                    if assert_adapter1 is not None
+                    else None),
+                   ("\"%s\"" % assert_adapter2
+                    if assert_adapter2 is not None
+                    else None),
+                   ("\"%s\"" % version
+                    if version is not None
+                    else None)))
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("bcl2fastq:")
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,exit_code=0,
+                 missing_fastqs=None,
+                 platform=None,
+                 assert_override_cycles=None,
+                 assert_no_lane_splitting=None,
+                 assert_create_fastq_for_index_read=None,
+                 assert_minimum_trimmed_read_length=None,
+                 assert_mask_short_reads=None,
+                 assert_adapter1=None,
+                 assert_adapter2=None,
+                 version=None):
+        """
+        Internal: configure the mock bcl-convert program
+        """
+        self._exit_code = exit_code
+        self._missing_fastqs = missing_fastqs
+        self._platform = platform
+        self._assert_override_cycles = assert_override_cycles
+        self._assert_no_lane_splitting = assert_no_lane_splitting
+        self._assert_create_fastq_for_index_read = \
+                                assert_create_fastq_for_index_read
+        self._assert_minimum_trimmed_read_length = \
+                                assert_minimum_trimmed_read_length
+        self._assert_mask_short_reads = assert_mask_short_reads
+        self._assert_adapter1 = assert_adapter1
+        self._assert_adapter2 = assert_adapter2
+        self._version = version
+
+    def main(self,args):
+        """
+        Internal: provides mock bcl-convert functionality
+        """
+        # Build generic header
+        header = """bcl-convert Version 00.000.000.%s
+Copyright (c) 2014-2018 Illumina, Inc.
+""" % self._version
+        # Handle version request
+        if "-V" in args:
+            print(header)
+            return self._exit_code
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("-r","--bcl-input-directory",action="store")
+        p.add_argument("-o","--output-dir",action="store")
+        p.add_argument("--sample-sheet",action="store")
+        p.add_argument("--bcl-only-lane",action="store")
+        p.add_argument("--mask-short-adapter-reads",action="store")
+        p.add_argument("--no-lane-splitting",action="store")
+        p.add_argument("--bcl-sampleproject-subdirectories",action="store")
+        p.add_argument("--bcl-num-parallel-tiles",action="store")
+        p.add_argument("--bcl-num-conversion-threads",action="store")
+        p.add_argument("--bcl-num-compression-threads",action="store")
+        p.add_argument("--bcl-num-decompression-threads",action="store")
+        args = p.parse_args(args)
+        # Check for input directory
+        input_dir = args.bcl_input_directory
+        print("BCL input directory: %s" % input_dir)
+        if not input_dir:
+            return 1
+        # Output directory
+        output_dir = args.output_dir
+        print("Output directory: %s" % output_dir)
+        if not output_dir:
+            return 1
+        elif os.path.exists(output_dir):
+            return 1
+        # Lane specified on command line
+        if args.bcl_only_lane:
+            try:
+                lanes = [int(args.bcl_only_lane)]
+            except ValueError:
+                return 1
+        else:
+            lanes = []
+        # Check for sample sheet file
+        if not args.sample_sheet:
+            # Default location is the root input folder
+            sample_sheet_file = os.path.join(input_dir,"SampleSheet.csv")
+        else:
+            sample_sheet_file = args.sample_sheet
+        print("Sample sheet: %s" % sample_sheet_file)
+        if not os.path.exists(sample_sheet_file):
+            return 1
+        # Extract default settings from the sample sheet
+        sample_sheet = SampleSheet(sample_sheet_file)
+        create_fastq_for_index_read = 0
+        barcode_mismatch_index1 = 1
+        barcode_mismatch_index2 = 1
+        adapter_sequence_read1 = None
+        adapter_sequence_read2 = None
+        minimum_trimmed_read_length = 35
+        mask_short_reads = 22
+        override_cycles = None
+        for item in sample_sheet.settings_items:
+            if item == "CreateFastqForIndexRead":
+                # Create index read Fastqs
+                create_fastq_for_index_read = \
+                    sample_sheet.settings['CreateFastqForIndexRead']
+            elif item.startswith("BarcodeMismatchIndex"):
+                # Number of mismatches allowed
+                indx = int(item[-1])
+                if indx == 1:
+                    barcode_mismatch_index1 = \
+                        sample_sheet.settings['BarcodeMismatchIndex1']
+                elif indx == 2:
+                    barcode_mismatch_index2 = \
+                        sample_sheet.settings['BarcodeMismatchIndex2']
+            elif item.startswith("AdapterRead"):
+                # Adapter sequences
+                indx = int(item[-1])
+                if indx == 1:
+                    adapter_sequence_read1 = \
+                        sample_sheet.settings['AdapterRead1']
+                elif indx == 2:
+                    adapter_sequence_read2 = \
+                        sample_sheet.settings['AdapterRead2']
+            elif item == "MinimumTrimmedReadLength":
+                # Minimum sequence length after trimming
+                minimum_trimmed_read_length = \
+                    sample_sheet.settings['MinimumTrimmedReadLength']
+            elif item == "MaskShortReads":
+                # Masking short reads
+                mask_short_reads = sample_sheet.settings['MaskShortReads']
+            elif item == "OverrideCycles":
+                override_cycles = sample_sheet.settings['OverrideCycles']
+        if sample_sheet.has_lanes and lanes:
+            # Check lane specifications match up between
+            # command line and sample sheet
+            sample_sheet_lanes = set()
+            for line in sample_sheet:
+                sample_sheet_lanes.add(int(line['Lane']))
+            sample_sheet_lanes = sorted(list(lanes))
+            if sample_sheet_lanes != lanes:
+                return 1
+        # No lane splitting
+        no_lane_splitting = False
+        if args.no_lane_splitting:
+            if args.no_lane_splitting == "true":
+                no_lane_splitting = True
+        # SampleProject subdirectories
+        sampleproject_subdirectories = False
+        if args.bcl_sampleproject_subdirectories:
+            if args.bcl_sampleproject_subdirectories == "true":
+                sampleproject_subdirectories = True
+        # Check override cycles
+        if self._assert_override_cycles:
+            print("Checking OverrideCycles: %s" % override_cycles)
+            assert(override_cycles == self._assert_override_cycles)
+        # Check CreateFastqForIndexRead
+        if self._assert_create_fastq_for_index_read is not None:
+            print("Checking CreateFastqForIndexRead: %s" %
+                  create_fastq_for_index_read)
+            assert(create_fastq_for_index_read ==
+                   self._assert_create_fastq_for_index_read)
+        # Check MinimumTrimmedReadLength
+        if self._assert_minimum_trimmed_read_length is not None:
+            print("Checking MinimumTrimmedReadLength: %s" %
+                  minimum_trimmed_read_length)
+            assert(int(minimum_trimmed_read_length) ==
+                   int(self._assert_minimum_trimmed_read_length))
+        # Check MaskShortReads
+        if self._assert_mask_short_reads is not None:
+            print("Checking MaskShortReads: %s" % mask_short_reads)
+            assert(int(mask_short_reads) ==
+                   int(self._assert_mask_short_reads))
+        # Check --no-lane-splitting
+        if self._assert_no_lane_splitting is not None:
+            print("Checking --no-lane-splitting: %s" % no_lane_splitting)
+            assert(no_lane_splitting == self._assert_no_lane_splitting)
+        # Platform
+        print("Platform (default): %s" % self._platform)
+        # RunInfo.xml
+        run_info_xml = os.path.join(input_dir,"RunInfo.xml")
+        if not os.path.exists(run_info_xml):
+            return 1
+        # Modifiers
+        no_lane_splitting = bool(args.no_lane_splitting)
+        print("No lane splitting: %s" % no_lane_splitting)
+        create_fastq_for_index_read = bool(create_fastq_for_index_read)
+        print("Create fastq for index read: %s" %
+              create_fastq_for_index_read)
+        # Get reads and determine if run is paired end
+        reads = []
+        ii = 1
+        ir = 1
+        for r in IlluminaRunInfo(run_info_xml).reads:
+            if r['is_indexed_read'] == 'N':
+                reads.append("R%d" % ir)
+                ir += 1
+            elif create_fastq_for_index_read:
+                reads.append("I%d" % ii)
+                ii += 1
+        if ir == 2:
+            paired_end = True
+        else:
+            paired_end = False
+        print("Paired-end: %s" % paired_end)
+        # Lanes
+        if not lanes:
+            # Include all lanes
+            lanes = IlluminaRun(input_dir,platform=self._platform).lanes
+        print("Lanes: %s" % lanes)
+        # Generate mock output based on inputs
+        tmpname = "tmp.%s" % uuid.uuid4()
+        make_mock_bcl2fastq2_output(os.path.join(tmpname,"bclconvert"),
+                                    lanes=lanes,
+                                    reads=reads,
+                                    sample_sheet=sample_sheet_file,
+                                    no_lane_splitting=no_lane_splitting,
+                                    exclude_fastqs=self._missing_fastqs)
+        # Move to final location
+        os.rename(os.path.join(tmpname,"bclconvert"),
                   output_dir)
         shutil.rmtree(tmpname)
         return self._exit_code
