@@ -23,6 +23,7 @@ Additional supporting classes:
 - PipelineParam: class for passing arbitrary values between tasks
 - FileCollector: returning collections of files based on glob patterns
 - FunctionParam: PipelineParameter-like deferred function evaluation
+- ListParam: PipelineParameter-like implementation of list-like behaviour
 - PathJoinParam: PipelineParameter-like dynamic file path joiner
 - PathExistsParam: PipelineParameter-like dynamic file existence checker
 
@@ -322,6 +323,15 @@ being converted to their values immediately prior to evaluation).
 This can be useful when building a pipeline where functions can't
 be evaluated until the pipeline is executed, and as an alternative
 to creating a full ``PipelineFunctionTask`` to wrap a function.
+
+``ListParam``
+*************
+
+The ``ListParam`` class a parameter-like alternative to using a
+standard Python ``list`` to pass lists between tasks in a pipeline;
+it is most useful when the list itself contains parameter-like
+items, in which case these items are also evaluated before the
+``ListParam`` is passed to a task.
 
 ``PathJoinParam``
 *****************
@@ -3129,6 +3139,61 @@ class FunctionParam(BaseParam):
             return self._f(*args,**kws)
         except Exception as ex:
             raise PipelineError("Failed to evaluate function: %s" % ex)
+
+class ListParam(BaseParam):
+    """
+    Implement list-like behaviour as pipeline parameter
+
+    This class implements the pipeline parameter
+    equivalent to the Python 'list' class. It supports
+    `append` and `extend` methods, and the `len`
+    function will return the number of elements in the
+    list.
+
+    The `value` property returns a Python list, with
+    any pipeline parameter-like objects in the original
+    list replaced with their values.
+
+    It is recommended that `ListParam` instances should be
+    used in pipelines when passing lists of parameters
+    between tasks.
+    """
+    def __init__(self,iterable=None):
+        """
+        Create a new FunctionParam instance
+
+        Arguments:
+          f (object): function-like object to
+            be evaluated
+          args (list): positional arguments to
+            pass to the function on evaluation
+          kws (mapping): keyworded arguments to
+            pass to the function on evaluation
+        """
+        BaseParam.__init__(self)
+        if iterable:
+            self._list = list(iterable)
+        else:
+            self._list = list()
+
+    def append(self,item):
+        self._list.append(item)
+
+    def extend(self,iterable):
+        self._list.extend(iterable)
+
+    @property
+    def value(self):
+        value = list()
+        for item in self._list:
+            try:
+                value.append(item.value)
+            except AttributeError:
+                value.append(item)
+        return value
+
+    def __len__(self):
+        return len(self._list)
 
 class PathJoinParam(FunctionParam):
     """
