@@ -25,6 +25,7 @@ from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
 from auto_process_ngs.pipeliner import BaseParam
+from auto_process_ngs.pipeliner import ListParam
 from auto_process_ngs.pipeliner import PathJoinParam
 from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
@@ -2231,6 +2232,54 @@ class TestFileCollector(unittest.TestCase):
         self.assertEqual(len(txt_files),1)
         self.assertEqual(list(txt_files),
                          [os.path.join(self.working_dir,"test1.txt")])
+
+class TestListParam(unittest.TestCase):
+    """
+    Tests for the 'ListParam' class
+    """
+    def test_listparam_init(self):
+        """
+        ListParam: check initialisation
+        """
+        # Empty list
+        self.assertEqual(ListParam().value,[])
+        # Non-empty iterable
+        self.assertEqual(ListParam((1,2,"hello",3)).value,
+                         [1,2,"hello",3])
+
+    def test_listparam_append(self):
+        """
+        ListParam: check 'append' method
+        """
+        l = ListParam((1,2,"hello",3))
+        l.append(4)
+        self.assertEqual(l.value,[1,2,"hello",3,4])
+
+    def test_listparam_extend(self):
+        """
+        ListParam: check 'extend' method
+        """
+        l = ListParam((1,2,"hello",3))
+        l.extend((4,5,"goodbye"))
+        self.assertEqual(l.value,[1,2,"hello",3,4,5,"goodbye"])
+
+    def test_listparam_len(self):
+        """
+        ListParam: check 'len' functionality
+        """
+        self.assertEqual(len(ListParam()),0)
+        self.assertEqual(len(ListParam((1,2,"hello",3))),4)
+
+    def test_listparam_with_params(self):
+        """
+        ListParam: handle pipeline parameters as items
+        """
+        l = ListParam()
+        l.append(PipelineParam(value=1))
+        l.append(PipelineParam(value=2))
+        l.append(PipelineParam(value="hello"))
+        l.append(PipelineParam(value=3))
+        self.assertEqual(l.value,[1,2,"hello",3])
 
 class TestPathJoinParam(unittest.TestCase):
     """
