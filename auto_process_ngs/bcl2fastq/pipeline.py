@@ -890,7 +890,7 @@ class MakeFastqs(Pipeline):
         # Merge Fastq directories
         #########################
         merge_fastq_dirs = MergeFastqDirs(
-            "Merge bcl2fastq output directories",
+            "Merge BCL to Fastq output directories",
             fastq_out_dirs,
             self.params.out_dir
         )
