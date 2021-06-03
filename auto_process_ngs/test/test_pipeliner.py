@@ -1903,11 +1903,20 @@ class TestPipelineCommand(unittest.TestCase):
         # Make a temporary working dir
         self.working_dir = tempfile.mkdtemp(
             suffix='TestPipelineCommand')
+        # Unset the MODULEPATH env var, if found
+        if 'MODULEPATH' in os.environ:
+            self.modulepath = os.environ['MODULEPATH']
+            os.environ['MODULEPATH'] = ''
+        else:
+            self.modulepath = None
 
     def tearDown(self):
         # Remove temp dir
         if os.path.exists(self.working_dir):
             shutil.rmtree(self.working_dir)
+        # Restore the MODULEPATH env var
+        if self.modulepath:
+            os.environ['MODULEPATH'] = self.modulepath
 
     def test_pipelinecommand(self):
         """
