@@ -10,6 +10,7 @@ from bcftbx.mock import MockIlluminaRun
 from bcftbx.mock import SampleSheets
 from bcftbx.IlluminaData import IlluminaData
 from auto_process_ngs.mock import MockBcl2fastq2Exe
+from auto_process_ngs.mock import MockBclConvertExe
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import Mock10xPackageExe
 from auto_process_ngs.mock import make_mock_bcl2fastq2_output
@@ -157,6 +158,79 @@ class TestMakeFastqs(unittest.TestCase):
                          (os.path.join(self.bin,"bcl2fastq"),
                           "bcl2fastq",
                           "2.20.0.422"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_M00879_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_standard_protocol_bclconvert_3_7_5(self):
+        """
+        MakeFastqs: standard protocol: use bcl-convert v3.7.5
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.miseq)
+        # Create mock bcl2fastq
+        MockBclConvertExe.create(os.path.join(self.bin,
+                                              "bcl-convert"),
+                                 version="3.7.5")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make an (empty) analysis directory
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the test
+        p = MakeFastqs(run_dir,sample_sheet,
+                       bcl_converter="bclconvert")
+        status = p.run(analysis_dir,
+                       poll_interval=0.5)
+        self.assertEqual(status,0)
+        # Check outputs
+        self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bclconvert_info,
+                         (os.path.join(self.bin,"bcl-convert"),
+                          "BCL Convert",
+                          "3.7.5"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
