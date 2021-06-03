@@ -954,7 +954,7 @@ class MakeFastqs(Pipeline):
         if do_barcode_analysis:
             # Set up pipeline for barcode analysis
             self.report("Lanes for barcode analysis: %s" %
-                        lanes_for_barcode_analysis)
+                        ','.join([str(l) for l in lanes_for_barcode_analysis]))
             analyse_barcodes = AnalyseBarcodes(
                 sample_sheet=self._sample_sheet)
             self.add_pipeline(analyse_barcodes,
