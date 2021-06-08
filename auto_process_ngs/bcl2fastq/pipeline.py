@@ -1147,10 +1147,14 @@ class MakeFastqs(Pipeline):
                             require_version=self.params.require_bclconvert)
                         self.add_task(get_bclconvert,
                                       envmodules=self.envmodules['bclconvert'])
+                    # Parameter to store intermediate output
+                    # directories for merging
+                    fastq_lanes_out_dirs = ListParam()
                     if lanes:
-                        # Multiple lanes: divide into individual lanes
-                        fastq_lanes_out_dirs = ListParam()
-                        # Task to merge outputs across individual lanes
+                        # Subset with multiple lanes
+                        #
+                        # Divide Fastq generation into individual lanes
+                        # then merge outputs at the end
                         make_fastqs = MergeFastqs(
                             "Merge Fastqs from lanes %s"
                             % ','.join([str(l) for l in lanes]),
@@ -1160,7 +1164,7 @@ class MakeFastqs(Pipeline):
                             no_lane_splitting=self.params.no_lane_splitting,
                             create_empty_fastqs=self.params.create_empty_fastqs)
                         self.add_task(make_fastqs)
-                        # Run BCL Convert for each lane
+                        # Run BCL Convert for each lane in subset
                         for lane in lanes:
                             # Output dir for this lane
                             fastq_lane_out_dir = FunctionParam(
@@ -1206,21 +1210,36 @@ class MakeFastqs(Pipeline):
                             # Merging task depends on BCL Convert
                             make_fastqs.requires(bcl_convert)
                     else:
+                        # Subset with no lanes specified
+                        #
                         # Handle no lane splitting
                         if sample_sheet.has_lanes:
-                            # BCL Convert cannot handle no lane
-                            # splitting directly for "asymmetric"
-                            # lanes
+                            # BCL Convert cannot handle no lane splitting
+                            # directly for runs with "asymmetric" lanes
+                            # (e.g. HISeq) i.e. platforms where lanes are
+                            # explicitly specified in the sample sheet
+                            #
+                            # Delegate no lane splitting to final Fastq
+                            # merging task
                             no_lane_splitting = False
                         else:
                             # Let BCL convert handle no lane splitting
+                            # (final Fastq merging task will do nothing)
                             no_lane_splitting = \
                                 self.params.no_lane_splitting
-                        # Run BCL Convert
-                        make_fastqs = RunBclConvert(
+                        # Intermediate output Fastq dir
+                        tmp_fastq_out_dir = FunctionParam(
+                            lambda working_dir,out_dir:
+                            os.path.join(
+                                working_dir,
+                                "__%s.tmp" % os.path.basename(out_dir)),
+                            self.params.WORKING_DIR,
+                            self.params.out_dir)
+                        # Run BCL Convert for all lanes
+                        bcl_convert = RunBclConvert(
                             "Run BCL Convert",
                             fetch_primary_data.output.run_dir,
-                            fastq_out_dir,
+                            tmp_fastq_out_dir,
                             make_sample_sheet.output.custom_sample_sheet,
                             bases_mask=bases_mask,
                             minimum_trimmed_read_length=\
@@ -1241,26 +1260,23 @@ class MakeFastqs(Pipeline):
                             skip_bclconvert=final_output_exists)
                         # Add the Fastq generation task to the pipeline
                         self.add_task(
-                            make_fastqs,
+                            bcl_convert,
                             runner=self.runners['bclconvert_runner'],
                             envmodules=self.envmodules['bclconvert'],
                             requires=(restore_backup,))
-                        # Handle no lane splitting for asymmetric
-                        # lanes
-                        if sample_sheet.has_lanes and \
-                           self.params.no_lane_splitting:
-                            # Deal with lane merging outside of
-                            # BCL Convert
-                            merge_fastqs = MergeFastqs(
-                                "Merge Fastqs across lanes",
-                                fastq_lanes_out_dirs,
-                                fastq_out_dir,
-                                make_sample_sheet.output.custom_sample_sheet,
-                                no_lane_splitting=True,
-                                create_empty_fastqs=\
-                                self.params.create_empty_fastqs)
-                            self.add_task(merge_fastqs)
-                            make_fastqs = merge_fastqs
+                        # Merge Fastqs (if requested) and move to
+                        # final location
+                        make_fastqs = MergeFastqs(
+                            "Merge Fastqs across lanes",
+                            ListParam((tmp_fastq_out_dir,)),
+                            fastq_out_dir,
+                            make_sample_sheet.output.custom_sample_sheet,
+                            no_lane_splitting=\
+                            self.params.no_lane_splitting,
+                            create_empty_fastqs=\
+                            self.params.create_empty_fastqs)
+                        self.add_task(make_fastqs,
+                                      requires=(bcl_convert,))
             # ICELL8 RNA-seq
             if protocol == "icell8":
                 # Get bcl2fastq information
@@ -1671,7 +1687,7 @@ class MakeFastqs(Pipeline):
             find_adapters_with_sliding_window=None,
             create_empty_fastqs=None,name=None,stats_file=None,
             stats_full=None,per_lane_stats=None,per_lane_sample_stats=None,
-            nprocessors=None,require_bcl2fastq=None,
+            nprocessors=None,require_bcl2fastq=None,require_bclconvert=None,
             cellranger_jobmode='local',cellranger_mempercore=None,
             cellranger_maxjobs=None,cellranger_jobinterval=None,
             cellranger_localcores=None,cellranger_localmem=None,
@@ -1719,6 +1735,10 @@ class MakeFastqs(Pipeline):
           require_bcl2fastq (str): if set then specify bcl2fastq
             version requirement; should be a string of the form
            '1.8.4' or '>2.0'. The pipeline will fail if this
+           requirement is not met
+          require_bclconvert (str): if set then specify bcl-convert
+            version requirement; should be a string of the form
+           '3.7.5' or '>3.6'. The pipeline will fail if this
            requirement is not met
           cellranger_jobmode (str): job mode to run cellranger in
           cellranger_mempercore (int): memory assumed per core
@@ -1871,6 +1891,7 @@ class MakeFastqs(Pipeline):
             'per_lane_sample_stats': per_lane_sample_stats,
             'nprocessors': nprocessors,
             'require_bcl2fastq': require_bcl2fastq,
+            'require_bclconvert': require_bclconvert,
             'cellranger_jobmode': cellranger_jobmode,
             'cellranger_mempercore': cellranger_mempercore,
             'cellranger_maxjobs': cellranger_maxjobs,
@@ -3397,10 +3418,9 @@ class MergeFastqs(PipelineTask):
                 fastq_groups = group_fastqs_by_name(
                     projects[project][sample])
                 for idx in range(len(fastq_groups[0])):
+                    fastqs = [grp[idx] for grp in fastq_groups]
                     if self.args.no_lane_splitting:
                         # Merge Fastqs across lanes
-                        fastqs = [grp[idx] for grp in fastq_groups]
-                        # Construct final Fastq name
                         fastq_out = AnalysisFastq(fastqs[0])
                         try:
                             # Reset the Fastq sample index number
