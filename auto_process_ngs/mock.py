@@ -2177,10 +2177,11 @@ def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
         if sample_sheet_.has_lanes:
             lanes = sorted(list(set([int(line['Lane'])
                                      for line in sample_sheet_])))
+            print("Updated lanes: %s" % lanes)
         # Predict outputs
         s = SampleSheetPredictor(sample_sheet=sample_sheet_)
         s.set(reads=reads,
-              lanes=lanes,
+              lanes=(lanes if not sample_sheet_.has_lanes else None),
               no_lane_splitting=no_lane_splitting,
               force_sample_dir=force_sample_dir)
         # Build and populate outputs
@@ -2188,6 +2189,7 @@ def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
                 print("Adding project: %s" % project.name)
                 for sample in project.samples:
                     for fq in sample.fastqs():
+                        print("- %s" % fq)
                         if exclude_fastqs and (fq in exclude_fastqs):
                             continue
                         if sample.sample_name is None:
@@ -2201,6 +2203,7 @@ def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
     # NB Would like to use the 'add_undetermined'
     # method but this doesn't play well with using
     # the predictor-based approach above
+    print("Adding 'undetermined' Fastqs")
     for r in reads:
         if no_lane_splitting:
             output.add_fastq(
