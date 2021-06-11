@@ -1083,16 +1083,21 @@ class DetermineRequired10xPackage(PipelineTask):
         """
         self.add_output('require_cellranger',Param(type=str))
     def setup(self):
+        protocols = {
+            "10x_scRNAseq": "cellranger",
+            "10x_snRNAseq": "cellranger",
+            "10x_scATAC": "cellranger-atac",
+            "10x_Multiome_ATAC": "cellranger-arc",
+            "10x_Multiome_GEX": "cellranger-arc",
+        }
         require_cellranger = self.args.require_cellranger
         if require_cellranger is None:
-            if self.args.qc_protocol in ("10x_scRNAseq",
-                                         "10x_snRNAseq",):
-                require_cellranger = "cellranger"
-            elif self.args.qc_protocol in ("10x_scATAC",):
-                require_cellranger = "cellranger-atac"
-            elif self.args.qc_protocol in ("10x_Multiome_ATAC",
-                                           "10x_Multiome_GEX",):
-                require_cellranger = "cellranger-arc"
+            try:
+                require_cellranger = protocols[self.args.qc_protocol]
+            except KeyError:
+                raise Exception("Can't identify 10xGenomics package "
+                                "required for protocol '%s'" %
+                                self.args.qc_protocol)
         print("Required 10x package: %s" % require_cellranger)
         self.output.require_cellranger.set(require_cellranger)
 
