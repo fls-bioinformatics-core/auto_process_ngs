@@ -210,6 +210,42 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_snRNAseq")
 
+    def test_determine_qc_protocol_10xchromium3_cellplex(self):
+        """determine_qc_protocol: cell multiplexing CellPlex (10xGenomics Chromium 3')
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Chromium 3'",
+                                          'Library type':
+                                          "CellPlex"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_CellPlex")
+
+    def test_determine_qc_protocol_10xchromium3v3_cellplex(self):
+        """determine_qc_protocol: cell multiplexing CellPlex (10xGenomics Chromium 3'v3)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Chromium 3'v3",
+                                          'Library type':
+                                          "CellPlex"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_CellPlex")
+
     def test_determine_qc_protocol_10x_single_cell_atac_seq(self):
         """determine_qc_protocol: single-cell ATAC-seq (10xGenomics Single Cell ATAC)
         """
