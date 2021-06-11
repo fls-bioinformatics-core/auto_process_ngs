@@ -64,6 +64,16 @@ logger = logging.getLogger(__name__)
 # Data
 #######################################################################
 
+# Permissible values for 10xGenomics platforms
+PLATFORMS = (
+    "10xGenomics Chromimum",
+    "10xGenomics Chromimum 3'v2",
+    "10xGenomics Chromimum 3'v3",
+    "10xGenomics Single Cell ATAC",
+    "10xGenomics Visium",
+    "10xGenomics Single Cell Multiome",
+)
+
 # Permissible values for cellranger count --chemistry option
 # See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
 CELLRANGER_ASSAY_CONFIGS = {
