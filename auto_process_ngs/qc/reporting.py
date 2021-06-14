@@ -586,15 +586,16 @@ class QCProject(object):
             # Store the fastq_strand files
             output_files.extend(fastq_strand)
         # Look for ICELL8 outputs
+        icell8_top_dir = os.path.dirname(self.qc_dir)
         print("Checking for ICELL8 reports in %s/stats" %
-              self.project.dirn)
-        icell8_stats_xlsx = os.path.join(self.project.dirn,
+              icell8_top_dir)
+        icell8_stats_xlsx = os.path.join(icell8_top_dir,
                                          "stats",
                                          "icell8_stats.xlsx")
         if os.path.exists(icell8_stats_xlsx):
             outputs.add("icell8_stats")
             output_files.append(icell8_stats_xlsx)
-        icell8_report_html = os.path.join(self.project.dirn,
+        icell8_report_html = os.path.join(icell8_top_dir,
                                           "icell8_processing.html")
         if os.path.exists(icell8_report_html):
             outputs.add("icell8_report")
@@ -669,8 +670,9 @@ class QCProject(object):
             if cellranger_name and versions:
                 software[cellranger_name] = sorted(list(versions))
         # Look for MultiQC report
-        print("Checking for MultiQC report in %s" % self.project.dirn)
-        multiqc_report = os.path.join(self.project.dirn,
+        multiqc_dir = os.path.dirname(self.qc_dir)
+        print("Checking for MultiQC report in %s" % multiqc_dir)
+        multiqc_report = os.path.join(multiqc_dir,
                                       "multi%s_report.html"
                                       % os.path.basename(self.qc_dir))
         if os.path.isfile(multiqc_report):
