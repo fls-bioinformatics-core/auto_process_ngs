@@ -113,6 +113,14 @@ def main():
     # Report name and version
     print("%s version %s" % (os.path.basename(sys.argv[0]),__version__))
 
+    # Report arguments
+    if sys.argv[1:]:
+        print("\n%s" % ' '.join(['"%s"' % arg if ' ' in arg else arg
+                                 for arg in sys.argv[1:]]))
+
+    # Report working directory
+    print("\nCWD %s" % os.getcwd())
+
     # Check for MultiQC if required
     if args.multiqc:
         if find_program("multiqc") is None:
@@ -275,15 +283,15 @@ def main():
                     '--force')
                 for p in report_projects:
                     multiqc_cmd.add_args(p.qc_dir)
-                print("Running %s" % multiqc_cmd)
+                print("\nRunning %s" % multiqc_cmd)
                 multiqc_retval = multiqc_cmd.run_subprocess()
                 if multiqc_retval == 0 and os.path.exists(multiqc_report):
-                    print("MultiQC: %s" % multiqc_report)
+                    print("MultiQC: %s\n" % multiqc_report)
                 else:
                     print("MultiQC: FAILED")
                     retval += 1
             else:
-                print("MultiQC: %s (already exists)" % multiqc_report)
+                print("MultiQC: %s (already exists)\n" % multiqc_report)
         # Create data directory?
         use_data_dir = (len(projects) > 1)
         if args.use_data_dir:
