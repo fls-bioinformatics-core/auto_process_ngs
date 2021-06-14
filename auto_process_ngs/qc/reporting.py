@@ -2048,9 +2048,10 @@ class QCReportFastqGroup(object):
         Arguments:
           document (Section): section to add report to
         """
+        rd = self.reads[0]
         strandedness_report = document.add_subsection(
             "Strandedness",
-            name="strandedness_%s" % self.reporters['r1'].safe_name)
+            name="strandedness_%s" % self.reporters[rd].safe_name)
         strandedness_report.add_css_classes("strandedness")
         # Locate strandedness
         txt = self.fastq_strand_txt
