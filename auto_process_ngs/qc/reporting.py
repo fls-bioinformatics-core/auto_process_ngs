@@ -1045,13 +1045,13 @@ class QCReport(Document):
                     pkg = 'cellranger-atac'
                     single_library_fields = ['sample',
                                              '10x_cells',
-                                             '10x_fragments_per_cell']
+                                             '10x_fragments_per_cell',
+                                             '10x_tss_enrichment_score']
                     for v in project.software[pkg]:
                         # Add version specific fields to summary table
                         v = v.split('.')
                         if v[0] == '2':
-                            extra_fields = ['10x_fragments_overlapping_peaks',
-                                            '10x_tss_enrichment_score']
+                            extra_fields = ['10x_fragments_overlapping_peaks']
                         else:
                             extra_fields = ['10x_fragments_overlapping_targets']
                         for f in extra_fields:
@@ -1851,7 +1851,7 @@ class QCReportSample(object):
                             (metrics.frac_fragments_overlapping_peaks*100.0,)
                 elif field == "10x_tss_enrichment_score":
                     try:
-                        value = metrics.tss_enrichment_score
+                        value = "%.4f" % (metrics.tss_enrichment_score,)
                     except AttributeError:
                         value = 'N/A'
                 elif field == "10x_atac_fragments_per_cell":
