@@ -1851,7 +1851,7 @@ class QCReportSample(object):
                             (metrics.frac_fragments_overlapping_peaks*100.0,)
                 elif field == "10x_tss_enrichment_score":
                     try:
-                        value = "%.4f" % (metrics.tss_enrichment_score,)
+                        value = "%.2f" % (metrics.tss_enrichment_score,)
                     except AttributeError:
                         value = 'N/A'
                 elif field == "10x_atac_fragments_per_cell":
