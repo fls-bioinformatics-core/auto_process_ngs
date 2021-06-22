@@ -320,8 +320,7 @@ class AtacSummary(MetricsSummary):
         try:
             return self.fetch('TSS enrichment score')
         except KeyError:
-            # Not supported
-            raise AttributeError
+            return self.fetch('tss_enrichment_score')
     @property
     def frac_fragments_overlapping_peaks(self):
         """

@@ -516,6 +516,7 @@ class TestAtacSummary(unittest.TestCase):
                          0.575082094792)
         self.assertEqual(s.frac_fragments_overlapping_peaks,
                          0.556428090013)
+        self.assertEqual(s.tss_enrichment_score,6.91438390781)
         self.assertRaises(AttributeError,
                           getattr,
                           s,'estimated_number_of_cells')
