@@ -1779,7 +1779,8 @@ class MergeSampleFastqs(PipelineTask):
             fastqs=FileCollector(merge_dir,pattern),
         )
         self.add_output('pattern',pattern)
-        self.add_output('fastqs',FileCollector(out_dir,pattern))
+        self.add_output('fastqs',FileCollector(self.args.merge_dir,
+                                               pattern))
     def setup(self):
         # If output directory already exists then nothing to do
         if os.path.exists(self.args.merge_dir):
