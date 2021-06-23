@@ -1849,7 +1849,7 @@ class CheckICell8Barcodes(PipelineFunctionTask):
             for r in FastqIterator(fq):
                 barcode = ICell8Read1(r).barcode
                 if barcode != assigned_barcode:
-                    failed_barcode.append(assigned_barcode)
+                    failed_barcodes.append(assigned_barcode)
                     break
         # Raise an exception if bad barcodes were found
         if failed_barcodes:
