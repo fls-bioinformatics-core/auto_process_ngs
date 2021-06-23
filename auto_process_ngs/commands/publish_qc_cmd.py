@@ -691,7 +691,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     if not exclude_zip_files:
                         report_html.add(
                             Link("[ZIP]",
-                                 os.path.basename(icell8_processing_zip)))
+                                 os.path.basename(icell8_zip)))
                 except Exception as ex:
                     print("Failed to copy ICELL8 report: %s" % ex)
             except AttributeError:
