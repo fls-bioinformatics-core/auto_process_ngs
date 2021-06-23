@@ -1732,7 +1732,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             with open(cmdline_file,'w') as fp:
                 fp.write("%s\n" % cmdline)
         else:
-            print("%s: not implemented" % command)
+            print("%s: not implemented" % args.command)
         print("Return exit code: %s" % self._exit_code)
         return self._exit_code
 
