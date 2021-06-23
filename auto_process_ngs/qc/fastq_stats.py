@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 # Fastq statistics utilities
+from builtins import range
 from bcftbx.FASTQFile import FastqIterator
 from .fastqc import FastqcData
 
@@ -70,9 +71,9 @@ class FastqQualityStats(object):
         # Initialise using first read for sequence length
         quality_per_base = []
         for read in FastqIterator(fastq):
-            for i in xrange(read.seqlen):
+            for i in range(read.seqlen):
                 quality_per_base.append({})
-                for j in xrange(ord('!'),ord('I')+1):
+                for j in range(ord('!'),ord('I')+1):
                     quality_per_base[i][chr(j)] = 0
             break
 
