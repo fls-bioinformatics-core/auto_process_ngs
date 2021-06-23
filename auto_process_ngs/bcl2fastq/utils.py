@@ -212,7 +212,7 @@ def bcl_to_fastq_info(path=None):
                 package_name = 'bcl2fastq'
                 try:
                     package_version = line.split()[1][1:]
-                except ex:
+                except Exception as ex:
                     logger.warning("Unable to get version from '%s': %s" %
                                    (line,ex))
     else:
