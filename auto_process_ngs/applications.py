@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013-17,2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2013-17,2019-2021 Peter Briggs
 #
 ########################################################################
 #
@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 #######################################################################
 # Import modules that this module depends on
@@ -50,6 +50,7 @@ import re
 import subprocess
 import logging
 import tempfile
+from bcl2fastq.utils import get_nmismatches
 from bcftbx.utils import find_program
 
 #######################################################################
