@@ -819,6 +819,7 @@ class QCReport(Document):
         '10x_fragments_per_cell': '#fragments/cell',
         '10x_fragments_overlapping_targets': '%fragments overlapping targets',
         '10x_fragments_overlapping_peaks': '%fragments overlapping peaks',
+        '10x_tss_enrichment_score': 'TSS enrichment score',
         '10x_atac_fragments_per_cell': '#ATAC fragments/cell',
         '10x_gex_cells_per_gene': '#GEX cells/gene',
         '10x_pipeline': 'Pipeline',
@@ -1044,7 +1045,8 @@ class QCReport(Document):
                     pkg = 'cellranger-atac'
                     single_library_fields = ['sample',
                                              '10x_cells',
-                                             '10x_fragments_per_cell']
+                                             '10x_fragments_per_cell',
+                                             '10x_tss_enrichment_score']
                     for v in project.software[pkg]:
                         # Add version specific fields to summary table
                         v = v.split('.')
@@ -1774,6 +1776,7 @@ class QCReportSample(object):
         - 10x_fragments_per_cell
         - 10x_fragments_overlapping_targets
         - 10x_fragments_overlapping_peaks
+        - 10x_tss_enrichment_score
         - 10x_atac_fragments_per_cell
         - 10x_gex_cells_per_gene
         - 10x_pipeline
@@ -1837,11 +1840,20 @@ class QCReportSample(object):
                     value = pretty_print_reads(
                         metrics.median_fragments_per_cell)
                 elif field == "10x_fragments_overlapping_targets":
-                    value = "%.1f%%" % \
-                            (metrics.frac_fragments_overlapping_targets*100.0,)
+                    try:
+                        value = "%.1f%%" % \
+                                (metrics.frac_fragments_overlapping_targets
+                                 *100.0,)
+                    except AttributeError:
+                        value = 'N/A'
                 elif field == "10x_fragments_overlapping_peaks":
                     value = "%.1f%%" % \
                             (metrics.frac_fragments_overlapping_peaks*100.0,)
+                elif field == "10x_tss_enrichment_score":
+                    try:
+                        value = "%.2f" % (metrics.tss_enrichment_score,)
+                    except AttributeError:
+                        value = 'N/A'
                 elif field == "10x_atac_fragments_per_cell":
                     value = pretty_print_reads(
                         metrics.atac_median_high_quality_fragments_per_cell)

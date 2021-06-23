@@ -516,6 +516,7 @@ class TestAtacSummary(unittest.TestCase):
                          0.575082094792)
         self.assertEqual(s.frac_fragments_overlapping_peaks,
                          0.556428090013)
+        self.assertEqual(s.tss_enrichment_score,6.91438390781)
         self.assertRaises(AttributeError,
                           getattr,
                           s,'estimated_number_of_cells')
@@ -530,14 +531,17 @@ class TestAtacSummary(unittest.TestCase):
         self.assertEqual(s.version,"2.0.0")
         self.assertEqual(s.estimated_number_of_cells,3582)
         self.assertEqual(s.median_fragments_per_cell,51354.5)
-        self.assertEqual(s.frac_fragments_overlapping_targets,0.291)
         self.assertEqual(s.frac_fragments_overlapping_peaks,0.4856)
+        self.assertEqual(s.tss_enrichment_score,6.8333)
         self.assertRaises(AttributeError,
                           getattr,
                           s,'cells_detected')
         self.assertRaises(AttributeError,
                           getattr,
                           s,'annotated_cells')
+        self.assertRaises(AttributeError,
+                          getattr,
+                          s,'frac_fragments_overlapping_targets')
 
 class TestMultiomeSummary(unittest.TestCase):
     """
