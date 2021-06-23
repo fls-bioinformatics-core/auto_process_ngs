@@ -50,7 +50,7 @@ import re
 import subprocess
 import logging
 import tempfile
-from bcl2fastq.utils import get_nmismatches
+from .bcl2fastq.utils import get_nmismatches
 from bcftbx.utils import find_program
 
 #######################################################################
