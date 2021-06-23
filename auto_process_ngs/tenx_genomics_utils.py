@@ -971,7 +971,7 @@ def spaceranger_info(path=None,name=None):
             package_version = output.split()[-1]
         except Exception as ex:
             logger.warning("Unable to get version from '%s': %s" %
-                           (line,ex))
+                           (output,ex))
     else:
         # No package supplied or located
         logger.warning("Unable to identify spaceranger package "
