@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8.pipeline.py: pipeline components for ICELL8 data
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
 #
 
 """
@@ -62,11 +62,10 @@ import glob
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import strip_ext
-from bcftbx.utils import mkdir
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from bcftbx.simple_xls import XLSWorkBook
-from ..applications import Command
+from ..command import Command
 from ..analysis import AnalysisFastq
 from ..analysis import AnalysisProject
 from ..fastq_utils import pair_fastqs
@@ -1780,7 +1779,8 @@ class MergeSampleFastqs(PipelineTask):
             fastqs=FileCollector(merge_dir,pattern),
         )
         self.add_output('pattern',pattern)
-        self.add_output('fastqs',FileCollector(out_dir,pattern))
+        self.add_output('fastqs',FileCollector(self.args.merge_dir,
+                                               pattern))
     def setup(self):
         # If output directory already exists then nothing to do
         if os.path.exists(self.args.merge_dir):
@@ -1849,7 +1849,7 @@ class CheckICell8Barcodes(PipelineFunctionTask):
             for r in FastqIterator(fq):
                 barcode = ICell8Read1(r).barcode
                 if barcode != assigned_barcode:
-                    failed_barcode.append(assigned_barcode)
+                    failed_barcodes.append(assigned_barcode)
                     break
         # Raise an exception if bad barcodes were found
         if failed_barcodes:

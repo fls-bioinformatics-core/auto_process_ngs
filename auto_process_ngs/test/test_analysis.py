@@ -13,7 +13,7 @@ from bcftbx.utils import find_program
 from bcftbx.mock import MockIlluminaData
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockAnalysisProject
-from auto_process_ngs.applications import Command
+from auto_process_ngs.command import Command
 from auto_process_ngs.fastq_utils import BaseFastqAttrs
 from auto_process_ngs.analysis import *
 

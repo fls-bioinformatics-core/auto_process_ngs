@@ -44,7 +44,7 @@ from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from .analysis import locate_project
 from .analysis import split_sample_reference
-from .applications import Command
+from .command import Command
 from .docwriter import Document
 from .docwriter import List
 from .docwriter import Link
@@ -971,7 +971,7 @@ def spaceranger_info(path=None,name=None):
             package_version = output.split()[-1]
         except Exception as ex:
             logger.warning("Unable to get version from '%s': %s" %
-                           (line,ex))
+                           (output,ex))
     else:
         # No package supplied or located
         logger.warning("Unable to identify spaceranger package "
@@ -1039,9 +1039,3 @@ def add_cellranger_args(cellranger_cmd,
     if disable_ui:
         cellranger_cmd.add_args("--disable-ui")
     return cellranger_cmd
-
-import sys
-if __name__ == "__main__":
-    json_file = sys.argv[1]
-    html_file = "qc_summary.html"
-    report_cellranger_mkfastqs_qc_summary(json_file,html_file)

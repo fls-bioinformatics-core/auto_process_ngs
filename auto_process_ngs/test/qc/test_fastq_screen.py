@@ -2,6 +2,7 @@
 # Unit tests for qc/fastq_screen.py
 #######################################################################
 
+import os
 import unittest
 import tempfile
 

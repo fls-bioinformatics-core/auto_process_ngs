@@ -11,7 +11,7 @@
 
 import os
 from bcftbx import IlluminaData
-from ..applications import Command
+from ..command import Command
 from ..bcl2fastq.reporting import ProcessingQCReport
 from ..simple_scheduler import SchedulerJob
 import logging

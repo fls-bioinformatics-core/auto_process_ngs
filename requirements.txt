@@ -1,4 +1,7 @@
-git+https://github.com/fls-bioinformatics-core/genomics.git#egg=genomics-bcftbx
 configparser
+pillow
+pandas
 cloudpickle
 psutil
+future
+git+https://github.com/fls-bioinformatics-core/genomics.git#egg=genomics-bcftbx

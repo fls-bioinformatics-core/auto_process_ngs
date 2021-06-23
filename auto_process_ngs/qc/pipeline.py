@@ -46,9 +46,9 @@ from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from ..analysis import copy_analysis_project
-from ..applications import Command
 from ..bcl2fastq.pipeline import Get10xPackage
 from ..bcl2fastq.pipeline import FunctionParam
+from ..command import Command
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline
@@ -741,7 +741,7 @@ class CheckIlluminaQCVersion(PipelineTask):
         version = self.illumina_qc_version()
         if version not in self.args.compatible_versions:
             self.fail(message="QC script version is %s, needs %s" %
-                      (version,'/'.join(compatible_versions)))
+                      (version,'/'.join(self.args.compatible_versions)))
     def illumina_qc_version(self):
         # Return version of illumina_qc.sh script
         status,qc_script_info = Command(

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8_atac.py: utility functions for handling ICELL8 ATAC-seq data
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020,2021 Peter Briggs
 #
 """
 Utility functions for handling single-cell ATAC-seq data from
@@ -34,7 +34,7 @@ except ImportError:
 from collections import defaultdict
 from bcftbx.FASTQFile import SequenceIdentifier
 from bcftbx.ngsutils import getreads
-from ..applications import Command
+from ..command import Command
 from ..analysis import AnalysisFastq
 from ..utils import BufferedOutputFiles
 from ..utils import ProgressChecker
@@ -172,7 +172,7 @@ def split_fastq(args):
         cmd = Command(cat,fastq)
         status = cmd.run_subprocess(
             working_dir=working_dir,
-            log=os.path.join(tmp_dir,"%s.fastq" % fq.basename))
+            log=os.path.join(working_dir,"%s.fastq" % fq.basename))
         # Check return status
         if status != 0:
             report("Failed to uncompress/copy %s" % fastq,

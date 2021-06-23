@@ -14,7 +14,7 @@ import cloudpickle
 from builtins import range
 import auto_process_ngs.envmod as envmod
 from auto_process_ngs.simple_scheduler import SimpleScheduler
-from auto_process_ngs.applications import Command
+from auto_process_ngs.command import Command
 from auto_process_ngs.pipeliner import Pipeline
 from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineFunctionTask
@@ -2071,7 +2071,7 @@ class TestBaseParam(unittest.TestCase):
             def init(self,x):
                 pass
             def setup(self):
-                print(x)
+                print(self.args.x)
         t = SimpleTask("Simple task",x=12)
         # Create and test associated task in a BaseParam
         p = BaseParam()

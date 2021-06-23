@@ -509,7 +509,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     barcode_files.append(filen)
             # Append a warning mark if there are issues
             if has_warnings:
-                p.add(WarningMark())
+                p.add(WarningIcon())
             barcodes.add(p)
             # Create subdir and copy files
             dest_barcode_dir = os.path.join(dirn,dest_dir)
@@ -691,7 +691,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     if not exclude_zip_files:
                         report_html.add(
                             Link("[ZIP]",
-                                 os.path.basename(icell8_processing_zip)))
+                                 os.path.basename(icell8_zip)))
                 except Exception as ex:
                     print("Failed to copy ICELL8 report: %s" % ex)
             except AttributeError:
