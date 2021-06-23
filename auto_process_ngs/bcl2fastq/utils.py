@@ -265,7 +265,7 @@ def bclconvert_info(path=None):
                 package_name = 'BCL Convert'
                 try:
                     package_version = '.'.join(line.split('.')[-3:])
-                except ex:
+                except Exception as ex:
                     logger.warning("Unable to get version from '%s': %s" %
                                    (line,ex))
     else:
