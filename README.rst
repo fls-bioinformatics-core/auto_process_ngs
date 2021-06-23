@@ -59,12 +59,11 @@ The tests can be run using::
 
     python setup.py test
 
-In addition the tests are run via TravisCI whenever this GitHub repository
+In addition the tests are run via GitHub Actions whenever the repository
 is updated:
 
-.. image:: https://travis-ci.org/fls-bioinformatics-core/auto_process_ngs.png?branch=master
-   :alt: Current status of TravisCI build for master branch
-   :target: https://travis-ci.org/fls-bioinformatics-core/auto_process_ngs/builds
+.. image:: https://github.com/fls-bioinformatics-core/auto_process_ngs/workflows/Python%20CI/badge.svg
+   :target: https://github.com/fls-bioinformatics-core/auto_process_ngs/actions?query=workflow%3A%22Python+CI%22
 
 Dependencies
 ************
@@ -83,10 +82,4 @@ installed using::
 Use the ``-e`` option to install an 'editable' version (see the section on
 `"Editable" installs
 <https://pip.pypa.io/en/latest/reference/pip_install.html#editable-installs>_`
-in the pip documentation),
-
-The tests are run on TravisCI whenever the developmental version is updated:
-
-.. image:: https://travis-ci.org/fls-bioinformatics-core/auto_process_ngs.png?branch=devel
-   :alt: Current status of TravisCI build for devel branch
-   :target: https://travis-ci.org/fls-bioinformatics-core/auto_process_ngs/builds
+in the pip documentation).
