@@ -28,11 +28,11 @@ import os
 import shutil
 import tempfile
 from ..analysis import AnalysisFastq
-from ..applications import Command
 from ..bcl2fastq.utils import get_nmismatches
 from ..bcl2fastq.utils import bases_mask_is_valid
 from ..bcl2fastq.utils import check_barcode_collisions
 from ..bcl2fastq.utils import make_custom_sample_sheet
+from ..command import Command
 from ..pipeliner import Pipeline
 from ..pipeliner import PipelineTask
 from ..pipeliner import PipelineCommandWrapper

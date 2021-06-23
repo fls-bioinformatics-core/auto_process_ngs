@@ -15,7 +15,7 @@ import logging
 from bcftbx.utils import find_program
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.analysis import locate_project_info_file
-from auto_process_ngs.applications import Command
+from auto_process_ngs.command import Command
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.constants import PROTOCOLS
 from auto_process_ngs.qc.outputs import expected_outputs

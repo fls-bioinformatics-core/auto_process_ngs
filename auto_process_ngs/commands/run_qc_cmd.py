@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc_cmd.py: implement auto process run_qc command
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
 #
 #########################################################################
 
@@ -11,7 +11,7 @@
 
 import os
 import logging
-from ..applications import Command
+from ..command import Command
 from ..qc.pipeline import QCPipeline
 from ..qc.fastq_strand import build_fastq_strand_conf
 from ..qc.utils import determine_qc_protocol

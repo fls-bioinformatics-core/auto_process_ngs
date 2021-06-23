@@ -42,8 +42,8 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
-from ..applications import Command
 from ..bcl2fastq.utils import get_bases_mask
+from ..command import Command
 from ..fastq_utils import FastqReadCounter
 from ..fastq_utils import pair_fastqs
 from ..fastq_utils import get_read_count

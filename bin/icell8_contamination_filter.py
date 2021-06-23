@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8_contamination_filter.py: remove 'contaminated' reads from fastqs
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017,2021 Peter Briggs
 #
 """
 icell8_contamination_filter.py
@@ -36,7 +36,7 @@ from bcftbx.utils import mkdir
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.utils import strip_ext
 from bcftbx.utils import find_program
-from auto_process_ngs.applications import Command
+from auto_process_ngs.command import Command
 from auto_process_ngs.utils import OutputFiles
 from auto_process_ngs.icell8.utils import ICell8FastqIterator
 

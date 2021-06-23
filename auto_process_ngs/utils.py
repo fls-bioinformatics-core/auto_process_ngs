@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_ngs module
-#     Copyright (C) University of Manchester 2013-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2021 Peter Briggs
 #
 ########################################################################
 #
@@ -48,7 +48,7 @@ import gzip
 import pydoc
 import tempfile
 import operator
-from .applications import Command
+from .command import Command
 import bcftbx.utils as bcf_utils
 from bcftbx.Md5sum import md5sum
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 #########################################################################
 #
@@ -19,7 +19,7 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.utils import find_program
 from bcftbx.utils import format_file_size
 from ..analysis import AnalysisDir
-from ..applications import Command
+from ..command import Command
 from ..simple_scheduler import SchedulerJob
 from ..fileops import exists
 from ..fileops import mkdir

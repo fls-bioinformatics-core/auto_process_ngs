@@ -29,10 +29,7 @@ Utility functions for bcl to fastq conversion operations:
 import os
 import re
 import logging
-from ..applications import Command
-from ..applications import bcl2fastq as bcl2fastq_apps
-from ..applications import general as general_apps
-from ..simple_scheduler import SchedulerJob
+from ..command import Command
 from ..utils import find_executables
 from ..utils import parse_version
 from ..samplesheet_utils import barcode_is_10xgenomics

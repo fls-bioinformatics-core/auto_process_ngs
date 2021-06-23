@@ -9,7 +9,7 @@ import gzip
 import zipfile
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from bcftbx.utils import find_program
-from auto_process_ngs.applications import Command
+from auto_process_ngs.command import Command
 from auto_process_ngs.utils import *
 
 class TestZipArchive(unittest.TestCase):

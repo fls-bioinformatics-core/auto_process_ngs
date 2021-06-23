@@ -34,7 +34,7 @@ except ImportError:
 from collections import defaultdict
 from bcftbx.FASTQFile import SequenceIdentifier
 from bcftbx.ngsutils import getreads
-from ..applications import Command
+from ..command import Command
 from ..analysis import AnalysisFastq
 from ..utils import BufferedOutputFiles
 from ..utils import ProgressChecker

@@ -46,9 +46,9 @@ from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from ..analysis import copy_analysis_project
-from ..applications import Command
 from ..bcl2fastq.pipeline import Get10xPackage
 from ..bcl2fastq.pipeline import FunctionParam
+from ..command import Command
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline

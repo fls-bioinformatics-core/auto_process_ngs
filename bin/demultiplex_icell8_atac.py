@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     demultiplex_icell8_atac.py: demultiplex reads from ICELL8 scATAC-seq
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 """
 demultiplex_icell8_atac.py
@@ -30,7 +30,7 @@ except ImportError:
 from multiprocessing import Pool
 from bcftbx.simple_xls import XLSWorkBook
 from auto_process_ngs import get_version
-from auto_process_ngs.applications import Command
+from auto_process_ngs.command import Command
 from auto_process_ngs.analysis import AnalysisFastq
 from auto_process_ngs.icell8.utils import ICell8WellList
 from auto_process_ngs.icell8.atac import split_fastq

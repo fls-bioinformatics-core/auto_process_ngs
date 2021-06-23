@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     merge_fastq_dirs_cmd.py: implement auto process merge_fastq_dirs command
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 #########################################################################
 
@@ -12,7 +12,7 @@
 import os
 import shutil
 import logging
-from ..applications import Command
+from ..command import Command
 from ..fileops import copytree_command
 from ..fileops import copy_command
 from ..simple_scheduler import SimpleScheduler

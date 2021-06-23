@@ -44,7 +44,7 @@ from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from .analysis import locate_project
 from .analysis import split_sample_reference
-from .applications import Command
+from .command import Command
 from .docwriter import Document
 from .docwriter import List
 from .docwriter import Link

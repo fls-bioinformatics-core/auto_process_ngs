@@ -980,7 +980,7 @@ from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
 from bcftbx.JobRunner import ResourceLock
 from bcftbx.JobRunner import SimpleJobRunner
-from .applications import Command
+from .command import Command
 from .simple_scheduler import SimpleScheduler
 from .simple_scheduler import SchedulerReporter
 

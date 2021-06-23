@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8.pipeline.py: pipeline components for ICELL8 data
-#     Copyright (C) University of Manchester 2018-2020,2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
 #
 
 """
@@ -65,7 +65,7 @@ from bcftbx.utils import strip_ext
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from bcftbx.simple_xls import XLSWorkBook
-from ..applications import Command
+from ..command import Command
 from ..analysis import AnalysisFastq
 from ..analysis import AnalysisProject
 from ..fastq_utils import pair_fastqs

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes and functions for QC
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
 #
 """
 Provides utility classes and functions for analysis project QC.
@@ -19,7 +19,7 @@ Provides the following functions:
 
 import os
 import logging
-from ..applications import Command
+from ..command import Command
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
 

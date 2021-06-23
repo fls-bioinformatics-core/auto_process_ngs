@@ -54,7 +54,6 @@ from bcftbx.utils import mkdirs
 from bcftbx.utils import walk
 from ..applications import general as general_apps
 from ..applications import bcl2fastq as bcl2fastq_apps
-from ..applications import Command
 from ..barcodes.pipeline import AnalyseBarcodes
 from ..bcl2fastq.utils import available_bcl2fastq_versions
 from ..bcl2fastq.utils import bases_mask_is_valid
@@ -64,6 +63,7 @@ from ..bcl2fastq.utils import get_bases_mask
 from ..bcl2fastq.utils import get_nmismatches
 from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
+from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
 from ..fileops import Location
 from ..icell8.utils import get_bases_mask_icell8
