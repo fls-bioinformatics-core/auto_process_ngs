@@ -2071,7 +2071,7 @@ class TestBaseParam(unittest.TestCase):
             def init(self,x):
                 pass
             def setup(self):
-                print(x)
+                print(self.args.x)
         t = SimpleTask("Simple task",x=12)
         # Create and test associated task in a BaseParam
         p = BaseParam()
