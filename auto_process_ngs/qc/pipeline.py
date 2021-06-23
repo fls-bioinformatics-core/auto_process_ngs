@@ -741,7 +741,7 @@ class CheckIlluminaQCVersion(PipelineTask):
         version = self.illumina_qc_version()
         if version not in self.args.compatible_versions:
             self.fail(message="QC script version is %s, needs %s" %
-                      (version,'/'.join(compatible_versions)))
+                      (version,'/'.join(self.args.compatible_versions)))
     def illumina_qc_version(self):
         # Return version of illumina_qc.sh script
         status,qc_script_info = Command(
