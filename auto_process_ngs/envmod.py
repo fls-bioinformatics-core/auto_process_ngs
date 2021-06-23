@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     envmod.py: wrapper for setting up environment with modulefiles
-#     Copyright (C) University of Manchester 2014-2015 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2015,2021 Peter Briggs
 #
 ########################################################################
 #
@@ -52,6 +52,7 @@ __ENVMODULES__ = False
 
 import os
 import logging
+import subprocess
 modules_python_dirs = ('/usr/share/Modules/init/',
                        '/usr/share/modules/init/',
                        '/opt/clusterware/opt/Modules/init/',
