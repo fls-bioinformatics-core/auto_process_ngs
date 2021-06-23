@@ -1039,9 +1039,3 @@ def add_cellranger_args(cellranger_cmd,
     if disable_ui:
         cellranger_cmd.add_args("--disable-ui")
     return cellranger_cmd
-
-import sys
-if __name__ == "__main__":
-    json_file = sys.argv[1]
-    html_file = "qc_summary.html"
-    report_cellranger_mkfastqs_qc_summary(json_file,html_file)
