@@ -1773,6 +1773,56 @@ class QCReportSample(object):
         sample (one line per single library analysis group),
         adding content for each specified field.
 
+        Valid fields are any supported by the 'get_10x_value'
+        method.
+
+        Arguments:
+          summary_table (Table): table to update
+          fields (list): list of custom fields to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+
+        Returns:
+          Boolean: True if report didn't contain any issues,
+            False otherwise.
+        """
+        # Flag to indicate whether we're writing to the first
+        # line of the single library table for this sample, and
+        # only report name on the first line
+        first_line = True
+        # Report each single library analysis
+        for cellranger_count in self.cellranger_count:
+            # Shortcut to metrics
+            metrics = cellranger_count.metrics
+            web_summary = cellranger_count.web_summary
+            # Add line in summary table
+            if first_line:
+                # Only display sample name on first line
+                idx = single_library_table.add_row(
+                    sample=self.sample)
+                first_line = False
+            else:
+                idx = single_library_table.add_row()
+            # Set values for fields
+            for field in fields:
+                if field == "sample":
+                    continue
+                value = self.get_10x_value(field,
+                                           cellranger_count,
+                                           metrics,
+                                           web_summary,
+                                           relpath=relpath)
+                single_library_table.set_value(idx,field,value)
+        # Finished
+        return True
+
+    def get_10x_value(self,field,cellranger_data,metrics,web_summary,
+                      relpath=None):
+        """
+        Return the value for the specified field
+
+        The following fields can be reported for each sample:
+
         Valid fields are:
 
         - 10x_cells
@@ -1790,102 +1840,81 @@ class QCReportSample(object):
         - linked_sample
 
         Arguments:
-          summary_table (Table): table to update
-          fields (list): list of custom fields to report
+          field (str): name of the field to report; if the
+            field is not recognised then KeyError is raised
+          cellranger_data (object): parent CellrangerCount
+            object for the sample
+          metrics (MetricsSummary): summary metrics for the
+            sample
+          web_summary (str): path to the web_summary.html
+            report for the sample
           relpath (str): if set then make link paths
             relative to 'relpath'
-
-        Returns:
-          Boolean: True if report didn't contain any issues,
-            False otherwise.
         """
-        # Flag to indicate whether we're writing to the first
-        # line of the single library table for this sample, and
-        # only report name on the first line
-        first_line = True
-        # Reporting status
-        has_problems = False
-        # Report each single library analysis
-        for cellranger_count in self.cellranger_count:
-            # Shortcut to metrics
-            metrics = cellranger_count.metrics
-            # Add line in summary table
-            if first_line:
-                # Only display sample name on first line
-                idx = single_library_table.add_row(
-                    sample=self.sample)
-                first_line = False
+        if field == "sample":
+            return
+        if field == "linked_sample":
+            try:
+                value = ','.join(
+                    [split_sample_reference(s)[2]
+                     for s in self.multiome_libraries.linked_samples(
+                             self.sample)])
+            except AttributeError:
+                value = '?'
+        elif field == "10x_cells":
+            try:
+                value = metrics.estimated_number_of_cells
+            except AttributeError:
+                value = metrics.annotated_cells
+                value = pretty_print_reads(value)
+        elif field == "10x_reads_per_cell":
+            value = pretty_print_reads(metrics.mean_reads_per_cell)
+        elif field == "10x_genes_per_cell":
+            value = pretty_print_reads(metrics.median_genes_per_cell)
+        elif field == "10x_frac_reads_in_cell":
+            value = metrics.frac_reads_in_cells
+        elif field == "10x_fragments_per_cell":
+            value = pretty_print_reads(
+                metrics.median_fragments_per_cell)
+        elif field == "10x_fragments_overlapping_targets":
+            try:
+                value = "%.1f%%" % \
+                        (metrics.frac_fragments_overlapping_targets
+                         *100.0,)
+            except AttributeError:
+                value = 'N/A'
+        elif field == "10x_fragments_overlapping_peaks":
+            value = "%.1f%%" % \
+                    (metrics.frac_fragments_overlapping_peaks*100.0,)
+        elif field == "10x_tss_enrichment_score":
+            try:
+                value = "%.2f" % (metrics.tss_enrichment_score,)
+            except AttributeError:
+                value = 'N/A'
+        elif field == "10x_atac_fragments_per_cell":
+            value = pretty_print_reads(
+                metrics.atac_median_high_quality_fragments_per_cell)
+        elif field == "10x_gex_geners_per_cell":
+            value = pretty_print_reads(
+                metrics.gex_median_genes_per_cell)
+        elif field == "10x_pipeline":
+            if cellranger_data.version:
+                value = "%s %s" % (cellranger_data.pipeline_name,
+                                   cellranger_data.version)
             else:
-                idx = single_library_table.add_row()
-            # Set values for fields
-            for field in fields:
-                if field == "sample":
-                    continue
-                if field == "linked_sample":
-                    try:
-                        value = ','.join(
-                            [split_sample_reference(s)[2]
-                             for s in self.multiome_libraries.linked_samples(
-                                     self.sample)])
-                    except AttributeError:
-                        value = '?'
-                elif field == "10x_cells":
-                    try:
-                        value = metrics.estimated_number_of_cells
-                    except AttributeError:
-                        value = metrics.annotated_cells
-                    value = pretty_print_reads(value)
-                elif field == "10x_reads_per_cell":
-                    value = pretty_print_reads(metrics.mean_reads_per_cell)
-                elif field == "10x_genes_per_cell":
-                    value = pretty_print_reads(metrics.median_genes_per_cell)
-                elif field == "10x_frac_reads_in_cell":
-                    value = metrics.frac_reads_in_cells
-                elif field == "10x_fragments_per_cell":
-                    value = pretty_print_reads(
-                        metrics.median_fragments_per_cell)
-                elif field == "10x_fragments_overlapping_targets":
-                    try:
-                        value = "%.1f%%" % \
-                                (metrics.frac_fragments_overlapping_targets
-                                 *100.0,)
-                    except AttributeError:
-                        value = 'N/A'
-                elif field == "10x_fragments_overlapping_peaks":
-                    value = "%.1f%%" % \
-                            (metrics.frac_fragments_overlapping_peaks*100.0,)
-                elif field == "10x_tss_enrichment_score":
-                    try:
-                        value = "%.2f" % (metrics.tss_enrichment_score,)
-                    except AttributeError:
-                        value = 'N/A'
-                elif field == "10x_atac_fragments_per_cell":
-                    value = pretty_print_reads(
-                        metrics.atac_median_high_quality_fragments_per_cell)
-                elif field == "10x_gex_genes_per_cell":
-                    value = pretty_print_reads(
-                        metrics.gex_median_genes_per_cell)
-                elif field == "10x_pipeline":
-                    if cellranger_count.version:
-                        value = "%s %s" % (cellranger_count.pipeline_name,
-                                           cellranger_count.version)
-                    else:
-                        value = cellranger_count.pipeline_name
-                elif field == "10x_reference":
-                    value = os.path.basename(cellranger_count.\
-                                             reference_data)
-                elif field == "10x_web_summary":
-                    web_summary = cellranger_count.web_summary
-                    if relpath:
-                        web_summary = os.path.relpath(web_summary,
-                                                      relpath)
-                    value = Link(self.sample,web_summary)
-                else:
-                    raise KeyError("'%s': unrecognised field for single "
-                                   "library analysis table" % field)
-                single_library_table.set_value(idx,field,value)
-        # Finished
-        return (not has_problems)
+                value = cellranger_data.pipeline_name
+        elif field == "10x_reference":
+            value = os.path.basename(cellranger_count.\
+                                     reference_data)
+        elif field == "10x_web_summary":
+            if relpath:
+                web_summary = os.path.relpath(web_summary,
+                                              relpath)
+            value = Link(self.sample,web_summary)
+        else:
+            raise KeyError("'%s': unrecognised field for single "
+                           "library analysis table" % field)
+        return value
 
     def get_value(self,field,relpath=None):
         """
