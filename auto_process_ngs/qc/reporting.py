@@ -1065,7 +1065,7 @@ class QCReport(Document):
             # Attributes to report for each sample
             if report_attrs is None:
                 report_attrs_ = ['fastqc',
-                                'fastq_screen',]
+                                 'fastq_screen',]
                 if 'strandedness' in project.outputs:
                     report_attrs_.append('strandedness')
             # Add data for this project to the report
