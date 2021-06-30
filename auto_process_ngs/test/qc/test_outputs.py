@@ -16,6 +16,7 @@ from auto_process_ngs.qc.outputs import fastq_strand_output
 from auto_process_ngs.qc.outputs import cellranger_count_output
 from auto_process_ngs.qc.outputs import cellranger_atac_count_output
 from auto_process_ngs.qc.outputs import cellranger_arc_count_output
+from auto_process_ngs.qc.outputs import cellranger_multi_output
 from auto_process_ngs.qc.outputs import check_illumina_qc_outputs
 from auto_process_ngs.qc.outputs import check_fastq_strand_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_count_outputs
@@ -214,6 +215,88 @@ class TestCellrangerArcCountOutputFunction(unittest.TestCase):
                           '%s/PJB1/outs/web_summary.html' % prefix,
                           '%s/PJB2/outs/summary.csv' % prefix,
                           '%s/PJB2/outs/web_summary.html' % prefix))
+
+class TestCellrangerMultiOutputFunction(unittest.TestCase):
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCellrangerMultiOutput')
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                       "PJB1_GEX_S1_R2_001.fastq.gz",
+                                       "PJB2_MC_S2_R1_001.fastq.gz",
+                                       "PJB2_MC_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add 10x_multi_config.csv file
+        fastq_dir = os.path.join(self.wd,"PJB","fastqs")
+        with open(os.path.join(self.wd,
+                               "PJB",
+                               "10x_multi_config.csv"),'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,%s,any,PJB1,gene expression,
+PJB2_MC,%s,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""" % (fastq_dir,fastq_dir))
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_cellranger_multi_output(self):
+        """cellranger_multi_output: check for project
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        config_csv = os.path.join(self.wd,"PJB","10x_multi_config.csv")
+        self.assertEqual(cellranger_multi_output(project,
+                                                 config_csv),
+                         ('cellranger_multi/outs/per_sample_outs/PBA/metrics_summary.csv',
+                          'cellranger_multi/outs/per_sample_outs/PBA/web_summary.html',
+                          'cellranger_multi/outs/per_sample_outs/PBB/metrics_summary.csv',
+                          'cellranger_multi/outs/per_sample_outs/PBB/web_summary.html',
+                          'cellranger_multi/outs/multi/multiplexing_analysis/tag_calls_summary.csv',))
+
+    def test_cellranger_multi_output_with_sample(self):
+        """cellranger_multi_output: check for project and sample
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        config_csv = os.path.join(self.wd,"PJB","10x_multi_config.csv")
+        self.assertEqual(cellranger_multi_output(project,
+                                                 config_csv,
+                                                 sample_name="PBB"),
+                         ('cellranger_multi/outs/per_sample_outs/PBB/metrics_summary.csv',
+                          'cellranger_multi/outs/per_sample_outs/PBB/web_summary.html',
+                          'cellranger_multi/outs/multi/multiplexing_analysis/tag_calls_summary.csv',))
+
+    def test_cellranger_multi_output_with_prefix(self):
+        """cellranger_multi_output: check for project and prefix
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        config_csv = os.path.join(self.wd,"PJB","10x_multi_config.csv")
+        prefix = "cellranger_multi/6.0.0/refdata-gex-mm10-2020-A"
+        self.assertEqual(cellranger_multi_output(project,
+                                                 config_csv,
+                                                 prefix=prefix),
+                         ('%s/outs/per_sample_outs/PBA/metrics_summary.csv' % prefix,
+                          '%s/outs/per_sample_outs/PBA/web_summary.html' % prefix,
+                          '%s/outs/per_sample_outs/PBB/metrics_summary.csv' % prefix,
+                          '%s/outs/per_sample_outs/PBB/web_summary.html' % prefix,
+                          '%s/outs/multi/multiplexing_analysis/tag_calls_summary.csv' % prefix,))
+
+    def test_cellranger_multi_output_no_config_csv(self):
+        """cellranger_multi_output: missing config.csv file
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        config_csv = os.path.join(self.wd,"PJB","10x_multi_config.csv.missing")
+        self.assertEqual(cellranger_multi_output(project,config_csv),[])
 
 class TestCheckIlluminaQcOutputs(unittest.TestCase):
     """

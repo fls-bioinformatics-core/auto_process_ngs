@@ -14,6 +14,7 @@ Provides the following functions:
 - cellranger_count_output: get names for cellranger count output
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - cellranger_arc_count_output: get names for cellranger-arc count output
+- cellranger_multi_output: get names for cellranger multi output
 - check_illumina_qc_outputs: fetch Fastqs without illumina_qc.sh outputs
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 - check_cellranger_count_outputs: fetch sample names without cellranger
@@ -35,6 +36,7 @@ import logging
 from .constants import FASTQ_SCREENS
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
+from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -221,6 +223,66 @@ def cellranger_arc_count_output(project,sample_name=None,
                   "web_summary.html"):
             outputs.append(os.path.join(sample_count_dir,
                                         "outs",f))
+    return tuple(outputs)
+
+def cellranger_multi_output(project,config_csv,sample_name=None,
+                            prefix="cellranger_multi"):
+    """
+    Generate list of 'cellranger multi' outputs
+
+    Given an AnalysisProject, the outputs from 'cellranger
+    multi' will look like:
+
+    - {PREFIX}/outs/multi/multiplexing_analysis/tag_calls_summary.csv
+
+    and
+
+    - {PREFIX}/outs/per_sample_outs/{SAMPLE_n}/metrics_summary.csv
+    - {PREFIX}/outs/per_sample_outs/{SAMPLE_n}/web_summary.html
+
+    for each multiplexed SAMPLE_n defined in the config.csv file
+    (nb these are not equivalent to the 'samples' defined by the
+    Fastq files in the project).
+
+    If a sample name is supplied then outputs are limited
+    to those for that sample; if the supplied config.csv file isn't
+    found then no outputs will be returned.
+
+    Arguments:
+      project (AnalysisProject): project to generate
+        output names for
+      config_csv (str): path to the cellranger multi
+        config.csv file
+      sample_name (str): multiplexed sample to limit outputs
+        to (optional)
+      prefix (str): directory for outputs (optional, defaults
+        to "cellranger_multi")
+
+    Returns:
+       tuple: cellranger multi outputs (without leading paths)
+    """
+    outputs = []
+    # Check that config.csv file exists
+    if not os.path.isfile(config_csv):
+        return outputs
+    # Per-sample metrics and web summary files
+    for sample in CellrangerMultiConfigCsv(config_csv).sample_names:
+        if sample_name and sample_name != sample:
+            continue
+        sample_dir = os.path.join(prefix,
+                                  "outs",
+                                  "per_sample_outs",
+                                  sample)
+        for f in ("metrics_summary.csv",
+                  "web_summary.html"):
+            outputs.append(os.path.join(sample_dir,f))
+    # Multiplexing outputs
+    multi_analysis_dir = os.path.join(prefix,
+                                      "outs",
+                                      "multi",
+                                      "multiplexing_analysis")
+    for f in ("tag_calls_summary.csv",):
+        outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
 
 def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
