@@ -96,9 +96,12 @@ class MetricsSummary(TabFile):
     Base class for extracting data from cellranger* count
     *summary.csv files
 
-    The files consists of two lines: the first is a
-    header line, the second consists of corresponding
-    data values.
+    By default the files consists of two lines: the first
+    is a header line, the second consists of corresponding
+    data values. There is also a multi-line variation (e.g.
+    from cellranger multi) with a header line followed by
+    multiple lines of data (use the 'multiline' argument
+    to indicate this is the expected format).
 
     In addition: in some variants (e.g.
     'metrics_summary.csv'), integer data values are formatted
@@ -114,27 +117,33 @@ class MetricsSummary(TabFile):
     This class extracts the data values and where
     possible converts them to integers.
     """
-    def __init__(self,f):
+    def __init__(self,f,multiline=False):
         """
         Create a new MetricsSummary instance
 
         Arguments:
           f (str): path to the 'metrics_summary.csv' file
+          multiline (bool): if True then expect multiple lines
+            of data (default is to expect a single line of
+            data)
         """
+        # Multi-line summary?
+        self._multiline = multiline
         # Read in data from the file
         with open(f,'rt') as fp:
             s = fp.read()
         self._data = dict()
         s = s.strip().split('\n')
-        if len(s) != 2:
-            raise Exception("%s: MetricsSummary expects 2 lines"
-                            % f)
+        if not self._multiline and len(s) != 2:
+            raise Exception("%s: MetricsSummary expects 2 lines (or specify "
+                            "multi-line mode)" % f)
         # Set up the tabfile instance
         TabFile.__init__(self,
                          column_names=self._tokenise(s[0]),
                          delimiter=',')
         # Add the data
-        self.append(data=self._tokenise(s[1]))
+        for line in s[1:]:
+            self.append(data=self._tokenise(line))
     def _tokenise(self,line):
         """
         Internal: process line from *summary.csv
@@ -181,6 +190,10 @@ class MetricsSummary(TabFile):
         """
         Fetch data associated with an arbitrary field
         """
+        if self._multiline:
+            raise NotImplementedError("Superclass should implement "
+                                      "'fetch' method for multi-line "
+                                      "metrics files")
         return self[0][field]
 
 class GexSummary(MetricsSummary):
@@ -398,6 +411,72 @@ class MultiomeSummary(MetricsSummary):
         Return the median genes per cell for GEX data
         """
         return self.fetch('GEX Median genes per cell')
+
+class MultiplexSummary(MetricsSummary):
+    """
+    Extract data from metrics_summary.csv file for CellPlex
+
+    Utility class for extracting data from a
+    'metrics_summary.csv' file output from running
+    'cellranger multi'.
+
+    The file consists of a header line followed by multiple
+    data lines, with one set of values per line.
+
+    The following properties are available:
+
+    - cells
+    - median_reads_per_cell
+    - median_genes_per_cell
+    - total_genes_detected
+    - median_umi_counts_per_cell
+    """
+    def __init__(self,f):
+        """
+        Create a new MultiomeSummary instance
+
+        Arguments:
+          f (str): path to the 'summary.csv' file
+        """
+        MetricsSummary.__init__(self,f,multiline=True)
+    def fetch(self,name):
+        """
+        Fetch data associated with an arbitrary field
+        """
+        metric = self.lookup('Metric Name',name)
+        if len(metric) != 1:
+            raise Exception("Failed to lookup metric '%s'" % name)
+        return metric[0]['Metric Value']
+    @property
+    def cells(self):
+        """
+        Returns the number of cells
+        """
+        return self.fetch('Cells')
+    @property
+    def median_reads_per_cell(self):
+        """
+        Returns the median reads per cell
+        """
+        return self.fetch('Median reads per cell')
+    @property
+    def median_genes_per_cell(self):
+        """
+        Returns the median genes per cell
+        """
+        return self.fetch('Median genes per cell')
+    @property
+    def total_genes_detected(self):
+        """
+        Returns the total genes detected
+        """
+        return self.fetch('Total genes detected')
+    @property
+    def median_umi_counts_per_cell(self):
+        """
+        Returns the median UMI counts per cell
+        """
+        return self.fetch('Median UMI counts per cell')
 
 class MultiomeLibraries(object):
     """

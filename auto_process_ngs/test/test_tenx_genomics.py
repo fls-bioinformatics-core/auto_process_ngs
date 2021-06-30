@@ -17,6 +17,7 @@ from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
+from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_LIBRARIES
@@ -605,6 +606,32 @@ class TestMultiomeSummary(unittest.TestCase):
         self.assertEqual(
             s.atac_median_high_quality_fragments_per_cell,9.0)
         self.assertEqual(s.gex_median_genes_per_cell,15.0)
+
+class TestMultiplexSummary(unittest.TestCase):
+    """
+    Tests for the 'MultiplexSummary' class
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestMultiplexSummary')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_multiplex_summary(self):
+        """MultiplexSummary: check metrics are extracted from CSV file
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(CELLPLEX_METRICS_SUMMARY)
+        m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.cells,5175)
+        self.assertEqual(m.median_reads_per_cell,20052)
+        self.assertEqual(m.median_genes_per_cell,3086)
+        self.assertEqual(m.total_genes_detected,21260)
+        self.assertEqual(m.median_umi_counts_per_cell,10515)
 
 class TestMultiomeLibraries(unittest.TestCase):
     """
