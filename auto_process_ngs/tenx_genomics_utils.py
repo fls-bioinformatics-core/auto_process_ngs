@@ -658,7 +658,7 @@ class CellrangerMultiConfigCsv(object):
         """
         Internal: read in data from a multiplex 'config.csv' file
         """
-        print("Reading data from '%s'" % self._filen)
+        logger.debug("Reading data from '%s'" % self._filen)
         with open(self._filen,'rt') as config_csv:
             current_section = None
             for line in config_csv:
@@ -680,7 +680,7 @@ class CellrangerMultiConfigCsv(object):
                     else:
                         # Extract sample name
                         sample,cmo,desc = [x.strip() for x in line.split(',')]
-                        print("Found sample '%s'" % sample)
+                        logger.debug("Found sample '%s'" % sample)
                         self._samples[sample] = { 'cmo': cmo,
                                                   'description': desc }
                 elif current_section == "gene-expression":
@@ -688,8 +688,8 @@ class CellrangerMultiConfigCsv(object):
                         # Extract reference dataset
                         self._reference_data_path = ','.join(
                             line.split(',')[1:]).strip()
-                        print("Found reference dataset '%s'" %
-                              self._reference_data_path)
+                        logger.debug("Found reference dataset '%s'" %
+                                     self._reference_data_path)
 
     @property
     def sample_names(self):
