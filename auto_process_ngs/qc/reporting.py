@@ -303,6 +303,8 @@ class QCProject(object):
     - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
     - samples: sorted list of sample names extracted
       from Fastqs
+    - multiplexed_samples: sorted list of sample names
+      for multiplexed samples (e.g. 10x CellPlex)
     - outputs: list of QC output categories detected (see
       below for valid values)
     - output_files: list of absolute paths to QC output
@@ -319,6 +321,7 @@ class QCProject(object):
     - 'icell8_stats'
     - 'icell8_report'
     - 'cellranger_count'
+    - 'cellranger_multi'
     - 'multiqc'
 
     General properties about the project:
@@ -496,6 +499,7 @@ class QCProject(object):
         """
         outputs = set()
         output_files = []
+        multiplexed_samples = set()
         software = {}
         print("Scanning contents of %s" % self.qc_dir)
         files = [os.path.join(self.qc_dir,f)
@@ -669,6 +673,52 @@ class QCProject(object):
             # Store cellranger versions
             if cellranger_name and versions:
                 software[cellranger_name] = sorted(list(versions))
+        # Look for cellranger multi outputs
+        cellranger_multi_dir = os.path.join(self.qc_dir,
+                                            "cellranger_multi")
+        if os.path.isdir(cellranger_multi_dir):
+            cellranger_name = None
+            versions = set()
+            cellranger_multi_samples = {}
+            for ver in filter(
+                    lambda f:
+                    os.path.isdir(os.path.join(cellranger_multi_dir,f)),
+                    os.listdir(cellranger_multi_dir)):
+                cellranger_multi_samples[ver] = {}
+                for ref in filter(
+                        lambda f:
+                        os.path.isdir(os.path.join(cellranger_multi_dir,ver,f)),
+                        os.listdir(os.path.join(cellranger_multi_dir,ver))):
+                    # Check putative reference dataset names
+                    cellranger_multi_samples[ver][ref] = []
+                    cellranger_multi = CellrangerMulti(
+                        os.path.join(
+                            cellranger_multi_dir,
+                            ver,
+                            ref))
+                    for smpl in cellranger_multi.sample_names:
+                        cellranger_multi_samples[ver][ref].append(smpl)
+                        try:
+                            output_files.append(cellranger_multi.web_summary(smpl))
+                            output_files.append(cellranger_multi.metrics_csv(smpl))
+                            cellranger_name = cellranger_multi.pipeline_name
+                            cellranger_references.add(
+                                cellranger_multi.reference_data)
+                        except OSError:
+                            pass
+                    # Add outputs, samples and version
+                    if cellranger_multi_samples[ver][ref]:
+                        outputs.add("cellranger_multi")
+                        versions.add(ver)
+                    for smpl in cellranger_multi_samples[ver][ref]:
+                        multiplexed_samples.add(smpl)
+            # Store cellranger versions
+            if cellranger_name and versions:
+                if cellranger_name not in software:
+                    software[cellranger_name] = sorted(list(versions))
+                else:
+                    software[cellranger_name] = sorted(
+                        software[cellranger_name].extend(list(versions)))
         # Look for MultiQC report
         multiqc_dir = os.path.dirname(self.qc_dir)
         print("Checking for MultiQC report in %s" % multiqc_dir)
@@ -703,6 +753,8 @@ class QCProject(object):
                               key=lambda s: split_sample_name(s))
         # Single library analyses reference data
         self.cellranger_references = sorted(list(cellranger_references))
+        # Multiplexed samples
+        self.multiplexed_samples = sorted(list(multiplexed_samples))
         # QC outputs
         self.outputs = sorted(list(outputs))
         # Software versions
