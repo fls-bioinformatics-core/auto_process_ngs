@@ -1630,7 +1630,10 @@ class QCReportSample(object):
                 project_id=project.id,
                 fastq_attrs=fastq_attrs))
         # Reads associated with the sample
-        self.reads = [r for r in self.fastq_groups[0].reads]
+        if self.fastq_groups:
+            self.reads = [r for r in self.fastq_groups[0].reads]
+        else:
+            self.reads = []
         # 10x single library analyses
         cellranger_count_dir = os.path.join(qc_dir,
                                             "cellranger_count")
