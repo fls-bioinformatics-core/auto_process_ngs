@@ -701,6 +701,42 @@ class TestMultiomeLibraries(unittest.TestCase):
 %s/210111_NB01234_00012_ABXXXXX_analysis/PB_GEX/fastqs,PB1_GEX,Gene Expression
 """ % self.wd)
 
+class TestCellrangerMultiConfigCsv(unittest.TestCase):
+    """
+    Tests for the 'CellrangerMultiConfigCsv' class
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCellrangerMultiConfigCsv')
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+    def test_cellranger_multi_config_csv(self):
+        """
+        CellrangerMultiConfigCsv: check data is extracted from config.csv
+        """
+        with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,gene expression,
+PJB2_MC,/data/runs/fastqs_mc,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""")
+        config_csv = CellrangerMultiConfigCsv(
+            os.path.join(self.wd,
+                         "10x_multi_config.csv"))
+        self.assertEqual(config_csv.sample_names,['PBA','PBB'])
+        self.assertEqual(config_csv.reference_data_path,
+                         "/data/refdata-cellranger-gex-GRCh38-2020-A")
+
 class TestSetCellCountForProject(unittest.TestCase):
     """
     Tests for the 'set_cell_count_for_project' function

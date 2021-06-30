@@ -547,6 +547,100 @@ class MultiomeLibraries(object):
                               project.info.library_type)))
             print("Generated %s" % filen)
 
+class CellrangerMultiConfigCsv(object):
+    """
+    Class to handle cellranger multi 'config.csv' files
+
+    See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
+
+    Provides the following properties:
+
+    - sample_names: list of sample names
+    - reference_data_path: path to the reference dataset
+
+    Provides the following methods:
+
+    - sample: returns information on a specific sample
+    """
+    def __init__(self,filen):
+        """
+        Create new CellrangerMultiConfigCSV instance
+
+        Arguments:
+          filen (str): path to cellranger multi config.csv
+            file
+        """
+        self._filen = os.path.abspath(filen)
+        self._samples = {}
+        self._reference_data_path = None
+        self._read_config_csv()
+
+    def _read_config_csv(self):
+        """
+        Internal: read in data from a multiplex 'config.csv' file
+        """
+        print("Reading data from '%s'" % self._filen)
+        with open(self._filen,'rt') as config_csv:
+            current_section = None
+            for line in config_csv:
+                line = line.rstrip('\n')
+                if line == "[samples]":
+                    current_section = "samples"
+                    continue
+                elif line == "[gene-expression]":
+                    current_section = "gene-expression"
+                    continue
+                elif not line:
+                    # Blank line ends section
+                    current_section = None
+                    continue
+                if current_section == "samples":
+                    if line.startswith('sample_id,cmo_ids,description'):
+                        # Header line, skip
+                        continue
+                    else:
+                        # Extract sample name
+                        sample,cmo,desc = [x.strip() for x in line.split(',')]
+                        print("Found sample '%s'" % sample)
+                        self._samples[sample] = { 'cmo': cmo,
+                                                  'description': desc }
+                elif current_section == "gene-expression":
+                    if line.startswith('reference,'):
+                        # Extract reference dataset
+                        self._reference_data_path = ','.join(
+                            line.split(',')[1:]).strip()
+                        print("Found reference dataset '%s'" %
+                              self._reference_data_path)
+
+    @property
+    def sample_names(self):
+        """
+        Return the sample names from config.csv
+
+        Samples are listed in the '[samples]' section.
+        """
+        return sorted(list(self._samples.keys()))
+
+    @property
+    def reference_data_path(self):
+        """
+        Return the path to the reference dataset from config.csv
+        """
+        return self._reference_data_path
+
+    def sample(self,sample_name):
+        """
+        Return dictionary of values associated with sample
+
+        Keys include 'cmp' (list of CMO ids) and 'description'
+        (description text) associated with the sample in the
+        '[samples]' section of the config.csv file.
+
+        Arguments:
+          sample_name (str): name of the sample of interest
+        """
+        return self._samples[sample_name]
+
 #######################################################################
 # Functions
 #######################################################################
