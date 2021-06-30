@@ -822,6 +822,8 @@ class QCReport(Document):
         '10x_tss_enrichment_score': 'TSS enrichment score',
         '10x_atac_fragments_per_cell': '#ATAC fragments/cell',
         '10x_gex_genes_per_cell': '#GEX genes/cell',
+        '10x_genes_detected': '#genes',
+        '10x_umis_per_cell': '#UMIs/cell',
         '10x_pipeline': 'Pipeline',
         '10x_reference': 'Reference dataset',
         '10x_web_summary': 'HTML report',
@@ -1837,6 +1839,8 @@ class QCReportSample(object):
         - 10x_tss_enrichment_score
         - 10x_atac_fragments_per_cell
         - 10x_gex_genes_per_cell
+        - 10x_genes_detected
+        - 10x_umis_per_cell
         - 10x_pipeline
         - 10x_reference
         - 10x_web_summary
@@ -1868,10 +1872,17 @@ class QCReportSample(object):
             try:
                 value = metrics.estimated_number_of_cells
             except AttributeError:
-                value = metrics.annotated_cells
-                value = pretty_print_reads(value)
+                try:
+                    value = metrics.annotated_cells
+                except AttributeError:
+                    value = metrics.cells
+            value = pretty_print_reads(value)
         elif field == "10x_reads_per_cell":
-            value = pretty_print_reads(metrics.mean_reads_per_cell)
+            try:
+                value = metrics.mean_reads_per_cell
+            except AttributeError:
+                value = metrics.median_reads_per_cell
+            value = pretty_print_reads(value)
         elif field == "10x_genes_per_cell":
             value = pretty_print_reads(metrics.median_genes_per_cell)
         elif field == "10x_frac_reads_in_cell":
@@ -1906,6 +1917,10 @@ class QCReportSample(object):
                                    cellranger_data.version)
             else:
                 value = cellranger_data.pipeline_name
+        elif field == "10x_genes_detected":
+            value = pretty_print_reads(metrics.total_genes_detected)
+        elif field == "10x_umis_per_cell":
+            value = pretty_print_reads(metrics.median_umi_counts_per_cell)
         elif field == "10x_reference":
             value = os.path.basename(cellranger_count.\
                                      reference_data)
