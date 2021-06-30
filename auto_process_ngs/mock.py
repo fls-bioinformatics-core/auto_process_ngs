@@ -69,6 +69,7 @@ from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .fastq_utils import pair_fastqs_by_name
+from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from .tenx_genomics_utils import flow_cell_id
 from .utils import ZipArchive
 from .mockqc import MockQCOutputs
@@ -1590,6 +1591,18 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         count.add_argument("--mempercore",action="store")
         count.add_argument("--maxjobs",action="store")
         count.add_argument("--jobinterval",action="store")
+        # multi subparser
+        if self._package_name == "cellranger" and version[0] >= 6:
+            # multi only implemented in cellranger 6.0.0
+            multi = sp.add_parser("multi")
+            multi.add_argument("--id",action="store")
+            multi.add_argument("--csv",action="store")
+            multi.add_argument("--jobmode",action="store")
+            multi.add_argument("--localcores",action="store")
+            multi.add_argument("--localmem",action="store")
+            multi.add_argument("--mempercore",action="store")
+            multi.add_argument("--maxjobs",action="store")
+            multi.add_argument("--jobinterval",action="store")
         # Process command line
         args = p.parse_args()
         # Check bases mask
@@ -1739,6 +1752,59 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
+            # _cmdline file
+            cmdline_file = os.path.join(top_dir,"_cmdline")
+            with open(cmdline_file,'w') as fp:
+                fp.write("%s\n" % cmdline)
+        elif args.command == "multi":
+            ###############
+            # multi command
+            ###############
+            missing_args = []
+            if args.csv is None:
+                missing_args.append("--csv <PATH>")
+            if missing_args:
+                sys.stderr.write("error: The following required arguments were not provided:\n")
+                for missing_arg in missing_args:
+                    sys.stderr.write("    %s\n" % missing_arg)
+                sys.stderr.write("\nUSAGE:\n    cellranger multi --id <ID> --csv <CSV> --jobmode <MODE>\n\nFor more information try --help\n")
+                sys.exit(1)
+            # Build outputs
+            top_dir = str(args.id)
+            os.mkdir(top_dir)
+            # Outs
+            outs_dir = os.path.join(top_dir,"outs")
+            os.mkdir(outs_dir)
+            config = CellrangerMultiConfigCsv(args.csv)
+            for d in ("per_sample_outs",
+                      "multi",
+                      "multi/multiplexing_analysis",):
+                os.mkdir(os.path.join(outs_dir,d))
+            # Per sample outs
+            for sample in config.sample_names:
+                sample_dir = os.path.join(outs_dir,
+                                          "per_sample_outs",
+                                          sample)
+                os.mkdir(sample_dir)
+                metrics_file = os.path.join(sample_dir,
+                                            "metrics_summary.csv")
+                with open(metrics_file,'wt') as fp:
+                    fp.write(mock10xdata.METRICS_SUMMARY)
+                web_summary_file = os.path.join(sample_dir,
+                                                "web_summary.html")
+                with open(web_summary_file,'wt') as fp:
+                    fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
+            # Multiplexing outs
+            for f in ("assignment_confidence_table.csv",
+                      "cells_per_tag.json",
+                      "tag_calls_per_cell.csv",
+                      "tag_calls_summary.csv"):
+                multiplexing_output = os.path.join(outs_dir,
+                                                   "multi",
+                                                   "multiplexing_analysis",f)
+                with open(multiplexing_output,'wt') as fp:
+                    fp.write("PLACEHOLDER FOR %s"  %
+                             os.path.basename(multiplexing_output).upper())
             # _cmdline file
             cmdline_file = os.path.join(top_dir,"_cmdline")
             with open(cmdline_file,'w') as fp:
