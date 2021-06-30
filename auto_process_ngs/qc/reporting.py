@@ -1156,7 +1156,7 @@ class QCReport(Document):
                                              '10x_umis_per_cell']
                 # Add column for multiple versions
                 if len(project.software[pkg]) > 1:
-                    mutiplex_analysis_fields.append('10x_pipeline')
+                    multiplex_analysis_fields.append('10x_pipeline')
                 # Add column for multiple reference datasets
                 if len(project.cellranger_references) > 1:
                     multiplex_analysis_fields.append('10x_reference')
@@ -2137,7 +2137,7 @@ class QCReportSample(object):
         elif field == "10x_umis_per_cell":
             value = pretty_print_reads(metrics.median_umi_counts_per_cell)
         elif field == "10x_reference":
-            value = os.path.basename(cellranger_count.\
+            value = os.path.basename(cellranger_data.\
                                      reference_data)
         elif field == "10x_web_summary":
             if relpath:
