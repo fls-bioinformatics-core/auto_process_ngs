@@ -2909,11 +2909,15 @@ def verify(project,qc_dir=None,qc_protocol=None):
             pass
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
+    cellranger_multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
+    if not os.path.exists(cellranger_multi_config):
+        cellranger_multi_config = None
     verified = True
     for f in expected_outputs(project,qc_dir,
                               fastq_strand_conf=fastq_strand_conf,
                               cellranger_version=cellranger_version,
                               cellranger_refdata=cellranger_refdata,
+                              cellranger_multi_config=cellranger_multi_config,
                               qc_protocol=qc_protocol):
         if not os.path.exists(f):
             logging.debug("Missing: %s" % f)
