@@ -1848,7 +1848,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_file = os.path.join(sample_dir,
                                             "metrics_summary.csv")
                 with open(metrics_file,'wt') as fp:
-                    fp.write(mock10xdata.METRICS_SUMMARY)
+                    fp.write(mock10xdata.CELLPLEX_METRICS_SUMMARY)
                 web_summary_file = os.path.join(sample_dir,
                                                 "web_summary.html")
                 with open(web_summary_file,'wt') as fp:
