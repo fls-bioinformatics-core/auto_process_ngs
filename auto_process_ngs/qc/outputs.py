@@ -326,7 +326,8 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
                            '10x_scRNAseq',
                            '10x_snRNAseq',
                            '10x_Visium',
-                           '10x_Multiome_GEX',):
+                           '10x_Multiome_GEX',
+                           '10x_CellPlex',):
             if project.fastq_attrs(fastq).read_number == 1:
                 # No screens for R1 for single cell
                 continue
@@ -392,7 +393,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
                              '10x_scRNAseq',
                              '10x_snRNAseq',
                              '10x_Visium',
-                             '10x_Multiome_GEX',):
+                             '10x_Multiome_GEX',
+                             '10x_CellPlex',):
             # Strand stats output based on R2
             fq_pair = (fq_group[1],)
         else:
@@ -511,7 +513,7 @@ def check_cellranger_arc_count_outputs(project,qc_dir=None,
 
 def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                      cellranger_version=None,cellranger_refdata=None,
-                     qc_protocol=None):
+                     cellranger_multi_config=None,qc_protocol=None):
     """
     Return expected QC outputs for a project
 
@@ -532,6 +534,10 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
         reference dataset; cellranger count outputs will
         be included for 10x protocols unless this path
         is set to `None`
+      cellranger_multi_config (str): path to a cellranger
+        multi config.csv file;  cellranger multi outputs
+        will be included for the `10x_CellPlex` protocol
+        if this is set and the file exists
       qc_protocol (str): QC protocol to predict outputs
         for; if not set then defaults to standard QC
         based on ended-ness
@@ -565,10 +571,11 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                             '10x_scRNAseq',
                             '10x_snRNAseq',
                             '10x_Visium',
-                            '10x_Multiome_GEX',)) \
+                            '10x_Multiome_GEX',
+                            '10x_CellPlex',)) \
             and project.fastq_attrs(fastq).read_number == 1:
-            # No screens for R1 for single cell, Visium or
-            # multiome GEX
+            # No screens for R1 for single cell, Visium,
+            # multiome GEX or CellPlex
             continue
         for screen in FASTQ_SCREENS:
             for output in [os.path.join(qc_dir,f)
@@ -584,7 +591,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                                '10x_scRNAseq',
                                '10x_snRNAseq',
                                '10x_Visium',
-                               '10x_Multiome_GEX',):
+                               '10x_Multiome_GEX',
+                               '10x_CellPlex',):
                 # Strand stats output based on R2
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[1]))
@@ -593,9 +601,12 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[0]))
             outputs.add(output)
-    # Cellranger count output
+    # Cellranger count/multi output
     if cellranger_refdata is not None:
-        prefix = "cellranger_count"
+        if qc_protocol == "10x_CellPlex":
+            prefix = "cellranger_multi"
+        else:
+            prefix = "cellranger_count"
         if cellranger_version:
             prefix = os.path.join(prefix,
                                   cellranger_version,
@@ -622,4 +633,13 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                             sample_name=sample.name,
                             prefix=prefix):
                         outputs.add(os.path.join(qc_dir,output))
+        elif qc_protocol == '10x_CellPlex' and cellranger_multi_config:
+            # Only expect multi outputs for CellPlex data if there
+            # is a 'config.csv' file
+            if os.path.exists(cellranger_multi_config):
+                for output in cellranger_multi_output(
+                        project,
+                        cellranger_multi_config,
+                        prefix=prefix):
+                    outputs.add(os.path.join(qc_dir,output))
     return sorted(list(outputs))

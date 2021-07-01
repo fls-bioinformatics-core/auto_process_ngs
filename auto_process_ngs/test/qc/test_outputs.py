@@ -1847,3 +1847,157 @@ class TestExpectedOutputs(unittest.TestCase):
         for r in reference_outputs:
             self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
                             "%s not found in expected" % r)
+
+    def test_expected_outputs_10x_cellplex_multiplexing(self):
+        """
+        expected_outputs: 10xGenomics CellPlex multiplexing with cellranger
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                       "PJB1_GEX_S1_R2_001.fastq.gz",
+                                       "PJB2_MC_S2_R1_001.fastq.gz",
+                                       "PJB2_MC_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        # Make mock fastq_strand
+        mock_fastq_strand_conf = os.path.join(self.wd,
+                                              p.name,
+                                              "fastq_strand.conf")
+        with open(mock_fastq_strand_conf,'w') as fp:
+            fp.write("")
+        # Make mock cellranger multi config.csv file
+        mock_config_csv = os.path.join(self.wd,
+                               "PJB",
+                               "10x_multi_config.csv")
+        with open(mock_config_csv,'wt') as fp:
+            fastq_dir = os.path.join(self.wd,
+                                     "PJB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,%s,any,PJB1,gene expression,
+PJB2_MC,%s,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""" % (fastq_dir,fastq_dir))
+        reference_outputs = ("qc/PJB1_GEX_S1_R1_001_fastqc",
+                             "qc/PJB1_GEX_S1_R1_001_fastqc.html",
+                             "qc/PJB1_GEX_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_GEX_S1_R2_001_fastqc",
+                             "qc/PJB1_GEX_S1_R2_001_fastqc.html",
+                             "qc/PJB1_GEX_S1_R2_001_fastqc.zip",
+                             "qc/PJB1_GEX_S1_R2_001_model_organisms_screen.png",
+                             "qc/PJB1_GEX_S1_R2_001_model_organisms_screen.txt",
+                             "qc/PJB1_GEX_S1_R2_001_other_organisms_screen.png",
+                             "qc/PJB1_GEX_S1_R2_001_other_organisms_screen.txt",
+                             "qc/PJB1_GEX_S1_R2_001_rRNA_screen.png",
+                             "qc/PJB1_GEX_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_GEX_S1_R2_001_fastq_strand.txt",
+                             "qc/PJB2_MC_S2_R1_001_fastqc",
+                             "qc/PJB2_MC_S2_R1_001_fastqc.html",
+                             "qc/PJB2_MC_S2_R1_001_fastqc.zip",
+                             "qc/PJB2_MC_S2_R2_001_fastqc",
+                             "qc/PJB2_MC_S2_R2_001_fastqc.html",
+                             "qc/PJB2_MC_S2_R2_001_fastqc.zip",
+                             "qc/PJB2_MC_S2_R2_001_model_organisms_screen.png",
+                             "qc/PJB2_MC_S2_R2_001_model_organisms_screen.txt",
+                             "qc/PJB2_MC_S2_R2_001_other_organisms_screen.png",
+                             "qc/PJB2_MC_S2_R2_001_other_organisms_screen.txt",
+                             "qc/PJB2_MC_S2_R2_001_rRNA_screen.png",
+                             "qc/PJB2_MC_S2_R2_001_rRNA_screen.txt",
+                             "qc/PJB2_MC_S2_R2_001_fastq_strand.txt",
+                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/metrics_summary.csv",
+                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/web_summary.html",
+                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/metrics_summary.csv",
+                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/web_summary.html",
+                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/multi/multiplexing_analysis/tag_calls_summary.csv",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    fastq_strand_conf=mock_fastq_strand_conf,
+                                    cellranger_multi_config=mock_config_csv,
+                                    cellranger_version="6.0.0",
+                                    cellranger_refdata=
+                                    "/data/refdata-cellranger-gex-GRCh38-2020-A",
+                                    qc_protocol="10x_CellPlex")
+        for e in expected:
+            print(e)
+            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
+                                  for r in reference_outputs],
+                            "%s not found in reference" % e)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
+                            "%s not found in expected" % r)
+
+    def test_expected_outputs_10x_cellplex_multiplexing_no_config_csv(self):
+        """
+        expected_outputs: 10xGenomics CellPlex multiplexing with cellranger (no config.csv file)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                       "PJB1_GEX_S1_R2_001.fastq.gz",
+                                       "PJB2_MC_S2_R1_001.fastq.gz",
+                                       "PJB2_MC_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        # Make mock fastq_strand
+        mock_fastq_strand_conf = os.path.join(self.wd,
+                                              p.name,
+                                              "fastq_strand.conf")
+        with open(mock_fastq_strand_conf,'w') as fp:
+            fp.write("")
+        reference_outputs = ("qc/PJB1_GEX_S1_R1_001_fastqc",
+                             "qc/PJB1_GEX_S1_R1_001_fastqc.html",
+                             "qc/PJB1_GEX_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_GEX_S1_R2_001_fastqc",
+                             "qc/PJB1_GEX_S1_R2_001_fastqc.html",
+                             "qc/PJB1_GEX_S1_R2_001_fastqc.zip",
+                             "qc/PJB1_GEX_S1_R2_001_model_organisms_screen.png",
+                             "qc/PJB1_GEX_S1_R2_001_model_organisms_screen.txt",
+                             "qc/PJB1_GEX_S1_R2_001_other_organisms_screen.png",
+                             "qc/PJB1_GEX_S1_R2_001_other_organisms_screen.txt",
+                             "qc/PJB1_GEX_S1_R2_001_rRNA_screen.png",
+                             "qc/PJB1_GEX_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_GEX_S1_R2_001_fastq_strand.txt",
+                             "qc/PJB2_MC_S2_R1_001_fastqc",
+                             "qc/PJB2_MC_S2_R1_001_fastqc.html",
+                             "qc/PJB2_MC_S2_R1_001_fastqc.zip",
+                             "qc/PJB2_MC_S2_R2_001_fastqc",
+                             "qc/PJB2_MC_S2_R2_001_fastqc.html",
+                             "qc/PJB2_MC_S2_R2_001_fastqc.zip",
+                             "qc/PJB2_MC_S2_R2_001_model_organisms_screen.png",
+                             "qc/PJB2_MC_S2_R2_001_model_organisms_screen.txt",
+                             "qc/PJB2_MC_S2_R2_001_other_organisms_screen.png",
+                             "qc/PJB2_MC_S2_R2_001_other_organisms_screen.txt",
+                             "qc/PJB2_MC_S2_R2_001_rRNA_screen.png",
+                             "qc/PJB2_MC_S2_R2_001_rRNA_screen.txt",
+                             "qc/PJB2_MC_S2_R2_001_fastq_strand.txt",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    fastq_strand_conf=mock_fastq_strand_conf,
+                                    cellranger_multi_config=None,
+                                    cellranger_version="6.0.0",
+                                    cellranger_refdata=
+                                    "/data/refdata-cellranger-gex-GRCh38-2020-A",
+                                    qc_protocol="10x_CellPlex")
+        for e in expected:
+            print(e)
+            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
+                                  for r in reference_outputs],
+                            "%s not found in reference" % e)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
+                            "%s not found in expected" % r)
