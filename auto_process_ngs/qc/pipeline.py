@@ -59,7 +59,6 @@ from ..pipeliner import PipelineParam as Param
 from ..pipeliner import PipelineFailure
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..tenx_genomics_utils import add_cellranger_args
-from ..tenx_genomics_utils import set_cell_count_for_project
 from ..utils import get_organism_list
 from .constants import FASTQ_SCREENS
 from .outputs import fastqc_output
@@ -72,6 +71,7 @@ from .outputs import check_cellranger_atac_count_outputs
 from .outputs import check_cellranger_arc_count_outputs
 from .outputs import expected_outputs
 from .utils import determine_qc_protocol
+from .utils import set_cell_count_for_project
 from .fastq_strand import build_fastq_strand_conf
 
 # Module specific logger
