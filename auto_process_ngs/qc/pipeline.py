@@ -1619,8 +1619,11 @@ class SetCellCountFromCellrangerCount(PipelineTask):
     def setup(self):
         # Extract and store the cell count from the cellranger
         # metric file
-        set_cell_count_for_project(self.args.project.dirn,
-                                   self.args.qc_dir)
+        try:
+            set_cell_count_for_project(self.args.project.dirn,
+                                       self.args.qc_dir)
+        except Exception as ex:
+            print("Failed to set the cell count: %s" % ex)
 
 class ReportQC(PipelineTask):
     """
