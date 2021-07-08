@@ -1520,10 +1520,14 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
 Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
 -------------------------------------------------------------------------------
 """ % (self._path,self._package_name,cmd,self._version)
-        elif self._package_name in ('cellranger',
-                                    'cellranger-arc',):
+        elif self._package_name == 'cellranger':
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
+        elif self._package_name == 'cellranger-arc':
+            header = "%s %s-%s" % (self._package_name,self._package_name,
+                                   self._version)
+            if version[0] >= 2:
+                header += '\n'
         elif self._package_name in ('spaceranger,'):
             header = "%s %s" % (self._package_name,self._version)
         # Handle version request or no args
