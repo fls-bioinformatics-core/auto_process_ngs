@@ -342,6 +342,14 @@ class TestCellrangerInfo(unittest.TestCase):
         os.chmod(cellranger_arc_100,0o775)
         return cellranger_arc_100
 
+    def _make_mock_cellranger_arc_200(self):
+        # Make a fake cellranger-atac 1.0.0 executable
+        cellranger_arc = os.path.join(self.wd,"cellranger-arc")
+        with open(cellranger_arc,'w') as fp:
+            fp.write("#!/bin/bash\necho -n cellranger-arc cellranger-arc-2.0.0")
+        os.chmod(cellranger_arc,0o775)
+        return cellranger_arc
+
     def test_cellranger_201(self):
         """cellranger_info: collect info for cellranger 2.0.1
         """
@@ -423,6 +431,23 @@ class TestCellrangerInfo(unittest.TestCase):
         cellranger_arc = self._make_mock_cellranger_arc_100()
         self.assertEqual(cellranger_info(name='cellranger-arc'),
                          (cellranger_arc,'cellranger-arc','1.0.0'))
+
+    def test_cellranger_arc_200(self):
+        """cellranger_info: collect info for cellranger-arc 2.0.0
+        """
+        cellranger_arc = self._make_mock_cellranger_arc_200()
+        self.assertEqual(cellranger_info(path=cellranger_arc),
+                         (cellranger_arc,'cellranger-arc','2.0.0'))
+
+    def test_cellranger_arc_200_on_path(self):
+        """cellranger_info: collect info for cellranger-arc 2.0.0 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        cellranger_arc = self._make_mock_cellranger_arc_200()
+        self.assertEqual(cellranger_info(name='cellranger-arc'),
+                         (cellranger_arc,'cellranger-arc','2.0.0'))
 
 class TestSpacerangerInfo(unittest.TestCase):
     """
