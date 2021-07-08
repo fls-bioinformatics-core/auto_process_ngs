@@ -346,7 +346,7 @@ class TestCellrangerInfo(unittest.TestCase):
         # Make a fake cellranger-atac 1.0.0 executable
         cellranger_arc = os.path.join(self.wd,"cellranger-arc")
         with open(cellranger_arc,'w') as fp:
-            fp.write("#!/bin/bash\necho -n cellranger-arc cellranger-arc-2.0.0")
+            fp.write("#!/bin/bash\necho cellranger-arc cellranger-arc-2.0.0")
         os.chmod(cellranger_arc,0o775)
         return cellranger_arc
 

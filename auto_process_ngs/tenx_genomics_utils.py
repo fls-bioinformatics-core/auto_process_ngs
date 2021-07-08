@@ -923,6 +923,9 @@ def cellranger_info(path=None,name=None):
                 except Exception as ex:
                     logger.warning("Unable to get version from '%s': "
                                    "%s" % (line,ex))
+            if package_version:
+                # Acquired version, stop processing lines
+                break
     else:
         # No package supplied or located
         logger.warning("Unable to identify %s package from '%s'" %
