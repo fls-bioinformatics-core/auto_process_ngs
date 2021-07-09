@@ -18,6 +18,7 @@ from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
+from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_LIBRARIES
 from auto_process_ngs.tenx_genomics_utils import *
 
@@ -581,17 +582,29 @@ class TestMultiomeSummary(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
 
-    def test_atac_summary_multiome(self):
-        """MultiomeSummary: check metrics are extracted from CSV file
+    def test_atac_summary_multiome_arc_1_0_0(self):
+        """MultiomeSummary: check metrics are extracted from CSV file (Cellranger ARC 1.0.0)
         """
         summary_csv = os.path.join(self.wd,"summary.csv")
-        with open(summary_csv,'w') as fp:
+        with open(summary_csv,'wt') as fp:
             fp.write(MULTIOME_SUMMARY)
         s = MultiomeSummary(summary_csv)
         self.assertEqual(s.estimated_number_of_cells,744)
         self.assertEqual(
             s.atac_median_high_quality_fragments_per_cell,8079)
         self.assertEqual(s.gex_median_genes_per_cell,1490)
+
+    def test_atac_summary_multiome_arc_2_0_0(self):
+        """MultiomeSummary: check metrics are extracted from CSV file (Cellranger ARC 2.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"summary.csv")
+        with open(summary_csv,'wt') as fp:
+            fp.write(MULTIOME_SUMMARY_2_0_0)
+        s = MultiomeSummary(summary_csv)
+        self.assertEqual(s.estimated_number_of_cells,785)
+        self.assertEqual(
+            s.atac_median_high_quality_fragments_per_cell,9.0)
+        self.assertEqual(s.gex_median_genes_per_cell,15.0)
 
 class TestMultiomeLibraries(unittest.TestCase):
     """
