@@ -358,7 +358,7 @@ class MultiomeSummary(MetricsSummary):
 
     - estimated_number_of_cells
     - atac_median_high_quality_fragments_per_cell
-    - gex_median_cells_per_gene
+    - gex_median_genes_per_cell
     """
     def __init__(self,f):
         """
@@ -383,7 +383,7 @@ class MultiomeSummary(MetricsSummary):
         return self.fetch(
             'ATAC Median high-quality fragments per cell')
     @property
-    def gex_median_cells_per_gene(self):
+    def gex_median_genes_per_cell(self):
         """
         Return the median genes per cell for GEX data
         """

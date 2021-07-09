@@ -591,7 +591,7 @@ class TestMultiomeSummary(unittest.TestCase):
         self.assertEqual(s.estimated_number_of_cells,744)
         self.assertEqual(
             s.atac_median_high_quality_fragments_per_cell,8079)
-        self.assertEqual(s.gex_median_cells_per_gene,1490)
+        self.assertEqual(s.gex_median_genes_per_cell,1490)
 
 class TestMultiomeLibraries(unittest.TestCase):
     """
