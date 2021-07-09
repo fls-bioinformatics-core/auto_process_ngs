@@ -1730,7 +1730,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             elif self._package_name == "cellranger-arc":
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
-                    fp.write(mock10xdata.MULTIOME_SUMMARY)
+                    if version[0] < 2:
+                        # Format for cellranger-arc < 2.0.0
+                        fp.write(mock10xdata.MULTIOME_SUMMARY)
+                    else:
+                        # Format for cellranger-arc >= 2.0.0
+                        fp.write(mock10xdata.MULTIOME_SUMMARY_2_0_0)
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
