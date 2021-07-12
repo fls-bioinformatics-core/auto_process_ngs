@@ -37,9 +37,7 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import split_run_name_full
-from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.TabFile import TabFile
-from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from .analysis import locate_project
 from .analysis import split_sample_reference
@@ -48,11 +46,7 @@ from .docwriter import Document
 from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
-from .analysis import AnalysisProject
 from .bcl2fastq.utils import get_bases_mask
-from .metadata import AnalysisProjectQCDirInfo
-from .utils import get_numbered_subdir
-from .utils import ZipArchive
 from . import css_rules
 
 # Initialise logging
@@ -642,7 +636,7 @@ class CellrangerMultiConfigCsv(object):
     """
     def __init__(self,filen):
         """
-        Create new CellrangerMultiConfigCSV instance
+        Create new CellrangerMultiConfigCsv instance
 
         Arguments:
           filen (str): path to cellranger multi config.csv
