@@ -63,21 +63,33 @@ class CellrangerCount(object):
         self._reference_data = reference_data
         self._version = version
         # Paths to metrics and web summary files
-        metrics_csv = "metrics_summary.csv"
-        if self.pipeline_name in ('cellranger-atac',
-                                  'cellranger-arc'):
+        if self.pipeline_name in ('cellranger',):
+            metrics_csv = "metrics_summary.csv"
+        elif self.pipeline_name in ('cellranger-atac',
+                                    'cellranger-arc'):
             metrics_csv = "summary.csv"
+        else:
+            metrics_csv = None
         try:
             self._metrics_csv = os.path.join(self.dir,
                                              "outs",
                                              metrics_csv)
+            if not os.path.exists(self._metrics_csv):
+                self._metrics_csv = None
         except OSError:
+            # OSError raise by self.dir if top-level is
+            # missing
             self._metrics_csv = None
+        # Path to web summary HTML file
         try:
             self._web_summary = os.path.join(self.dir,
                                              "outs",
                                              "web_summary.html")
+            if not os.path.exists(self._web_summary):
+                self._web_summary = None
         except OSError:
+            # OSError raise by self.dir if top-level is
+            # missing
             self._web_summary = None
 
     @property
@@ -167,6 +179,8 @@ class CellrangerCount(object):
             metrics = AtacSummary
         elif self.pipeline_name == "cellranger-arc":
             metrics = MultiomeSummary
+        else:
+            metrics = None
         return metrics(self.metrics_csv)
 
     @property
@@ -228,10 +242,9 @@ class CellrangerMulti(object):
         except OSError:
             pass
         # Command line file
-        try:
-            self._cmdline_file = os.path.join(self.dir,
-                                              "_cmdline")
-        except OSError:
+        self._cmdline_file = os.path.join(self.dir,
+                                          "_cmdline")
+        if not os.path.exists(self._cmdline_file):
             self._cmdline_file = None
         # Locate multi config.csv file
         if not config_csv:
