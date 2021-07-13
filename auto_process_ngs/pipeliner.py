@@ -3306,6 +3306,17 @@ class Dispatcher(object):
     function etc, executes it, and makes the result available
     to the dispatcher on successful completion.
 
+    If the invoked function raises an exception then the
+    result will be returned as None, and the exception will
+    be available from the `get_exception` method.
+
+    For example:
+
+    >>> if d.get_exception():
+    >>>     print("Success: %s" % d.get_result())
+    >>> else:
+    >>>     print("Failure: %s" % d.get_exception())
+
     Currently uses cloudpickle as the pickling module:
     https://pypi.org/project/cloudpickle/
     """
@@ -3329,6 +3340,9 @@ class Dispatcher(object):
         # Use the current Python interpreter when
         # running the function
         self._python = sys.executable
+        # Result and exception
+        self._result = None
+        self._exception = None
         if cleanup:
             atexit.register(self._cleanup)
 
@@ -3438,6 +3452,23 @@ class Dispatcher(object):
                         pkl_kwds_file,
                         self._pickled_result_file))
 
+    def _handle_result(self):
+        """
+        Internal: deal with the results from calling the function
+        """
+        if not (self._result is None and self._exception is None):
+            return
+        if os.path.exists(self._pickled_result_file):
+            # Try and retrieve the result of the call
+            result = self._unpickle_object(self._pickled_result_file)
+            if not isinstance(result,Exception):
+                self._result = result
+            else:
+                self._exception = result
+        else:
+            # No output found
+            raise PipelineError("Pickled output not found")
+
     def get_result(self):
         """Return the result from the function invocation
 
@@ -3445,14 +3476,22 @@ class Dispatcher(object):
           Object: the object returned by the function, or None
             if no result was found.
         """
-        if os.path.exists(self._pickled_result_file):
-            result = self._unpickle_object(self._pickled_result_file)
-            if isinstance(result,Exception):
-                raise result
-            else:
-                return result
+        self._handle_result()
+        if self._exception:
+            raise PipelineError("Function raised an exception during "
+                                "execution (%s)" % self._exception)
         else:
-            raise PipelineError("Pickled output not found")
+            return self._result
+
+    def get_exception(self):
+        """Return the exception from the function invocation
+
+        Returns:
+          Exception: the exception returned by the function, or
+            None if exception was raised.
+        """
+        self._handle_result()
+        return self._exception
 
     def _pickle_object(self,obj,pickle_file=None):
         """
