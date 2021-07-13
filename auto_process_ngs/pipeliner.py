@@ -2907,13 +2907,19 @@ class PipelineFunctionTask(PipelineTask):
         result = list()
         try:
             for d in self._dispatchers:
-                result.append(d.get_result())
+                try:
+                    result.append(d.get_result())
+                except PipelineError as ex:
+                    self.report("'%s': exception collecting result from "
+                                "dispatcher (%s)" % (self.name(),
+                                                     self.id()))
+                    self.report_diagnostics(d.get_exception())
+                    raise ex
         except Exception as ex:
             logger.critical("'%s': exception collecting results from "
-                            "dispatchers (%s)" % (self.name(),self.id()))
-            self.report("'%s': exception collecting results from "
-                        "dispatchers (%s)" % (self.name(),self.id()))
-            self.report("Exception: %s" % ex)
+                            "dispatchers (%s): %s" % (self.name(),
+                                                      self.id(),
+                                                      ex))
             self._completed = True
             self._exit_code = 1
             result = None
