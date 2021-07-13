@@ -3389,7 +3389,14 @@ class Dispatcher(object):
             result = func(*args,**kwds)
             logger.info("Dispatcher: result: %s" % (result,))
         except Exception as ex:
+            # Report exception to stdout
             print("Dispatched function raised exception: %s" % ex)
+            try:
+                print("Traceback:\n%s" %
+                      ''.join(traceback.format_tb(ex.__traceback__)))
+            except AttributeError:
+                # No __traceback__ for Python 2 exceptions
+                pass
             result = ex
         # Pickle the result
         if pkl_result_file:
