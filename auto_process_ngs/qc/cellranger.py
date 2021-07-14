@@ -63,23 +63,26 @@ class CellrangerCount(object):
         self._reference_data = reference_data
         self._version = version
         # Paths to metrics and web summary files
-        if self.pipeline_name in ('cellranger',):
-            metrics_csv = "metrics_summary.csv"
-        elif self.pipeline_name in ('cellranger-atac',
-                                    'cellranger-arc'):
-            metrics_csv = "summary.csv"
-        else:
-            metrics_csv = None
         try:
-            self._metrics_csv = os.path.join(self.dir,
-                                             "outs",
-                                             metrics_csv)
-            if not os.path.exists(self._metrics_csv):
-                self._metrics_csv = None
+            if self.pipeline_name in ('cellranger',):
+                metrics_csv = os.path.join(self.dir,
+                                           "outs",
+                                           "metrics_summary.csv")
+            elif self.pipeline_name in ('cellranger-atac',
+                                        'cellranger-arc'):
+                metrics_csv = os.path.join(self.dir,
+                                           "outs",
+                                           "summary.csv")
+            else:
+                metrics_csv = None
+            if metrics_csv:
+                if not os.path.exists(metrics_csv):
+                    metrics_csv = None
         except OSError:
             # OSError raise by self.dir if top-level is
             # missing
-            self._metrics_csv = None
+            metrics_csv = None
+        self._metrics_csv = metrics_csv
         # Path to web summary HTML file
         try:
             self._web_summary = os.path.join(self.dir,
