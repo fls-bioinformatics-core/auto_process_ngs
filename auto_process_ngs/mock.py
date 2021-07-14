@@ -1370,7 +1370,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
             elif self._package_name == 'cellranger-atac':
                 self._version = '2.0.0'
             elif self._package_name == 'cellranger-arc':
-                self._version = '1.0.0'
+                self._version = '2.0.0'
             elif self._package_name == 'spaceranger':
                 self._version = '1.1.0'
         else:
@@ -1520,10 +1520,14 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
 Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
 -------------------------------------------------------------------------------
 """ % (self._path,self._package_name,cmd,self._version)
-        elif self._package_name in ('cellranger',
-                                    'cellranger-arc',):
+        elif self._package_name == 'cellranger':
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
+        elif self._package_name == 'cellranger-arc':
+            header = "%s %s-%s" % (self._package_name,self._package_name,
+                                   self._version)
+            if version[0] >= 2:
+                header += '\n'
         elif self._package_name in ('spaceranger,'):
             header = "%s %s" % (self._package_name,self._version)
         # Handle version request or no args
@@ -1555,7 +1559,10 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             # --qc removed in cellranger 6.0.0
             include_qc_arg = False
         elif self._package_name == "cellranger-atac" and version[0] >= 2:
-            # --qc removed in cellranger-atc 2.0.0
+            # --qc removed in cellranger-atac 2.0.0
+            include_qc_arg = False
+        elif self._package_name == "cellranger-arc" and version[0] >= 2:
+            # --qc removed in cellranger-arc 2.0.0
             include_qc_arg = False
         if include_qc_arg:
             mkfastq.add_argument("--qc",action="store_true")
@@ -1723,7 +1730,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             elif self._package_name == "cellranger-arc":
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
-                    fp.write(mock10xdata.MULTIOME_SUMMARY)
+                    if version[0] < 2:
+                        # Format for cellranger-arc < 2.0.0
+                        fp.write(mock10xdata.MULTIOME_SUMMARY)
+                    else:
+                        # Format for cellranger-arc >= 2.0.0
+                        fp.write(mock10xdata.MULTIOME_SUMMARY_2_0_0)
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")

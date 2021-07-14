@@ -1215,8 +1215,8 @@ class TestQCPipeline(unittest.TestCase):
                             "Missing %s" % f)
 
     #@unittest.skip("Skipped")
-    def test_qcpipeline_multiome_atac_with_cellranger_arc_count(self):
-        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count'
+    def test_qcpipeline_multiome_atac_with_cellranger_arc_count_1_0_0(self):
+        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count (Cellranger ARC 1.0.0)'
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
@@ -1303,8 +1303,96 @@ class TestQCPipeline(unittest.TestCase):
                             "Missing %s" % f)
 
     #@unittest.skip("Skipped")
-    def test_qcpipeline_multiome_gex_with_cellranger_arc_count(self):
-        """QCPipeline: single cell multiome GEX QC run with 'cellranger-arc count'
+    def test_qcpipeline_multiome_atac_with_cellranger_arc_count_2_0_0(self):
+        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count (Cellranger ARC 2.0.0)'
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
+                                 version="2.0.0")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock multiome ATAC analysis project
+        p = MockAnalysisProject("PJB_ATAC",("PJB1_ATAC_S1_R1_001.fastq.gz",
+                                            "PJB1_ATAC_S1_R2_001.fastq.gz",
+                                            "PJB1_ATAC_S1_R3_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R1_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R2_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R3_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Single Cell Multiome',
+                                           'Library type': 'ATAC' })
+        p.create(top_dir=self.wd)
+        # Make mock multiome GEX analysis project (with QC outputs)
+        p2 = MockAnalysisProject("PJB_GEX",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                            "PJB1_GEX_S1_R2_001.fastq.gz",
+                                            "PJB2_GEX_S2_R1_001.fastq.gz",
+                                            "PJB2_GEX_S2_R2_001.fastq.gz",),
+                                 metadata={ 'Organism': 'Human',
+                                            'Single cell platform':
+                                            '10xGenomics Single Cell Multiome',
+                                            'Library type': 'GEX' })
+        p2.create(top_dir=self.wd)
+        UpdateAnalysisProject(
+            AnalysisProject(os.path.join(self.wd,p2.name))).\
+            add_qc_outputs(protocol='10x_Multiome_GEX')
+        # Add the 10x_multiome_libraries.info file
+        with open(os.path.join(self.wd,
+                               "PJB_ATAC",
+                               "10x_multiome_libraries.info"),'wt') as fp:
+            fp.write("{sample1}\t{working_dir}:{project}/{sample2}\n".format(
+                sample1="PJB1_ATAC",
+                sample2="PJB1_GEX",
+                working_dir=self.wd,
+                project="PJB_GEX"))
+            fp.write("{sample1}\t{working_dir}:{project}/{sample2}\n".format(
+                sample1="PJB2_ATAC",
+                sample2="PJB2_GEX",
+                working_dir=self.wd,
+                project="PJB_GEX"))
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
+                          multiqc=True)
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_arc_references=
+                           { 'human':
+                             '/data/refdata-cellranger-arc-GRCh38-2020-A' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB_ATAC.zip",
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB_ATAC",f)),
+                            "Missing %s" % f)
+
+    #@unittest.skip("Skipped")
+    def test_qcpipeline_multiome_gex_with_cellranger_arc_count_1_0_0(self):
+        """QCPipeline: single cell multiome GEX QC run with 'cellranger-arc count' (Cellranger ARC 1.0.0)
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
@@ -1385,6 +1473,94 @@ class TestQCPipeline(unittest.TestCase):
                   "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
                   "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
                   "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB_GEX",f)),
+                            "Missing %s" % f)
+
+    #@unittest.skip("Skipped")
+    def test_qcpipeline_multiome_gex_with_cellranger_arc_count_2_0_0(self):
+        """QCPipeline: single cell multiome GEX QC run with 'cellranger-arc count' (Cellranger ARC 2.0.0)
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
+                                 version="2.0.0")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock multiome GEX analysis project
+        p = MockAnalysisProject("PJB_GEX",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                           "PJB1_GEX_S1_R2_001.fastq.gz",
+                                           "PJB2_GEX_S2_R1_001.fastq.gz",
+                                           "PJB2_GEX_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Single Cell Multiome',
+                                           'Library type': 'GEX' })
+        p.create(top_dir=self.wd)
+        # Make mock multiome ATAC analysis project (with QC outputs)
+        p2 = MockAnalysisProject("PJB_ATAC",("PJB1_ATAC_S1_R1_001.fastq.gz",
+                                             "PJB1_ATAC_S1_R2_001.fastq.gz",
+                                             "PJB1_ATAC_S1_R3_001.fastq.gz",
+                                             "PJB2_ATAC_S2_R1_001.fastq.gz",
+                                             "PJB2_ATAC_S2_R2_001.fastq.gz",
+                                             "PJB2_ATAC_S2_R3_001.fastq.gz"),
+                                 metadata={ 'Organism': 'Human',
+                                            'Single cell platform':
+                                            '10xGenomics Single Cell Multiome',
+                                            'Library type': 'ATAC' })
+        p2.create(top_dir=self.wd)
+        UpdateAnalysisProject(
+            AnalysisProject(os.path.join(self.wd,p2.name))).\
+            add_qc_outputs(protocol='10x_Multiome_ATAC')
+        # Add the 10x_multiome_libraries.info file
+        with open(os.path.join(self.wd,
+                               "PJB_GEX",
+                               "10x_multiome_libraries.info"),'wt') as fp:
+            fp.write("{sample1}\t{working_dir}:{project}/{sample2}\n".format(
+                sample1="PJB1_GEX",
+                sample2="PJB1_ATAC",
+                working_dir=self.wd,
+                project="PJB_ATAC"))
+            fp.write("{sample1}\t{working_dir}:{project}/{sample2}\n".format(
+                sample1="PJB2_GEX",
+                sample2="PJB2_ATAC",
+                working_dir=self.wd,
+                project="PJB_ATAC"))
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
+                          multiqc=True)
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_arc_references=
+                           { 'human':
+                             '/data/refdata-cellranger-arc-GRCh38-2020-A' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB_GEX.zip",
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB_GEX",f)),

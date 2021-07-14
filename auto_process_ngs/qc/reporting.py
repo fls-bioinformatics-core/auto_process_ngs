@@ -821,7 +821,7 @@ class QCReport(Document):
         '10x_fragments_overlapping_peaks': '%fragments overlapping peaks',
         '10x_tss_enrichment_score': 'TSS enrichment score',
         '10x_atac_fragments_per_cell': '#ATAC fragments/cell',
-        '10x_gex_cells_per_gene': '#GEX cells/gene',
+        '10x_gex_genes_per_cell': '#GEX genes/cell',
         '10x_pipeline': 'Pipeline',
         '10x_reference': 'Reference dataset',
         '10x_web_summary': 'HTML report',
@@ -1063,7 +1063,7 @@ class QCReport(Document):
                                              'linked_sample',
                                              '10x_cells',
                                              '10x_atac_fragments_per_cell',
-                                             '10x_gex_cells_per_gene']
+                                             '10x_gex_genes_per_cell']
                 # Add column for multiple versions
                 if len(project.software[pkg]) > 1:
                     single_library_fields.append('10x_pipeline')
@@ -1778,7 +1778,7 @@ class QCReportSample(object):
         - 10x_fragments_overlapping_peaks
         - 10x_tss_enrichment_score
         - 10x_atac_fragments_per_cell
-        - 10x_gex_cells_per_gene
+        - 10x_gex_genes_per_cell
         - 10x_pipeline
         - 10x_reference
         - 10x_web_summary
@@ -1857,9 +1857,9 @@ class QCReportSample(object):
                 elif field == "10x_atac_fragments_per_cell":
                     value = pretty_print_reads(
                         metrics.atac_median_high_quality_fragments_per_cell)
-                elif field == "10x_gex_cells_per_gene":
+                elif field == "10x_gex_genes_per_cell":
                     value = pretty_print_reads(
-                        metrics.gex_median_cells_per_gene)
+                        metrics.gex_median_genes_per_cell)
                 elif field == "10x_pipeline":
                     if cellranger_count.version:
                         value = "%s %s" % (cellranger_count.pipeline_name,

@@ -18,6 +18,7 @@ from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
+from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_LIBRARIES
 from auto_process_ngs.tenx_genomics_utils import *
 
@@ -342,6 +343,14 @@ class TestCellrangerInfo(unittest.TestCase):
         os.chmod(cellranger_arc_100,0o775)
         return cellranger_arc_100
 
+    def _make_mock_cellranger_arc_200(self):
+        # Make a fake cellranger-atac 1.0.0 executable
+        cellranger_arc = os.path.join(self.wd,"cellranger-arc")
+        with open(cellranger_arc,'w') as fp:
+            fp.write("#!/bin/bash\necho cellranger-arc cellranger-arc-2.0.0")
+        os.chmod(cellranger_arc,0o775)
+        return cellranger_arc
+
     def test_cellranger_201(self):
         """cellranger_info: collect info for cellranger 2.0.1
         """
@@ -423,6 +432,23 @@ class TestCellrangerInfo(unittest.TestCase):
         cellranger_arc = self._make_mock_cellranger_arc_100()
         self.assertEqual(cellranger_info(name='cellranger-arc'),
                          (cellranger_arc,'cellranger-arc','1.0.0'))
+
+    def test_cellranger_arc_200(self):
+        """cellranger_info: collect info for cellranger-arc 2.0.0
+        """
+        cellranger_arc = self._make_mock_cellranger_arc_200()
+        self.assertEqual(cellranger_info(path=cellranger_arc),
+                         (cellranger_arc,'cellranger-arc','2.0.0'))
+
+    def test_cellranger_arc_200_on_path(self):
+        """cellranger_info: collect info for cellranger-arc 2.0.0 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        cellranger_arc = self._make_mock_cellranger_arc_200()
+        self.assertEqual(cellranger_info(name='cellranger-arc'),
+                         (cellranger_arc,'cellranger-arc','2.0.0'))
 
 class TestSpacerangerInfo(unittest.TestCase):
     """
@@ -556,17 +582,29 @@ class TestMultiomeSummary(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
 
-    def test_atac_summary_multiome(self):
-        """MultiomeSummary: check metrics are extracted from CSV file
+    def test_atac_summary_multiome_arc_1_0_0(self):
+        """MultiomeSummary: check metrics are extracted from CSV file (Cellranger ARC 1.0.0)
         """
         summary_csv = os.path.join(self.wd,"summary.csv")
-        with open(summary_csv,'w') as fp:
+        with open(summary_csv,'wt') as fp:
             fp.write(MULTIOME_SUMMARY)
         s = MultiomeSummary(summary_csv)
         self.assertEqual(s.estimated_number_of_cells,744)
         self.assertEqual(
             s.atac_median_high_quality_fragments_per_cell,8079)
-        self.assertEqual(s.gex_median_cells_per_gene,1490)
+        self.assertEqual(s.gex_median_genes_per_cell,1490)
+
+    def test_atac_summary_multiome_arc_2_0_0(self):
+        """MultiomeSummary: check metrics are extracted from CSV file (Cellranger ARC 2.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"summary.csv")
+        with open(summary_csv,'wt') as fp:
+            fp.write(MULTIOME_SUMMARY_2_0_0)
+        s = MultiomeSummary(summary_csv)
+        self.assertEqual(s.estimated_number_of_cells,785)
+        self.assertEqual(
+            s.atac_median_high_quality_fragments_per_cell,9.0)
+        self.assertEqual(s.gex_median_genes_per_cell,15.0)
 
 class TestMultiomeLibraries(unittest.TestCase):
     """
