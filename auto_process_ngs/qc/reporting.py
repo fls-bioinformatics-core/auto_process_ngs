@@ -2123,7 +2123,7 @@ class QCReportSample(object):
         elif field == "10x_atac_fragments_per_cell":
             value = pretty_print_reads(
                 metrics.atac_median_high_quality_fragments_per_cell)
-        elif field == "10x_gex_geners_per_cell":
+        elif field == "10x_gex_genes_per_cell":
             value = pretty_print_reads(
                 metrics.gex_median_genes_per_cell)
         elif field == "10x_pipeline":
