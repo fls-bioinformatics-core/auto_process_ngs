@@ -1216,7 +1216,7 @@ class TestQCPipeline(unittest.TestCase):
 
     #@unittest.skip("Skipped")
     def test_qcpipeline_multiome_atac_with_cellranger_arc_count_1_0_0(self):
-        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count (Cellranger ARC 1.0.0)'
+        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count' (Cellranger ARC 1.0.0)
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
@@ -1304,7 +1304,7 @@ class TestQCPipeline(unittest.TestCase):
 
     #@unittest.skip("Skipped")
     def test_qcpipeline_multiome_atac_with_cellranger_arc_count_2_0_0(self):
-        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count (Cellranger ARC 2.0.0)'
+        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count' (Cellranger ARC 2.0.0)
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
