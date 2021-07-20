@@ -322,6 +322,7 @@ if __name__ == "__main__":
     qc_dir = args.qc_dir
     master_fastq_dir = None
     fastq_attrs = IlluminaFastqAttrs
+    extra_files = set()
 
     # Deal with inputs
     #
@@ -371,6 +372,12 @@ if __name__ == "__main__":
             sys.exit(1)
         # Look for project metadata
         info_file = locate_project_info_file(dir_path)
+        # Look for extra files
+        for f in ('10x_multiome_libraries.info',
+                  '10x_multi_config.csv',):
+            ff = os.path.join(dir_path,f)
+            if os.path.isfile(ff):
+                extra_files.add(ff)
     else:
         # Look for a metadata file based on Fastqs
         for fq in inputs:
@@ -608,6 +615,11 @@ if __name__ == "__main__":
         project_metadata['name'] = os.path.basename(out_dir)
     if args.organism:
         project_metadata['organism'] = args.organism
+
+    # Import extra files specified by the user
+    for f in list(extra_files):
+        print("Importing %s" % f)
+        os.symlink(f,os.path.join(project_dir,os.path.basename(f)))
 
     # Save out metadata to temporary project dir
     info_file = os.path.join(project_dir,"README.info")
