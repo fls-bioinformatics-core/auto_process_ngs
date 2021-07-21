@@ -1795,6 +1795,8 @@ class RunCellrangerMulti(PipelineTask):
         self._working_dir = None
         # Samples from config.csv
         self._samples = []
+        # Whether to run cellranger multi
+        self.run_cellranger_multi = False
     def setup(self):
         # Check if there's anything to do
         if not self.args.config_csv:
@@ -1818,7 +1820,6 @@ class RunCellrangerMulti(PipelineTask):
         self._outs_files_per_sample = ("web_summary.html",
                                        "metrics_summary.csv")
         # Check outputs and run cellranger if required
-        run_cellranger_multi = False
         multi_dir = os.path.abspath(
             os.path.join(self.args.out_dir,
                          "cellranger_multi",
@@ -1832,7 +1833,7 @@ class RunCellrangerMulti(PipelineTask):
                                     "per_sample_outs",
                                     sample,f)
                 if not os.path.exists(path):
-                    run_cellranger_multi = True
+                    self.run_cellranger_multi = True
                     break
         # Multiplexing analysis outputs
         for f in self._outs_files_multi_analysis:
@@ -1840,15 +1841,15 @@ class RunCellrangerMulti(PipelineTask):
                                 "multi",
                                 "multiplexing_analysis",f)
             if not os.path.exists(path):
-                run_cellranger_multi = True
+                self.run_cellranger_multi = True
                 break
         # Top level outputs
         for f in self._top_level_files:
             path = os.path.join(multi_dir,f)
             if not os.path.exists(path):
-                run_cellranger_multi = True
+                self.run_cellranger_multi = True
                 break
-        if not run_cellranger_multi:
+        if not self.run_cellranger_multi:
             print("Found existing outputs")
             return
         # Create a working directory for this sample
@@ -1893,9 +1894,19 @@ class RunCellrangerMulti(PipelineTask):
         # Handle outputs from cellranger multi
         has_errors = False
         # Check outputs
-        top_dir = os.path.join(self._working_dir,
-                               "tmp.cellranger_multi.%s" % self.args.project.name,
-                               self.args.project.name)
+        if self.run_cellranger_multi:
+            top_dir = os.path.join(self._working_dir,
+                                   "tmp.cellranger_multi.%s" %
+                                   self.args.project.name,
+                                   self.args.project.name)
+        else:
+            top_dir = os.path.abspath(
+                os.path.join(self.args.out_dir,
+                             "cellranger_multi",
+                             self.args.cellranger_version,
+                             os.path.basename(
+                                 self.args.reference_data_path)
+                ))
         outs_dir = os.path.join(top_dir,"outs")
         missing_files = []
         # Per sample outputs
@@ -1924,7 +1935,7 @@ class RunCellrangerMulti(PipelineTask):
         if missing_files:
             print("Some output files missing from multiplexing analysis")
             has_errors = True
-        else:
+        elif self.run_cellranger_multi:
             # Move multi outputs to final destination
             multi_dir = os.path.abspath(
                 os.path.join(self.args.out_dir,
