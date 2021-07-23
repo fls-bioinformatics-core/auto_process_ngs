@@ -26,8 +26,6 @@ logger = logging.getLogger(__name__)
 # Data
 #######################################################################
 
-BCL2FASTQ_VERSIONS = ('1.8','2.17','2.20',)
-
 BCL2FASTQ_DEFAULTS = {
     "minimum_trimmed_read_length": 35,
     "mask_short_adapter_reads": 22,
