@@ -276,8 +276,17 @@ def add_make_fastqs_command(cmdparser):
                                   "in the bcl2fastq conversion (overrides "
                                   "default). Set to 'auto' to determine "
                                   "automatically")
-    # Options to control bcl2fastq
-    bcl_to_fastq = p.add_argument_group('Bcl2fastq options')
+    # Options to control bcl converter (bcl2fastq/bcl-convert)
+    bcl_to_fastq = p.add_argument_group('Bcl conversion options')
+    # BCL converter
+    bcl_to_fastq.add_argument('--bcl-converter',
+                              choices=['bcl2fastq','bclconvert',],
+                              dest='bcl_converter',
+                              default='bcl2fastq',
+                              help="explicitly set BCL conversion software "
+                              "to use for non-10xGenomics/non-ICELL8 runs "
+                              "(either 'bcl2fastq' or 'bclconvert'; default "
+                              "is 'bcl2fastq')")
     # Use lane splitting
     # Determine defaults to report to user
     no_lane_splitting_platforms = []
@@ -315,14 +324,12 @@ def add_make_fastqs_command(cmdparser):
     bcl_to_fastq.add_argument('--no-lane-splitting',action='store_true',
                               dest='no_lane_splitting',default=False,
                               help="don't split the output FASTQ files by "
-                              "lane (bcl2fastq v2 only; turn off using "
-                              "--use-lane-splitting)%s" %
+                              "lane (turn off using --use-lane-splitting)%s" %
                               default_no_lane_splitting)
     bcl_to_fastq.add_argument('--use-lane-splitting',action='store_true',
                               dest='use_lane_splitting',default=False,
                               help="split the output FASTQ files by lane "
-                              "(bcl2fastq v2 only; turn off using "
-                              "--no-lane-splitting)%s" %
+                              "(turn off using --no-lane-splitting)%s" %
                               default_use_lane_splitting)
     bcl_to_fastq.add_argument("--find-adapters-with-sliding-window",
                               action="store_true",
@@ -1302,6 +1309,7 @@ def make_fastqs(args):
         force_copy_of_primary_data=args.force_copy,
         generate_stats=(not args.no_stats),
         analyse_barcodes=(not args.no_barcode_analysis),
+        bcl_converter=args.bcl_converter,
         require_bcl2fastq_version=args.bcl2fastq_version,
         unaligned_dir=args.out_dir,
         sample_sheet=args.sample_sheet,
