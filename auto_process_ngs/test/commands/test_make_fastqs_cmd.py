@@ -11,6 +11,7 @@ from auto_process_ngs.auto_processor import AutoProcess
 from bcftbx.mock import MockIlluminaRun
 from bcftbx.mock import SampleSheets
 from auto_process_ngs.mock import MockBcl2fastq2Exe
+from auto_process_ngs.mock import MockBclConvertExe
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import Mock10xPackageExe
 from auto_process_ngs.commands.make_fastqs_cmd import make_fastqs
@@ -82,6 +83,64 @@ poll_interval = 0.5
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,protocol="standard")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_M00879_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_M00879_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_make_fastqs_standard_protocol_bclconvert(self):
+        """make_fastqs: standard protocol (bcl-convert)
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl-convert
+        MockBclConvertExe.create(os.path.join(self.bin,"bcl-convert"),
+                                 version="3.7.5")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_M00879_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        make_fastqs(ap,protocol="standard",
+                    bcl_converter="bclconvert")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,

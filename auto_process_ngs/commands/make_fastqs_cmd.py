@@ -39,7 +39,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 unaligned_dir=None,sample_sheet=None,
                 name=None,lanes=None,lane_subsets=None,
                 icell8_well_list=None,
-                nprocessors=None,require_bcl2fastq_version=None,
+                nprocessors=None,bcl_converter=None,
+                require_bcl2fastq_version=None,
                 bases_mask=None,no_lane_splitting=False,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
@@ -113,6 +114,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         for fastqs
       analyse_barcodes (bool): if True then (re)analyse barcodes for
         fastqs
+      bcl_converter (str): default BCL-to-Fastq conversion software to
+        use (defaults to "bcl2fastq")
       require_bcl2fastq_version (str): (optional) specify bcl2fastq
         version to use. Should be a string of the form '1.8.4' or
         '>2.0'. Set to None to automatically determine required
@@ -316,24 +319,29 @@ def make_fastqs(ap,protocol='standard',platform=None,
         # Look for default setting
         create_empty_fastqs = ap.settings.bcl2fastq.create_empty_fastqs
 
+    # BCL converter
+    if bcl_converter is None:
+        bcl_converter = "bcl2fastq"
+
     # Require specific bcl2fastq version
-    if require_bcl2fastq_version is None:
-        # Look for platform-specific requirement
-        try:
-            require_bcl2fastq_version = \
-                ap.settings.platform[ap.metadata.platform].bcl2fastq
-            print("Bcl2fastq version %s required for platform '%s'" %
-                  (ap.metadata.platform,require_bcl2fastq_version))
-        except (KeyError,AttributeError):
-            pass
-    if require_bcl2fastq_version is None:
-        # Look for default requirement
-        require_bcl2fastq_version = ap.settings.bcl2fastq.default_version
-        print("Bcl2fastq version %s required by default" %
-              require_bcl2fastq_version)
-    if require_bcl2fastq_version is not None:
-        # No version requirement
-        print("No bcl2fastq version explicitly specified")
+    if bcl_converter == "bcl2fastq":
+        if require_bcl2fastq_version is None:
+            # Look for platform-specific requirement
+            try:
+                require_bcl2fastq_version = \
+                    ap.settings.platform[ap.metadata.platform].bcl2fastq
+                print("Bcl2fastq version %s required for platform '%s'" %
+                      (ap.metadata.platform,require_bcl2fastq_version))
+            except (KeyError,AttributeError):
+                pass
+        if require_bcl2fastq_version is None:
+            # Look for default requirement
+            require_bcl2fastq_version = ap.settings.bcl2fastq.default_version
+            print("Bcl2fastq version %s required by default" %
+                  require_bcl2fastq_version)
+        if require_bcl2fastq_version is not None:
+            # No version requirement
+            print("No bcl2fastq version explicitly specified")
 
     # Number of processors
     if not nprocessors:
@@ -348,6 +356,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
     runners = {
         'rsync_runner': ap.settings.runners.rsync,
         'bcl2fastq_runner': ap.settings.runners.bcl2fastq,
+        'bclconvert_runner': ap.settings.runners.bcl2fastq,
         'demultiplex_icell8_atac_runner': ap.settings.runners.bcl2fastq,
         'cellranger_runner': ap.settings.runners.cellranger,
         'cellranger_atac_runner': ap.settings.runners.cellranger,
@@ -364,6 +373,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
     # Set up pipeline environment modules
     envmodules = {}
     for envmod in ('bcl2fastq',
+                   'bclconvert',
                    'cellranger_mkfastq',
                    'cellranger_atac_mkfastq',
                    'cellranger_arc_mkfastq',
@@ -463,6 +473,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         outputs = make_fastqs.output
         if outputs.bcl2fastq_info:
             processing_software['bcl2fastq'] = outputs.bcl2fastq_info
+        if outputs.bclconvert_info:
+            processing_software['bcl-convert'] = outputs.bclconvert_info
         if outputs.cellranger_info:
             processing_software['cellranger'] = outputs.cellranger_info
         if outputs.cellranger_atac_info:
