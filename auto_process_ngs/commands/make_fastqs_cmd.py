@@ -40,7 +40,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 name=None,lanes=None,lane_subsets=None,
                 icell8_well_list=None,
                 nprocessors=None,bcl_converter=None,
-                require_bcl2fastq_version=None,
+                bcl_converter_version=None,
                 bases_mask=None,no_lane_splitting=False,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
@@ -116,10 +116,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
         fastqs
       bcl_converter (str): default BCL-to-Fastq conversion software to
         use (defaults to "bcl2fastq")
-      require_bcl2fastq_version (str): (optional) specify bcl2fastq
-        version to use. Should be a string of the form '1.8.4' or
-        '>2.0'. Set to None to automatically determine required
-        bcl2fastq version.
+      bcl_converter_version (str): (optional) specify version of BCL
+        converter software to use. Should be a string of the form
+        '1.8.4' or '>2.0'.
       bases_mask (str): if set then use this as an alternative bases
         mask setting
       no_lane_splitting (bool): if True then run bcl2fastq with
@@ -325,21 +324,22 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
     # Require specific bcl2fastq version
     if bcl_converter == "bcl2fastq":
-        if require_bcl2fastq_version is None:
+        if bcl_converter_version is None:
             # Look for platform-specific requirement
             try:
-                require_bcl2fastq_version = \
+                bcl_converter_version = \
                     ap.settings.platform[ap.metadata.platform].bcl2fastq
                 print("Bcl2fastq version %s required for platform '%s'" %
                       (ap.metadata.platform,require_bcl2fastq_version))
             except (KeyError,AttributeError):
                 pass
-        if require_bcl2fastq_version is None:
+        if bcl_converter_version is None:
             # Look for default requirement
-            require_bcl2fastq_version = ap.settings.bcl2fastq.default_version
+            bcl_converter_version = \
+                ap.settings.bcl2fastq.default_version
             print("Bcl2fastq version %s required by default" %
-                  require_bcl2fastq_version)
-        if require_bcl2fastq_version is not None:
+                  bcl_converter_version)
+        if bcl_converter_version is not None:
             # No version requirement
             print("No bcl2fastq version explicitly specified")
 
@@ -430,7 +430,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              per_lane_stats=per_lane_stats_file,
                              nprocessors=nprocessors,
                              default_runner=default_runner,
-                             require_bcl2fastq=require_bcl2fastq_version,
+                             require_bcl2fastq=bcl_converter_version,
                              cellranger_jobmode=cellranger_jobmode,
                              cellranger_mempercore=cellranger_mempercore,
                              cellranger_maxjobs=cellranger_maxjobs,

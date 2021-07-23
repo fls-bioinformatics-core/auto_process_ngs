@@ -279,14 +279,15 @@ def add_make_fastqs_command(cmdparser):
     # Options to control bcl converter (bcl2fastq/bcl-convert)
     bcl_to_fastq = p.add_argument_group('Bcl conversion options')
     # BCL converter
-    bcl_to_fastq.add_argument('--bcl-converter',
-                              choices=['bcl2fastq','bclconvert',],
+    bcl_to_fastq.add_argument('--bcl-converter',action="store",
                               dest='bcl_converter',
+                              metavar="CONVERTER",
                               default='bcl2fastq',
                               help="explicitly set BCL conversion software "
                               "to use for non-10xGenomics/non-ICELL8 runs "
-                              "(either 'bcl2fastq' or 'bclconvert'; default "
-                              "is 'bcl2fastq')")
+                              "(either 'bcl2fastq' or 'bcl-convert'; default "
+                              "is 'bcl2fastq'); can also include a version "
+                              "specifier (e.g. 'bcl2fastq>=2.0')")
     # Use lane splitting
     # Determine defaults to report to user
     no_lane_splitting_platforms = []
@@ -395,11 +396,6 @@ def add_make_fastqs_command(cmdparser):
                               dest='create_fastq_for_index_read',
                               default=False,
                               help="also create FASTQs for index reads")
-    # Require specific version
-    bcl_to_fastq.add_argument('--require-bcl2fastq-version',action='store',
-                              dest='bcl2fastq_version',default=None,
-                              help="explicitly specify version of bcl2fastq "
-                              "software to use (e.g. '=1.8.4' or '>=2.0').")
     # Number of processors
     display_nprocessors = []
     for platform in __settings.platform:
@@ -596,6 +592,13 @@ def add_make_fastqs_command(cmdparser):
                           dest="working_dir",default=None,
                           help="specify the working directory for the "
                           "pipeline operations")
+    # Deprecated options
+    deprecated = p.add_argument_group('Deprecated options')
+    deprecated.add_argument('--require-bcl2fastq-version',action='store',
+                            dest='bcl2fastq_version',default=None,
+                            help="deprecated: explicitly specify version "
+                            "of bcl2fastq software to use (e.g. '=1.8.4' "
+                            "or '>=2.0') (use --bcl-converter instead)")
 
 def add_setup_analysis_dirs_command(cmdparser):
     """Create a parser for the 'setup_analysis_dirs' command
@@ -1240,6 +1243,29 @@ def make_fastqs(args):
         create_empty_fastqs = False
     else:
         create_empty_fastqs = None
+    # Deal with BCL converter and version requirement
+    bcl_converter = args.bcl_converter
+    require_version = None
+    for op in ('>','<','>=','<=','='):
+        if op in args.bcl_converter:
+            bcl_converter = args.bcl_converter.split(op)[0]
+            bcl_converter_version = args.bcl_converter.split(op)[-1]
+            break
+    if bcl_converter not in ('bcl2fastq','bcl-convert',):
+        raise Exception("%s: invalid BCL converter for --bcl-converter "
+                        "(must be one of 'bcl2fastq', 'bcl-convert')")
+    if args.bcl2fastq_version:
+        # Deal with deprecated --require-bcl2fastq-version
+        if bcl_converter != 'bcl2fastq':
+            raise Exception("Deprecated option --require-bcl2fastq-version "
+                            "can't be used if BCL converter is not "
+                            "'bcl2fastq'")
+        elif bcl_converter_require_version:
+            raise Exception("Deprecated option --require-bcl2fastq-version "
+                            "can't be used if --bcl-converter also specifies "
+                            "a version")
+        else:
+            bcl_converter_version = args.bcl2fastq_version
     # Deal with --lanes
     if args.lanes:
         # Build subsets
@@ -1309,8 +1335,8 @@ def make_fastqs(args):
         force_copy_of_primary_data=args.force_copy,
         generate_stats=(not args.no_stats),
         analyse_barcodes=(not args.no_barcode_analysis),
-        bcl_converter=args.bcl_converter,
-        require_bcl2fastq_version=args.bcl2fastq_version,
+        bcl_converter=bcl_converter,
+        bcl_converter_version=bcl_converter_version,
         unaligned_dir=args.out_dir,
         sample_sheet=args.sample_sheet,
         bases_mask=args.bases_mask,
