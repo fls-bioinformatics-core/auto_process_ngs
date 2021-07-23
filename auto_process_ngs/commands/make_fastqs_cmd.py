@@ -394,6 +394,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              ap.params.sample_sheet,
                              protocol=protocol,
                              bases_mask=bases_mask,
+                             bcl_converter=bcl_converter,
                              platform=platform,
                              icell8_well_list=icell8_well_list,
                              minimum_trimmed_read_length=\
