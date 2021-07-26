@@ -1245,7 +1245,7 @@ def make_fastqs(args):
         create_empty_fastqs = None
     # Deal with BCL converter and version requirement
     bcl_converter = args.bcl_converter
-    require_version = None
+    bcl_converter_version = None
     for op in ('>','<','>=','<=','='):
         if op in args.bcl_converter:
             bcl_converter = args.bcl_converter.split(op)[0]
@@ -1260,7 +1260,7 @@ def make_fastqs(args):
             raise Exception("Deprecated option --require-bcl2fastq-version "
                             "can't be used if BCL converter is not "
                             "'bcl2fastq'")
-        elif bcl_converter_require_version:
+        elif bcl_converter_version:
             raise Exception("Deprecated option --require-bcl2fastq-version "
                             "can't be used if --bcl-converter also specifies "
                             "a version")
