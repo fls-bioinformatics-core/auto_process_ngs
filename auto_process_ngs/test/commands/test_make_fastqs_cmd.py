@@ -140,7 +140,7 @@ poll_interval = 0.5
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,protocol="standard",
-                    bcl_converter="bclconvert")
+                    bcl_converter="bcl-convert")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
