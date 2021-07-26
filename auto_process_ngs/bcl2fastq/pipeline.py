@@ -1104,7 +1104,7 @@ class MakeFastqs(Pipeline):
                         # exist
                         get_bcl2fastq = GetBcl2Fastq(
                             "Get information on bcl2fastq",
-                            require_bcl2fastq=self.params.require_bcl2fastq)
+                            require_version=self.params.require_bcl2fastq)
                         self.add_task(get_bcl2fastq,
                                       envmodules=self.envmodules['bcl2fastq'])
                     # Run standard bcl2fastq
@@ -1285,7 +1285,7 @@ class MakeFastqs(Pipeline):
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
                         "Get information on bcl2fastq",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1339,7 +1339,7 @@ class MakeFastqs(Pipeline):
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
                         "Get information on bcl2fastq",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1397,7 +1397,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x is None:
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq_for_10x,
                                   envmodules=\
                                   self.envmodules['cellranger_mkfastq'])
@@ -1449,7 +1449,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_atac is None:
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-atac",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq_for_10x_atac,
                                   envmodules=\
                                   self.envmodules['cellranger_atac_mkfastq'])
@@ -1504,7 +1504,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_visium is None:
                     get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
                         "Get information on bcl2fastq for spaceranger",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq_for_10x_visium,
                                   envmodules=\
                                   self.envmodules['spaceranger_mkfastq'])
@@ -1559,7 +1559,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_multiome is None:
                     get_bcl2fastq_for_10x_multiome = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-arc",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq_for_10x_multiome,
                                   envmodules=\
                                   self.envmodules['cellranger_arc_mkfastq'])
@@ -2102,12 +2102,12 @@ class GetBcl2Fastq(PipelineFunctionTask):
     """
     Get information on the bcl2fastq executable
     """
-    def init(self,require_bcl2fastq=None):
+    def init(self,require_version=None):
         """
         Initialise the GetBcl2Fastq task
 
         Arguments:
-          require_bcl2fastq (str): if set then should be a
+          require_version (str): if set then should be a
             string of the form '1.8.4' or '>2.0', explicitly
             specifying the version of bcl2fastq to use. If
             not set then no version check will be made
@@ -2124,23 +2124,23 @@ class GetBcl2Fastq(PipelineFunctionTask):
         self.add_output('bcl2fastq_version',Param(type=str))
         self.add_output('bcl2fastq_info',Param())
     def setup(self):
-        if self.args.require_bcl2fastq:
+        if self.args.require_version:
             print("Requires bcl2fastq version %s" %
-                  self.args.require_bcl2fastq)
+                  self.args.require_version)
         self.add_call("Check bcl2fastq version",
                       self.get_bcl2fastq,
-                      self.args.require_bcl2fastq)
-    def get_bcl2fastq(self,require_bcl2fastq=None):
+                      self.args.require_version)
+    def get_bcl2fastq(self,require_version=None):
         # Get bcl2fastq
-        bcl2fastq = available_bcl2fastq_versions(require_bcl2fastq)
+        bcl2fastq = available_bcl2fastq_versions(require_version)
         if bcl2fastq:
             bcl2fastq_exe = bcl2fastq[0]
             bcl2fastq_info = bcl_to_fastq_info(bcl2fastq_exe)
         else:
             msg = "No appropriate bcl2fastq software located"
-            if not require_bcl2fastq:
+            if not require_version:
                 msg += " matching requirement '%s'" % \
-                       require_bcl2fastq
+                       require_version
             raise Exception(msg)
         # Return the information on bcl2fastq
         return (bcl2fastq_exe,bcl2fastq_info[1],bcl2fastq_info[2])
