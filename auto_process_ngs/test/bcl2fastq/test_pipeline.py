@@ -218,7 +218,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,
-                       bcl_converter="bclconvert")
+                       bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
                        poll_interval=0.5)
         self.assertEqual(status,0)
@@ -895,7 +895,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,
-                       bcl_converter="bclconvert",
+                       bcl_converter="bcl-convert",
                        adapter_sequence="ACGTACGTACGT",
                        adapter_sequence_read2="TGCATGCATGCA")
         status = p.run(analysis_dir,
@@ -1045,7 +1045,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,
-                       bcl_converter="bclconvert",
+                       bcl_converter="bcl-convert",
                        minimum_trimmed_read_length=26)
         status = p.run(analysis_dir,
                        poll_interval=0.5)
@@ -1194,7 +1194,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,
-                       bcl_converter="bclconvert",
+                       bcl_converter="bcl-convert",
                        mask_short_adapter_reads=10)
         status = p.run(analysis_dir,
                        poll_interval=0.5)
@@ -1351,7 +1351,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,
-                       bcl_converter="bclconvert",
+                       bcl_converter="bcl-convert",
                        trim_adapters=False)
         status = p.run(analysis_dir,
                        poll_interval=0.5)
@@ -1498,7 +1498,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,
-                       bcl_converter="bclconvert",
+                       bcl_converter="bcl-convert",
                        bases_mask="y76,I6n2,I6n2,y76")
         status = p.run(analysis_dir,
                        poll_interval=0.5)
@@ -1571,9 +1571,9 @@ class TestMakeFastqs(unittest.TestCase):
         analysis_dir = os.path.join(self.wd,"analysis")
         os.mkdir(analysis_dir)
         # Do the test
-        p = MakeFastqs(run_dir,sample_sheet)
+        p = MakeFastqs(run_dir,sample_sheet,
+                       bcl_converter="bcl2fastq>=2.17")
         status = p.run(analysis_dir,
-                       require_bcl2fastq=">=2.17",
                        poll_interval=0.5)
         self.assertEqual(status,0)
         # Check outputs
@@ -1645,9 +1645,8 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,
-                       bcl_converter="bclconvert")
+                       bcl_converter="bcl-convert>=3.7")
         status = p.run(analysis_dir,
-                       require_bclconvert=">=3.7",
                        poll_interval=0.5)
         self.assertEqual(status,0)
         # Check outputs
@@ -1718,9 +1717,9 @@ class TestMakeFastqs(unittest.TestCase):
         analysis_dir = os.path.join(self.wd,"analysis")
         os.mkdir(analysis_dir)
         # Pipeline fails for unsatisfied version requirement
-        p = MakeFastqs(run_dir,sample_sheet)
+        p = MakeFastqs(run_dir,sample_sheet,
+                       bcl_converter="bcl2fastq=>2.20")
         status = p.run(analysis_dir,
-                       require_bcl2fastq="=>2.20",
                        poll_interval=0.5)
         self.assertEqual(status,1)
         # Check outputs
@@ -2004,7 +2003,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
-                       bcl_converter="bclconvert")
+                       bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
                        poll_interval=0.5)
         self.assertEqual(status,0)
@@ -2079,7 +2078,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
-                       bcl_converter="bclconvert")
+                       bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
                        no_lane_splitting=True,
                        poll_interval=0.5)
@@ -2155,7 +2154,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
-                       bcl_converter="bclconvert",
+                       bcl_converter="bcl-convert",
                        lane_subsets=(
                            subset(lanes=(1,2,)),
                            subset(lanes=(3,4,5,6,7,8,))))
@@ -2232,7 +2231,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
-                       bcl_converter="bclconvert",
+                       bcl_converter="bcl-convert",
                        lane_subsets=(
                            subset(lanes=(1,2,)),
                            subset(lanes=(3,4,5,6,7,8,))))
@@ -2309,7 +2308,7 @@ class TestMakeFastqs(unittest.TestCase):
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
-                       bcl_converter="bclconvert")
+                       bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
                        no_lane_splitting=True,
                        poll_interval=0.5)
@@ -5113,7 +5112,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="mirna",
-                       bcl_converter="bclconvert")
+                       bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
                        poll_interval=0.5)
         self.assertEqual(status,0)

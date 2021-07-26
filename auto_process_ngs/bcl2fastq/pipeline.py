@@ -180,6 +180,8 @@ class MakeFastqs(Pipeline):
         data exists
     - bcl2fastq_info: tuple with information on the bcl2fastq
         software used
+    - bclconvert_info: tuple with information on the BCL Convert
+        software used
     - cellranger_info: tuple with information on the cellranger
         software used
     - stats_file: path to the statistics file
@@ -212,7 +214,10 @@ class MakeFastqs(Pipeline):
           bases_mask (str): default bases mask to use (defaults
             to "auto")
           bcl_converter (str): default BCL-to-Fastq conversion
-            software to use (defaults to "bcl2fastq")
+            software to use (can be one of 'bcl2fastq',
+            'bcl-convert'; defaults to "bcl2fastq"). Optionally
+            can include a version requirement (e.g.
+            "bcl2fastq>=2.20") which must also be satisfied
           platform (str): optionally specify the platform for
             the sequencer run (e.g. 'miseq', 'nextseq' etc)
           icell8_well_list (str): optionally specify path to a
@@ -347,8 +352,6 @@ class MakeFastqs(Pipeline):
         self.add_param('per_lane_stats',type=str)
         self.add_param('per_lane_sample_stats',type=str)
         self.add_param('nprocessors',type=int)
-        self.add_param('require_bcl2fastq',type=str)
-        self.add_param('require_bclconvert',type=str)
         self.add_param('cellranger_jobmode',value='local',type=str)
         self.add_param('cellranger_mempercore',type=int)
         self.add_param('cellranger_maxjobs',type=int)
@@ -986,8 +989,21 @@ class MakeFastqs(Pipeline):
             protocol = subset['protocol']
             self.report("- Protocol: %s" % protocol)
 
+            #########################
             # BCL to Fastq converter
+            #########################
             converter = subset['bcl_converter']
+            converter_version = None
+                  subset['bcl_converter'])
+            for op in ('>=','=>','<=','=<','>','<','='):
+                if op in converter:
+                    converter = subset['bcl_converter'].split(op)[0]
+                    converter_version = op + \
+                                        subset['bcl_converter'].split(op)[1]
+                    break
+            if converter not in ('bcl2fastq','bcl-convert',):
+                raise Exception("%s: invalid BCL converter specified" %
+                                converter)
 
             #############
             # Bases mask
@@ -1104,7 +1120,7 @@ class MakeFastqs(Pipeline):
                         # exist
                         get_bcl2fastq = GetBcl2Fastq(
                             "Get information on bcl2fastq",
-                            require_version=self.params.require_bcl2fastq)
+                            require_version=converter_version)
                         self.add_task(get_bcl2fastq,
                                       envmodules=self.envmodules['bcl2fastq'])
                     # Run standard bcl2fastq
@@ -1137,14 +1153,14 @@ class MakeFastqs(Pipeline):
                                   runner=self.runners['bcl2fastq_runner'],
                                   envmodules=self.envmodules['bcl2fastq'],
                                   requires=(restore_backup,))
-                elif converter == "bclconvert":
+                elif converter == "bcl-convert":
                     # Get BCL Convert information
                     if get_bclconvert is None:
                         # Create a new task only if one doesn't already
                         # exist
                         get_bclconvert = GetBclConvert(
                             "Get information on BCL Convert",
-                            require_version=self.params.require_bclconvert)
+                            require_version=converter_version)
                         self.add_task(get_bclconvert,
                                       envmodules=self.envmodules['bclconvert'])
                     # Parameter to store intermediate output
@@ -1285,7 +1301,7 @@ class MakeFastqs(Pipeline):
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
                         "Get information on bcl2fastq",
-                        require_version=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1339,7 +1355,7 @@ class MakeFastqs(Pipeline):
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
                         "Get information on bcl2fastq",
-                        require_version=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1397,7 +1413,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x is None:
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger",
-                        require_version=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq_for_10x,
                                   envmodules=\
                                   self.envmodules['cellranger_mkfastq'])
@@ -1449,7 +1465,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_atac is None:
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-atac",
-                        require_version=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq_for_10x_atac,
                                   envmodules=\
                                   self.envmodules['cellranger_atac_mkfastq'])
@@ -1504,7 +1520,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_visium is None:
                     get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
                         "Get information on bcl2fastq for spaceranger",
-                        require_version=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq_for_10x_visium,
                                   envmodules=\
                                   self.envmodules['spaceranger_mkfastq'])
@@ -1559,7 +1575,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_multiome is None:
                     get_bcl2fastq_for_10x_multiome = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-arc",
-                        require_version=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq_for_10x_multiome,
                                   envmodules=\
                                   self.envmodules['cellranger_arc_mkfastq'])
@@ -1687,14 +1703,13 @@ class MakeFastqs(Pipeline):
             find_adapters_with_sliding_window=None,
             create_empty_fastqs=None,name=None,stats_file=None,
             stats_full=None,per_lane_stats=None,per_lane_sample_stats=None,
-            nprocessors=None,require_bcl2fastq=None,require_bclconvert=None,
-            cellranger_jobmode='local',cellranger_mempercore=None,
-            cellranger_maxjobs=None,cellranger_jobinterval=None,
-            cellranger_localcores=None,cellranger_localmem=None,
-            working_dir=None,log_dir=None,log_file=None,
-            batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
-            poll_interval=5,runners=None,default_runner=None,
-            envmodules=None,verbose=False):
+            nprocessors=None,cellranger_jobmode='local',
+            cellranger_mempercore=None,cellranger_maxjobs=None,
+            cellranger_jobinterval=None,cellranger_localcores=None,
+            cellranger_localmem=None,working_dir=None,log_dir=None,
+            log_file=None,batch_size=None,batch_limit=None,max_jobs=1,
+            max_slots=None,poll_interval=5,runners=None,
+            default_runner=None,envmodules=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -1732,14 +1747,6 @@ class MakeFastqs(Pipeline):
           nprocessors (int): number of threads to use for
             multithreaded applications (default is to take
             number of CPUs set in job runners)
-          require_bcl2fastq (str): if set then specify bcl2fastq
-            version requirement; should be a string of the form
-           '1.8.4' or '>2.0'. The pipeline will fail if this
-           requirement is not met
-          require_bclconvert (str): if set then specify bcl-convert
-            version requirement; should be a string of the form
-           '3.7.5' or '>3.6'. The pipeline will fail if this
-           requirement is not met
           cellranger_jobmode (str): job mode to run cellranger in
           cellranger_mempercore (int): memory assumed per core
           cellranger_maxjobs (int): maxiumum number of concurrent
@@ -1890,8 +1897,6 @@ class MakeFastqs(Pipeline):
             'per_lane_stats': per_lane_stats,
             'per_lane_sample_stats': per_lane_sample_stats,
             'nprocessors': nprocessors,
-            'require_bcl2fastq': require_bcl2fastq,
-            'require_bclconvert': require_bclconvert,
             'cellranger_jobmode': cellranger_jobmode,
             'cellranger_mempercore': cellranger_mempercore,
             'cellranger_maxjobs': cellranger_maxjobs,
@@ -2190,7 +2195,7 @@ class GetBclConvert(PipelineFunctionTask):
         if self.args.require_version:
             print("Requires bcl-convert version %s" %
                   self.args.require_version)
-        self.add_call("Check bcl2fastq version",
+        self.add_call("Check bcl-convert version",
                       self.get_bclconvert,
                       self.args.require_version)
     def get_bclconvert(self,require_version=None):
