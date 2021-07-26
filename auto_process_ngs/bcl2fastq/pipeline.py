@@ -994,7 +994,6 @@ class MakeFastqs(Pipeline):
             #########################
             converter = subset['bcl_converter']
             converter_version = None
-                  subset['bcl_converter'])
             for op in ('>=','=>','<=','=<','>','<','='):
                 if op in converter:
                     converter = subset['bcl_converter'].split(op)[0]
