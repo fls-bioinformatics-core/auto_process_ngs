@@ -2984,7 +2984,8 @@ class PipelineCommand(object):
         return sanitize_name(self._name)
 
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash",
-                            envmodules=None,working_dir=None):
+                            envmodules=None,conda=None,conda_env=None,
+                            working_dir=None):
         """
         Generate a uniquely-named wrapper script to run the command
 
@@ -2993,6 +2994,9 @@ class PipelineCommand(object):
             the wrapper scripts to
           shell (str): shell to use (defaults to '/bin/bash')
           envmodules (str): list of environment modules to load
+          conda (str): path to conda executable
+          conda_env (str): name or path for conda environment to
+            activate in the script
           working_dir (str): explicitly specify the directory
             the script should be executed in
 
@@ -3019,6 +3023,17 @@ class PipelineCommand(object):
             for module in envmodules:
                 if module is not None:
                     prologue.append("module load %s" % module)
+        if conda_env:
+            if not conda:
+                conda = find_program("conda")
+            if not conda:
+                raise PipelineError("Unable to locate conda")
+            conda_dir = os.sep.join(
+                os.path.abspath(conda).split(os.sep)[:-2])
+            conda_activate_cmd = \
+                "source %s/bin/activate %s" % (conda_dir,conda_env)
+            prologue.extend(["echo %s" % conda_activate_cmd,
+                             conda_activate_cmd])
         if working_dir:
             prologue.append("cd %s" % working_dir)
         prologue.append("echo \"#### CWD $(pwd)\"")
