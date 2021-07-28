@@ -2253,6 +2253,8 @@ class PipelineTask(object):
         self._runner_nslots = None
         self._jobs = []
         self._groups = []
+        # Conda dependencies
+        self._conda_pkgs = []
         # Monitoring
         self._ncompleted = 0
         # Logging
@@ -2654,10 +2656,28 @@ class PipelineTask(object):
         """
         return self._output
 
-    def run(self,sched=None,runner=None,envmodules=None,working_dir=None,
-            log_dir=None,scripts_dir=None,log_file=None,wait_for=(),
-            asynchronous=True,poll_interval=5,batch_size=None,
-            lock_manager=None,verbose=False):
+    def conda(self,*reqs):
+        """
+        Specify one or more conda packages for the task
+
+        Package requirements can be either unversioned
+        (e.g. 'multiqc') or versioned (e.g. 'multiqc=1.8').
+        """
+        for req in reqs:
+            self._conda_pkgs.append(req)
+
+    @property
+    def conda_dependencies(self):
+        """
+        Return a list of conda packages required by the task
+        """
+        return [p for p in self._conda_pkgs]
+
+    def run(self,sched=None,runner=None,envmodules=None,conda=None,
+            conda_env=None,working_dir=None,log_dir=None,
+            scripts_dir=None,log_file=None,wait_for=(),asynchronous=True,
+            poll_interval=5,batch_size=None,lock_manager=None,
+            verbose=False):
         """
         Run the task
 
@@ -2671,6 +2691,9 @@ class PipelineTask(object):
             jobs via the scheduler
           envmodules (list): list of environment modules to load when
             running jobs in the task
+          conda (str): path to conda
+          conda_env (str): name or path for conda environment to
+            activate when running jobs in the task
           working_dir (str): path to the working directory to use
             (defaults to the current working directory)
           log_dir (str): path to the directory to write logs to
@@ -2721,6 +2744,8 @@ class PipelineTask(object):
                 script_file = command.make_wrapper_script(
                     scripts_dir=scripts_dir,
                     envmodules=envmodules,
+                    conda=conda,
+                    conda_env=conda_env,
                     working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:
@@ -2752,6 +2777,8 @@ class PipelineTask(object):
                 script_file = batch_cmd.make_wrapper_script(
                     scripts_dir=scripts_dir,
                     envmodules=envmodules,
+                    conda=conda,
+                    conda_env=conda_env,
                     working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:

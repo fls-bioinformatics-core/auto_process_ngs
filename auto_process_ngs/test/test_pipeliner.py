@@ -1768,6 +1768,44 @@ class TestPipelineTask(unittest.TestCase):
         # Unpickle it
         unpickled = cloudpickle.loads(pickled)
 
+    def test_pipelinetask_no_conda_dependencies(self):
+        """
+        PipelineTask: check when no conda dependencies are declared
+        """
+        # Define a task without conda dependencies
+        class NoCondaDeps(PipelineTask):
+            def init(self,fq):
+                pass
+            def setup(self):
+                self.add_cmd(PipelineCommandWrapper(
+                    "Run FastQC","fastqc",self.args.fq))
+        # Make a task instance
+        task = NoCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
+        # Check conda dependencies
+        self.assertEqual(task.conda_dependencies,[])
+
+    def test_pipelinetask_conda_dependencies(self):
+        """
+        PipelineTask: check declaring conda dependencies
+        """
+        # Define a task with conda dependencies
+        class WithCondaDeps(PipelineTask):
+            def init(self,fq):
+                self.conda("fastqc=0.11.3")
+                self.conda("fastq-screen=0.14.0",
+                           "bowtie=1.2.3")
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Run FastQC","fastqc",self.args.fq))
+        # Make a task instance
+        task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
+        # Check conda dependencies
+        self.assertEqual(task.conda_dependencies,
+                         ["fastqc=0.11.3",
+                          "fastq-screen=0.14.0",
+                          "bowtie=1.2.3"])
+
 class TestPipelineFunctionTask(unittest.TestCase):
 
     def setUp(self):
