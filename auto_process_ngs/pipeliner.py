@@ -793,12 +793,12 @@ setting up tasks, for example:
 The values will be set when the pipeline's ``run`` method is
 invoked.
 
-Defining execution environment for a task: runners and envmodules
------------------------------------------------------------------
+Defining execution environment for a task: runners, modules & conda
+-------------------------------------------------------------------
 
 It is possible to define the execution environment on a per-task
-basis within a pipeline, by defining job runners and environment
-modules.
+basis within a pipeline, by defining job runners, environment
+modules and conda dependencies.
 
 Runners and environments can be declared in a parameterised
 fashion when a pipline is created, using the ``add_runner`` and
@@ -852,6 +852,24 @@ default runner is used for that task; this defaults to a
 ``default_runner`` argument of the ``Pipeline`` instance's ``run``
 method.
 
+Execution environments can also be defined with ``conda`` packages.
+The packages and versions required by a task are declared in a
+task's ``init`` method with calls to the ``conda`` method, for
+example:
+
+::
+
+   class RunFastqc(PipelineTask):
+       def init(self,fastq,out_dir):
+           self.conda("fastqc=0.11.3")
+           ...
+
+If ``conda`` dependency resolution is enabled when the pipeline is
+executed then these declarations will be used to generate ``conda``
+environments that are activated when the tasks run (otherwise they
+are ignored) (see the section "Enabling conda to create task environments
+automatically" for details).
+
 Defining outputs from a pipeline
 --------------------------------
 
@@ -891,6 +909,33 @@ the pipeline's ``run`` method to ``False``. For example:
 It is recommended that outputs are defined as ``PipelineParam``
 instances, to take advantage of the implicit task requirement
 gathering mechanism.
+
+Enabling conda to create task environments automatically
+--------------------------------------------------------
+
+The ``conda`` package manager can be used within ``Pipeline``s
+to automatically create run-time environments for any tasks which
+declare ``conda`` dependencies in their ``init`` methods.
+
+To enable the use of conda when a pipeline is executed, specify
+the following arguments when invoking the pipeline's ``run``
+method:
+
+1. ``enable_conda`` must be set to ``True``, and
+2. The path to an existing ``conda`` installation must be supplied
+   using via ``conda`` argument.
+
+For example:
+
+::
+
+    ppl = Pipeline()
+    ...
+    ppl.run(enable_conda=True,conda='/usr/local/miniconda3/bin/conda)
+
+(By default new ``conda`` environments are created in a subdirectory of
+the working directory, but it is possible to explicitly specify a
+different location via the ``conda_env_dir`` of the ``run`` method.)
 
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
