@@ -733,6 +733,107 @@ prepend-path PATH %s
                           ppl.add_envmodules,
                           'test_env')
 
+    def test_pipeline_with_conda(self):
+        """
+        Pipeline: define and run pipeline with conda dependency resolution
+        """
+        # Set up mock conda
+        bin_dir = os.path.join(self.working_dir,"conda","bin")
+        env_dir = os.path.join(self.working_dir,"conda","envs")
+        os.makedirs(bin_dir)
+        os.makedirs(env_dir)
+        conda_ = os.path.join(bin_dir,"conda")
+        with open(conda_,'wt') as fp:
+            fp.write("""#!/bin/bash
+if [ "$1" == "--version" ] ; then
+   echo "conda 4.10.3"
+   exit 0
+elif [ "$1" == "create" ] ; then
+   YES=
+   PREFIX=
+   PACKAGES=
+   while [ ! -z "$2" ] ; do
+     case "$2" in
+       -n)
+         shift
+         PREFIX=$(dirname $(dirname $0))/envs/${2}
+         ;;
+       --prefix)
+         shift
+         PREFIX=$2
+         ;;
+       -y)
+         YES=yes
+         ;;
+       -c)
+         shift
+         ;;
+       --override-channels)
+         shift
+         ;;
+       *)
+         PACKAGES="$PACKAGES $2"
+         ;;
+     esac
+     shift
+   done
+fi
+if [ -z "$YES" ] ; then
+   echo "Need to supply -y option"
+   exit 1
+fi
+if [ -z "$PREFIX" ] ; then
+   echo "Need to supply either -n or --prefix"
+   exit 1
+fi
+mkdir -p $PREFIX
+for pkg in $PACKAGES ; do
+   name=$(echo $pkg | cut -f1 -d=)
+   cat >${PREFIX}/${name} <<EOF
+#!/bin/bash
+echo \$1
+exit 0
+EOF
+   chmod +x ${PREFIX}/${name}
+done
+""")
+            os.chmod(conda_,0o755)
+        activate_ = os.path.join(bin_dir,"activate")
+        with open(activate_,'wt') as fp:
+            fp.write("""#!/bin/bash
+export PATH=$PATH:${1}
+""")
+            os.chmod(activate_,0o755)
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.conda("fastqc=0.11.3")
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        ppl.add_envmodules("fastqc")
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task,
+                     envmodules=ppl.envmodules["fastqc"])
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              enable_conda=True,
+                              conda=conda_,
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+
     def test_pipeline_define_outputs(self):
         """
         Pipeline: test defining pipeline outputs
