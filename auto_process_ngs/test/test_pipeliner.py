@@ -29,7 +29,9 @@ from auto_process_ngs.pipeliner import ListParam
 from auto_process_ngs.pipeliner import PathJoinParam
 from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
+from auto_process_ngs.pipeliner import CondaWrapper
 from auto_process_ngs.pipeliner import PipelineError
+from auto_process_ngs.pipeliner import CondaCreateEnvError
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 
@@ -2502,6 +2504,214 @@ class TestDispatcher(unittest.TestCase):
         self.assertEqual(exit_code,0)
         result = d.get_result()
         self.assertEqual(result,"Hello World!")
+
+class TestCondaWrapper(unittest.TestCase):
+
+    def setUp(self):
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestCondaWrapper')
+        # Save PATH
+        self.save_path = os.environ['PATH']
+
+    def tearDown(self):
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+        # Restore PATH
+        os.environ['PATH'] = self.save_path
+
+    def _make_mock_conda(self,script):
+        # Internal: make a mock conda executable
+        # for use in tests
+        self.conda_dir = os.path.join(self.working_dir,
+                                      "conda")
+        self.conda_bin_dir = os.path.join(self.conda_dir,
+                                          "bin")
+        self.conda_env_dir = os.path.join(self.conda_dir,
+                                          "envs")
+        for d in (self.conda_dir,
+                  self.conda_bin_dir,
+                  self.conda_env_dir):
+            os.makedirs(d)
+        # Write mock conda
+        self.conda = os.path.join(self.conda_bin_dir,"conda")
+        with open(self.conda,"wt") as fp:
+            fp.write("%s\n" % script)
+        os.chmod(self.conda,0o755)
+        # Update PATH
+        os.environ['PATH'] = os.environ['PATH'] + \
+                             os.sep + \
+                             self.conda_bin_dir
+
+    def test_conda_wrapper_conda_version(self):
+        """
+        CondaWrapper: get conda version
+        """
+        self._make_mock_conda("""#!/bin/bash -e
+if [ "$1" == "--version" ] ; then
+   echo "conda 4.10.3"
+   exit 0
+else
+   exit 1
+fi
+""")
+        conda = CondaWrapper(conda=self.conda)
+        self.assertEqual(conda.version,"4.10.3")
+
+    def test_conda_wrapper_conda_defaults(self):
+        """
+        CondaWrapper: check properties for default env dir
+        """
+        self._make_mock_conda("""#!/bin/bash -e
+exit 0
+""")
+        conda = CondaWrapper(conda=self.conda)
+        self.assertEqual(conda.conda,self.conda)
+        self.assertTrue(conda.is_installed)
+        self.assertEqual(conda.env_dir,self.conda_env_dir)
+        self.assertEqual(conda.list_envs,[])
+
+    def test_conda_wrapper_conda_custom_env_dir(self):
+        """
+        CondaWrapper: check properties for custom env dir
+        """
+        self._make_mock_conda("""#!/bin/bash -e
+exit 0
+""")
+        custom_env_dir = os.path.join(self.working_dir,
+                                      "local_conda_envs")
+        os.makedirs(custom_env_dir)
+        conda = CondaWrapper(conda=self.conda,
+                             env_dir=custom_env_dir)
+        self.assertEqual(conda.conda,self.conda)
+        self.assertTrue(conda.is_installed)
+        self.assertEqual(conda.env_dir,custom_env_dir)
+        self.assertEqual(conda.list_envs,[])
+
+    def test_conda_wrapper_null_wrapper(self):
+        """
+        CondaWrapper: check properties for 'null' wrapper
+        """
+        conda = CondaWrapper()
+        self.assertEqual(conda.conda,None)
+        self.assertFalse(conda.is_installed)
+        self.assertEqual(conda.env_dir,None)
+        self.assertEqual(conda.list_envs,[])
+        self.assertEqual(conda.version,None)
+
+    def test_conda_wrapper_missing_conda_executable(self):
+        """
+        CondaWrapper: check properties when conda is missing
+        """
+        conda = CondaWrapper(
+            conda="/usr/local/missing/conda/bin/conda")
+        self.assertEqual(conda.conda,
+                         "/usr/local/missing/conda/bin/conda")
+        self.assertFalse(conda.is_installed)
+        self.assertEqual(conda.env_dir,
+                         "/usr/local/missing/conda/envs")
+        self.assertEqual(conda.list_envs,[])
+        self.assertEqual(conda.version,None)
+
+    def test_conda_wrapper_list_envs(self):
+        """
+        CondaWrapper: check listing environments
+        """
+        self._make_mock_conda("""#!/bin/bash -e
+exit 0
+""")
+        # Default env dir
+        conda = CondaWrapper(conda=self.conda)
+        self.assertEqual(conda.list_envs,[])
+        for env in ('fastqc','picard','star'):
+            os.makedirs(os.path.join(self.conda_env_dir,env))
+        self.assertEqual(conda.list_envs,
+                         ['fastqc','picard','star'])
+        # Custom env dir
+        custom_env_dir = os.path.join(self.working_dir,
+                                      "local_conda_envs")
+        os.makedirs(custom_env_dir)
+        conda = CondaWrapper(conda=self.conda,
+                             env_dir=custom_env_dir)
+        self.assertEqual(conda.list_envs,[])
+        for env in ('fastqc','picard','star'):
+            os.makedirs(os.path.join(custom_env_dir,env))
+        self.assertEqual(conda.list_envs,
+                         ['fastqc','picard','star'])
+
+    def test_conda_wrapper_create_env(self):
+        """
+        CondaWrapper: check create new environment
+        """
+        self._make_mock_conda("""#!/bin/bash -e
+if [ "$1" != "create" ] ; then
+   exit 1
+fi
+ENV_NAME=
+PREFIX=
+YES=
+PACKAGES=
+while [ ! -z "$2" ] ; do
+   case "$2" in
+     -n)
+        shift
+        ENV_NAME=$2
+        ;;
+     --prefix)
+        shift
+        PREFIX=$2
+        ;;
+     -y)
+        YES=yes
+        ;;
+     *)
+        PACKAGES="${PACKAGES} $2"
+        ;;
+   esac
+   shift
+done
+if [ -z "$YES" ] ; then
+   exit 1
+fi
+if [ ! -z "$ENV_NAME" ] ; then
+   ENV_DIR=$(dirname $(dirname $0))/envs
+   mkdir ${ENV_DIR}/${ENV_NAME}
+   echo $PACKAGES >${ENV_DIR}/${ENV_NAME}/packages.txt
+elif [ ! -z "$PREFIX" ] ; then
+   mkdir ${PREFIX}
+   echo $PACKAGES >${PREFIX}/packages.txt
+fi
+""")
+        conda = CondaWrapper(conda=self.conda)
+        conda.create_env("qc",
+                         "fastqc=0.11.3",
+                         "fastq-screen=0.14.0",
+                         "bowtie=1.2.3")
+        env_dir = os.path.join(self.conda_env_dir,"qc")
+        self.assertTrue(os.path.exists(env_dir))
+        packages = os.path.join(env_dir,"packages.txt")
+        self.assertTrue(os.path.exists(packages))
+        with open(packages,'rt') as fp:
+            contents = fp.read().strip()
+            self.assertEqual(contents,
+                             "fastqc=0.11.3 fastq-screen=0.14.0 bowtie=1.2.3")
+
+    def test_conda_wrapper_create_env_raise_exception_on_error(self):
+        """
+        CondaWrapper: raise exception on error when creating environment
+        """
+        self._make_mock_conda("""#!/bin/bash -e
+echo "Failed to create environment"
+exit 1
+""")
+        conda = CondaWrapper(conda=self.conda)
+        self.assertRaises(CondaCreateEnvError,
+                          conda.create_env,
+                          "qc",
+                          "fastqc=0.11.3",
+                          "fastq-screen=0.14.0",
+                          "bowtie=1.2.3")
 
 class TestResolveParameter(unittest.TestCase):
 
