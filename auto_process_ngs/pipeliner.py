@@ -3940,7 +3940,7 @@ class CondaCreateEnvError(CondaWrapperError):
         self.status = status
         self.cmdline = cmdline
         self.output = output
-        super().__init__(self.message)
+        CondaWrapperError.__init__(self,self.message)
 
 ######################################################################
 # Custom exceptions
