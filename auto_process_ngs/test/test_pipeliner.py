@@ -834,6 +834,63 @@ export PATH=$PATH:${1}
         # Check the outputs
         self.assertEqual(exit_status,0)
 
+    def test_pipeline_with_conda_fail_to_create_environment(self):
+        """
+        Pipeline: handle failure with conda dependency resolution
+        """
+        # Set up mock conda
+        bin_dir = os.path.join(self.working_dir,"conda","bin")
+        env_dir = os.path.join(self.working_dir,"conda","envs")
+        os.makedirs(bin_dir)
+        os.makedirs(env_dir)
+        conda_ = os.path.join(bin_dir,"conda")
+        with open(conda_,'wt') as fp:
+            fp.write("""#!/bin/bash
+if [ "$1" == "--version" ] ; then
+   echo "conda 4.10.3"
+   exit 0
+elif [ "$1" == "create" ] ; then
+   echo "!!!! Failed to create environment !!!!"
+   exit 1
+fi
+""")
+            os.chmod(conda_,0o755)
+        activate_ = os.path.join(bin_dir,"activate")
+        with open(activate_,'wt') as fp:
+            fp.write("""#!/bin/bash
+export PATH=$PATH:${1}
+""")
+            os.chmod(activate_,0o755)
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.conda("fastqc=0.11.3")
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        ppl.add_envmodules("fastqc")
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task,
+                     envmodules=ppl.envmodules["fastqc"])
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              enable_conda=True,
+                              conda=conda_,
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the outputs
+        self.assertEqual(exit_status,1)
+
     def test_pipeline_define_outputs(self):
         """
         Pipeline: test defining pipeline outputs

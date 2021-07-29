@@ -2155,6 +2155,7 @@ class Pipeline(object):
                                 sorted(
                                     task.conda_dependencies)).replace('=','@')
                             # Fetch the environment
+                            conda_env = None
                             if env_name not in conda.list_envs:
                                 # Create new environment
                                 self.report("attempting to create new conda "
@@ -2175,9 +2176,12 @@ class Pipeline(object):
                                         "\n**** CONDA DIAGNOSTICS ****\n")
                                     self.report("Command: %s\n" % ex.cmdline)
                                     self.report("Status : %s\n" % ex.status)
-                                    self.report("Output:\n\n%s\n" % ex.output)
+                                    self.report("Output:\n\n%s" % ex.output)
                                     self.report(
-                                        "\n**** END OF DIAGNOSTICS ****")
+                                        "\n**** END OF DIAGNOSTICS ****\n")
+                                    self.report("WARNING the task may fail "
+                                                "as the required environment "
+                                                "couldn't be created")
                             else:
                                 # Use existing environment
                                 self.report("using existing conda environment "
@@ -2188,7 +2192,8 @@ class Pipeline(object):
                             if 'conda' not in kws:
                                 kws['conda'] = conda.conda
                             if 'conda_env' not in kws:
-                                kws['conda_env'] = conda_env
+                                if conda_env:
+                                    kws['conda_env'] = conda_env
                     if 'runner' not in kws:
                         kws['runner'] = default_runner
                     if 'working_dir' not in kws:
