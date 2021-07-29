@@ -3825,7 +3825,7 @@ class CondaWrapper(object):
         Return a list of environments in the 'envs' directory
         """
         if self._env_dir and os.path.exists(self._env_dir):
-            return os.listdir(self._env_dir)
+            return sorted(os.listdir(self._env_dir))
         else:
             return []
 
