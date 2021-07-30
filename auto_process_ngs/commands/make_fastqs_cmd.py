@@ -330,7 +330,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 bcl_converter_version = \
                     ap.settings.platform[ap.metadata.platform].bcl2fastq
                 print("Bcl2fastq version %s required for platform '%s'" %
-                      (ap.metadata.platform,require_bcl2fastq_version))
+                      (ap.metadata.platform,bcl_converter_version))
             except (KeyError,AttributeError):
                 pass
         if bcl_converter_version is None:
