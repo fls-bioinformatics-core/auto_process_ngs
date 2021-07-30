@@ -1246,14 +1246,15 @@ def make_fastqs(args):
     # Deal with BCL converter and version requirement
     bcl_converter = args.bcl_converter
     bcl_converter_version = None
-    for op in ('>','<','>=','<=','='):
+    for op in ('>=','=>','<=','=<','>','<','='):
         if op in args.bcl_converter:
             bcl_converter = args.bcl_converter.split(op)[0]
-            bcl_converter_version = args.bcl_converter.split(op)[-1]
+            bcl_converter_version = op + args.bcl_converter.split(op)[1]
             break
     if bcl_converter not in ('bcl2fastq','bcl-convert',):
-        raise Exception("%s: invalid BCL converter for --bcl-converter "
-                        "(must be one of 'bcl2fastq', 'bcl-convert')")
+        raise Exception("%s: invalid BCL converter specifier for "
+                        "--bcl-converter (must be one of 'bcl2fastq', "
+                        "'bcl-convert')" % args.bcl_converter)
     if args.bcl2fastq_version:
         # Deal with deprecated --require-bcl2fastq-version
         if bcl_converter != 'bcl2fastq':
@@ -1335,8 +1336,7 @@ def make_fastqs(args):
         force_copy_of_primary_data=args.force_copy,
         generate_stats=(not args.no_stats),
         analyse_barcodes=(not args.no_barcode_analysis),
-        bcl_converter=bcl_converter,
-        bcl_converter_version=bcl_converter_version,
+        bcl_converter=args.bcl_converter,
         unaligned_dir=args.out_dir,
         sample_sheet=args.sample_sheet,
         bases_mask=args.bases_mask,

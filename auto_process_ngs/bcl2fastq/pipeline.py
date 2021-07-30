@@ -90,6 +90,7 @@ from ..tenx_genomics_utils import cellranger_info
 from ..tenx_genomics_utils import spaceranger_info
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
 from ..tenx_genomics_utils import make_qc_summary_html
+from ..utils import find_executables
 from .reporting import ProcessingQCReport
 
 # Module specific logger
@@ -2199,8 +2200,11 @@ class GetBclConvert(PipelineFunctionTask):
                       self.args.require_version)
     def get_bclconvert(self,require_version=None):
         # Get bcl-convert
-        bclconvert_exe = find_program("bcl-convert")
-        if bclconvert_exe:
+        bclconvert = find_executables(("bcl-convert",),
+                                      info_func=bclconvert_info,
+                                      reqs=require_version)
+        if bclconvert:
+            bclconvert_exe = bclconvert[0]
             # Get information on the version etc
             bclconvert_info_ = bclconvert_info(bclconvert_exe)
         else:
