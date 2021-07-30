@@ -1290,7 +1290,8 @@ class MakeFastqs(Pipeline):
                             no_lane_splitting=\
                             self.params.no_lane_splitting,
                             create_empty_fastqs=\
-                            self.params.create_empty_fastqs)
+                            self.params.create_empty_fastqs,
+                            skip_merge=final_output_exists)
                         self.add_task(make_fastqs,
                                       requires=(bcl_convert,))
             # ICELL8 RNA-seq
@@ -3345,7 +3346,8 @@ class MergeFastqs(PipelineTask):
     Merges Fastqs across multiple lanes
     """
     def init(self,fastq_dirs,out_dir,sample_sheet=None,
-             no_lane_splitting=False,create_empty_fastqs=False):
+             no_lane_splitting=False,create_empty_fastqs=False,
+             skip_merge=False):
         """
         Initialise the MergeFastqs task
 
@@ -3361,6 +3363,8 @@ class MergeFastqs(PipelineTask):
           create_empty_fastqs (bool): if True then create empty
             placeholder Fastq files for any that are missing
             on successful completion of Fastq merging
+          skip_merge (bool): if True then skip running
+            the merging step within the task
 
         Outputs:
             missing_fastqs: list of Fastqs missing after
@@ -3371,6 +3375,9 @@ class MergeFastqs(PipelineTask):
         # Outputs
         self.add_output('missing_fastqs',list())
     def setup(self):
+        if self.args.skip_merge:
+            print("Skipping merge of Fastqs")
+            return
         # Sort out the Fastqs in the input project directories
         projects = dict()
         for fastq_dir in self.args.fastq_dirs:

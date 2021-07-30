@@ -2516,6 +2516,101 @@ class TestMakeFastqs(unittest.TestCase):
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
+    def test_makefastqs_standard_protocol_bclconvert_rerun_completed_pipeline(self):
+        """
+        MakeFastqs: standard protocol/bcl-convert: rerun completed pipeline
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.miseq)
+        # Create mock bcl-convert
+        MockBclConvertExe.create(os.path.join(self.bin,
+                                              "bcl-convert"),
+                                 version="3.7.5")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Set up mock outputs in analysis directory to mimic
+        # output from a previous successful pipeline run
+        analysis_dir = os.path.join(self.wd,"analysis")
+        make_mock_bcl2fastq2_output(os.path.join(analysis_dir,
+                                                 "bcl2fastq"),
+                                    lanes=(1,),
+                                    sample_sheet=sample_sheet)
+        # Make a primary data directory
+        os.mkdir(os.path.join(analysis_dir,"primary_data"))
+        os.symlink(run_dir,
+                   os.path.join(analysis_dir,
+                                "primary_data",
+                                os.path.basename(run_dir)))
+        # Make empty stats files
+        for f in ("statistics_full.info",
+                  "statistics.info",
+                  "per_lane_statistics.info",
+                  "per_lane_sample_stats.info",
+                  "processing_qc.html",):
+            with open(os.path.join(analysis_dir,f),'wt') as fp:
+                fp.write("")
+        # Do the test
+        p = MakeFastqs(run_dir,
+                       sample_sheet,
+                       protocol="standard",
+                       bcl_converter="bcl-convert",
+                       analyse_barcodes=False)
+        status = p.run(analysis_dir,
+                       ##default_runner=SimpleJobRunner(join_logs=True),
+                       ##verbose=True,
+                       poll_interval=0.5)
+        self.assertEqual(status,0)
+        # Check outputs
+        self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bclconvert_info,
+                         (os.path.join(self.bin,"bcl-convert"),
+                          "BCL Convert",
+                          "3.7.5"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       "bcl2fastq",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_M00879_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
     def test_makefastqs_multiple_lanes_multiple_subsets(self):
         """
         MakeFastqs: multiple lanes (explicitly define multiple subsets)
