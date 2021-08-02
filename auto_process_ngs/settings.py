@@ -56,11 +56,14 @@ To update the configuration file use the save method e.g.
 
 import os
 import sys
-import logging
 import bcftbx.JobRunner as JobRunner
 from bcftbx.utils import AttributeDictionary
 from .config import Config
 from .config import NoSectionError
+
+# Module specific logger
+import logging
+logger = logging.getLogger(__name__)
 
 #######################################################################
 # Classes
@@ -179,9 +182,9 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['star_index'] = index_file
-            logging.warning("Added STAR index information from "
-                            "deprecated 'fastq_strand_indexes' section (use "
-                            "'organism:ORGANISM' sections instead)")
+            logger.warning("Added STAR index information from "
+                           "deprecated 'fastq_strand_indexes' section (use "
+                           "'organism:ORGANISM' sections instead)")
         except NoSectionError:
             pass
         # Legacy 10xgenomics transcriptome references
@@ -190,9 +193,9 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['cellranger_reference'] = reference
-            logging.warning("Added cellranger references from deprecated "
-                            "'10xgenomics_transcriptomes' section (use "
-                            "'organism:ORGANISM' sections instead)")
+            logger.warning("Added cellranger references from deprecated "
+                           "'10xgenomics_transcriptomes' section (use "
+                           "'organism:ORGANISM' sections instead)")
         except NoSectionError:
             pass
         # Legacy 10xgenomics snRNA-seq pre-mRNA references
@@ -201,10 +204,10 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['cellranger_premrna_reference'] = reference
-            logging.warning("Added cellranger pre-mRNA references from "
-                            "deprecated '10xgenomics_premrna_references' "
-                            "section (use 'organism:ORGANISM' sections "
-                            "instead)")
+            logger.warning("Added cellranger pre-mRNA references from "
+                           "deprecated '10xgenomics_premrna_references' "
+                           "section (use 'organism:ORGANISM' sections "
+                           "instead)")
         except NoSectionError:
             pass
         # Legacy 10xgenomics scATAC-seq genome references
@@ -213,9 +216,9 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['cellranger_atac_reference'] = reference
-            logging.warning("Added cellranger-atac references from deprecated "
-                            "'10xgenomics_atac_genome_references' section "
-                            "(use 'organism:ORGANISM' sections instead)")
+            logger.warning("Added cellranger-atac references from deprecated "
+                           "'10xgenomics_atac_genome_references' section "
+                           "(use 'organism:ORGANISM' sections instead)")
         except NoSectionError:
             pass
         # Legacy 10xGenomics cellranger ARC single cell multiome references
@@ -224,9 +227,9 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['cellranger_arc_reference'] = reference
-            logging.warning("Added cellranger-arc references from deprecated "
-                            "'10xgenomics_multiome_references' section "
-                            "(use 'organism:ORGANISM' sections instead)")
+            logger.warning("Added cellranger-arc references from deprecated "
+                           "'10xgenomics_multiome_references' section "
+                           "(use 'organism:ORGANISM' sections instead)")
         except NoSectionError:
             pass
         # Sequencers
@@ -244,10 +247,10 @@ class Settings(object):
                         AttributeDictionary(platform=None,
                                             model=None)
                 self['sequencers'][instrument]['platform'] = platform
-            logging.warning("Added sequencer information from "
-                            "deprecated 'sequencers' section (use "
-                            "'sequencer:INSTRUMENT' sections "
-                            "instead)")
+            logger.warning("Added sequencer information from "
+                           "deprecated 'sequencers' section (use "
+                           "'sequencer:INSTRUMENT' sections "
+                           "instead)")
         except NoSectionError:
             pass
         # Sequencing platform-specific defaults
@@ -259,15 +262,15 @@ class Settings(object):
         # Handle deprecated bcl2fastq settings
         for platform in ('hiseq','miseq','nextseq'):
             if config.has_option('bcl2fastq',platform):
-                logging.warning("Deprecated setting in [bcl2fastq]: '%s'"
-                                % platform)
+                logger.warning("Deprecated setting in [bcl2fastq]: '%s'"
+                               % platform)
             try:
                 bcl2fastq = self.platform[platform]['bcl2fastq']
             except KeyError:
                 bcl2fastq = config.get('bcl2fastq',platform)
                 if bcl2fastq is None:
                     continue
-                logging.warning("Setting 'bcl2fastq' in '[platform:%s]' to '%s'"
+                logger.warning("Setting 'bcl2fastq' in '[platform:%s]' to '%s'"
                                 % (platform,bcl2fastq))
                 if platform not in self.platform:
                     self.platform[platform] = AttributeDictionary()
@@ -336,7 +339,7 @@ class Settings(object):
             for template,fields in config.items('reporting_templates'):
                 self['reporting_templates'][template] = fields
         except NoSectionError:
-            logging.debug("No reporting templates defined")
+            logger.debug("No reporting templates defined")
         # Destinations for data transfer
         self.add_section('destination')
         for section in filter(lambda x: x.startswith('destination:'),
@@ -587,7 +590,7 @@ class Settings(object):
                             config.set(name,attr,values[attr])
             config.write(open(self.settings_file,'w'))
         else:
-            logging.warning("No settings file found, nothing saved")
+            logger.warning("No settings file found, nothing saved")
     
     def report_settings(self):
         """
@@ -597,8 +600,8 @@ class Settings(object):
         if self.settings_file:
             text.append("Settings from %s" % self.settings_file)
         else:
-            logging.warning("No settings file found, reporting built-in "
-                            "defaults")
+            logger.warning("No settings file found, reporting built-in "
+                           "defaults")
         for section in self._sections:
             if section == 'sequencers':
                 display_name = 'sequencer'
@@ -643,7 +646,7 @@ def get_install_dir():
         if os.path.isdir(os.path.join(path,'config')) and \
            os.path.isfile(os.path.join(path,'config',
                                        'auto_process.ini.sample')):
-            logging.debug("Found install dir: %s" % path)
+            logger.debug("Found install dir: %s" % path)
             return os.path.abspath(os.path.normpath(path))
         path = os.path.dirname(path)
     return os.path.dirname(__file__)
@@ -657,7 +660,7 @@ def get_config_dir():
 
     """
     path = os.path.join(get_install_dir(),'config')
-    logging.debug("Putative config dir: %s" % path)
+    logger.debug("Putative config dir: %s" % path)
     if os.path.isdir(path):
         return path
     else:
@@ -717,17 +720,17 @@ def locate_settings_file(name='auto_process.ini',create_from_sample=True):
         settings_file = None
     # No settings file found anywhere on search path
     if settings_file is None:
-        logging.debug("No local settings file found in %s" %
-                      ', '.join(config_file_dirs))
+        logger.debug("No local settings file found in %s" %
+                     ', '.join(config_file_dirs))
         if sample_settings_file is not None and create_from_sample:
-            logging.warning("Attempting to make a copy from sample "
-                            "settings file")
+            logger.warning("Attempting to make a copy from sample "
+                           "settings file")
             settings_file = os.path.splitext(sample_settings_file)[0]
             try:
                 with open(settings_file,'w') as fp:
                     with open(sample_settings_file,'r') as fpp:
                         fp.write(fpp.read())
-                logging.warning("Created new file %s" % settings_file)
+                logger.warning("Created new file %s" % settings_file)
             except Exception as ex:
                 raise Exception("Failed to create %s: %s" %
                                 (settings_file,ex))
