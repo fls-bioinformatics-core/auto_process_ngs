@@ -55,12 +55,14 @@ class TestSettings(unittest.TestCase):
         # Conda
         self.assertEqual(s.conda.enable_conda,False)
         self.assertEqual(s.conda.env_dir,None)
-        # Bcl2fastq
-        self.assertEqual(s.bcl2fastq.nprocessors,1)
-        self.assertEqual(s.bcl2fastq.default_version,'>=1.8.4')
-        self.assertEqual(s.bcl2fastq.no_lane_splitting,False)
+        # BCL conversion software
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl2fastq>=1.8.4')
+        self.assertEqual(s.bcl_conversion.nprocessors,None)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
         # NextSeq-specific
-        self.assertEqual(s.platform.nextseq.bcl2fastq,'>=2.0')
+        self.assertEqual(s.platform.nextseq.bcl_converter,'bcl2fastq>=2.0')
         self.assertEqual(s.platform.nextseq.no_lane_splitting,True)
         # Fastq_stats
         self.assertEqual(s.fastq_stats.nprocessors,1)
@@ -467,3 +469,75 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
                          '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
         self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+
+    def test_legacy_bcl2fastq_settings_no_bcl_conversion(self):
+        """Settings: handle legacy 'bcl2fastq' section (no 'bcl_conversion' settings)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[bcl2fastq]
+default_version = >=2.20
+nprocessors = 1
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check bcl_conversion settings
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl2fastq>=2.20')
+        self.assertEqual(s.bcl_conversion.nprocessors,1)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
+
+    def test_legacy_platform_settings_no_bcl_conversion(self):
+        """Settings: handle legacy 'platform:...' section (no 'bcl_conversion' settings)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[platform:nextseq]
+bcl2fastq = >=2.20
+nprocessors = 1
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check bcl_conversion settings (should be defaults)
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl2fastq>=1.8.4')
+        self.assertEqual(s.bcl_conversion.nprocessors,None)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
+        # Check platform-specific options
+        self.assertEqual(s.platform['nextseq'].bcl_converter,
+                         'bcl2fastq>=2.20')
+        self.assertEqual(s.platform['nextseq'].nprocessors,1)
+
+    def test_platform_settings_override_bcl_conversion_section(self):
+        """Settings: 'platform:...' section overrides 'bcl_conversion' settings
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[bcl_conversion]
+bcl_converter = bcl-convert=3.7.5
+nprocessors = 16
+
+[platform:nextseq]
+bcl_converter = bcl2fastq>=2.20
+nprocessors = 8
+no_lane_splitting = true
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check bcl_conversion settings
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl-convert=3.7.5')
+        self.assertEqual(s.bcl_conversion.nprocessors,16)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
+        # Check platform-specific options
+        self.assertEqual(s.platform['nextseq'].bcl_converter,
+                         'bcl2fastq>=2.20')
+        self.assertEqual(s.platform['nextseq'].nprocessors,8)
+        self.assertEqual(s.platform['nextseq'].no_lane_splitting,True)
+        self.assertEqual(s.platform['nextseq'].create_empty_fastqs,False)

@@ -160,9 +160,15 @@ class Settings(object):
         self.conda['env_dir'] = config.get('conda','env_dir',None)
         if self.conda['env_dir']:
             self.conda['env_dir'] = os.path.expandvars(self.conda.env_dir)
-        # bcl2fastq
-        self.add_section('bcl2fastq')
-        self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)
+        # bcl_conversion
+        self.add_section('bcl_conversion')
+        # Add settings from legacy bcl2fastq section first
+        self.bcl_conversion = self.get_bcl_converter_config('bcl2fastq',
+                                                            config)
+        # Update with settings from bcl_conversion section
+        self.get_bcl_converter_config('bcl_conversion',
+                                      config,
+                                      self.bcl_conversion)
         # qc
         self.add_section('qc')
         self.qc['nprocessors'] = config.getint('qc','nprocessors',None)
@@ -258,7 +264,8 @@ class Settings(object):
         for section in filter(lambda x: x.startswith('platform:'),
                               config.sections()):
             platform = section.split(':')[1]
-            self.platform[platform] = self.get_bcl2fastq_config(section,config)
+            self.platform[platform] = self.get_bcl_converter_config(section,
+                                                                    config)
         # Handle deprecated bcl2fastq settings
         for platform in ('hiseq','miseq','nextseq'):
             if config.has_option('bcl2fastq',platform):
@@ -348,51 +355,74 @@ class Settings(object):
             self.destination[dest] = self.get_destination_config(
                 section,config)
 
-    def get_bcl2fastq_config(self,section,config):
+    def get_bcl_converter_config(self,section,config,attr_dict=None):
         """
-        Retrieve bcl2fastq configuration options from .ini file
+        Retrieve BCL conversion configuration options from .ini file
 
-        Given the name of a section (e.g. 'bcl2fastq',
-        'platform:miseq'), fetch the bcl2fastq settings and return
+        Given the name of a section (e.g. 'bcl_conversion',
+        'platform:miseq'), fetch the BCL converter settings and return
         in an AttributeDictionary object.
 
         The options that can be extracted are:
 
-        - default_version
-        - bcl2fastq
+        - bcl_converter
         - nprocessors
         - no_lane_splitting
         - create_empty_fastqs
+
+        There are also some legacy options:
+
+        - default_version
+        - bcl2fastq
 
         Arguments:
           section (str): name of the section to retrieve the
             settings from
           config (Config): Config object with settings loaded
+          attr_dict (AttributeDictionary): optional, existing
+            AttributeDictionary which will be added to
 
         Returns:
           AttributeDictionary: dictionary of option:value pairs.
 
         """
-        values = AttributeDictionary()
-        if section == 'bcl2fastq':
-            values['default_version'] = config.get(section,'default_version',
-                                                   None)
-            values['nprocessors'] = config.getint(section,'nprocessors',None)
-            values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
-                                                            False)
-            values['create_empty_fastqs'] = config.getboolean(
-                section,
-                'create_empty_fastqs',
-                True)
+        if attr_dict:
+            values = attr_dict
         else:
-            values['bcl2fastq'] = config.get(section,'bcl2fastq',None)
-            values['nprocessors'] = config.getint(section,'nprocessors',None)
-            values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
-                                                            None)
-            values['create_empty_fastqs'] = config.getboolean(
-                section,
-                'create_empty_fastqs',
-                None)
+            values = AttributeDictionary()
+        if section == 'bcl2fastq':
+            # Deprecated [bcl2fastq] section
+            value = config.get(section,'default_version',None)
+            if value:
+                values['bcl_converter'] = "bcl2fastq%s" % value
+        else:
+            # [bcl_conversion] and [platform:...] sections
+            value = config.get(section,'bcl2fastq',None)
+            if value:
+                # Legacy 'bcl2fastq' setting
+                values['bcl2fastq'] = value
+            value = config.get(section,'bcl_converter',None)
+            if value:
+                values['bcl_converter'] = value
+            else:
+                try:
+                    values['bcl_converter'] = "bcl2fastq%s" % \
+                                              values['bcl2fastq']
+                except KeyError:
+                    if 'bcl_converter' not in values:
+                        values['bcl_converter'] = 'bcl2fastq>=1.8.4'
+        # Common settings
+        value = config.getint(section,'nprocessors',None)
+        if value or 'nprocessors' not in values:
+            values['nprocessors'] = value
+        values['no_lane_splitting'] = config.getboolean(
+            section,
+            'no_lane_splitting',
+            False)
+        values['create_empty_fastqs'] = config.getboolean(
+            section,
+            'create_empty_fastqs',
+            False)
         return values
 
     def get_destination_config(self,section,config):
