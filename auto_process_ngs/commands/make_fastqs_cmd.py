@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 BCL2FASTQ_DEFAULTS = {
+    "bcl_converter": 'bcl2fastq',
     "minimum_trimmed_read_length": 35,
     "mask_short_adapter_reads": 22,
 }
@@ -40,7 +41,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 name=None,lanes=None,lane_subsets=None,
                 icell8_well_list=None,
                 nprocessors=None,bcl_converter=None,
-                bcl_converter_version=None,
                 bases_mask=None,no_lane_splitting=False,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
@@ -115,10 +115,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
       analyse_barcodes (bool): if True then (re)analyse barcodes for
         fastqs
       bcl_converter (str): default BCL-to-Fastq conversion software to
-        use (defaults to "bcl2fastq")
-      bcl_converter_version (str): (optional) specify version of BCL
-        converter software to use. Should be a string of the form
-        '1.8.4' or '>2.0'.
+        use; optionally can include a version specification (e.g.
+        "bcl2fastq>2.0" or "bcl-convert=3.7.5"). Defaults to "bcl2fastq"
       bases_mask (str): if set then use this as an alternative bases
         mask setting
       no_lane_splitting (bool): if True then run bcl2fastq with
@@ -278,9 +276,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
     # Pipeline log file
     pipeline_log = os.path.join(ap.log_dir,"make_fastqs.log")
 
-    # Deal with platform information
-    if not platform:
-        platform = ap.metadata.platform
     # Bases mask
     if bases_mask is not None:
         ap.params['bases_mask'] = bases_mask
@@ -294,62 +289,44 @@ def make_fastqs(ap,protocol='standard',platform=None,
         mask_short_adapter_reads = \
                 BCL2FASTQ_DEFAULTS['mask_short_adapter_reads']
 
-    # No lane splitting
-    if no_lane_splitting is None:
-        # Look for platform-specific setting
-        try:
-            no_lane_splitting = \
-                ap.settings.platform[ap.metadata.platform].no_lane_splitting
-        except (KeyError,AttributeError):
-            pass
-    if no_lane_splitting is None:
-        # Look for default setting
-        no_lane_splitting = ap.settings.bcl2fastq.no_lane_splitting
+    # Get platform
+    if not platform:
+        platform = ap.metadata.platform
 
-    # Create empty placeholder Fastqs
-    if create_empty_fastqs is None:
-        # Look for platform-specific setting
-        try:
-            create_empty_fastqs = \
-                ap.settings.platform[ap.metadata.platform].create_empty_fastqs
-        except (KeyError,AttributeError):
-            pass
-    if create_empty_fastqs is None:
-        # Look for default setting
-        create_empty_fastqs = ap.settings.bcl2fastq.create_empty_fastqs
+    # Set options from supplied arguments, platform-specific settings
+    # and configured defaults
+    defaults = {
+        'bcl_converter': bcl_converter,
+        'nprocessors': nprocessors,
+        'no_lane_splitting': no_lane_splitting,
+        'create_empty_fastqs': create_empty_fastqs,
+    }
+    for item in ('bcl_converter',
+                 'nprocessors',
+                 'no_lane_splitting',
+                 'create_empty_fastqs',):
+        if defaults[item] is None:
+            value = None
+            if platform in ap.settings.platform:
+                value = ap.settings.platform[platform][item]
+            if value is None:
+                value = ap.settings.bcl_conversion[item]
+            defaults[item] = value
 
     # BCL converter
-    if bcl_converter is None:
-        bcl_converter = "bcl2fastq"
-
-    # Require specific bcl2fastq version
-    if bcl_converter == "bcl2fastq":
-        if bcl_converter_version is None:
-            # Look for platform-specific requirement
-            try:
-                bcl_converter_version = \
-                    ap.settings.platform[ap.metadata.platform].bcl2fastq
-                print("Bcl2fastq version %s required for platform '%s'" %
-                      (ap.metadata.platform,bcl_converter_version))
-            except (KeyError,AttributeError):
-                pass
-        if bcl_converter_version is None:
-            # Look for default requirement
-            bcl_converter_version = \
-                ap.settings.bcl2fastq.default_version
-            print("Bcl2fastq version %s required by default" %
-                  bcl_converter_version)
-        if bcl_converter_version is not None:
-            # No version requirement
-            print("No bcl2fastq version explicitly specified")
+    if defaults['bcl_converter'] is None:
+        bcl_converter = BCL2FASTQ_DEFAULTS['bcl_converter']
+    else:
+        bcl_converter = defaults['bcl_converter']
 
     # Number of processors
-    if not nprocessors:
-        # Look for platform-specific number of processors
-        if platform in ap.settings.platform:
-            nprocessors = ap.settings.platform[platform].nprocessors
-        if not nprocessors:
-            nprocessors = ap.settings.bcl2fastq.nprocessors
+    nprocessors = defaults['nprocessors']
+
+    # Split Fastqs across lanes
+    no_lane_splitting = defaults['no_lane_splitting']
+
+    # Create empty Fastqs
+    create_empty_fastqs = defaults['create_empty_fastqs']
 
     # Set up pipeline runners
     default_runner = ap.settings.general.default_runner
