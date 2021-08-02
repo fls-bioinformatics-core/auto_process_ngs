@@ -356,7 +356,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
     runners = {
         'rsync_runner': ap.settings.runners.rsync,
         'bcl2fastq_runner': ap.settings.runners.bcl2fastq,
-        'bclconvert_runner': ap.settings.runners.bcl2fastq,
+        'bclconvert_runner': ap.settings.runners.bcl_convert,
         'demultiplex_icell8_atac_runner': ap.settings.runners.bcl2fastq,
         'cellranger_runner': ap.settings.runners.cellranger,
         'cellranger_atac_runner': ap.settings.runners.cellranger,
@@ -373,7 +373,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
     # Set up pipeline environment modules
     envmodules = {}
     for envmod in ('bcl2fastq',
-                   'bclconvert',
+                   'bcl_convert',
                    'cellranger_mkfastq',
                    'cellranger_atac_mkfastq',
                    'cellranger_arc_mkfastq',

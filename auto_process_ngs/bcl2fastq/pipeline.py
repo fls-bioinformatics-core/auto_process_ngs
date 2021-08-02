@@ -383,7 +383,7 @@ class MakeFastqs(Pipeline):
 
         # Define module environment modules
         self.add_envmodules('bcl2fastq')
-        self.add_envmodules('bclconvert')
+        self.add_envmodules('bcl_convert')
         self.add_envmodules('cellranger_mkfastq')
         self.add_envmodules('cellranger_atac_mkfastq')
         self.add_envmodules('cellranger_arc_mkfastq')
@@ -1162,7 +1162,7 @@ class MakeFastqs(Pipeline):
                             "Get information on BCL Convert",
                             require_version=converter_version)
                         self.add_task(get_bclconvert,
-                                      envmodules=self.envmodules['bclconvert'])
+                                      envmodules=self.envmodules['bcl_convert'])
                     # Parameter to store intermediate output
                     # directories for merging
                     fastq_lanes_out_dirs = ListParam()
@@ -1221,7 +1221,7 @@ class MakeFastqs(Pipeline):
                             self.add_task(
                                 bcl_convert,
                                 runner=self.runners['bclconvert_runner'],
-                                envmodules=self.envmodules['bclconvert'],
+                                envmodules=self.envmodules['bcl_convert'],
                                 requires=(restore_backup,))
                             # Merging task depends on BCL Convert
                             make_fastqs.requires(bcl_convert)
@@ -1278,7 +1278,7 @@ class MakeFastqs(Pipeline):
                         self.add_task(
                             bcl_convert,
                             runner=self.runners['bclconvert_runner'],
-                            envmodules=self.envmodules['bclconvert'],
+                            envmodules=self.envmodules['bcl_convert'],
                             requires=(restore_backup,))
                         # Merge Fastqs (if requested) and move to
                         # final location

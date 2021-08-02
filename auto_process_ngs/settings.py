@@ -130,6 +130,8 @@ class Settings(object):
         self.modulefiles['make_fastqs'] = config.get('modulefiles',
                                                      'make_fastqs')
         self.modulefiles['bcl2fastq'] = config.get('modulefiles','bcl2fastq')
+        self.modulefiles['bcl_convert'] = config.get('modulefiles',
+                                                     'bcl_convert')
         self.modulefiles['cellranger_mkfastq'] = config.get('modulefiles',
                                                     'cellranger_mkfastq')
         self.modulefiles['cellranger_atac_mkfastq'] = config.get('modulefiles',
@@ -300,6 +302,7 @@ class Settings(object):
         # Define runners for specific jobs
         self.add_section('runners')
         for name in ('bcl2fastq',
+                     'bcl_convert',
                      'qc',
                      'star',
                      'stats',

@@ -13,6 +13,7 @@ poll_interval = 5
 [modulefiles]
 make_fastqs = None
 bcl2fastq = None
+bcl_convert = None
 cellranger_mkfastq = None
 cellranger_atac_mkfastq = None
 cellranger_arc_mkfastq = None
@@ -111,6 +112,7 @@ nprocessors = 1
 # Define runners for specific jobs
 [runners]
 bcl2fastq = SimpleJobRunner
+bcl_convert = SimpleJobRunner
 qc = SimpleJobRunner
 star = SimpleJobRunner
 stats = SimpleJobRunner
