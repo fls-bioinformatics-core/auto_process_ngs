@@ -478,15 +478,17 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
         with open(settings_file,'w') as s:
             s.write("""[bcl2fastq]
 default_version = >=2.20
-nprocessors = 1
+nprocessors = 8
+no_lane_splitting = true
+create_empty_fastqs = false
 """)
         # Load settings
         s = Settings(settings_file)
         # Check bcl_conversion settings
         self.assertEqual(s.bcl_conversion.bcl_converter,
                          'bcl2fastq>=2.20')
-        self.assertEqual(s.bcl_conversion.nprocessors,1)
-        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.nprocessors,8)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,True)
         self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
 
     def test_legacy_platform_settings_no_bcl_conversion(self):
@@ -502,11 +504,10 @@ nprocessors = 1
         # Load settings
         s = Settings(settings_file)
         # Check bcl_conversion settings (should be defaults)
-        self.assertEqual(s.bcl_conversion.bcl_converter,
-                         'bcl2fastq>=1.8.4')
+        self.assertEqual(s.bcl_conversion.bcl_converter,None)
         self.assertEqual(s.bcl_conversion.nprocessors,None)
-        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
-        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,None)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,None)
         # Check platform-specific options
         self.assertEqual(s.platform['nextseq'].bcl_converter,
                          'bcl2fastq>=2.20')
@@ -533,11 +534,11 @@ no_lane_splitting = true
         self.assertEqual(s.bcl_conversion.bcl_converter,
                          'bcl-convert=3.7.5')
         self.assertEqual(s.bcl_conversion.nprocessors,16)
-        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
-        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,None)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,None)
         # Check platform-specific options
         self.assertEqual(s.platform['nextseq'].bcl_converter,
                          'bcl2fastq>=2.20')
         self.assertEqual(s.platform['nextseq'].nprocessors,8)
         self.assertEqual(s.platform['nextseq'].no_lane_splitting,True)
-        self.assertEqual(s.platform['nextseq'].create_empty_fastqs,False)
+        self.assertEqual(s.platform['nextseq'].create_empty_fastqs,None)

@@ -397,32 +397,24 @@ class Settings(object):
                 values['bcl_converter'] = "bcl2fastq%s" % value
         else:
             # [bcl_conversion] and [platform:...] sections
-            value = config.get(section,'bcl2fastq',None)
-            if value:
-                # Legacy 'bcl2fastq' setting
-                values['bcl2fastq'] = value
+            bcl2fastq = config.get(section,'bcl2fastq',None)
             value = config.get(section,'bcl_converter',None)
             if value:
                 values['bcl_converter'] = value
-            else:
-                try:
-                    values['bcl_converter'] = "bcl2fastq%s" % \
-                                              values['bcl2fastq']
-                except KeyError:
-                    if 'bcl_converter' not in values:
-                        values['bcl_converter'] = 'bcl2fastq>=1.8.4'
+            elif bcl2fastq is not None:
+                values['bcl_converter'] = "bcl2fastq%s" % bcl2fastq
+            elif 'bcl_converter' not in values:
+                values['bcl_converter'] = None
         # Common settings
         value = config.getint(section,'nprocessors',None)
         if value or 'nprocessors' not in values:
             values['nprocessors'] = value
-        values['no_lane_splitting'] = config.getboolean(
-            section,
-            'no_lane_splitting',
-            False)
-        values['create_empty_fastqs'] = config.getboolean(
-            section,
-            'create_empty_fastqs',
-            False)
+        value = config.getboolean(section,'no_lane_splitting',None)
+        if value is not None or 'no_lane_splitting' not in values:
+            values['no_lane_splitting'] = value
+        value = config.getboolean(section,'create_empty_fastqs',None)
+        if value is not None or 'create_empty_fastqs' not in values:
+            values['create_empty_fastqs'] = value
         return values
 
     def get_destination_config(self,section,config):
