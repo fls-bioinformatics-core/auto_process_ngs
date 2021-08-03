@@ -273,7 +273,7 @@ def add_make_fastqs_command(cmdparser):
                                   dest="bases_mask",default=None,
                                   help="explicitly set the bases-mask string "
                                   "to indicate how each cycle should be used "
-                                  "in the bcl2fastq conversion (overrides "
+                                  "in the BCL to Fastq conversion (overrides "
                                   "default). Set to 'auto' to determine "
                                   "automatically")
     # Options to control bcl converter (bcl2fastq/bcl-convert)
@@ -282,114 +282,63 @@ def add_make_fastqs_command(cmdparser):
     bcl_to_fastq.add_argument('--bcl-converter',action="store",
                               dest='bcl_converter',
                               metavar="CONVERTER",
-                              default='bcl2fastq',
+                              default=None,
                               help="explicitly set BCL conversion software "
                               "to use for non-10xGenomics/non-ICELL8 runs "
-                              "(either 'bcl2fastq' or 'bcl-convert'; default "
-                              "is 'bcl2fastq'); can also include a version "
-                              "specifier (e.g. 'bcl2fastq>=2.0')")
+                              "(either 'bcl2fastq' or 'bcl-convert'; can "
+                              "also include a version specifier e.g. "
+                              "'bcl2fastq>=2.0'). Default: %s (may be "
+                              "overridden by platform-specific settings)" %
+                              __settings.bcl_conversion.bcl_converter)
     # Use lane splitting
-    # Determine defaults to report to user
-    no_lane_splitting_platforms = []
-    use_lane_splitting_platforms = []
-    for platform in __settings.platform:
-        if __settings.platform[platform].no_lane_splitting is not None:
-            if __settings.platform[platform].no_lane_splitting:
-                no_lane_splitting_platforms.append(platform)
-            else:
-                use_lane_splitting_platforms.append(platform)
-    if __settings.bcl2fastq.no_lane_splitting:
-        if use_lane_splitting_platforms:
-            default_no_lane_splitting = \
-                            "Used by default for all platforms except %s" % \
-                            ', '.join(use_lane_splitting_platforms)
-            default_use_lane_splitting = "Used by default for %s" % \
-                            ', '.join(use_lane_splitting_platforms)
-        else:
-            default_no_lane_splitting = "Default for all platforms"
-            default_use_lane_splitting = ""
-    else:
-        if no_lane_splitting_platforms:
-            default_use_lane_splitting = \
-                            "Used by default for all platforms except %s" % \
-                            ', '.join(no_lane_splitting_platforms)
-            default_no_lane_splitting = "Used by default for %s" % \
-                            ', '.join(no_lane_splitting_platforms)
-        else:
-            default_no_lane_splitting = ""
-            default_use_lane_splitting = "Default for all platforms"
-    if default_use_lane_splitting:
-        default_use_lane_splitting = ". "+default_use_lane_splitting
-    if default_no_lane_splitting:
-        default_no_lane_splitting = ". "+default_no_lane_splitting
     bcl_to_fastq.add_argument('--no-lane-splitting',action='store_true',
-                              dest='no_lane_splitting',default=False,
+                              dest='no_lane_splitting',default=None,
                               help="don't split the output FASTQ files by "
-                              "lane (turn off using --use-lane-splitting)%s" %
-                              default_no_lane_splitting)
+                              "lane. Default: %s (may be overridden by "
+                              "platform-specific settings); turn off using "
+                              "--use-lane-splitting" %
+                              ("on" if
+                               __settings.bcl_conversion.no_lane_splitting
+                               else "off"))
     bcl_to_fastq.add_argument('--use-lane-splitting',action='store_true',
-                              dest='use_lane_splitting',default=False,
-                              help="split the output FASTQ files by lane "
-                              "(turn off using --no-lane-splitting)%s" %
-                              default_use_lane_splitting)
+                              dest='use_lane_splitting',default=None,
+                              help="split the output FASTQ files by lane. "
+                              "Default: %s (but may be overridden by "
+                              "platform-specific settings); turn off "
+                              "using --no-lane-splitting" %
+                              ("off" if
+                               __settings.bcl_conversion.no_lane_splitting
+                               else "on"))
     bcl_to_fastq.add_argument("--find-adapters-with-sliding-window",
                               action="store_true",
                               dest='find_adapters_with_sliding_window',
                               help="use sliding window algorithm to "
                               "identify adapters for trimming")
     # Creation of empty fastqs
-    # Determine defaults to report to user
-    create_empty_fastqs_platforms = []
-    no_create_empty_fastqs_platforms = []
-    for platform in __settings.platform:
-        if __settings.platform[platform].create_empty_fastqs is not None:
-            if __settings.platform[platform].create_empty_fastqs:
-                create_empty_fastqs_platforms.append(platform)
-            else:
-                no_create_empty_fastqs_platforms.append(platform)
-    if __settings.bcl2fastq.create_empty_fastqs:
-        if no_create_empty_fastqs_platforms:
-            default_create_empty_fastqs = \
-                    "Used by default for all platforms except %s" % \
-                    ', '.join(no_create_empty_fastqs_platforms)
-            default_no_create_empty_fastqs = \
-                    "Used by default for %s" % \
-                    ', '.join(no_create_empty_fastqs_platforms)
-        else:
-            default_create_empty_fastqs = "Default for all platforms"
-            default_no_create_empty_fastqs = ""
-    else:
-        if create_empty_fastqs_platforms:
-            default_no_create_empty_fastqs = \
-                    "Used by default for all platforms except %s" % \
-                    ', '.join(create_empty_fastqs_platforms)
-            default_create_empty_fastqs = \
-                    "Used by default for %s" % \
-                    ', '.join(create_empty_fastqs_platforms)
-        else:
-            default_no_create_empty_fastqs = "Default for all platforms"
-            default_create_empty_fastqs = ""
-    if default_create_empty_fastqs:
-        default_create_empty_fastqs = ". "+default_create_empty_fastqs
-    if default_no_create_empty_fastqs:
-        default_no_create_empty_fastqs = ". "+default_no_create_empty_fastqs
     bcl_to_fastq.add_argument('--create-empty-fastqs',action='store_true',
                               dest='create_empty_fastqs',
-                              default=False,
+                              default=None,
                               help="create empty files as placeholders for "
-                              "missing FASTQs from bcl2fastq demultiplexing "
-                              "step (NB bcl2fastq must have finished without "
-                              "an error for this option to be applied; turn "
-                              "off using --no-create-empty-fastqs)%s"
-                              % default_create_empty_fastqs)
+                              "missing FASTQs from demultiplexing step. "
+                              "Default: %s (but may be overridden by "
+                              "platform-specific settings); turn off using "
+                              "--no-create-empty-fastqs. NB Fastq generation "
+                              "must have finished without for this option to "
+                              "be applied" %
+                              ("on" if
+                               __settings.bcl_conversion.create_empty_fastqs
+                               else "off"))
     bcl_to_fastq.add_argument('--no-create-empty-fastqs',action='store_true',
                               dest='no_create_empty_fastqs',
                               default=False,
                               help="don't create empty files as placeholders "
-                              "for missing FASTQs from bcl2fastq "
-                              "demultiplexing step (turn off using "
-                              "--create-empty-fastqs)%s"
-                              % default_no_create_empty_fastqs)
+                              "for missing FASTQs from demultiplexing step. "
+                              "Default: %s (but may be overridden by "
+                              "platform-specific settings); turn off using "
+                              "--create-empty-fastqs." %
+                              ("off" if
+                               __settings.bcl_conversion.create_empty_fastqs
+                               else "on"))
     # Fastqs for index reads
     bcl_to_fastq.add_argument('--create-fastq-for-index-reads',
                               action='store_true',
@@ -397,23 +346,11 @@ def add_make_fastqs_command(cmdparser):
                               default=False,
                               help="also create FASTQs for index reads")
     # Number of processors
-    display_nprocessors = []
-    for platform in __settings.platform:
-        if __settings.platform[platform].nprocessors is not None:
-            display_nprocessors.append(
-                "%s: %s" % 
-                (platform,
-                 __settings.platform[platform].nprocessors))
-    if display_nprocessors:
-        display_nprocessors.append("other platforms: %s" %
-                                   __settings.bcl2fastq.nprocessors)
-    elif __settings.bcl2fastq.nprocessors:
-        display_nprocessors.append("%s" % __settings.bcl2fastq.nprocessors)
-    else:
-        display_nprocessors.append("taken from job runner")
-    display_nprocessors = ', '.join(display_nprocessors)
     add_nprocessors_option(bcl_to_fastq,None,
-                           default_display=display_nprocessors)
+                           default_display=(
+                               __settings.bcl_conversion.nprocessors
+                               if __settings.bcl_conversion.nprocessors
+                               else "taken from job runner"))
     add_runner_option(bcl_to_fastq)
     # Adapter trimming/masking options
     adapters = p.add_argument_group('Adapter trimming and masking')
@@ -1243,30 +1180,29 @@ def make_fastqs(args):
         create_empty_fastqs = False
     else:
         create_empty_fastqs = None
-    # Deal with BCL converter and version requirement
+    # BCL converter
     bcl_converter = args.bcl_converter
-    bcl_converter_version = None
-    for op in ('>=','=>','<=','=<','>','<','='):
-        if op in args.bcl_converter:
-            bcl_converter = args.bcl_converter.split(op)[0]
-            bcl_converter_version = op + args.bcl_converter.split(op)[1]
-            break
-    if bcl_converter not in ('bcl2fastq','bcl-convert',):
-        raise Exception("%s: invalid BCL converter specifier for "
-                        "--bcl-converter (must be one of 'bcl2fastq', "
-                        "'bcl-convert')" % args.bcl_converter)
     if args.bcl2fastq_version:
         # Deal with deprecated --require-bcl2fastq-version
-        if bcl_converter != 'bcl2fastq':
+        if bcl_converter == None:
+            # Set implicitly to bcl2fastq
+            bcl_converter = 'bcl2fastq'
+            logger.warning("Implicitly setting BCL converter to "
+                           "'bcl2fastq' for deprecated option "
+                           "--require-bcl2fastq-version "
+                           "(use --bcl-converter instead)")
+        if bcl_converter == 'bcl2fastq':
+            # Add the version
+            if args.bcl2fastq[0].isdigit():
+                bcl_converter += '='
+            bcl_converter = "%s%s" % (bcl_converter,args.bcl2fastq_version)
+            logger.warning("Setting BCL converter version from "
+                           "deprecated option --require-bcl2fastq-version "
+                           "(use --bcl-converter instead)")
+        else:
             raise Exception("Deprecated option --require-bcl2fastq-version "
                             "can't be used if BCL converter is not "
                             "'bcl2fastq'")
-        elif bcl_converter_version:
-            raise Exception("Deprecated option --require-bcl2fastq-version "
-                            "can't be used if --bcl-converter also specifies "
-                            "a version")
-        else:
-            bcl_converter_version = args.bcl2fastq_version
     # Deal with --lanes
     if args.lanes:
         # Build subsets
