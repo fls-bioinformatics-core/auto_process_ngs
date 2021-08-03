@@ -45,12 +45,12 @@ By default ``make_fastqs`` performs the following steps:
 * Fetches the BCL data and copies it to the ``primary_data`` subdirectory
   of the analysis directory
 * Checks the sample sheet for errors and possible barcode collisions
-* Runs ``bcl2fastq`` (or ``cellranger`` for 10xGenomics Chromium data)
-  and verifies that the outputs match what was expected from the input
-  sample sheet
+* Runs BCL to Fastq conversion (either ``bcl2fastq`` or ``bcl-convert``,
+  or ``cellranger`` for 10xGenomics Chromium data) and verifies that the
+  outputs match what was expected from the input sample sheet
 * Generates statistics for the Fastq data and produces a report on the
   analysing the numbers of reads assigned to each sample, lane and
-  project (``processing.html``)
+  project (``processing_qc.html``)
 * Analyses the barcode index sequences to look for issues with
   demultiplexing (``standard`` protocol only)
 
@@ -151,7 +151,7 @@ the Fastqs.
 
 .. note::
 
-   ``--protocol=icell8`` runs the standard bcl2fastq commands with
+   ``--protocol=icell8`` runs the standard ``bcl2fastq`` commands with
    with the following settings:
 
    * Disable adapter trimming and masking by setting
@@ -177,7 +177,7 @@ using the ``--protocol=icell8_atac`` option:
 
     auto_process.py make_fastqs --protocol=icell8_atac --well-list=WELL_LIST_FILE...
 
-This runs bcl2fastq to perform initial standard demultiplexing based on
+This runs ``bcl2fastq`` to perform initial standard demultiplexing based on
 the samples defined in the sample sheet, followed by a second round of
 demultiplexing into ICELL8 samples based on the contents of the well list
 file which must be supplied via the mandatory ``--well-list`` argument.
@@ -310,7 +310,10 @@ Some of the most commonly used options are:
   of processing protocols have been run). Lanes can be specified
   as a range (e.g. ``1-4``), a list (e.g. ``6,8``) or a
   combination (e.g. ``1-4,6,8``). See
-  :ref:`make_fastqs-mixed-protocols` for more details.
+  :ref:`make_fastqs-mixed-protocols` for more details
+* ``--bcl-converter``: allows the Illumina Fastq generation
+  software to be specified, see :ref:`make_fastqs-bcl-converter`
+  for more details
 * ``--use-bases-mask``: allows a custom bases mask string (which
   controls how each cycle of raw data is used) to be specified
   (default is to determine the bases mask automatically; set to
@@ -326,6 +329,27 @@ Some of the most commonly used options are:
 
 The full set of options can be found in the
 :ref:`'make_fastqs' section of the command reference <commands_make_fastqs>`.
+
+.. _make_fastqs-bcl-converter:
+
+Specifying Illumina BCL conversion software
+-------------------------------------------
+
+For the ``standard`` and ``mirna`` Fastq generation protocols,
+it is possible to use either the ``bcl2fastq`` or ``bcl-convert``
+software packages to convert raw BCL data into Fastq files.
+
+The ``--bcl-converter`` command line option can be used to
+specify both the BCL converter software and optionally also
+restrict to a range (or single version), for example:
+
+::
+
+   auto_process.py make_fastqs --bcl-converter 'bcl-convert>=3.7'
+
+Default BCL conversion software can be specified in the config
+file, both generally and on a per-platform basis (see
+:ref:`specifying_bcl_conversion_software`).
 
 .. _make_fastqs-adapter-trimming-and-masking:
 

@@ -32,6 +32,7 @@ third-party software packages which must be installed separately:
 Pipeline stage      Software packages  Notes
 =================== ================== ===================
 make_fastqs         `bcl2fastq 2.17`_  2.17+ recommended
+make_fastqs         `bcl-convert`_     Alternative to ``bcl2fastq``
 make_fastqs         `cellranger`_      10xGenomics Chromium single-cell RNA-seq data only
 make_fastqs         `cellranger-atac`_ 10xGenomics Chromium single-cell ATAC-seq data only
 make_fastqs         `cellranger-arc`_  10xGenomics Multiome ATAC + GEX data
@@ -50,6 +51,7 @@ process_icell8      `bowtie2`_         Required by fastq_screen
 
 .. _bcl2fastq 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
 .. _bcl2fastq1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
+.. _bcl-convert: https://support.illumina.com/sequencing/sequencing_software/bcl-convert.html
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger-atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
 .. _cellranger-arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
