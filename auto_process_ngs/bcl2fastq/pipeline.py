@@ -3413,8 +3413,9 @@ class MergeFastqs(PipelineTask):
                     s_index += 1
                     s_indices[sample_name] = s_index
         # Make a new directory for the merging
-        self.tmp_merge_dir = "__mergefastqs.%s.tmp" % \
-                             time.strftime("%Y%m%d%H%M%S")
+        self.tmp_merge_dir = "__mergefastqs.%s.%s.tmp" % \
+                             (os.path.basename(self.args.out_dir),
+                             time.strftime("%Y%m%d%H%M%S"))
         os.mkdir(self.tmp_merge_dir)
         print("Made temporary directory for merging: %s" %
               self.tmp_merge_dir)
