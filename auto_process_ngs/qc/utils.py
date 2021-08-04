@@ -62,7 +62,9 @@ def determine_qc_protocol(project):
             elif library_type == "snRNA-seq":
                 # 10xGenomics snRNA-seq
                 protocol = "10x_snRNAseq"
-            elif library_type == "CellPlex":
+            elif library_type in ("CellPlex",
+                                  "CellPlex scRNA-seq",
+                                  "CellPlex snRNA-seq"):
                 # 10xGenomics CellPlex (cell multiplexing)
                 protocol = "10x_CellPlex"
         elif library_type in ("scATAC-seq",
