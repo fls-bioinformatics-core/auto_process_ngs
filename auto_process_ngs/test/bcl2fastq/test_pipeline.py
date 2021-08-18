@@ -17,6 +17,7 @@ from auto_process_ngs.mock import make_mock_bcl2fastq2_output
 from auto_process_ngs.bcl2fastq.pipeline import MakeFastqs
 from auto_process_ngs.bcl2fastq.pipeline import subset
 from auto_process_ngs.bcl2fastq.utils import make_custom_sample_sheet
+from auto_process_ngs.stats import FastqStatistics
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -46,7 +47,43 @@ class TestMakeFastqs(unittest.TestCase):
         # Remove the temporary test directory
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
-            
+
+    def assertFastqStats(self,stats,fq,expected_nreads,**lanes):
+        """
+        Internal: check the statistics on a Fastq file
+
+        'stats' should be a FastqStatistics object
+        'fq' should be a Fastq file name (no path)
+        'expected_nreads' is the total number of expected reads
+        'lanes' can be lane identifiers specifying the expected
+        read count for that lane e.g. 'L1=4' means 'expect 4
+        reads associated with lane 1'
+        """
+        # Look up the Fastq
+        data = stats.raw.lookup('Fastq',fq)
+        if not data:
+            raise AssertionError("'%s': Fastq not found" % fq)
+        # Check number of reads
+        self.assertEqual(data[0]['Nreads'],
+                         expected_nreads,
+                         "'%s': contains %d reads, expected %d"
+                         % (fq,data[0]['Nreads'],expected_nreads))
+        # Check reads per lane
+        for lane in lanes:
+            expected_lane_nreads = int(lanes[lane])
+            try:
+                nreads = data[0][lane]
+                if not nreads:
+                    nreads = 0
+            except KeyError:
+                raise AssertionError("'%s': lane '%s' not found"
+                                     % (fq,lane))
+            self.assertEqual(nreads,
+                             expected_lane_nreads,
+                             "'%s': has %d reads for lane %s, "
+                             "expected %d"
+                             % (fq,nreads,lane,expected_lane_nreads))
+
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_bcl2fastq_2_17(self):
         """
@@ -265,6 +302,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_set_out_dirs(self):
@@ -942,6 +989,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_set_minimum_trimmed_read_length(self):
@@ -1091,6 +1148,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_set_mask_short_adapter_reads(self):
@@ -1240,6 +1307,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_disable_adapter_trimming(self):
@@ -1397,6 +1474,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_set_bases_mask(self):
@@ -1544,6 +1631,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_require_bcl2fastq_version(self):
@@ -1690,6 +1787,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_require_bcl2fastq_version_not_found(self):
@@ -2058,7 +2165,23 @@ class TestMakeFastqs(unittest.TestCase):
         # Sample sheet
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'wt') as fp:
-            fp.write(SampleSheets.hiseq)
+            samplesheet_data = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,,TAAGGCGA,,AGAGTAGA,AB,
+2,TM2,TM2,,,,TAAGGCGA,,GCGTAAGA,TM,
+3,CD3,CD3,,,,GTGAAACG,,TCTTTCCC,CD,
+4,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+4,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+4,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+5,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+5,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+5,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+6,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+6,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+6,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+7,ML7,ML7,,,,GCCAATAT,,TCTTTCCC,ML,
+8,VL8,VL8,,,,GCCAATAT,,TCTTTCCC,VL,"""
+            fp.write(samplesheet_data)
         # Create mock bcl-convert
         MockBclConvertExe.create(os.path.join(self.bin,
                                               "bcl-convert"),
@@ -2117,6 +2240,62 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1','L2','L3','L4',
+                                           'L5','L6','L7','L8'])
+        for fq in ("AB1_S1_L001_R1_001.fastq.gz",
+                   "AB1_S1_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
+        for fq in ("TM2_S2_L002_R1_001.fastq.gz",
+                   "TM2_S2_L002_R2_001.fastq.gz",
+                   "Undetermined_S0_L002_R1_001.fastq.gz",
+                   "Undetermined_S0_L002_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L2=1)
+        for fq in ("CD3_S3_L003_R1_001.fastq.gz",
+                   "CD3_S3_L003_R2_001.fastq.gz",
+                   "Undetermined_S0_L003_R1_001.fastq.gz",
+                   "Undetermined_S0_L003_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L3=1)
+        for fq in ("EB4_S4_L004_R1_001.fastq.gz",
+                   "EB4_S4_L004_R2_001.fastq.gz",
+                   "EB5_S5_L004_R1_001.fastq.gz",
+                   "EB5_S5_L004_R2_001.fastq.gz",
+                   "EB6_S6_L004_R1_001.fastq.gz",
+                   "EB6_S6_L004_R2_001.fastq.gz",
+                   "Undetermined_S0_L004_R1_001.fastq.gz",
+                   "Undetermined_S0_L004_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L4=1)
+        for fq in ("EB4_S4_L005_R1_001.fastq.gz",
+                   "EB4_S4_L005_R2_001.fastq.gz",
+                   "EB5_S5_L005_R1_001.fastq.gz",
+                   "EB5_S5_L005_R2_001.fastq.gz",
+                   "EB6_S6_L005_R1_001.fastq.gz",
+                   "EB6_S6_L005_R2_001.fastq.gz",
+                   "Undetermined_S0_L005_R1_001.fastq.gz",
+                   "Undetermined_S0_L005_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L5=1)
+        for fq in ("EB4_S4_L006_R1_001.fastq.gz",
+                   "EB4_S4_L006_R2_001.fastq.gz",
+                   "EB5_S5_L006_R1_001.fastq.gz",
+                   "EB5_S5_L006_R2_001.fastq.gz",
+                   "EB6_S6_L006_R1_001.fastq.gz",
+                   "EB6_S6_L006_R2_001.fastq.gz",
+                   "Undetermined_S0_L006_R1_001.fastq.gz",
+                   "Undetermined_S0_L006_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L6=1)
+        for fq in ("ML7_S7_L007_R1_001.fastq.gz",
+                   "ML7_S7_L007_R2_001.fastq.gz",
+                   "Undetermined_S0_L007_R1_001.fastq.gz",
+                   "Undetermined_S0_L007_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L7=1)
+        for fq in ("VL8_S8_L008_R1_001.fastq.gz",
+                   "VL8_S8_L008_R2_001.fastq.gz",
+                   "Undetermined_S0_L008_R1_001.fastq.gz",
+                   "Undetermined_S0_L008_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L8=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_bclconvert_multiple_lanes_no_lane_splitting(self):
@@ -2133,7 +2312,23 @@ class TestMakeFastqs(unittest.TestCase):
         # Sample sheet
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'wt') as fp:
-            fp.write(SampleSheets.hiseq)
+            samplesheet_data = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,,TAAGGCGA,,AGAGTAGA,AB,
+2,TM2,TM2,,,,TAAGGCGA,,GCGTAAGA,TM,
+3,CD3,CD3,,,,GTGAAACG,,TCTTTCCC,CD,
+4,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+4,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+4,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+5,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+5,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+5,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+6,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+6,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+6,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+7,ML7,ML7,,,,GCCAATAT,,TCTTTCCC,ML,
+8,VL8,VL8,,,,GCCAATAT,,TCTTTCCC,VL,"""
+            fp.write(samplesheet_data)
         # Create mock bcl-convert
         MockBclConvertExe.create(os.path.join(self.bin,
                                               "bcl-convert"),
@@ -2193,6 +2388,39 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1','L2','L3','L4',
+                                           'L5','L6','L7','L8'])
+        for fq in ("AB1_S1_R1_001.fastq.gz",
+                   "AB1_S1_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
+        for fq in ("TM2_S2_R1_001.fastq.gz",
+                   "TM2_S2_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L2=1)
+        for fq in ("CD3_S3_R1_001.fastq.gz",
+                   "CD3_S3_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L3=1)
+        for fq in ("EB4_S4_R1_001.fastq.gz",
+                   "EB4_S4_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,3,L4=1,L5=1,L6=1)
+        for fq in ("EB5_S5_R1_001.fastq.gz",
+                   "EB5_S5_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,3,L4=1,L5=1,L6=1)
+        for fq in ("EB6_S6_R1_001.fastq.gz",
+                   "EB6_S6_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,3,L4=1,L5=1,L6=1)
+        for fq in ("ML7_S7_R1_001.fastq.gz",
+                   "ML7_S7_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L7=1)
+        for fq in ("VL8_S8_R1_001.fastq.gz",
+                   "VL8_S8_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L8=1)
+        for fq in ("Undetermined_S0_R1_001.fastq.gz",
+                   "Undetermined_S0_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,8,
+                                  L1=1,L2=1,L3=1,L4=1,
+                                  L5=1,L6=1,L7=1,L8=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_bclconvert_multiple_lanes_subsets(self):
@@ -2209,7 +2437,23 @@ class TestMakeFastqs(unittest.TestCase):
         # Sample sheet
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'wt') as fp:
-            fp.write(SampleSheets.hiseq)
+            samplesheet_data = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,,TAAGGCGA,,AGAGTAGA,AB,
+2,TM2,TM2,,,,TAAGGCGA,,GCGTAAGA,TM,
+3,CD3,CD3,,,,GTGAAACG,,TCTTTCCC,CD,
+4,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+4,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+4,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+5,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+5,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+5,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+6,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+6,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+6,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+7,ML7,ML7,,,,GCCAATAT,,TCTTTCCC,ML,
+8,VL8,VL8,,,,GCCAATAT,,TCTTTCCC,VL,"""
+            fp.write(samplesheet_data)
         # Create mock bcl-convert
         MockBclConvertExe.create(os.path.join(self.bin,
                                               "bcl-convert"),
@@ -2271,6 +2515,62 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1','L2','L3','L4',
+                                           'L5','L6','L7','L8'])
+        for fq in ("AB1_S1_L001_R1_001.fastq.gz",
+                   "AB1_S1_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
+        for fq in ("TM2_S2_L002_R1_001.fastq.gz",
+                   "TM2_S2_L002_R2_001.fastq.gz",
+                   "Undetermined_S0_L002_R1_001.fastq.gz",
+                   "Undetermined_S0_L002_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L2=1)
+        for fq in ("CD3_S1_L003_R1_001.fastq.gz",
+                   "CD3_S1_L003_R2_001.fastq.gz",
+                   "Undetermined_S0_L003_R1_001.fastq.gz",
+                   "Undetermined_S0_L003_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L3=1)
+        for fq in ("EB4_S2_L004_R1_001.fastq.gz",
+                   "EB4_S2_L004_R2_001.fastq.gz",
+                   "EB5_S3_L004_R1_001.fastq.gz",
+                   "EB5_S3_L004_R2_001.fastq.gz",
+                   "EB6_S4_L004_R1_001.fastq.gz",
+                   "EB6_S4_L004_R2_001.fastq.gz",
+                   "Undetermined_S0_L004_R1_001.fastq.gz",
+                   "Undetermined_S0_L004_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L4=1)
+        for fq in ("EB4_S2_L005_R1_001.fastq.gz",
+                   "EB4_S2_L005_R2_001.fastq.gz",
+                   "EB5_S3_L005_R1_001.fastq.gz",
+                   "EB5_S3_L005_R2_001.fastq.gz",
+                   "EB6_S4_L005_R1_001.fastq.gz",
+                   "EB6_S4_L005_R2_001.fastq.gz",
+                   "Undetermined_S0_L005_R1_001.fastq.gz",
+                   "Undetermined_S0_L005_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L5=1)
+        for fq in ("EB4_S2_L006_R1_001.fastq.gz",
+                   "EB4_S2_L006_R2_001.fastq.gz",
+                   "EB5_S3_L006_R1_001.fastq.gz",
+                   "EB5_S3_L006_R2_001.fastq.gz",
+                   "EB6_S4_L006_R1_001.fastq.gz",
+                   "EB6_S4_L006_R2_001.fastq.gz",
+                   "Undetermined_S0_L006_R1_001.fastq.gz",
+                   "Undetermined_S0_L006_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L6=1)
+        for fq in ("ML7_S5_L007_R1_001.fastq.gz",
+                   "ML7_S5_L007_R2_001.fastq.gz",
+                   "Undetermined_S0_L007_R1_001.fastq.gz",
+                   "Undetermined_S0_L007_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L7=1)
+        for fq in ("VL8_S6_L008_R1_001.fastq.gz",
+                   "VL8_S6_L008_R2_001.fastq.gz",
+                   "Undetermined_S0_L008_R1_001.fastq.gz",
+                   "Undetermined_S0_L008_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L8=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_bclconvert_multiple_lanes_subsets_no_lane_splitting(self):
@@ -2287,7 +2587,23 @@ class TestMakeFastqs(unittest.TestCase):
         # Sample sheet
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'wt') as fp:
-            fp.write(SampleSheets.hiseq)
+            samplesheet_data = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,,TAAGGCGA,,AGAGTAGA,AB,
+2,TM2,TM2,,,,TAAGGCGA,,GCGTAAGA,TM,
+3,CD3,CD3,,,,GTGAAACG,,TCTTTCCC,CD,
+4,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+4,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+4,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+5,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+5,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+5,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+6,EB4,EB4,,,,TAAGGCGA,,TAGATCGC,EB,
+6,EB5,EB5,,,,AGGCAGAA,,TAGATCTA,EB,
+6,EB6,EB6,,,,AGGCAGGG,,ACTGCATA,EB,
+7,ML7,ML7,,,,GCCAATAT,,TCTTTCCC,ML,
+8,VL8,VL8,,,,GCCAATAT,,TCTTTCCC,VL,"""
+            fp.write(samplesheet_data)
         # Create mock bcl-convert
         MockBclConvertExe.create(os.path.join(self.bin,
                                               "bcl-convert"),
@@ -2347,6 +2663,37 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1','L2','L3','L4',
+                                           'L5','L6','L7','L8'])
+        for fq in ("AB1_S1_R1_001.fastq.gz",
+                   "AB1_S1_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
+        for fq in ("TM2_S2_R1_001.fastq.gz",
+                   "TM2_S2_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L2=1)
+        for fq in ("CD3_S1_R1_001.fastq.gz",
+                   "CD3_S1_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L3=1)
+        for fq in ("EB4_S2_R1_001.fastq.gz",
+                   "EB4_S2_R2_001.fastq.gz",
+                   "EB5_S3_R1_001.fastq.gz",
+                   "EB5_S3_R2_001.fastq.gz",
+                   "EB6_S4_R1_001.fastq.gz",
+                   "EB6_S4_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,3,L4=1,L5=1,L6=1)
+        for fq in ("ML7_S5_R1_001.fastq.gz",
+                   "ML7_S5_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L7=1)
+        for fq in ("VL8_S6_R1_001.fastq.gz",
+                   "VL8_S6_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L8=1)
+        for fq in ("Undetermined_S0_R1_001.fastq.gz",
+                   "Undetermined_S0_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,8,
+                                  L1=1,L2=1,L3=1,L4=1,
+                                  L5=1,L6=1,L7=1,L8=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_bclconvert_no_lanes_no_lane_splitting(self):
@@ -2423,6 +2770,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_R1_001.fastq.gz",
+                   "Sample1_S1_R2_001.fastq.gz",
+                   "Sample2_S2_R1_001.fastq.gz",
+                   "Sample2_S2_R2_001.fastq.gz",
+                   "Undetermined_S0_R1_001.fastq.gz",
+                   "Undetermined_S0_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_rerun_completed_pipeline(self):
@@ -2451,6 +2808,7 @@ class TestMakeFastqs(unittest.TestCase):
         make_mock_bcl2fastq2_output(os.path.join(analysis_dir,
                                                  "bcl2fastq"),
                                     lanes=(1,),
+                                    reads=('R1','R2'),
                                     sample_sheet=sample_sheet)
         # Make a primary data directory
         os.mkdir(os.path.join(analysis_dir,"primary_data"))
@@ -2609,6 +2967,16 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_multiple_lanes_multiple_subsets(self):
@@ -5319,6 +5687,37 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1','L2','L3','L4'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
+        for fq in ("Sample1_S1_L002_R1_001.fastq.gz",
+                   "Sample1_S1_L002_R2_001.fastq.gz",
+                   "Sample2_S2_L002_R1_001.fastq.gz",
+                   "Sample2_S2_L002_R2_001.fastq.gz",
+                   "Undetermined_S0_L002_R1_001.fastq.gz",
+                   "Undetermined_S0_L002_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L2=1)
+        for fq in ("Sample1_S1_L003_R1_001.fastq.gz",
+                   "Sample1_S1_L003_R2_001.fastq.gz",
+                   "Sample2_S2_L003_R1_001.fastq.gz",
+                   "Sample2_S2_L003_R2_001.fastq.gz",
+                   "Undetermined_S0_L003_R1_001.fastq.gz",
+                   "Undetermined_S0_L003_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L3=1)
+        for fq in ("Sample1_S1_L004_R1_001.fastq.gz",
+                   "Sample1_S1_L004_R2_001.fastq.gz",
+                   "Sample2_S2_L004_R1_001.fastq.gz",
+                   "Sample2_S2_L004_R2_001.fastq.gz",
+                   "Undetermined_S0_L004_R1_001.fastq.gz",
+                   "Undetermined_S0_L004_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L4=1)
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_missing_fastqs_no_placeholders(self):
