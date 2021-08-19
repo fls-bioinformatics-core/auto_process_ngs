@@ -38,6 +38,148 @@ from bcftbx.JobRunner import SimpleJobRunner
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
+# Helpers
+
+class _Mock(object):
+    """
+    Helper class for mocking executables for testing
+    """
+
+    @staticmethod
+    def conda(bin_dir):
+        """
+        Make a mock conda executable for testing
+
+        Arguments:
+          bin_dir (str): path to directory to put mock
+            'conda' executable into (must already exist)
+
+        Returns:
+           String: path to mock 'conda' executable.
+        """
+        conda_bin_dir = os.path.abspath(bin_dir)
+        conda_ = os.path.join(bin_dir,"conda")
+        with open(conda_,'wt') as fp:
+            fp.write("""#!/bin/bash
+if [ "$1" == "--version" ] ; then
+   echo "conda 4.10.3"
+   exit 0
+elif [ "$1" == "create" ] ; then
+   YES=
+   PREFIX=
+   PACKAGES=
+   while [ ! -z "$2" ] ; do
+     case "$2" in
+       -n)
+         shift
+         PREFIX=$(dirname $(dirname $0))/envs/${2}
+         ;;
+       --prefix)
+         shift
+         PREFIX=$2
+         ;;
+       -y)
+         YES=yes
+         ;;
+       -c)
+         shift
+         ;;
+       --override-channels)
+         shift
+         ;;
+       *)
+         PACKAGES="$PACKAGES $2"
+         ;;
+     esac
+     shift
+   done
+fi
+if [ -z "$YES" ] ; then
+   echo "Need to supply -y option"
+   exit 1
+fi
+if [ -z "$PREFIX" ] ; then
+   echo "Need to supply either -n or --prefix"
+   exit 1
+fi
+# Make directory for new environment
+mkdir -p $PREFIX
+# Write package list to a 'packages.txt' file
+echo $PACKAGES >${PREFIX}/packages.txt
+# Make an executable script for each package name
+for pkg in $PACKAGES ; do
+   name=$(echo $pkg | cut -f1 -d=)
+   cat >${PREFIX}/${name} <<EOF
+#!/bin/bash
+echo \$1
+exit 0
+EOF
+   chmod +x ${PREFIX}/${name}
+done
+""")
+            os.chmod(conda_,0o755)
+        activate_ = os.path.join(bin_dir,"activate")
+        with open(activate_,'wt') as fp:
+            fp.write("""#!/bin/bash
+export PATH=$PATH:${1}
+""")
+            os.chmod(activate_,0o755)
+        # Return path to mock conda
+        return conda_
+
+    def conda_with_failing_create(bin_dir):
+        """
+        Make a mock conda executable with failing 'create' command
+
+        Arguments:
+          bin_dir (str): path to directory to put mock
+            'conda' executable into (must already exist)
+
+        Returns:
+           String: path to mock 'conda' executable.
+        """
+        conda_ = os.path.join(bin_dir,"conda")
+        with open(conda_,'wt') as fp:
+            fp.write("""#!/bin/bash
+if [ "$1" == "--version" ] ; then
+   echo "conda 4.10.3"
+   exit 0
+elif [ "$1" == "create" ] ; then
+   echo "!!!! Failed to create environment !!!!"
+   exit 1
+fi
+""")
+            os.chmod(conda_,0o755)
+        activate_ = os.path.join(bin_dir,"activate")
+        with open(activate_,'wt') as fp:
+            fp.write("""#!/bin/bash
+export PATH=$PATH:${1}
+""")
+            os.chmod(activate_,0o755)
+        # Return path to mock conda
+        return conda_
+
+    @staticmethod
+    def fastqc(bin_dir):
+        """
+        Make a mock FastQC executable for testing
+
+        Arguments:
+          bin_dir (str): path to directory to put mock
+           'fastqc' executable into (must already exist)
+
+        Returns:
+           String: path to mock 'fastqc' executable.
+        """
+        fastqc_ = os.path.join(bin_dir,"fastqc")
+        with io.open(fastqc_,'wt') as fp:
+            fp.write(u"""#!/bin/bash
+echo $1
+exit 0
+""")
+        os.chmod(os.path.join(bin_dir,"fastqc"),0o775)
+        return fastqc_
+
 # Unit tests
 
 class TestPipeline(unittest.TestCase):
@@ -631,12 +773,7 @@ class TestPipeline(unittest.TestCase):
         bin_dir = os.path.join(self.working_dir,"apps","bin")
         os.mkdir(os.path.join(self.working_dir,"apps"))
         os.mkdir(bin_dir)
-        with io.open(os.path.join(bin_dir,"fastqc"),'wt') as fp:
-            fp.write(u"""#!/bin/bash
-echo $1
-exit 0
-""")
-        os.chmod(os.path.join(bin_dir,"fastqc"),0o775)
+        _Mock.fastqc(bin_dir)
         # Set up mock environment module
         modules_dir = os.path.join(self.working_dir,"modulefiles")
         os.mkdir(modules_dir)
@@ -740,70 +877,9 @@ prepend-path PATH %s
         # Set up mock conda
         bin_dir = os.path.join(self.working_dir,"conda","bin")
         env_dir = os.path.join(self.working_dir,"conda","envs")
-        os.makedirs(bin_dir)
-        os.makedirs(env_dir)
-        conda_ = os.path.join(bin_dir,"conda")
-        with open(conda_,'wt') as fp:
-            fp.write("""#!/bin/bash
-if [ "$1" == "--version" ] ; then
-   echo "conda 4.10.3"
-   exit 0
-elif [ "$1" == "create" ] ; then
-   YES=
-   PREFIX=
-   PACKAGES=
-   while [ ! -z "$2" ] ; do
-     case "$2" in
-       -n)
-         shift
-         PREFIX=$(dirname $(dirname $0))/envs/${2}
-         ;;
-       --prefix)
-         shift
-         PREFIX=$2
-         ;;
-       -y)
-         YES=yes
-         ;;
-       -c)
-         shift
-         ;;
-       --override-channels)
-         shift
-         ;;
-       *)
-         PACKAGES="$PACKAGES $2"
-         ;;
-     esac
-     shift
-   done
-fi
-if [ -z "$YES" ] ; then
-   echo "Need to supply -y option"
-   exit 1
-fi
-if [ -z "$PREFIX" ] ; then
-   echo "Need to supply either -n or --prefix"
-   exit 1
-fi
-mkdir -p $PREFIX
-for pkg in $PACKAGES ; do
-   name=$(echo $pkg | cut -f1 -d=)
-   cat >${PREFIX}/${name} <<EOF
-#!/bin/bash
-echo \$1
-exit 0
-EOF
-   chmod +x ${PREFIX}/${name}
-done
-""")
-            os.chmod(conda_,0o755)
-        activate_ = os.path.join(bin_dir,"activate")
-        with open(activate_,'wt') as fp:
-            fp.write("""#!/bin/bash
-export PATH=$PATH:${1}
-""")
-            os.chmod(activate_,0o755)
+        for d in (bin_dir,env_dir):
+            os.makedirs(d)
+        conda_ = _Mock.conda(bin_dir)
         # Define a task
         class RunFastqc(PipelineTask):
             def init(self,*files):
@@ -838,29 +914,12 @@ export PATH=$PATH:${1}
         """
         Pipeline: handle failure with conda dependency resolution
         """
-        # Set up mock conda
+        # Set up mock conda with failing create command
         bin_dir = os.path.join(self.working_dir,"conda","bin")
         env_dir = os.path.join(self.working_dir,"conda","envs")
-        os.makedirs(bin_dir)
-        os.makedirs(env_dir)
-        conda_ = os.path.join(bin_dir,"conda")
-        with open(conda_,'wt') as fp:
-            fp.write("""#!/bin/bash
-if [ "$1" == "--version" ] ; then
-   echo "conda 4.10.3"
-   exit 0
-elif [ "$1" == "create" ] ; then
-   echo "!!!! Failed to create environment !!!!"
-   exit 1
-fi
-""")
-            os.chmod(conda_,0o755)
-        activate_ = os.path.join(bin_dir,"activate")
-        with open(activate_,'wt') as fp:
-            fp.write("""#!/bin/bash
-export PATH=$PATH:${1}
-""")
-            os.chmod(activate_,0o755)
+        for d in (bin_dir,env_dir):
+            os.makedirs(d)
+        conda_ = _Mock.conda_with_failing_create(bin_dir)
         # Define a task
         class RunFastqc(PipelineTask):
             def init(self,*files):
@@ -2760,7 +2819,7 @@ class TestCondaWrapper(unittest.TestCase):
         # Restore PATH
         os.environ['PATH'] = self.save_path
 
-    def _make_mock_conda(self,script):
+    def _make_mock_conda(self,mock_conda_func):
         # Internal: make a mock conda executable
         # for use in tests
         self.conda_dir = os.path.join(self.working_dir,
@@ -2773,11 +2832,8 @@ class TestCondaWrapper(unittest.TestCase):
                   self.conda_bin_dir,
                   self.conda_env_dir):
             os.makedirs(d)
-        # Write mock conda
-        self.conda = os.path.join(self.conda_bin_dir,"conda")
-        with open(self.conda,"wt") as fp:
-            fp.write("%s\n" % script)
-        os.chmod(self.conda,0o755)
+        # Create mock conda using supplied function
+        self.conda = mock_conda_func(self.conda_bin_dir)
         # Update PATH
         os.environ['PATH'] = os.environ['PATH'] + \
                              os.sep + \
@@ -2787,14 +2843,7 @@ class TestCondaWrapper(unittest.TestCase):
         """
         CondaWrapper: get conda version
         """
-        self._make_mock_conda("""#!/bin/bash -e
-if [ "$1" == "--version" ] ; then
-   echo "conda 4.10.3"
-   exit 0
-else
-   exit 1
-fi
-""")
+        self._make_mock_conda(_Mock.conda)
         conda = CondaWrapper(conda=self.conda)
         self.assertEqual(conda.version,"4.10.3")
 
@@ -2802,9 +2851,7 @@ fi
         """
         CondaWrapper: check properties for default env dir
         """
-        self._make_mock_conda("""#!/bin/bash -e
-exit 0
-""")
+        self._make_mock_conda(_Mock.conda)
         conda = CondaWrapper(conda=self.conda)
         self.assertEqual(conda.conda,self.conda)
         self.assertTrue(conda.is_installed)
@@ -2815,9 +2862,7 @@ exit 0
         """
         CondaWrapper: check properties for custom env dir
         """
-        self._make_mock_conda("""#!/bin/bash -e
-exit 0
-""")
+        self._make_mock_conda(_Mock.conda)
         custom_env_dir = os.path.join(self.working_dir,
                                       "local_conda_envs")
         os.makedirs(custom_env_dir)
@@ -2857,9 +2902,7 @@ exit 0
         """
         CondaWrapper: check listing environments
         """
-        self._make_mock_conda("""#!/bin/bash -e
-exit 0
-""")
+        self._make_mock_conda(_Mock.conda)
         # Default env dir
         conda = CondaWrapper(conda=self.conda)
         self.assertEqual(conda.list_envs,[])
@@ -2883,45 +2926,7 @@ exit 0
         """
         CondaWrapper: check create new environment
         """
-        self._make_mock_conda("""#!/bin/bash -e
-if [ "$1" != "create" ] ; then
-   exit 1
-fi
-ENV_NAME=
-PREFIX=
-YES=
-PACKAGES=
-while [ ! -z "$2" ] ; do
-   case "$2" in
-     -n)
-        shift
-        ENV_NAME=$2
-        ;;
-     --prefix)
-        shift
-        PREFIX=$2
-        ;;
-     -y)
-        YES=yes
-        ;;
-     *)
-        PACKAGES="${PACKAGES} $2"
-        ;;
-   esac
-   shift
-done
-if [ -z "$YES" ] ; then
-   exit 1
-fi
-if [ ! -z "$ENV_NAME" ] ; then
-   ENV_DIR=$(dirname $(dirname $0))/envs
-   mkdir ${ENV_DIR}/${ENV_NAME}
-   echo $PACKAGES >${ENV_DIR}/${ENV_NAME}/packages.txt
-elif [ ! -z "$PREFIX" ] ; then
-   mkdir ${PREFIX}
-   echo $PACKAGES >${PREFIX}/packages.txt
-fi
-""")
+        self._make_mock_conda(_Mock.conda)
         conda = CondaWrapper(conda=self.conda)
         conda.create_env("qc",
                          "fastqc=0.11.3",
@@ -2940,10 +2945,7 @@ fi
         """
         CondaWrapper: raise exception on error when creating environment
         """
-        self._make_mock_conda("""#!/bin/bash -e
-echo "Failed to create environment"
-exit 1
-""")
+        self._make_mock_conda(_Mock.conda_with_failing_create)
         conda = CondaWrapper(conda=self.conda)
         self.assertRaises(CondaCreateEnvError,
                           conda.create_env,
