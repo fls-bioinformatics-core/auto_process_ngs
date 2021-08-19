@@ -1326,6 +1326,8 @@ class TestPipelineTask(unittest.TestCase):
         # Make a temporary working dir
         self.working_dir = tempfile.mkdtemp(
             suffix='TestPipeline')
+        # Store PATH
+        self.path = os.environ['PATH']
 
     def tearDown(self):
         # Stop the scheduler
@@ -1334,6 +1336,8 @@ class TestPipelineTask(unittest.TestCase):
         # Remove temp dir
         if os.path.exists(self.working_dir):
             shutil.rmtree(self.working_dir)
+        # Restore PATH
+        os.environ['PATH'] = self.path
 
     def _user(self):
         # Internal function to determine user
@@ -2000,6 +2004,8 @@ class TestPipelineTask(unittest.TestCase):
         task = NoCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
         # Check conda dependencies
         self.assertEqual(task.conda_dependencies,[])
+        # Check conda environment name
+        self.assertEqual(task.conda_env_name,None)
 
     def test_pipelinetask_conda_dependencies(self):
         """
@@ -2022,6 +2028,156 @@ class TestPipelineTask(unittest.TestCase):
                          ["fastqc=0.11.3",
                           "fastq-screen=0.14.0",
                           "bowtie=1.2.3"])
+        # Check conda environment name
+        self.assertEqual(task.conda_env_name,
+                         "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3")
+
+    def test_pipelinetask_setup_conda_env(self):
+        """
+        PipelineTask: set up conda environment for dependencies
+        """
+        # Define a task with conda dependencies
+        class WithCondaDeps(PipelineTask):
+            def init(self,fq):
+                self.conda("fastqc=0.11.3")
+                self.conda("fastq-screen=0.14.0",
+                           "bowtie=1.2.3")
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Run FastQC","fastqc",self.args.fq))
+        # Create a mock conda instance
+        bin_dir = os.path.join(self.working_dir,"__conda","bin")
+        env_dir = os.path.join(self.working_dir,"__conda","envs")
+        for d in (bin_dir,env_dir):
+            os.makedirs(d)
+        conda_ = _Mock.conda(bin_dir)
+        # Make a task instance
+        task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
+        # Setup conda environment
+        conda_env = task.setup_conda_env(conda_)
+        # Check conda environment
+        self.assertEqual(
+            conda_env,
+            os.path.join(env_dir,
+                         "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3"))
+        self.assertTrue(os.path.exists(conda_env))
+
+    def test_pipelinetask_setup_conda_env_custom_location(self):
+        """
+        PipelineTask: set up conda environment for dependencies in custom location
+        """
+        # Define a task with conda dependencies
+        class WithCondaDeps(PipelineTask):
+            def init(self,fq):
+                self.conda("fastqc=0.11.3")
+                self.conda("fastq-screen=0.14.0",
+                           "bowtie=1.2.3")
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Run FastQC","fastqc",self.args.fq))
+        # Create a mock conda instance
+        bin_dir = os.path.join(self.working_dir,'__conda','bin')
+        env_dir = os.path.join(self.working_dir,'__conda','envs')
+        alternative_env_dir = os.path.join(self.working_dir,
+                                           '__my_conda_envs')
+        for d in (bin_dir,
+                  env_dir,
+                  alternative_env_dir):
+            os.makedirs(d)
+        conda_ = _Mock.conda(bin_dir)
+        # Make a task instance
+        task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
+        # Setup conda environment
+        conda_env = task.setup_conda_env(conda_,
+                                         env_dir=alternative_env_dir)
+        # Check conda environment
+        self.assertEqual(
+            conda_env,
+            os.path.join(alternative_env_dir,
+                         "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3"))
+        self.assertTrue(os.path.exists(conda_env))
+
+    def test_pipelinetask_run_with_conda_dependencies_enabled(self):
+        """
+        PipelineTask: run task with conda dependencies enabled
+        """
+        # Define a task with conda dependencies
+        class WithCondaDeps(PipelineTask):
+            def init(self,fq):
+                self.conda("fastqc=0.11.3")
+                self.conda("fastq-screen=0.14.0",
+                           "bowtie=1.2.3")
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Run FastQC","fastqc",self.args.fq))
+        # Make a task instance
+        task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
+        # Create a mock conda instance
+        bin_dir = os.path.join(self.working_dir,'__conda','bin')
+        env_dir = os.path.join(self.working_dir,'__conda','envs')
+        for d in (bin_dir,env_dir):
+            os.makedirs(d)
+        conda_ = _Mock.conda(bin_dir)
+        # Run the task
+        task.run(sched=self.sched,
+                 enable_conda=True,
+                 conda=conda_,
+                 working_dir=self.working_dir,
+                 poll_interval=0.5,
+                 asynchronous=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        # Check conda environment
+        self.assertTrue(
+            os.path.exists(os.path.join(
+                env_dir,"bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3")))
+
+    def test_pipelinetask_run_with_conda_dependencies_disabled(self):
+        """
+        PipelineTask: run task with conda dependencies disabled
+        """
+        # Define a task with conda dependencies
+        class WithCondaDeps(PipelineTask):
+            def init(self,fq):
+                self.conda("fastqc=0.11.3")
+                self.conda("fastq-screen=0.14.0",
+                           "bowtie=1.2.3")
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Run FastQC","fastqc",self.args.fq))
+        # Make a task instance
+        task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
+        # Create a mock conda instance
+        bin_dir = os.path.join(self.working_dir,'__conda','bin')
+        env_dir = os.path.join(self.working_dir,'__conda','envs')
+        for d in (bin_dir,env_dir):
+            os.makedirs(d)
+        conda_ = _Mock.conda(bin_dir)
+        # Create a mock FastQC instance
+        fastq_bin_dir = os.path.join(self.working_dir,'__apps','bin')
+        os.makedirs(fastq_bin_dir)
+        _Mock.fastqc(fastq_bin_dir)
+        os.environ['PATH'] = os.environ['PATH'] + os.pathsep + fastq_bin_dir
+        # Run the task
+        task.run(sched=self.sched,
+                 enable_conda=False,
+                 conda=conda_,
+                 working_dir=self.working_dir,
+                 poll_interval=0.5,
+                 asynchronous=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        # Check conda environment
+        self.assertFalse(
+            os.path.exists(os.path.join(
+                env_dir,
+                "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3")))
 
 class TestPipelineFunctionTask(unittest.TestCase):
 

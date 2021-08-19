@@ -2145,55 +2145,14 @@ class Pipeline(object):
                     else:
                         self.report("starting '%s'" % task.name())
                     kws = dict(**kws)
+                    if 'enable_conda' not in kws:
+                        kws['enable_conda'] = enable_conda
                     if enable_conda:
-                        if task.conda_dependencies:
-                            self.report("using conda to resolve dependencies:")
-                            for dep in task.conda_dependencies:
-                                self.report("- %s" % dep)
-                            # Make a name for the environment
-                            env_name = '+'.join(
-                                sorted(
-                                    task.conda_dependencies)).replace('=','@')
-                            # Fetch the environment
-                            conda_env = None
-                            if env_name not in conda.list_envs:
-                                # Create new environment
-                                self.report("attempting to create new conda "
-                                            "environment '%s'" % env_name)
-                                try:
-                                    conda_env = conda.create_env(
-                                        env_name,
-                                        *task.conda_dependencies)
-                                    self.report("created conda environment "
-                                                "'%s'" % env_name)
-                                except CondaWrapperError as ex:
-                                    # Failed to create the environment
-                                    self.report("failed to create conda "
-                                                "environment '%s': %s" %
-                                                (env_name,ex))
-                                    # Diagnostics
-                                    self.report(
-                                        "\n**** CONDA DIAGNOSTICS ****\n")
-                                    self.report("Command: %s\n" % ex.cmdline)
-                                    self.report("Status : %s\n" % ex.status)
-                                    self.report("Output:\n\n%s" % ex.output)
-                                    self.report(
-                                        "\n**** END OF DIAGNOSTICS ****\n")
-                                    self.report("WARNING the task may fail "
-                                                "as the required environment "
-                                                "couldn't be created")
-                            else:
-                                # Use existing environment
-                                self.report("using existing conda environment "
-                                            "'%s'" % env_name)
-                                conda_env = os.path.join(conda.env_dir,
-                                                         env_name)
-                            # Add info to the keywords
-                            if 'conda' not in kws:
-                                kws['conda'] = conda.conda
-                            if 'conda_env' not in kws:
-                                if conda_env:
-                                    kws['conda_env'] = conda_env
+                        # Add info to the keywords
+                        if 'conda' not in kws:
+                            kws['conda'] = conda.conda
+                        if 'conda_env_dir' not in kws:
+                            kws['conda_env_dir'] = conda.env_dir
                     if 'runner' not in kws:
                         kws['runner'] = default_runner
                     if 'working_dir' not in kws:
@@ -2812,8 +2771,71 @@ class PipelineTask(object):
         """
         return [p for p in self._conda_pkgs]
 
-    def run(self,sched=None,runner=None,envmodules=None,conda=None,
-            conda_env=None,working_dir=None,log_dir=None,
+    @property
+    def conda_env_name(self):
+        """
+        Return a name for conda environment based on packages
+        """
+        if self.conda_dependencies:
+            return '+'.join(sorted(self.conda_dependencies)).replace('=','@')
+        else:
+            return None
+
+    def setup_conda_env(self,conda,env_dir=None,channels=None):
+        """
+        Fetch or create a conda environment with required packages
+
+        Arguments:
+          conda (str): path to conda executable
+          env_dir (str): path to conda environments directory
+            (defaults to environments directory belonging to the
+            supplied conda installation)
+          channels (list): optional list of channel names to use
+            with conda operations
+        """
+        # Set up conda wrapper
+        conda = CondaWrapper(conda=conda,
+                             env_dir=env_dir,
+                             channels=CONDA_CHANNELS)
+        # Make a name for the environment
+        env_name = self.conda_env_name
+        # Fetch the environment
+        conda_env = None
+        if env_name not in conda.list_envs:
+            # Create new environment
+            self.report("attempting to create new conda "
+                        "environment '%s'" % env_name)
+            try:
+                conda_env = conda.create_env(
+                    env_name,
+                    *self.conda_dependencies)
+                self.report("created conda environment "
+                            "'%s'" % env_name)
+            except CondaWrapperError as ex:
+                # Failed to create the environment
+                self.report("failed to create conda environment '%s': %s" %
+                            (env_name,ex))
+                # Diagnostics
+                self.report(
+                    "\n**** CONDA DIAGNOSTICS ****\n")
+                self.report("Command: %s\n" % ex.cmdline)
+                self.report("Status : %s\n" % ex.status)
+                self.report("Output:\n\n%s" % ex.output)
+                self.report(
+                    "\n**** END OF DIAGNOSTICS ****\n")
+                self.report("WARNING the task may fail "
+                            "as the required environment "
+                            "couldn't be created")
+        else:
+            # Use existing environment
+            self.report("using existing conda environment "
+                        "'%s'" % env_name)
+            conda_env = os.path.join(conda.env_dir,
+                                     env_name)
+        return conda_env
+
+    def run(self,sched=None,runner=None,envmodules=None,enable_conda=False,
+            conda=None,conda_env_dir=None,working_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,wait_for=(),asynchronous=True,
             poll_interval=5,batch_size=None,lock_manager=None,
             verbose=False):
@@ -2830,9 +2852,11 @@ class PipelineTask(object):
             jobs via the scheduler
           envmodules (list): list of environment modules to load when
             running jobs in the task
+          enable_conda (bool): whether to enable conda dependency
+            resolution (default: False)
           conda (str): path to conda
-          conda_env (str): name or path for conda environment to
-            activate when running jobs in the task
+          conda_env_dir (str): path to top-level directory to create
+            or find conda environments
           working_dir (str): path to the working directory to use
             (defaults to the current working directory)
           log_dir (str): path to the directory to write logs to
@@ -2873,6 +2897,16 @@ class PipelineTask(object):
         self._runner_nslots = runner.nslots
         # Do setup
         self.invoke(self.setup)
+        # Set up conda environment
+        enable_conda = bool(enable_conda and self.conda_dependencies)
+        if enable_conda and self._commands:
+            self.report("using conda to resolve dependencies:")
+            for dep in self.conda_dependencies:
+                self.report("- %s" % dep)
+            conda_env = self.setup_conda_env(conda,
+                                             env_dir=conda_env_dir)
+        else:
+            conda_env = None
         # Generate commands to run
         cmds = []
         if not batch_size:
