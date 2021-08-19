@@ -127,6 +127,7 @@ export PATH=$PATH:${1}
         # Return path to mock conda
         return conda_
 
+    @staticmethod
     def conda_with_failing_create(bin_dir):
         """
         Make a mock conda executable with failing 'create' command
