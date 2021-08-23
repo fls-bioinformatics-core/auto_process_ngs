@@ -27,6 +27,10 @@ process_icell8 = None
 cutadapt = None
 fastq_screen = None
 
+# Conda dependency resolution
+[conda]
+enable_conda = False
+
 # bcl2fastq settings
 [bcl2fastq]
 nprocessors = 1

@@ -147,6 +147,11 @@ class Settings(object):
         self.modulefiles['report_qc'] = config.get('modulefiles','report_qc')
         self.modulefiles['cutadapt'] = config.get('modulefiles','cutadapt')
         self.modulefiles['fastq_screen'] = config.get('modulefiles','fastq_screen')
+        # conda
+        self.add_section('conda')
+        self.conda.enable_conda = config.getboolean('conda',
+                                                    'enable_conda',
+                                                    False)
         # bcl2fastq
         self.add_section('bcl2fastq')
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)

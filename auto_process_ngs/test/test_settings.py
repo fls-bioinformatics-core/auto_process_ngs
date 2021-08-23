@@ -51,6 +51,8 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.fastq_strand,None)
         self.assertEqual(s.modulefiles.cellranger,None)
         self.assertEqual(s.modulefiles.report_qc,None)
+        # Conda
+        self.assertEqual(s.conda.enable_conda,False)
         # Bcl2fastq
         self.assertEqual(s.bcl2fastq.nprocessors,1)
         self.assertEqual(s.bcl2fastq.default_version,'>=1.8.4')
@@ -101,6 +103,8 @@ nprocessors = 8
         self.assertEqual(s.modulefiles.cellranger_arc_mkfastq,None)
         self.assertEqual(s.modulefiles.spaceranger_mkfastq,None)
         self.assertEqual(s.modulefiles.run_qc,None)
+        # Conda
+        self.assertEqual(s.conda.enable_conda,False)
         # Fastq_stats
         self.assertEqual(s.fastq_stats.nprocessors,8)
 
