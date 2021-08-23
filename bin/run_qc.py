@@ -190,6 +190,14 @@ if __name__ == "__main__":
                             "scRNA-seq; if set to 'auto' (the default) then "
                             "cellranger will attempt to determine this "
                             "automatically")
+    # Conda options
+    conda = p.add_argument_group("Conda dependency resolution")
+    conda.add_argument('--enable-conda',choices=["yes","no"],
+                       dest="enable_conda",
+                       default=__settings.conda.enable_conda,
+                       help="use conda to resolve task dependencies; can "
+                       "be 'yes' or 'no' (default: %s)" %
+                       ("yes" if __settings.conda.enable_conda else "no"))
     # Pipeline/job options
     pipeline = p.add_argument_group('Job control options')
     pipeline.add_argument('--local',action='store_true',
@@ -416,6 +424,11 @@ if __name__ == "__main__":
     # Maximum number of jobs and cores
     max_jobs = args.max_jobs
     max_cores = args.max_cores
+
+    # Conda dependency resolution
+    enable_conda = args.enable_conda
+    if enable_conda is None:
+        enable_conda = __settings.conda.enable_conda
 
     # Cellranger data
     cellranger_settings = __settings['10xgenomics']
@@ -647,6 +660,7 @@ if __name__ == "__main__":
                        runners=runners,
                        default_runner=default_runner,
                        envmodules=envmodules,
+                       enable_conda=enable_conda,
                        working_dir=working_dir,
                        verbose=args.verbose)
     if status:
