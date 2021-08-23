@@ -36,13 +36,13 @@ make_fastqs         `cellranger`_      10xGenomics Chromium single-cell RNA-seq 
 make_fastqs         `cellranger-atac`_ 10xGenomics Chromium single-cell ATAC-seq data only
 make_fastqs         `cellranger-arc`_  10xGenomics Multiome ATAC + GEX data
 make_fastqs         `spaceranger`_     10xGenomics Visium spatial RNA-seq data only
-run_qc              `fastqc`_
-run_qc              `fastq_screen`_
-run_qc              `bowtie`_          Required by fastq_screen
-run_qc              `STAR`_            Required for strandedness determination
+run_qc (*)          `fastqc`_
+run_qc (*)          `fastq_screen`_
+run_qc (*)          `bowtie`_          Required by fastq_screen
+run_qc (*)          `STAR`_            Required for strandedness determination
 run_qc              `cellranger`_      10xGenomics Chromium single-cell RNA-seq data only
 run_qc              `cellranger-atac`_ 10xGenomics Chromium single-cell ATAC-seq data only
-run_qc              `multiqc`_
+run_qc (*)          `multiqc`_
 process_icell8      `cutadapt`_
 process_icell8      `fastq_screen`_
 process_icell8      `bowtie2`_         Required by fastq_screen
@@ -62,7 +62,10 @@ process_icell8      `bowtie2`_         Required by fastq_screen
 .. _multiqc: http://multiqc.info/
 .. _cutadapt: http://cutadapt.readthedocs.io
 
-These programs provided by these packages must be found on the
+(*) indicates packages that only need to be installed if
+:ref:`conda_dependency_resolution` hasn't been enabled in the
+configuration (or by an appropriate command line option); otherwise
+the programs provided by these packages must be available on the
 ``PATH`` when the appropriate autoprocessor commands are issued.
 :ref:`environment_modules` can be used to help manage this.
 Alternatively many of these packages can be obtained from the
