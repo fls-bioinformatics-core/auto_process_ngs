@@ -193,8 +193,7 @@ if __name__ == "__main__":
     # Conda options
     conda = p.add_argument_group("Conda dependency resolution")
     conda.add_argument('--enable-conda',choices=["yes","no"],
-                       dest="enable_conda",
-                       default=__settings.conda.enable_conda,
+                       dest="enable_conda",default=None,
                        help="use conda to resolve task dependencies; can "
                        "be 'yes' or 'no' (default: %s)" %
                        ("yes" if __settings.conda.enable_conda else "no"))
@@ -429,6 +428,8 @@ if __name__ == "__main__":
     enable_conda = args.enable_conda
     if enable_conda is None:
         enable_conda = __settings.conda.enable_conda
+    else:
+        enable_conda = (args.enable_conda == "yes")
 
     # Cellranger data
     cellranger_settings = __settings['10xgenomics']
