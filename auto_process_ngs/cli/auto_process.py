@@ -695,7 +695,7 @@ def add_run_qc_command(cmdparser):
     # Conda options
     conda = p.add_argument_group("Conda dependency resolution")
     conda.add_argument('--enable-conda',choices=["yes","no"],
-                       dest="enable_conda",default=enable_conda,
+                       dest="enable_conda",default=None,
                        help="use conda to resolve task dependencies; can "
                        "be 'yes' or 'no' (default: %s)" % enable_conda)
     # Job control options
@@ -1379,6 +1379,7 @@ def run_qc(args):
                        max_jobs=args.max_jobs,
                        max_cores=args.max_cores,
                        batch_limit=args.max_batches,
+                       enable_conda=(args.enable_conda == 'yes'),
                        working_dir=args.working_dir,
                        verbose=args.verbose)
     sys.exit(retcode)

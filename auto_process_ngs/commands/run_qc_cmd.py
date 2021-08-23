@@ -33,7 +33,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
            report_html=None,run_multiqc=True,
            working_dir=None,verbose=None,
            max_jobs=None,max_cores=None,
-           batch_limit=None,enable_conda=False,
+           batch_limit=None,enable_conda=None,
            poll_interval=None):
     """Run QC pipeline script for projects
 
@@ -92,7 +92,6 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
          exceed this limit
       enable_conda (bool): if True then use conda to resolve
         dependencies declared on tasks in the pipeline
-        (default: conda dependency resolution not enabled)
       poll_interval (float): specifies non-default polling
         interval for scheduler used for running QC
 
