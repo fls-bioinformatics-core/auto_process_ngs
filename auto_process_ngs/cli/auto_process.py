@@ -633,6 +633,7 @@ def add_run_qc_command(cmdparser):
     max_concurrent_jobs = __settings.general.max_concurrent_jobs
     max_cores = __settings.general.max_cores
     max_batches = __settings.general.max_batches
+    enable_conda = ("yes" if __settings.conda.enable_conda else "no")
     # Build parser
     p.add_argument('--projects',action='store',
                    dest='project_pattern',default=None,
@@ -691,6 +692,12 @@ def add_run_qc_command(cmdparser):
                    "<QC_DIR>_report.html)")
     add_runner_option(p)
     add_modulefiles_option(p)
+    # Conda options
+    conda = p.add_argument_group("Conda dependency resolution")
+    conda.add_argument('--enable-conda',choices=["yes","no"],
+                       dest="enable_conda",default=enable_conda,
+                       help="use conda to resolve task dependencies; can "
+                       "be 'yes' or 'no' (default: %s)" % enable_conda)
     # Job control options
     job_control = p.add_argument_group("Job control options")
     job_control.add_argument('-j','--maxjobs',type=int,action='store',
