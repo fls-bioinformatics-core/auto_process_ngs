@@ -20,6 +20,7 @@ from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineFunctionTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
+from auto_process_ngs.pipeliner import PipelineScriptWrapper
 from auto_process_ngs.pipeliner import PipelineParam
 from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
@@ -2509,6 +2510,68 @@ class TestPipelineCommandWrapper(unittest.TestCase):
         # Add argument and check updated command
         cmd.add_args("there")
         self.assertEqual(str(cmd.cmd()),"echo hello there")
+
+class TestPipelineScriptWrapper(unittest.TestCase):
+
+    def setUp(self):
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestPipelineScriptWrapper')
+        # Unset the MODULEPATH env var, if found
+        if 'MODULEPATH' in os.environ:
+            self.modulepath = os.environ['MODULEPATH']
+            os.environ['MODULEPATH'] = ''
+        else:
+            self.modulepath = None
+
+    def tearDown(self):
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+        # Restore the MODULEPATH env var
+        if self.modulepath:
+            os.environ['MODULEPATH'] = self.modulepath
+
+    def test_pipelinescriptwrapper(self):
+        """
+        PipelineScriptWrapper: check generated wrapper script
+        """
+        # Make a pipeline script wrapper
+        script = PipelineScriptWrapper(
+            "Echo text",
+            """
+            # Example script
+            TEXT={txt}
+            if [ 1 == 1 ] ; then
+              echo "$TEXT"
+            fi
+            # Finished
+            """.format(txt="hello there"))
+        # Check name and generated wrapper script
+        self.assertEqual(script.name(),"echo_text")
+        script_file = script.make_wrapper_script(
+            scripts_dir=self.working_dir)
+        self.assertTrue(os.path.isfile(script_file))
+        self.assertEqual(os.path.dirname(script_file),
+                         self.working_dir)
+        with open(script_file,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "#!/bin/bash\n"
+                             "echo \"#### COMMAND Echo text\"\n"
+                             "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                             "echo \"#### USER $USER\"\n"
+                             "echo \"#### START $(date)\"\n"
+                             "echo \"#### CWD $(pwd)\"\n"
+                             "# Example script\n"
+                             "TEXT=hello there\n"
+                             "if [ 1 == 1 ] ; then\n"
+                             "  echo \"$TEXT\"\n"
+                             "fi\n"
+                             "# Finished\n"
+                             "exit_code=$?\n"
+                             "echo \"#### END $(date)\"\n"
+                             "echo \"#### EXIT_CODE $exit_code\"\n"
+                             "exit $exit_code")
 
 class TestBaseParam(unittest.TestCase):
 

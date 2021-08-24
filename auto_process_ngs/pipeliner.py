@@ -1021,6 +1021,7 @@ import string
 import cloudpickle
 import atexit
 import tempfile
+import textwrap
 from collections import Iterator
 try:
     # Python2
@@ -3174,6 +3175,8 @@ class PipelineCommand(object):
         """
         # Set internal name
         self._name = self.__class__.__name__
+        # Quoting of spaces when generating wrapper
+        self._quote_spaces = True
         # Invoke the 'init' method
         self.init(*args,**kws)
 
@@ -3245,7 +3248,7 @@ class PipelineCommand(object):
                                        shell=shell,
                                        prologue='\n'.join(prologue),
                                        epilogue='\n'.join(epilogue),
-                                       quote_spaces=True)
+                                       quote_spaces=self._quote_spaces)
         return script_file
 
     def init(self):
@@ -3322,6 +3325,45 @@ class PipelineCommandWrapper(PipelineCommand):
         Internal: implement the 'cmd' method
         """
         return self._cmd
+
+class PipelineScriptWrapper(PipelineCommand):
+    """
+    Class for constructing script command lines
+
+    This class is based on the PipelineCommand class but
+    can be used directly (rather than needing to be
+    subclassed).
+
+    For example, to wrap a bash script directly:
+
+    >>> ls_script = PipelineScriptWrapper("List directory",
+    ...                                   "ls {d}".format(d=dirn))
+
+    """
+    def __init__(self,name,script):
+        """
+        Create a new PipelineScriptWrapper instance
+
+        Arguments:
+          name (str): arbitrary name for the script
+          script  (str): script for the command
+        """
+        PipelineCommand.__init__(self,script)
+        self._name = str(name)
+        self._script = textwrap.dedent(str(script).lstrip('\n').rstrip())
+        self._quote_spaces = False
+
+    def init(self,*args):
+        """
+        Internal: dummy init which does nothing
+        """
+        pass
+
+    def cmd(self):
+        """
+        Internal: implement the 'cmd' method
+        """
+        return Command(self._script)
 
 ######################################################################
 # Parameter-like utility classes for passing values between tasks
