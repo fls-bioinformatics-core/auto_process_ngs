@@ -2668,16 +2668,38 @@ class PipelineTask(object):
         else:
             self.report("completed: %s" % status)
 
-    def add_cmd(self,pipeline_job):
+    def add_cmd(self,*args):
         """
         Add a PipelineCommand to the task
 
+        The arguments can be one of:
+
+        - Single argument: PipelineCommand instance
+        - Two arguments: title string and Command instance
+        - Two arguments: title string and script (as string)
+
         Arguments:
-           pipeline_job (PipelineCommand): a PipelineCommand
-             instance to be executed by the task when it
-             runs
+           Variable (see above)
         """
-        self._commands.append(pipeline_job)
+        if len(args) == 1:
+            # Assume PipelineCommand instance
+            self._commands.append(args[0])
+        elif len(args) == 2:
+            # Assume name and command
+            try:
+                # Try adding Command instance
+                self._commands.append(
+                    PipelineCommandWrapper(args[0],
+                                           *args[1].command_line))
+            except AttributeError:
+                # Try adding as a script
+                self._commands.append(
+                    PipelineScriptWrapper(args[0],args[1]))
+        else:
+            # Incorrect number of arguments
+            raise TypeError("add_cmd() invoked with incorrect arguments: "
+                            "either 'pipeline_command', or 'name' and "
+                            "'command', or 'name' and 'script'")
 
     def requires(self,*tasks):
         """
