@@ -3026,7 +3026,7 @@ class PipelineTask(object):
         if batch_limit and not batch_size:
             if len(self._commands) > batch_limit:
                 batch_size = int(
-                    math.ceil(len(self._commands)/batch_limit))
+                    math.ceil(float(len(self._commands))/batch_limit))
                 self.report("setting batch size to %d" % batch_size)
         # Generate commands to run
         cmds = []
