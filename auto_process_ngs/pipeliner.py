@@ -3024,6 +3024,7 @@ class PipelineTask(object):
                 self.report("Batching commands (%s commands per "
                             "batch)" % batch_size)
             remaining_cmds = self._commands
+            batch_number = 1
             while remaining_cmds:
                 # Grab a batch of commands
                 batch = remaining_cmds[:batch_size]
@@ -3041,6 +3042,7 @@ class PipelineTask(object):
                     envmodules=envmodules,
                     conda=conda,
                     conda_env=conda_env,
+                    batch_number=batch_number,
                     working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:
@@ -3052,6 +3054,8 @@ class PipelineTask(object):
                 self._scripts.append(script_file)
                 # Update remaining commands to batch
                 remaining_cmds = remaining_cmds[batch_size:]
+                # Increment batch number
+                batch_number += 1
         # Run the commands
         if cmds:
             # Report runner and nslots
@@ -3276,7 +3280,7 @@ class PipelineCommand(object):
 
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash",
                             envmodules=None,conda=None,conda_env=None,
-                            working_dir=None):
+                            working_dir=None,batch_number=None):
         """
         Generate a uniquely-named wrapper script to run the command
 
@@ -3290,6 +3294,9 @@ class PipelineCommand(object):
             activate in the script
           working_dir (str): explicitly specify the directory
             the script should be executed in
+          batch_number (int): for batched commands, the number
+            of the batch that this script corresponds to
+            (optional)
 
         Returns:
           String: name of the wrapper script.
@@ -3299,10 +3306,12 @@ class PipelineCommand(object):
             scripts_dir = os.getcwd()
         script_file = os.path.join(scripts_dir,"%s.%s.sh" % (self.name(),
                                                              uuid.uuid4()))
-        prologue = ["echo \"#### COMMAND %s\"" % self._name,
-                    "echo \"#### HOSTNAME $HOSTNAME\"",
-                    "echo \"#### USER $USER\"",
-                    "echo \"#### START $(date)\""]
+        prologue = ["echo \"#### COMMAND %s\"" % self._name]
+        if batch_number is not None:
+            prologue.append("echo \"#### BATCH %s\"" % batch_number)
+        prologue.extend(["echo \"#### HOSTNAME $HOSTNAME\"",
+                         "echo \"#### USER $USER\"",
+                         "echo \"#### START $(date)\""])
         if envmodules:
             shell += " --login"
             try:
