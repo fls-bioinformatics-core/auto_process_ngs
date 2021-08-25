@@ -4234,4 +4234,5 @@ def indent(s,prefix):
         return textwrap.indent(s,prefix)
     except AttributeError:
         # Python2
-        return '\n'.join([prefix+line for line in s.splitlines(True)])
+        return '\n'.join([prefix+line.rstrip('\n')
+                          for line in s.splitlines(True)])
