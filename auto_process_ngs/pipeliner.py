@@ -11,15 +11,14 @@ The core classes are:
 
 - Pipeline: class for building and executing pipelines
 - PipelineTask: class for defining pipeline tasks
-- PipelineCommand: class for defining commands that can be used in tasks
-  (nb the ``PipelineCommandWrapper`` class is recommended over subclassing
-  ``PipelineCommand``)
+- PipelineFunctionTask: subclass of PipelineTask which enables Python
+  functions to be run as external processes
 
 Additional supporting classes:
 
-- PipelineFunctionTask: subclass of PipelineTask which enables Python
-  functions to be run as external processes
+- PipelineCommand: class for defining commands that can be used in tasks
 - PipelineCommandWrapper: shortcut alternative to PipelineCommand
+- PipelineScriptWrapper: subclass of PipelineCommand for scripts
 - PipelineParam: class for passing arbitrary values between tasks
 - FileCollector: returning collections of files based on glob patterns
 - FunctionParam: PipelineParameter-like deferred function evaluation
@@ -80,11 +79,10 @@ on a collection of Fastq files one at a time::
             if not os.path.exists(self.args.out_dir):
                 os.mkdir(self.args.out_dir)
             for fq in self.args.fastqs:
-                self.add_cmd(
-                    PipelineCommandWrapper("Run FastQC",
-                                           "fastqc",
-                                           "-o",self.args.out_dir,
-                                           fq))
+                self.add_cmd("Run FastQC",
+                             Command("fastqc",
+                                     "-o",self.args.out_dir,
+                                     fq))
         def finish(self):
             for fq in self.args.fastqs:
                 if fq.endswith(".gz"):
@@ -115,8 +113,8 @@ The key features are:
    that Fastq.
 
 3. The command to run ``fastqc`` is created by creating a
-   ``PipelineCommandWrapper`` instance, which names the command
-   and specifies the command and arguments to execute.
+   ``Command`` instance, which specifies the command and arguments to
+    execute.
 
 4. The commands defined via the ``add_cmd`` method are not guaranteed
    to run sequentially. If there are additional commands that rely on
@@ -145,10 +143,9 @@ a set of Fastq files::
                 else:
                    cat = "cat"
                 self.add_cmd(
-                    PipelineCommandWrapper("Count reads",
-                                           "echo","-n",fq,"' '","&&",
-                                            cat,fq,"|",
-                                            "wc","-l"))
+                    "Count reads",
+                    Command("echo","-n",fq,"' '","&&",
+                            cat,fq,"|","wc","-l"))
         def finish(self):
             for line in self.stdout.split('\n'):
                 if not line:
@@ -183,6 +180,33 @@ non-zero read counts::
 
 In this case all the processing is performed by the ``setup`` method;
 no commands are defined.
+
+Running scripts from within tasks
+---------------------------------
+
+It is possible to define scripts to run from within tasks, for
+example previous the ``CountReads`` task might be more cleanly
+implemented using scripts when adding commands::
+
+    class CountReads(PipelineTask):
+        ...
+        def setup(self):
+            for fq in self.args.fastqs:
+                if os.path.splitext(fq)[1] == ".gz":
+                   cat = "zcat"
+                else:
+                   cat = "cat"
+                self.add_cmd(
+                    "Count reads",
+                    '''
+                    # Count lines in a FASTQ file
+                    echo -n {fastq} && {cat} {fastq} | wc -l
+                    '''.format(fastq=fq,cat=cat))
+        ...
+
+Scripts can be multiline and use ``bash`` syntax, so they can
+provide an alternative to coding logic within the ``setup``
+function.
 
 Defining task outputs
 ---------------------
@@ -620,13 +644,12 @@ threads might look like:
         def init(self,fastq,index_basename,sam_out):
             pass
         def setup(self):
-            self.add_cmd(
-                PipelineCommandWrapper("Run bowtie",
-                                       "bowtie2",
-                                       "-x",self.args.index_basename,
-                                       "-U",self.args.fastq,
-                                       "-S",self.args.sam_out,
-                                       "--threads",self.runner_nslots)
+            self.add_cmd("Run bowtie",
+                         Command("bowtie2",
+                                 "-x",self.args.index_basename,
+                                 "-U",self.args.fastq,
+                                 "-S",self.args.sam_out,
+                                 "--threads",self.runner_nslots)
 
 .. note::
 
@@ -937,8 +960,8 @@ For example:
 the working directory, but it is possible to explicitly specify a
 different location via the ``conda_env_dir`` of the ``run`` method.)
 
-PipelineCommand versus PipelineCommandWrapper
----------------------------------------------
+A note on PipelineCommand and PipelineCommandWrapper
+----------------------------------------------------
 
 In the first version of the pipeliner code, commands within the
 ``setup`` method of ``PipelineTasks`` had to be generated using
@@ -964,14 +987,58 @@ which can then be used within a task, for example::
             for fq in self.args.fastqs:
                 self.add_cmd(Fastqc(fq,self.args.out_dir))
 
-as an alternative to the example ``RunFastqc`` example task given
-previously, which used the ``PipelineCommandWrapper`` class to
-explicitly generate the Fastqc command.
+Subsequently a "shortcut" class called ``PipelineCommandWrapper``
+was introduced, which allowed the generation of commands to be
+performed within the task class without a ``PipelineCommand``
+subclass.
 
-Both approaches are valid. However: using ``PipelineCommand`` is
-probably better suited to situations where the same command was used
-in more than one distinct tasks. In cases where the command is only
-used in one task, using ``PipelineCommandWrapper`` is recommended.
+In this case the example ``RunFastqc`` task becomes::
+
+    class RunFastqc(PipelineTask):
+        ...
+        def setup(self):
+            ...
+            for fq in self.args.fastqs:
+                self.add_cmd(
+                    PipeLineCommandWrapper(
+                        "Run FastQC",
+                        "fastqc",
+                         "-o",self._out_dir,
+                         self._fastq))
+
+This has since been superseded by updates to the ``add_cmd`` method
+which allows a title and ``Command`` instance (or a string
+containing a script) to be supplied instead. In this case the
+example would become::
+
+    class RunFastqc(PipelineTask):
+        ...
+        def setup(self):
+            ...
+            for fq in self.args.fastqs:
+                self.add_cmd("Run FastQC",
+                             Command("fastqc",
+                                     "-o",self._out_dir,
+                                     self._fastq))
+
+or (if using a script)::
+
+    class RunFastqc(PipelineTask):
+        ...
+        def setup(self):
+            ...
+            for fq in self.args.fastqs:
+                self.add_cmd("Run FastQC",
+                             '''
+                             fastqc -o {out_dir} {fastq}
+                             '''.format(out_dir=self._out_dir,
+                                        fastq=self._fastq))
+
+All approaches are supported, however the last two are likely to
+result in cleaner code that is easier to read. ``PipelineCommand``
+is probably better suited to situations where the same command will
+be used across multiple distinct tasks. In cases where the command
+is only used in one task, the last two approaches are recommended.
 
 Advanced pipeline construction: combining pipelines
 ---------------------------------------------------
@@ -1021,6 +1088,7 @@ import string
 import cloudpickle
 import atexit
 import tempfile
+import textwrap
 from collections import Iterator
 try:
     # Python2
@@ -2667,16 +2735,38 @@ class PipelineTask(object):
         else:
             self.report("completed: %s" % status)
 
-    def add_cmd(self,pipeline_job):
+    def add_cmd(self,*args):
         """
         Add a PipelineCommand to the task
 
+        The arguments can be one of:
+
+        - Single argument: PipelineCommand instance
+        - Two arguments: title string and Command instance
+        - Two arguments: title string and script (as string)
+
         Arguments:
-           pipeline_job (PipelineCommand): a PipelineCommand
-             instance to be executed by the task when it
-             runs
+           Variable (see above)
         """
-        self._commands.append(pipeline_job)
+        if len(args) == 1:
+            # Assume PipelineCommand instance
+            self._commands.append(args[0])
+        elif len(args) == 2:
+            # Assume name and command
+            try:
+                # Try adding Command instance
+                self._commands.append(
+                    PipelineCommandWrapper(args[0],
+                                           *args[1].command_line))
+            except AttributeError:
+                # Try adding as a script
+                self._commands.append(
+                    PipelineScriptWrapper(args[0],args[1]))
+        else:
+            # Incorrect number of arguments
+            raise TypeError("add_cmd() invoked with incorrect arguments: "
+                            "either 'pipeline_command', or 'name' and "
+                            "'command', or 'name' and 'script'")
 
     def requires(self,*tasks):
         """
@@ -2937,14 +3027,13 @@ class PipelineTask(object):
             while remaining_cmds:
                 # Grab a batch of commands
                 batch = remaining_cmds[:batch_size]
-                # Combine batch into a single command
-                batch_cmd = PipelineCommandWrapper(
+                # Combine batch commands and scripts into a
+                # single command
+                batch_cmd = PipelineScriptWrapper(
                     "Batch commands for %s" % self.name(),
-                    *batch[0].cmd().command_line)
-                for cmd in batch[1:]:
-                    batch_cmd.add_args("&&",
-                                       "\\\n",
-                                       *cmd.cmd().command_line)
+                    *[b.cmd().make_wrapper_script(
+                        quote_spaces=b.quote_spaces())
+                      for b in batch])
                 if verbose:
                     self.report("%s" % batch_cmd.cmd())
                 script_file = batch_cmd.make_wrapper_script(
@@ -3174,6 +3263,8 @@ class PipelineCommand(object):
         """
         # Set internal name
         self._name = self.__class__.__name__
+        # Quoting of spaces when generating wrapper
+        self._quote_spaces = True
         # Invoke the 'init' method
         self.init(*args,**kws)
 
@@ -3245,8 +3336,14 @@ class PipelineCommand(object):
                                        shell=shell,
                                        prologue='\n'.join(prologue),
                                        epilogue='\n'.join(epilogue),
-                                       quote_spaces=True)
+                                       quote_spaces=self.quote_spaces())
         return script_file
+
+    def quote_spaces(self):
+        """
+        Indicate whether spaces should be quoted in wrapper script
+        """
+        return self._quote_spaces
 
     def init(self):
         """
@@ -3322,6 +3419,84 @@ class PipelineCommandWrapper(PipelineCommand):
         Internal: implement the 'cmd' method
         """
         return self._cmd
+
+class PipelineScriptWrapper(PipelineCommand):
+    """
+    Class for constructing script command lines
+
+    This class is based on the PipelineCommand class but
+    can be used directly (rather than needing to be
+    subclassed).
+
+    For example, to wrap a bash script directly:
+
+    >>> ls_script = PipelineScriptWrapper("List directory",
+    ...                                   "ls {d}".format(d=dirn))
+
+    It is also possible to compose a script from
+    multiple blocks, for example:
+
+    >>> properties = PipelineScriptWrapper("File properties",
+    ...                                    "export FILEN={f}".format(
+    ...                                         f="Example.fq"),
+    ...                                    "du -h $FILEN",
+    ...                                    "file $FILEN")
+
+    in which case the generated script will look like::
+
+        {
+            export FILEN=Example.fq
+        } && {
+            du -h $FILEN
+        } && {
+            file $FILEN
+        }
+    """
+    def __init__(self,name,*scripts):
+        """
+        Create a new PipelineScriptWrapper instance
+
+        Arguments:
+          name (str): arbitrary name for the script
+          scripts (str): one or more script blocks
+        """
+        PipelineCommand.__init__(self)
+        self._name = str(name)
+        self._quote_spaces = False
+        self._block_sep = ' && '
+        self._scripts = []
+        for script in scripts:
+            self.add_block(script)
+
+    def add_block(self,script):
+        """
+        Append a script block
+
+        Arguments:
+          scripts (str): script block to append
+        """
+        self._scripts.append(
+            textwrap.dedent(str(script).lstrip('\n').rstrip()))
+
+    def init(self,*args):
+        """
+        Internal: dummy init which does nothing
+        """
+        pass
+
+    def cmd(self):
+        """
+        Internal: implement the 'cmd' method
+        """
+        if len(self._scripts) == 1:
+            # Single block
+            return Command(self._scripts[0])
+        else:
+            # Multiple blocks
+            blocks = []
+            for block in self._scripts:
+                blocks.append("{\n%s\n}" % indent(block,"    "))
+            return Command(self._block_sep.join(blocks))
 
 ######################################################################
 # Parameter-like utility classes for passing values between tasks
@@ -4049,3 +4224,15 @@ def resolve_parameter(p):
         return p.value
     except AttributeError:
         return p
+
+def indent(s,prefix):
+    """
+    Wrapper for textwrap.indent to handle Python2/3
+    """
+    try:
+        # Python3
+        return textwrap.indent(s,prefix)
+    except AttributeError:
+        # Python2
+        return '\n'.join([prefix+line.rstrip('\n')
+                          for line in s.splitlines(True)])
