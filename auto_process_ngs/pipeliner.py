@@ -3495,7 +3495,7 @@ class PipelineScriptWrapper(PipelineCommand):
             # Multiple blocks
             blocks = []
             for block in self._scripts:
-                blocks.append("{\n%s\n}" % textwrap.indent(block,"    "))
+                blocks.append("{\n%s\n}" % indent(block,"    "))
             return Command(self._block_sep.join(blocks))
 
 ######################################################################
@@ -4224,3 +4224,14 @@ def resolve_parameter(p):
         return p.value
     except AttributeError:
         return p
+
+def indent(s,prefix):
+    """
+    Wrapper for textwrap.indent to handle Python2/3
+    """
+    try:
+        # Python3
+        return textwrap.indent(s,prefix)
+    except AttributeError:
+        # Python2
+        return '\n'.join([prefix+line for line in s.splitlines(True)])
