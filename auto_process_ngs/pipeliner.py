@@ -3361,19 +3361,50 @@ class PipelineScriptWrapper(PipelineCommand):
     >>> ls_script = PipelineScriptWrapper("List directory",
     ...                                   "ls {d}".format(d=dirn))
 
+    It is also possible to compose a script from
+    multiple blocks, for example:
+
+    >>> properties = PipelineScriptWrapper("File properties",
+    ...                                    "export FILEN={f}".format(
+    ...                                         f="Example.fq"),
+    ...                                    "du -h $FILEN",
+    ...                                    "file $FILEN")
+
+    in which case the generated script will look like::
+
+        {
+            export FILEN=Example.fq
+        } && {
+            du -h $FILEN
+        } && {
+            file $FILEN
+        }
     """
-    def __init__(self,name,script):
+    def __init__(self,name,*scripts):
         """
         Create a new PipelineScriptWrapper instance
 
         Arguments:
           name (str): arbitrary name for the script
-          script  (str): script for the command
+          scripts (str): one or more script blocks
         """
-        PipelineCommand.__init__(self,script)
+        PipelineCommand.__init__(self)
         self._name = str(name)
-        self._script = textwrap.dedent(str(script).lstrip('\n').rstrip())
         self._quote_spaces = False
+        self._block_sep = ' && '
+        self._scripts = []
+        for script in scripts:
+            self.add_block(script)
+
+    def add_block(self,script):
+        """
+        Append a script block
+
+        Arguments:
+          scripts (str): script block to append
+        """
+        self._scripts.append(
+            textwrap.dedent(str(script).lstrip('\n').rstrip()))
 
     def init(self,*args):
         """
@@ -3385,7 +3416,15 @@ class PipelineScriptWrapper(PipelineCommand):
         """
         Internal: implement the 'cmd' method
         """
-        return Command(self._script)
+        if len(self._scripts) == 1:
+            # Single block
+            return Command(self._scripts[0])
+        else:
+            # Multiple blocks
+            blocks = []
+            for block in self._scripts:
+                blocks.append("{\n%s\n}" % textwrap.indent(block,"    "))
+            return Command(self._block_sep.join(blocks))
 
 ######################################################################
 # Parameter-like utility classes for passing values between tasks

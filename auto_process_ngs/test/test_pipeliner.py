@@ -2710,6 +2710,52 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                              "echo \"#### EXIT_CODE $exit_code\"\n"
                              "exit $exit_code")
 
+    def test_pipelinescriptwrapper_with_blocks(self):
+        """
+        PipelineScriptWrapper: check for multiple script blocks
+        """
+        # Make a pipeline script wrapper
+        script = PipelineScriptWrapper(
+            "Echo text",
+            """
+            # Block 1
+            TEXT={txt}
+            """.format(txt="hello there"),
+            """
+            # Block 2
+            if [ 1 == 1 ] ; then
+              echo "$TEXT"
+            fi
+            """)
+        # Check name and generated wrapper script
+        self.assertEqual(script.name(),"echo_text")
+        script_file = script.make_wrapper_script(
+            scripts_dir=self.working_dir)
+        self.assertTrue(os.path.isfile(script_file))
+        self.assertEqual(os.path.dirname(script_file),
+                         self.working_dir)
+        with open(script_file,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "#!/bin/bash\n"
+                             "echo \"#### COMMAND Echo text\"\n"
+                             "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                             "echo \"#### USER $USER\"\n"
+                             "echo \"#### START $(date)\"\n"
+                             "echo \"#### CWD $(pwd)\"\n"
+                             "{\n"
+                             "    # Block 1\n"
+                             "    TEXT=hello there\n"
+                             "} && {\n"
+                             "    # Block 2\n"
+                             "    if [ 1 == 1 ] ; then\n"
+                             "      echo \"$TEXT\"\n"
+                             "    fi\n"
+                             "}\n"
+                             "exit_code=$?\n"
+                             "echo \"#### END $(date)\"\n"
+                             "echo \"#### EXIT_CODE $exit_code\"\n"
+                             "exit $exit_code")
+
 class TestBaseParam(unittest.TestCase):
 
     def test_baseparam_uuid(self):
