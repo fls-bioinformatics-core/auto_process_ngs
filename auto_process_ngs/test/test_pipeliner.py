@@ -1852,6 +1852,106 @@ class TestPipelineTask(unittest.TestCase):
         self.assertTrue(stdout[24].startswith("#### END "))
         self.assertEqual(stdout[25],"#### EXIT_CODE 0")
 
+    def test_pipelinetask_with_batched_functions(self):
+        """
+        PipelineTask: run task with batched functions
+        """
+        # Define a task with a command
+        # Echoes text via Python function
+        class EchoMany(PipelineFunctionTask):
+            def init(self,*s):
+                pass
+            def setup(self):
+                for s in self.args.s:
+                    self.add_call("Echo text",self.echo,s)
+            def echo(self,s):
+                print(s)
+        # Make a task instance
+        task = EchoMany("Echo string",
+                        "Hello!",
+                        "Bonjour!",
+                        "Takk!",
+                        "Wilkommen!",
+                        "Benvenuto!")
+        # Check initial state
+        self.assertEqual(task.args.s,
+                         ("Hello!",
+                          "Bonjour!",
+                          "Takk!",
+                          "Wilkommen!",
+                          "Benvenuto!"))
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertFalse(task.output)
+        # Run the task with batches
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 batch_size=2,
+                 asynchronous=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertFalse(task.output)
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Batch commands for Echo string
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # #### CWD /tmp/dir
+        # Hello!
+        # Bonjour!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        # #### COMMAND Batch commands for Echo string
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # #### CWD /tmp/dir
+        # Takk!
+        # Wilkommen!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        # #### COMMAND Batch commands for Echo string
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # #### CWD /tmp/dir
+        # Benvenuto!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),27) # 27 = 26 + trailing newline
+        self.assertEqual(stdout[0],"#### COMMAND Batch commands for Echo "
+                         "string")
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[2],"#### USER %s" % self._user())
+        self.assertTrue(stdout[3].startswith("#### START "))
+        self.assertEqual(stdout[4],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[5],"Hello!")
+        self.assertEqual(stdout[6],"Bonjour!")
+        self.assertTrue(stdout[7].startswith("#### END "))
+        self.assertEqual(stdout[8],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[9],"#### COMMAND Batch commands for Echo "
+                         "string")
+        self.assertEqual(stdout[10],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[11],"#### USER %s" % self._user())
+        self.assertTrue(stdout[12].startswith("#### START "))
+        self.assertEqual(stdout[13],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[14],"Takk!")
+        self.assertEqual(stdout[15],"Wilkommen!")
+        self.assertTrue(stdout[16].startswith("#### END "))
+        self.assertEqual(stdout[17],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[18],"#### COMMAND Batch commands for Echo "
+                         "string")
+        self.assertEqual(stdout[19],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[20],"#### USER %s" % self._user())
+        self.assertTrue(stdout[21].startswith("#### START "))
+        self.assertEqual(stdout[22],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[23],"Benvenuto!")
+        self.assertTrue(stdout[24].startswith("#### END "))
+        self.assertEqual(stdout[25],"#### EXIT_CODE 0")
+
     def test_pipelinetask_with_batched_scripts(self):
         """
         PipelineTask: run task with batched scripts

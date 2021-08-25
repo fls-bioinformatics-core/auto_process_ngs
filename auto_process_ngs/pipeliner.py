@@ -2964,7 +2964,9 @@ class PipelineTask(object):
                 # single command
                 batch_cmd = PipelineScriptWrapper(
                     "Batch commands for %s" % self.name(),
-                    *[b.cmd().make_wrapper_script() for b in batch])
+                    *[b.cmd().make_wrapper_script(
+                        quote_spaces=b.quote_spaces())
+                      for b in batch])
                 if verbose:
                     self.report("%s" % batch_cmd.cmd())
                 script_file = batch_cmd.make_wrapper_script(
@@ -3267,8 +3269,14 @@ class PipelineCommand(object):
                                        shell=shell,
                                        prologue='\n'.join(prologue),
                                        epilogue='\n'.join(epilogue),
-                                       quote_spaces=self._quote_spaces)
+                                       quote_spaces=self.quote_spaces())
         return script_file
+
+    def quote_spaces(self):
+        """
+        Indicate whether spaces should be quoted in wrapper script
+        """
+        return self._quote_spaces
 
     def init(self):
         """
