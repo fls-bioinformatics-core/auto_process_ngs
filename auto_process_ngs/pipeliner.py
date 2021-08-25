@@ -2960,14 +2960,11 @@ class PipelineTask(object):
             while remaining_cmds:
                 # Grab a batch of commands
                 batch = remaining_cmds[:batch_size]
-                # Combine batch into a single command
-                batch_cmd = PipelineCommandWrapper(
+                # Combine batch commands and scripts into a
+                # single command
+                batch_cmd = PipelineScriptWrapper(
                     "Batch commands for %s" % self.name(),
-                    *batch[0].cmd().command_line)
-                for cmd in batch[1:]:
-                    batch_cmd.add_args("&&",
-                                       "\\\n",
-                                       *cmd.cmd().command_line)
+                    *[b.cmd().make_wrapper_script() for b in batch])
                 if verbose:
                     self.report("%s" % batch_cmd.cmd())
                 script_file = batch_cmd.make_wrapper_script(
