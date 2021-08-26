@@ -219,6 +219,15 @@ if __name__ == "__main__":
                           % (__settings.general.max_concurrent_jobs
                              if __settings.general.max_concurrent_jobs
                              else 'no limit'))
+    pipeline.add_argument('-b','--maxbatches',type=int,action='store',
+                          dest='max_batches',metavar='NBATCHES',
+                          default=__settings.general.max_batches,
+                          help="enable dynamic batching of pipeline "
+                          "jobs with maximum number of batches set to "
+                          "NBATCHES (default: %s)"
+                          % (__settings.general.max_batches
+                             if __settings.general.max_batches
+                             else 'no batching'))
     # Advanced options
     advanced = p.add_argument_group('Advanced/debugging options')
     advanced.add_argument('--verbose',action="store_true",
@@ -230,7 +239,7 @@ if __name__ == "__main__":
                           "running QC script. RUNNER must be a valid job "
                           "runner specification e.g. 'GEJobRunner(-j y)' "
                           "(default: '%s')" % __settings.runners.qc)
-    advanced.add_argument('-b','--batch',metavar='N',action='store',
+    advanced.add_argument('-s','--batch_size',metavar='N',action='store',
                           dest='batch_size',type=int, default=None,
                           help="batch QC commands with N commands per job "
                           "(default: no batching)")
@@ -634,6 +643,7 @@ if __name__ == "__main__":
                        max_jobs=max_jobs,
                        max_slots=max_cores,
                        batch_size=args.batch_size,
+                       batch_limit=args.max_batches,
                        runners=runners,
                        default_runner=default_runner,
                        envmodules=envmodules,
