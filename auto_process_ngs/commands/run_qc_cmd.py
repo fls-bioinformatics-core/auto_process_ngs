@@ -33,7 +33,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
            report_html=None,run_multiqc=True,
            working_dir=None,verbose=None,
            max_jobs=None,max_cores=None,
-           poll_interval=None):
+           batch_limit=None,poll_interval=None):
     """Run QC pipeline script for projects
 
     Run the illumina_qc.sh script to perform QC on projects.
@@ -86,6 +86,9 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
         default: no limit)
       max_cores (int): maximum number of cores available to
         the scheduler (default: no limit)
+      batch_limit (int): if set then run commands in each task in
+         batches, with the batch size set dyanmically so as not to
+         exceed this limit
       poll_interval (float): specifies non-default polling
         interval for scheduler used for running QC
 
@@ -199,6 +202,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
                        poll_interval=poll_interval,
                        max_jobs=max_jobs,
                        max_slots=max_cores,
+                       batch_limit=batch_limit,
                        runners=runners,
                        default_runner=default_runner,
                        envmodules=envmodules,

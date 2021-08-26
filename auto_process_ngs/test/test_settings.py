@@ -34,6 +34,8 @@ class TestSettings(unittest.TestCase):
         # General settings
         self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
         self.assertEqual(s.general.max_concurrent_jobs,12)
+        self.assertEqual(s.general.max_cores,None)
+        self.assertEqual(s.general.max_batches,None)
         self.assertEqual(s.general.poll_interval,5.0)
         # Modulefiles
         self.assertEqual(s.modulefiles.make_fastqs,None)
@@ -88,6 +90,8 @@ nprocessors = 8
         # General settings
         self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
         self.assertEqual(s.general.max_concurrent_jobs,12)
+        self.assertEqual(s.general.max_cores,None)
+        self.assertEqual(s.general.max_batches,None)
         self.assertEqual(s.general.poll_interval,5.0)
         # Modulefiles
         self.assertEqual(s.modulefiles.make_fastqs,None)

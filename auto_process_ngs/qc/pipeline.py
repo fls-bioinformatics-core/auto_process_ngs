@@ -492,11 +492,10 @@ class QCPipeline(Pipeline):
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,cellranger_exe=None,
             cellranger_reference_dataset=None,
-            cellranger_out_dir=None,
-            working_dir=None,log_file=None,
-            batch_size=None,max_jobs=1,max_slots=None,poll_interval=5,
-            runners=None,default_runner=None,envmodules=None,
-            verbose=False):
+            cellranger_out_dir=None,working_dir=None,log_file=None,
+            batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
+            poll_interval=5,runners=None,default_runner=None,
+            envmodules=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -561,6 +560,10 @@ class QCPipeline(Pipeline):
             each task in batches, with each batch running
             this many commands at a time (default is to run
             one command per job)
+          batch_limit (int): if set then run commands in
+            each task in batches, with the batch size set
+            dyanmically so as not to exceed this limit
+            (default is to use fixed batch sizes)
           max_jobs (int): optional maximum number of
             concurrent jobs in scheduler (defaults to 1)
           max_slots (int): optional maximum number of 'slots'
@@ -608,6 +611,7 @@ class QCPipeline(Pipeline):
                               scripts_dir=scripts_dir,
                               log_file=log_file,
                               batch_size=batch_size,
+                              batch_limit=batch_limit,
                               exit_on_failure=PipelineFailure.DEFERRED,
                               params={
                                   'nthreads': nthreads,

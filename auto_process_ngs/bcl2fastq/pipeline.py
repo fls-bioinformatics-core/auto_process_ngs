@@ -1510,7 +1510,7 @@ class MakeFastqs(Pipeline):
             cellranger_maxjobs=None,cellranger_jobinterval=None,
             cellranger_localcores=None,cellranger_localmem=None,
             working_dir=None,log_dir=None,log_file=None,
-            batch_size=None,max_jobs=1,max_slots=None,
+            batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
             poll_interval=5,runners=None,default_runner=None,
             envmodules=None,verbose=False):
         """
@@ -1570,6 +1570,10 @@ class MakeFastqs(Pipeline):
             each task in batches, with each batch running
             this many commands at a time (default is to run
             one command per job)
+          batch_limit (int): if set then run commands in
+            each task in batches, with the batch size set
+            dyanmically so as not to exceed this limit
+            (default is to use fixed batch sizes)
           max_jobs (int): optional maximum number of
             concurrent jobs in scheduler (defaults to 1)
           max_slots (int): optional maximum number of 'slots'
@@ -1711,6 +1715,7 @@ class MakeFastqs(Pipeline):
                               scripts_dir=scripts_dir,
                               log_file=log_file,
                               batch_size=batch_size,
+                              batch_limit=batch_limit,
                               exit_on_failure=PipelineFailure.DEFERRED,
                               params=params,
                               poll_interval=poll_interval,

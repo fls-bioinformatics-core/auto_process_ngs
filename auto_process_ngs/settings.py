@@ -122,6 +122,7 @@ class Settings(object):
         self.general['max_concurrent_jobs'] = config.getint('general',
                                                             'max_concurrent_jobs',12)
         self.general['max_cores'] = config.getint('general','max_cores')
+        self.general['max_batches'] = config.getint('general','max_batches')
         self.general['poll_interval'] = config.getfloat('general',
                                                         'poll_interval',5)
         # modulefiles
