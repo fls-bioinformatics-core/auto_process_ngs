@@ -385,6 +385,27 @@ individual tasks within the QC pipeline:
 If any of these are defined then they will be loaded for the relevant
 tasks in the QC pipeline.
 
+.. _conda_dependency_resolution:
+
+--------------------------------------------
+Using conda to resolve pipeline dependencies
+--------------------------------------------
+
+For certain pipelines and tasks it is possible to enable the ``conda``
+package management utility to handle setting up appropriate run-time
+environments, rather than having to manually install the required
+dependencies and specify their locations (e.g. using environment
+modules).
+
+To do this by default, set the ``enable_conda`` parameter in the
+``[conda]`` section, i.e.::
+
+    [conda]
+    enable_conda = true
+
+Note that this requires ``conda`` to be installed and available on the
+user's ``PATH`` at run-time.
+
 .. _required_bcl2fastq_versions:
 
 ---------------------------

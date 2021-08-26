@@ -495,6 +495,7 @@ class QCPipeline(Pipeline):
             cellranger_out_dir=None,working_dir=None,log_file=None,
             batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
             poll_interval=5,runners=None,default_runner=None,
+            enable_conda=False,conda=None,conda_env_dir=None,
             envmodules=None,verbose=False):
         """
         Run the tasks in the pipeline
@@ -576,6 +577,11 @@ class QCPipeline(Pipeline):
             instances; valid names are 'qc_runner',
             'report_runner','cellranger_runner',
             'verify_runner','default'
+          enable_conda (bool): if True then enable use of
+            conda environments to satisfy task dependencies
+          conda (str): path to conda
+          conda_env_dir (str): path to non-default
+            directory for conda environments
           envmodules (mapping): mapping of names to
             environment module file lists; valid names are
             'illumina_qc','fastq_strand','cellranger',
@@ -610,6 +616,9 @@ class QCPipeline(Pipeline):
                               log_dir=log_dir,
                               scripts_dir=scripts_dir,
                               log_file=log_file,
+                              enable_conda=enable_conda,
+                              conda=conda,
+                              conda_env_dir=conda_env_dir,
                               batch_size=batch_size,
                               batch_limit=batch_limit,
                               exit_on_failure=PipelineFailure.DEFERRED,
@@ -825,7 +834,12 @@ class RunIlluminaQC(PipelineTask):
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
         """
-        pass
+        self.conda("fastqc=0.11.3",
+                   "fastq-screen=0.14.0",
+                   "bowtie=1.2.3")
+        # Also need to specify tbb=2020.2 for bowtie
+        # See https://www.biostars.org/p/494922/
+        self.conda("tbb=2020.2")
     def setup(self):
         if not self.args.fastqs:
             print("Nothing to do")
@@ -1011,7 +1025,8 @@ class RunFastqStrand(PipelineTask):
             runner)
           qc_protocol (str): QC protocol to use
         """
-        pass
+        self.conda("star=2.4.2a",
+                   "future")
     def setup(self):
         if not self.args.fastq_pairs:
             print("No Fastqs: nothing to do")
@@ -1625,7 +1640,12 @@ class ReportQC(PipelineTask):
           zip_outputs (bool): if True then also generate
             a ZIP archive of the QC reports
         """
-        pass
+        self.conda("multiqc=1.8",
+                   "pillow")
+        # Specify Python version to use to avoid similar
+        # issue as reported here:
+        # https://github.com/ewels/MultiQC/issues/1413
+        self.conda("python=3.8")
     def setup(self):
         # Check for 10x multiome libraries file with linked projects
         libraries_file = os.path.join(self.args.project.dirn,
