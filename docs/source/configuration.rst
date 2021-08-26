@@ -285,23 +285,45 @@ with 8 cores might look like:
 
 .. _limiting_number_of_jobs:
 
---------------------------------------
-Limiting the number of concurrent jobs
---------------------------------------
+------------------------------------------
+Managing concurrent jobs and process loads
+------------------------------------------
 
-The ``max_concurrent_jobs`` setting in the ``general`` section
-limits the number of jobs that ``auto_process`` will attempt to
-run simultaneously.
+There are a number of settings available in the ``[general]``
+section which allow limits to be set on the resources that
+``auto_process`` will try to consume when running jobs and
+pipelines:
+
+======================= =============================================
+Setting
+======================= =============================================
+``max_concurrent_jobs`` Maximum number of jobs that ``auto_process``
+                        is allowed to run at one time
+``max_cores``           Maximum number of cores that ``auto_process``
+                        is allowed to use at one time across all
+                        jobs
+``max_batches``         Dynamically sets batch sizes within pipelines
+                        so that number of job batches from each task
+                        doesn't exceed this number
+======================= =============================================
 
 For example:
 
 ::
 
     [general]
-    max_concurrent_jobs = 4
+    max_cores = 24
 
-This is particularly useful to prevent exceeding resource limits
-when running on a local workstation.
+If any of these is set to zero or ``None`` then this means
+that resource is not limited by ``auto_process``.
+
+``max_concurrent_jobs`` and ``max_batches`` are useful on
+shared cluster systems, to avoid submitting large numbers of
+jobs at one time.
+
+``max_cores`` is useful when running on a local workstation,
+to avoid exceeding resource limits while ensuring the most
+efficient use of the available CPUs.
 
 .. _environment_modules:
 
