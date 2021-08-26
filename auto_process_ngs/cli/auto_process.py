@@ -566,6 +566,15 @@ def add_make_fastqs_command(cmdparser):
                              % (__settings.general.max_cores
                                 if __settings.general.max_cores
                                 else 'no limit'))
+    job_control.add_argument('-b','--maxbatches',type=int,action='store',
+                             dest='max_batches',metavar='NBATCHES',
+                             default=__settings.general.max_batches,
+                             help="enable dynamic batching of pipeline "
+                             "jobs with maximum number of batches set to "
+                             "NBATCHES (default: %s)"
+                             % (__settings.general.max_batches
+                                if __settings.general.max_batches
+                                else 'no batching'))
     # Advanced options
     advanced = p.add_argument_group('Advanced/debugging options')
     advanced.add_argument('--verbose',action="store_true",
@@ -1292,6 +1301,7 @@ def make_fastqs(args):
         cellranger_ignore_dual_index=args.ignore_dual_index,
         max_jobs=args.max_jobs,
         max_cores=args.max_cores,
+        batch_limit=args.max_batches,
         working_dir=args.working_dir,
         verbose=args.verbose)
 

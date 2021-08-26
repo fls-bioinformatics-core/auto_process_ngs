@@ -63,7 +63,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_localcores=None,
                 cellranger_localmem=None,
                 cellranger_ignore_dual_index=False,
-                max_jobs=None,max_cores=None,
+                max_jobs=None,max_cores=None,batch_limit=None,
                 verbose=False,working_dir=None):
     """
     Create and summarise FASTQ files
@@ -183,6 +183,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
          sample, ignore it (10xGenomics Chromium SC data only)
       max_jobs (int): maximum number of concurrent jobs allowed
       max_cores (int): maximum number of cores available
+      batch_limit (int): if set then run commands in each task in
+         batches, with the batch size set dyanmically so as not to
+         exceed this limit
       working_dir (str): path to a working directory (defaults to
          temporary directory in the current directory)
       verbose (bool): if True then report additional information for
@@ -426,6 +429,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              log_file=pipeline_log,
                              max_jobs=max_jobs,
                              max_slots=max_cores,
+                             batch_limit=batch_limit,
                              poll_interval=poll_interval,
                              working_dir=working_dir,
                              verbose=verbose)
