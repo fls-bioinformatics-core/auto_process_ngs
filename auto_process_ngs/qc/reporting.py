@@ -1390,9 +1390,14 @@ class QCReport(Document):
         # Report processing software packages
         for pkg in project.processing_software:
             # Acquire the value
+            try:
+                program = self.software_names[pkg]
+            except KeyError:
+                # Unknown software package
+                program = pkg
             value = project.processing_software[pkg][2]
             self.processing_software_table.add_row(
-                program=self.software_names[pkg],
+                program=program,
                 version=value)
 
     def report_qc_software(self,project):
