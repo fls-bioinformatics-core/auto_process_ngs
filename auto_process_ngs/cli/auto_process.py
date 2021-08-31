@@ -695,7 +695,7 @@ def add_run_qc_command(cmdparser):
     # Conda options
     conda = p.add_argument_group("Conda dependency resolution")
     conda.add_argument('--enable-conda',choices=["yes","no"],
-                       dest="enable_conda",default=None,
+                       dest="enable_conda",default=enable_conda,
                        help="use conda to resolve task dependencies; can "
                        "be 'yes' or 'no' (default: %s)" % enable_conda)
     # Job control options
