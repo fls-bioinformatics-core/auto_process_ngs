@@ -69,6 +69,7 @@ from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .fastq_utils import pair_fastqs_by_name
+from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from .tenx_genomics_utils import flow_cell_id
 from .utils import ZipArchive
 from .mockqc import MockQCOutputs
@@ -570,6 +571,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
     - add_qc_outputs
     - add_icell8_outputs
     - add_cellranger_count_outputs
+    - add_cellranger_multi_outputs
 
     Example usage:
 
@@ -845,6 +847,64 @@ class UpdateAnalysisProject(DirectoryUpdater):
             qc_info = self._project.qc_info(self._project.qc_dir)
             qc_info['cellranger_refdata'] = "/data/refdata-cellranger-1.2.0"
             qc_info.save()
+        self._reload_project()
+
+    def add_cellranger_multi_outputs(self,config_csv,qc_dir=None,
+                                     prefix="cellranger_multi"):
+        """
+        Add mock 'cellranger multi' outputs to project
+
+        Arguments:
+          config_csv (str): path to a 10x multiplexing config
+            file
+          qc_dir (str): specify non-default QC output
+            directory
+          prefix (str): leading subdirectory for cellranger
+            count outputs (defaults to 'cellranger_count';
+            ignored if 'legacy' style outputs are generated)
+        """
+        print("Adding cellranger multi outputs to %s" % self._project.dirn)
+        if qc_dir is not None:
+            self._project.use_qc_dir(qc_dir)
+        print("- QC dir: %s" % self._project.qc_dir)
+        if not os.path.exists(self._project.qc_dir):
+            self.add_subdir(self._project.qc_dir)
+        self.add_subdir(os.path.join(self._project.qc_dir,prefix))
+        # Read in multiplexing config
+        config = CellrangerMultiConfigCsv(config_csv)
+        # Per sample outputs
+        per_sample_output_files = ("web_summary.html",
+                                   "metrics_summary.csv")
+        for sample in config.sample_names:
+            sample_dir = os.path.join(self._project.qc_dir,
+                                      prefix,
+                                      "outs",
+                                      "per_sample_outs",
+                                      sample)
+            self.add_subdir(sample_dir)
+            for f in per_sample_output_files:
+                self.add_file(os.path.join(sample_dir,f))
+        # Multiplexing analysis outputs
+        multiplexing_output_files = ("assignment_confidence_table.csv",
+                                     "cells_per_tag.json",
+                                     "tag_calls_per_cell.csv",
+                                     "tag_calls_summary.csv")
+        multiplexing_dir = os.path.join(self._project.qc_dir,
+                                        prefix,
+                                        "outs",
+                                        "multi",
+                                        "multiplexing_analysis")
+        self.add_subdir(multiplexing_dir)
+        for f in multiplexing_output_files:
+            self.add_file(os.path.join(multiplexing_dir,f))
+        # Top-level outputs
+        for f in ("_cmdline",):
+            self.add_file(os.path.join(self._project.qc_dir,
+                                       prefix,f))
+        # Update cellranger reference data in qc.info
+        qc_info = self._project.qc_info(self._project.qc_dir)
+        qc_info['cellranger_refdata'] = config.reference_data_path
+        qc_info.save()
         self._reload_project()
 
 #######################################################################
@@ -1590,6 +1650,18 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         count.add_argument("--mempercore",action="store")
         count.add_argument("--maxjobs",action="store")
         count.add_argument("--jobinterval",action="store")
+        # multi subparser
+        if self._package_name == "cellranger" and version[0] >= 6:
+            # multi only implemented in cellranger 6.0.0
+            multi = sp.add_parser("multi")
+            multi.add_argument("--id",action="store")
+            multi.add_argument("--csv",action="store")
+            multi.add_argument("--jobmode",action="store")
+            multi.add_argument("--localcores",action="store")
+            multi.add_argument("--localmem",action="store")
+            multi.add_argument("--mempercore",action="store")
+            multi.add_argument("--maxjobs",action="store")
+            multi.add_argument("--jobinterval",action="store")
         # Process command line
         args = p.parse_args()
         # Check bases mask
@@ -1739,6 +1811,59 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
+            # _cmdline file
+            cmdline_file = os.path.join(top_dir,"_cmdline")
+            with open(cmdline_file,'w') as fp:
+                fp.write("%s\n" % cmdline)
+        elif args.command == "multi":
+            ###############
+            # multi command
+            ###############
+            missing_args = []
+            if args.csv is None:
+                missing_args.append("--csv <PATH>")
+            if missing_args:
+                sys.stderr.write("error: The following required arguments were not provided:\n")
+                for missing_arg in missing_args:
+                    sys.stderr.write("    %s\n" % missing_arg)
+                sys.stderr.write("\nUSAGE:\n    cellranger multi --id <ID> --csv <CSV> --jobmode <MODE>\n\nFor more information try --help\n")
+                sys.exit(1)
+            # Build outputs
+            top_dir = str(args.id)
+            os.mkdir(top_dir)
+            # Outs
+            outs_dir = os.path.join(top_dir,"outs")
+            os.mkdir(outs_dir)
+            config = CellrangerMultiConfigCsv(args.csv)
+            for d in ("per_sample_outs",
+                      "multi",
+                      "multi/multiplexing_analysis",):
+                os.mkdir(os.path.join(outs_dir,d))
+            # Per sample outs
+            for sample in config.sample_names:
+                sample_dir = os.path.join(outs_dir,
+                                          "per_sample_outs",
+                                          sample)
+                os.mkdir(sample_dir)
+                metrics_file = os.path.join(sample_dir,
+                                            "metrics_summary.csv")
+                with open(metrics_file,'wt') as fp:
+                    fp.write(mock10xdata.CELLPLEX_METRICS_SUMMARY)
+                web_summary_file = os.path.join(sample_dir,
+                                                "web_summary.html")
+                with open(web_summary_file,'wt') as fp:
+                    fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
+            # Multiplexing outs
+            for f in ("assignment_confidence_table.csv",
+                      "cells_per_tag.json",
+                      "tag_calls_per_cell.csv",
+                      "tag_calls_summary.csv"):
+                multiplexing_output = os.path.join(outs_dir,
+                                                   "multi",
+                                                   "multiplexing_analysis",f)
+                with open(multiplexing_output,'wt') as fp:
+                    fp.write("PLACEHOLDER FOR %s"  %
+                             os.path.basename(multiplexing_output).upper())
             # _cmdline file
             cmdline_file = os.path.join(top_dir,"_cmdline")
             with open(cmdline_file,'w') as fp:

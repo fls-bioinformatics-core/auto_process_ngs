@@ -236,10 +236,7 @@ if __name__ == "__main__":
                              if __settings.general.max_batches
                              else 'no batching'))
     # Advanced options
-    advanced = p.add_argument_group('Advanced/debugging options')
-    advanced.add_argument('--verbose',action="store_true",
-                          dest="verbose",default=False,
-                          help="run pipeline in 'verbose' mode")
+    advanced = p.add_argument_group('Advanced options')
     advanced.add_argument('-r','--runner',metavar='RUNNER',action='store',
                           dest="runner",default=None,
                           help="explicitly specify runner definition for "
@@ -250,10 +247,6 @@ if __name__ == "__main__":
                           dest='batch_size',type=int, default=None,
                           help="batch QC commands with N commands per job "
                           "(default: no batching)")
-    advanced.add_argument('--work-dir',action="store",
-                          dest="working_dir",default=None,
-                          help="specify the working directory for the "
-                          "pipeline operations")
     advanced.add_argument('--ignore-metadata',action="store_true",
                           dest="ignore_metadata",default=False,
                           help="ignore information from project metadata "
@@ -262,6 +255,20 @@ if __name__ == "__main__":
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
+    # Debugging options
+    debugging = p.add_argument_group('Debugging options')
+    debugging.add_argument('--verbose',action="store_true",
+                           dest="verbose",default=False,
+                           help="run pipeline in 'verbose' mode")
+    debugging.add_argument('--work-dir',action="store",
+                          dest="working_dir",default=None,
+                          help="specify the working directory for the "
+                          "pipeline operations")
+    debugging.add_argument('--no-cleanup',action='store_true',
+                           dest="no_cleanup",default=False,
+                           help="don't remove the temporary project "
+                           "directory on completion (by default the "
+                           "temporary directory is deleted)")
     # Deprecated options
     deprecated = p.add_argument_group('Deprecated/redundant options')
     deprecated.add_argument('--multiqc',action='store_true',
@@ -322,6 +329,7 @@ if __name__ == "__main__":
     qc_dir = args.qc_dir
     master_fastq_dir = None
     fastq_attrs = IlluminaFastqAttrs
+    extra_files = set()
 
     # Deal with inputs
     #
@@ -371,6 +379,12 @@ if __name__ == "__main__":
             sys.exit(1)
         # Look for project metadata
         info_file = locate_project_info_file(dir_path)
+        # Look for extra files
+        for f in ('10x_multiome_libraries.info',
+                  '10x_multi_config.csv',):
+            ff = os.path.join(dir_path,f)
+            if os.path.isfile(ff):
+                extra_files.add(ff)
     else:
         # Look for a metadata file based on Fastqs
         for fq in inputs:
@@ -609,13 +623,21 @@ if __name__ == "__main__":
     if args.organism:
         project_metadata['organism'] = args.organism
 
+    # Import extra files specified by the user
+    for f in list(extra_files):
+        print("Importing %s" % f)
+        os.symlink(f,os.path.join(project_dir,os.path.basename(f)))
+
     # Save out metadata to temporary project dir
     info_file = os.path.join(project_dir,"README.info")
     print("Writing metadata to %s" % info_file)
     project_metadata.save(info_file)
 
     # Remove the temporary directory on exit
-    atexit.register(cleanup_atexit,project_dir)
+    if not args.no_cleanup:
+        print("Registering temporary project directory for "
+              "deletion on pipeline completion")
+        atexit.register(cleanup_atexit,project_dir)
 
     # Load the project
     project = AnalysisProject(project_dir)

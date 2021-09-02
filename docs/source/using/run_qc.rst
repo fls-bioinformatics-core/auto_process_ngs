@@ -1,6 +1,10 @@
 Generating QC reports using ``auto_process run_qc``
 ===================================================
 
+--------
+Overview
+--------
+
 The ``run_qc`` command is used to run the QC pipeline on the
 Fastqs for each project within the analysis directory, and
 generate a report for each one.
@@ -13,6 +17,10 @@ The general invocation of the command is:
 
 There is also a standalone utility called ``run_qc.py`` which
 can be used to run the QC pipeline on an arbitrary subdirectory.
+
+------------
+QC protocols
+------------
 
 The QC pipeline protocol used for each project will differ slightly
 depending on the nature of the data within that project:
@@ -28,6 +36,7 @@ QC protocol           Used for
 ``10x_Visium``        10xGenomics Visium spatial RNA-seq
 ``10x_Multiome_ATAC`` 10xGenomics Visium multiome ATAC-seq data
 ``10x_Multiome_GEX``  10xGenomics Visium multiome gene expression data
+``10x_CellPlex``      10xGenomics CellPlex cell multiplexing data
 ``singlecell``        ICELL8 single cell RNA-seq
 ``ICELL8_scATAC``     ICELL8 single cell ATAC-seq
 ===================== ==========================
@@ -73,6 +82,16 @@ In addition for 10xGenomics scRNA-seq, snRNA-seq and scATAC data:
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger_atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
 .. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
+
+For 10xGenomics CellPlex (cell multiplexing) data:
+
+ * Multiplexing analyses are run using the `cellranger`_ ``multi``
+   command, provided that a ``10x_multi_config.csv`` file is also
+   present in the project directory.
+
+   This file should have the format outlined at `cellranger_multi`_.
+
+.. _cellranger_multi: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
 
 `multiQC`_ is also run to summarise the QC from all the Fastqs in the
 project.

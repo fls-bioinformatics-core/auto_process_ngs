@@ -1216,7 +1216,7 @@ class TestQCPipeline(unittest.TestCase):
 
     #@unittest.skip("Skipped")
     def test_qcpipeline_multiome_atac_with_cellranger_arc_count_1_0_0(self):
-        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count (Cellranger ARC 1.0.0)'
+        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count' (Cellranger ARC 1.0.0)
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
@@ -1304,7 +1304,7 @@ class TestQCPipeline(unittest.TestCase):
 
     #@unittest.skip("Skipped")
     def test_qcpipeline_multiome_atac_with_cellranger_arc_count_2_0_0(self):
-        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count (Cellranger ARC 2.0.0)'
+        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count' (Cellranger ARC 2.0.0)
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
@@ -1564,6 +1564,85 @@ class TestQCPipeline(unittest.TestCase):
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB_GEX",f)),
+                            "Missing %s" % f)
+
+    #@unittest.skip("Skipped")
+    def test_qcpipeline_cellplex_with_cellranger_multi(self):
+        """QCPipeline: 10xGenomics Cellplex run with 'cellranger multi'
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 version="6.0.0")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock 10x Cellplex analysis project
+        p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                       "PJB1_GEX_S1_R2_001.fastq.gz",
+                                       "PJB2_MC_S2_R1_001.fastq.gz",
+                                       "PJB2_MC_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Chromium 3\'v3',
+                                           'Library type': 'CellPlex' })
+        p.create(top_dir=self.wd)
+        # Add the cellranger multi config.csv file
+        with open(os.path.join(self.wd,
+                               "PJB",
+                               "10x_multi_config.csv"),'wt') as fp:
+            fastq_dir = os.path.join(self.wd,
+                                     "PJB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,%s,any,PJB1,gene expression,
+PJB2_MC,%s,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""" % (fastq_dir,fastq_dir))
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          multiqc=True)
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_arc_references=
+                           { 'human':
+                             '/data/refdata-cellranger-gex-GRCh38-2020-A' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "qc/cellranger_multi",
+                  "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/_cmdline",
+                  "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/web_summary.html",
+                  "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/metrics_summary.csv",
+                  "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/web_summary.html",
+                  "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/metrics_summary.csv",
+                  "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/multi/multiplexing_analysis/tag_calls_summary.csv",
+                  "cellranger_multi",
+                  "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/_cmdline",
+                  "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/web_summary.html",
+                  "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/metrics_summary.csv",
+                  "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/web_summary.html",
+                  "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/metrics_summary.csv",
+                  "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/multi/multiplexing_analysis/tag_calls_summary.csv",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
                             "Missing %s" % f)
 
     def test_qcpipeline_with_10x_scRNAseq_no_project_metadata(self):

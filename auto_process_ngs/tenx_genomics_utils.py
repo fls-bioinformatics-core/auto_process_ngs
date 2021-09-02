@@ -21,7 +21,6 @@ platforms:
 - cellranger_info
 - spaceranger_info
 - make_qc_summary_html
-- set_cell_count_for_project
 - add_cellranger_args
 """
 
@@ -38,9 +37,7 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import split_run_name_full
-from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.TabFile import TabFile
-from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from .analysis import locate_project
 from .analysis import split_sample_reference
@@ -49,11 +46,7 @@ from .docwriter import Document
 from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
-from .analysis import AnalysisProject
 from .bcl2fastq.utils import get_bases_mask
-from .metadata import AnalysisProjectQCDirInfo
-from .utils import get_numbered_subdir
-from .utils import ZipArchive
 from . import css_rules
 
 # Initialise logging
@@ -63,6 +56,16 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # Data
 #######################################################################
+
+# Permissible values for 10xGenomics platforms
+PLATFORMS = (
+    "10xGenomics Chromium",
+    "10xGenomics Chromium 3'v2",
+    "10xGenomics Chromium 3'v3",
+    "10xGenomics Single Cell ATAC",
+    "10xGenomics Visium",
+    "10xGenomics Single Cell Multiome",
+)
 
 # Permissible values for cellranger count --chemistry option
 # See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
@@ -86,9 +89,12 @@ class MetricsSummary(TabFile):
     Base class for extracting data from cellranger* count
     *summary.csv files
 
-    The files consists of two lines: the first is a
-    header line, the second consists of corresponding
-    data values.
+    By default the files consists of two lines: the first
+    is a header line, the second consists of corresponding
+    data values. There is also a multi-line variation (e.g.
+    from cellranger multi) with a header line followed by
+    multiple lines of data (use the 'multiline' argument
+    to indicate this is the expected format).
 
     In addition: in some variants (e.g.
     'metrics_summary.csv'), integer data values are formatted
@@ -104,27 +110,33 @@ class MetricsSummary(TabFile):
     This class extracts the data values and where
     possible converts them to integers.
     """
-    def __init__(self,f):
+    def __init__(self,f,multiline=False):
         """
         Create a new MetricsSummary instance
 
         Arguments:
           f (str): path to the 'metrics_summary.csv' file
+          multiline (bool): if True then expect multiple lines
+            of data (default is to expect a single line of
+            data)
         """
+        # Multi-line summary?
+        self._multiline = multiline
         # Read in data from the file
         with open(f,'rt') as fp:
             s = fp.read()
         self._data = dict()
         s = s.strip().split('\n')
-        if len(s) != 2:
-            raise Exception("%s: MetricsSummary expects 2 lines"
-                            % f)
+        if not self._multiline and len(s) != 2:
+            raise Exception("%s: MetricsSummary expects 2 lines (or specify "
+                            "multi-line mode)" % f)
         # Set up the tabfile instance
         TabFile.__init__(self,
                          column_names=self._tokenise(s[0]),
                          delimiter=',')
         # Add the data
-        self.append(data=self._tokenise(s[1]))
+        for line in s[1:]:
+            self.append(data=self._tokenise(line))
     def _tokenise(self,line):
         """
         Internal: process line from *summary.csv
@@ -171,6 +183,10 @@ class MetricsSummary(TabFile):
         """
         Fetch data associated with an arbitrary field
         """
+        if self._multiline:
+            raise NotImplementedError("Superclass should implement "
+                                      "'fetch' method for multi-line "
+                                      "metrics files")
         return self[0][field]
 
 class GexSummary(MetricsSummary):
@@ -389,6 +405,72 @@ class MultiomeSummary(MetricsSummary):
         """
         return self.fetch('GEX Median genes per cell')
 
+class MultiplexSummary(MetricsSummary):
+    """
+    Extract data from metrics_summary.csv file for CellPlex
+
+    Utility class for extracting data from a
+    'metrics_summary.csv' file output from running
+    'cellranger multi'.
+
+    The file consists of a header line followed by multiple
+    data lines, with one set of values per line.
+
+    The following properties are available:
+
+    - cells
+    - median_reads_per_cell
+    - median_genes_per_cell
+    - total_genes_detected
+    - median_umi_counts_per_cell
+    """
+    def __init__(self,f):
+        """
+        Create a new MultiomeSummary instance
+
+        Arguments:
+          f (str): path to the 'summary.csv' file
+        """
+        MetricsSummary.__init__(self,f,multiline=True)
+    def fetch(self,name):
+        """
+        Fetch data associated with an arbitrary field
+        """
+        metric = self.lookup('Metric Name',name)
+        if len(metric) != 1:
+            raise Exception("Failed to lookup metric '%s'" % name)
+        return metric[0]['Metric Value']
+    @property
+    def cells(self):
+        """
+        Returns the number of cells
+        """
+        return self.fetch('Cells')
+    @property
+    def median_reads_per_cell(self):
+        """
+        Returns the median reads per cell
+        """
+        return self.fetch('Median reads per cell')
+    @property
+    def median_genes_per_cell(self):
+        """
+        Returns the median genes per cell
+        """
+        return self.fetch('Median genes per cell')
+    @property
+    def total_genes_detected(self):
+        """
+        Returns the total genes detected
+        """
+        return self.fetch('Total genes detected')
+    @property
+    def median_umi_counts_per_cell(self):
+        """
+        Returns the median UMI counts per cell
+        """
+        return self.fetch('Median UMI counts per cell')
+
 class MultiomeLibraries(object):
     """
     Class to handle '10x_multiome_libraries.info' files
@@ -536,6 +618,100 @@ class MultiomeLibraries(object):
                           self._library_description(
                               project.info.library_type)))
             print("Generated %s" % filen)
+
+class CellrangerMultiConfigCsv(object):
+    """
+    Class to handle cellranger multi 'config.csv' files
+
+    See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
+
+    Provides the following properties:
+
+    - sample_names: list of sample names
+    - reference_data_path: path to the reference dataset
+
+    Provides the following methods:
+
+    - sample: returns information on a specific sample
+    """
+    def __init__(self,filen):
+        """
+        Create new CellrangerMultiConfigCsv instance
+
+        Arguments:
+          filen (str): path to cellranger multi config.csv
+            file
+        """
+        self._filen = os.path.abspath(filen)
+        self._samples = {}
+        self._reference_data_path = None
+        self._read_config_csv()
+
+    def _read_config_csv(self):
+        """
+        Internal: read in data from a multiplex 'config.csv' file
+        """
+        logger.debug("Reading data from '%s'" % self._filen)
+        with open(self._filen,'rt') as config_csv:
+            current_section = None
+            for line in config_csv:
+                line = line.rstrip('\n')
+                if line == "[samples]":
+                    current_section = "samples"
+                    continue
+                elif line == "[gene-expression]":
+                    current_section = "gene-expression"
+                    continue
+                elif not line:
+                    # Blank line ends section
+                    current_section = None
+                    continue
+                if current_section == "samples":
+                    if line.startswith('sample_id,cmo_ids,description'):
+                        # Header line, skip
+                        continue
+                    else:
+                        # Extract sample name
+                        sample,cmo,desc = [x.strip() for x in line.split(',')]
+                        logger.debug("Found sample '%s'" % sample)
+                        self._samples[sample] = { 'cmo': cmo,
+                                                  'description': desc }
+                elif current_section == "gene-expression":
+                    if line.startswith('reference,'):
+                        # Extract reference dataset
+                        self._reference_data_path = ','.join(
+                            line.split(',')[1:]).strip()
+                        logger.debug("Found reference dataset '%s'" %
+                                     self._reference_data_path)
+
+    @property
+    def sample_names(self):
+        """
+        Return the sample names from config.csv
+
+        Samples are listed in the '[samples]' section.
+        """
+        return sorted(list(self._samples.keys()))
+
+    @property
+    def reference_data_path(self):
+        """
+        Return the path to the reference dataset from config.csv
+        """
+        return self._reference_data_path
+
+    def sample(self,sample_name):
+        """
+        Return dictionary of values associated with sample
+
+        Keys include 'cmp' (list of CMO ids) and 'description'
+        (description text) associated with the sample in the
+        '[samples]' section of the config.csv file.
+
+        Arguments:
+          sample_name (str): name of the sample of interest
+        """
+        return self._samples[sample_name]
 
 #######################################################################
 # Functions
@@ -710,145 +886,6 @@ def make_qc_summary_html(json_file,html_file):
         sample_qc.add(tbl)
     # Write the report
     qc_summary.write(html_file)
-
-def set_cell_count_for_project(project_dir,qc_dir=None):
-    """
-    Set the total number of cells for a project
-
-    Sums the number of cells for each sample in a project
-    (as determined from 'cellranger count' and extracted
-    from the 'metrics_summary.csv' file for scRNA-seq, or
-    from 'cellranger-atac count' and extracted from the
-    'summary.csv' file for scATAC-seq).
-
-    The final count is written to the 'number_of_cells'
-    metadata item for the project.
-
-    Arguments:
-      project_dir (str): path to the project directory
-      qc_dir (str): path to QC directory (if not the default
-        QC directory for the project)
-
-    Returns:
-      Integer: exit code, non-zero values indicate problems
-        were encountered.
-    """
-    # Set up basic info
-    project = AnalysisProject(os.path.basename(project_dir),
-                              project_dir)
-    if qc_dir is None:
-        qc_dir = project.qc_dir
-    qc_dir = os.path.abspath(qc_dir)
-    # Determine which 10x pipeline was used
-    pipeline = None
-    single_cell_platform = project.info.single_cell_platform
-    if single_cell_platform:
-        if single_cell_platform.startswith("10xGenomics Chromium 3'"):
-            pipeline = "cellranger"
-        elif single_cell_platform == "10xGenomics Single Cell ATAC":
-            pipeline = "cellranger-atac"
-        elif single_cell_platform == "10xGenomics Single Cell Multiome":
-            pipeline = "cellranger-arc"
-    if not pipeline:
-        raise NotImplementedError("Not implemented for platform '%s'"
-                                  % single_cell_platform)
-    # Determine possible locations for outputs
-    count_dirs = []
-    # New-style with version and reference data levels
-    qc_info_file = os.path.join(qc_dir,"qc.info")
-    if os.path.exists(qc_info_file):
-        qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
-        try:
-            cellranger_refdata = qc_info['cellranger_refdata']
-        except KeyError:
-            cellranger_refdata = None
-        try:
-            cellranger_version = qc_info['cellranger_version']
-        except KeyError:
-            cellranger_version = None
-        if cellranger_version and cellranger_refdata:
-            count_dirs.append(os.path.join(qc_dir,
-                                           "cellranger_count",
-                                           cellranger_version,
-                                           os.path.basename(
-                                               cellranger_refdata)))
-    # Old-style without additional subdirectories
-    count_dirs.append(os.path.join(qc_dir,
-                                   "cellranger_count"))
-    # Check each putative output location in turn
-    for count_dir in count_dirs:
-        # Check that the directory exists
-        if not os.path.exists(count_dir):
-            logger.warning("%s: not found" % count_dir)
-            continue
-        print("Looking for outputs under %s" % count_dir)
-        # Loop over samples and collect cell numbers for each
-        number_of_cells = 0
-        try:
-            for sample in project.samples:
-                print("- %s" % sample)
-                outs_dir = os.path.join(count_dir,
-                                        sample.name,
-                                        "outs")
-                if pipeline == "cellranger":
-                    # Single cell/nuclei RNA-seq output
-                    metrics_summary_csv = os.path.join(
-                        outs_dir,
-                        "metrics_summary.csv")
-                    if not os.path.exists(metrics_summary_csv):
-                        raise Exception("Failed to add cell count "
-                                        "for sample '%s': missing "
-                                        "file '%s'" %
-                                        (sample.name,
-                                         metrics_summary_csv))
-                    # Extract cell numbers
-                    metrics = GexSummary(metrics_summary_csv)
-                    number_of_cells += \
-                        metrics.estimated_number_of_cells
-                elif pipeline == "cellranger-atac":
-                    # Single cell ATAC-seq output
-                    summary_csv = os.path.join(
-                        outs_dir,
-                        "summary.csv")
-                    if not os.path.exists(summary_csv):
-                        raise Exception("Failed to add cell count "
-                                        "for sample '%s': missing "
-                                        "file '%s'" %
-                                        (sample.name,
-                                         summary_csv))
-                    # Extract cell numbers
-                    try:
-                        # Cellranger ATAC pre-2.0.0 uses 'annotated_cells'
-                        number_of_cells += AtacSummary(summary_csv).\
-                                           annotated_cells
-                    except AttributeError:
-                        # Cellranger ATAC 2.0.0 uses 'Estimated number of
-                        # cells'
-                        number_of_cells += AtacSummary(summary_csv).\
-                                           estimated_number_of_cells
-                elif pipeline == "cellranger-arc":
-                    # Single cell multiome output
-                    summary_csv = os.path.join(
-                        outs_dir,
-                        "summary.csv")
-                    if not os.path.exists(summary_csv):
-                        raise Exception("Failed to add cell count "
-                                        "for sample '%s': missing "
-                                        "file '%s'" %
-                                        (sample.name,
-                                         summary_csv))
-                    # Extract cell numbers
-                    number_of_cells += MultiomeSummary(summary_csv).\
-                                       estimated_number_of_cells
-            # Store in the project metadata
-            project.info['number_of_cells'] = number_of_cells
-            project.info.save()
-            return 0
-        except Exception as ex:
-            logger.warning("Unable to set cell count from data in "
-                           "%s: %s" % (count_dir,ex))
-    # Reached the end without setting count
-    return 1
 
 def cellranger_info(path=None,name=None):
     """

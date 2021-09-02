@@ -27,7 +27,7 @@ Protocol option          Used for
 ``icell8``               ICELL8 single-cell RNA-seq data
 ``icell8_atac``          ICELL8 single-cell ATAC-seq data
 ``10x_chromium_sc``      10xGenomics Chromium single cell
-                         RNA-seq data
+                         RNA-seq and CellPlex data
 ``10x_atac``             10xGenomics Chromium single cell
                          ATAC-seq data
 ``10x_visium``           10xGenomics Visium spatial RNA-seq
@@ -200,6 +200,11 @@ option:
     auto_process.py make_fastqs --protocol=10x_chromium_sc ...
 
 which fetches the data and runs ``cellranger mkfastq``.
+
+.. note::
+
+   This protocol should also be used for 10xGenomics CellPlex
+   (cell multiplexing) datasets.
 
 This will generate the Fastqs in the specified output directory
 (e.g. ``bcl2fastq``) along with an HTML report derived from the

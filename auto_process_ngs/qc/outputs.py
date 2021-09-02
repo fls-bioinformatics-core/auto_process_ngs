@@ -14,6 +14,7 @@ Provides the following functions:
 - cellranger_count_output: get names for cellranger count output
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - cellranger_arc_count_output: get names for cellranger-arc count output
+- cellranger_multi_output: get names for cellranger multi output
 - check_illumina_qc_outputs: fetch Fastqs without illumina_qc.sh outputs
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 - check_cellranger_count_outputs: fetch sample names without cellranger
@@ -35,6 +36,7 @@ import logging
 from .constants import FASTQ_SCREENS
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
+from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -223,6 +225,66 @@ def cellranger_arc_count_output(project,sample_name=None,
                                         "outs",f))
     return tuple(outputs)
 
+def cellranger_multi_output(project,config_csv,sample_name=None,
+                            prefix="cellranger_multi"):
+    """
+    Generate list of 'cellranger multi' outputs
+
+    Given an AnalysisProject, the outputs from 'cellranger
+    multi' will look like:
+
+    - {PREFIX}/outs/multi/multiplexing_analysis/tag_calls_summary.csv
+
+    and
+
+    - {PREFIX}/outs/per_sample_outs/{SAMPLE_n}/metrics_summary.csv
+    - {PREFIX}/outs/per_sample_outs/{SAMPLE_n}/web_summary.html
+
+    for each multiplexed SAMPLE_n defined in the config.csv file
+    (nb these are not equivalent to the 'samples' defined by the
+    Fastq files in the project).
+
+    If a sample name is supplied then outputs are limited
+    to those for that sample; if the supplied config.csv file isn't
+    found then no outputs will be returned.
+
+    Arguments:
+      project (AnalysisProject): project to generate
+        output names for
+      config_csv (str): path to the cellranger multi
+        config.csv file
+      sample_name (str): multiplexed sample to limit outputs
+        to (optional)
+      prefix (str): directory for outputs (optional, defaults
+        to "cellranger_multi")
+
+    Returns:
+       tuple: cellranger multi outputs (without leading paths)
+    """
+    outputs = []
+    # Check that config.csv file exists
+    if not os.path.isfile(config_csv):
+        return outputs
+    # Per-sample metrics and web summary files
+    for sample in CellrangerMultiConfigCsv(config_csv).sample_names:
+        if sample_name and sample_name != sample:
+            continue
+        sample_dir = os.path.join(prefix,
+                                  "outs",
+                                  "per_sample_outs",
+                                  sample)
+        for f in ("metrics_summary.csv",
+                  "web_summary.html"):
+            outputs.append(os.path.join(sample_dir,f))
+    # Multiplexing outputs
+    multi_analysis_dir = os.path.join(prefix,
+                                      "outs",
+                                      "multi",
+                                      "multiplexing_analysis")
+    for f in ("tag_calls_summary.csv",):
+        outputs.append(os.path.join(multi_analysis_dir,f))
+    return tuple(outputs)
+
 def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
     """
     Return Fastqs missing QC outputs from illumina_qc.sh
@@ -264,7 +326,8 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
                            '10x_scRNAseq',
                            '10x_snRNAseq',
                            '10x_Visium',
-                           '10x_Multiome_GEX',):
+                           '10x_Multiome_GEX',
+                           '10x_CellPlex',):
             if project.fastq_attrs(fastq).read_number == 1:
                 # No screens for R1 for single cell
                 continue
@@ -330,7 +393,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
                              '10x_scRNAseq',
                              '10x_snRNAseq',
                              '10x_Visium',
-                             '10x_Multiome_GEX',):
+                             '10x_Multiome_GEX',
+                             '10x_CellPlex',):
             # Strand stats output based on R2
             fq_pair = (fq_group[1],)
         else:
@@ -449,7 +513,7 @@ def check_cellranger_arc_count_outputs(project,qc_dir=None,
 
 def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                      cellranger_version=None,cellranger_refdata=None,
-                     qc_protocol=None):
+                     cellranger_multi_config=None,qc_protocol=None):
     """
     Return expected QC outputs for a project
 
@@ -470,6 +534,10 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
         reference dataset; cellranger count outputs will
         be included for 10x protocols unless this path
         is set to `None`
+      cellranger_multi_config (str): path to a cellranger
+        multi config.csv file;  cellranger multi outputs
+        will be included for the `10x_CellPlex` protocol
+        if this is set and the file exists
       qc_protocol (str): QC protocol to predict outputs
         for; if not set then defaults to standard QC
         based on ended-ness
@@ -503,10 +571,11 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                             '10x_scRNAseq',
                             '10x_snRNAseq',
                             '10x_Visium',
-                            '10x_Multiome_GEX',)) \
+                            '10x_Multiome_GEX',
+                            '10x_CellPlex',)) \
             and project.fastq_attrs(fastq).read_number == 1:
-            # No screens for R1 for single cell, Visium or
-            # multiome GEX
+            # No screens for R1 for single cell, Visium,
+            # multiome GEX or CellPlex
             continue
         for screen in FASTQ_SCREENS:
             for output in [os.path.join(qc_dir,f)
@@ -522,7 +591,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                                '10x_scRNAseq',
                                '10x_snRNAseq',
                                '10x_Visium',
-                               '10x_Multiome_GEX',):
+                               '10x_Multiome_GEX',
+                               '10x_CellPlex',):
                 # Strand stats output based on R2
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[1]))
@@ -531,9 +601,12 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[0]))
             outputs.add(output)
-    # Cellranger count output
+    # Cellranger count/multi output
     if cellranger_refdata is not None:
-        prefix = "cellranger_count"
+        if qc_protocol == "10x_CellPlex":
+            prefix = "cellranger_multi"
+        else:
+            prefix = "cellranger_count"
         if cellranger_version:
             prefix = os.path.join(prefix,
                                   cellranger_version,
@@ -560,4 +633,13 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                             sample_name=sample.name,
                             prefix=prefix):
                         outputs.add(os.path.join(qc_dir,output))
+        elif qc_protocol == '10x_CellPlex' and cellranger_multi_config:
+            # Only expect multi outputs for CellPlex data if there
+            # is a 'config.csv' file
+            if os.path.exists(cellranger_multi_config):
+                for output in cellranger_multi_output(
+                        project,
+                        cellranger_multi_config,
+                        prefix=prefix):
+                    outputs.add(os.path.join(qc_dir,output))
     return sorted(list(outputs))

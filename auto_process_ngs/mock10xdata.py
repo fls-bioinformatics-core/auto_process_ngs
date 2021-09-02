@@ -226,6 +226,87 @@ MULTIOME_SUMMARY_2_0_0 = """Sample ID,Genome,Pipeline version,Estimated number o
 PB_ATAC_multiome,GRCh38,cellranger-arc-2.0.0,785,2,2,2,0.7659,0.0125,0.7934,0.5388,0.5809,0.5591,127.3885,9.0000,0.6139,167,0.0624,0.8433,0.9228,0.9009,0.8869,100000,40.0000,0.0881,0.9838,0.8720,509.5541,161.0000,15.0000,0.3135,0.9698,0.9707,0.9550,0.0241,0.6598,0.8938,0.2190,0.0150,0.6503,0.9612,0.1222,400000,135,1.0000,0.9956
 """
 
+CELLPLEX_METRICS_SUMMARY = """Library or Sample,Library Type,Grouped By,Group Name,Metric Name,Metric Value
+Library,Gene Expression,Fastq ID,JR_10K_1_gex,Number of reads,"384,834,949"
+Library,Gene Expression,Fastq ID,JR_10K_1_gex,Number of short reads skipped,0
+Library,Gene Expression,Fastq ID,JR_10K_1_gex,Q30 RNA read,93.5%
+Library,Gene Expression,Fastq ID,JR_10K_1_gex,Q30 UMI,94.3%
+Library,Gene Expression,Fastq ID,JR_10K_1_gex,Q30 barcodes,95.8%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Cell-associated barcodes identified as multiplets,903 (6.65%)
+Library,Gene Expression,Physical library ID,JR_10K_gex,Cell-associated barcodes not assigned any CMOs,1635 (12.03%)
+Library,Gene Expression,Physical library ID,JR_10K_gex,Cells assigned to a sample,11050 (81.32%)
+Library,Gene Expression,Physical library ID,JR_10K_gex,Confidently mapped antisense,1.29%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Confidently mapped to exonic regions,66.79%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Confidently mapped to genome,94.53%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Confidently mapped to intergenic regions,4.18%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Confidently mapped to intronic regions,23.57%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Confidently mapped to transcriptome,64.13%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Estimated number of cells,"13,588"
+Library,Gene Expression,Physical library ID,JR_10K_gex,Fraction reads in cells,92.18%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Mapped to genome,97.28%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Mean reads per cell,"28,322"
+Library,Gene Expression,Physical library ID,JR_10K_gex,Number of reads,"384,834,949"
+Library,Gene Expression,Physical library ID,JR_10K_gex,Number of reads in the library,"384,834,949"
+Library,Gene Expression,Physical library ID,JR_10K_gex,Sequencing saturation,20.38%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Valid UMIs,99.96%
+Library,Gene Expression,Physical library ID,JR_10K_gex,Valid barcodes,98.53%
+Library,Multiplexing Capture,,,Cell-associated barcodes identified as multiplets,903 (6.65%)
+Library,Multiplexing Capture,,,Cells assigned to a sample,11050 (81.32%)
+Library,Multiplexing Capture,,,Estimated number of cell-associated barcodes,"13,588"
+Library,Multiplexing Capture,,,Median CMO UMIs per cell,"7,963"
+Library,Multiplexing Capture,,,Number of samples assigned at least one cell,2
+Library,Multiplexing Capture,,,Singlet capture ratio,0.87
+Library,Multiplexing Capture,CMO Name,CMO301,CMO signal-to-noise ratio,5.09
+Library,Multiplexing Capture,CMO Name,CMO301,Cells assigned to CMO,53.17%
+Library,Multiplexing Capture,CMO Name,CMO301,Fraction reads in cell-associated barcodes,70.78%
+Library,Multiplexing Capture,CMO Name,CMO302,CMO signal-to-noise ratio,3.57
+Library,Multiplexing Capture,CMO Name,CMO302,Cells assigned to CMO,46.83%
+Library,Multiplexing Capture,CMO Name,CMO302,Fraction reads in cell-associated barcodes,55.19%
+Library,Multiplexing Capture,Fastq ID,JR_10K_1_multiplex,Number of reads,"215,531,826"
+Library,Multiplexing Capture,Fastq ID,JR_10K_1_multiplex,Number of short reads skipped,0
+Library,Multiplexing Capture,Fastq ID,JR_10K_1_multiplex,Q30 RNA read,96.8%
+Library,Multiplexing Capture,Fastq ID,JR_10K_1_multiplex,Q30 UMI,95.5%
+Library,Multiplexing Capture,Fastq ID,JR_10K_1_multiplex,Q30 barcodes,95.8%
+Library,Multiplexing Capture,Fastq ID,JR_10K_2_multiplex,Number of reads,"538,688"
+Library,Multiplexing Capture,Fastq ID,JR_10K_2_multiplex,Number of short reads skipped,0
+Library,Multiplexing Capture,Fastq ID,JR_10K_2_multiplex,Q30 RNA read,97.1%
+Library,Multiplexing Capture,Fastq ID,JR_10K_2_multiplex,Q30 UMI,95.9%
+Library,Multiplexing Capture,Fastq ID,JR_10K_2_multiplex,Q30 barcodes,95.9%
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Cell-associated barcodes identified as multiplets,903 (6.65%)
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Cell-associated barcodes not assigned any CMOs,1635 (12.03%)
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Cells assigned to a sample,11050 (81.32%)
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Estimated number of cell-associated barcodes,"13,588"
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Fraction CMO reads,98.30%
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Fraction CMO reads usable,63.49%
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Fraction reads from multiplets,7.07%
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Fraction reads in cell-associated barcodes,64.85%
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Fraction unrecognized CMO,1.70%
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Mean reads per cell-associated barcode,"15,568"
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Median CMO UMIs per cell-associated barcode,"7,735"
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Number of reads,"216,070,514"
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Samples assigned at least one cell,2
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Valid UMIs,99.99%
+Library,Multiplexing Capture,Physical library ID,JR_10K_multiplex,Valid barcodes,99.59%
+Sample,Gene Expression,,,Cells,"5,175"
+Sample,Gene Expression,,,Confidently mapped antisense,1.38%
+Sample,Gene Expression,,,Confidently mapped to exonic regions,68.40%
+Sample,Gene Expression,,,Confidently mapped to genome,95.05%
+Sample,Gene Expression,,,Confidently mapped to intergenic regions,3.77%
+Sample,Gene Expression,,,Confidently mapped to intronic regions,22.88%
+Sample,Gene Expression,,,Confidently mapped to transcriptome,65.67%
+Sample,Gene Expression,,,Mapped to genome,97.66%
+Sample,Gene Expression,,,Median UMI counts per cell,"10,515"
+Sample,Gene Expression,,,Median genes per cell,"3,086"
+Sample,Gene Expression,,,Median reads per cell,"20,052"
+Sample,Gene Expression,,,Number of reads assigned to the sample,"114,898,392"
+Sample,Gene Expression,,,Total genes detected,"21,260"
+Sample,Gene Expression,Physical library ID,JR_10K_gex,Cell-associated barcodes identified as multiplets,903 (6.65%)
+Sample,Gene Expression,Physical library ID,JR_10K_gex,Cell-associated barcodes not assigned any CMOs,1635 (12.03%)
+Sample,Gene Expression,Physical library ID,JR_10K_gex,Cells assigned to other samples,5875 (43.24%)
+Sample,Gene Expression,Physical library ID,JR_10K_gex,Cells assigned to this sample,5175 (38.09%)
+>>>>>>> tenx_genomics_utils: update MetricsSummary to handle multi-line files, and implement new MultiplexSummary class.
+"""
+
 MULTIOME_LIBRARIES = """#Local sample\tLinked sample
 PB2_ATAC\tNEXTSEQ_210111/12:PB_GEX/PB2_GEX
 PB1_ATAC\tNEXTSEQ_210111/12:PB_GEX/PB1_GEX

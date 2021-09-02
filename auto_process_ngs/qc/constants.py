@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.constants.py: constants for QC pipeline
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019,2021 Peter Briggs
 #
 
 """
@@ -21,6 +21,10 @@ PROTOCOLS = ('standardPE',
              '10x_scRNAseq',
              '10x_snRNAseq',
              '10x_scATAC',
+             '10x_Visium',
+             '10x_Multiome_GEX',
+             '10x_Multiome_ATAC',
+             '10x_CellPlex',
              'ICELL8_scATAC',)
 
 # Screen names

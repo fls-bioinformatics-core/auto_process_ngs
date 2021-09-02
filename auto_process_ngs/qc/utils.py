@@ -19,9 +19,13 @@ Provides the following functions:
 
 import os
 import logging
+from ..analysis import AnalysisProject
 from ..command import Command
+from ..metadata import AnalysisProjectQCDirInfo
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
+from .cellranger import CellrangerCount
+from .cellranger import CellrangerMulti
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -58,6 +62,11 @@ def determine_qc_protocol(project):
             elif library_type == "snRNA-seq":
                 # 10xGenomics snRNA-seq
                 protocol = "10x_snRNAseq"
+            elif library_type in ("CellPlex",
+                                  "CellPlex scRNA-seq",
+                                  "CellPlex snRNA-seq"):
+                # 10xGenomics CellPlex (cell multiplexing)
+                protocol = "10x_CellPlex"
         elif library_type in ("scATAC-seq",
                               "snATAC-seq",):
             if single_cell_platform == "10xGenomics Single Cell ATAC":
@@ -222,3 +231,156 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         raise ex
     # Return the exit code
     return report.exit_code
+
+def set_cell_count_for_project(project_dir,qc_dir=None):
+    """
+    Set the total number of cells for a project
+
+    Sums the number of cells for each sample in a project
+    (as determined from 'cellranger count' and extracted
+    from the 'metrics_summary.csv' file for scRNA-seq, or
+    from 'cellranger-atac count' and extracted from the
+    'summary.csv' file for scATAC-seq).
+
+    The final count is written to the 'number_of_cells'
+    metadata item for the project.
+
+    Arguments:
+      project_dir (str): path to the project directory
+      qc_dir (str): path to QC directory (if not the default
+        QC directory for the project)
+
+    Returns:
+      Integer: exit code, non-zero values indicate problems
+        were encountered.
+    """
+    # Set up basic info
+    project = AnalysisProject(project_dir)
+    if qc_dir is None:
+        qc_dir = project.qc_dir
+    qc_dir = os.path.abspath(qc_dir)
+    print("QC dir: %s" % qc_dir)
+    number_of_cells = None
+    # Determine which 10x pipeline was used
+    pipeline = None
+    single_cell_platform = project.info.single_cell_platform
+    if single_cell_platform:
+        if single_cell_platform.startswith("10xGenomics Chromium 3'"):
+            pipeline = "cellranger"
+        elif single_cell_platform == "10xGenomics Single Cell ATAC":
+            pipeline = "cellranger-atac"
+        elif single_cell_platform == "10xGenomics Single Cell Multiome":
+            pipeline = "cellranger-arc"
+    if not pipeline:
+        raise NotImplementedError("Not implemented for platform '%s'"
+                                  % single_cell_platform)
+    # Fetch information on version and reference data
+    cellranger_refdata = None
+    cellranger_version = None
+    qc_info_file = os.path.join(qc_dir,"qc.info")
+    if os.path.exists(qc_info_file):
+        qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+        try:
+            cellranger_refdata = qc_info['cellranger_refdata']
+        except KeyError:
+            pass
+        try:
+            cellranger_version = qc_info['cellranger_version']
+        except KeyError:
+            pass
+    else:
+        print("%s: not found" % qc_info_file)
+    # Determine whether we're handling output from 'count'
+    # or from 'multi'
+    if os.path.exists(os.path.join(qc_dir,"cellranger_count")):
+        # Handle outputs from 'count'
+        # Determine possible locations for outputs
+        count_dirs = []
+        # New-style with 'version' and 'reference' subdirectories
+        if cellranger_version and cellranger_refdata:
+            count_dirs.append(os.path.join(qc_dir,
+                                           "cellranger_count",
+                                           cellranger_version,
+                                           os.path.basename(
+                                               cellranger_refdata)))
+        # Old-style without additional subdirectories
+        count_dirs.append(os.path.join(qc_dir,
+                                       "cellranger_count"))
+        # Check each putative output location in turn
+        for count_dir in count_dirs:
+            # Check that the directory exists
+            if os.path.exists(count_dir):
+                number_of_cells = 0
+                try:
+                    # Loop over samples and collect cell numbers for
+                    # each sample
+                    for sample in project.samples:
+                        print("- %s" % sample)
+                        ncells = None
+                        sample_dir = os.path.join(count_dir,
+                                                  sample.name)
+                        sample_outs = CellrangerCount(sample_dir,
+                                                      cellranger_exe=pipeline)
+                        for metric in ('Estimated Number of Cells',
+                                       'Estimated number of cells',
+                                       'annotated_cells',):
+                            # Try to fetch metric for cell count
+                            try:
+                                ncells = sample_outs.metrics.fetch(metric)
+                                break
+                            except KeyError:
+                                pass
+                        if ncells is None:
+                            number_of_cells = None
+                            raise Exception("Failed to add cell count "
+                                            "for sample '%s'" % sample.name)
+                        else:
+                            print("  %d cells" % ncells)
+                            number_of_cells += ncells
+                    # Extracted cell numbers so break out
+                    break
+                except Exception as ex:
+                    logger.warning("Unable to get cell counts from '%s': %s"
+                                   % (count_dir,ex))
+    elif os.path.exists(os.path.join(qc_dir,"cellranger_multi")):
+        # Handle outputs from 'multi'
+        number_of_cells = 0
+        try:
+            multi_outs = CellrangerMulti(
+                os.path.join(qc_dir,
+                             "cellranger_multi",
+                             cellranger_version,
+                             os.path.basename(
+                                 cellranger_refdata)),
+                cellranger_exe=pipeline)
+            if multi_outs.sample_names:
+                for sample in multi_outs.sample_names:
+                    print("- %s" % sample)
+                    try:
+                        ncells = multi_outs.metrics(sample).cells
+                        print("  %d cells" % ncells)
+                        number_of_cells += ncells
+                    except Exception as ex:
+                        raise Exception("Failed to add cell count for sample "
+                                        "'%s': %s" % (sample,ex))
+            else:
+                raise Exception("No samples found under %s" %
+                                os.path.join(qc_dir,"cellranger_multi"))
+        except Exception as ex:
+            number_of_cells = None
+            logger.warning("Unable to set cell count from data in "
+                           "%s: %s" %
+                           (os.path.join(qc_dir,"cellranger_multi"),ex))
+    else:
+        # No known outputs to get cell counts from
+        raise Exception("No 10xGenomics analysis subdirectories found?")
+    if number_of_cells is not None:
+        # Report
+        print("Total number of cells: %d" % number_of_cells)
+        # Store in the project metadata
+        project.info['number_of_cells'] = number_of_cells
+        project.info.save()
+        return 0
+    else:
+        # Cell count wasn't set
+        return 1

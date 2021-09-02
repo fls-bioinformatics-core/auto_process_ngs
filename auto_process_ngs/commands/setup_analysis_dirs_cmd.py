@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     setup_analysis_dirs_cmd.py: implement 'setup_analysis_dirs' command
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
 #
 #########################################################################
 
@@ -15,6 +15,8 @@ import json
 import logging
 import bcftbx.IlluminaData as IlluminaData
 from .. import analysis
+from .. import tenx_genomics_utils
+from .. import icell8
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -101,12 +103,8 @@ def setup_analysis_dirs(ap,
     for line in project_metadata:
         sc_platform = line['SC_Platform']
         if sc_platform and sc_platform != '.':
-            if not sc_platform in ('10xGenomics Single Cell ATAC',
-                                   '10xGenomics Visium',
-                                   '10xGenomics Single Cell Multiome',
-                                   'ICELL8',
-                                   'ICELL8 ATAC') \
-                and not sc_platform.startswith('10xGenomics Chromium 3\''):
+            if not sc_platform in tenx_genomics_utils.PLATFORMS and \
+               not sc_platform in icell8.PLATFORMS:
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")

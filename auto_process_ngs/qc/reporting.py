@@ -42,6 +42,7 @@ from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
 from .cellranger import CellrangerCount
+from .cellranger import CellrangerMulti
 from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
@@ -303,6 +304,8 @@ class QCProject(object):
     - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
     - samples: sorted list of sample names extracted
       from Fastqs
+    - multiplexed_samples: sorted list of sample names
+      for multiplexed samples (e.g. 10x CellPlex)
     - outputs: list of QC output categories detected (see
       below for valid values)
     - output_files: list of absolute paths to QC output
@@ -319,6 +322,7 @@ class QCProject(object):
     - 'icell8_stats'
     - 'icell8_report'
     - 'cellranger_count'
+    - 'cellranger_multi'
     - 'multiqc'
 
     General properties about the project:
@@ -496,6 +500,7 @@ class QCProject(object):
         """
         outputs = set()
         output_files = []
+        multiplexed_samples = set()
         software = {}
         print("Scanning contents of %s" % self.qc_dir)
         files = [os.path.join(self.qc_dir,f)
@@ -669,6 +674,52 @@ class QCProject(object):
             # Store cellranger versions
             if cellranger_name and versions:
                 software[cellranger_name] = sorted(list(versions))
+        # Look for cellranger multi outputs
+        cellranger_multi_dir = os.path.join(self.qc_dir,
+                                            "cellranger_multi")
+        if os.path.isdir(cellranger_multi_dir):
+            cellranger_name = None
+            versions = set()
+            cellranger_multi_samples = {}
+            for ver in filter(
+                    lambda f:
+                    os.path.isdir(os.path.join(cellranger_multi_dir,f)),
+                    os.listdir(cellranger_multi_dir)):
+                cellranger_multi_samples[ver] = {}
+                for ref in filter(
+                        lambda f:
+                        os.path.isdir(os.path.join(cellranger_multi_dir,ver,f)),
+                        os.listdir(os.path.join(cellranger_multi_dir,ver))):
+                    # Check putative reference dataset names
+                    cellranger_multi_samples[ver][ref] = []
+                    cellranger_multi = CellrangerMulti(
+                        os.path.join(
+                            cellranger_multi_dir,
+                            ver,
+                            ref))
+                    for smpl in cellranger_multi.sample_names:
+                        cellranger_multi_samples[ver][ref].append(smpl)
+                        try:
+                            output_files.append(cellranger_multi.web_summary(smpl))
+                            output_files.append(cellranger_multi.metrics_csv(smpl))
+                            cellranger_name = cellranger_multi.pipeline_name
+                            cellranger_references.add(
+                                cellranger_multi.reference_data)
+                        except OSError:
+                            pass
+                    # Add outputs, samples and version
+                    if cellranger_multi_samples[ver][ref]:
+                        outputs.add("cellranger_multi")
+                        versions.add(ver)
+                    for smpl in cellranger_multi_samples[ver][ref]:
+                        multiplexed_samples.add(smpl)
+            # Store cellranger versions
+            if cellranger_name and versions:
+                if cellranger_name not in software:
+                    software[cellranger_name] = sorted(list(versions))
+                else:
+                    software[cellranger_name] = sorted(
+                        software[cellranger_name].extend(list(versions)))
         # Look for MultiQC report
         multiqc_dir = os.path.dirname(self.qc_dir)
         print("Checking for MultiQC report in %s" % multiqc_dir)
@@ -703,6 +754,8 @@ class QCProject(object):
                               key=lambda s: split_sample_name(s))
         # Single library analyses reference data
         self.cellranger_references = sorted(list(cellranger_references))
+        # Multiplexed samples
+        self.multiplexed_samples = sorted(list(multiplexed_samples))
         # QC outputs
         self.outputs = sorted(list(outputs))
         # Software versions
@@ -822,6 +875,8 @@ class QCReport(Document):
         '10x_tss_enrichment_score': 'TSS enrichment score',
         '10x_atac_fragments_per_cell': '#ATAC fragments/cell',
         '10x_gex_genes_per_cell': '#GEX genes/cell',
+        '10x_genes_detected': '#genes',
+        '10x_umis_per_cell': '#UMIs/cell',
         '10x_pipeline': 'Pipeline',
         '10x_reference': 'Reference dataset',
         '10x_web_summary': 'HTML report',
@@ -959,6 +1014,10 @@ class QCReport(Document):
                     print("\t- %s" % sample)
             else:
                 logger.warning("%s: no samples found" % project.name)
+            if project.multiplexed_samples:
+                print("Multiplexed samples found:")
+                for sample in project.multiplexed_samples:
+                    print("\t- %s" % sample)
             if project.fastqs:
                 print("Fastqs referenced:")
                 for fastq in project.fastqs:
@@ -1006,7 +1065,7 @@ class QCReport(Document):
             # Attributes to report for each sample
             if report_attrs is None:
                 report_attrs_ = ['fastqc',
-                                'fastq_screen',]
+                                 'fastq_screen',]
                 if 'strandedness' in project.outputs:
                     report_attrs_.append('strandedness')
             # Add data for this project to the report
@@ -1085,6 +1144,37 @@ class QCReport(Document):
                         sample,
                         single_library_analysis_table,
                         single_library_fields)
+            # Report 10x multiplexing analyses
+            if 'cellranger_multi' in project.outputs:
+                # Set up fields for reporting
+                pkg = 'cellranger'
+                multiplex_analysis_fields = ['sample',
+                                             '10x_cells',
+                                             '10x_reads_per_cell',
+                                             '10x_genes_per_cell',
+                                             '10x_genes_detected',
+                                             '10x_umis_per_cell']
+                # Add column for multiple versions
+                if len(project.software[pkg]) > 1:
+                    multiplex_analysis_fields.append('10x_pipeline')
+                # Add column for multiple reference datasets
+                if len(project.cellranger_references) > 1:
+                    multiplex_analysis_fields.append('10x_reference')
+                # Always link to web summary
+                multiplex_analysis_fields.append('10x_web_summary')
+                # Create a new table
+                multiplex_analysis_table = \
+                    self.add_multiplex_analysis_table(
+                        project,
+                        multiplex_analysis_fields,
+                        section=project_summary)
+                # Report analyses for each multiplexed sample
+                for sample in project.multiplexed_samples:
+                    self.report_multiplexing_analyses(
+                        project,
+                        sample,
+                        multiplex_analysis_table,
+                        multiplex_analysis_fields)
         # Report the status
         self.report_status()
 
@@ -1303,6 +1393,22 @@ class QCReport(Document):
         # Append to the summary section
         section.add(single_library_tbl)
         return single_library_tbl
+
+    def add_multiplex_analysis_table(self,project,fields,section):
+        """
+        Create a new table for summarising 10x multiplexing analyses
+        """
+        # Add title
+        section = section.add_subsection(
+            "Multiplexing analysis",
+            name="multiplexing_analysis_%s" % sanitize_name(project.id),
+            css_classes=('single_library_summary',))
+        # Create the table
+        multiplexing_tbl = Table(fields,**self.field_descriptions)
+        multiplexing_tbl.add_css_classes('summary','single_library_summary')
+        # Append to the summary section
+        section.add(multiplexing_tbl)
+        return multiplexing_tbl
 
     def report_metadata(self,project):
         """
@@ -1558,6 +1664,45 @@ class QCReport(Document):
             # report
             self.status = False
 
+    def report_multiplexing_analyses(self,project,sample,
+                                     multiplexing_analysis_table,
+                                     fields):
+        """
+        Report the multiplexing analyses for a sample
+
+        Writes lines to the multiplexing analysis summary
+        table for each analysis found that is associated
+        with the specified sample.
+
+        Arguments:
+          project (QCProject): project to report
+          sample (str): name of multiplexed sample to report
+          multiplexing_analysis_table (Table): summary table
+            to report each analysis in
+          fields (list): list of fields to report for each
+            analysis in the summary table
+        """
+        # Determine location of QC artefacts
+        if self.data_dir:
+            qc_dir = os.path.join(self.data_dir,
+                                  sanitize_name(project.id),
+                                  os.path.basename(project.qc_dir))
+        else:
+            qc_dir = project.qc_dir
+        # Get a reporter for the sample
+        reporter = QCReportSample(project,
+                                  sample,
+                                  qc_dir=qc_dir)
+        # Update the single library analysis table
+        status = reporter.update_multiplexing_analysis_table(
+            multiplexing_analysis_table,
+            fields,
+            relpath=self.relpath)
+        if not status:
+            # Update flag to indicate problems with the
+            # report
+            self.status = False
+
     def report_status(self):
         """
         Set the visibility of the "warnings" section
@@ -1589,6 +1734,10 @@ class QCReportSample(object):
       the sample to a document section
     update_summary_table: add lines to summary table for
       the sample
+    update_single_library_table: add lines to the single
+      library analysis summary table
+    update_multiplexing_analysis_table: add lines to the
+      multiplexing analysis summary table
     """
     # Summary fields provided at sample level
     sample_summary_fields = (
@@ -1611,6 +1760,7 @@ class QCReportSample(object):
         self.sample = str(sample)
         self.fastq_groups = []
         self.cellranger_count = []
+        self.cellranger_multi = []
         self.multiome_libraries = None
         # Location for QC artefacts
         if qc_dir:
@@ -1630,7 +1780,10 @@ class QCReportSample(object):
                 project_id=project.id,
                 fastq_attrs=fastq_attrs))
         # Reads associated with the sample
-        self.reads = [r for r in self.fastq_groups[0].reads]
+        if self.fastq_groups:
+            self.reads = [r for r in self.fastq_groups[0].reads]
+        else:
+            self.reads = []
         # 10x single library analyses
         cellranger_count_dir = os.path.join(qc_dir,
                                             "cellranger_count")
@@ -1650,6 +1803,21 @@ class QCReportSample(object):
                         version = None
                     self.cellranger_count.append(
                         CellrangerCount(dirn,
+                                        version=version,
+                                        reference_data=reference))
+        # 10x multiplexing analyses
+        cellranger_multi_dir = os.path.join(qc_dir,
+                                            "cellranger_multi")
+        if os.path.isdir(cellranger_multi_dir):
+            # Descend into version and reference subdirs
+            for version in os.listdir(cellranger_multi_dir):
+                for reference in os.listdir(
+                        os.path.join(cellranger_multi_dir,version)):
+                    # Add the cellranger multi information
+                    self.cellranger_multi.append(
+                        CellrangerMulti(os.path.join(cellranger_multi_dir,
+                                                     version,
+                                                     reference),
                                         version=version,
                                         reference_data=reference))
         # 10x multiome libraries
@@ -1773,21 +1941,8 @@ class QCReportSample(object):
         sample (one line per single library analysis group),
         adding content for each specified field.
 
-        Valid fields are:
-
-        - 10x_cells
-        - 10x_genes_per_cell
-        - 10x_frac_reads_in_cell
-        - 10x_fragments_per_cell
-        - 10x_fragments_overlapping_targets
-        - 10x_fragments_overlapping_peaks
-        - 10x_tss_enrichment_score
-        - 10x_atac_fragments_per_cell
-        - 10x_gex_genes_per_cell
-        - 10x_pipeline
-        - 10x_reference
-        - 10x_web_summary
-        - linked_sample
+        Valid fields are any supported by the 'get_10x_value'
+        method.
 
         Arguments:
           summary_table (Table): table to update
@@ -1803,12 +1958,11 @@ class QCReportSample(object):
         # line of the single library table for this sample, and
         # only report name on the first line
         first_line = True
-        # Reporting status
-        has_problems = False
         # Report each single library analysis
         for cellranger_count in self.cellranger_count:
             # Shortcut to metrics
             metrics = cellranger_count.metrics
+            web_summary = cellranger_count.web_summary
             # Add line in summary table
             if first_line:
                 # Only display sample name on first line
@@ -1821,71 +1975,179 @@ class QCReportSample(object):
             for field in fields:
                 if field == "sample":
                     continue
-                if field == "linked_sample":
-                    try:
-                        value = ','.join(
-                            [split_sample_reference(s)[2]
-                             for s in self.multiome_libraries.linked_samples(
-                                     self.sample)])
-                    except AttributeError:
-                        value = '?'
-                elif field == "10x_cells":
-                    try:
-                        value = metrics.estimated_number_of_cells
-                    except AttributeError:
-                        value = metrics.annotated_cells
-                    value = pretty_print_reads(value)
-                elif field == "10x_reads_per_cell":
-                    value = pretty_print_reads(metrics.mean_reads_per_cell)
-                elif field == "10x_genes_per_cell":
-                    value = pretty_print_reads(metrics.median_genes_per_cell)
-                elif field == "10x_frac_reads_in_cell":
-                    value = metrics.frac_reads_in_cells
-                elif field == "10x_fragments_per_cell":
-                    value = pretty_print_reads(
-                        metrics.median_fragments_per_cell)
-                elif field == "10x_fragments_overlapping_targets":
-                    try:
-                        value = "%.1f%%" % \
-                                (metrics.frac_fragments_overlapping_targets
-                                 *100.0,)
-                    except AttributeError:
-                        value = 'N/A'
-                elif field == "10x_fragments_overlapping_peaks":
-                    value = "%.1f%%" % \
-                            (metrics.frac_fragments_overlapping_peaks*100.0,)
-                elif field == "10x_tss_enrichment_score":
-                    try:
-                        value = "%.2f" % (metrics.tss_enrichment_score,)
-                    except AttributeError:
-                        value = 'N/A'
-                elif field == "10x_atac_fragments_per_cell":
-                    value = pretty_print_reads(
-                        metrics.atac_median_high_quality_fragments_per_cell)
-                elif field == "10x_gex_genes_per_cell":
-                    value = pretty_print_reads(
-                        metrics.gex_median_genes_per_cell)
-                elif field == "10x_pipeline":
-                    if cellranger_count.version:
-                        value = "%s %s" % (cellranger_count.pipeline_name,
-                                           cellranger_count.version)
-                    else:
-                        value = cellranger_count.pipeline_name
-                elif field == "10x_reference":
-                    value = os.path.basename(cellranger_count.\
-                                             reference_data)
-                elif field == "10x_web_summary":
-                    web_summary = cellranger_count.web_summary
-                    if relpath:
-                        web_summary = os.path.relpath(web_summary,
-                                                      relpath)
-                    value = Link(self.sample,web_summary)
-                else:
-                    raise KeyError("'%s': unrecognised field for single "
-                                   "library analysis table" % field)
+                value = self.get_10x_value(field,
+                                           cellranger_count,
+                                           metrics,
+                                           web_summary,
+                                           relpath=relpath)
                 single_library_table.set_value(idx,field,value)
         # Finished
-        return (not has_problems)
+        return True
+
+    def update_multiplexing_analysis_table(self,multiplexing_analysis_table,
+                                           fields=None,relpath=None):
+        """
+        Add lines to a table reporting multiplexing analyses
+
+        Creates new lines in 'multiplexing_analysis_table' for the
+        sample (one line per multiplexed analysis), adding content
+        for each specified field.
+
+        Valid fields are any supported by the 'get_10x_value'
+        method.
+
+        Arguments:
+          summary_table (Table): table to update
+          fields (list): list of custom fields to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+
+        Returns:
+          Boolean: True if report didn't contain any issues,
+            False otherwise.
+        """
+        # Flag to indicate whether we're writing to the first
+        # line of the multiplexing analysis table for this sample, and
+        # only report name on the first line
+        first_line = True
+        # Report each multiplexing analysis
+        for cellranger_multi in self.cellranger_multi:
+            # Shortcut to metrics
+            metrics = cellranger_multi.metrics(self.sample)
+            web_summary = cellranger_multi.web_summary(self.sample)
+            # Add line in summary table
+            if first_line:
+                # Only display sample name on first line
+                idx = multiplexing_analysis_table.add_row(
+                    sample=self.sample)
+                first_line = False
+            else:
+                idx = multiplexing_analysis_table.add_row()
+            # Set values for fields
+            for field in fields:
+                if field == "sample":
+                    continue
+                value = self.get_10x_value(field,
+                                           cellranger_multi,
+                                           metrics,
+                                           web_summary,
+                                           relpath=relpath)
+                multiplexing_analysis_table.set_value(idx,field,value)
+        # Finished
+        return True
+
+    def get_10x_value(self,field,cellranger_data,metrics,web_summary,
+                      relpath=None):
+        """
+        Return the value for the specified field
+
+        The following fields can be reported for each sample:
+
+        Valid fields are:
+
+        - 10x_cells
+        - 10x_genes_per_cell
+        - 10x_frac_reads_in_cell
+        - 10x_fragments_per_cell
+        - 10x_fragments_overlapping_targets
+        - 10x_fragments_overlapping_peaks
+        - 10x_tss_enrichment_score
+        - 10x_atac_fragments_per_cell
+        - 10x_gex_genes_per_cell
+        - 10x_genes_detected
+        - 10x_umis_per_cell
+        - 10x_pipeline
+        - 10x_reference
+        - 10x_web_summary
+        - linked_sample
+
+        Arguments:
+          field (str): name of the field to report; if the
+            field is not recognised then KeyError is raised
+          cellranger_data (object): parent CellrangerCount
+            object for the sample
+          metrics (MetricsSummary): summary metrics for the
+            sample
+          web_summary (str): path to the web_summary.html
+            report for the sample
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        if field == "sample":
+            return
+        if field == "linked_sample":
+            try:
+                value = ','.join(
+                    [split_sample_reference(s)[2]
+                     for s in self.multiome_libraries.linked_samples(
+                             self.sample)])
+            except AttributeError:
+                value = '?'
+        elif field == "10x_cells":
+            try:
+                value = metrics.estimated_number_of_cells
+            except AttributeError:
+                try:
+                    value = metrics.annotated_cells
+                except AttributeError:
+                    value = metrics.cells
+            value = pretty_print_reads(value)
+        elif field == "10x_reads_per_cell":
+            try:
+                value = metrics.mean_reads_per_cell
+            except AttributeError:
+                value = metrics.median_reads_per_cell
+            value = pretty_print_reads(value)
+        elif field == "10x_genes_per_cell":
+            value = pretty_print_reads(metrics.median_genes_per_cell)
+        elif field == "10x_frac_reads_in_cell":
+            value = metrics.frac_reads_in_cells
+        elif field == "10x_fragments_per_cell":
+            value = pretty_print_reads(
+                metrics.median_fragments_per_cell)
+        elif field == "10x_fragments_overlapping_targets":
+            try:
+                value = "%.1f%%" % \
+                        (metrics.frac_fragments_overlapping_targets
+                         *100.0,)
+            except AttributeError:
+                value = 'N/A'
+        elif field == "10x_fragments_overlapping_peaks":
+            value = "%.1f%%" % \
+                    (metrics.frac_fragments_overlapping_peaks*100.0,)
+        elif field == "10x_tss_enrichment_score":
+            try:
+                value = "%.2f" % (metrics.tss_enrichment_score,)
+            except AttributeError:
+                value = 'N/A'
+        elif field == "10x_atac_fragments_per_cell":
+            value = pretty_print_reads(
+                metrics.atac_median_high_quality_fragments_per_cell)
+        elif field == "10x_gex_genes_per_cell":
+            value = pretty_print_reads(
+                metrics.gex_median_genes_per_cell)
+        elif field == "10x_pipeline":
+            if cellranger_data.version:
+                value = "%s %s" % (cellranger_data.pipeline_name,
+                                   cellranger_data.version)
+            else:
+                value = cellranger_data.pipeline_name
+        elif field == "10x_genes_detected":
+            value = pretty_print_reads(metrics.total_genes_detected)
+        elif field == "10x_umis_per_cell":
+            value = pretty_print_reads(metrics.median_umi_counts_per_cell)
+        elif field == "10x_reference":
+            value = os.path.basename(cellranger_data.\
+                                     reference_data)
+        elif field == "10x_web_summary":
+            if relpath:
+                web_summary = os.path.relpath(web_summary,
+                                              relpath)
+            value = Link(self.sample,web_summary)
+        else:
+            raise KeyError("'%s': unrecognised field for single "
+                           "library analysis table" % field)
+        return value
 
     def get_value(self,field,relpath=None):
         """
@@ -2647,11 +2909,15 @@ def verify(project,qc_dir=None,qc_protocol=None):
             pass
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
+    cellranger_multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
+    if not os.path.exists(cellranger_multi_config):
+        cellranger_multi_config = None
     verified = True
     for f in expected_outputs(project,qc_dir,
                               fastq_strand_conf=fastq_strand_conf,
                               cellranger_version=cellranger_version,
                               cellranger_refdata=cellranger_refdata,
+                              cellranger_multi_config=cellranger_multi_config,
                               qc_protocol=qc_protocol):
         if not os.path.exists(f):
             logging.debug("Missing: %s" % f)
