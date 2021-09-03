@@ -14,14 +14,18 @@ bcl2fastq/utils.py
 
 Utility functions for bcl to fastq conversion operations:
 
+- get_sequencer_platform: get sequencing instrument platform
 - available_bcl2fastq_versions: list available bcl2fastq converters
 - bcl_to_fastq_info: retrieve information on the bcl2fastq software
 - bclconvert_info: retrieve information on the BCL Convert software
 - make_custom_sample_sheet: create a corrected copy of a sample sheet file
 - get_required_samplesheet_format: fetch format required by bcl2fastq version
-- get_nmismatches: determine number of mismatches from bases mask
-- check_barcode_collisions: look for too-similiar pairs of barcode sequences
 - get_bases_mask: get a bases mask string
+- bases_mask_is_valid: check if bases mask string is valid
+- get_nmismatches: determine number of mismatches from bases mask
+- convert_bases_mask_to_override_cycles: convert bases mask for BCL convert
+- check_barcode_collisions: look for too-similiar pairs of barcode sequences
+
 """
 
 #######################################################################
@@ -507,6 +511,55 @@ def get_nmismatches(bases_mask,multi_index=False):
             return 1
         else:
             return 0
+
+def convert_bases_mask_to_override_cycles(bases_mask):
+    """
+    Converts bcl2fastq-format bases mask to BCL Convert format
+
+    Given a bases mask string (e.g. 'y76,I8,I8,y76'), returns
+    the equivalent BCL Convert format for use with 'OverrideCycles'
+    in a sample sheet (e.g. 'Y76;I8;I8;Y76').
+
+    Arguments:
+      bases_mask (str): bcl2fastq bases mask string
+
+    Returns:
+      String: the original bases mask converted to BCL Convert
+        format
+    """
+    override_cycles = []
+    for item in str(bases_mask).upper().split(','):
+        value = ''
+        count = 0
+        for c in item:
+            if not value:
+                # First character
+                value += c
+            elif c.isdigit():
+                # Digit character
+                value += c
+            else:
+                # Non-digit character
+                if c == value[-1]:
+                    # Same as previous character
+                    count += 1
+                else:
+                    # Different from previous character
+                    if count:
+                        # Increase count by 1 to include
+                        # the very first character
+                        value += str(count+1)
+                        count = 0
+                    value += c
+        # Tidy up trailing count
+        if count:
+            # Increase count by 1 to include
+            # the very first character
+            value += str(count+1)
+        # Add converted item
+        override_cycles.append(value)
+    # Assemble with appropriate delimiter and return
+    return ';'.join(override_cycles)
 
 def check_barcode_collisions(sample_sheet_file,nmismatches,
                              use_index='all'):
