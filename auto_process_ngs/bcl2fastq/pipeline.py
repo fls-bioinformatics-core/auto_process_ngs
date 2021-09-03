@@ -67,6 +67,7 @@ from ..bcl2fastq.utils import get_bases_mask
 from ..bcl2fastq.utils import get_nmismatches
 from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
+from ..bcl2fastq.utils import convert_bases_mask_to_override_cycles
 from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
 from ..fileops import Location
@@ -2621,8 +2622,8 @@ class RunBclConvert(PipelineTask):
         if bases_mask:
             # Convert bases mask to OverrideCycles format
             # (convert delimiters from comma to semi-colon)
-            override_cycles = bases_mask.replace(',',';')
-            sample_sheet.settings['OverrideCycles'] = override_cycles
+            sample_sheet.settings['OverrideCycles'] = \
+                convert_bases_mask_to_override_cycles(bases_mask)
         if mismatches:
             # Mismatches are set independently for index1 and index2
             for ix,nmismatches in enumerate(mismatches):
