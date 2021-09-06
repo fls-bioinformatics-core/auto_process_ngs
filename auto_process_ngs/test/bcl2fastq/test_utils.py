@@ -1327,6 +1327,26 @@ class TestGetNmismatches(unittest.TestCase):
         self.assertRaises(Exception,get_nmismatches,'auto')
         self.assertRaises(Exception,get_nmismatches,123)
 
+class TestConvertBasesMaskToOverrideCycles(unittest.TestCase):
+    """Tests for the convert_bases_mask_to_override_cycles function
+    """
+    def test_convert_bases_mask_to_override_cycles(self):
+        """
+        convert_bases_mask_to_override_cycles: check conversions
+        """
+        self.assertEqual(
+            convert_bases_mask_to_override_cycles(
+                "y76,I10,I10,y76"),"Y76;I10;I10;Y76")
+        self.assertEqual(
+            convert_bases_mask_to_override_cycles(
+                "y76,I10,I10,n76"),"Y76;I10;I10;N76")
+        self.assertEqual(
+            convert_bases_mask_to_override_cycles(
+                "y76,I6n4,n10,y76"),"Y76;I6N4;N10;Y76")
+        self.assertEqual(
+            convert_bases_mask_to_override_cycles(
+                "y76,I6nnnn,nnnnnnnnnn,y76"),"Y76;I6N4;N10;Y76")
+
 class TestCheckBarcodeCollisions(unittest.TestCase):
     """Tests for the check_barcode_collisions function
     """
