@@ -1577,7 +1577,7 @@ class TestMakeFastqs(unittest.TestCase):
         # Check override cycles
         MockBclConvertExe.create(os.path.join(self.bin,
                                               "bcl-convert"),
-                                 assert_override_cycles="y76;I6n2;I6n2;y76")
+                                 assert_override_cycles="Y76;I6N2;I6N2;Y76")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make an (empty) analysis directory
