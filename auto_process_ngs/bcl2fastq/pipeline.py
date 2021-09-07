@@ -1170,6 +1170,14 @@ class MakeFastqs(Pipeline):
                     if lanes:
                         # Subset with multiple lanes
                         #
+                        # Flag whether the final or intermediate output
+                        # directories already exist
+                        output_dirs_exist = FunctionParam(
+                            lambda final_out_dir,intermediate_out_dir:
+                            os.path.exists(final_out_dir) or
+                            os.path.exists(intermediate_out_dir),
+                            self.params.out_dir,
+                            fastq_out_dir)
                         # Divide Fastq generation into individual lanes
                         # then merge outputs at the end
                         make_fastqs = MergeFastqs(
@@ -1181,16 +1189,8 @@ class MakeFastqs(Pipeline):
                             no_lane_splitting=self.params.no_lane_splitting,
                             create_empty_fastqs=
                             self.params.create_empty_fastqs,
-                            skip_merge=final_output_exists)
+                            skip_merge=output_dirs_exist)
                         self.add_task(make_fastqs)
-                        # Flag whether the final or intermediate output
-                        # directories already exist
-                        output_dirs_exist = FunctionParam(
-                            lambda final_out_dir,intermediate_out_dir:
-                            os.path.exists(final_out_dir) or
-                            os.path.exists(intermediate_out_dir),
-                            self.params.out_dir,
-                            fastq_out_dir)
                         # Run BCL Convert for each lane in subset
                         for lane in lanes:
                             # Output dir for this lane
