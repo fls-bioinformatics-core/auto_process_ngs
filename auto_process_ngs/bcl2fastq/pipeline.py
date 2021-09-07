@@ -847,7 +847,7 @@ class MakeFastqs(Pipeline):
                                                   for l in s['lanes']]))
             for attr in s:
                 if attr != 'lanes' and s[attr] is not None:
-                    self.report("- %s: %s" % (attr,s[attr]))
+                    self.report("-- %s: %s" % (attr,s[attr]))
 
         #####################
         # Fetch primary data
