@@ -1027,9 +1027,12 @@ class MockBcl2fastq2Exe(object):
       `assert_minimum_trimmed_read_length`
       and `assert_mask_short_adapter_reads`
       arguments
-    - adpater sequences can be checked via
+    - adapter sequences can be checked via
       the `assert_adapter` and
       `assert_adapter2` arguments
+    - sliding window algorith for adapter
+      trimming can be checked via
+      `assert_find_adapters_with_sliding_window`
     """
 
     @staticmethod
@@ -1040,6 +1043,7 @@ class MockBcl2fastq2Exe(object):
                assert_minimum_trimmed_read_length=None,
                assert_mask_short_adapter_reads=None,
                assert_adapter=None,assert_adapter2=None,
+               assert_find_adapters_with_sliding_window=None,
                version='2.20.0.422'):
         """
         Create a "mock" bcl2fastq executable
@@ -1083,6 +1087,10 @@ class MockBcl2fastq2Exe(object):
             assert that the adapter sequence
             for read2 in the sample sheet matches
             the supplied value
+          assert_find_adapters_with_sliding_window
+            (bool): if set then assert that
+            --find-adapters-with-sliding-window
+            matches the supplied boolean value
           version (str): version of bcl2fastq2
             to imitate
         """
@@ -1104,6 +1112,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                            assert_mask_short_adapter_reads=%s,
                            assert_adapter=%s,
                            assert_adapter2=%s,
+                           assert_find_adapters_with_sliding_window=%s,
                            version=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    missing_fastqs,
@@ -1123,6 +1132,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                    ("\"%s\"" % assert_adapter2
                     if assert_adapter2 is not None
                     else None),
+                   assert_find_adapters_with_sliding_window,
                    ("\"%s\"" % version
                     if version is not None
                     else None)))
@@ -1142,6 +1152,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                  assert_mask_short_adapter_reads=None,
                  assert_adapter=None,
                  assert_adapter2=None,
+                 assert_find_adapters_with_sliding_window=None,
                  version=None):
         """
         Internal: configure the mock bcl2fastq2
@@ -1159,6 +1170,8 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                                 assert_mask_short_adapter_reads
         self._assert_adapter = assert_adapter
         self._assert_adapter2 = assert_adapter2
+        self._assert_find_adapters_with_sliding_window = \
+                                assert_find_adapters_with_sliding_window
         self._version = version
 
     def main(self,args):
@@ -1190,6 +1203,8 @@ bcl2fastq v%s
         p.add_argument("--ignore-missing-bcls",action="store_true")
         p.add_argument("--no-lane-splitting",action="store_true")
         p.add_argument("--create-fastq-for-index-read",action="store_true")
+        p.add_argument("--find-adapters-with-sliding-window",
+                       action="store_true")
         p.add_argument("-r",action="store")
         if self._version.startswith("2.17."):
             p.add_argument("-d",action="store")
@@ -1222,6 +1237,12 @@ bcl2fastq v%s
                   args.mask_short_adapter_reads)
             assert(int(args.mask_short_adapter_reads) ==
                    int(self._assert_mask_short_adapter_reads))
+        # Check --find-adapters-with-sliding-window
+        if self._assert_find_adapters_with_sliding_window is not None:
+            print("Checking --find-adapters-with-sliding-window: %s" %
+                  args.find_adapters_with_sliding_window)
+            assert(args.find_adapters_with_sliding_window ==
+                   self._assert_find_adapters_with_sliding_window)
         # Platform
         print("Platform (default): %s" % self._platform)
         # Run folder (input data)
