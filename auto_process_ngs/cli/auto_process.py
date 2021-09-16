@@ -324,6 +324,11 @@ def add_make_fastqs_command(cmdparser):
                               "(bcl2fastq v2 only; turn off using "
                               "--no-lane-splitting)%s" %
                               default_use_lane_splitting)
+    bcl_to_fastq.add_argument("--find-adapters-with-sliding-window",
+                              action="store_true",
+                              dest='find_adapters_with_sliding_window',
+                              help="use sliding window algorithm to "
+                              "identify adapters for trimming")
     # Creation of empty fastqs
     # Determine defaults to report to user
     create_empty_fastqs_platforms = []
@@ -1304,6 +1309,8 @@ def make_fastqs(args):
         adapter_sequence=args.adapter_sequence,
         adapter_sequence_read2=args.adapter_sequence_read2,
         create_fastq_for_index_read=args.create_fastq_for_index_read,
+        find_adapters_with_sliding_window=\
+        args.find_adapters_with_sliding_window,
         stats_file=args.stats_file,
         per_lane_stats_file=args.per_lane_stats_file,
         barcode_analysis_dir=args.barcode_analysis_dir,
