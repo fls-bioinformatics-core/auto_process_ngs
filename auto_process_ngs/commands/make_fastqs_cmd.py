@@ -49,6 +49,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 adapter_sequence=None,
                 adapter_sequence_read2=None,
                 create_fastq_for_index_read=False,
+                find_adapters_with_sliding_window=None,
                 generate_stats=True,stats_file=None,
                 per_lane_stats_file=None,
                 analyse_barcodes=True,barcode_analysis_dir=None,
@@ -142,6 +143,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
       create_fastq_for_index_reads (boolean): if True then also create
         Fastq files for index reads (default, don't create index read
         Fastqs)
+      find_adapters_with_sliding_window (boolean): if True then use
+        sliding window algorithm to identify adapter sequences for
+        trimming
       stats_file (str): if set then use this as the name of the output
         per-fastq stats file.
       per_lane_stats_file (str): if set then use this as the name of
@@ -410,6 +414,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              no_lane_splitting=no_lane_splitting,
                              create_fastq_for_index_read=\
                              create_fastq_for_index_read,
+                             find_adapters_with_sliding_window=\
+                             find_adapters_with_sliding_window,
                              create_empty_fastqs=create_empty_fastqs,
                              stats_file=stats_file,
                              per_lane_stats=per_lane_stats_file,
