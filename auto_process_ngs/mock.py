@@ -1637,6 +1637,26 @@ Copyright (c) 2014-2018 Illumina, Inc.
             sample_sheet_lanes = sorted(list(lanes))
             if sample_sheet_lanes != lanes:
                 return 1
+        # Check the adapter sequences from the sample sheet
+        if (self._assert_adapter1 is not None) or \
+           (self._assert_adapter2 is not None):
+            # Extract adapter sequences
+            try:
+                adapter1 = sample_sheet.settings['AdapterRead1']
+            except KeyError:
+                adapter1 = ""
+            try:
+                adapter2 = sample_sheet.settings['AdapterRead2']
+            except KeyError:
+                adapter2 = ""
+            if self._assert_adapter1 is not None:
+                print("Check AdapterRead1: should be '%s', got '%s'" %
+                      (self._assert_adapter1,adapter1))
+                assert(self._assert_adapter1 == adapter1)
+            if self._assert_adapter2 is not None:
+                print("Check AdapterRead2: should be '%s', got '%s'" %
+                      (self._assert_adapter2,adapter2))
+                assert(self._assert_adapter2 == adapter2)
         # No lane splitting
         no_lane_splitting = False
         if args.no_lane_splitting:
