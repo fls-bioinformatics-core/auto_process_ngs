@@ -1001,6 +1001,190 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
+    def test_makefastqs_standard_protocol_bclconvert_set_missing_adapter_read2_from_sample_sheet(self):
+        """
+        MakeFastqs: standard protocol/bcl-convert: automatically set missing read2 adapter from sample sheet
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write("""[Settings]
+Adapter,ACGTACGTACGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGTA,,
+Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
+        # Create mock bcl2fastq
+        # Check adapter sequences
+        MockBclConvertExe.create(os.path.join(self.bin,
+                                              "bcl-convert"),
+                                 assert_adapter1="ACGTACGTACGT",
+                                 assert_adapter2="ACGTACGTACGT")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make an (empty) analysis directory
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the test
+        p = MakeFastqs(run_dir,sample_sheet,
+                       bcl_converter="bcl-convert",
+                       adapter_sequence="ACGTACGTACGT")
+        status = p.run(analysis_dir,
+                       poll_interval=0.5)
+        self.assertEqual(status,0)
+        # Check outputs
+        self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bclconvert_info,
+                         (os.path.join(self.bin,"bcl-convert"),
+                          "BCL Convert",
+                          "3.7.5"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_M00879_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_standard_protocol_bclconvert_dont_reset_adapter_read2_from_sample_sheet_v2(self):
+        """
+        MakeFastqs: standard protocol/bcl-convert: don't reset read2 adapter for sample sheet V2
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write("""[Settings]
+AdapterRead1,ACGTACGTACGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGTA,,
+Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
+        # Create mock bcl2fastq
+        # Check adapter sequences
+        MockBclConvertExe.create(os.path.join(self.bin,
+                                              "bcl-convert"),
+                                 assert_adapter1="ACGTACGTACGT",
+                                 assert_adapter2="")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make an (empty) analysis directory
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the test
+        p = MakeFastqs(run_dir,sample_sheet,
+                       bcl_converter="bcl-convert",
+                       adapter_sequence="ACGTACGTACGT")
+        status = p.run(analysis_dir,
+                       poll_interval=0.5)
+        self.assertEqual(status,0)
+        # Check outputs
+        self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bclconvert_info,
+                         (os.path.join(self.bin,"bcl-convert"),
+                          "BCL Convert",
+                          "3.7.5"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_M00879_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
+
+    #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_set_minimum_trimmed_read_length(self):
         """
         MakeFastqs: standard protocol/bcl2fastq: set minimum trimmed read length

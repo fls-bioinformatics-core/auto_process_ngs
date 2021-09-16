@@ -350,7 +350,12 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
     # Update adapter sequences
     if adapter is not None:
         if adapter:
-            sample_sheet.settings['Adapter'] = str(adapter)
+            if 'AdapterRead1' in sample_sheet.settings:
+                # SampleSheet V2: set AdapterRead1
+                sample_sheet.settings['AdapterRead1'] = str(adapter)
+            else:
+                # SampleSheet IEM format: set Adapter
+                sample_sheet.settings['Adapter'] = str(adapter)
         else:
             try:
                 del(sample_sheet.settings['Adapter'])

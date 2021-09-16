@@ -2655,6 +2655,14 @@ class RunBclConvert(PipelineTask):
             adapter_seq = sample_sheet.settings['Adapter']
             sample_sheet.settings['AdapterRead1'] = adapter_seq
             del(sample_sheet.settings['Adapter'])
+            print("Set 'AdapterRead1' to '%s'" % adapter_seq)
+            # Deal with 'AdapterRead2'
+            if 'AdapterRead2' not in sample_sheet.settings:
+                # Explicitly set to AdapterRead1 to mimick
+                # bcl2fastq behaviour (where AdapterRead2 is
+                # implicitly set to AdapterRead1 if not set)
+                sample_sheet.settings['AdapterRead2'] = adapter_seq
+                print("Set 'AdapterRead2' to '%s'" % adapter_seq)
         # Remove unwanted lanes
         if self.args.lane is not None:
             i = 0
