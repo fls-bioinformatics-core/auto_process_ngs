@@ -142,6 +142,7 @@ class bcl2fastq(object):
                    minimum_trimmed_read_length=None,
                    mask_short_adapter_reads=None,
                    create_fastq_for_index_reads=False,
+                   find_adapters_with_sliding_window=False,
                    loading_threads=None,
                    demultiplexing_threads=None,
                    processing_threads=None,
@@ -179,6 +180,11 @@ class bcl2fastq(object):
           create_fastq_for_index_reads: optional, if True then also create
             Fastq files for index reads (default, don't create index read
             Fastqs) (--create-fastq-for-index-reads)
+          find_adapters_with_sliding_window: optional, if True then
+            use the sliding window algorithm rather than string matching
+            when identifying adapter sequences for trimming (default,
+            don't use sliding window algorithm)
+            (--find-adapters-with-sliding-window)
           loading_threads: optional, specify number of threads to use
             for loading bcl data (--loading-threads)
           demultiplexing_threads: optional, specify number of threads to
@@ -221,6 +227,8 @@ class bcl2fastq(object):
                                    mask_short_adapter_reads)
         if create_fastq_for_index_reads:
             bcl2fastq_cmd.add_args('--create-fastq-for-index-read')
+        if find_adapters_with_sliding_window:
+            bcl2fastq_cmd.add_args('--find-adapters-with-sliding-window')
         if loading_threads is not None:
             bcl2fastq_cmd.add_args('-r',loading_threads)
         if demultiplexing_threads is not None:

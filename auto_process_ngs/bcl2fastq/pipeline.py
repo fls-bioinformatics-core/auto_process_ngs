@@ -123,6 +123,7 @@ LANE_SUBSET_ATTRS = (
     'minimum_trimmed_read_length',
     'mask_short_adapter_reads',
     'create_fastq_for_index_read',
+    'find_adapters_with_sliding_window',
     'no_lane_splitting',
     'icell8_well_list',
     'icell8_atac_swap_i1_and_i2',
@@ -327,6 +328,8 @@ class MakeFastqs(Pipeline):
         self.add_param('force_copy_of_primary_data',value=False,type=bool)
         self.add_param('no_lane_splitting',value=False,type=bool)
         self.add_param('create_fastq_for_index_read',value=False,type=bool)
+        self.add_param('find_adapters_with_sliding_window',value=False,
+                       type=bool)
         self.add_param('create_empty_fastqs',value=False,type=bool)
         self.add_param('name',type=str)
         self.add_param('stats_file',type=str)
@@ -442,6 +445,8 @@ class MakeFastqs(Pipeline):
                 no_lane_splitting=self.params.no_lane_splitting,
                 create_fastq_for_index_read=\
                 self.params.create_fastq_for_index_read,
+                find_adapters_with_sliding_window=\
+                self.params.find_adapters_with_sliding_window,
                 icell8_well_list=self._icell8_well_list,
                 icell8_atac_swap_i1_and_i2=\
                 self._icell8_atac_swap_i1_and_i2,
@@ -1006,6 +1011,10 @@ class MakeFastqs(Pipeline):
             create_fastq_for_index_read = \
                 subset['create_fastq_for_index_read']
 
+            # Use sliding window for adapter trimming
+            find_adapters_with_sliding_window = \
+                subset['find_adapters_with_sliding_window']
+
             #########
             # ICELL8
             #########
@@ -1093,6 +1102,8 @@ class MakeFastqs(Pipeline):
                     no_lane_splitting=self.params.no_lane_splitting,
                     create_fastq_for_index_read=\
                     create_fastq_for_index_read,
+                    find_adapters_with_sliding_window=\
+                    find_adapters_with_sliding_window,
                     create_empty_fastqs=self.params.create_empty_fastqs,
                     platform=identify_platform.output.platform,
                     bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
@@ -1503,6 +1514,7 @@ class MakeFastqs(Pipeline):
     def run(self,analysis_dir,out_dir=None,barcode_analysis_dir=None,
             primary_data_dir=None,force_copy_of_primary_data=False,
             no_lane_splitting=None,create_fastq_for_index_read=None,
+            find_adapters_with_sliding_window=None,
             create_empty_fastqs=None,name=None,stats_file=None,
             stats_full=None,per_lane_stats=None,per_lane_sample_stats=None,
             nprocessors=None,require_bcl2fastq=None,
@@ -1534,6 +1546,9 @@ class MakeFastqs(Pipeline):
           create_fastq_for_index_read (bool): if True then
             also output Fastqs for the index (I1 etc) reads
             (--create-fastq-for-index-read)
+          find_adapters_with_sliding_window (bool): if True then
+            use sliding window algorith to identify adapter
+            sequences (--find-adapters-with-sliding-window)
           create_empty_fastqs (bool): if True then create empty
             "placeholder" Fastqs if not created by bcl2fastq
           name (str): optional identifier for output
@@ -1692,6 +1707,8 @@ class MakeFastqs(Pipeline):
             'force_copy_of_primary_data': force_copy_of_primary_data,
             'no_lane_splitting': no_lane_splitting,
             'create_fastq_for_index_read': create_fastq_for_index_read,
+            'find_adapters_with_sliding_window':
+            find_adapters_with_sliding_window,
             'create_empty_fastqs': create_empty_fastqs,
             'name': name,
             'stats_file': stats_file,
@@ -2015,7 +2032,8 @@ class RunBcl2Fastq(PipelineTask):
              ignore_missing_bcl=False,no_lane_splitting=False,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
-             create_fastq_for_index_read=False,nprocessors=None,
+             create_fastq_for_index_read=False,
+             find_adapters_with_sliding_window=False,nprocessors=None,
              create_empty_fastqs=False,
              platform=None,bcl2fastq_exe=None,bcl2fastq_version=None,
              skip_bcl2fastq=False):
@@ -2039,6 +2057,10 @@ class RunBcl2Fastq(PipelineTask):
           create_fastq_for_index_read (boolean): if True then
             also create Fastq files for index reads (default,
             don't create index read Fastqs)
+          find_adapters_with_sliding_window (bool): if True
+            then use sliding window algorith for identifying
+            adapter sequences (default is to use string
+            matching algorithm)
           nprocessors (int): number of processors to use
             (taken from job runner by default)
           create_empty_fastqs (bool): if True then create empty
@@ -2137,6 +2159,8 @@ class RunBcl2Fastq(PipelineTask):
             self.args.mask_short_adapter_reads,
             'create_fastq_for_index_reads':
             self.args.create_fastq_for_index_read,
+            'find_adapters_with_sliding_window':
+            self.args.find_adapters_with_sliding_window,
             'loading_threads': None,
             'demultiplexing_threads': None,
             'processing_threads': None,
@@ -2176,7 +2200,9 @@ class RunBcl2Fastq(PipelineTask):
                           ('no_lane_splitting',"No lane splitting"),
                           ('minimum_trimmed_read_length',"Min trimmed read len"),
                           ('mask_short_adapter_reads',"Mask short adptr reads"),
-                          ('create_fastq_for_index_read',"Create index Fastqs")):
+                          ('create_fastq_for_index_read',"Create index Fastqs"),
+                          ('find_adapters_with_sliding_window',
+                           "Use sliding window")):
             if item in params:
                 print("%-22s: %s" % (desc,params[item]))
         print("Threads for each stage:")
