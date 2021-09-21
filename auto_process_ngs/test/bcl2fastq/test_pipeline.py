@@ -3085,6 +3085,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         make_mock_bcl2fastq2_output(os.path.join(analysis_dir,
                                                  "bcl2fastq"),
                                     lanes=(1,),
+                                    reads=('R1','R2'),
                                     sample_sheet=sample_sheet)
         # Make a primary data directory
         os.mkdir(os.path.join(analysis_dir,"primary_data"))
