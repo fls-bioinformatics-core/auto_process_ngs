@@ -47,6 +47,8 @@ from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
 from .outputs import expected_outputs
+from .plots import useqlenplot
+from .plots import ureadcountplot
 from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
@@ -888,6 +890,8 @@ class QCReport(Document):
     - fastqs: Fastq R1/R2 names
     - reads: number of reads
     - read_lengths: length of reads
+    - read_lengths_distribution: mini-plots of read length distributions
+    - read_composition: mini-plot of fractions of masked/padded/total reads
     - fastqc_[read]: FastQC mini-plot for [read] (r1,r2,...)
     - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
     - screens_[read]: FastQScreen mini-plots for [read]
@@ -908,7 +912,9 @@ class QCReport(Document):
         'fastq' : 'Fastq',
         'fastqs': 'Fastqs',
         'reads': '#reads',
-        'read_lengths': 'Length',
+        'read_lengths': 'Lengths',
+        'read_lengths_distribution': 'Dist',
+        'read_composition': 'Composition',
         'fastqc_r1': 'FastQC[R1]',
         'boxplot_r1': 'Boxplot[R1]',
         'screens_r1': 'Screens[R1]',
@@ -1109,12 +1115,16 @@ class QCReport(Document):
                     summary_fields_ = ['sample',
                                        'fastqs',
                                        'reads',
-                                       'read_lengths',]
+                                       'read_composition',
+                                       'read_lengths',
+                                       'read_lengths_distribution',]
                 else:
                     summary_fields_ = ['sample',
                                        'fastq',
                                        'reads',
-                                       'read_lengths',]
+                                       'read_composition',
+                                       'read_lengths',
+                                       'read_lengths_distribution',]
                 if 'strandedness' in project.outputs:
                     summary_fields_.append('strandedness')
                 for read in project.reads:
@@ -2674,6 +2684,16 @@ class QCReportFastqGroup(object):
                             'Sequence Length Distribution',
                             relpath=relpath)))
             value = "<br />".join([str(x) for x in value])
+        elif field == "read_lengths_distribution":
+            value = []
+            for read in self.reads:
+                value.append(
+                    Img(self.reporters[read].useqlenplot(
+                        min_len=self.project.stats.min_sequence_length),
+                        href=self.reporters[read].fastqc.summary.link_to_module(
+                            'Sequence Length Distribution',
+                            relpath=relpath)))
+            value = "<br />".join([str(x) for x in value])
         elif field.startswith("boxplot_"):
             read = field.split('_')[-1]
             value = Img(self.reporters[read].uboxplot(),
@@ -2724,6 +2744,8 @@ class QCReportFastq(object):
     report_fastqc
     report_fastq_screens
     report_program_versions
+    useqlenplot
+    ureadcountplot
     uboxplot
     ufastqcplot
     uscreenplot
@@ -2929,6 +2951,34 @@ class QCReportFastq(object):
             output.append("%s: %s" %
                           (self.fastqc.summary.status(m),m))
         return "\n".join(output)
+
+    def useqlenplot(self,min_len=None,inline=True):
+        """
+        Return a mini-sequence length distribution plot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return useqlenplot(self.sequence_lengths.dist,
+                           self.sequence_lengths.masked_dist,
+                           min_len=min_len,
+                           bg_color="white",seq_color="grey",
+                           inline=inline)
+
+    def ureadcountplot(self,max_reads=None,inline=True):
+        """
+        Return a mini-sequence composition plot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return ureadcountplot(self.sequence_lengths.nreads,
+                              self.sequence_lengths.nmasked,
+                              self.sequence_lengths.npadded,
+                              max_reads=max_reads,
+                              inline=inline)
 
     def uboxplot(self,inline=True):
         """
