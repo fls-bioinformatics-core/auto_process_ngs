@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     docwriter.py: HTML document generation library
-#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
 #
 #########################################################################
 
@@ -768,6 +768,9 @@ class Img(object):
             return Link(" ".join(html),self._target).html()
         else:
             return " ".join(html)
+
+    def __repr__(self):
+        return self.html()
 
 class Link(object):
     """
