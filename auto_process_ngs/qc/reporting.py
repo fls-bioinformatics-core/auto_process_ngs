@@ -313,6 +313,17 @@ class QCProject(object):
       files
     - software: dictionary with information on the
       QC software packages
+    - stats: AttrtibuteDictionary with useful stats from
+      across the project
+
+    The 'stats' property has the following attributes:
+
+    - max_seqs: maximum number of sequences across all
+      Fastq files
+    - min_sequence_length: minimum sequence length across
+      all Fastq files
+    - max_sequence_length: maximum sequence length across
+      all Fastq files
 
     The following are valid values for the 'outputs'
     property:
@@ -358,6 +369,12 @@ class QCProject(object):
         logger.debug("QCProject: qc_dir (final): %s" % self.qc_dir)
         # How to handle Fastq names
         self.fastq_attrs = self.project.fastq_attrs
+        # Additional metrics
+        self.stats = AttributeDictionary(
+            max_seqs=None,
+            min_sequence_length=None,
+            max_sequence_length=None
+        )
         # Detect outputs
         self._detect_outputs()
         # Expose metadata from parent run
@@ -504,6 +521,9 @@ class QCProject(object):
         output_files = []
         multiplexed_samples = set()
         software = {}
+        max_seqs = None
+        min_seq_length = None
+        max_seq_length = None
         print("Scanning contents of %s" % self.qc_dir)
         files = [os.path.join(self.qc_dir,f)
                  for f in os.listdir(self.qc_dir)]
@@ -604,6 +624,23 @@ class QCProject(object):
                 fastq_names.add(
                     os.path.basename(
                         os.path.splitext(f)[0])[:-len("_seqlens")])
+                seqlens_data = SeqLens(f)
+                try:
+                    # Try to extract the sequence lengths
+                    max_seqs = max(max_seqs,seqlens_data.nreads)
+                except Exception:
+                    if not max_seqs:
+                        max_seqs = seqlens_data.nreads
+                if not min_seq_length:
+                    min_seq_length = seqlens_data.min_length
+                else:
+                    min_seq_length = min(min_seq_length,
+                                         seqlens_data.min_length)
+                if not max_seq_length:
+                    max_seq_length = seqlens_data.max_length
+                else:
+                    max_seq_length = max(max_seq_length,
+                                         seqlens_data.max_length)
         # Look for ICELL8 outputs
         icell8_top_dir = os.path.dirname(self.qc_dir)
         print("Checking for ICELL8 reports in %s/stats" %
@@ -776,6 +813,10 @@ class QCProject(object):
         self.software = software
         # Output files
         self.output_files = sorted(output_files)
+        # Maximum number of sequences etc
+        self.stats['max_seqs'] = max_seqs
+        self.stats['min_sequence_length'] = min_seq_length
+        self.stats['max_sequence_length'] = max_seq_length
 
 class FastqSet(object):
     """
@@ -1047,6 +1088,15 @@ class QCReport(Document):
                     print("\t- %s" % output)
             else:
                 logger.warning("%s: no QC outputs found" % project.name)
+            if project.stats.max_seqs:
+                print("Maximum number of sequences: %d" %
+                      project.stats.max_seqs)
+            if project.stats.min_sequence_length:
+                print("Minimum sequence length    : %d" %
+                      project.stats.min_sequence_length)
+            if project.stats.max_sequence_length:
+                print("Maximum sequence length    : %d" %
+                      project.stats.max_sequence_length)
             if project.software:
                 print("Software versions:")
                 for package in project.software:
