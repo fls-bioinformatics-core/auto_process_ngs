@@ -2627,6 +2627,8 @@ class QCReportFastqGroup(object):
         - fastq (if single-end)
         - reads
         - read_lengths
+        - read_lengths_distribution
+        - read_composition
         - boxplot_r1
         - boxplot_r2
         - boxplot_r3
