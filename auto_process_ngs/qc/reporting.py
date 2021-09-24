@@ -52,6 +52,7 @@ from .plots import ufastqcplot
 from .plots import uboxplot
 from .plots import ustrandplot
 from .plots import encode_png
+from .seqlens import SeqLens
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
@@ -319,6 +320,7 @@ class QCProject(object):
     - 'fastqc_[r1...]'
     - 'screens_[r1...]'
     - 'strandedness'
+    - 'sequence_lengths'
     - 'icell8_stats'
     - 'icell8_report'
     - 'cellranger_count'
@@ -590,6 +592,18 @@ class QCProject(object):
                 software['fastq_strand'] = sorted(list(versions))
             # Store the fastq_strand files
             output_files.extend(fastq_strand)
+        # Look for sequence length outputs
+        seq_lens = list(filter(lambda f:
+                               f.endswith("_seqlens.json"),
+                               files))
+        logger.debug("seq_lens: %s" % seq_lens)
+        if seq_lens:
+            outputs.add("sequence_lengths")
+            for f in seq_lens:
+                fq = self.fastq_attrs(os.path.splitext(f)[0])
+                fastq_names.add(
+                    os.path.basename(
+                        os.path.splitext(f)[0])[:-len("_seqlens")])
         # Look for ICELL8 outputs
         icell8_top_dir = os.path.dirname(self.qc_dir)
         print("Checking for ICELL8 reports in %s/stats" %
@@ -2568,18 +2582,47 @@ class QCReportFastqGroup(object):
                                   "#%s" % self.reporters[read].safe_name))
             value = "<br />".join([str(x) for x in value])
         elif field == "reads":
-            value = pretty_print_reads(
-                self.reporters[self.reads[0]].fastqc.data.basic_statistics(
+            if self.reporters[self.reads[0]].sequence_lengths:
+                value = pretty_print_reads(
+                    self.reporters[self.reads[0]].sequence_lengths.nreads)
+            else:
+                value = pretty_print_reads(
+                    self.reporters[self.reads[0]].fastqc.data.basic_statistics(
                     'Total Sequences'))
+        elif field == "read_composition":
+            value = []
+            for read in self.reads:
+                value.append(
+                    Img(self.reporters[read].ureadcountplot(
+                        max_reads=self.project.stats.max_seqs),
+                        title="%s: %s reads\n"
+                        "* %s masked (%.1f%%)\n"
+                        "* %s padded (%.1f%%)"
+                        % (read.upper(),
+                           pretty_print_reads(
+                               self.reporters[read].sequence_lengths.nreads),
+                           pretty_print_reads(
+                               self.reporters[read].sequence_lengths.nmasked),
+                           self.reporters[read].sequence_lengths.frac_masked,
+                           pretty_print_reads(
+                               self.reporters[read].sequence_lengths.npadded),
+                           self.reporters[read].sequence_lengths.frac_padded)))
+            value = "<br />".join([str(x) for x in value])
         elif field == "read_lengths":
             value = []
             for read in self.reads:
-                value.append(Link(
-                    self.reporters[read].fastqc.data.basic_statistics(
-                        'Sequence length'),
-                    self.reporters[read].fastqc.summary.link_to_module(
-                        'Sequence Length Distribution',
-                        relpath=relpath)))
+                if self.reporters[read].sequence_lengths:
+                    value.append(
+                        "%.1f&nbsp;(%s)" %
+                        (self.reporters[read].sequence_lengths.mean,
+                         self.reporters[read].sequence_lengths.range))
+                else:
+                    value.append(Link(
+                        self.reporters[read].fastqc.data.basic_statistics(
+                            'Sequence length'),
+                        self.reporters[read].fastqc.summary.link_to_module(
+                            'Sequence Length Distribution',
+                            relpath=relpath)))
             value = "<br />".join([str(x) for x in value])
         elif field.startswith("boxplot_"):
             read = field.split('_')[-1]
@@ -2617,6 +2660,7 @@ class QCReportFastq(object):
     path: path to the Fastq
     safe_name: name suitable for use in HTML links etc
     sample_name: sample name derived from the Fastq basename
+    sequence_lengths: SeqLens instance
     fastqc: Fastqc instance
     fastq_screen.names: list of FastQScreen names
     fastq_screen.SCREEN.description: description of SCREEN
@@ -2686,6 +2730,13 @@ class QCReportFastq(object):
                 self.fastq_screen[name]["png"] = png
                 self.fastq_screen[name]["txt"] = txt
                 self.fastq_screen[name]["version"] = Fastqscreen(txt).version
+        # Sequence lengths
+        try:
+            self.sequence_lengths = SeqLens(
+                os.path.join(qc_dir,
+                             "%s_seqlens.json" % self.fastq_attrs(fastq)))
+        except Exception as ex:
+            self.sequence_lengths = None
         # Program versions
         self.program_versions = AttributeDictionary()
         if self.fastqc is not None:
