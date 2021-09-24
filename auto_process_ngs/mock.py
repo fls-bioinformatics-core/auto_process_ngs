@@ -60,6 +60,7 @@ import shutil
 import gzip
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
+from bcftbx.FASTQFile import get_fastq_file_handle
 from bcftbx.IlluminaData import IlluminaRun
 from bcftbx.IlluminaData import IlluminaRunInfo
 from bcftbx.IlluminaData import IlluminaData
@@ -68,6 +69,7 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
+from .analysis import AnalysisFastq
 from .fastq_utils import pair_fastqs_by_name
 from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from .tenx_genomics_utils import flow_cell_id
@@ -383,7 +385,8 @@ class MockAnalysisProject(object):
         """
         self.fastq_names.append(fq)
 
-    def create(self,top_dir=None,readme=True,scriptcode=True):
+    def create(self,top_dir=None,readme=True,scriptcode=True,
+               populate_fastqs=True):
         """
         Build and populate the directory structure
 
@@ -393,7 +396,8 @@ class MockAnalysisProject(object):
           readme (boolean): if True then write a README file
           scriptcode (boolean): if True then write a ScriptCode
             subdirectory
-
+          populate_fastqs (boolean): if True then write content
+            to the Fastq files
         """
         # Create directory
         if top_dir is None:
@@ -407,8 +411,16 @@ class MockAnalysisProject(object):
         # Add Fastq files
         for fq in self.fastq_names:
             fq = os.path.basename(fq)
-            with open(os.path.join(fqs_dir,fq),'w') as fp:
-                fp.write('')
+            with get_fastq_file_handle(os.path.join(fqs_dir,fq),'wt') as fp:
+                if populate_fastqs:
+                    read_number = AnalysisFastq(fq).read_number
+                    fp.write("""@MISEQ:1:000000000-A2Y1L:1:1101:19264:2433 {read_number}:N:0:NAAGGCGATAGATCGC
+AGATAGCCGAAGATAAAGAGNTCATAACCGT
++
+?????BBB@BBBB?BBFFFF#66EAFHHHCE
+""".format(read_number=read_number))
+                else:
+                    fp.write('')
         # Add README.info
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:
