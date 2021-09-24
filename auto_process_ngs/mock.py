@@ -60,7 +60,6 @@ import shutil
 import gzip
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
-from bcftbx.FASTQFile import get_fastq_file_handle
 from bcftbx.IlluminaData import IlluminaRun
 from bcftbx.IlluminaData import IlluminaRunInfo
 from bcftbx.IlluminaData import IlluminaData
@@ -411,16 +410,21 @@ class MockAnalysisProject(object):
         # Add Fastq files
         for fq in self.fastq_names:
             fq = os.path.basename(fq)
-            with get_fastq_file_handle(os.path.join(fqs_dir,fq),'wt') as fp:
-                if populate_fastqs:
-                    read_number = AnalysisFastq(fq).read_number
-                    fp.write("""@MISEQ:1:000000000-A2Y1L:1:1101:19264:2433 {read_number}:N:0:NAAGGCGATAGATCGC
-AGATAGCCGAAGATAAAGAGNTCATAACCGT
+            if populate_fastqs:
+                read_number = AnalysisFastq(fq).read_number
+                lane = AnalysisFastq(fq).lane_number
+                read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
+GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
-?????BBB@BBBB?BBFFFF#66EAFHHHCE
-""".format(read_number=read_number))
-                else:
-                    fp.write('')
+IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
+            else:
+                read = ""
+            if fq.endswith('.gz'):
+                with gzip.open(os.path.join(fqs_dir,fq),'wb') as fp:
+                    fp.write(read.encode())
+            else:
+                with open(os.path.join(fqs_dir,fq),'wt') as fp:
+                    fp.write(read)
         # Add README.info
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:
