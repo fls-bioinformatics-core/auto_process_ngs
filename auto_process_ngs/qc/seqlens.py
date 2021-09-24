@@ -27,13 +27,13 @@ class SeqLens(object):
             ``get_sequence_lengths`` function
         """
         self._json_file = os.path.abspath(json_file)
-        self._data = dict()
         try:
             with open(self._json_file,'rt') as fp:
                 self._data = json.load(fp)
         except Exception as ex:
             logger.warn("Failed to load data from '%s': %s"
                         % (self._json_file,ex))
+            self._data = None
 
     @property
     def data(self):
