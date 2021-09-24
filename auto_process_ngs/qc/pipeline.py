@@ -885,8 +885,8 @@ class GetSeqLengthStats(PipelineFunctionTask):
                                    "%s_seqlens.json" %
                                    self.args.fastq_attrs(fastq))
             if not os.path.exists(outfile):
-                raise PipelineException("Missing sequence length "
-                                        "file: %s" % outfile)
+                raise Exception("Missing sequence length file: %s"  %
+                                outfile)
 
 class CheckIlluminaQCVersion(PipelineTask):
     """
