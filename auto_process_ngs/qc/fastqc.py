@@ -2,6 +2,7 @@
 #
 # fastqc library
 import os
+from collections import OrderedDict
 from bcftbx.TabFile import TabFile
 from bcftbx.htmlpagewriter import PNGBase64Encoder
 from ..docwriter import Table
@@ -403,3 +404,45 @@ class FastqcData(object):
             if key == measure:
                 return value
         raise KeyError("No measure '%s'" % measure)
+
+    def adapter_content_summary(self):
+        """
+        Return summary data for adapter content
+
+        Summarises the amount of adapter present in a
+        Fastq file based on data in the
+        ``Adapter Content`` section, assigning a
+        decimal fraction for each adapter class.
+
+        The fraction is calculated by summing the
+        fraction of adapter across all bases, and
+        then normalising by the number of bases.
+
+        Returns:
+          OrderedDict: mapping adapter names to the
+            fraction representing the amount of
+            adapter present in the Fastq.
+        """
+        # Get the raw adapter content data
+        # i.e. table with adapter content at each base
+        # position for each adapter class
+        data = self.data("Adapter Content")
+        # Get the list of adapter names from table
+        # header
+        adapters = data[0].split('\t')[1:]
+        # Summarise content for each adapter across
+        # sequence by summing up content at each
+        # position and dividing by total area
+        summary = OrderedDict()
+        for adapter in adapters:
+            summary[adapter] = 0.0
+        for line in data[1:]:
+            content = line.split('\t')[1:]
+            for i,adapter in enumerate(adapters):
+                summary[adapter] += float(content[i])
+        # Normalise the sums
+        total_area = len(data[1:])*100.0
+        for adapter in adapters:
+            summary[adapter] = summary[adapter]/total_area
+        # Return content summary
+        return summary
