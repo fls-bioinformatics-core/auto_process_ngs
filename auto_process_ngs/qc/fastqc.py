@@ -344,6 +344,13 @@ class FastqcData(object):
         """
         return self._data_file
 
+    @property
+    def modules(self):
+        """
+        List of the modules in the raw data
+        """
+        return self._modules
+
     def data(self,module):
         """
         Return the raw data for a module
