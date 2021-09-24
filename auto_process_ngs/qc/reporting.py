@@ -1777,6 +1777,7 @@ class QCReportSample(object):
             self.fastq_groups.append(QCReportFastqGroup(
                 fqs,
                 qc_dir=qc_dir,
+                project=project,
                 project_id=project.id,
                 fastq_attrs=fastq_attrs))
         # Reads associated with the sample
@@ -2223,7 +2224,7 @@ class QCReportFastqGroup(object):
     update_summary_table: add line to summary table for
       the group
     """
-    def __init__(self,fastqs,qc_dir,project_id=None,
+    def __init__(self,fastqs,qc_dir,project,project_id=None,
                  fastq_attrs=AnalysisFastq):
         """
         Create a new QCReportFastqGroup
@@ -2234,11 +2235,13 @@ class QCReportFastqGroup(object):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
+          project (QCProject): parent project
           project_id (str): identifier for the project
           fastq_attrs (BaseFastqAttrs): class for extracting
             data from Fastq names
         """
         self.qc_dir = qc_dir
+        self.project = project
         self.project_id = project_id
         self.fastq_attrs = fastq_attrs
         # Assign fastqs to reads
