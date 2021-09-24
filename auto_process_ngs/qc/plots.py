@@ -28,6 +28,7 @@ RGB_COLORS = {
     'green': (0,128,0),
     'grey': (145,145,145),
     'lightgrey': (211,211,211),
+    'lightblue': (173,216,230),
     'maroon': (128,0,0),
     'navyblue': (0,0,153),
     'orange': (255,165,0),
@@ -484,6 +485,198 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
                 pixels[i,j] = RGB_COLORS['lightgrey']
     # Output the plot to file
     fp,tmp_plot = tempfile.mkstemp(".ustrand.png")
+    img.save(tmp_plot)
+    os.fdopen(fp).close()
+    if inline:
+        encoded_plot = encode_png(tmp_plot)
+    if outfile is not None:
+        shutil.move(tmp_plot,outfile)
+    else:
+        os.remove(tmp_plot)
+    if inline:
+        return encoded_plot
+    else:
+        return outfile
+
+def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
+                outfile=None,inline=False,height=20,
+                bg_color="lightgrey",seq_color="black",
+                masked_color="red"):
+    """
+    Make a 'micro' plot of sequence length
+
+    Given a sequence length distribution, create a histogram-style
+    plot where the numbers of sequences with different lengths
+    are shown (similar to the 'Sequence Length Distribution' plot
+    from FastQC).
+
+    Optionally if a distribution of masked reads is also supplied
+    then these data will be overlayed on top.
+
+    The distributions should be supplied as dictionaries or
+    mappings where the keys are sequence lengths and the
+    corresponding values are the number of sequences.
+
+    Arguments:
+      dist (mapping): mapping of sequence lengths to numbers
+        of sequences, giving the distribution of sequence
+        lengths
+      masked_dist (mapping): optional, mapping of sequence
+        lengths to numbers of masked reads
+      min_len (int): optional, set the lower limit of the
+        plot (otherwise defaults to the lowest length
+        present in the distribution)
+      max_len (int): optional, set the upper limit of the
+        plot (otherwise defaults to the highest length
+        present in the distribution)
+      outfile (str): path for the output PNG
+      inline (boolean): if True then returns the PNG
+        as base64 encoded string rather than as a file
+      height (int): height of the plot in pixels
+      bg_color (str): name of colour to use for the
+        background
+      seq_color (str): name of colour to use for the
+        sequence distribution
+      masked_color (str): name of color to use for masked
+        sequence distribution
+    """
+    # Get ordered list of sequence lengths
+    seq_lens = sorted(dist.keys())
+    # Get max number of reads for a single length
+    max_reads = max([dist[x] for x in dist])
+    # Get min and max read lengths & size of plot
+    if max_len is None:
+        max_len = max(dist)
+    if min_len is None:
+        min_len = min(dist)
+    length = max_len - min_len + 1
+    # Create the image
+    img = Image.new('RGB',(length,height),RGB_COLORS[bg_color])
+    pixels = img.load()
+    # Create the plot
+    for seq_len in seq_lens:
+        # Plot the sequencing lengths
+        i = seq_len - min_len
+        if dist[seq_len]:
+            ndata = max(1,int(float(dist[seq_len])/max_reads*height))
+            for j in range(1,ndata+1):
+                pixels[i,height-j] = RGB_COLORS[seq_color]
+        # Overlay the masked read data
+        if masked_dist:
+            try:
+                ndata = max(1,int(float(masked_dist[seq_len])/
+                                  max_reads*height))
+                for j in range(1,ndata+1):
+                    pixels[i,height-j] = RGB_COLORS[masked_color]
+            except KeyError:
+                pass
+    # Output the plot
+    return make_plot(img,
+                     outfile=outfile,
+                     inline=inline,
+                     ext=".useqlen.png")
+
+def ureadcountplot(nreads,nmasked=None,npadded=None,max_reads=None,
+                   outfile=None,inline=False,width=50,height=10,
+                   bg_color="white",fg_color="blue",masked_color="red",
+                   padded_color="maroon",fill_color="lightgrey"):
+    """
+    Make a 'micro' plot summarising read counts and masking
+
+    Given a total number of reads/sequences in a Fastq file
+    plus the number of those sequences which are masked (i.e.
+    completely composed of Ns) and padded (i.e. have one or
+    more trailing Ns), plots a horizontal bar indicating the
+    sequence composition.
+
+    By default the numbers are normalised so that the total
+    number of reads fills the bar; however if a maximum read
+    count is also supplied then the normalisation is relative
+    to that maximum (so the plot also indicates the relative
+    size of the Fastq compared to the maximum read count).
+
+    Arguments:
+      nreads (int): number of reads in the Fastq
+      nmasked (int): number of masked reads
+      npadded (int): number of padded reads
+      max_reads (int): maximum number of reads (e.g. in
+        all Fastqs) for normalisation
+      outfile (str): path for the output PNG
+      inline (boolean): if True then returns the PNG
+        as base64 encoded string rather than as a file
+      width (int): width of the plot in pixels
+      height (int): height of the plot in pixels
+      bg_color (str): name of colour to use for the
+        background
+      fg_color (str): name of the colour for plotting
+        unmasked, unpadded reads
+      masked_color (str): name of the colour for plotting
+        masked read fraction
+      padded_color (str): name of the colour for plotting
+        padded read fraction
+      fill_color (str): name of the colour for filling
+        the unoccupied remainder of the bar
+    """
+    # Initialise
+    if not max_reads:
+        max_reads = nreads
+    if not nmasked:
+        nmasked = 0
+    if not npadded:
+        npadded = 0
+    # Create the image
+    img = Image.new('RGB',(width,height),RGB_COLORS[bg_color])
+    pixels = img.load()
+    # Plot masked content
+    start = 0
+    if nmasked and nmasked > max_reads/100.0:
+        end = max(1,int(float(nmasked)/float(max_reads)*width))
+        for i in range(start,end):
+            for j in range(1,height-1):
+                pixels[i,j] = RGB_COLORS[masked_color]
+        start = end
+    else:
+        end = start
+    # Plot padded content
+    if npadded and npadded > max_reads/100.0:
+        end = max(end+1,end+int(float(npadded)/float(max_reads)*width))
+        for i in range(start,end):
+            for j in range(1,height-1):
+                pixels[i,j] = RGB_COLORS[padded_color]
+        start = end
+    # Plot remaining read content
+    if nreads == max_reads:
+        end = width
+    else:
+        end = int(float(nreads)/float(max_reads)*width)
+    for i in range(start,end):
+        for j in range(1,height-1):
+            pixels[i,j] = RGB_COLORS[fg_color]
+    # Fill remainder of the plot
+    for i in range(end,width):
+        for j in range(1,height-1):
+            pixels[i,j] = RGB_COLORS[fill_color]
+    # Output the plot
+    return make_plot(img,
+                     outfile=outfile,
+                     inline=inline,
+                     ext=".ureadcount.png")
+
+def make_plot(img,outfile=None,inline=False,ext=".plot.png"):
+    """
+    Internal: output PNG plots from Image objects
+
+    Arguments:
+      img (Image): image to output plot for
+      outfile (str): path to output file to write
+        PNG to (if None then no file will be
+        created)
+      inline (bool): if True then return base64
+        encoded string for the plot
+      ext (str): optional, extension to use for
+        temporary file
+    """
+    fp,tmp_plot = tempfile.mkstemp(ext)
     img.save(tmp_plot)
     os.fdopen(fp).close()
     if inline:
