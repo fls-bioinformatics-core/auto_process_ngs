@@ -1130,6 +1130,9 @@ class QCReport(Document):
                                        'read_composition',
                                        'read_lengths',
                                        'read_lengths_distribution',]
+                if 'sequence_lengths' not in project.outputs:
+                    summary_fields_.remove('read_composition')
+                    summary_fields_.remove('read_lengths_distribution')
                 if 'strandedness' in project.outputs:
                     summary_fields_.append('strandedness')
                 for read in project.reads:
