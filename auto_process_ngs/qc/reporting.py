@@ -53,6 +53,7 @@ from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
 from .plots import ustrandplot
+from .plots import uadapterplot
 from .plots import encode_png
 from .seqlens import SeqLens
 from ..tenx_genomics_utils import MultiomeLibraries
@@ -894,6 +895,7 @@ class QCReport(Document):
     - read_composition: mini-plot of fractions of masked/padded/total reads
     - fastqc_[read]: FastQC mini-plot for [read] (r1,r2,...)
     - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
+    - adapters_[read]: mini-plot adapter content summary for [read]
     - screens_[read]: FastQScreen mini-plots for [read]
     - strandedness: 'forward', 'reverse' or 'unstranded' for pair
     - cellranger_count: 'cellranger count' outputs for each sample
@@ -917,13 +919,16 @@ class QCReport(Document):
         'read_composition': 'Composition',
         'fastqc_r1': 'FastQC[R1]',
         'boxplot_r1': 'Boxplot[R1]',
+        'adapters_r1': 'Adapters[R1]',
         'screens_r1': 'Screens[R1]',
         'fastqc_r2': 'FastQC[R2]',
         'boxplot_r2': 'Boxplot[R2]',
         'screens_r2': 'Screens[R2]',
+        'adapters_r2': 'Adapters[R2]',
         'fastqc_r3': 'FastQC[R3]',
         'boxplot_r3': 'Boxplot[R3]',
         'screens_r3': 'Screens[R3]',
+        'adapters_r3': 'Adapters[R3]',
         'strandedness': 'Strand',
         'cellranger_count': 'Single library analyses',
         '10x_cells': '#cells',
@@ -1131,6 +1136,7 @@ class QCReport(Document):
                     if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('fastqc_%s' % read)
                         summary_fields_.append('boxplot_%s' % read)
+                        summary_fields_.append('adapters_%s' % read)
                     if ('screens_%s' % read) in project.outputs:
                         summary_fields_.append('screens_%s' % read)
                 if 'cellranger_count' in project.outputs and \
@@ -2627,6 +2633,9 @@ class QCReportFastqGroup(object):
         - screens_r1
         - screens_r2
         - screens_r3
+        - adapters_r1
+        - adapters_r2
+        - adapters_r3
         - strandedness
 
         Arguments:
@@ -2694,6 +2703,17 @@ class QCReportFastqGroup(object):
                             'Sequence Length Distribution',
                             relpath=relpath)))
             value = "<br />".join([str(x) for x in value])
+        elif field.startswith("adapters_"):
+            read = field.split('_')[-1]
+            value = Img(self.reporters[read].uadapterplot(),
+                        href=self.reporters[read].fastqc.summary.link_to_module(
+                            'Adapter Content',
+                            relpath=relpath),
+                        title='\n'.join(
+                            ["%s: %.2f" %
+                             (adapter,
+                              self.reporters[read].adapters_summary[adapter])
+                             for adapter in self.reporters[read].adapters]))
         elif field.startswith("boxplot_"):
             read = field.split('_')[-1]
             value = Img(self.reporters[read].uboxplot(),
@@ -2738,6 +2758,8 @@ class QCReportFastq(object):
     fastq_screen.SCREEN.txt: associated TXT file for SCREEN
     fastq_screen.SCREEN.version: associated version for SCREEN
     program_versions.NAME: version of package NAME
+    adapters: list of adapters from Fastqc
+    adapters_summary: dictionary summarising adapter content
 
     Provides the following methods:
 
@@ -2748,6 +2770,7 @@ class QCReportFastq(object):
     ureadcountplot
     uboxplot
     ufastqcplot
+    uadapterplot
     uscreenplot
     """
     def __init__(self,fastq,qc_dir,project_id=None,
@@ -2809,6 +2832,11 @@ class QCReportFastq(object):
                              "%s_seqlens.json" % self.fastq_attrs(fastq)))
         except Exception as ex:
             self.sequence_lengths = None
+        # Adapters
+        if self.fastqc is not None:
+            self.adapters_summary = \
+                self.fastqc.data.adapter_content_summary()
+            self.adapters = self.adapters_summary.keys()
         # Program versions
         self.program_versions = AttributeDictionary()
         if self.fastqc is not None:
@@ -2989,6 +3017,17 @@ class QCReportFastq(object):
             inlining in HTML document
         """
         return uboxplot(self.fastqc.data.path,inline=inline)
+
+    def uadapterplot(self,inline=True):
+        """
+        Return a mini-adapter content summary plot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return uadapterplot(self.adapters_summary,self.adapters,
+                            inline=inline)
 
     def ufastqcplot(self,inline=True):
         """
