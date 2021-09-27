@@ -161,6 +161,13 @@ class Settings(object):
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
+        # Organisms
+        self.add_section('organisms')
+        for section in filter(lambda x: x.startswith('organism:'),
+                              config.sections()):
+            organism = section.split(':')[1]
+            self.organisms[organism] = self.get_organism_config(
+                section,config)
         # fastq_strand indexes
         self.add_section('fastq_strand_indexes')
         try:
@@ -395,6 +402,42 @@ class Settings(object):
         values['include_qc_report'] = config.getboolean(
             section,'include_qc_report',False)
         values['hard_links'] = config.getboolean(section,'hard_links',False)
+        return values
+
+    def get_organism_config(self,section,config):
+        """
+        Retrieve 'organism' configuration options from .ini file
+
+        Given the name of a section (e.g. 'organism:Human'),
+        fetch the data association with the organism and return in
+        an AttributeDictionary object.
+
+        The items that can be extracted are:
+
+        - star_index (str, path to STAR index)
+        - bowtie_index (str, path to Bowtie index)
+        - cellranger_reference (str)
+        - cellranger_premrna_reference (str)
+        - cellranger_atac_reference (str)
+        - cellranger_arc_reference (str)
+
+        Arguments:
+          section (str): name of the section to retrieve the
+            settings from
+          config (Config): Config object with settings loaded
+
+        Returns:
+          AttributeDictionary: dictionary of option:value pairs.
+        """
+        values = AttributeDictionary()
+        for param in (
+                'star_index',
+                'bowtie_index',
+                'cellranger_reference',
+                'cellranger_premrna_reference',
+                'cellranger_atac_reference',
+                'cellranger_arc_reference'):
+            values[param] = config.get(section,param,None)
         return values
 
     def get_sequencer_config(self,section,config):

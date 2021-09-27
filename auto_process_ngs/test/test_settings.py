@@ -262,3 +262,52 @@ model = "HiSeq 2500"
         self.assertRaises(Exception,
                           Settings,
                           settings_file)
+
+    def test_organism_definitions(self):
+        """Settings: handle 'organism:...' sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[organism:human]
+star_index = /data/hg38/star
+bowtie_index = /data/hg38/bowtie
+cellranger_reference = /data/10x/refdata-gex-GRCh38-2020-A
+cellranger_premrna_reference = /data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna
+cellranger_atac_reference = /data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+cellranger_arc_reference = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
+
+[organism:mouse]
+star_index = /data/mm10/star
+bowtie_index = /data/mm10/bowtie
+cellranger_reference = /data/10x/refdata-gex-mm10-2020-A
+cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
+cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check organism settings
+        self.assertTrue('human' in s.organisms)
+        self.assertEqual(s.organisms['human']['star_index'],
+                         '/data/hg38/star')
+        self.assertEqual(s.organisms['human']['bowtie_index'],
+                         '/data/hg38/bowtie')
+        self.assertEqual(s.organisms['human']['cellranger_reference'],
+                         '/data/10x/refdata-gex-GRCh38-2020-A')
+        self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
+                         '/data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna')
+        self.assertEqual(s.organisms['human']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertTrue('mouse' in s.organisms)
+        self.assertEqual(s.organisms['mouse']['star_index'],
+                         '/data/mm10/star')
+        self.assertEqual(s.organisms['mouse']['bowtie_index'],
+                         '/data/mm10/bowtie')
+        self.assertEqual(s.organisms['mouse']['cellranger_reference'],
+                         '/data/10x/refdata-gex-mm10-2020-A')
+        self.assertEqual(s.organisms['mouse']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')

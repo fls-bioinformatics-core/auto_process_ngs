@@ -47,6 +47,21 @@ create_empty_fastqs = True
 #model = "HiSeq 2500"
 #platform = hiseq
 
+# Organisms
+# Define an 'organism:NAME' section for each
+# organism and set the corresponding parameters
+# pointing to the reference datasets
+# These values will be specific to the local site
+#[organism:human]
+#star_index = None
+#bowtie_index = None
+#annotation_bed = None
+#annotation_gtf = None
+#cellranger_reference = None
+#cellranger_premrna_reference = None
+#cellranger_atac_reference = None
+#cellranger_arc_reference = None
+
 # QC settings
 [qc]
 nprocessors = 1
