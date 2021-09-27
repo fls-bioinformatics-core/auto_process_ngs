@@ -143,6 +143,15 @@ if __name__ == "__main__":
                           "'human', 'mouse'). Multiple organisms "
                           "should be separated by commas (e.g. "
                           "'human,mouse')")
+    metadata.add_argument('--library-type',metavar='LIBRARY',
+                          action='store',dest='library_type',default=None,
+                          help="explicitly specify library type (e.g. "
+                          "'RNA-seq', 'ChIP-seq')")
+    metadata.add_argument('--single-cell-platform',metavar='PLATFORM',
+                          action='store',dest='single_cell_platform',
+                          default=None,
+                          help="explicitly specify the single cell "
+                          "platform (e.g. '10xGenomics Chromium 3'v3')")
     # QC pipeline options
     qc_options = p.add_argument_group('QC options')
     qc_options.add_argument('-p','--protocol',metavar='PROTOCOL',
@@ -151,7 +160,7 @@ if __name__ == "__main__":
                             help="explicitly specify the QC protocol to "
                             "use; can be one of %s. If not set then "
                             "protocol will be determined automatically "
-                            "based on directory contents." %
+                            "based on directory contents and metadata." %
                             ", ".join(["'%s'" % x for x in PROTOCOLS]))
     qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
                             action='store',dest='fastq_screen_subset',
@@ -622,6 +631,10 @@ if __name__ == "__main__":
         project_metadata['name'] = os.path.basename(out_dir)
     if args.organism:
         project_metadata['organism'] = args.organism
+    if args.library_type:
+        project_metadata['library_type'] = args.library_type
+    if args.single_cell_platform:
+        project_metadata['single_cell_platform'] = args.single_cell_platform
 
     # Import extra files specified by the user
     for f in list(extra_files):
