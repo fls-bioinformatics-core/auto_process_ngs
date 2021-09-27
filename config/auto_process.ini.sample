@@ -50,29 +50,26 @@ create_empty_fastqs = True
 # Organisms
 # Define an 'organism:NAME' section for each
 # organism and set the corresponding parameters
-# pointing to the reference datasets
+# pointing to the reference datasets:
+# - star_index
+# - bowtie_index
+# - cellranger_reference
+# - cellranger_premrna_reference
+# - cellranger_atac_reference
+# - cellranger_arc_reference
 # These values will be specific to the local site
 #[organism:human]
-#star_index = None
-#bowtie_index = None
-#annotation_bed = None
-#annotation_gtf = None
-#cellranger_reference = None
-#cellranger_premrna_reference = None
-#cellranger_atac_reference = None
-#cellranger_arc_reference = None
+#star_index = /data/genomeIndexes/hg38/STAR/
+#bowtie_index = /data/genomeIndexes/hg38/bowtie/
+#cellranger_reference = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
+#cellranger_premrna_reference = /data/cellranger/refdata-cellranger-GRCh38-1.0.1-pre_mrna
+#cellranger_atac_reference = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1
+#cellranger_arc_reference = /data/cellranger/refdata-cellranger-arc-GRCh38-2020-A
 
 # QC settings
 [qc]
 nprocessors = 1
 fastq_screen_subset = 100000
-
-# Strandedness
-# Assign organism name to path to STAR index to use
-# for that organism in fastq_strand
-[fastq_strand_indexes]
-#human = /data/genomeIndexes/hg38/STAR/
-#mouse = /data/genomeIndexes/mm10/STAR/
 
 # icell8 settings
 [icell8]
@@ -97,38 +94,6 @@ cellranger_jobinterval = 100
 # is 'local'
 cellranger_localmem = 5
 cellranger_localcores = 1
-
-# 10xGenomics transcriptomes
-# Assign organism name to path to cellranger
-# transcriptome reference data to use for that
-# organism in single library analysis
-[10xgenomics_transcriptomes]
-#human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
-#mouse = /data/cellranger/refdata-cellranger-mm10-1.2.0
-
-# 10xGenomics snRNA-seq pre-mRNA references
-# Assign organism name to path to cellranger
-# snRNA-seq reference data to use for that
-# organism in single library analysis
-[10xgenomics_premrna_references]
-#human = /data/cellranger/refdata-cellranger-GRCh38-1.0.1-pre_mrna
-#mouse = /data/cellranger/refdata-cellranger-mm10-1.0.1-pre_mrna
-
-# 10xGenomics ATAC-seq genome references
-# Assign organism name to path to cellranger-atac
-# ATAC-seq reference data to use for that
-# organism in single library analysis
-[10xgenomics_atac_genome_references]
-#human = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1
-#mouse = /data/cellranger/refdata-cellranger-atac-mm10-1.0.1
-
-# 10xGenomics single cell multiome reference datasets
-# Assign organism name to path to cellranger-arc
-# single cell multiome reference data to use for that
-# organism in single library analysis
-[10xgenomics_multiome_references]
-#human = /data/cellranger/refdata-cellranger-arc-GRCh38-2020-A
-#mouse = /data/cellranger/refdata-cellranger-arc-mm10-2020-A
 
 # Platform specific settings
 # Make sections [platform:NAME] and add parameters to
