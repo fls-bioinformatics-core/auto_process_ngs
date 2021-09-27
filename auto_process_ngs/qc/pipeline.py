@@ -250,7 +250,9 @@ class QCPipeline(Pipeline):
             project,
             qc_dir,
             fastq_attrs=project.fastq_attrs)
-        self.add_task(get_seq_lengths)
+        self.add_task(get_seq_lengths,
+                      requires=(setup_qc_dirs,),
+                      log_dir=log_dir)
 
         # Check illumina_qc.sh is compatible version
         check_illumina_qc_version = CheckIlluminaQCVersion(
