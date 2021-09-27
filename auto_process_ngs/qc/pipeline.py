@@ -109,7 +109,6 @@ class QCPipeline(Pipeline):
         # Define parameters
         self.add_param('nthreads',type=int)
         self.add_param('fastq_subset',type=int)
-        self.add_param('fastq_strand_indexes',type=dict)
         self.add_param('cellranger_exe',type=str)
         self.add_param('cellranger_reference_dataset',type=str)
         self.add_param('cellranger_out_dir',type=str)
@@ -124,6 +123,7 @@ class QCPipeline(Pipeline):
         self.add_param('cellranger_jobinterval',type=int)
         self.add_param('cellranger_localcores',type=int)
         self.add_param('cellranger_localmem',type=int)
+        self.add_param('star_indexes',type=dict)
 
         # Define runners
         self.add_runner('verify_runner')
@@ -288,7 +288,7 @@ class QCPipeline(Pipeline):
             project,
             qc_dir=qc_dir,
             organism=organism,
-            star_indexes=self.params.fastq_strand_indexes
+            star_indexes=self.params.star_indexes
         )
         self.add_task(setup_fastq_strand_conf,
                       requires=(setup_qc_dirs,),
@@ -575,7 +575,7 @@ class QCPipeline(Pipeline):
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
 
-    def run(self,nthreads=None,fastq_strand_indexes=None,
+    def run(self,nthreads=None,star_indexes=None,
             fastq_subset=None,cellranger_chemistry='auto',
             cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
@@ -597,8 +597,8 @@ class QCPipeline(Pipeline):
           nthreads (int): number of threads/processors to
             use for QC jobs (defaults to number of slots set
             in job runners)
-          fastq_strand_indexes (dict): mapping of organism
-            IDs to directories with STAR index
+          star_indexes (dict): mapping of organism IDs to
+            directories with STAR indexes
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
           cellranger_chemistry (str): explicitly specify
@@ -718,7 +718,6 @@ class QCPipeline(Pipeline):
                               params={
                                   'nthreads': nthreads,
                                   'fastq_subset': fastq_subset,
-                                  'fastq_strand_indexes': fastq_strand_indexes,
                                   'cellranger_chemistry': cellranger_chemistry,
                                   'cellranger_transcriptomes':
                                   cellranger_transcriptomes,
@@ -738,6 +737,7 @@ class QCPipeline(Pipeline):
                                   'cellranger_reference_dataset':
                                   cellranger_reference_dataset,
                                   'cellranger_out_dir': cellranger_out_dir,
+                                  'star_indexes': star_indexes,
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
@@ -1022,16 +1022,16 @@ class SetupFastqStrandConf(PipelineFunctionTask):
             print("No STAR indexes available")
             return
         print("STAR indexes: %s" % star_indexes)
-        fastq_strand_indexes = build_fastq_strand_conf(
+        star_indexes = build_fastq_strand_conf(
             get_organism_list(organism),
             star_indexes)
-        if not fastq_strand_indexes:
+        if not star_indexes:
             print("No matching indexes for strandedness determination")
             return
         # Create the conf file
         print("Writing conf file: %s" % fastq_strand_conf)
         with open(fastq_strand_conf,'wt') as fp:
-            fp.write("%s\n" % fastq_strand_indexes)
+            fp.write("%s\n" % star_indexes)
     def finish(self):
         if os.path.exists(self.fastq_strand_conf):
             self.output.fastq_strand_conf.set(

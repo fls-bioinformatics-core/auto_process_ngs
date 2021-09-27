@@ -210,7 +210,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     cellranger_localmem = cellranger_settings.cellranger_localmem
     # Run the QC
     status = runqc.run(nthreads=nthreads,
-                       fastq_strand_indexes=star_indexes,
+                       star_indexes=star_indexes,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,

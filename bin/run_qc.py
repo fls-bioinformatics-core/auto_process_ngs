@@ -678,7 +678,7 @@ if __name__ == "__main__":
                       multiqc=(not args.no_multiqc))
     status = runqc.run(nthreads=nthreads,
                        fastq_subset=args.fastq_screen_subset,
-                       fastq_strand_indexes=star_indexes,
+                       star_indexes=star_indexes,
                        cellranger_chemistry=\
                        args.cellranger_chemistry,
                        cellranger_transcriptomes=cellranger_transcriptomes,
