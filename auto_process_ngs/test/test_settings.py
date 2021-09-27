@@ -307,6 +307,123 @@ cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/mm10/bowtie')
         self.assertEqual(s.organisms['mouse']['cellranger_reference'],
                          '/data/10x/refdata-gex-mm10-2020-A')
+        self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
+                         None)
+        self.assertEqual(s.organisms['mouse']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+
+    def test_legacy_organism_definitions(self):
+        """Settings: handle sections for specific indices (no 'organism:...' sections)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[fastq_strand_indexes]
+human = /data/hg38/star
+mouse = /data/mm10/star
+
+[10xgenomics_transcriptomes]
+human = /data/10x/refdata-gex-GRCh38-2020-A
+mouse = /data/10x/refdata-gex-mm10-2020-A
+
+[10xgenomics_premrna_references]
+human = /data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna
+
+[10xgenomics_atac_genome_references]
+human = /data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+mouse = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
+
+[10xgenomics_multiome_references]
+human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
+mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check organism settings
+        self.assertTrue('human' in s.organisms)
+        self.assertEqual(s.organisms['human']['star_index'],
+                         '/data/hg38/star')
+        self.assertEqual(s.organisms['human']['bowtie_index'],None)
+        self.assertEqual(s.organisms['human']['cellranger_reference'],
+                         '/data/10x/refdata-gex-GRCh38-2020-A')
+        self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
+                         '/data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna')
+        self.assertEqual(s.organisms['human']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertTrue('mouse' in s.organisms)
+        self.assertEqual(s.organisms['mouse']['star_index'],
+                         '/data/mm10/star')
+        self.assertEqual(s.organisms['mouse']['bowtie_index'],None)
+        self.assertEqual(s.organisms['mouse']['cellranger_reference'],
+                         '/data/10x/refdata-gex-mm10-2020-A')
+        self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
+                         None)
+        self.assertEqual(s.organisms['mouse']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+
+    def test_mixed_organism_definitions(self):
+        """Settings: handle mixture of 'organism:...' and index sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[organism:human]
+bowtie_index = /data/hg38/bowtie
+
+[organism:mouse]
+star_index = /data/mm10/star
+bowtie_index = /data/mm10/bowtie
+cellranger_reference = /data/10x/refdata-gex-mm10-2020-A
+cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
+cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
+
+[fastq_strand_indexes]
+human = /data/hg38/star
+mouse = /data/mm10/star
+
+[10xgenomics_transcriptomes]
+human = /data/10x/refdata-gex-GRCh38-2020-A
+
+[10xgenomics_premrna_references]
+human = /data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna
+
+[10xgenomics_atac_genome_references]
+human = /data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+
+[10xgenomics_multiome_references]
+human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check organism settings
+        self.assertTrue('human' in s.organisms)
+        self.assertEqual(s.organisms['human']['star_index'],
+                         '/data/hg38/star')
+        self.assertEqual(s.organisms['human']['bowtie_index'],
+                         '/data/hg38/bowtie')
+        self.assertEqual(s.organisms['human']['cellranger_reference'],
+                         '/data/10x/refdata-gex-GRCh38-2020-A')
+        self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
+                         '/data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna')
+        self.assertEqual(s.organisms['human']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertTrue('mouse' in s.organisms)
+        self.assertEqual(s.organisms['mouse']['star_index'],
+                         '/data/mm10/star')
+        self.assertEqual(s.organisms['mouse']['bowtie_index'],
+                         '/data/mm10/bowtie')
+        self.assertEqual(s.organisms['mouse']['cellranger_reference'],
+                         '/data/10x/refdata-gex-mm10-2020-A')
+        self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
+                         None)
         self.assertEqual(s.organisms['mouse']['cellranger_atac_reference'],
                          '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
         self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
