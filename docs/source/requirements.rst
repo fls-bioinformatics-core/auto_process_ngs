@@ -106,52 +106,39 @@ described here:
 
 * https://genomics-bcftbx.readthedocs.io/en/latest/config.html#set-up-reference-data
 
-In addition the strandedness determination requires ``STAR``
-indexes for each organism of interest. These can then be
-defined in the ``fastq_strand_indexes`` section of the
-``auto_process.ini`` file, for example::
+Other reference data are required for the calculation of
+various QC metrics:
 
-  [fastq_strand_indexes]
-  human = /data/genomeIndexes/hg38/STAR/
-  mouse = /data/genomeIndexes/mm10/STAR/
+* Strandedness determination requires ``STAR`` indexes for
+  each organism of interest;
+* Single library analyses of 10xGenomics single cell data
+  require the appropriate compatible reference datasets for
+  ``cellranger[-atac|-arc] count``:
+  - **scRNA-seq data**: transcriptome reference data set
+  - **snRNA-seq data**: "pre-mRNA" reference data set (which
+    includes both intronic and exonic information)
+  - **sc/snATAC-seq**: Cell Ranger ATAC compatible genome
+    reference
+  - **single cell multiome GEX+ATAC data**: ``cellranger-arc``
+    compatible reference package
 
-For 10xGenomics single cell data, the single library analysis
-requires appropriate compatible reference data for
-``cellranger[-atac|-arc] count``:
-
-* **scRNA-seq data**: transcriptome reference data set
-* **snRNA-seq data**: "pre-mRNA" reference data set (which
-  includes both intronic and exonic information)
-* **sc/snATAC-seq**: Cell Ranger ATAC compatible genome
-  reference
-* **single cell multiome GEX+ATAC data**: ``cellranger-arc``
-  compatible reference package
-
-The reference data sets can be assigned to different organisms
-in the ``10xgenomics_transcriptomes``,
-``10xgenomics_premrna_references`` and
-``10xgenomics_atac_genome_references``
-sections of the ``auto_process.ini`` file.
-
-For example:
+These can be defined in ``[organism:...]`` sections of the
+``auto_process.ini`` file, for example:
 
 ::
 
-   [10xgenomics_transcriptomes]
-   human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
-   mouse = /data/cellranger/refdata-cellranger-mm10-1.2.0
+   [organism: human]
+   star_index = /data/genomeIndexes/hg38/STAR/
+   cellranger_reference = /data/10x/refdata-cellranger-GRCh38-1.2.0
+   cellranger_premrna_reference = /data/10x/refdata-cellranger-GRCh38-1.2.0_premrna
+   cellranger_atac_reference = /data/10x/refdata-cellranger-atac-GRCh38-1.0.1
+   cellranger_arc_reference = /data/10x/refdata-cellranger-arc-GRCh38-2020-A
    
-   [10xgenomics_premrna_references]
-   human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0_premrna
-   mouse = /data/cellranger/refdata-cellranger-mm10-1.2.0_premrnaferences``
-
-   [10xgenomics_atac_genome_references]
-   human = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1
-   mouse = /data/cellranger/refdata-cellranger-atac-mm10-1.0.1
-
-   [10xgenomics_multiome_references]
-   human = /data/cellranger/refdata-cellranger-arc-GRCh38-2020-A
-   mouse = /data/cellranger/refdata-cellranger-arc-mm10-2020-A
+   [organism: mouse]
+   star_index = /data/genomeIndexes/mm10/STAR/
+   cellranger_reference = /data/10x/refdata-cellranger-mm10-1.2.0
+   cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-1.0.1
+   cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A
 
 .. note::
 
@@ -175,6 +162,14 @@ Pre-mRNA references are currently not available, but the documentation
 explains how to generate a custom reference package for these data:
 
 * https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/references#premrna
+
+.. note::
+
+   The ``[organism:...]`` sections supersede the old
+   ``fastq_strand_indexes`` and ``10xgenomics...`` sections
+   of the ``auto_process.ini`` file; the old sections are
+   still recognised for now but are deprecated and likely to
+   be dropped in future.
   
 .. _auto_process_reference_data_icell8:
 
