@@ -454,29 +454,49 @@ if __name__ == "__main__":
     else:
         enable_conda = (args.enable_conda == "yes")
 
-    # Cellranger data
+    # STAR indexes
+    star_indexes = dict()
+    for organism in __settings.organisms:
+        star_index = __settings.organisms[organism].star_index
+        if star_index:
+            star_indexes[organism] = star_index
+
+    # Cellranger settings
     cellranger_settings = __settings['10xgenomics']
+
+    # Cellranger reference datasets
     cellranger_transcriptomes = dict()
-    if __settings['10xgenomics_transcriptomes']:
-        for organism in __settings['10xgenomics_transcriptomes']:
-            if organism not in cellranger_transcriptomes:
-                cellranger_transcriptomes[organism] = \
-                    __settings['10xgenomics_transcriptomes'][organism]
+    for organism in __settings.organisms:
+        if __settings.organisms[organism].cellranger_reference:
+            cellranger_transcriptomes[organism] = \
+                __settings.organisms[organism].cellranger_reference
+    cellranger_premrna_references = dict()
+    for organism in __settings.organisms:
+        if __settings.organisms[organism].cellranger_premrna_reference:
+            cellranger_premrna_references[organism] = \
+                __settings.organisms[organism].cellranger_premrna_reference
+    cellranger_atac_references = dict()
+    for organism in __settings.organisms:
+        if __settings.organisms[organism].cellranger_atac_reference:
+            cellranger_atac_references[organism] = \
+                __settings.organisms[organism].cellranger_atac_reference
+    cellranger_multiome_references = dict()
+    for organism in __settings.organisms:
+        if __settings.organisms[organism].cellranger_arc_reference:
+            cellranger_multiome_references[organism] = \
+                __settings.organisms[organism].cellranger_arc_reference
+
+    # Add in organism-specific references supplied on the command line
     if args.cellranger_transcriptomes:
         for transcriptome in args.cellranger_transcriptomes:
             organism,reference =  transcriptome.split('=')
             cellranger_transcriptomes[organism] = reference
-    cellranger_premrna_references = dict()
-    if __settings['10xgenomics_premrna_references']:
-        for organism in __settings['10xgenomics_premrna_references']:
-            if organism not in cellranger_premrna_references:
-                cellranger_premrna_references[organism] = \
-                    __settings['10xgenomics_premrna_references'][organism]
     if args.cellranger_premrna_references:
         for premrna_reference in args.cellranger_premrna_references:
             organism,reference =  premrna_reference.split('=')
             cellranger_premrna_references[organism] = reference
-    cellranger_atac_references = __settings['10xgenomics_atac_genome_references']
+
+    # Single reference supplied on command line
     cellranger_reference_dataset = args.cellranger_reference_dataset
     if cellranger_reference_dataset:
         cellranger_reference_dataset = os.path.abspath(
@@ -671,14 +691,14 @@ if __name__ == "__main__":
                       multiqc=(not args.no_multiqc))
     status = runqc.run(nthreads=nthreads,
                        fastq_subset=args.fastq_screen_subset,
-                       fastq_strand_indexes=
-                       __settings.fastq_strand_indexes,
+                       star_indexes=star_indexes,
                        cellranger_chemistry=\
                        args.cellranger_chemistry,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,
                        cellranger_atac_references=cellranger_atac_references,
+                       cellranger_arc_references=cellranger_multiome_references,
                        cellranger_jobmode=cellranger_jobmode,
                        cellranger_maxjobs=max_jobs,
                        cellranger_mempercore=cellranger_mempercore,

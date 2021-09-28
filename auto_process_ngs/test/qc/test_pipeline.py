@@ -100,7 +100,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
                            max_jobs=1,
@@ -138,7 +138,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
                            max_jobs=1,
@@ -610,7 +610,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0' },
@@ -669,7 +669,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -728,7 +728,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -790,7 +790,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -851,7 +851,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_premrna_references=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0_premrna' },
@@ -911,7 +911,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -971,7 +971,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -1031,7 +1031,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_atac_references=
                            { 'human':
@@ -1092,7 +1092,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_atac_references=
                            { 'human':
@@ -1152,7 +1152,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1196,7 +1196,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1270,7 +1270,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1358,7 +1358,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1446,7 +1446,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1534,7 +1534,7 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1613,7 +1613,7 @@ PBB,CMO302,PBB
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1673,7 +1673,7 @@ PBB,CMO302,PBB
                           multiqc=True,
                           qc_protocol="10x_scRNAseq",
                           organism="human")
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -1731,7 +1731,7 @@ PBB,CMO302,PBB
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(fastq_strand_indexes=
+        status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
                            max_jobs=1,

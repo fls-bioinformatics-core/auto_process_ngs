@@ -161,13 +161,69 @@ class Settings(object):
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
-        # fastq_strand indexes
-        self.add_section('fastq_strand_indexes')
+        # Organisms
+        self.add_section('organisms')
+        for section in filter(lambda x: x.startswith('organism:'),
+                              config.sections()):
+            organism = section.split(':')[1]
+            self.organisms[organism] = self.get_organism_config(
+                section,config)
+        # Handle legacy STAR index specifications (fastq_strand_indexes)
         try:
-            for genome,conf_file in config.items('fastq_strand_indexes'):
-                self.fastq_strand_indexes[genome] = conf_file
+            for organism,index_file in config.items('fastq_strand_indexes'):
+                if organism not in self.organisms:
+                    self.organisms[organism] = self.get_organism_config()
+                self['organisms'][organism]['star_index'] = index_file
+            logging.warning("Added STAR index information from "
+                            "deprecated 'fastq_strand_indexes' section (use "
+                            "'organism:ORGANISM' sections instead)")
         except NoSectionError:
-            logging.debug("No strand stats conf files defined")
+            pass
+        # Legacy 10xgenomics transcriptome references
+        try:
+            for organism,reference in config.items('10xgenomics_transcriptomes'):
+                if organism not in self.organisms:
+                    self.organisms[organism] = self.get_organism_config()
+                self['organisms'][organism]['cellranger_reference'] = reference
+            logging.warning("Added cellranger references from deprecated "
+                            "'10xgenomics_transcriptomes' section (use "
+                            "'organism:ORGANISM' sections instead)")
+        except NoSectionError:
+            pass
+        # Legacy 10xgenomics snRNA-seq pre-mRNA references
+        try:
+            for organism,reference in config.items('10xgenomics_premrna_references'):
+                if organism not in self.organisms:
+                    self.organisms[organism] = self.get_organism_config()
+                self['organisms'][organism]['cellranger_premrna_reference'] = reference
+            logging.warning("Added cellranger pre-mRNA references from "
+                            "deprecated '10xgenomics_premrna_references' "
+                            "section (use 'organism:ORGANISM' sections "
+                            "instead)")
+        except NoSectionError:
+            pass
+        # Legacy 10xgenomics scATAC-seq genome references
+        try:
+            for organism,reference in config.items('10xgenomics_atac_genome_references'):
+                if organism not in self.organisms:
+                    self.organisms[organism] = self.get_organism_config()
+                self['organisms'][organism]['cellranger_atac_reference'] = reference
+            logging.warning("Added cellranger-atac references from deprecated "
+                            "'10xgenomics_atac_genome_references' section "
+                            "(use 'organism:ORGANISM' sections instead)")
+        except NoSectionError:
+            pass
+        # Legacy 10xGenomics cellranger ARC single cell multiome references
+        try:
+            for organism,reference in config.items('10xgenomics_multiome_references'):
+                if organism not in self.organisms:
+                    self.organisms[organism] = self.get_organism_config()
+                self['organisms'][organism]['cellranger_arc_reference'] = reference
+            logging.warning("Added cellranger-arc references from deprecated "
+                            "'10xgenomics_multiome_references' section "
+                            "(use 'organism:ORGANISM' sections instead)")
+        except NoSectionError:
+            pass
         # Sequencers
         self.add_section('sequencers')
         for section in filter(lambda x: x.startswith('sequencer:'),
@@ -235,35 +291,6 @@ class Settings(object):
         self['10xgenomics']['cellranger_jobinterval'] = config.getint('10xgenomics','cellranger_jobinterval',100)
         self['10xgenomics']['cellranger_localmem'] = config.getint('10xgenomics','cellranger_localmem',5)
         self['10xgenomics']['cellranger_localcores'] = config.getint('10xgenomics','cellranger_localcores',None)
-        # 10xgenomics transcriptomes
-        self.add_section('10xgenomics_transcriptomes')
-        try:
-            for genome,transcriptome in config.items('10xgenomics_transcriptomes'):
-                self['10xgenomics_transcriptomes'][genome] = transcriptome
-        except NoSectionError:
-            logging.debug("No 10xgenomics transcriptomes defined")
-        # 10xgenomics snRNA-seq pre-mRNA references
-        self.add_section('10xgenomics_premrna_references')
-        try:
-            for genome,reference in config.items('10xgenomics_premrna_references'):
-                self['10xgenomics_premrna_references'][genome] = reference
-        except NoSectionError:
-            logging.debug("No 10xgenomics snRNA-seq pre-mRNA references defined")
-        # 10xgenomics scATAC-seq genome references
-        self.add_section('10xgenomics_atac_genome_references')
-        try:
-            for genome,reference in config.items('10xgenomics_atac_genome_references'):
-                self['10xgenomics_atac_genome_references'][genome] = reference
-        except NoSectionError:
-            logging.debug("No 10xgenomics scATAC-seq genome references defined")
-        # 10xGenomics cellranger ARC single cell multiome
-        # reference datasets
-        self.add_section('10xgenomics_multiome_references')
-        try:
-            for genome,reference in config.items('10xgenomics_multiome_references'):
-                self['10xgenomics_multiome_references'][genome] = reference
-        except NoSectionError:
-            logging.debug("No 10xgenomics multiome references defined")
         # fastq_stats
         self.add_section('fastq_stats')
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',None)
@@ -395,6 +422,45 @@ class Settings(object):
         values['include_qc_report'] = config.getboolean(
             section,'include_qc_report',False)
         values['hard_links'] = config.getboolean(section,'hard_links',False)
+        return values
+
+    def get_organism_config(self,section=None,config=None):
+        """
+        Retrieve 'organism' configuration options from .ini file
+
+        Given the name of a section (e.g. 'organism:Human'),
+        fetch the data association with the organism and return in
+        an AttributeDictionary object.
+
+        The items that can be extracted are:
+
+        - star_index (str, path to STAR index)
+        - bowtie_index (str, path to Bowtie index)
+        - cellranger_reference (str)
+        - cellranger_premrna_reference (str)
+        - cellranger_atac_reference (str)
+        - cellranger_arc_reference (str)
+
+        Arguments:
+          section (str): name of the section to retrieve the
+            settings from
+          config (Config): Config object with settings loaded
+
+        Returns:
+          AttributeDictionary: dictionary of option:value pairs.
+        """
+        values = AttributeDictionary()
+        for param in (
+                'star_index',
+                'bowtie_index',
+                'cellranger_reference',
+                'cellranger_premrna_reference',
+                'cellranger_atac_reference',
+                'cellranger_arc_reference'):
+            if section and config:
+                values[param] = config.get(section,param,None)
+            else:
+                values[param] = None
         return values
 
     def get_sequencer_config(self,section,config):

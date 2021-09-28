@@ -115,21 +115,43 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     if len(projects) == 0:
         logger.warning("No projects found for QC analysis")
         return 1
+    # Set up dictionaries for indices and reference data
+    # STAR indexes
+    star_indexes = dict()
+    for organism in ap.settings.organisms:
+        star_index = ap.settings.organisms[organism].star_index
+        if star_index:
+            star_indexes[organism] = star_index
     # Set 10x cellranger reference data
     if not cellranger_transcriptomes:
         cellranger_transcriptomes = dict()
-    if ap.settings['10xgenomics_transcriptomes']:
-        for organism in ap.settings['10xgenomics_transcriptomes']:
-            if organism not in cellranger_transcriptomes:
-                cellranger_transcriptomes[organism] = \
-                    ap.settings['10xgenomics_transcriptomes'][organism]
     if not cellranger_premrna_references:
         cellranger_premrna_references = dict()
-    if ap.settings['10xgenomics_premrna_references']:
-        for organism in ap.settings['10xgenomics_premrna_references']:
-            if organism not in cellranger_premrna_references:
-                cellranger_premrna_references[organism] = \
-                    ap.settings['10xgenomics_premrna_references'][organism]
+    cellranger_atac_references = dict()
+    cellranger_multiome_references = dict()
+    for organism in ap.settings.organisms:
+        reference_datasets = ap.settings.organisms[organism]
+        # Transcriptomes
+        cellranger_reference = reference_datasets.cellranger_reference
+        if cellranger_reference:
+            cellranger_transcriptomes[organism] = cellranger_reference
+        # Pre-mRNA references
+        cellranger_premrna_reference = \
+            reference_datasets.cellranger_premrna_reference
+        if cellranger_premrna_reference:
+            cellranger_premrna_references[organism] = \
+                cellranger_premrna_reference
+        # ATAC
+        cellranger_atac_reference = \
+            reference_datasets.cellranger_atac_reference
+        if cellranger_atac_reference:
+            cellranger_atac_references[organism] = cellranger_atac_reference
+        # Multiome
+        cellranger_arc_reference = \
+            reference_datasets.cellranger_arc_reference
+        if cellranger_arc_reference:
+            cellranger_multiome_references[organism] = \
+                cellranger_arc_reference
     # Set up runners
     if runner is None:
         default_runner = ap.settings.general.default_runner
@@ -186,12 +208,9 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     cellranger_jobinterval = cellranger_settings.cellranger_jobinterval
     cellranger_localcores = cellranger_settings.cellranger_localcores
     cellranger_localmem = cellranger_settings.cellranger_localmem
-    cellranger_atac_references = ap.settings['10xgenomics_atac_genome_references']
-    cellranger_multiome_references = ap.settings['10xgenomics_multiome_references']
     # Run the QC
     status = runqc.run(nthreads=nthreads,
-                       fastq_strand_indexes=
-                       ap.settings.fastq_strand_indexes,
+                       star_indexes=star_indexes,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,

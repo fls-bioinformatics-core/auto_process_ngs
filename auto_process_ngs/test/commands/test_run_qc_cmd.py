@@ -128,9 +128,11 @@ poll_interval = 0.5
             s.write("""[general]
 poll_interval = 0.5
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -203,9 +205,11 @@ mouse = /data/genomeIndexes/mm10/STAR
             s.write("""[general]
 poll_interval = 0.5
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -279,9 +283,11 @@ mouse = /data/genomeIndexes/mm10/STAR
             s.write("""[general]
 poll_interval = 0.5
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -360,13 +366,13 @@ mouse = /data/genomeIndexes/mm10/STAR
             s.write("""[general]
 poll_interval = 1.0
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+cellranger_reference = /data/cellranger/transcriptomes/hg38
 
-[10xgenomics_transcriptomes]
-human = /data/cellranger/transcriptomes/hg38
-mouse = /data/cellranger/transcriptomes/mm10
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
+cellranger_reference = /data/cellranger/transcriptomes/mm10
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -452,13 +458,13 @@ mouse = /data/cellranger/transcriptomes/mm10
             s.write("""[general]
 poll_interval = 1.0
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+cellranger_premrna_reference = /data/cellranger/transcriptomes/hg38_pre_mrna
 
-[10xgenomics_premrna_references]
-human = /data/cellranger/transcriptomes/hg38_pre_mrna
-mouse = /data/cellranger/transcriptomes/mm10_pre_mrna
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
+cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -545,13 +551,13 @@ mouse = /data/cellranger/transcriptomes/mm10_pre_mrna
             s.write("""[general]
 poll_interval = 1.0
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+cellranger_reference = /data/cellranger/transcriptomes/hg38
 
-[10xgenomics_transcriptomes]
-human = /data/cellranger/transcriptomes/hg38
-mouse = /data/cellranger/transcriptomes/mm10
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
+cellranger_reference = /data/cellranger/transcriptomes/mm10
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -638,13 +644,13 @@ mouse = /data/cellranger/transcriptomes/mm10
             s.write("""[general]
 poll_interval = 1.0
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+cellranger_reference = /data/cellranger/transcriptomes/hg38
 
-[10xgenomics_transcriptomes]
-human = /data/cellranger/transcriptomes/hg38
-mouse = /data/cellranger/transcriptomes/mm10
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
+cellranger_reference = /data/cellranger/transcriptomes/mm10
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -730,13 +736,13 @@ mouse = /data/cellranger/transcriptomes/mm10
             s.write("""[general]
 poll_interval = 1.0
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+cellranger_atac_reference = /data/cellranger/atac_references/hg38
 
-[10xgenomics_atac_genome_references]
-human = /data/cellranger/atac_references/hg38
-mouse = /data/cellranger/atac_references/mm10
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
+cellranger_atac_reference = /data/cellranger/atac_references/mm10
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -819,9 +825,11 @@ mouse = /data/cellranger/atac_references/mm10
             s.write("""[general]
 poll_interval = 1.0
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -896,9 +904,11 @@ mouse = /data/genomeIndexes/mm10/STAR
             s.write("""[general]
 poll_interval = 1.0
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -973,9 +983,11 @@ mouse = /data/genomeIndexes/mm10/STAR
             s.write("""[general]
 poll_interval = 1.0
 
-[fastq_strand_indexes]
-human = /data/genomeIndexes/hg38/STAR
-mouse = /data/genomeIndexes/mm10/STAR
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
 """)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
