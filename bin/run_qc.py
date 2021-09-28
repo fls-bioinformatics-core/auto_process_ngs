@@ -206,6 +206,12 @@ if __name__ == "__main__":
                        help="use conda to resolve task dependencies; can "
                        "be 'yes' or 'no' (default: %s)" %
                        ("yes" if __settings.conda.enable_conda else "no"))
+    conda.add_argument('--conda-env-dir',action='store',
+                       dest="conda_env_dir",default=__settings.conda.env_dir,
+                       help="specify directory for conda enviroments "
+                       "(default: %s)" % ('temporary directory'
+                                          if not __settings.conda.env_dir else
+                                          __settings.conda.env_dir))
     # Pipeline/job options
     pipeline = p.add_argument_group('Job control options')
     pipeline.add_argument('--local',action='store_true',
@@ -697,6 +703,7 @@ if __name__ == "__main__":
                        default_runner=default_runner,
                        envmodules=envmodules,
                        enable_conda=enable_conda,
+                       conda_env_dir=args.conda_env_dir,
                        working_dir=working_dir,
                        verbose=args.verbose)
     if status:

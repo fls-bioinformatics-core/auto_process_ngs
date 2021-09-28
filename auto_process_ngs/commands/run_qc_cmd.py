@@ -34,7 +34,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
            working_dir=None,verbose=None,
            max_jobs=None,max_cores=None,
            batch_limit=None,enable_conda=None,
-           poll_interval=None):
+           conda_env_dir=None,poll_interval=None):
     """Run QC pipeline script for projects
 
     Run the illumina_qc.sh script to perform QC on projects.
@@ -92,6 +92,8 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
          exceed this limit
       enable_conda (bool): if True then use conda to resolve
         dependencies declared on tasks in the pipeline
+      conda_env_dir (str): path to non-default directory for conda
+        environments
       poll_interval (float): specifies non-default polling
         interval for scheduler used for running QC
 
@@ -212,6 +214,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
                        runners=runners,
                        default_runner=default_runner,
                        enable_conda=enable_conda,
+                       conda_env_dir=conda_env_dir,
                        envmodules=envmodules,
                        working_dir=working_dir,
                        verbose=verbose)
