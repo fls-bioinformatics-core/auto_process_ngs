@@ -558,16 +558,16 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
         # Plot the sequencing lengths
         i = seq_len - min_len
         if dist[seq_len]:
-            ndata = max(1,int(float(dist[seq_len])/max_reads*height))
+            ndata = max(1,int(float(dist[seq_len])/max_reads*(height-2)))
             for j in range(1,ndata+1):
-                pixels[i,height-j] = RGB_COLORS[seq_color]
+                pixels[i,height-j-1] = RGB_COLORS[seq_color]
         # Overlay the masked read data
         if masked_dist:
             try:
                 ndata = max(1,int(float(masked_dist[seq_len])/
-                                  max_reads*height))
+                                  max_reads*(height-2)))
                 for j in range(1,ndata+1):
-                    pixels[i,height-j] = RGB_COLORS[masked_color]
+                    pixels[i,height-j-1] = RGB_COLORS[masked_color]
             except KeyError:
                 pass
     # Output the plot

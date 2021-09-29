@@ -2703,10 +2703,13 @@ class QCReportFastqGroup(object):
             for read in self.reads:
                 value.append(
                     Img(self.reporters[read].useqlenplot(
-                        min_len=self.project.stats.min_sequence_length),
+                        min_len=self.project.stats.min_sequence_length,
+                        max_len=self.project.stats.max_sequence_length),
                         href=self.reporters[read].fastqc.summary.link_to_module(
                             'Sequence Length Distribution',
-                            relpath=relpath)))
+                            relpath=relpath),
+                        title="%s: click for FastQC sequence length plot" %
+                        read.upper()))
             value = "<br />".join([str(x) for x in value])
         elif field.startswith("adapters_"):
             read = field.split('_')[-1]
@@ -2985,17 +2988,20 @@ class QCReportFastq(object):
                           (self.fastqc.summary.status(m),m))
         return "\n".join(output)
 
-    def useqlenplot(self,min_len=None,inline=True):
+    def useqlenplot(self,max_len=None,min_len=None,inline=True):
         """
         Return a mini-sequence length distribution plot
 
         Arguments:
+          max_len (int): set the upper limit of the x-axis
+          min_len (int): set the lower limit of the x-axis
           inline (bool): if True then return plot in format for
             inlining in HTML document
         """
         return useqlenplot(self.sequence_lengths.dist,
                            self.sequence_lengths.masked_dist,
                            min_len=min_len,
+                           max_len=max_len,
                            bg_color="white",seq_color="grey",
                            inline=inline)
 
