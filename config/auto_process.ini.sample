@@ -30,6 +30,7 @@ fastq_screen = None
 # Conda dependency resolution
 [conda]
 enable_conda = False
+env_dir = None
 
 # bcl2fastq settings
 [bcl2fastq]

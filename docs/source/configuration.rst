@@ -406,6 +406,14 @@ To do this by default, set the ``enable_conda`` parameter in the
 Note that this requires ``conda`` to be installed and available on the
 user's ``PATH`` at run-time.
 
+By default a temporary directory will be used when creating and reusing
+``conda`` environments, but this can be overriden by setting the
+``env_dir`` parameter, e.g.::
+
+    [conda]
+    enable_conda = true
+    env_dir = $HOME/conda_envs
+
 .. _required_bcl2fastq_versions:
 
 ---------------------------

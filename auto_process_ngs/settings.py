@@ -152,6 +152,9 @@ class Settings(object):
         self.conda['enable_conda'] = config.getboolean('conda',
                                                        'enable_conda',
                                                        False)
+        self.conda['env_dir'] = config.get('conda','env_dir',None)
+        if self.conda['env_dir']:
+            self.conda['env_dir'] = os.path.expandvars(self.conda.env_dir)
         # bcl2fastq
         self.add_section('bcl2fastq')
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)

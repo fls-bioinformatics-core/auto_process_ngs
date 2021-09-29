@@ -964,6 +964,53 @@ prepend-path PATH %s
         # Check the outputs
         self.assertEqual(exit_status,0)
 
+    def test_pipeline_with_conda_custom_env_dir(self):
+        """
+        Pipeline: use custom env directory with conda dependency resolution
+        """
+        # Set up mock conda
+        bin_dir = os.path.join(self.working_dir,"conda","bin")
+        env_dir = os.path.join(self.working_dir,"conda","envs")
+        for d in (bin_dir,env_dir):
+            os.makedirs(d)
+        conda_ = _Mock.conda(bin_dir)
+        # Custom env dir
+        custom_env_dir = os.path.join(self.working_dir,"__conda_envs")
+        # Check custom env dir doesn't exist
+        self.assertFalse(os.path.exists(custom_env_dir))
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.conda("fastqc=0.11.3")
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        ppl.add_envmodules("fastqc")
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task,
+                     envmodules=ppl.envmodules["fastqc"])
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              enable_conda=True,
+                              conda=conda_,
+                              conda_env_dir=custom_env_dir,
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        # Check custom env dir exists
+        self.assertTrue(os.path.isdir(custom_env_dir))
+
     def test_pipeline_with_conda_fail_to_create_environment(self):
         """
         Pipeline: handle failure with conda dependency resolution

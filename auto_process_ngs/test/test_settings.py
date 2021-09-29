@@ -53,6 +53,7 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.report_qc,None)
         # Conda
         self.assertEqual(s.conda.enable_conda,False)
+        self.assertEqual(s.conda.env_dir,None)
         # Bcl2fastq
         self.assertEqual(s.bcl2fastq.nprocessors,1)
         self.assertEqual(s.bcl2fastq.default_version,'>=1.8.4')
@@ -105,6 +106,7 @@ nprocessors = 8
         self.assertEqual(s.modulefiles.run_qc,None)
         # Conda
         self.assertEqual(s.conda.enable_conda,False)
+        self.assertEqual(s.conda.env_dir,None)
         # Fastq_stats
         self.assertEqual(s.fastq_stats.nprocessors,8)
 
@@ -133,6 +135,40 @@ SN7001251 = hiseq
         self.assertTrue('SN7001251' in s.sequencers)
         self.assertEqual(s.sequencers['SN7001251']['platform'],'hiseq')
         self.assertEqual(s.sequencers.SN7001251.platform,'hiseq')
+
+    def test_conda_settings(self):
+        """Settings: check conda options are set correctly
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[conda]
+enable_conda = true
+env_dir = /scratch/conda_envs
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check conda settings
+        self.assertTrue(s.conda.enable_conda)
+        self.assertEqual(s.conda.env_dir,"/scratch/conda_envs")
+
+    def test_conda_env_dir(self):
+        """Settings: check conda env dir expands env variable
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[conda]
+enable_conda = true
+env_dir = /scratch/$USER/conda_envs
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check conda settings
+        self.assertTrue(s.conda.enable_conda)
+        self.assertEqual(s.conda.env_dir,os.path.join("/scratch",
+                                                      os.environ['USER'],
+                                                      "conda_envs"))
 
     def test_destination_definitions(self):
         """Settings: handle 'destination:...' sections
