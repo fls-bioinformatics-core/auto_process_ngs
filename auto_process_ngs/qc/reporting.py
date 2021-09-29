@@ -892,7 +892,7 @@ class QCReport(Document):
     - reads: number of reads
     - read_lengths: length of reads
     - read_lengths_distribution: mini-plots of read length distributions
-    - read_composition: mini-plot of fractions of masked/padded/total reads
+    - read_counts: mini-plot of fractions of masked/padded/total reads
     - fastqc_[read]: FastQC mini-plot for [read] (r1,r2,...)
     - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
     - adapters_[read]: mini-plot adapter content summary for [read]
@@ -916,7 +916,7 @@ class QCReport(Document):
         'reads': '#reads',
         'read_lengths': 'Lengths',
         'read_lengths_distribution': 'Dist',
-        'read_composition': 'Composition',
+        'read_counts': 'Counts',
         'fastqc_r1': 'FastQC[R1]',
         'boxplot_r1': 'Boxplot[R1]',
         'adapters_r1': 'Adapters[R1]',
@@ -1120,18 +1120,18 @@ class QCReport(Document):
                     summary_fields_ = ['sample',
                                        'fastqs',
                                        'reads',
-                                       'read_composition',
+                                       'read_counts',
                                        'read_lengths',
                                        'read_lengths_distribution',]
                 else:
                     summary_fields_ = ['sample',
                                        'fastq',
                                        'reads',
-                                       'read_composition',
+                                       'read_counts',
                                        'read_lengths',
                                        'read_lengths_distribution',]
                 if 'sequence_lengths' not in project.outputs:
-                    summary_fields_.remove('read_composition')
+                    summary_fields_.remove('read_counts')
                     summary_fields_.remove('read_lengths_distribution')
                 if 'strandedness' in project.outputs:
                     summary_fields_.append('strandedness')
@@ -2628,7 +2628,7 @@ class QCReportFastqGroup(object):
         - reads
         - read_lengths
         - read_lengths_distribution
-        - read_composition
+        - read_counts
         - boxplot_r1
         - boxplot_r2
         - boxplot_r3
@@ -2663,25 +2663,29 @@ class QCReportFastqGroup(object):
                 value = pretty_print_reads(
                     self.reporters[self.reads[0]].fastqc.data.basic_statistics(
                     'Total Sequences'))
-        elif field == "read_composition":
+        elif field == "read_counts":
             value = []
+            title = []
             for read in self.reads:
                 value.append(
                     Img(self.reporters[read].ureadcountplot(
-                        max_reads=self.project.stats.max_seqs),
-                        title="%s: %s reads\n"
-                        "* %s masked (%.1f%%)\n"
-                        "* %s padded (%.1f%%)"
-                        % (read.upper(),
-                           pretty_print_reads(
-                               self.reporters[read].sequence_lengths.nreads),
-                           pretty_print_reads(
-                               self.reporters[read].sequence_lengths.nmasked),
-                           self.reporters[read].sequence_lengths.frac_masked,
-                           pretty_print_reads(
-                               self.reporters[read].sequence_lengths.npadded),
-                           self.reporters[read].sequence_lengths.frac_padded)))
-            value = "<br />".join([str(x) for x in value])
+                        max_reads=self.project.stats.max_seqs)))
+                title.append(
+                    "%s: %s reads\n* %s masked (%.1f%%)\n* %s padded (%.1f%%)"
+                    % (read.upper(),
+                       pretty_print_reads(
+                           self.reporters[read].sequence_lengths.nreads),
+                       pretty_print_reads(
+                           self.reporters[read].sequence_lengths.nmasked),
+                       self.reporters[read].sequence_lengths.frac_masked,
+                       pretty_print_reads(
+                           self.reporters[read].sequence_lengths.npadded),
+                       self.reporters[read].sequence_lengths.frac_padded))
+            ##value = "<br />".join([str(x) for x in value])
+            value = "<div title=\"%s\">%s</div>" % ("\n\n".join(title),
+                                                    "<br />".join(
+                                                        [str(x)
+                                                         for x in value]))
         elif field == "read_lengths":
             value = []
             for read in self.reads:
