@@ -595,6 +595,8 @@ class Settings(object):
         for section in self._sections:
             if section == 'sequencers':
                 display_name = 'sequencer'
+            elif section == 'organisms':
+                display_name = 'organism'
             else:
                 display_name = section
             if self.has_subsections(section):
