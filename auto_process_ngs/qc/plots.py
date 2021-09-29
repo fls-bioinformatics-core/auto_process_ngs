@@ -577,9 +577,9 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
                      ext=".useqlen.png")
 
 def ureadcountplot(nreads,nmasked=None,npadded=None,max_reads=None,
-                   outfile=None,inline=False,width=50,height=10,
-                   bg_color="white",fg_color="blue",masked_color="red",
-                   padded_color="maroon",fill_color="lightgrey"):
+                   outfile=None,inline=False,width=50,height=6,
+                   bg_color="white",fg_color="green",masked_color="red",
+                   padded_color="orange",fill_color="lightgrey"):
     """
     Make a 'micro' plot summarising read counts and masking
 
