@@ -892,7 +892,8 @@ class QCReport(Document):
     - reads: number of reads
     - read_lengths: length of reads
     - read_lengths_distribution: mini-plots of read length distributions
-    - read_counts: mini-plot of fractions of masked/padded/total reads
+    - read_counts: mini-plots of fractions of masked/padded/total reads
+    - adapter_content: mini-plots summarising adapter content for all reads
     - fastqc_[read]: FastQC mini-plot for [read] (r1,r2,...)
     - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
     - adapters_[read]: mini-plot adapter content summary for [read]
@@ -917,6 +918,7 @@ class QCReport(Document):
         'read_lengths': 'Lengths',
         'read_lengths_distribution': 'Dist',
         'read_counts': 'Counts',
+        'adapter_content': 'Adapters',
         'fastqc_r1': 'FastQC[R1]',
         'boxplot_r1': 'Boxplot[R1]',
         'adapters_r1': 'Adapters[R1]',
@@ -1122,29 +1124,31 @@ class QCReport(Document):
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'read_lengths_distribution',]
+                                       'read_lengths_distribution',
+                                       'adapter_content']
                 else:
                     summary_fields_ = ['sample',
                                        'fastq',
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'read_lengths_distribution',]
-                if 'sequence_lengths' not in project.outputs:
-                    summary_fields_.remove('read_counts')
-                    summary_fields_.remove('read_lengths_distribution')
+                                       'read_lengths_distribution',
+                                       'adapter_content',]
                 if 'strandedness' in project.outputs:
                     summary_fields_.append('strandedness')
                 for read in project.reads:
                     if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('fastqc_%s' % read)
                         summary_fields_.append('boxplot_%s' % read)
-                        summary_fields_.append('adapters_%s' % read)
+                        ##summary_fields_.append('adapters_%s' % read)
                     if ('screens_%s' % read) in project.outputs:
                         summary_fields_.append('screens_%s' % read)
                 if 'cellranger_count' in project.outputs and \
                    not self.use_single_library_table:
                     summary_fields_.append('cellranger_count')
+                if 'sequence_lengths' not in project.outputs:
+                    summary_fields_.remove('read_counts')
+                    summary_fields_.remove('read_lengths_distribution')
             # Attributes to report for each sample
             if report_attrs is None:
                 report_attrs_ = ['fastqc',
@@ -2629,6 +2633,7 @@ class QCReportFastqGroup(object):
         - read_lengths
         - read_lengths_distribution
         - read_counts
+        - adapter_content
         - boxplot_r1
         - boxplot_r2
         - boxplot_r3
@@ -2681,7 +2686,6 @@ class QCReportFastqGroup(object):
                        pretty_print_reads(
                            self.reporters[read].sequence_lengths.npadded),
                        self.reporters[read].sequence_lengths.frac_padded))
-            ##value = "<br />".join([str(x) for x in value])
             value = "<div title=\"%s\">%s</div>" % ("\n\n".join(title),
                                                     "<br />".join(
                                                         [str(x)
@@ -2712,8 +2716,24 @@ class QCReportFastqGroup(object):
                         href=self.reporters[read].fastqc.summary.link_to_module(
                             'Sequence Length Distribution',
                             relpath=relpath),
-                        title="%s: click for FastQC sequence length plot" %
-                        read.upper()))
+                        title="%s: sequence length distribution (click for "
+                        "FastQC plot)" % read.upper()))
+            value = "<br />".join([str(x) for x in value])
+        elif field == "adapter_content":
+            value = []
+            for read in self.reads:
+                value.append(
+                    Img(self.reporters[read].uadapterplot(height=20),
+                        href=self.reporters[read].fastqc.summary.link_to_module(
+                            'Adapter Content',
+                            relpath=relpath),
+                        title="%s fraction adapter content:\n%s" %
+                        (read.upper(),
+                         '\n'.join(
+                             ["* %s: %.2f" %
+                              (adapter,
+                               self.reporters[read].adapters_summary[adapter])
+                              for adapter in self.reporters[read].adapters]))))
             value = "<br />".join([str(x) for x in value])
         elif field.startswith("adapters_"):
             read = field.split('_')[-1]
@@ -2730,7 +2750,9 @@ class QCReportFastqGroup(object):
             read = field.split('_')[-1]
             value = Img(self.reporters[read].uboxplot(),
                         href="#boxplot_%s" %
-                        self.reporters[read].safe_name)
+                        self.reporters[read].safe_name,
+                        title="%s: sequence quality distribution (click for "
+                        "FastQC plot)" % read.upper())
         elif field.startswith("fastqc_"):
             read = field.split('_')[-1]
             value = Img(self.reporters[read].ufastqcplot(),
@@ -3033,7 +3055,7 @@ class QCReportFastq(object):
         """
         return uboxplot(self.fastqc.data.path,inline=inline)
 
-    def uadapterplot(self,inline=True):
+    def uadapterplot(self,height=25,inline=True):
         """
         Return a mini-adapter content summary plot
 
@@ -3042,7 +3064,7 @@ class QCReportFastq(object):
             inlining in HTML document
         """
         return uadapterplot(self.adapters_summary,self.adapters,
-                            inline=inline)
+                            height=height,inline=inline)
 
     def ufastqcplot(self,inline=True):
         """
