@@ -865,9 +865,14 @@ class GetSeqLengthStats(PipelineFunctionTask):
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
         """
-        pass
+        self._fastqs = list()
     def setup(self):
-        for fastq in self.args.project.fastqs:
+        # Remove index Fastqs
+        self._fastqs = remove_index_fastqs(
+            self.args.project.fastqs,
+            fastq_attrs=self.args.fastq_attrs)
+        # Get sequence length data for Fastqs
+        for fastq in self._fastqs:
             outfile = os.path.join(self.args.qc_dir,
                                    "%s_seqlens.json" %
                                    self.args.fastq_attrs(fastq))
