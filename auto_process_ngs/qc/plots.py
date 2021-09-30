@@ -25,6 +25,7 @@ RGB_COLORS = {
     'cornflowerblue': (100,149,237),
     'cyan': (0,255,255),
     'darkyellow1': (204,204,0),
+    'gainsboro': (220,220,220), # Very light grey!
     'green': (0,128,0),
     'grey': (145,145,145),
     'lightgrey': (211,211,211),
@@ -500,8 +501,8 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
 
 def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
                 outfile=None,inline=False,height=20,
-                bg_color="lightgrey",seq_color="black",
-                masked_color="red"):
+                bg_color="gainsboro",bbox_color="white",
+                seq_color="black",masked_color="red"):
     """
     Make a 'micro' plot of sequence length
 
@@ -535,6 +536,8 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
       height (int): height of the plot in pixels
       bg_color (str): name of colour to use for the
         background
+      bbox_color (str): name of colour to use for the
+        bounding box
       seq_color (str): name of colour to use for the
         sequence distribution
       masked_color (str): name of color to use for masked
@@ -549,10 +552,17 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
         max_len = max(dist)
     if min_len is None:
         min_len = min(dist)
-    length = max_len - min_len + 1
+    width = max_len - min_len + 3
     # Create the image
-    img = Image.new('RGB',(length,height),RGB_COLORS[bg_color])
+    img = Image.new('RGB',(width,height),RGB_COLORS[bg_color])
     pixels = img.load()
+    # Add bounding box
+    for i in range(0,width):
+        pixels[i,0] = RGB_COLORS[bbox_color]
+        pixels[i,height-1] = RGB_COLORS[bbox_color]
+    for j in range(0,height):
+        pixels[0,j] = RGB_COLORS[bbox_color]
+        pixels[width-1,j] = RGB_COLORS[bbox_color]
     # Create the plot
     for seq_len in seq_lens:
         # Plot the sequencing lengths
@@ -560,14 +570,14 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
         if dist[seq_len]:
             ndata = max(1,int(float(dist[seq_len])/max_reads*(height-2)))
             for j in range(1,ndata+1):
-                pixels[i,height-j-1] = RGB_COLORS[seq_color]
+                pixels[i+1,height-j-1] = RGB_COLORS[seq_color]
         # Overlay the masked read data
         if masked_dist:
             try:
                 ndata = max(1,int(float(masked_dist[seq_len])/
                                   max_reads*(height-2)))
                 for j in range(1,ndata+1):
-                    pixels[i,height-j-1] = RGB_COLORS[masked_color]
+                    pixels[i+1,height-j-1] = RGB_COLORS[masked_color]
             except KeyError:
                 pass
     # Output the plot
