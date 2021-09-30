@@ -3028,7 +3028,6 @@ class QCReportFastq(object):
                            self.sequence_lengths.masked_dist,
                            min_len=min_len,
                            max_len=max_len,
-                           bg_color="white",seq_color="grey",
                            inline=inline)
 
     def ureadcountplot(self,max_reads=None,inline=True):
