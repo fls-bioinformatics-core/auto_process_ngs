@@ -3044,10 +3044,10 @@ class QCReportFastq(object):
                           (self.fastqc.summary.status(m),m))
         return "\n".join(output)
 
-    def useqlenplot(self,max_len=None,min_len=None,inline=True):
+    def useqlenplot(self,max_len=None,min_len=None,height=None,
+                    inline=True):
         """
         Return a mini-sequence length distribution plot
-
         Arguments:
           max_len (int): set the upper limit of the x-axis
           min_len (int): set the lower limit of the x-axis
@@ -3073,6 +3073,7 @@ class QCReportFastq(object):
                               self.sequence_lengths.nmasked,
                               self.sequence_lengths.npadded,
                               max_reads=max_reads,
+                              height=12,
                               inline=inline)
 
     def uboxplot(self,inline=True):
