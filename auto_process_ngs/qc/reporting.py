@@ -2753,7 +2753,8 @@ class QCReportFastqGroup(object):
             value = []
             for read in self.reads:
                 value.append(
-                    Img(self.reporters[read].uadapterplot(height=20),
+                    Img(self.reporters[read].uadapterplot(height=40,
+                                                          multi_bar=False),
                         href=self.reporters[read].fastqc.summary.link_to_module(
                             'Adapter Content',
                             relpath=relpath),
@@ -2764,7 +2765,7 @@ class QCReportFastqGroup(object):
                               (adapter,
                                self.reporters[read].adapters_summary[adapter])
                               for adapter in self.reporters[read].adapters]))))
-            value = "<br />".join([str(x) for x in value])
+            value = ''.join([str(x) for x in value])
         elif field.startswith("adapters_"):
             read = field.split('_')[-1]
             value = Img(self.reporters[read].uadapterplot(),
@@ -3086,7 +3087,7 @@ class QCReportFastq(object):
         """
         return uboxplot(self.fastqc.data.path,inline=inline)
 
-    def uadapterplot(self,height=25,inline=True):
+    def uadapterplot(self,height=25,multi_bar=True,inline=True):
         """
         Return a mini-adapter content summary plot
 
@@ -3095,7 +3096,8 @@ class QCReportFastq(object):
             inlining in HTML document
         """
         return uadapterplot(self.adapters_summary,self.adapters,
-                            height=height,inline=inline)
+                            bar_width=10,height=height,
+                            multi_bar=multi_bar,inline=inline)
 
     def ufastqcplot(self,inline=True):
         """
