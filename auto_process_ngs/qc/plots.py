@@ -500,7 +500,7 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
         return outfile
 
 def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
-                outfile=None,inline=False,height=20,
+                outfile=None,inline=False,height=None,
                 bg_color="gainsboro",bbox_color="white",
                 seq_color="black",masked_color="red"):
     """
@@ -543,6 +543,9 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
       masked_color (str): name of color to use for masked
         sequence distribution
     """
+    # Set height of plot
+    if height is None:
+        height = 20
     # Get ordered list of sequence lengths
     seq_lens = sorted(dist.keys())
     # Get max number of reads for a single length
