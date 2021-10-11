@@ -676,13 +676,18 @@ def ureadcountplot(nreads,nmasked=None,npadded=None,max_reads=None,
                      ext=".ureadcount.png")
 
 def uadapterplot(adapter_content,adapter_names=None,outfile=None,
-                 inline=False,height=25,bar_width=6,spacing=2):
+                 inline=False,height=25,bar_width=6,spacing=2,
+                 multi_bar=True):
     """
     Make a 'micro' plot summarising adapter content
 
-    The plot consists of vertical bars (one per adapter)
-    which indicate the relative presence of that adapter
-    class in the sequence data.
+    The plot consists of vertical bar(s) which indicate the
+    relative presence of each adapter  class in the sequence
+    data.
+
+    In 'multi-bar' mode the plot has one bar for each
+    adapter class; in 'single-bar' mode the plot combines
+    all data into a single bar.
 
     The adapter content should be supplied as a dictionary
     where the keys are adapter names and the corresponding
@@ -696,46 +701,73 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
         which the adapters appear in the plot
         (otherwise taken from the keys in the mapping)
       outfile (str): path for the output PNG
-      inline (boolean): if True then returns the PNG
+      inline (bool): if True then returns the PNG
         as base64 encoded string rather than as a file
       height (int): height of the plot in pixels
       bar_width (int): width of each bar representing
         content for an adapter class, in pixels
       spacing (int): spacing between each bar, in pixels
+      multi_bar (bool): if True then make a multi-bar
+        plot (one bar per adapter class); otherwise
+        make a single bar plot (all adapter data in a
+        single bar)
     """
-    # Width of plot required for each adapter
+    # Width of plot required for each bar
     width = bar_width + spacing*2
     # Colours for each adapter
     fg_colors = ('red','blue','green','black')
     # Get adapter names
     if not adapter_names:
         adapter_names = sorted(adapter_content.keys())
-    # Number of adapters and total width of plot
-    nadapters = len(adapter_names)
-    width *= nadapters
+    # Number of bars and total width of plot
+    if multi_bar:
+        nbars = len(adapter_names)
+    else:
+        nbars = 1
+    width *= nbars
     # Create the image
     img = Image.new('RGB',(width,height),RGB_COLORS['white'])
     pixels = img.load()
     # Add a baseline on the plot
     for j in range(spacing,width-spacing):
         pixels[j,height-2] = RGB_COLORS['lightgrey']
-    # Plot a bar for each adapter
-    for ii,adapter in enumerate(adapter_names):
-        # Set colour based on adapter content
-        fg_color = fg_colors[ii%4]
-        # Length of bar represents adapter content
-        bar_length = int(adapter_content[adapter]*(height-4))
-        # Draw the coloured part of the bar
-        for i in range(2,bar_length+2):
-            start = int(ii*float(width)/nadapters) + spacing
-            end = start + bar_width
-            for j in range(start,end):
-                pixels[j,height-i] = RGB_COLORS[fg_color]
+    # Generate the plot
+    if multi_bar:
+        # Plot a bar for each adapter
+        for ii,adapter in enumerate(adapter_names):
+            # Set colour based on adapter content
+            fg_color = fg_colors[ii%4]
+            # Length of bar represents adapter content
+            bar_length = int(adapter_content[adapter]*(height-4))
+            # Draw the coloured part of the bar
+            for i in range(2,bar_length+2):
+                start = int(ii*float(width)/nadapters) + spacing
+                end = start + bar_width
+                for j in range(start,end):
+                    pixels[j,height-i] = RGB_COLORS[fg_color]
+            # Pad the remainder of the bar
+            for i in range(bar_length+2,height-2):
+                start = int(ii*float(width)/nadapters) + spacing
+                end = start + bar_width
+                for j in range(start,end):
+                    pixels[j,height-i] = RGB_COLORS['lightgrey']
+    else:
+        # Single bar with all data
+        start = 1
+        for ii,adapter in enumerate(adapter_names):
+            # Set colour based on adapter content
+            fg_color = fg_colors[ii%4]
+            # Length of bar represents adapter content
+            bar_length = int(adapter_content[adapter]*(height-2))
+            # Draw the coloured part of the bar
+            end = start + bar_length
+            for i in range(start,end):
+                for j in range(1,width-2):
+                    pixels[j,height-i] = RGB_COLORS[fg_color]
+            start = end
         # Pad the remainder of the bar
-        for i in range(bar_length+2,height-2):
-            start = int(ii*float(width)/nadapters) + spacing
-            end = start + bar_width
-            for j in range(start,end):
+        for i in range(start,height-2):
+            for j in range(1,width-2):
                 pixels[j,height-i] = RGB_COLORS['lightgrey']
     # Output the plot
     return make_plot(img,
