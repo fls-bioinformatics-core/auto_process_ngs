@@ -891,10 +891,11 @@ class QCReport(Document):
     - fastqs: Fastq R1/R2 names
     - reads: number of reads
     - read_lengths: length of reads
-    - read_lengths_distribution: mini-plots of read length distributions
+    - read_lengths_distributions: mini-plots of read length distributions
     - read_counts: mini-plots of fractions of masked/padded/total reads
     - adapter_content: mini-plots summarising adapter content for all reads
-    - fastqc_[read]: FastQC mini-plot for [read] (r1,r2,...)
+    - read_length_dist_[read]: length dist mini-plot for [read] (r1,r2,...)
+    - fastqc_[read]: FastQC mini-plot for [read]
     - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
     - adapters_[read]: mini-plot adapter content summary for [read]
     - screens_[read]: FastQScreen mini-plots for [read]
@@ -916,18 +917,21 @@ class QCReport(Document):
         'fastqs': 'Fastqs',
         'reads': '#reads',
         'read_lengths': 'Lengths',
-        'read_lengths_distribution': 'Dist',
+        'read_lengths_distributions': 'Dists',
         'read_counts': 'Counts',
         'adapter_content': 'Adapters',
+        'read_lengths_dist_r1': 'Dist[R1]',
         'fastqc_r1': 'FastQC[R1]',
         'boxplot_r1': 'Boxplot[R1]',
         'adapters_r1': 'Adapters[R1]',
         'screens_r1': 'Screens[R1]',
+        'read_lengths_dist_r2': 'Dist[R2]',
         'fastqc_r2': 'FastQC[R2]',
         'boxplot_r2': 'Boxplot[R2]',
         'screens_r2': 'Screens[R2]',
         'adapters_r2': 'Adapters[R2]',
         'fastqc_r3': 'FastQC[R3]',
+        'read_lengths_dist_r3': 'Dist[R3]',
         'boxplot_r3': 'Boxplot[R3]',
         'screens_r3': 'Screens[R3]',
         'adapters_r3': 'Adapters[R3]',
@@ -1124,7 +1128,7 @@ class QCReport(Document):
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'read_lengths_distribution',
+                                       'strandedness',
                                        'adapter_content']
                 else:
                     summary_fields_ = ['sample',
@@ -1132,11 +1136,16 @@ class QCReport(Document):
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'read_lengths_distribution',
+                                       'strandedness',
                                        'adapter_content',]
-                if 'strandedness' in project.outputs:
-                    summary_fields_.append('strandedness')
+                if 'strandedness' not in project.outputs:
+                    summary_fields_.remove('strandedness')
                 for read in project.reads:
+                    if 'sequence_lengths' in project.outputs:
+                        summary_fields_.append('read_lengths_dist_%s' % read)
+                    else:
+                        summary_fields_.remove('read_counts')
+                        summary_fields_.remove('read_lengths_distributions')
                     if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('fastqc_%s' % read)
                         summary_fields_.append('boxplot_%s' % read)
@@ -1146,9 +1155,6 @@ class QCReport(Document):
                 if 'cellranger_count' in project.outputs and \
                    not self.use_single_library_table:
                     summary_fields_.append('cellranger_count')
-                if 'sequence_lengths' not in project.outputs:
-                    summary_fields_.remove('read_counts')
-                    summary_fields_.remove('read_lengths_distribution')
             # Attributes to report for each sample
             if report_attrs is None:
                 report_attrs_ = ['fastqc',
@@ -2559,6 +2565,8 @@ class QCReportFastqGroup(object):
                 fields = ('fastqs',
                           'reads',
                           'read_lengths',
+                          'read_lengths_dist_r1',
+                          'read_lengths_dist_r2',
                           'boxplot_r1','boxplot_r2',
                           'fastqc_r1','fastqc_r2',
                           'screens_r1','screens_r2')
@@ -2566,6 +2574,7 @@ class QCReportFastqGroup(object):
                 fields = ('fastq',
                           'reads',
                           'read_lengths',
+                          'read_lengths_dist_r1',
                           'boxplot_r1',
                           'fastqc_r1',
                           'screens_r1')
@@ -2631,9 +2640,12 @@ class QCReportFastqGroup(object):
         - fastq (if single-end)
         - reads
         - read_lengths
-        - read_lengths_distribution
+        - read_lengths_distributions
         - read_counts
         - adapter_content
+        - read_lengths_dist_r1
+        - read_lengths_dist_r2
+        - read_lengths_dist_r3
         - boxplot_r1
         - boxplot_r2
         - boxplot_r3
@@ -2706,7 +2718,7 @@ class QCReportFastqGroup(object):
                             'Sequence Length Distribution',
                             relpath=relpath)))
             value = "<br />".join([str(x) for x in value])
-        elif field == "read_lengths_distribution":
+        elif field == "read_lengths_distributions":
             value = []
             for read in self.reads:
                 value.append(
@@ -2719,6 +2731,24 @@ class QCReportFastqGroup(object):
                         title="%s: sequence length distribution (click for "
                         "FastQC plot)" % read.upper()))
             value = "<br />".join([str(x) for x in value])
+        elif field.startswith("read_lengths_dist_"):
+            read = field.split('_')[-1]
+            min_seq_len = self.project.stats.min_sequence_length
+            max_seq_len = self.project.stats.max_sequence_length
+            if min_seq_len == max_seq_len:
+                length_range = ""
+            else:
+                length_range = " (%s-%s)" % (min_seq_len,max_seq_len)
+            value = Img(
+                self.reporters[read].useqlenplot(
+                    min_len=min_seq_len,
+                    max_len=max_seq_len,
+                    height=50),
+                href=self.reporters[read].fastqc.summary.link_to_module(
+                    'Sequence Length Distribution',
+                    relpath=relpath),
+                title="%s: sequence length distribution%s\n(click for "
+                "FastQC plot)" % (read.upper(),length_range))
         elif field == "adapter_content":
             value = []
             for read in self.reads:
@@ -3028,6 +3058,7 @@ class QCReportFastq(object):
                            self.sequence_lengths.masked_dist,
                            min_len=min_len,
                            max_len=max_len,
+                           height=height,
                            inline=inline)
 
     def ureadcountplot(self,max_reads=None,inline=True):
