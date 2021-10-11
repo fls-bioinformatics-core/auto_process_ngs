@@ -2697,7 +2697,7 @@ class QCReportFastqGroup(object):
                     value.append(
                         "%.1f&nbsp;(%s)" %
                         (self.reporters[read].sequence_lengths.mean,
-                         self.reporters[read].sequence_lengths.range))
+                         self.reporters[read].sequence_lengths.range.replace('-','&#8209;')))
                 else:
                     value.append(Link(
                         self.reporters[read].fastqc.data.basic_statistics(
