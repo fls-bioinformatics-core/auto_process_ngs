@@ -741,13 +741,13 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
             bar_length = int(adapter_content[adapter]*(height-4))
             # Draw the coloured part of the bar
             for i in range(2,bar_length+2):
-                start = int(ii*float(width)/nadapters) + spacing
+                start = int(ii*float(width)/nbars) + spacing
                 end = start + bar_width
                 for j in range(start,end):
                     pixels[j,height-i] = RGB_COLORS[fg_color]
             # Pad the remainder of the bar
             for i in range(bar_length+2,height-2):
-                start = int(ii*float(width)/nadapters) + spacing
+                start = int(ii*float(width)/nbars) + spacing
                 end = start + bar_width
                 for j in range(start,end):
                     pixels[j,height-i] = RGB_COLORS['lightgrey']
