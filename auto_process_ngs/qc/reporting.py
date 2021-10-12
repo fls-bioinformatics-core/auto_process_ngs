@@ -1166,17 +1166,21 @@ class QCReport(Document):
                         summary_fields_.remove('strandedness')
                     except ValueError:
                         pass
-                if 'sequence_lengths' not in project.outputs:
+                if 'sequence_lengths' in project.outputs:
+                    for read in project.reads:
+                        summary_fields_.append('read_lengths_dist_%s' % read)
+                else:
                     try:
                         summary_fields_.remove('read_counts')
                     except ValueError:
                         pass
                 for read in project.reads:
-                    if 'sequence_lengths' in project.outputs:
-                        summary_fields_.append('read_lengths_dist_%s' % read)
                     if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('fastqc_%s' % read)
+                for read in project.reads:
+                    if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('boxplot_%s' % read)
+                for read in project.reads:
                     if ('screens_%s' % read) in project.outputs:
                         summary_fields_.append('screens_%s' % read)
                 if 'cellranger_count' in project.outputs and \
