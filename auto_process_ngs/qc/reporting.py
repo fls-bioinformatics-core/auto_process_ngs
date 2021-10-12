@@ -327,6 +327,12 @@ class QCProject(object):
       all Fastq files
     - max_sequence_length: maximum sequence length across
       all Fastq files
+    - max_sequence_length_read[READ]: maximum sequence
+      length across all READ Fastqs (where READ is 'r1',
+      'r2' etc)
+    - min_sequence_length_read[READ]: minimum sequence
+      length across all READ Fastqs (where READ is 'r1',
+      'r2' etc)
 
     The following are valid values for the 'outputs'
     property:
@@ -376,7 +382,9 @@ class QCProject(object):
         self.stats = AttributeDictionary(
             max_seqs=None,
             min_sequence_length=None,
-            max_sequence_length=None
+            max_sequence_length=None,
+            min_sequence_length_read={},
+            max_sequence_length_read={},
         )
         # Detect outputs
         self._detect_outputs()
@@ -525,8 +533,8 @@ class QCProject(object):
         multiplexed_samples = set()
         software = {}
         max_seqs = None
-        min_seq_length = None
-        max_seq_length = None
+        min_seq_length = {}
+        max_seq_length = {}
         print("Scanning contents of %s" % self.qc_dir)
         files = [os.path.join(self.qc_dir,f)
                  for f in os.listdir(self.qc_dir)]
@@ -624,6 +632,8 @@ class QCProject(object):
             outputs.add("sequence_lengths")
             for f in seq_lens:
                 fq = self.fastq_attrs(os.path.splitext(f)[0])
+                read = '%s%s' % ('i' if fq.is_index_read else 'r',
+                                 fq.read_number)
                 fastq_names.add(
                     os.path.basename(
                         os.path.splitext(f)[0])[:-len("_seqlens")])
@@ -634,16 +644,16 @@ class QCProject(object):
                 except Exception:
                     if not max_seqs:
                         max_seqs = seqlens_data.nreads
-                if not min_seq_length:
-                    min_seq_length = seqlens_data.min_length
+                if not read in min_seq_length:
+                    min_seq_length[read] = seqlens_data.min_length
                 else:
-                    min_seq_length = min(min_seq_length,
-                                         seqlens_data.min_length)
-                if not max_seq_length:
-                    max_seq_length = seqlens_data.max_length
+                    min_seq_length[read] = min(min_seq_length[read],
+                                               seqlens_data.min_length)
+                if not read in max_seq_length:
+                    max_seq_length[read] = seqlens_data.max_length
                 else:
-                    max_seq_length = max(max_seq_length,
-                                         seqlens_data.max_length)
+                    max_seq_length[read] = max(max_seq_length[read],
+                                               seqlens_data.max_length)
         # Look for ICELL8 outputs
         icell8_top_dir = os.path.dirname(self.qc_dir)
         print("Checking for ICELL8 reports in %s/stats" %
@@ -818,8 +828,13 @@ class QCProject(object):
         self.output_files = sorted(output_files)
         # Maximum number of sequences etc
         self.stats['max_seqs'] = max_seqs
-        self.stats['min_sequence_length'] = min_seq_length
-        self.stats['max_sequence_length'] = max_seq_length
+        for read in self.reads:
+            self.stats['min_sequence_length_read'][read] = min_seq_length[read]
+            self.stats['max_sequence_length_read'][read] = max_seq_length[read]
+        self.stats['min_sequence_length'] = min(
+            [min_seq_length[r] for r in self.reads])
+        self.stats['max_sequence_length'] = max(
+            [max_seq_length[r] for r in self.reads])
 
 class FastqSet(object):
     """
@@ -1111,9 +1126,17 @@ class QCReport(Document):
             if project.stats.min_sequence_length:
                 print("Minimum sequence length    : %d" %
                       project.stats.min_sequence_length)
+            for read in project.reads:
+                if read in project.stats.min_sequence_length_read:
+                    print("\t- %s: %s" %
+                          (read,project.stats.min_sequence_length_read[read]))
             if project.stats.max_sequence_length:
                 print("Maximum sequence length    : %d" %
                       project.stats.max_sequence_length)
+            for read in project.reads:
+                if read in project.stats.max_sequence_length_read:
+                    print("\t- %s: %s" %
+                          (read,project.stats.max_sequence_length_read[read]))
             if project.software:
                 print("Software versions:")
                 for package in project.software:
