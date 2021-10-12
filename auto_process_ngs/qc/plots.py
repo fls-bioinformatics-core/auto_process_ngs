@@ -164,9 +164,9 @@ def uboxplot(fastqc_data=None,fastq=None,
     quality boxplots for a FASTQ file.
 
     Arguments:
-       fastqc_data (str): path to a ``fastqc_data.txt``
+      fastqc_data (str): path to a ``fastqc_data.txt``
         file
-       outfile (str): path to output file
+      outfile (str): path to output file
       inline (boolean): if True then returns the PNG
         as base64 encoded string rather than as a file
 
