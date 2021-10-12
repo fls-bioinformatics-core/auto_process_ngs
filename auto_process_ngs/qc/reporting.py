@@ -3149,7 +3149,7 @@ class QCReportFastq(object):
         screen_files = list()
         for name in self.fastq_screen.names:
             screen_files.append(self.fastq_screen[name].txt)
-        return uscreenplot(screen_files,inline=inline)
+        return uscreenplot(screen_files,screen_width=30,inline=inline)
 
 #######################################################################
 # Functions
