@@ -51,7 +51,8 @@ def encode_png(png_file):
     return "data:image/png;base64,%s" % \
         PNGBase64Encoder().encodePNG(png_file)
     
-def uscreenplot(screen_files,outfile=None,inline=None):
+def uscreenplot(screen_files,outfile=None,screen_width=None,
+                inline=None):
     """
     Generate 'micro-plot' of FastqScreen outputs
 
@@ -59,7 +60,10 @@ def uscreenplot(screen_files,outfile=None,inline=None):
       screen_files (list): list of paths to one or more
         ...screen.txt files from FastqScreen
       outfile (str): path to output file
-
+      screen_width (int): optional, set the width for
+        each screen plot
+      inline (boolean): if True then returns the PNG
+        as base64 encoded string rather than as a file
     """
     # Mappings
     mappings = ('%One_hit_one_library',
@@ -71,6 +75,9 @@ def uscreenplot(screen_files,outfile=None,inline=None):
               RGB_COLORS['navyblue'],
               RGB_COLORS['red'],
               RGB_COLORS['maroon'])
+    # Width for each screen plot
+    if screen_width is None:
+        screen_width = 50
     # Read in the screen data
     screens = []
     for screen_file in screen_files:
@@ -79,18 +86,18 @@ def uscreenplot(screen_files,outfile=None,inline=None):
     # Make a small stacked bar chart
     bbox_color = (145,145,145)
     barwidth = 4
-    width = nscreens*50
+    width = nscreens*screen_width
     n_libraries_max = max([len(s) for s in screens])
     height = (n_libraries_max + 1)*(barwidth + 1)
     img = Image.new('RGB',(width,height),"white")
     pixels = img.load()
     # Process each screen in turn
     for nscreen,screen in enumerate(screens):
-        xorigin = nscreen*50
-        xend = xorigin+50-1
+        xorigin = nscreen*screen_width
+        xend = xorigin+screen_width-1
         yend = height-1
         # Draw a box around the plot
-        for i in range(xorigin,xorigin+50):
+        for i in range(xorigin,xorigin+screen_width):
             pixels[i,0] = bbox_color
             pixels[i,yend] = bbox_color
         for j in range(height):
@@ -109,7 +116,7 @@ def uscreenplot(screen_files,outfile=None,inline=None):
                 for mapping,rgb in zip(mappings,colors):
                     # Round up to nearest pixel (so that non-zero
                     # percentages are always represented)
-                    npx = int(ceil(data[mapping]/2.0))
+                    npx = int(ceil(data[mapping]/100.0*screen_width))
                     # Don't exceed plot limit
                     if x+npx > width:
                         npx = width-x
@@ -129,7 +136,7 @@ def uscreenplot(screen_files,outfile=None,inline=None):
         # Add 'no hits'
         x = xorigin
         y = n_libraries_max*(barwidth+1) + 1
-        npx = int(screen.no_hits/2.0)
+        npx = int(screen.no_hits/100.0*screen_width)
         for i in range(x,x+npx):
             for j in range(y,y+barwidth):
                 pixels[i,j] = bbox_color
