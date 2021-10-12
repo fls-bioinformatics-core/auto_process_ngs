@@ -2760,8 +2760,10 @@ class QCReportFastqGroup(object):
             value = "<br />".join([str(x) for x in value])
         elif field.startswith("read_lengths_dist_"):
             read = field.split('_')[-1]
-            min_seq_len = self.project.stats.min_sequence_length
-            max_seq_len = self.project.stats.max_sequence_length
+            min_seq_len = self.project.stats.min_sequence_length_read[read]
+            max_seq_len = self.project.stats.max_sequence_length_read[read]
+            if (max_seq_len - min_seq_len) < 50:
+                min_seq_len = max(0,max_seq_len - 50)
             if min_seq_len == max_seq_len:
                 length_range = ""
             else:
