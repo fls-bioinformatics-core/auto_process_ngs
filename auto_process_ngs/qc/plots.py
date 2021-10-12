@@ -559,6 +559,10 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
     # Create the image
     img = Image.new('RGB',(width,height),RGB_COLORS[bg_color])
     pixels = img.load()
+    # Stripe the background
+    for i in range(0,width,2):
+        for j in range(0,height):
+            pixels[i,j] = RGB_COLORS['white']
     # Add bounding box
     for i in range(0,width):
         pixels[i,0] = RGB_COLORS[bbox_color]
