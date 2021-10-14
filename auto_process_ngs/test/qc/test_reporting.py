@@ -36,7 +36,8 @@ class TestQCReporter(unittest.TestCase):
         if self.wd is None:
             self.wd = tempfile.mkdtemp(suffix='.test_QCReporter')
     def _make_analysis_project(self,paired_end=True,fastq_dir=None,
-                               qc_dir="qc",fastq_names=None):
+                               qc_dir="qc",fastq_names=None,
+                               include_seqlens=True):
         # Create a mock Analysis Project directory
         self._make_working_dir()
         # Generate names for fastq files to add
@@ -66,6 +67,9 @@ class TestQCReporter(unittest.TestCase):
             MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms')
             MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
             MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
+            # Sequence lengths
+            if include_seqlens:
+                MockQCOutputs.seqlens(fq,qc_dir)
         return os.path.join(self.wd,self.analysis_dir.name)
     def test_qcreporter_single_end(self):
         """QCReporter: single-end data
@@ -77,10 +81,32 @@ class TestQCReporter(unittest.TestCase):
         reporter.report(filename=os.path.join(self.wd,'report.SE.html'))
         self.assertTrue(os.path.exists(
             os.path.join(self.wd,'report.SE.html')))
+    def test_qcreporter_single_end_no_seq_lens(self):
+        """QCReporter: single-end data (no sequence lengths)
+        """
+        analysis_dir = self._make_analysis_project(paired_end=False,
+                                                   include_seqlens=False)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.SE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.SE.html')))
     def test_qcreporter_paired_end(self):
         """QCReporter: paired-end data
         """
         analysis_dir = self._make_analysis_project(paired_end=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_no_seq_lens(self):
+        """QCReporter: paired-end data (no sequence lengths)
+        """
+        analysis_dir = self._make_analysis_project(paired_end=True,
+                                                   include_seqlens=False)
         project = AnalysisProject('PJB',analysis_dir)
         reporter = QCReporter(project)
         self.assertTrue(reporter.verify())
