@@ -3111,9 +3111,11 @@ class QCReportFastq(object):
                     inline=True):
         """
         Return a mini-sequence length distribution plot
+
         Arguments:
           max_len (int): set the upper limit of the x-axis
           min_len (int): set the lower limit of the x-axis
+          height (int): optionally set the plot height in pixels
           inline (bool): if True then return plot in format for
             inlining in HTML document
         """
@@ -3129,6 +3131,8 @@ class QCReportFastq(object):
         Return a mini-sequence composition plot
 
         Arguments:
+          max_reads (int): if set then scale the reads for this
+            Fastq against this value in the plot
           inline (bool): if True then return plot in format for
             inlining in HTML document
         """
@@ -3149,11 +3153,26 @@ class QCReportFastq(object):
         """
         return uboxplot(self.fastqc.data.path,inline=inline)
 
+    def udeduplicationplot(self,inline=True):
+        """
+        Return a mini-sequence deduplication plot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return udeduplicationplot(self.sequence_deduplication_percentage,
+                                  style='fancy',inline=inline)
+
     def uadapterplot(self,height=25,multi_bar=True,inline=True):
         """
         Return a mini-adapter content summary plot
 
         Arguments:
+          height (int): optionally set the plot height in pixels
+          multi_bar (bool): if True then create a plot with one
+            bar per adapter class (otherwise summarise adapter
+            content on one bar in the plot)
           inline (bool): if True then return plot in format for
             inlining in HTML document
         """
