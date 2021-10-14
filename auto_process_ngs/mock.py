@@ -646,6 +646,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
     def add_qc_outputs(self,fastq_set=None,qc_dir=None,
                        protocol="standardPE",
                        include_fastq_strand=True,
+                       include_seqlens=True,
                        include_multiqc=True,
                        include_report=True,
                        include_zip_file=True,
@@ -662,6 +663,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
             protocol to use
           include_fastq_strand (bool): if True then
             add mock fastq_strand.py outputs
+          include_seqlens (bool): if True then add
+            mock sequence length outputs
           include_multiqc (bool): if True then add
             mock MultiQC outputs
           include_report (bool): if True then add
@@ -700,6 +703,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
                 MockQCOutputs.fastq_screen_v0_9_2(fq,
                                                   self._project.qc_dir,
                                                   screen)
+            if include_seqlens:
+                MockQCOutputs.seqlens(fq,self._project.qc_dir)
         # Handle fastq_strand, if requested
         if include_fastq_strand:
             fastq_strand_conf = os.path.join(self._project.dirn,
