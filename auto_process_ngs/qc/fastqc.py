@@ -405,6 +405,25 @@ class FastqcData(object):
                 return value
         raise KeyError("No measure '%s'" % measure)
 
+    def sequence_deduplication_percentage(self):
+        """
+        Return sequence deduplication percentage
+
+        Returns the percentage of sequences remaining
+        after deduplication according to FastQC.
+
+        Returns:
+          Float: percentage sequence deduplication
+            from FastQC.
+        """
+        # Get the raw sequence duplication data
+        data = self.data("Sequence Duplication Levels")
+        for line in data:
+            # Locate line of the form
+            # #Total Deduplicated Percentage	67.73267849677316
+            if line.startswith("#Total Deduplicated Percentage"):
+                return float(line.split('\t')[-1])
+
     def adapter_content_summary(self):
         """
         Return summary data for adapter content
