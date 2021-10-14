@@ -774,7 +774,7 @@ def udeduplicationplot(total_deduplicated_percentage,height=None,
             elif i < warn_cutoff:
                 stripe_color = (230,215,175) # "orange"
             else:
-                stripe_color = (175,230,175) # "green"
+                stripe_color = (175,225,255) # "blue"
             for j in range(1,height-1):
                 pixels[i,j] = stripe_color
     # Plot fraction of deduplicated sequences
