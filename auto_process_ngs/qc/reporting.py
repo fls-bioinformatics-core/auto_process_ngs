@@ -827,15 +827,35 @@ class QCProject(object):
         self.software = software
         # Output files
         self.output_files = sorted(output_files)
-        # Maximum number of sequences etc
+        # Maximum number of sequences
         self.stats['max_seqs'] = max_seqs
+        # Maximum and minimum sequence lengths for each read
         for read in self.reads:
-            self.stats['min_sequence_length_read'][read] = min_seq_length[read]
-            self.stats['max_sequence_length_read'][read] = max_seq_length[read]
-        self.stats['min_sequence_length'] = min(
-            [min_seq_length[r] for r in self.reads])
-        self.stats['max_sequence_length'] = max(
-            [max_seq_length[r] for r in self.reads])
+            try:
+                self.stats['min_sequence_length_read'][read] = \
+                    min_seq_length[read]
+            except KeyError:
+                # No data for this read
+                self.stats['min_sequence_length_read'][read] = None
+            try:
+                self.stats['max_sequence_length_read'][read] = \
+                    max_seq_length[read]
+            except KeyError:
+                # No data for this read
+                self.stats['max_sequence_length_read'][read] = None
+        # Maximum and minimum sequence lengths for all reads
+        try:
+            self.stats['min_sequence_length'] = min(
+                [min_seq_length[r] for r in min_seq_length])
+        except ValueError:
+            # No data for any read
+            self.stats['min_sequence_length'] = None
+        try:
+            self.stats['max_sequence_length'] = max(
+                [max_seq_length[r] for r in max_seq_length])
+        except ValueError:
+            # No data for any read
+            self.stats['max_sequence_length'] = None
 
 class FastqSet(object):
     """
