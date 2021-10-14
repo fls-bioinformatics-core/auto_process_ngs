@@ -53,6 +53,7 @@ from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
 from .plots import ustrandplot
+from .plots import udeduplicationplot
 from .plots import uadapterplot
 from .plots import encode_png
 from .seqlens import SeqLens
@@ -934,6 +935,7 @@ class QCReport(Document):
         'read_lengths': 'Lengths',
         'read_lengths_distributions': 'Dists',
         'read_counts': 'Counts',
+        'sequence_deduplication': 'Dedup%',
         'adapter_content': 'Adapters',
         'read_lengths_dist_r1': 'Dist[R1]',
         'fastqc_r1': 'FastQC[R1]',
@@ -1152,6 +1154,7 @@ class QCReport(Document):
                                        'read_counts',
                                        'read_lengths',
                                        'strandedness',
+                                       'sequence_deduplication',
                                        'adapter_content']
                 else:
                     summary_fields_ = ['sample',
@@ -1160,6 +1163,7 @@ class QCReport(Document):
                                        'read_counts',
                                        'read_lengths',
                                        'strandedness',
+                                       'sequence_deduplication',
                                        'adapter_content',]
                 if 'strandedness' not in project.outputs:
                     try:
@@ -2673,6 +2677,7 @@ class QCReportFastqGroup(object):
         - read_lengths
         - read_lengths_distributions
         - read_counts
+        - sequence_deduplication
         - adapter_content
         - read_lengths_dist_r1
         - read_lengths_dist_r2
@@ -2782,6 +2787,21 @@ class QCReportFastqGroup(object):
                     relpath=relpath),
                 title="%s: sequence length distribution%s\n(click for "
                 "FastQC plot)" % (read.upper(),length_range))
+        elif field == "sequence_deduplication":
+            value = []
+            for read in self.reads:
+                value.append(
+                    Img(self.reporters[read].udeduplicationplot(),
+                        href=self.reporters[read].fastqc.summary.link_to_module(
+                            'Sequence Duplication Levels',
+                            relpath=relpath),
+                        title="%s: percentage of sequences after "
+                        "deduplication: %.2f%%\n(click for FastQC Sequence "
+                        "Duplication Levels plot)" %
+                        (read.upper(),
+                         self.reporters[read].\
+                         sequence_deduplication_percentage)))
+            value = '<br />'.join([str(x) for x in value])
         elif field == "adapter_content":
             value = []
             for read in self.reads:
@@ -2868,6 +2888,7 @@ class QCReportFastq(object):
     ureadcountplot
     uboxplot
     ufastqcplot
+    useqduplicationplot
     uadapterplot
     uscreenplot
     """
@@ -2930,11 +2951,19 @@ class QCReportFastq(object):
                              "%s_seqlens.json" % self.fastq_attrs(fastq)))
         except Exception as ex:
             self.sequence_lengths = None
+        # Sequence deduplication percentage
+        if self.fastqc is not None:
+            self.sequence_deduplication_percentage = \
+                self.fastqc.data.sequence_deduplication_percentage()
+        else:
+            self.sequence_deduplication_percentage = None
         # Adapters
         if self.fastqc is not None:
             self.adapters_summary = \
                 self.fastqc.data.adapter_content_summary()
             self.adapters = self.adapters_summary.keys()
+        else:
+            self.adapters = None
         # Program versions
         self.program_versions = AttributeDictionary()
         if self.fastqc is not None:
