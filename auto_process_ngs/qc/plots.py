@@ -686,6 +686,120 @@ def ureadcountplot(nreads,nmasked=None,npadded=None,max_reads=None,
                      inline=inline,
                      ext=".ureadcount.png")
 
+def udeduplicationplot(total_deduplicated_percentage,height=None,
+                       width=None,style='simple',warn_cutoff=None,
+                       fail_cutoff=None,outfile=None,inline=False):
+    """
+    Make a 'micro' plot summarising sequence deduplication
+
+    Given the percentage of reads after deduplication (as
+    calculated by FastQC's "Sequence Duplication Levels"
+    module), plots a horizontal bar indicating the level
+    of sequence (de)duplication.
+
+    Two styles are supported:
+
+    - 'simple' produces a two-colour plot where the fraction
+      of unique sequences is shown in blue and the remainder
+      in red
+    - 'fancy' produces a multi-colour plot where the fraction
+      of unique sequences is coloured according to pass,
+      warn or fail cut-off levels, with the background to the
+      bar striped with colours according to the cut-offs.
+
+    Arguments:
+      total_deduplicated_percentage (float): percentage of
+        sequences remaining after deduplication
+      height (int): height of the plot in pixels
+      width (int): width of the plot in pixels
+      style (str): either 'simple' or 'fancy'
+      warn_cutoff (float): fraction of unique sequences
+        below which the plot should indicate a warning
+      fail_cutoff (float): fraction of unique sequences
+        below which the plot should indicate a failure
+      outfile (str): path for the output PNG
+      inline (boolean): if True then returns the PNG
+        as base64 encoded string rather than as a file
+    """
+    # Set cutoffs for plot
+    if warn_cutoff is None:
+        # Set to 80%
+        warn_cutoff = 0.8
+    if fail_cutoff is None:
+        # Set to 50%
+        fail_cutoff = 0.5
+    # Set plot limits
+    if width is None:
+        width = 50
+    if height is None:
+        height = 12
+    # Set parameters according to style
+    if style == 'simple':
+        stripe_bg = False
+        use_cutoffs = False
+    elif style == 'fancy':
+        stripe_bg = True
+        use_cutoffs = True
+    else:
+        raise Exception("udeduplicationplot: unknown style '%s'"
+                        % style)
+    # Set colours
+    bg_color = "white"
+    fg_color = "blue"
+    fg_color_warn = "orange"
+    fg_color_fail = "red"
+    fg_color_fill = "red"
+    if use_cutoffs:
+        # Set colour based on cutoffs
+        if total_deduplicated_percentage < fail_cutoff*100.0:
+            dedup_color = fg_color_fail
+        elif total_deduplicated_percentage < warn_cutoff*100.0:
+            dedup_color = fg_color_warn
+        else:
+            dedup_color = fg_color
+    else:
+        # Ignore cutoffs
+        dedup_color = fg_color
+    # Scale cutoffs to plot width
+    warn_cutoff = int(warn_cutoff*float(width))
+    fail_cutoff = int(fail_cutoff*float(width))
+    # Create the image
+    img = Image.new('RGB',(width,height),RGB_COLORS[bg_color])
+    pixels = img.load()
+    # Create background striping
+    if stripe_bg:
+        for i in range(0,width,2):
+            if i < fail_cutoff:
+                stripe_color = (230,175,175) # "red"
+            elif i < warn_cutoff:
+                stripe_color = (230,215,175) # "orange"
+            else:
+                stripe_color = (175,230,175) # "green"
+            for j in range(1,height-1):
+                pixels[i,j] = stripe_color
+    # Plot fraction of deduplicated sequences
+    frac_dedup_seqs = float(total_deduplicated_percentage)/100.0
+    start = 0
+    if frac_dedup_seqs > 0:
+        end = max(1,int(frac_dedup_seqs*width))
+        for i in range(start,end):
+            for j in range(start,end):
+                for j in range(1,height-1):
+                    pixels[i,j] = RGB_COLORS[dedup_color]
+        start = end
+    else:
+        end = start
+    # Fill remainder of the plot with solid colour
+    if not stripe_bg:
+        for i in range(end,width):
+            for j in range(1,height-1):
+                pixels[i,j] = RGB_COLORS[fg_color_fail]
+    # Output the plot
+    return make_plot(img,
+                     outfile=outfile,
+                     inline=inline,
+                     ext=".ureadcount.png")
+
 def uadapterplot(adapter_content,adapter_names=None,outfile=None,
                  inline=False,height=25,bar_width=6,spacing=2,
                  multi_bar=True):
