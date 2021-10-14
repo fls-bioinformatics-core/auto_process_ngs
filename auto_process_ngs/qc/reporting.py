@@ -3182,6 +3182,7 @@ class QCReportFastq(object):
             inlining in HTML document
         """
         return udeduplicationplot(self.sequence_deduplication_percentage,
+                                  warn_cutoff=0.8,fail_cutoff=0.3,
                                   style='fancy',inline=inline)
 
     def uadapterplot(self,height=25,multi_bar=True,inline=True):
