@@ -727,7 +727,7 @@ def udeduplicationplot(total_deduplicated_percentage,height=None,
         warn_cutoff = 0.8
     if fail_cutoff is None:
         # Set to 50%
-        fail_cutoff = 0.5
+        fail_cutoff = 0.3
     # Set plot limits
     if width is None:
         width = 50
