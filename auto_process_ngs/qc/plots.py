@@ -552,7 +552,7 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
     """
     # Set height of plot
     if height is None:
-        height = 20
+        height = 50
     # Get ordered list of sequence lengths
     seq_lens = sorted(dist.keys())
     # Get max number of reads for a single length
@@ -601,7 +601,7 @@ def useqlenplot(dist,masked_dist=None,min_len=None,max_len=None,
                      ext=".useqlen.png")
 
 def ureadcountplot(nreads,nmasked=None,npadded=None,max_reads=None,
-                   outfile=None,inline=False,width=50,height=6,
+                   outfile=None,inline=False,width=50,height=12,
                    bg_color="white",fg_color="green",masked_color="red",
                    padded_color="orange",fill_color="lightgrey"):
     """
@@ -687,7 +687,7 @@ def ureadcountplot(nreads,nmasked=None,npadded=None,max_reads=None,
                      ext=".ureadcount.png")
 
 def udeduplicationplot(total_deduplicated_percentage,height=None,
-                       width=None,style='simple',warn_cutoff=None,
+                       width=None,style='fancy',warn_cutoff=None,
                        fail_cutoff=None,outfile=None,inline=False):
     """
     Make a 'micro' plot summarising sequence deduplication
@@ -801,8 +801,8 @@ def udeduplicationplot(total_deduplicated_percentage,height=None,
                      ext=".ureadcount.png")
 
 def uadapterplot(adapter_content,adapter_names=None,outfile=None,
-                 inline=False,height=25,bar_width=6,spacing=2,
-                 multi_bar=True):
+                 inline=False,height=40,bar_width=10,spacing=2,
+                 multi_bar=False):
     """
     Make a 'micro' plot summarising adapter content
 

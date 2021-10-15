@@ -2780,7 +2780,8 @@ class QCReportFastqGroup(object):
                 value.append(
                     Img(self.reporters[read].useqlenplot(
                         min_len=self.project.stats.min_sequence_length,
-                        max_len=self.project.stats.max_sequence_length),
+                        max_len=self.project.stats.max_sequence_length,
+                        height=20),
                         href=self.reporters[read].fastqc.summary.link_to_module(
                             'Sequence Length Distribution',
                             relpath=relpath),
@@ -2800,8 +2801,7 @@ class QCReportFastqGroup(object):
             value = Img(
                 self.reporters[read].useqlenplot(
                     min_len=min_seq_len,
-                    max_len=max_seq_len,
-                    height=50),
+                    max_len=max_seq_len),
                 href=self.reporters[read].fastqc.summary.link_to_module(
                     'Sequence Length Distribution',
                     relpath=relpath),
@@ -2826,8 +2826,7 @@ class QCReportFastqGroup(object):
             value = []
             for read in self.reads:
                 value.append(
-                    Img(self.reporters[read].uadapterplot(height=40,
-                                                          multi_bar=False),
+                    Img(self.reporters[read].uadapterplot(),
                         href=self.reporters[read].fastqc.summary.link_to_module(
                             'Adapter Content',
                             relpath=relpath),
@@ -2841,7 +2840,8 @@ class QCReportFastqGroup(object):
             value = ''.join([str(x) for x in value])
         elif field.startswith("adapters_"):
             read = field.split('_')[-1]
-            value = Img(self.reporters[read].uadapterplot(),
+            value = Img(self.reporters[read].uadapterplot(height=25,
+                                                          multi_bar=True),
                         href=self.reporters[read].fastqc.summary.link_to_module(
                             'Adapter Content',
                             relpath=relpath),
@@ -3160,7 +3160,6 @@ class QCReportFastq(object):
                               self.sequence_lengths.nmasked,
                               self.sequence_lengths.npadded,
                               max_reads=max_reads,
-                              height=12,
                               inline=inline)
 
     def uboxplot(self,inline=True):
@@ -3182,10 +3181,9 @@ class QCReportFastq(object):
             inlining in HTML document
         """
         return udeduplicationplot(self.sequence_deduplication_percentage,
-                                  warn_cutoff=0.8,fail_cutoff=0.3,
-                                  style='fancy',inline=inline)
+                                  inline=inline)
 
-    def uadapterplot(self,height=25,multi_bar=True,inline=True):
+    def uadapterplot(self,height=40,multi_bar=False,inline=True):
         """
         Return a mini-adapter content summary plot
 
@@ -3198,8 +3196,8 @@ class QCReportFastq(object):
             inlining in HTML document
         """
         return uadapterplot(self.adapters_summary,self.adapters,
-                            bar_width=10,height=height,
-                            multi_bar=multi_bar,inline=inline)
+                            height=height,multi_bar=multi_bar,
+                            inline=inline)
 
     def ufastqcplot(self,inline=True):
         """
