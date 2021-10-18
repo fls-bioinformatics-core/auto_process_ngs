@@ -331,7 +331,7 @@ corresponds to the fraction for each adapter.
 .. note::
 
    The colours of the bar match the colours used by ``fastqc`` for
-   different adapter class.
+   different adapter classes.
 
 For example:
 
