@@ -326,9 +326,12 @@ A single adapter fraction is obtained for each adapter class
 detected by ``fastqc`` by calculating the fraction of plot area
 which lies under the curves for each adapter in the "Adapter Content"
 plots. This is then represented as a bar where the coloured portion
-corresponds to the fraction for each adapter, with the colour
-of the bar indicating the adapter class (matching the colours used
-by ``fastqc``).
+corresponds to the fraction for each adapter.
+
+.. note::
+
+   The colours of the bar match the colours used by ``fastqc`` for
+   different adapter class.
 
 For example:
 
@@ -341,11 +344,13 @@ For example:
    |adapter_uplot_no_adptrs|    No adapter content detected (bar
                                 is grey)
    |adapter_uplot_adptrs_sml|   Small amount of adapter content
-	                        detected (bar is partially green,
-				indicating presence of Nextera
-				Transposase sequences)
+	                        detected (bar is partially solid,
+				with green colour indicating
+				presence of Nextera Transposase
+				sequences)
    |adapter_uplot_adptrs_lrg|   Significant adapter content
-	                        detected (bar is partially red,
+	                        detected (more than 50% of the bar
+				is solid, with red colour
 				indicating presence of Illumina
 				Universal Adapter sequences)
    ============================ ===================================
