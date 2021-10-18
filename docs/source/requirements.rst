@@ -39,7 +39,7 @@ make_fastqs         `spaceranger`_     10xGenomics Visium spatial RNA-seq data o
 run_qc (*)          `fastqc`_
 run_qc (*)          `fastq_screen`_
 run_qc (*)          `bowtie`_          Required by fastq_screen
-run_qc (*)          `STAR`_            Required for strandedness determination
+run_qc (*)          `STAR`_            Required for strandedness and alignment
 run_qc              `cellranger`_      10xGenomics Chromium single-cell RNA-seq data only
 run_qc              `cellranger-atac`_ 10xGenomics Chromium single-cell ATAC-seq data only
 run_qc (*)          `multiqc`_
