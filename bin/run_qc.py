@@ -544,6 +544,13 @@ if __name__ == "__main__":
         else:
             nthreads = min(max_cores,8)
         print("-- Threads for QC: %s" % nthreads)
+        # Set number of threads for STAR jobs
+        if args.nthreads:
+            nthreads_star = args.nthreads
+        else:
+            mempercore = max_mem/float(max_cores)
+            nthreads_star = int(math.ceil(32.0/mempercore))
+        print("-- Threads for STAR: %s" % nthreads_star)
         # Remove limit on number of jobs
         print("-- Set maximum no of jobs to 'unlimited'")
         max_jobs = None
@@ -561,6 +568,7 @@ if __name__ == "__main__":
         runners = {
             'cellranger_runner': SimpleJobRunner(nslots=cellranger_localcores),
             'qc_runner': SimpleJobRunner(nslots=nthreads),
+            'star_runner': SimpleJobRunner(nslots=nthreads_star),
             'verify_runner': default_runner,
             'report_runner': default_runner,
         }
@@ -586,6 +594,7 @@ if __name__ == "__main__":
             runners = {
                 'cellranger_runner': default_runner,
                 'qc_runner': default_runner,
+                'star_runner': default_runner,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
             }
@@ -596,6 +605,7 @@ if __name__ == "__main__":
             runners = {
                 'cellranger_runner': __settings.runners.cellranger,
                 'qc_runner': __settings.runners.qc,
+                'star_runner': __settings.runners.star,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
             }
