@@ -301,6 +301,7 @@ class Settings(object):
         self.add_section('runners')
         for name in ('bcl2fastq',
                      'qc',
+                     'star',
                      'stats',
                      'rsync',
                      'icell8',

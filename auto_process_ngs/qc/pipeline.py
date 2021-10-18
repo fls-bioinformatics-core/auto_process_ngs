@@ -128,6 +128,7 @@ class QCPipeline(Pipeline):
         # Define runners
         self.add_runner('verify_runner')
         self.add_runner('qc_runner')
+        self.add_runner('star_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
@@ -322,7 +323,7 @@ class QCPipeline(Pipeline):
         )
         self.add_task(run_fastq_strand,
                       requires=(check_fastq_strand,),
-                      runner=self.runners['qc_runner'],
+                      runner=self.runners['star_runner'],
                       envmodules=self.envmodules['fastq_strand'],
                       log_dir=log_dir)
         report_requires.append(run_fastq_strand)
@@ -668,7 +669,7 @@ class QCPipeline(Pipeline):
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
             instances; valid names are 'qc_runner',
-            'report_runner','cellranger_runner',
+            'star_runner','report_runner','cellranger_runner',
             'verify_runner','default'
           enable_conda (bool): if True then enable use of
             conda environments to satisfy task dependencies

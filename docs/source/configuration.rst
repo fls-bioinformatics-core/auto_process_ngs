@@ -184,7 +184,9 @@ Runner name                   Used for
                               generation, archiving etc)
 ``qc``                        Running computationally intensive QC
                               commands (e.g. ``FastQC``, ``Fastq_screen``,
-                              strandedness etc)
+                              etc)
+``star``                      Running pipeline tasks which use ``STAR``
+                              (e.g. strandedness, alignment etc)
 ``cellranger``                Running ``cellranger`` in Fastq generation
                               and QC pipelines
 ``icell8``                    Default runner for commands in the ICELL8

@@ -112,6 +112,7 @@ nprocessors = 1
 [runners]
 bcl2fastq = SimpleJobRunner
 qc = SimpleJobRunner
+star = SimpleJobRunner
 stats = SimpleJobRunner
 rsync = SimpleJobRunner
 cellranger = SimpleJobRunner

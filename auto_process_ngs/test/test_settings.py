@@ -66,6 +66,7 @@ class TestSettings(unittest.TestCase):
         # Job-specific runners
         self.assertTrue(isinstance(s.runners.bcl2fastq,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.qc,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.star,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.stats,SimpleJobRunner))
         # Archiving
         self.assertEqual(s.archive.dirn,None)
