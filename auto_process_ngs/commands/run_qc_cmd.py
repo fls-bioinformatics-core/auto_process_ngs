@@ -160,6 +160,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
         runners={
             'cellranger_runner': ap.settings.runners.cellranger,
             'qc_runner': ap.settings.runners.qc,
+            'star_runner': ap.settings.runners.star,
             'verify_runner': default_runner,
             'report_runner': default_runner,
         }
@@ -168,6 +169,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
         runners={
             'cellranger_runner': runner,
             'qc_runner': runner,
+            'star_runner': runner,
             'verify_runner': runner,
             'report_runner': runner,
         }
