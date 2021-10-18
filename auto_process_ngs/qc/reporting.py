@@ -1466,9 +1466,7 @@ class QCReport(Document):
                     elif item == 'multiqc':
                         multiqc_report = "multi%s_report.html" \
                                          % os.path.basename(project.qc_dir)
-                        value = Link(multiqc_report,
-                                     os.path.join(project_data_dir,
-                                                  multiqc_report))
+                        value = Link(multiqc_report)
                     elif item == 'icell8_stats':
                         value = Link("icell8_stats.xlsx",
                                      os.path.join(project_data_dir,
