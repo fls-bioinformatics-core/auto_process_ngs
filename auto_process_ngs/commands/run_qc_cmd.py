@@ -186,6 +186,8 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     # Conda dependency resolution
     if enable_conda is None:
         enable_conda = ap.settings.conda.enable_conda
+    if conda_env_dir is None:
+        conda_env_dir = ap.settings.conda.env_dir
     # Set scheduler parameters
     if poll_interval is None:
         poll_interval = ap.settings.general.poll_interval
