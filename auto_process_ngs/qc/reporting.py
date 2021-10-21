@@ -14,6 +14,7 @@ import logging
 import time
 import ast
 import shutil
+import textwrap
 from collections import defaultdict
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.TabFile import TabFile
@@ -948,48 +949,99 @@ class QCReport(Document):
     """
     # Field descriptions for summary table
     field_descriptions = {
-        'sample': 'Sample',
-        'fastq' : 'Fastq',
-        'fastqs': 'Fastqs',
-        'reads': '#reads',
-        'read_lengths': 'Lengths',
-        'read_lengths_distributions': 'Dists',
-        'read_counts': 'Counts',
-        'sequence_deduplication': 'Dedup%',
-        'adapter_content': 'Adapters',
-        'read_lengths_dist_r1': 'Dist[R1]',
-        'fastqc_r1': 'FastQC[R1]',
-        'boxplot_r1': 'Quality[R1]',
-        'adapters_r1': 'Adapters[R1]',
-        'screens_r1': 'Screens[R1]',
-        'read_lengths_dist_r2': 'Dist[R2]',
-        'fastqc_r2': 'FastQC[R2]',
-        'boxplot_r2': 'Quality[R2]',
-        'screens_r2': 'Screens[R2]',
-        'adapters_r2': 'Adapters[R2]',
-        'fastqc_r3': 'FastQC[R3]',
-        'read_lengths_dist_r3': 'Dist[R3]',
-        'boxplot_r3': 'Quality[R3]',
-        'screens_r3': 'Screens[R3]',
-        'adapters_r3': 'Adapters[R3]',
-        'strandedness': 'Strand',
-        'cellranger_count': 'Single library analyses',
-        '10x_cells': '#cells',
-        '10x_reads_per_cell': '#reads/cell',
-        '10x_genes_per_cell': '#genes/cell',
-        '10x_frac_reads_in_cell': '%reads in cells',
-        '10x_fragments_per_cell': '#fragments/cell',
-        '10x_fragments_overlapping_targets': '%fragments overlapping targets',
-        '10x_fragments_overlapping_peaks': '%fragments overlapping peaks',
-        '10x_tss_enrichment_score': 'TSS enrichment score',
-        '10x_atac_fragments_per_cell': '#ATAC fragments/cell',
-        '10x_gex_genes_per_cell': '#GEX genes/cell',
-        '10x_genes_detected': '#genes',
-        '10x_umis_per_cell': '#UMIs/cell',
-        '10x_pipeline': 'Pipeline',
-        '10x_reference': 'Reference dataset',
-        '10x_web_summary': 'HTML report',
-        'linked_sample': 'Linked sample',
+        'sample': ('Sample','Sample name'),
+        'fastq' : ('Fastq','Fastq file'),
+        'fastqs': ('Fastqs','Fastq files in each sample'),
+        'reads': ('#reads','Number of reads/read pairs'),
+        'read_lengths': ('Lengths',
+                         'Mean sequence length and range'),
+        'read_lengths_dist': ('Dists',
+                              'Distributions of sequence lengths in '
+                              'each Fastq'),
+        'read_counts': ('Counts',
+                        'Relative number of total reads, and proportions '
+                        'of masked and padded reads in each Fastq'),
+        'sequence_deduplication': ('Dedup%',
+                                   'Fraction of reads with distinct '
+                                   'sequences in each Fastq'),
+        'adapter_content': ('Adapters',
+                            'Fraction of data containing adapter '
+                            'sequences in each Fastq'),
+        'read_lengths_dist_r1': ('Dist[R1]',
+                                 'Distributions of R1 sequence '
+                                 'lengths'),
+        'fastqc_r1': ('FastQC[R1]',
+                      'Summary of FastQC metrics for R1'),
+        'boxplot_r1': ('Quality[R1]',
+                       'Per base sequence quality for R1'),
+        'adapters_r1': ('Adapters[R1]',
+                        'Summary of adapter content for R1'),
+        'screens_r1': ('Screens[R1]',
+                       'Outputs from FastqScreen running R1 against '
+                       'multiple panels'),
+        'read_lengths_dist_r2': ('Dist[R2]',
+                                 'Distributions of R2 sequence '
+                                 'lengths'),
+        'fastqc_r2': ('FastQC[R2]',
+                      'Summary of FastQC metrics for R2'),
+        'boxplot_r2': ('Quality[R2]',
+                       'Per base sequence quality for R2'),
+        'screens_r2': ('Screens[R2]',
+                       'Outputs from FastqScreen running R2 against '
+                       'multiple panels'),
+        'adapters_r2': ('Adapters[R2]',
+                        'Summary of adapter content for R2'),
+        'fastqc_r3': ('FastQC[R3]',
+                      'Summary of FastQC metrics for R3'),
+        'read_lengths_dist_r3': ('Dist[R3]',
+                                 'Distributions of R3 sequence '
+                                 'lengths'),
+        'boxplot_r3': ('Quality[R3]',
+                       'Per base sequence quality for R1'),
+        'screens_r3': ('Screens[R3]',
+                       'Outputs from FastqScreen running R3 against '
+                       'multiple panels'),
+        'adapters_r3': ('Adapters[R3]',
+                        'Summary of adapter content for R1'),
+        'strandedness': ('Strand',
+                         'Proportions of reads mapping to forward and '
+                         'reverse strands'),
+        'cellranger_count': ('Single library analyses',
+                             'Web summary from Cellranger* single '
+                             'library analysis for this sample'),
+        '10x_cells': ('#cells','Number of cells'),
+        '10x_reads_per_cell': ('#reads/cell','Average reads per cell'),
+        '10x_genes_per_cell': ('#genes/cell','Median genes per cell'),
+        '10x_frac_reads_in_cell': ('%reads in cells',
+                                   'Fraction of reads in cells'),
+        '10x_fragments_per_cell': ('#fragments/cell',
+                                   'Median fragments per cell'),
+        '10x_fragments_overlapping_targets': ('%fragments overlapping targets',
+                                              'Fraction of fragments '
+                                              'overlapping targets'),
+        '10x_fragments_overlapping_peaks': ('%fragments overlapping peaks',
+                                            'Fraction of fragments '
+                                            'overlapping peaks'),
+        '10x_tss_enrichment_score': ('TSS enrichment score',
+                                     'TSS enrichment score'),
+        '10x_atac_fragments_per_cell': ('#ATAC fragments/cell',
+                                        'ATAC Median high-quality fragments '
+                                        'per cell'),
+        '10x_gex_genes_per_cell': ('#GEX genes/cell',
+                                   'GEX Median genes per cell'),
+        '10x_genes_detected': ('#genes',
+                               'Total genes detected'),
+        '10x_umis_per_cell': ('#UMIs/cell',
+                              'Median UMI counts per cell'),
+        '10x_pipeline': ('Pipeline',
+                         'Name of the 10x Genomics pipeline used'),
+        '10x_reference': ('Reference dataset',
+                          'Reference dataset used for the analysis'),
+        '10x_web_summary': ('HTML report',
+                            'Link to the web_summary.html report'),
+        'linked_sample': ('Linked sample',
+                          'Corresponding sample for single cell multiome '
+                          'analysis')
     }
     # Titles for metadata items
     metadata_titles = {
@@ -1509,8 +1561,15 @@ class QCReport(Document):
 
         Associated CSS classes are 'summary' and 'fastq_summary'
         """
+        # Generate headers for table
+        tbl_headers = {
+            f: "<space title=\"%s\">%s</span>" %
+            ('\n'.join(textwrap.wrap(self.field_descriptions[f][1],width=20)),
+             self.field_descriptions[f][0])
+            for f in self.field_descriptions.keys()
+        }
         # Create the table
-        summary_tbl = Table(fields,**self.field_descriptions)
+        summary_tbl = Table(fields,**tbl_headers)
         summary_tbl.add_css_classes('summary','fastq_summary')
         if "cellranger_count" in fields:
             summary_tbl.add_css_classes('single_library_analyses',
@@ -1535,8 +1594,15 @@ class QCReport(Document):
             "Single library analysis",
             name="single_library_analysis_%s" % sanitize_name(project.id),
             css_classes=('single_library_summary',))
+        # Generate headers for table
+        tbl_headers = {
+            f: "<space title=\"%s\">%s</span>" %
+            ('\n'.join(textwrap.wrap(self.field_descriptions[f][1],width=20)),
+             self.field_descriptions[f][0])
+            for f in self.field_descriptions.keys()
+        }
         # Create the table
-        single_library_tbl = Table(fields,**self.field_descriptions)
+        single_library_tbl = Table(fields,**tbl_headers)
         single_library_tbl.add_css_classes('summary','single_library_summary')
         # Append to the summary section
         section.add(single_library_tbl)
