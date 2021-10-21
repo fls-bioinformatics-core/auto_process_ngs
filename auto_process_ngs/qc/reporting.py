@@ -955,9 +955,6 @@ class QCReport(Document):
         'reads': ('#reads','Number of reads/read pairs'),
         'read_lengths': ('Lengths',
                          'Mean sequence length and range'),
-        'read_lengths_dist': ('Dists',
-                              'Distributions of sequence lengths in '
-                              'each Fastq'),
         'read_counts': ('Counts',
                         'Relative number of total reads, and proportions '
                         'of masked and padded reads in each Fastq'),
@@ -2761,7 +2758,6 @@ class QCReportFastqGroup(object):
         - fastq (if single-end)
         - reads
         - read_lengths
-        - read_lengths_distributions
         - read_counts
         - sequence_duplication
         - adapter_content
@@ -2839,20 +2835,6 @@ class QCReportFastqGroup(object):
                         self.reporters[read].fastqc.summary.link_to_module(
                             'Sequence Length Distribution',
                             relpath=relpath)))
-            value = "<br />".join([str(x) for x in value])
-        elif field == "read_lengths_distributions":
-            value = []
-            for read in self.reads:
-                value.append(
-                    Img(self.reporters[read].useqlenplot(
-                        min_len=self.project.stats.min_sequence_length,
-                        max_len=self.project.stats.max_sequence_length,
-                        height=20),
-                        href=self.reporters[read].fastqc.summary.link_to_module(
-                            'Sequence Length Distribution',
-                            relpath=relpath),
-                        title="%s: sequence length distribution (click for "
-                        "FastQC plot)" % read.upper()))
             value = "<br />".join([str(x) for x in value])
         elif field.startswith("read_lengths_dist_"):
             read = field.split('_')[-1]
