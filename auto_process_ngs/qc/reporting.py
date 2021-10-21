@@ -961,7 +961,7 @@ class QCReport(Document):
         'read_counts': ('Counts',
                         'Relative number of total reads, and proportions '
                         'of masked and padded reads in each Fastq'),
-        'sequence_duplication': ('Dedup%',
+        'sequence_duplication': ('Dup%',
                                  'Fraction of reads with duplicated '
                                  'sequences in each Fastq'),
         'adapter_content': ('Adapters',
@@ -2877,7 +2877,7 @@ class QCReportFastqGroup(object):
             value = []
             for read in self.reads:
                 value.append(
-                    Img(self.reporters[read].udeduplicationplot(mode='dup'),
+                    Img(self.reporters[read].uduplicationplot(mode='dup'),
                         href=self.reporters[read].fastqc.summary.link_to_module(
                             'Sequence Duplication Levels',
                             relpath=relpath),
