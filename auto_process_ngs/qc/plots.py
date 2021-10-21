@@ -15,6 +15,9 @@ from .fastq_screen import Fastqscreen
 from .fastq_stats import FastqQualityStats
 from .fastq_strand import Fastqstrand
 
+# Data
+from .constants import SEQUENCE_DEDUP_CUTOFFS
+
 # Module specific logger
 logger = logging.getLogger(__name__)
 
@@ -686,33 +689,42 @@ def ureadcountplot(nreads,nmasked=None,npadded=None,max_reads=None,
                      inline=inline,
                      ext=".ureadcount.png")
 
-def udeduplicationplot(total_deduplicated_percentage,height=None,
-                       width=None,style='fancy',warn_cutoff=None,
-                       fail_cutoff=None,outfile=None,inline=False):
+def uduplicationplot(total_deduplicated_percentage,height=None,
+                     width=None,mode='dup',style='fancy',
+                     warn_cutoff=None,fail_cutoff=None,
+                     outfile=None,inline=False):
     """
-    Make a 'micro' plot summarising sequence deduplication
+    Make a 'micro' plot summarising sequence duplication
 
     Given the percentage of reads after deduplication (as
     calculated by FastQC's "Sequence Duplication Levels"
     module), plots a horizontal bar indicating the level
     of sequence (de)duplication.
 
+    Two modes are available:
+
+    - 'dup' shows the fraction of sequences removed after
+      deduplication
+    - 'dedup' shows the fraction of sequences remaining after
+      deduplication
+
     Two styles are supported:
 
-    - 'simple' produces a two-colour plot where the fraction
-      of unique sequences is shown in blue and the remainder
-      in red
     - 'fancy' produces a multi-colour plot where the fraction
       of unique sequences is coloured according to pass,
       warn or fail cut-off levels, with the background to the
-      bar striped with colours according to the cut-offs.
+      bar striped with colours according to the cut-offs
+    - 'simple' produces a two-colour plot where the fraction
+      of unique sequences is shown in blue and the remainder
+      in red
 
     Arguments:
       total_deduplicated_percentage (float): percentage of
         sequences remaining after deduplication
       height (int): height of the plot in pixels
       width (int): width of the plot in pixels
-      style (str): either 'simple' or 'fancy'
+      style (str): either 'fancy' (default) or 'simple'
+      mode (str): either 'dup' (default) or 'dedup'
       warn_cutoff (float): fraction of unique sequences
         below which the plot should indicate a warning
       fail_cutoff (float): fraction of unique sequences
@@ -721,13 +733,21 @@ def udeduplicationplot(total_deduplicated_percentage,height=None,
       inline (boolean): if True then returns the PNG
         as base64 encoded string rather than as a file
     """
+    # Set mode for plot
+    if mode == 'dedup':
+        show_dedup = True
+    elif mode == 'dup':
+        show_dedup = False
+    else:
+        raise Exception("uduplicationplot: unknown mode '%s'"
+                        % mode)
     # Set cutoffs for plot
     if warn_cutoff is None:
-        # Set to 80%
-        warn_cutoff = 0.8
+        # Set to 30%
+        warn_cutoff = SEQUENCE_DEDUP_CUTOFFS['warn']
     if fail_cutoff is None:
-        # Set to 50%
-        fail_cutoff = 0.3
+        # Set to 20%
+        fail_cutoff = SEQUENCE_DEDUP_CUTOFFS['fail']
     # Set plot limits
     if width is None:
         width = 50
@@ -741,7 +761,7 @@ def udeduplicationplot(total_deduplicated_percentage,height=None,
         stripe_bg = True
         use_cutoffs = True
     else:
-        raise Exception("udeduplicationplot: unknown style '%s'"
+        raise Exception("uduplicationplot: unknown style '%s'"
                         % style)
     # Set colours
     bg_color = "white"
@@ -776,12 +796,20 @@ def udeduplicationplot(total_deduplicated_percentage,height=None,
             else:
                 stripe_color = (175,225,255) # "blue"
             for j in range(1,height-1):
-                pixels[i,j] = stripe_color
+                if show_dedup:
+                    ii = i
+                else:
+                    ii = width - i - 1
+                pixels[ii,j] = stripe_color
     # Plot fraction of deduplicated sequences
     frac_dedup_seqs = float(total_deduplicated_percentage)/100.0
+    frac_dup_seqs = 1.0 - frac_dedup_seqs
     start = 0
     if frac_dedup_seqs > 0:
-        end = max(1,int(frac_dedup_seqs*width))
+        if show_dedup:
+            end = max(1,int(frac_dedup_seqs*width))
+        else:
+            end = max(1,int(frac_dup_seqs*width))
         for i in range(start,end):
             for j in range(start,end):
                 for j in range(1,height-1):
@@ -798,7 +826,7 @@ def udeduplicationplot(total_deduplicated_percentage,height=None,
     return make_plot(img,
                      outfile=outfile,
                      inline=inline,
-                     ext=".ureadcount.png")
+                     ext=".uduplication.png")
 
 def uadapterplot(adapter_content,adapter_names=None,outfile=None,
                  inline=False,height=40,bar_width=10,spacing=2,

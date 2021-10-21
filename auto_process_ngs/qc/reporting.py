@@ -54,7 +54,7 @@ from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
 from .plots import ustrandplot
-from .plots import udeduplicationplot
+from .plots import uduplicationplot
 from .plots import uadapterplot
 from .plots import encode_png
 from .seqlens import SeqLens
@@ -961,9 +961,9 @@ class QCReport(Document):
         'read_counts': ('Counts',
                         'Relative number of total reads, and proportions '
                         'of masked and padded reads in each Fastq'),
-        'sequence_deduplication': ('Dedup%',
-                                   'Fraction of reads with distinct '
-                                   'sequences in each Fastq'),
+        'sequence_duplication': ('Dedup%',
+                                 'Fraction of reads with duplicated '
+                                 'sequences in each Fastq'),
         'adapter_content': ('Adapters',
                             'Fraction of data containing adapter '
                             'sequences in each Fastq'),
@@ -1226,7 +1226,7 @@ class QCReport(Document):
                                        'read_counts',
                                        'read_lengths',
                                        'strandedness',
-                                       'sequence_deduplication',
+                                       'sequence_duplication',
                                        'adapter_content']
                 else:
                     summary_fields_ = ['sample',
@@ -1235,7 +1235,7 @@ class QCReport(Document):
                                        'read_counts',
                                        'read_lengths',
                                        'strandedness',
-                                       'sequence_deduplication',
+                                       'sequence_duplication',
                                        'adapter_content',]
                 if 'strandedness' not in project.outputs:
                     try:
@@ -2763,7 +2763,7 @@ class QCReportFastqGroup(object):
         - read_lengths
         - read_lengths_distributions
         - read_counts
-        - sequence_deduplication
+        - sequence_duplication
         - adapter_content
         - read_lengths_dist_r1
         - read_lengths_dist_r2
@@ -2873,20 +2873,20 @@ class QCReportFastqGroup(object):
                     relpath=relpath),
                 title="%s: sequence length distribution%s\n(click for "
                 "FastQC plot)" % (read.upper(),length_range))
-        elif field == "sequence_deduplication":
+        elif field == "sequence_duplication":
             value = []
             for read in self.reads:
                 value.append(
-                    Img(self.reporters[read].udeduplicationplot(),
+                    Img(self.reporters[read].udeduplicationplot(mode='dup'),
                         href=self.reporters[read].fastqc.summary.link_to_module(
                             'Sequence Duplication Levels',
                             relpath=relpath),
-                        title="%s: percentage of sequences after "
+                        title="%s: percentage of sequences removed by "
                         "deduplication: %.2f%%\n(click for FastQC Sequence "
                         "Duplication Levels plot)" %
                         (read.upper(),
-                         self.reporters[read].\
-                         sequence_deduplication_percentage)))
+                         (100.0 - self.reporters[read].\
+                          sequence_deduplication_percentage))))
             value = '<br />'.join([str(x) for x in value])
         elif field == "adapter_content":
             value = []
@@ -3238,15 +3238,17 @@ class QCReportFastq(object):
         """
         return uboxplot(self.fastqc.data.path,inline=inline)
 
-    def udeduplicationplot(self,inline=True):
+    def uduplicationplot(self,mode='dup',inline=True):
         """
-        Return a mini-sequence deduplication plot
+        Return a mini-sequence duplication plot
 
         Arguments:
+          mode (str): either 'dup' or 'dedup'
           inline (bool): if True then return plot in format for
             inlining in HTML document
         """
-        return udeduplicationplot(self.sequence_deduplication_percentage,
+        return uduplicationplot(self.sequence_deduplication_percentage,
+                                  mode=mode,
                                   inline=inline)
 
     def uadapterplot(self,height=40,multi_bar=False,inline=True):

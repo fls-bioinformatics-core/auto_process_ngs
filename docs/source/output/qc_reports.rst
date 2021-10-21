@@ -53,7 +53,7 @@ and Fastq:
 * :ref:`qc_report_strandedness`
 * :ref:`qc_report_read_counts`
 * :ref:`qc_report_sequence_length_dist_plots`
-* :ref:`qc_report_sequence_deduplication_plots`
+* :ref:`qc_report_sequence_duplication_plots`
 * :ref:`qc_report_adapter_summary_plots`
 
 One purpose of this table is to help pick up on trends and identify
@@ -255,62 +255,68 @@ same length, plots will look like e.g.
 .. image:: ../images/auto/qc/seq_dist_uplot_untrimmed.png
    :align: center
 
-.. _qc_report_sequence_deduplication_plots:
+.. _qc_report_sequence_duplication_plots:
 
-Sequence deduplication summary plots
-------------------------------------
+Sequence duplication summary plots
+----------------------------------
 
-The sequence deduplication summary plots indicate the level of
+The sequence duplication summary plots indicate the level of
 sequence duplication in the data, according to the
 `Sequence Duplication Levels <https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/3%20Analysis%20Modules/8%20Duplicate%20Sequences.html>`_
 module of ``fastqc``.
 
-The deduplication level is the percentage of reads that are left
-when reads with duplicated sequences (i.e. sequences that appear
-in multiple reads) are removed, and is an indication of the
-number of reads with distinct sequences within the data.
+The duplication level is the percentage of reads that are would be
+removed when reads with duplicated sequences (i.e. sequences that
+appear in multiple reads) are counted as a single read. It is an
+indication of the number of reads with distinct sequences within
+the data (as lower duplication indicates fewer distinct sequences).
 
 (See the Biostars thread
 `Revisiting the FastQC read duplication report <https://www.biostars.org/p/107402/>`_ for more explanation of the deduplication in ``fastqc``.)
 
 In the plots the solid portion of the bar represents the fraction
-of reads after deduplication. The colour of the bar indicates
-which category the data fall into depending on the level of reads
-remaining:
+of reads removed by deduplication, and the colour of the bar
+indicates which category the data fall into depending on the level
+of reads remaining:
 
-* Blue indicates more than 80% of reads remain after deduplication
-* Orange indicates 30-80% of reads remain
-* Red indicates less than 30% reads remain
+* Red indicates less than 20% reads remain after deduplication
+  (i.e. more than 80% reads were duplicates)
+* Orange indicates 20-30% of reads remain
+  (i.e. between 70-80% reads were duplicates)
+* Blue indicates more than 30% of reads remain
+  (i.e. less than 70% reads were duplicates)
+
+.. note::
+
+   The thresholds used in this plot differs from those used by
+   ``fastqc``.
 
 The background of the plot also uses lighter versions of these
 colours to indicate the thresholds.
 
 For example:
 
-.. table:: Example sequence deduplication plots
+.. table:: Example sequence duplication plots
    :widths: auto
 
    ============================ ===================================
    Example                      Interpretation
    ============================ ===================================
-   |dedup_uplot_pass|           Pass: over 80% of reads remain
-                                after duplicate sequences have been
-			        removed
-   |dedup_uplot_warn|           Warn: less than 80% of reads remain
-                                after duplicate sequences have been
-			        removed
-   |dedup_uplot_fail|           Fail: less than 30% of reads remain
-                                after duplicate sequences have been
-			        removed
-   |dedup_uplot_bg|             Plot background with no data (to
+   |dup_uplot_fail|             Fail: more than 80% of reads are
+                                duplicated
+   |dup_uplot_warn|             Warn: between than 70-80% of reads
+                                are duplicated
+   |dup_uplot_pass|             Pass: less than 70% of reads are
+                                duplicated
+   |dup_uplot_bg|               Plot background with no data (to
                                 show thresholds for pass, warn and
 				fail)
    ============================ ===================================
 
-.. |dedup_uplot_pass| image:: ../images/auto/qc/deduplication_uplot_pass.png
-.. |dedup_uplot_warn| image:: ../images/auto/qc/deduplication_uplot_warn.png
-.. |dedup_uplot_fail| image:: ../images/auto/qc/deduplication_uplot_fail.png
-.. |dedup_uplot_bg|   image:: ../images/auto/qc/deduplication_uplot_bg.png
+.. |dup_uplot_pass| image:: ../images/auto/qc/duplication_uplot_pass.png
+.. |dup_uplot_warn| image:: ../images/auto/qc/duplication_uplot_warn.png
+.. |dup_uplot_fail| image:: ../images/auto/qc/duplication_uplot_fail.png
+.. |dup_uplot_bg|   image:: ../images/auto/qc/duplication_uplot_bg.png
 
 .. _qc_report_adapter_summary_plots:
 

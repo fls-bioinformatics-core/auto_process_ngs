@@ -363,18 +363,18 @@ plots.useqlenplot({ 10: 2017916,
 img = os.path.join(imagesdir,"seq_dist_uplot_untrimmed.png")
 plots.useqlenplot({ 98: 3045784 },min_len=48,max_len=98,outfile=img)
 
-# Deduplication plot examples
-img = os.path.join(imagesdir,"deduplication_uplot_pass.png")
-plots.udeduplicationplot(98.08,outfile=img)
+# Sequence duplication plot examples
+img = os.path.join(imagesdir,"duplication_uplot_pass.png")
+plots.uduplicationplot(45.08,outfile=img)
 
-img = os.path.join(imagesdir,"deduplication_uplot_warn.png")
-plots.udeduplicationplot(67.73,outfile=img)
+img = os.path.join(imagesdir,"duplication_uplot_warn.png")
+plots.uduplicationplot(25.73,outfile=img)
 
-img = os.path.join(imagesdir,"deduplication_uplot_fail.png")
-plots.udeduplicationplot(21.63,outfile=img)
+img = os.path.join(imagesdir,"duplication_uplot_fail.png")
+plots.uduplicationplot(9.63,outfile=img)
 
-img = os.path.join(imagesdir,"deduplication_uplot_bg.png")
-plots.udeduplicationplot(0.0,outfile=img)
+img = os.path.join(imagesdir,"duplication_uplot_bg.png")
+plots.uduplicationplot(0.0,outfile=img)
 
 # Adapter content plot examples
 img = os.path.join(imagesdir,"adapter_uplot_no_adptrs.png")
