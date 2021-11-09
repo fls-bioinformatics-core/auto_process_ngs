@@ -4,7 +4,13 @@
 
 version: 2
 
+# Set the version of Python and other tools you might need
+build:
+  tools:
+    python: "3.6"
+
 python:
   install:
     - requirements: requirements.txt
     - requirements: docs/requirements.txt
+  system_packages: true
