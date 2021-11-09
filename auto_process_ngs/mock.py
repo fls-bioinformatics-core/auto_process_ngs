@@ -68,6 +68,7 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
+from .analysis import AnalysisFastq
 from .fastq_utils import pair_fastqs_by_name
 from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from .tenx_genomics_utils import flow_cell_id
@@ -383,7 +384,8 @@ class MockAnalysisProject(object):
         """
         self.fastq_names.append(fq)
 
-    def create(self,top_dir=None,readme=True,scriptcode=True):
+    def create(self,top_dir=None,readme=True,scriptcode=True,
+               populate_fastqs=True):
         """
         Build and populate the directory structure
 
@@ -393,7 +395,8 @@ class MockAnalysisProject(object):
           readme (boolean): if True then write a README file
           scriptcode (boolean): if True then write a ScriptCode
             subdirectory
-
+          populate_fastqs (boolean): if True then write content
+            to the Fastq files
         """
         # Create directory
         if top_dir is None:
@@ -407,8 +410,21 @@ class MockAnalysisProject(object):
         # Add Fastq files
         for fq in self.fastq_names:
             fq = os.path.basename(fq)
-            with open(os.path.join(fqs_dir,fq),'w') as fp:
-                fp.write('')
+            if populate_fastqs:
+                read_number = AnalysisFastq(fq).read_number
+                lane = AnalysisFastq(fq).lane_number
+                read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
+GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
++
+IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
+            else:
+                read = ""
+            if fq.endswith('.gz'):
+                with gzip.open(os.path.join(fqs_dir,fq),'wb') as fp:
+                    fp.write(read.encode())
+            else:
+                with open(os.path.join(fqs_dir,fq),'wt') as fp:
+                    fp.write(read)
         # Add README.info
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:
@@ -630,6 +646,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
     def add_qc_outputs(self,fastq_set=None,qc_dir=None,
                        protocol="standardPE",
                        include_fastq_strand=True,
+                       include_seqlens=True,
                        include_multiqc=True,
                        include_report=True,
                        include_zip_file=True,
@@ -646,6 +663,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
             protocol to use
           include_fastq_strand (bool): if True then
             add mock fastq_strand.py outputs
+          include_seqlens (bool): if True then add
+            mock sequence length outputs
           include_multiqc (bool): if True then add
             mock MultiQC outputs
           include_report (bool): if True then add
@@ -684,6 +703,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
                 MockQCOutputs.fastq_screen_v0_9_2(fq,
                                                   self._project.qc_dir,
                                                   screen)
+            if include_seqlens:
+                MockQCOutputs.seqlens(fq,self._project.qc_dir)
         # Handle fastq_strand, if requested
         if include_fastq_strand:
             fastq_strand_conf = os.path.join(self._project.dirn,

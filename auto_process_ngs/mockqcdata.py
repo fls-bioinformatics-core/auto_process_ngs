@@ -993,5 +993,42 @@ human	5.17	103.76
 """
 }
 
+SEQ_LENS_JSON = """{
+    "fastq": "%(fastq)s",
+    "frac_reads_masked": 0.0,
+    "frac_reads_padded": 0.2712291764912113,
+    "max_length": 76,
+    "mean_length": 75.31423877677945,
+    "median_length": 76,
+    "min_length": 65,
+    "nreads": 37285443,
+    "nreads_masked": 0,
+    "nreads_padded": 101129,
+    "seq_lengths_dist": {
+        "65": 3,
+        "66": 6,
+        "67": 2,
+        "68": 1,
+        "69": 16,
+        "70": 218,
+        "71": 307,
+        "72": 1289,
+        "73": 1559577,
+        "74": 5165990,
+        "75": 10549970,
+        "76": 20008064
+    },
+    "seq_lengths_masked_dist": {},
+    "seq_lengths_padded_dist": {
+        "71": 1,
+        "72": 8,
+        "73": 4088,
+        "74": 13609,
+        "75": 30989,
+        "76": 52434
+    }
+}
+"""
+
 # Base64 encoded generic example PNG
 BASE64_PNG_DATA = "iVBORw0KGgoAAAANSUhEUgAAAEwAAAAqCAIAAACWWCo7AAABFElEQVR4nO2asW3DMBBFvwwv4YZ1BjDgwn1qNlqDN8vnGirEOjO4j2sVUp0JmIJQQwOOAyOxfbwH4YMQVOjdB0EV6khCPSRzzuM8ak2Sm0cP+T8wSTXUexLQd20r50i63k3DJBJyRlqS3/mSMcYQQlrSNEyud+XOQ4r5Fcej1JIiAQIA45y6zgMewJpBZF1LeTz8/Uteg7xpyrUkGUuTgHv+JkV+nvLpJNsgAhEPAPBAfKlvg1ua3O8zql36DMf3nckLNmTMGfNnKgng8IWXzkuaOCdNUgv1EaKA/t3t3vxyTiWHj6mJJk1SCyaphVXyrDmbalI1JqkFk9SCSWrBJLVgklowSS2YpBZMUgtNSHYt/Kz0Dck+c8rgvriAAAAAAElFTkSuQmCC"

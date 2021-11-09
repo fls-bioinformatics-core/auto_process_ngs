@@ -14,6 +14,7 @@ Pipeline classes:
 Pipeline task classes:
 
 - SetupQCDirs
+- GetSeqLengthStats
 - CheckIlluminaQCOutputs
 - RunIlluminaQC
 - SetupFastqStrandConf
@@ -77,6 +78,7 @@ from .outputs import expected_outputs
 from .utils import determine_qc_protocol
 from .utils import set_cell_count_for_project
 from .fastq_strand import build_fastq_strand_conf
+from .seqlens import get_sequence_lengths
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -241,6 +243,17 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
         update_qc_metadata_requires.append(setup_qc_dirs)
         qc_metadata['protocol'] = qc_protocol
+
+        # Get Fastq sequence length statistics
+        get_seq_lengths = GetSeqLengthStats(
+            "%s: get sequence length statistics" %
+            project_name,
+            project,
+            qc_dir,
+            fastq_attrs=project.fastq_attrs)
+        self.add_task(get_seq_lengths,
+                      requires=(setup_qc_dirs,),
+                      log_dir=log_dir)
 
         # Check illumina_qc.sh is compatible version
         check_illumina_qc_version = CheckIlluminaQCVersion(
@@ -834,6 +847,54 @@ class UpdateQCMetadata(PipelineTask):
         qc_info['cellranger_version'] = self.args.cellranger_version
         qc_info['cellranger_refdata'] = self.args.cellranger_refdata
         qc_info.save()
+
+class GetSeqLengthStats(PipelineFunctionTask):
+    """
+    Get data on sequence lengths, masking and padding
+    for Fastqs in a project, and write the data to
+    JSON files.
+    """
+    def init(self,project,qc_dir,fastq_attrs=None):
+        """
+        Initialise the GetSeqLengthStats task
+
+        Arguments:
+          project (AnalysisProject): project with Fastqs
+            to get the sequence length data from
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          fastq_attrs (BaseFastqAttrs): class to use for
+            extracting data from Fastq names
+        """
+        self._fastqs = list()
+    def setup(self):
+        # Remove index Fastqs
+        self._fastqs = remove_index_fastqs(
+            self.args.project.fastqs,
+            fastq_attrs=self.args.fastq_attrs)
+        # Get sequence length data for Fastqs
+        for fastq in self._fastqs:
+            outfile = os.path.join(self.args.qc_dir,
+                                   "%s_seqlens.json" %
+                                   self.args.fastq_attrs(fastq))
+            if os.path.exists(outfile):
+                continue
+            self.add_call(
+                "Get read lengths for %s" % os.path.basename(fastq),
+                get_sequence_lengths,
+                fastq,
+                outfile=outfile)
+    def finish(self):
+        for result in self.result():
+            # Fastq name
+            fastq = result['fastq']
+            # Check output file exists
+            outfile = os.path.join(self.args.qc_dir,
+                                   "%s_seqlens.json" %
+                                   self.args.fastq_attrs(fastq))
+            if not os.path.exists(outfile):
+                raise Exception("Missing sequence length file: %s"  %
+                                outfile)
 
 class CheckIlluminaQCVersion(PipelineTask):
     """

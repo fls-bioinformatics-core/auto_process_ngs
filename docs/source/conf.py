@@ -246,6 +246,167 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
 
+# -- Make example plot images for QC report -----------------------------------
+
+from auto_process_ngs.qc import plots
+imagesdir = os.path.join("images","auto","qc")
+if not os.path.exists(imagesdir):
+    os.makedirs(imagesdir)
+
+# Read count plot examples
+img = os.path.join(imagesdir,"read_count_uplot.png")
+plots.ureadcountplot(3045784,nmasked=0,npadded=0,
+                     max_reads=3665120,
+                     outfile=img)
+
+img = os.path.join(imagesdir,"read_count_uplot_small.png")
+plots.ureadcountplot(1360307,nmasked=0,npadded=0,
+                     max_reads=3665120,
+                     outfile=img)
+
+img = os.path.join(imagesdir,"read_count_uplot_masking_and_padding1.png")
+plots.ureadcountplot(58192145,nmasked=1087126,npadded=1455460,
+                     max_reads=58192145,
+                     outfile=img)
+
+img = os.path.join(imagesdir,"read_count_uplot_masking_and_padding2.png")
+plots.ureadcountplot(50181731,nmasked=21227806,npadded=28246553,
+                     max_reads=58192145,
+                     outfile=img)
+
+# Sequence length distribution plot examples
+img = os.path.join(imagesdir,"seq_dist_uplot.png")
+plots.useqlenplot({ 65: 3.0,
+                    66: 6.0,
+                    67: 2.0,
+                    68: 1.0,
+                    69: 16.0,
+                    70: 218.0,
+                    71: 307.0,
+                    72: 1289.0,
+                    73: 1559577.0,
+                    74: 5165990.0,
+                    75: 10549970,
+                    76: 20008064 },
+                  min_len=26,max_len=76,outfile=img)
+
+img = os.path.join(imagesdir,"seq_dist_uplot_slewed.png")
+plots.useqlenplot({ 10: 2017916,
+                    11: 167219,
+                    12: 223764,
+                    13: 387221,
+                    14: 244739,
+                    15: 247888,
+                    16: 272688,
+                    17: 478475,
+                    18: 543203,
+                    19: 805492,
+                    20: 2681762,
+                    21: 7473567,
+                    22: 12133952,
+                    23: 5344314,
+                    24: 2067501,
+                    25: 342139,
+                    26: 224964,
+                    27: 349178,
+                    28: 319042,
+                    29: 332929,
+                    30: 290437,
+                    31: 401247,
+                    32: 497299,
+                    33: 327686,
+                    34: 388090,
+                    35: 115688,
+                    36: 75495,
+                    37: 46890,
+                    38: 14520,
+                    39: 11042,
+                    40: 3499,
+                    41: 2577,
+                    42: 3838,
+                    43: 9538,
+                    44: 14095,
+                    45: 14476,
+                    46: 852,
+                    47: 445,
+                    48: 307,
+                    49: 378,
+                    50: 325,
+                    51: 398,
+                    52: 483,
+                    53: 431,
+                    54: 252,
+                    55: 405,
+                    56: 285,
+                    57: 336,
+                    58: 709,
+                    59: 773,
+                    60: 1697,
+                    61: 12008,
+                    62: 8188,
+                    63: 9502,
+                    64: 2204,
+                    65: 4104,
+                    66: 7917,
+                    67: 9872,
+                    68: 13565,
+                    69: 8609,
+                    70: 1932,
+                    71: 29161,
+                    72: 7255,
+                    73: 4784,
+                    74: 6592,
+                    75: 127139,
+                    76: 75135 },
+                  min_len=10,max_len=76,outfile=img)
+
+img = os.path.join(imagesdir,"seq_dist_uplot_untrimmed.png")
+plots.useqlenplot({ 98: 3045784 },min_len=48,max_len=98,outfile=img)
+
+# Sequence duplication plot examples
+img = os.path.join(imagesdir,"duplication_uplot_pass.png")
+plots.uduplicationplot(45.08,outfile=img)
+
+img = os.path.join(imagesdir,"duplication_uplot_warn.png")
+plots.uduplicationplot(25.73,outfile=img)
+
+img = os.path.join(imagesdir,"duplication_uplot_fail.png")
+plots.uduplicationplot(9.63,outfile=img)
+
+img = os.path.join(imagesdir,"duplication_uplot_bg.png")
+plots.uduplicationplot(0.0,outfile=img)
+
+# Adapter content plot examples
+img = os.path.join(imagesdir,"adapter_uplot_no_adptrs.png")
+plots.uadapterplot({'Illumina Universal Adapter': 0.0,
+                    'Illumina Small RNA Adapter': 0.0,
+                    'Nextera Transposase Sequence': 0.0,
+                    'SOLID Small RNA Adapter': 0.0 },
+                   ('Illumina Universal Adapter',
+                    'Illumina Small RNA Adapter',
+                    'Nextera Transposase Sequence',
+                    'SOLID Small RNA Adapter'),outfile=img)
+
+img = os.path.join(imagesdir,"adapter_uplot_adptrs_sml.png")
+plots.uadapterplot({'Illumina Universal Adapter': 0.0,
+                    'Illumina Small RNA Adapter': 0.0,
+                    'Nextera Transposase Sequence': 0.2,
+                    'SOLID Small RNA Adapter': 0.0 },
+                   ('Illumina Universal Adapter',
+                    'Illumina Small RNA Adapter',
+                    'Nextera Transposase Sequence',
+                    'SOLID Small RNA Adapter'),outfile=img)
+
+img = os.path.join(imagesdir,"adapter_uplot_adptrs_lrg.png")
+plots.uadapterplot({'Illumina Universal Adapter': 0.57,
+                    'Illumina Small RNA Adapter': 0.0,
+                    'Nextera Transposase Sequence': 0.0,
+                    'SOLID Small RNA Adapter': 0.0 },
+                   ('Illumina Universal Adapter',
+                    'Illumina Small RNA Adapter',
+                    'Nextera Transposase Sequence',
+                    'SOLID Small RNA Adapter'),outfile=img)
+
 # -- Make command reference documents ------------------------------------------
 
 if not os.path.exists("reference"):

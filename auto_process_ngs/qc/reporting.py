@@ -14,6 +14,7 @@ import logging
 import time
 import ast
 import shutil
+import textwrap
 from collections import defaultdict
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.TabFile import TabFile
@@ -47,11 +48,16 @@ from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
 from .outputs import expected_outputs
+from .plots import useqlenplot
+from .plots import ureadcountplot
 from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
 from .plots import ustrandplot
+from .plots import uduplicationplot
+from .plots import uadapterplot
 from .plots import encode_png
+from .seqlens import SeqLens
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
@@ -312,6 +318,23 @@ class QCProject(object):
       files
     - software: dictionary with information on the
       QC software packages
+    - stats: AttrtibuteDictionary with useful stats from
+      across the project
+
+    The 'stats' property has the following attributes:
+
+    - max_seqs: maximum number of sequences across all
+      Fastq files
+    - min_sequence_length: minimum sequence length across
+      all Fastq files
+    - max_sequence_length: maximum sequence length across
+      all Fastq files
+    - max_sequence_length_read[READ]: maximum sequence
+      length across all READ Fastqs (where READ is 'r1',
+      'r2' etc)
+    - min_sequence_length_read[READ]: minimum sequence
+      length across all READ Fastqs (where READ is 'r1',
+      'r2' etc)
 
     The following are valid values for the 'outputs'
     property:
@@ -319,6 +342,7 @@ class QCProject(object):
     - 'fastqc_[r1...]'
     - 'screens_[r1...]'
     - 'strandedness'
+    - 'sequence_lengths'
     - 'icell8_stats'
     - 'icell8_report'
     - 'cellranger_count'
@@ -356,6 +380,14 @@ class QCProject(object):
         logger.debug("QCProject: qc_dir (final): %s" % self.qc_dir)
         # How to handle Fastq names
         self.fastq_attrs = self.project.fastq_attrs
+        # Additional metrics
+        self.stats = AttributeDictionary(
+            max_seqs=None,
+            min_sequence_length=None,
+            max_sequence_length=None,
+            min_sequence_length_read={},
+            max_sequence_length_read={},
+        )
         # Detect outputs
         self._detect_outputs()
         # Expose metadata from parent run
@@ -502,6 +534,9 @@ class QCProject(object):
         output_files = []
         multiplexed_samples = set()
         software = {}
+        max_seqs = None
+        min_seq_length = {}
+        max_seq_length = {}
         print("Scanning contents of %s" % self.qc_dir)
         files = [os.path.join(self.qc_dir,f)
                  for f in os.listdir(self.qc_dir)]
@@ -590,6 +625,37 @@ class QCProject(object):
                 software['fastq_strand'] = sorted(list(versions))
             # Store the fastq_strand files
             output_files.extend(fastq_strand)
+        # Look for sequence length outputs
+        seq_lens = list(filter(lambda f:
+                               f.endswith("_seqlens.json"),
+                               files))
+        logger.debug("seq_lens: %s" % seq_lens)
+        if seq_lens:
+            outputs.add("sequence_lengths")
+            for f in seq_lens:
+                fq = self.fastq_attrs(os.path.splitext(f)[0])
+                read = '%s%s' % ('i' if fq.is_index_read else 'r',
+                                 fq.read_number)
+                fastq_names.add(
+                    os.path.basename(
+                        os.path.splitext(f)[0])[:-len("_seqlens")])
+                seqlens_data = SeqLens(f)
+                try:
+                    # Try to extract the sequence lengths
+                    max_seqs = max(max_seqs,seqlens_data.nreads)
+                except Exception:
+                    if not max_seqs:
+                        max_seqs = seqlens_data.nreads
+                if not read in min_seq_length:
+                    min_seq_length[read] = seqlens_data.min_length
+                else:
+                    min_seq_length[read] = min(min_seq_length[read],
+                                               seqlens_data.min_length)
+                if not read in max_seq_length:
+                    max_seq_length[read] = seqlens_data.max_length
+                else:
+                    max_seq_length[read] = max(max_seq_length[read],
+                                               seqlens_data.max_length)
         # Look for ICELL8 outputs
         icell8_top_dir = os.path.dirname(self.qc_dir)
         print("Checking for ICELL8 reports in %s/stats" %
@@ -762,6 +828,35 @@ class QCProject(object):
         self.software = software
         # Output files
         self.output_files = sorted(output_files)
+        # Maximum number of sequences
+        self.stats['max_seqs'] = max_seqs
+        # Maximum and minimum sequence lengths for each read
+        for read in self.reads:
+            try:
+                self.stats['min_sequence_length_read'][read] = \
+                    min_seq_length[read]
+            except KeyError:
+                # No data for this read
+                self.stats['min_sequence_length_read'][read] = None
+            try:
+                self.stats['max_sequence_length_read'][read] = \
+                    max_seq_length[read]
+            except KeyError:
+                # No data for this read
+                self.stats['max_sequence_length_read'][read] = None
+        # Maximum and minimum sequence lengths for all reads
+        try:
+            self.stats['min_sequence_length'] = min(
+                [min_seq_length[r] for r in min_seq_length])
+        except ValueError:
+            # No data for any read
+            self.stats['min_sequence_length'] = None
+        try:
+            self.stats['max_sequence_length'] = max(
+                [max_seq_length[r] for r in max_seq_length])
+        except ValueError:
+            # No data for any read
+            self.stats['max_sequence_length'] = None
 
 class FastqSet(object):
     """
@@ -833,8 +928,13 @@ class QCReport(Document):
     - fastqs: Fastq R1/R2 names
     - reads: number of reads
     - read_lengths: length of reads
-    - fastqc_[read]: FastQC mini-plot for [read] (r1,r2,...)
+    - read_lengths_distributions: mini-plots of read length distributions
+    - read_counts: mini-plots of fractions of masked/padded/total reads
+    - adapter_content: mini-plots summarising adapter content for all reads
+    - read_length_dist_[read]: length dist mini-plot for [read] (r1,r2,...)
+    - fastqc_[read]: FastQC mini-plot for [read]
     - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
+    - adapters_[read]: mini-plot adapter content summary for [read]
     - screens_[read]: FastQScreen mini-plots for [read]
     - strandedness: 'forward', 'reverse' or 'unstranded' for pair
     - cellranger_count: 'cellranger count' outputs for each sample
@@ -849,38 +949,96 @@ class QCReport(Document):
     """
     # Field descriptions for summary table
     field_descriptions = {
-        'sample': 'Sample',
-        'fastq' : 'Fastq',
-        'fastqs': 'Fastqs',
-        'reads': '#reads',
-        'read_lengths': 'Length',
-        'fastqc_r1': 'FastQC[R1]',
-        'boxplot_r1': 'Boxplot[R1]',
-        'screens_r1': 'Screens[R1]',
-        'fastqc_r2': 'FastQC[R2]',
-        'boxplot_r2': 'Boxplot[R2]',
-        'screens_r2': 'Screens[R2]',
-        'fastqc_r3': 'FastQC[R3]',
-        'boxplot_r3': 'Boxplot[R3]',
-        'screens_r3': 'Screens[R3]',
-        'strandedness': 'Strand',
-        'cellranger_count': 'Single library analyses',
-        '10x_cells': '#cells',
-        '10x_reads_per_cell': '#reads/cell',
-        '10x_genes_per_cell': '#genes/cell',
-        '10x_frac_reads_in_cell': '%reads in cells',
-        '10x_fragments_per_cell': '#fragments/cell',
-        '10x_fragments_overlapping_targets': '%fragments overlapping targets',
-        '10x_fragments_overlapping_peaks': '%fragments overlapping peaks',
-        '10x_tss_enrichment_score': 'TSS enrichment score',
-        '10x_atac_fragments_per_cell': '#ATAC fragments/cell',
-        '10x_gex_genes_per_cell': '#GEX genes/cell',
-        '10x_genes_detected': '#genes',
-        '10x_umis_per_cell': '#UMIs/cell',
-        '10x_pipeline': 'Pipeline',
-        '10x_reference': 'Reference dataset',
-        '10x_web_summary': 'HTML report',
-        'linked_sample': 'Linked sample',
+        'sample': ('Sample','Sample name'),
+        'fastq' : ('Fastq','Fastq file'),
+        'fastqs': ('Fastqs','Fastq files in each sample'),
+        'reads': ('#reads','Number of reads/read pairs'),
+        'read_lengths': ('Lengths',
+                         'Mean sequence length and range'),
+        'read_counts': ('Counts',
+                        'Relative number of total reads, and proportions '
+                        'of masked and padded reads in each Fastq'),
+        'sequence_duplication': ('Dup%',
+                                 'Fraction of reads with duplicated '
+                                 'sequences in each Fastq'),
+        'adapter_content': ('Adapters',
+                            'Fraction of data containing adapter '
+                            'sequences in each Fastq'),
+        'read_lengths_dist_r1': ('Dist[R1]',
+                                 'Distributions of R1 sequence '
+                                 'lengths'),
+        'fastqc_r1': ('FastQC[R1]',
+                      'Summary of FastQC metrics for R1'),
+        'boxplot_r1': ('Quality[R1]',
+                       'Per base sequence quality for R1'),
+        'adapters_r1': ('Adapters[R1]',
+                        'Summary of adapter content for R1'),
+        'screens_r1': ('Screens[R1]',
+                       'Outputs from FastqScreen running R1 against '
+                       'multiple panels'),
+        'read_lengths_dist_r2': ('Dist[R2]',
+                                 'Distributions of R2 sequence '
+                                 'lengths'),
+        'fastqc_r2': ('FastQC[R2]',
+                      'Summary of FastQC metrics for R2'),
+        'boxplot_r2': ('Quality[R2]',
+                       'Per base sequence quality for R2'),
+        'screens_r2': ('Screens[R2]',
+                       'Outputs from FastqScreen running R2 against '
+                       'multiple panels'),
+        'adapters_r2': ('Adapters[R2]',
+                        'Summary of adapter content for R2'),
+        'fastqc_r3': ('FastQC[R3]',
+                      'Summary of FastQC metrics for R3'),
+        'read_lengths_dist_r3': ('Dist[R3]',
+                                 'Distributions of R3 sequence '
+                                 'lengths'),
+        'boxplot_r3': ('Quality[R3]',
+                       'Per base sequence quality for R1'),
+        'screens_r3': ('Screens[R3]',
+                       'Outputs from FastqScreen running R3 against '
+                       'multiple panels'),
+        'adapters_r3': ('Adapters[R3]',
+                        'Summary of adapter content for R1'),
+        'strandedness': ('Strand',
+                         'Proportions of reads mapping to forward and '
+                         'reverse strands'),
+        'cellranger_count': ('Single library analyses',
+                             'Web summary from Cellranger* single '
+                             'library analysis for this sample'),
+        '10x_cells': ('#cells','Number of cells'),
+        '10x_reads_per_cell': ('#reads/cell','Average reads per cell'),
+        '10x_genes_per_cell': ('#genes/cell','Median genes per cell'),
+        '10x_frac_reads_in_cell': ('%reads in cells',
+                                   'Fraction of reads in cells'),
+        '10x_fragments_per_cell': ('#fragments/cell',
+                                   'Median fragments per cell'),
+        '10x_fragments_overlapping_targets': ('%fragments overlapping targets',
+                                              'Fraction of fragments '
+                                              'overlapping targets'),
+        '10x_fragments_overlapping_peaks': ('%fragments overlapping peaks',
+                                            'Fraction of fragments '
+                                            'overlapping peaks'),
+        '10x_tss_enrichment_score': ('TSS enrichment score',
+                                     'TSS enrichment score'),
+        '10x_atac_fragments_per_cell': ('#ATAC fragments/cell',
+                                        'ATAC Median high-quality fragments '
+                                        'per cell'),
+        '10x_gex_genes_per_cell': ('#GEX genes/cell',
+                                   'GEX Median genes per cell'),
+        '10x_genes_detected': ('#genes',
+                               'Total genes detected'),
+        '10x_umis_per_cell': ('#UMIs/cell',
+                              'Median UMI counts per cell'),
+        '10x_pipeline': ('Pipeline',
+                         'Name of the 10x Genomics pipeline used'),
+        '10x_reference': ('Reference dataset',
+                          'Reference dataset used for the analysis'),
+        '10x_web_summary': ('HTML report',
+                            'Link to the web_summary.html report'),
+        'linked_sample': ('Linked sample',
+                          'Corresponding sample for single cell multiome '
+                          'analysis')
     }
     # Titles for metadata items
     metadata_titles = {
@@ -1033,6 +1191,23 @@ class QCReport(Document):
                     print("\t- %s" % output)
             else:
                 logger.warning("%s: no QC outputs found" % project.name)
+            if project.stats.max_seqs:
+                print("Maximum number of sequences: %d" %
+                      project.stats.max_seqs)
+            if project.stats.min_sequence_length:
+                print("Minimum sequence length    : %d" %
+                      project.stats.min_sequence_length)
+            for read in project.reads:
+                if read in project.stats.min_sequence_length_read:
+                    print("\t- %s: %s" %
+                          (read,project.stats.min_sequence_length_read[read]))
+            if project.stats.max_sequence_length:
+                print("Maximum sequence length    : %d" %
+                      project.stats.max_sequence_length)
+            for read in project.reads:
+                if read in project.stats.max_sequence_length_read:
+                    print("\t- %s: %s" %
+                          (read,project.stats.max_sequence_length_read[read]))
             if project.software:
                 print("Software versions:")
                 for package in project.software:
@@ -1045,18 +1220,40 @@ class QCReport(Document):
                     summary_fields_ = ['sample',
                                        'fastqs',
                                        'reads',
-                                       'read_lengths',]
+                                       'read_counts',
+                                       'read_lengths',
+                                       'strandedness',
+                                       'sequence_duplication',
+                                       'adapter_content']
                 else:
                     summary_fields_ = ['sample',
                                        'fastq',
                                        'reads',
-                                       'read_lengths',]
-                if 'strandedness' in project.outputs:
-                    summary_fields_.append('strandedness')
+                                       'read_counts',
+                                       'read_lengths',
+                                       'strandedness',
+                                       'sequence_duplication',
+                                       'adapter_content',]
+                if 'strandedness' not in project.outputs:
+                    try:
+                        summary_fields_.remove('strandedness')
+                    except ValueError:
+                        pass
+                if 'sequence_lengths' in project.outputs:
+                    for read in project.reads:
+                        summary_fields_.append('read_lengths_dist_%s' % read)
+                else:
+                    try:
+                        summary_fields_.remove('read_counts')
+                    except ValueError:
+                        pass
                 for read in project.reads:
                     if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('fastqc_%s' % read)
+                for read in project.reads:
+                    if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('boxplot_%s' % read)
+                for read in project.reads:
                     if ('screens_%s' % read) in project.outputs:
                         summary_fields_.append('screens_%s' % read)
                 if 'cellranger_count' in project.outputs and \
@@ -1361,8 +1558,15 @@ class QCReport(Document):
 
         Associated CSS classes are 'summary' and 'fastq_summary'
         """
+        # Generate headers for table
+        tbl_headers = {
+            f: "<space title=\"%s\">%s</span>" %
+            ('\n'.join(textwrap.wrap(self.field_descriptions[f][1],width=20)),
+             self.field_descriptions[f][0])
+            for f in self.field_descriptions.keys()
+        }
         # Create the table
-        summary_tbl = Table(fields,**self.field_descriptions)
+        summary_tbl = Table(fields,**tbl_headers)
         summary_tbl.add_css_classes('summary','fastq_summary')
         if "cellranger_count" in fields:
             summary_tbl.add_css_classes('single_library_analyses',
@@ -1387,8 +1591,15 @@ class QCReport(Document):
             "Single library analysis",
             name="single_library_analysis_%s" % sanitize_name(project.id),
             css_classes=('single_library_summary',))
+        # Generate headers for table
+        tbl_headers = {
+            f: "<space title=\"%s\">%s</span>" %
+            ('\n'.join(textwrap.wrap(self.field_descriptions[f][1],width=20)),
+             self.field_descriptions[f][0])
+            for f in self.field_descriptions.keys()
+        }
         # Create the table
-        single_library_tbl = Table(fields,**self.field_descriptions)
+        single_library_tbl = Table(fields,**tbl_headers)
         single_library_tbl.add_css_classes('summary','single_library_summary')
         # Append to the summary section
         section.add(single_library_tbl)
@@ -1775,6 +1986,7 @@ class QCReportSample(object):
             self.fastq_groups.append(QCReportFastqGroup(
                 fqs,
                 qc_dir=qc_dir,
+                project=project,
                 project_id=project.id,
                 fastq_attrs=fastq_attrs))
         # Reads associated with the sample
@@ -2221,7 +2433,7 @@ class QCReportFastqGroup(object):
     update_summary_table: add line to summary table for
       the group
     """
-    def __init__(self,fastqs,qc_dir,project_id=None,
+    def __init__(self,fastqs,qc_dir,project,project_id=None,
                  fastq_attrs=AnalysisFastq):
         """
         Create a new QCReportFastqGroup
@@ -2232,11 +2444,13 @@ class QCReportFastqGroup(object):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
+          project (QCProject): parent project
           project_id (str): identifier for the project
           fastq_attrs (BaseFastqAttrs): class for extracting
             data from Fastq names
         """
         self.qc_dir = qc_dir
+        self.project = project
         self.project_id = project_id
         self.fastq_attrs = fastq_attrs
         # Assign fastqs to reads
@@ -2467,6 +2681,8 @@ class QCReportFastqGroup(object):
                 fields = ('fastqs',
                           'reads',
                           'read_lengths',
+                          'read_lengths_dist_r1',
+                          'read_lengths_dist_r2',
                           'boxplot_r1','boxplot_r2',
                           'fastqc_r1','fastqc_r2',
                           'screens_r1','screens_r2')
@@ -2474,6 +2690,7 @@ class QCReportFastqGroup(object):
                 fields = ('fastq',
                           'reads',
                           'read_lengths',
+                          'read_lengths_dist_r1',
                           'boxplot_r1',
                           'fastqc_r1',
                           'screens_r1')
@@ -2539,6 +2756,12 @@ class QCReportFastqGroup(object):
         - fastq (if single-end)
         - reads
         - read_lengths
+        - read_counts
+        - sequence_duplication
+        - adapter_content
+        - read_lengths_dist_r1
+        - read_lengths_dist_r2
+        - read_lengths_dist_r3
         - boxplot_r1
         - boxplot_r2
         - boxplot_r3
@@ -2548,6 +2771,9 @@ class QCReportFastqGroup(object):
         - screens_r1
         - screens_r2
         - screens_r3
+        - adapters_r1
+        - adapters_r2
+        - adapters_r3
         - strandedness
 
         Arguments:
@@ -2563,24 +2789,120 @@ class QCReportFastqGroup(object):
                                   "#%s" % self.reporters[read].safe_name))
             value = "<br />".join([str(x) for x in value])
         elif field == "reads":
-            value = pretty_print_reads(
-                self.reporters[self.reads[0]].fastqc.data.basic_statistics(
+            if self.reporters[self.reads[0]].sequence_lengths:
+                value = pretty_print_reads(
+                    self.reporters[self.reads[0]].sequence_lengths.nreads)
+            else:
+                value = pretty_print_reads(
+                    self.reporters[self.reads[0]].fastqc.data.basic_statistics(
                     'Total Sequences'))
+        elif field == "read_counts":
+            value = []
+            title = []
+            for read in self.reads:
+                value.append(
+                    Img(self.reporters[read].ureadcountplot(
+                        max_reads=self.project.stats.max_seqs)))
+                title.append(
+                    "%s: %s reads\n* %s masked (%.1f%%)\n* %s padded (%.1f%%)"
+                    % (read.upper(),
+                       pretty_print_reads(
+                           self.reporters[read].sequence_lengths.nreads),
+                       pretty_print_reads(
+                           self.reporters[read].sequence_lengths.nmasked),
+                       self.reporters[read].sequence_lengths.frac_masked,
+                       pretty_print_reads(
+                           self.reporters[read].sequence_lengths.npadded),
+                       self.reporters[read].sequence_lengths.frac_padded))
+            value = "<div title=\"%s\">%s</div>" % ("\n\n".join(title),
+                                                    "<br />".join(
+                                                        [str(x)
+                                                         for x in value]))
         elif field == "read_lengths":
             value = []
             for read in self.reads:
-                value.append(Link(
-                    self.reporters[read].fastqc.data.basic_statistics(
-                        'Sequence length'),
-                    self.reporters[read].fastqc.summary.link_to_module(
-                        'Sequence Length Distribution',
-                        relpath=relpath)))
+                if self.reporters[read].sequence_lengths:
+                    value.append(
+                        "%.1f&nbsp;(%s)" %
+                        (self.reporters[read].sequence_lengths.mean,
+                         self.reporters[read].sequence_lengths.range.replace('-','&#8209;')))
+                else:
+                    value.append(Link(
+                        self.reporters[read].fastqc.data.basic_statistics(
+                            'Sequence length'),
+                        self.reporters[read].fastqc.summary.link_to_module(
+                            'Sequence Length Distribution',
+                            relpath=relpath)))
             value = "<br />".join([str(x) for x in value])
+        elif field.startswith("read_lengths_dist_"):
+            read = field.split('_')[-1]
+            min_seq_len = self.project.stats.min_sequence_length_read[read]
+            max_seq_len = self.project.stats.max_sequence_length_read[read]
+            if (max_seq_len - min_seq_len) < 50:
+                min_seq_len = max(0,max_seq_len - 50)
+            if min_seq_len == max_seq_len:
+                length_range = ""
+            else:
+                length_range = " (%s-%s)" % (min_seq_len,max_seq_len)
+            value = Img(
+                self.reporters[read].useqlenplot(
+                    min_len=min_seq_len,
+                    max_len=max_seq_len),
+                href=self.reporters[read].fastqc.summary.link_to_module(
+                    'Sequence Length Distribution',
+                    relpath=relpath),
+                title="%s: sequence length distribution%s\n(click for "
+                "FastQC plot)" % (read.upper(),length_range))
+        elif field == "sequence_duplication":
+            value = []
+            for read in self.reads:
+                value.append(
+                    Img(self.reporters[read].uduplicationplot(mode='dup'),
+                        href=self.reporters[read].fastqc.summary.link_to_module(
+                            'Sequence Duplication Levels',
+                            relpath=relpath),
+                        title="%s: percentage of sequences removed by "
+                        "deduplication: %.2f%%\n(click for FastQC Sequence "
+                        "Duplication Levels plot)" %
+                        (read.upper(),
+                         (100.0 - self.reporters[read].\
+                          sequence_deduplication_percentage))))
+            value = '<br />'.join([str(x) for x in value])
+        elif field == "adapter_content":
+            value = []
+            for read in self.reads:
+                value.append(
+                    Img(self.reporters[read].uadapterplot(),
+                        href=self.reporters[read].fastqc.summary.link_to_module(
+                            'Adapter Content',
+                            relpath=relpath),
+                        title="%s fraction adapter content:\n%s" %
+                        (read.upper(),
+                         '\n'.join(
+                             ["* %s: %.2f" %
+                              (adapter,
+                               self.reporters[read].adapters_summary[adapter])
+                              for adapter in self.reporters[read].adapters]))))
+            value = ''.join([str(x) for x in value])
+        elif field.startswith("adapters_"):
+            read = field.split('_')[-1]
+            value = Img(self.reporters[read].uadapterplot(height=25,
+                                                          multi_bar=True),
+                        href=self.reporters[read].fastqc.summary.link_to_module(
+                            'Adapter Content',
+                            relpath=relpath),
+                        title='\n'.join(
+                            ["%s: %.2f" %
+                             (adapter,
+                              self.reporters[read].adapters_summary[adapter])
+                             for adapter in self.reporters[read].adapters]))
         elif field.startswith("boxplot_"):
             read = field.split('_')[-1]
             value = Img(self.reporters[read].uboxplot(),
                         href="#boxplot_%s" %
-                        self.reporters[read].safe_name)
+                        self.reporters[read].safe_name,
+                        title="%s: sequence quality distribution (click for "
+                        "FastQC plot)" % read.upper())
         elif field.startswith("fastqc_"):
             read = field.split('_')[-1]
             value = Img(self.reporters[read].ufastqcplot(),
@@ -2612,6 +2934,7 @@ class QCReportFastq(object):
     path: path to the Fastq
     safe_name: name suitable for use in HTML links etc
     sample_name: sample name derived from the Fastq basename
+    sequence_lengths: SeqLens instance
     fastqc: Fastqc instance
     fastq_screen.names: list of FastQScreen names
     fastq_screen.SCREEN.description: description of SCREEN
@@ -2619,14 +2942,20 @@ class QCReportFastq(object):
     fastq_screen.SCREEN.txt: associated TXT file for SCREEN
     fastq_screen.SCREEN.version: associated version for SCREEN
     program_versions.NAME: version of package NAME
+    adapters: list of adapters from Fastqc
+    adapters_summary: dictionary summarising adapter content
 
     Provides the following methods:
 
     report_fastqc
     report_fastq_screens
     report_program_versions
+    useqlenplot
+    ureadcountplot
     uboxplot
     ufastqcplot
+    useqduplicationplot
+    uadapterplot
     uscreenplot
     """
     def __init__(self,fastq,qc_dir,project_id=None,
@@ -2681,6 +3010,26 @@ class QCReportFastq(object):
                 self.fastq_screen[name]["png"] = png
                 self.fastq_screen[name]["txt"] = txt
                 self.fastq_screen[name]["version"] = Fastqscreen(txt).version
+        # Sequence lengths
+        try:
+            self.sequence_lengths = SeqLens(
+                os.path.join(qc_dir,
+                             "%s_seqlens.json" % self.fastq_attrs(fastq)))
+        except Exception as ex:
+            self.sequence_lengths = None
+        # Sequence deduplication percentage
+        if self.fastqc is not None:
+            self.sequence_deduplication_percentage = \
+                self.fastqc.data.sequence_deduplication_percentage()
+        else:
+            self.sequence_deduplication_percentage = None
+        # Adapters
+        if self.fastqc is not None:
+            self.adapters_summary = \
+                self.fastqc.data.adapter_content_summary()
+            self.adapters = self.adapters_summary.keys()
+        else:
+            self.adapters = None
         # Program versions
         self.program_versions = AttributeDictionary()
         if self.fastqc is not None:
@@ -2824,6 +3173,41 @@ class QCReportFastq(object):
                           (self.fastqc.summary.status(m),m))
         return "\n".join(output)
 
+    def useqlenplot(self,max_len=None,min_len=None,height=None,
+                    inline=True):
+        """
+        Return a mini-sequence length distribution plot
+
+        Arguments:
+          max_len (int): set the upper limit of the x-axis
+          min_len (int): set the lower limit of the x-axis
+          height (int): optionally set the plot height in pixels
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return useqlenplot(self.sequence_lengths.dist,
+                           self.sequence_lengths.masked_dist,
+                           min_len=min_len,
+                           max_len=max_len,
+                           height=height,
+                           inline=inline)
+
+    def ureadcountplot(self,max_reads=None,inline=True):
+        """
+        Return a mini-sequence composition plot
+
+        Arguments:
+          max_reads (int): if set then scale the reads for this
+            Fastq against this value in the plot
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return ureadcountplot(self.sequence_lengths.nreads,
+                              self.sequence_lengths.nmasked,
+                              self.sequence_lengths.npadded,
+                              max_reads=max_reads,
+                              inline=inline)
+
     def uboxplot(self,inline=True):
         """
         Return a mini-sequence quality boxplot
@@ -2833,6 +3217,35 @@ class QCReportFastq(object):
             inlining in HTML document
         """
         return uboxplot(self.fastqc.data.path,inline=inline)
+
+    def uduplicationplot(self,mode='dup',inline=True):
+        """
+        Return a mini-sequence duplication plot
+
+        Arguments:
+          mode (str): either 'dup' or 'dedup'
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return uduplicationplot(self.sequence_deduplication_percentage,
+                                  mode=mode,
+                                  inline=inline)
+
+    def uadapterplot(self,height=40,multi_bar=False,inline=True):
+        """
+        Return a mini-adapter content summary plot
+
+        Arguments:
+          height (int): optionally set the plot height in pixels
+          multi_bar (bool): if True then create a plot with one
+            bar per adapter class (otherwise summarise adapter
+            content on one bar in the plot)
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return uadapterplot(self.adapters_summary,self.adapters,
+                            height=height,multi_bar=multi_bar,
+                            inline=inline)
 
     def ufastqcplot(self,inline=True):
         """
@@ -2855,7 +3268,7 @@ class QCReportFastq(object):
         screen_files = list()
         for name in self.fastq_screen.names:
             screen_files.append(self.fastq_screen[name].txt)
-        return uscreenplot(screen_files,inline=inline)
+        return uscreenplot(screen_files,screen_width=30,inline=inline)
 
 #######################################################################
 # Functions
