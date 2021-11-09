@@ -934,7 +934,6 @@ class QCReport(Document):
     - read_length_dist_[read]: length dist mini-plot for [read] (r1,r2,...)
     - fastqc_[read]: FastQC mini-plot for [read]
     - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
-    - adapters_[read]: mini-plot adapter content summary for [read]
     - screens_[read]: FastQScreen mini-plots for [read]
     - strandedness: 'forward', 'reverse' or 'unstranded' for pair
     - cellranger_count: 'cellranger count' outputs for each sample
@@ -971,8 +970,6 @@ class QCReport(Document):
                       'Summary of FastQC metrics for R1'),
         'boxplot_r1': ('Quality[R1]',
                        'Per base sequence quality for R1'),
-        'adapters_r1': ('Adapters[R1]',
-                        'Summary of adapter content for R1'),
         'screens_r1': ('Screens[R1]',
                        'Outputs from FastqScreen running R1 against '
                        'multiple panels'),
@@ -986,8 +983,6 @@ class QCReport(Document):
         'screens_r2': ('Screens[R2]',
                        'Outputs from FastqScreen running R2 against '
                        'multiple panels'),
-        'adapters_r2': ('Adapters[R2]',
-                        'Summary of adapter content for R2'),
         'fastqc_r3': ('FastQC[R3]',
                       'Summary of FastQC metrics for R3'),
         'read_lengths_dist_r3': ('Dist[R3]',
@@ -998,8 +993,6 @@ class QCReport(Document):
         'screens_r3': ('Screens[R3]',
                        'Outputs from FastqScreen running R3 against '
                        'multiple panels'),
-        'adapters_r3': ('Adapters[R3]',
-                        'Summary of adapter content for R1'),
         'strandedness': ('Strand',
                          'Proportions of reads mapping to forward and '
                          'reverse strands'),
@@ -2771,9 +2764,6 @@ class QCReportFastqGroup(object):
         - screens_r1
         - screens_r2
         - screens_r3
-        - adapters_r1
-        - adapters_r2
-        - adapters_r3
         - strandedness
 
         Arguments:
@@ -2884,18 +2874,6 @@ class QCReportFastqGroup(object):
                                self.reporters[read].adapters_summary[adapter])
                               for adapter in self.reporters[read].adapters]))))
             value = ''.join([str(x) for x in value])
-        elif field.startswith("adapters_"):
-            read = field.split('_')[-1]
-            value = Img(self.reporters[read].uadapterplot(height=25,
-                                                          multi_bar=True),
-                        href=self.reporters[read].fastqc.summary.link_to_module(
-                            'Adapter Content',
-                            relpath=relpath),
-                        title='\n'.join(
-                            ["%s: %.2f" %
-                             (adapter,
-                              self.reporters[read].adapters_summary[adapter])
-                             for adapter in self.reporters[read].adapters]))
         elif field.startswith("boxplot_"):
             read = field.split('_')[-1]
             value = Img(self.reporters[read].uboxplot(),
