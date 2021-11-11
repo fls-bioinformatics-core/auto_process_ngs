@@ -250,6 +250,7 @@ class QCPipeline(Pipeline):
             project_name,
             project,
             qc_dir,
+            qc_protocol=qc_protocol,
             fastq_attrs=project.fastq_attrs)
         self.add_task(get_seq_lengths,
                       requires=(setup_qc_dirs,),
@@ -854,7 +855,7 @@ class GetSeqLengthStats(PipelineFunctionTask):
     for Fastqs in a project, and write the data to
     JSON files.
     """
-    def init(self,project,qc_dir,fastq_attrs=None):
+    def init(self,project,qc_dir,qc_protocol=None,fastq_attrs=None):
         """
         Initialise the GetSeqLengthStats task
 
@@ -863,6 +864,7 @@ class GetSeqLengthStats(PipelineFunctionTask):
             to get the sequence length data from
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
+          qc_protocol (str): QC protocol being used
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
         """
@@ -874,6 +876,11 @@ class GetSeqLengthStats(PipelineFunctionTask):
             fastq_attrs=self.args.fastq_attrs)
         # Get sequence length data for Fastqs
         for fastq in self._fastqs:
+            # Ignore the R2 reads for 10x single-cell ATAC
+            if self.args.qc_protocol in ('10x_scATAC',
+                                         '10x_Multiome_ATAC',):
+                if self.args.fastq_attrs(fastq).read_number == 2:
+                    continue
             outfile = os.path.join(self.args.qc_dir,
                                    "%s_seqlens.json" %
                                    self.args.fastq_attrs(fastq))
