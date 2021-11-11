@@ -2,11 +2,15 @@
 #
 # fastqc library
 import os
+import logging
 from collections import OrderedDict
 from bcftbx.TabFile import TabFile
 from bcftbx.htmlpagewriter import PNGBase64Encoder
 from ..docwriter import Table
 from ..docwriter import Link
+
+# Module specific logger
+logger = logging.getLogger(__name__)
 
 """
 Example Fastqc summary text file (FASTQ_fastqc/summary.txt):
@@ -448,7 +452,15 @@ class FastqcData(object):
         data = self.data("Adapter Content")
         # Get the list of adapter names from table
         # header
-        adapters = data[0].split('\t')[1:]
+        try:
+            adapters = data[0].split('\t')[1:]
+        except IndexError:
+            # It's possible that the adapter data is
+            # empty so issue a warning
+            logger.warn("Unable to extract list of adapters"
+                        "from FastQC output")
+            # Return empty (ordered) dictionary
+            return OrderedDict()
         # Summarise content for each adapter across
         # sequence by summing up content at each
         # position and dividing by total area
