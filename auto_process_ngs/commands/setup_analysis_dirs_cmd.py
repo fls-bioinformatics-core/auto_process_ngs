@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def setup_analysis_dirs(ap,
+                        name=None,
                         unaligned_dir=None,
                         project_metadata_file=None,
                         ignore_missing_metadata=False,
@@ -39,6 +40,8 @@ def setup_analysis_dirs(ap,
     Arguments:
       unaligned_dir (str): optional, name of 'unaligned'
         subdirectory (defaults to value stored in parameters)
+      name (str): (optional) identifier to append to output
+        project directories
       project_metadata_file (str): optional, name of the
         'projects.info' metadata file to take project
         information from
@@ -125,11 +128,16 @@ def setup_analysis_dirs(ap,
         if projects and project_name not in projects:
             logger.warning("Skipping '%s'" % project_name)
             continue
+        # Append the identifier, if supplied
+        if name:
+            new_project_name = project_name + '_' + name
+        else:
+            new_project_name = project_name
         # Create the project
         project = analysis.AnalysisProject(
-            project_name,
+            new_project_name,
             os.path.join(ap.analysis_dir,
-                         project_name),
+                         new_project_name),
             user=user,
             PI=PI,
             organism=organism,
@@ -143,7 +151,7 @@ def setup_analysis_dirs(ap,
             logging.warning("Project '%s' already exists, skipping" %
                             project.name)
             continue
-        print("Creating project: '%s'" % project_name)
+        print("Creating project: '%s'" % new_project_name)
         try:
             project.create_directory(
                 illumina_data.get_project(project_name),
@@ -152,7 +160,7 @@ def setup_analysis_dirs(ap,
             n_projects += 1
         except IlluminaData.IlluminaDataError as ex:
             logger.warning("Failed to create project '%s': %s" %
-                           (project_name,ex))
+                           (new_project_name,ex))
             continue
         # Create template control files for 10xGenomics projects
         if single_cell_platform == "10xGenomics Single Cell Multiome":
@@ -253,6 +261,8 @@ def setup_analysis_dirs(ap,
     # Also set up analysis directory for undetermined reads
     if undetermined_project is None:
         undetermined_project = 'undetermined'
+        if name:
+            undetermined_project = undetermined_project + '_' + name
     undetermined = illumina_data.undetermined
     if illumina_data.undetermined is not None:
         undetermined = analysis.AnalysisProject(
