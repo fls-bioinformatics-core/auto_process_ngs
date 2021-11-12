@@ -72,26 +72,11 @@ In addition for 10xGenomics scRNA-seq, snRNA-seq and scATAC data:
  * Single library analysis is run using the ``count`` command of
    either `cellranger`_ or `cellranger_atac`_ (as appropriate)
 
-.. note::
-
-   If a ``10x_multiome_libraries.info`` file is present then the
-   single library will be run for single cell multiome data via
-   the ``count`` command of `cellranger_arc`_ (see
-   :ref:`10x_multiome_libraries_info`).
+See :ref:`run_qc_additional_files` for additional analyses that
+may be triggered by the presence of certain special files.
 
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger_atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
-.. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
-
-For 10xGenomics CellPlex (cell multiplexing) data:
-
- * Multiplexing analyses are run using the `cellranger`_ ``multi``
-   command, provided that a ``10x_multi_config.csv`` file is also
-   present in the project directory.
-
-   This file should have the format outlined at `cellranger_multi`_.
-
-.. _cellranger_multi: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
 
 `multiQC`_ is also run to summarise the QC from all the Fastqs in the
 project.
@@ -109,6 +94,32 @@ there for sharing using the :doc:`publish_qc command <publish_qc>`.
    section on :doc:`running the QC standalone <run_qc_standalone>`.
 
 .. _multiqc: http://multiqc.info/
+
+.. _run_qc_additional_files:
+
+----------------
+Additional Files
+----------------
+
+10xGenomics Single Cell Multiome Data
+*************************************
+
+If a ``10x_multiome_libraries.info`` file is present then the single
+library will be run for single cell multiome data via the ``count``
+command of `cellranger_arc`_ (see :ref:`10x_multiome_libraries_info`).
+.. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
+
+10xGenomics CellPlex Data
+*************************
+
+For 10xGenomics CellPlex (cell multiplexing) data, multiplexing
+analyses are run using the `cellranger`_ ``multi`` command, provided
+that a ``10x_multi_config.csv`` file is also present in the project
+directory.
+
+This file should have the format outlined at `cellranger_multi`_.
+
+.. _cellranger_multi: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
 
 ---------------------------
 Configuring the QC pipeline

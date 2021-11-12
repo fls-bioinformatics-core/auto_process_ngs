@@ -55,6 +55,11 @@ For certain types of data there are additional files that should
 be added to the project directory manually after running
 ``setup_analysis_dirs``.
 
+Note that for some of these files ``setup_analysis_dirs`` will
+generate partially-populated template versions, with the
+``.template`` extension. These can be edited and renamed before
+use in downstream processing stages (e.g. the QC pipeline).
+
 .. _10x_multiome_libraries_info:
 
 10xGenomics single cell multiome linked samples
