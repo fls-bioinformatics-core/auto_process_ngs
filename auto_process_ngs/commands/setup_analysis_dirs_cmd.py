@@ -154,6 +154,21 @@ def setup_analysis_dirs(ap,
             logger.warning("Failed to create project '%s': %s" %
                            (project_name,ex))
             continue
+        # Create template control files for 10xGenomics projects
+        if single_cell_platform == "10xGenomics Single Cell Multiome":
+            # Make template 10x_multiome_libraries.info file
+            f = "10x_multiome_libraries.info.template"
+            print("-- making %s" % f)
+            f = os.path.join(project.dirn,f)
+            try:
+                with open(f,'wt') as fp:
+                    fp.write("## 10x_multiome_libraries.info\n")
+                    fp.write("## Link samples with complementary samples\n"
+                             "## (can be in other runs and/or projects)\n")
+                    for sample in project.samples:
+                        fp.write("#%s\t[RUN:][PROJECT][/SAMPLE]\n" % sample)
+            except Exception as ex:
+                logger.warning("Failed to create '%s': %s" % (f,ex))
         # Copy in additional data files
         if single_cell_platform == "ICELL8 ATAC":
             # Copy across the ATAC report files

@@ -265,22 +265,6 @@ AB\tAB1,AB2\tAlan Brown\tscATAC-seq\t10xGenomics Visium\tHuman\tAudrey Benson\t1
                 fastq = os.path.join(fastqs_dir,fq)
                 self.assertTrue(os.path.exists(fastq))
 
-    def test_setup_analysis_dirs_missing_metadata(self):
-        """
-        setup_analysis_dirs: raise exception if metadata not set
-        """
-        # Make a mock auto-process directory
-        mockdir = MockAnalysisDirFactory.bcl2fastq2(
-            '170901_M00879_0087_000000000-AGEW9',
-            'miseq',
-            metadata={ "instrument_datestamp": "170901" },
-            top_dir=self.dirn)
-        mockdir.create(no_project_dirs=True)
-        # Attempt to set up the project dirs
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
-        self.assertRaises(Exception,
-                          setup_analysis_dirs,ap)
-
     def test_setup_analysis_dirs_10x_multiome(self):
         """
         setup_analysis_dirs: test create new analysis dir for 10x Multiome
@@ -290,7 +274,7 @@ AB\tAB1,AB2\tAlan Brown\tscATAC-seq\t10xGenomics Visium\tHuman\tAudrey Benson\t1
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
             metadata={ "instrument_datestamp": "170901" },
-            reads=('R1','R2','R3','I1'),
+            reads=('R1','R2','I1'),
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq")))
@@ -300,17 +284,15 @@ AB\tAB1,AB2\tAlan Brown\tscATAC-seq\t10xGenomics Visium\tHuman\tAudrey Benson\t1
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\tAlan Brown\tscATAC-seq\t10xGenomics Single Cell Multiome\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1,AB2\tAlan Brown\tGEX\t10xGenomics Single Cell Multiome\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
             "AB": ["AB1_S1_R1_001.fastq.gz",
                    "AB1_S1_R2_001.fastq.gz",
-                   "AB1_S1_R3_001.fastq.gz",
                    "AB1_S1_I1_001.fastq.gz",
                    "AB2_S2_R1_001.fastq.gz",
                    "AB2_S2_R2_001.fastq.gz",
-                   "AB2_S2_R3_001.fastq.gz",
                    "AB2_S2_I1_001.fastq.gz"],
             "undetermined": ["Undetermined_S0_R1_001.fastq.gz",]
         }
@@ -336,6 +318,34 @@ AB\tAB1,AB2\tAlan Brown\tscATAC-seq\t10xGenomics Single Cell Multiome\tHuman\tAu
             for fq in projects[project]:
                 fastq = os.path.join(fastqs_dir,fq)
                 self.assertTrue(os.path.exists(fastq))
+            # Check template 10x_multiome_libraries.info
+            template_libraries_file = os.path.join(
+                project_dir_path,
+                "10x_multiome_libraries.info.template")
+            if project == "AB":
+                # Template file should exist
+                self.assertTrue(os.path.exists(template_libraries_file),
+                                "Missing %s" % template_libraries_file)
+            else:
+                # No template file
+                self.assertFalse(os.path.exists(template_libraries_file),
+                                 "Found %s" % template_libraries_file)
+
+    def test_setup_analysis_dirs_missing_metadata(self):
+        """
+        setup_analysis_dirs: raise exception if metadata not set
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Attempt to set up the project dirs
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        self.assertRaises(Exception,
+                          setup_analysis_dirs,ap)
 
     def test_setup_analysis_dirs_ignore_missing_metadata(self):
         """
