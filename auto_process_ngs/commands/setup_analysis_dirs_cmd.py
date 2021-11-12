@@ -162,9 +162,10 @@ def setup_analysis_dirs(ap,
             f = os.path.join(project.dirn,f)
             try:
                 with open(f,'wt') as fp:
-                    fp.write("## 10x_multiome_libraries.info\n")
-                    fp.write("## Link samples with complementary samples\n"
-                             "## (can be in other runs and/or projects)\n")
+                    fp.write("## 10x_multiome_libraries.info\n"
+                             "## Link samples with complementary samples\n"
+                             "## (can be in other runs and/or projects)\n"
+                             "## See https://auto-process-ngs.readthedocs.io/en/latest/using/setup_analysis_dirs.html#xgenomics-single-cell-multiome-linked-samples\n")
                     for sample in project.samples:
                         fp.write("#%s\t[RUN:][PROJECT][/SAMPLE]\n" % sample)
             except Exception as ex:
@@ -186,7 +187,8 @@ def setup_analysis_dirs(ap,
             f = os.path.join(project.dirn,f)
             try:
                 with open(f,'wt') as fp:
-                    fp.write("## 10x_multi_config.csv\n")
+                    fp.write("## 10x_multi_config.csv\n"
+                             "## See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi\n")
                     # Gene expression section
                     fp.write("[gene-expression]\n"
                              "reference,%s\n" %
