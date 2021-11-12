@@ -154,6 +154,61 @@ def setup_analysis_dirs(ap,
             logger.warning("Failed to create project '%s': %s" %
                            (project_name,ex))
             continue
+        # Create template control files for 10xGenomics projects
+        if single_cell_platform == "10xGenomics Single Cell Multiome":
+            # Make template 10x_multiome_libraries.info file
+            f = "10x_multiome_libraries.info.template"
+            print("-- making %s" % f)
+            f = os.path.join(project.dirn,f)
+            try:
+                with open(f,'wt') as fp:
+                    fp.write("## 10x_multiome_libraries.info\n"
+                             "## Link samples with complementary samples\n"
+                             "## (can be in other runs and/or projects)\n"
+                             "## See https://auto-process-ngs.readthedocs.io/en/latest/using/setup_analysis_dirs.html#xgenomics-single-cell-multiome-linked-samples\n")
+                    for sample in project.samples:
+                        fp.write("#%s\t[RUN:][PROJECT][/SAMPLE]\n" % sample)
+            except Exception as ex:
+                logger.warning("Failed to create '%s': %s" % (f,ex))
+        if single_cell_platform.startswith("10xGenomics Chromium") and \
+           library_type.startswith("CellPlex"):
+            # Acquire reference dataset
+            try:
+                reference_dataset = ap.settings.organisms[organism].\
+                                    cellranger_reference
+            except Exception as ex:
+                logger.warning("Failed to locate 10xGenomics reference "
+                               "dataset for project '%s': %s" %
+                               (project_name,ex))
+                reference_dataset = None
+            # Make template 10x_multi_config.csv file
+            f = "10x_multi_config.csv.template"
+            print("-- making %s" % f)
+            f = os.path.join(project.dirn,f)
+            try:
+                with open(f,'wt') as fp:
+                    fp.write("## 10x_multi_config.csv\n"
+                             "## See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi\n")
+                    # Gene expression section
+                    fp.write("[gene-expression]\n"
+                             "reference,%s\n" %
+                             (reference_dataset if reference_dataset
+                              else "PATH_TO_REFERENCE_DATASET"))
+                    fp.write("\n")
+                    # Libraries section
+                    fp.write("[libraries]\n"
+                             "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
+                    for sample in project.samples:
+                        fp.write("{sample},{fastqs_dir},{sample},any,[gene expression|Multiplexing Capture],\n".format(
+                            sample=sample.name,
+                            fastqs_dir=project.fastq_dir))
+                    fp.write("\n")
+                    # Samples section
+                    fp.write("[samples]\n"
+                             "sample_id,cmo_ids,description\n"
+                             "MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION\n")
+            except Exception as ex:
+                logger.warning("Failed to create '%s': %s" % (f,ex))
         # Copy in additional data files
         if single_cell_platform == "ICELL8 ATAC":
             # Copy across the ATAC report files
