@@ -169,6 +169,44 @@ def setup_analysis_dirs(ap,
                         fp.write("#%s\t[RUN:][PROJECT][/SAMPLE]\n" % sample)
             except Exception as ex:
                 logger.warning("Failed to create '%s': %s" % (f,ex))
+        if single_cell_platform.startswith("10xGenomics Chromium") and \
+           library_type.startswith("CellPlex"):
+            # Acquire reference dataset
+            try:
+                reference_dataset = ap.settings.organisms[organism].\
+                                    cellranger_reference
+            except Exception as ex:
+                logger.warning("Failed to locate 10xGenomics reference "
+                               "dataset for project '%s': %s" %
+                               (project_name,ex))
+                reference_dataset = None
+            # Make template 10x_multi_config.csv file
+            f = "10x_multi_config.csv.template"
+            print("-- making %s" % f)
+            f = os.path.join(project.dirn,f)
+            try:
+                with open(f,'wt') as fp:
+                    fp.write("## 10x_multi_config.csv\n")
+                    # Gene expression section
+                    fp.write("[gene-expression]\n"
+                             "reference,%s\n" %
+                             (reference_dataset if reference_dataset
+                              else "PATH_TO_REFERENCE_DATASET"))
+                    fp.write("\n")
+                    # Libraries section
+                    fp.write("[libraries]\n"
+                             "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
+                    for sample in project.samples:
+                        fp.write("{sample},{fastqs_dir},{sample},any,[gene expression|Multiplexing Capture],\n".fmt(
+                            sample=sample.name,
+                            fastqs_dir=project.fastq_dir))
+                    fp.write("\n")
+                    # Samples section
+                    fp.write("[samples]\n"
+                             "sample_id,cmo_ids,description\n"
+                             "MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION\n")
+            except Exception as ex:
+                logger.warning("Failed to create '%s': %s" % (f,ex))
         # Copy in additional data files
         if single_cell_platform == "ICELL8 ATAC":
             # Copy across the ATAC report files
