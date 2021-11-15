@@ -656,6 +656,8 @@ class QCProject(object):
                 else:
                     max_seq_length[read] = max(max_seq_length[read],
                                                seqlens_data.max_length)
+            # Store the sequence length files
+            output_files.extend(seq_lens)
         # Look for ICELL8 outputs
         icell8_top_dir = os.path.dirname(self.qc_dir)
         print("Checking for ICELL8 reports in %s/stats" %
