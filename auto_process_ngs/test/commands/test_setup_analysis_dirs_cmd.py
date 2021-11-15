@@ -91,6 +91,63 @@ CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Ecclesto
                 fastq = os.path.join(fastqs_dir,fq)
                 self.assertTrue(os.path.exists(fastq))
 
+    def test_setup_analysis_dirs_with_identifier(self):
+        """
+        setup_analysis_dirs: test create new analysis dirs with an identifier
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Check project dirs don't exist
+        for project in ("AB","CDE"):
+            project_dir_path = os.path.join(mockdir.dirn,project)
+            self.assertFalse(os.path.exists(project_dir_path))
+        # Add required metadata to 'projects.info'
+        projects_info = os.path.join(mockdir.dirn,"projects.info")
+        with open(projects_info,"w") as fp:
+            fp.write(
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+AB\tAB1,AB2\tAlan Brown\tRNA-seq\t.\tHuman\tAudrey Benson\t1% PhiX
+CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Eccleston\t1% PhiX
+""")
+        # Expected data
+        projects = {
+            "AB": ["AB1_S1_R1_001.fastq.gz",
+                   "AB1_S1_R2_001.fastq.gz",
+                   "AB2_S2_R1_001.fastq.gz",
+                   "AB2_S2_R2_001.fastq.gz"],
+            "CDE": ["CDE3_S3_R1_001.fastq.gz",
+                    "CDE3_S3_R2_001.fastq.gz",
+                    "CDE4_S4_R1_001.fastq.gz",
+                    "CDE4_S4_R2_001.fastq.gz"],
+            "undetermined": ["Undetermined_S0_R1_001.fastq.gz",
+                             "Undetermined_S0_R1_001.fastq.gz"]
+        }
+        # Setup the project dirs
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        setup_analysis_dirs(ap,name="test_id")
+        # Check project dirs and contents
+        for project in projects:
+            project_dir_path = os.path.join(mockdir.dirn,
+                                            "%s_%s" % (project,
+                                                       "test_id"))
+            self.assertTrue(os.path.exists(project_dir_path))
+            # Check README.info file
+            readme_file = os.path.join(project_dir_path,
+                                       "README.info")
+            self.assertTrue(os.path.exists(readme_file))
+            # Check Fastqs
+            fastqs_dir = os.path.join(project_dir_path,
+                                      "fastqs")
+            self.assertTrue(os.path.exists(fastqs_dir))
+            for fq in projects[project]:
+                fastq = os.path.join(fastqs_dir,fq)
+                self.assertTrue(os.path.exists(fastq))
+
     def test_setup_analysis_dirs_ignore_commented_projects(self):
         """
         setup_analysis_dirs: ignore commented line in 'projects.info'

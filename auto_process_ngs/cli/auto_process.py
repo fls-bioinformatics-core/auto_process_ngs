@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/auto_process.py: command line interface for auto_process_ngs
-#     Copyright (C) University of Manchester 2013-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2021 Peter Briggs
 #
 #########################################################################
 #
@@ -620,6 +620,8 @@ def add_setup_analysis_dirs_command(cmdparser):
                    dest='link_to_fastqs',default=False,
                    help="create symbolic links to original fastqs from "
                    "project directory (default is to make hard links)")
+    p.add_argument('--id',action='store',dest='name',default=None,
+                   help="identifier to append to project names")
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
@@ -1343,7 +1345,8 @@ def setup_analysis_dirs(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
-    d.setup_analysis_dirs(unaligned_dir=args.unaligned_dir,
+    d.setup_analysis_dirs(name=args.name,
+                          unaligned_dir=args.unaligned_dir,
                           ignore_missing_metadata=
                           args.ignore_missing_metadata,
                           undetermined_project=args.undetermined,

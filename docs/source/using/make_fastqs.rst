@@ -517,6 +517,38 @@ the full set of available options:
 * :ref:`commands_update_fastq_stats`
 * :ref:`commands_analyse_barcodes`
 
+.. _make_fastqs-processing-same-run-multiple-times:
+
+Processing a single run multiple times
+--------------------------------------
+
+Sometimes it is necessary to process a single run multiple times,
+(for example, to try different parameter sets) while keeping the
+outputs from each processing attempt in the same analysis
+directory.
+
+The ``--id`` option of the ``make_fastqs`` command can be used to
+facilitate this, by allowing an identifier (e.g. ``no_trimming``)
+to be supplied which will then be appended to the outputs from the
+Fastq generation (including the output directories holding the
+generated Fastqs, the barcode analysis directories, and the
+statistics and processing report files).
+
+For example:
+
+::
+
+   auto_process.py make_fastqs --id=no_trimming --no-adapter-trimming
+
+would produce ``bcl2fastq_no_trimming``, ``barcodes_no_trimming``,
+``statistics_no_trimming.info`` and so on.
+
+.. note::
+
+   The ``--id`` option of the ``setup_analysis_dirs`` command
+   can be used to create projects which carry the same identifier,
+   see :ref:`setup_analysis_dirs-add-identifier`.
+
 .. _make_fastqs-outputs:
 
 Outputs
