@@ -79,6 +79,7 @@ CELLRANGER_ASSAY_CONFIGS = {
     'SC3Pv3': 'Single Cell 3\' v3',
     'SC5P-PE': 'Single Cell 5\' paired-end (both R1 and R2 are used for alignment)',
     'SC5P-R2': 'Single Cell 5\' R2-only (where only R2 is used for alignment)',
+    'ARC-v1': 'Single Cell Multiome (ATAC+GEX) v1', # Not documented?
 }
 
 #######################################################################
