@@ -15,6 +15,7 @@ from ..applications import general as applications_general
 from ..analysis import AnalysisProject
 from ..qc.utils import verify_qc
 from ..qc.utils import report_qc
+from ..simple_scheduler import SchedulerJob
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def import_project(ap,project_dir):
+def import_project(ap,project_dir,runner=None):
     """
     Import a project directory into this analysis directory
 
@@ -32,6 +33,9 @@ def import_project(ap,project_dir):
         analysis directory
       project_dir (str): path to project directory to be
         imported
+      runner (JobRunner): explicitly specify the job runner to
+        send jobs to (overrides default runner set in the
+        configuration)
     """
     # Load target directory as a project
     project_dir = os.path.abspath(project_dir)
@@ -43,6 +47,10 @@ def import_project(ap,project_dir):
                                     project.name)).exists:
         raise Exception("Project called '%s' already exists" %
                         project.name)
+    # Set up job runner
+    if runner is None:
+        runner = ap.settings.general.default_runner
+    print("Using job runner '%s'" % runner)
     # Set up a log directory
     ap.set_log_dir(ap.get_log_subdir('import_project_%s' % project.name))
     # Rsync the project directory
@@ -54,7 +62,18 @@ def import_project(ap,project_dir):
                                            ap.analysis_dir,
                                            extra_options=excludes)
         print("Running %s" % rsync)
-        status = rsync.run_subprocess(log=ap.log_path('import_project.rsync.log'))
+        rsync_job = SchedulerJob(runner,
+                                 rsync.command_line,
+                                 name="import_project.rsync.%s" % project.name,
+                                 log_dir=ap.log_dir)
+        rsync_job.start()
+        try:
+            rsync_job.wait()
+        except KeyboardInterrupt as ex:
+            logger.warning("Keyboard interrupt, terminating project import")
+            rsync_job.terminate()
+            raise ex
+        status = rsync_job.exit_status
     except Exception as ex:
         logger.error("Exception importing project: %s" % ex)
         raise ex
@@ -103,11 +122,12 @@ def import_project(ap,project_dir):
             print("Updated Fastq directory: %s" % fastq_dir)
             qc_info['fastq_dir'] = fastq_dir
             qc_info.save()
-        if verify_qc(project,log_dir=ap.log_dir):
+        if verify_qc(project,log_dir=ap.log_dir,runner=runner):
             try:
                 report_qc(project,
                           zip_outputs=True,
                           multiqc=True,
+                          runner=runner,
                           log_dir=ap.log_dir)
                 print("Updated QC report for %s" % project.name)
             except Exception as ex:
