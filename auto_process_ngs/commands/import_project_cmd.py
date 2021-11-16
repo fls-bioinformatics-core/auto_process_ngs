@@ -84,14 +84,15 @@ def import_project(ap,project_dir,runner=None):
     print("Updating projects.info file with imported project")
     project_metadata = ap.load_project_metadata()
     sample_names = [s.name for s in project.samples]
-    project_metadata.add_project(project.name,
-                                 sample_names,
-                                 user=project.info.user,
-                                 library_type=project.info.library_type,
-                                 single_cell_platform=project.info.single_cell_platform,
-                                 organism=project.info.organism,
-                                 PI=project.info.PI,
-                                 comments=project.info.comments)
+    project_metadata.add_project(
+        project.name,
+        sample_names,
+        user=project.info.user,
+        library_type=project.info.library_type,
+        single_cell_platform=project.info.single_cell_platform,
+        organism=project.info.organism,
+        PI=project.info.PI,
+        comments=project.info.comments)
     project_metadata.save()
     # Report
     print("Projects now in metadata file:")
