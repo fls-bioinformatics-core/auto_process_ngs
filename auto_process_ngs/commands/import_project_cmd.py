@@ -26,7 +26,16 @@ logger = logging.getLogger(__name__)
 
 def import_project(ap,project_dir,runner=None):
     """
-    Import a project directory into this analysis directory
+    Import a project directory into an analysis directory
+
+    Importing a project directory consists of the following
+    actions:
+
+    - Copying the project directory and contents to the
+      analysis directory
+    - Updating 'projects.info' to add in the data about the
+      imported project
+    - Updating the project metadata and the QC report
 
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the parent
