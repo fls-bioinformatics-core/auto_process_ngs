@@ -33,6 +33,7 @@ from auto_process_ngs.pipeliner import FunctionParam
 from auto_process_ngs.pipeliner import CondaWrapper
 from auto_process_ngs.pipeliner import PipelineError
 from auto_process_ngs.pipeliner import CondaCreateEnvError
+from auto_process_ngs.pipeliner import make_conda_env_name
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 
@@ -3855,6 +3856,19 @@ class TestCondaWrapper(unittest.TestCase):
                           "fastqc=0.11.3",
                           "fastq-screen=0.14.0",
                           "bowtie=1.2.3")
+
+class TestMakeCondaEnvName(unittest.TestCase):
+
+    def test_make_conda_env_name(self):
+        """
+        make_conda_env_name: returns consistent environment name
+        """
+        self.assertEqual(make_conda_env_name("fastq-screen=0.14.0",
+                                             "bowtie=1.2.3"),
+                         "bowtie@1.2.3+fastq-screen@0.14.0")
+        self.assertEqual(make_conda_env_name("bowtie=1.2.3",
+                                             "fastq-screen=0.14.0"),
+                         "bowtie@1.2.3+fastq-screen@0.14.0")
 
 class TestResolveParameter(unittest.TestCase):
 

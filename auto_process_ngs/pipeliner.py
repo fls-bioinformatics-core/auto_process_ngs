@@ -2884,7 +2884,7 @@ class PipelineTask(object):
         Return a name for conda environment based on packages
         """
         if self.conda_dependencies:
-            return '+'.join(sorted(self.conda_dependencies)).replace('=','@')
+            return make_conda_env_name(*self.conda_dependencies)
         else:
             return None
 
@@ -4206,6 +4206,31 @@ class CondaCreateEnvError(CondaWrapperError):
         self.cmdline = cmdline
         self.output = output
         CondaWrapperError.__init__(self,self.message)
+
+def make_conda_env_name(*pkgs):
+    """
+    Return a name for a conda env based on package list
+
+    Constructs a name for a conda environment, based on
+    the packages specified for inclusion in the
+    environment.
+
+    The name consists of components of the form
+    "NAME[@VERSION]" for each package specification
+    "NAME[=VERSION]" (e.g. 'star=2.4.2a' becomes
+    'star@2.4.2a').
+
+    Components are joined by '+' and are sorted by package
+    name (regardless of the order they are supplied in).
+
+    Arguments:
+      pkgs (list): list of conda package specifiers
+
+    Returns:
+      String: environment name constructed from package
+        list.
+    """
+    return '+'.join(sorted([str(p) for p in pkgs])).replace('=','@')
 
 ######################################################################
 # Custom exceptions
