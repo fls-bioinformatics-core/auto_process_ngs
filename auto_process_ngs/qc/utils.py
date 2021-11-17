@@ -22,6 +22,9 @@ import logging
 from ..analysis import AnalysisProject
 from ..command import Command
 from ..metadata import AnalysisProjectQCDirInfo
+from ..pipeliner import CondaWrapper
+from ..pipeliner import CondaWrapperError
+from ..pipeliner import make_conda_env_name
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
 from .cellranger import CellrangerCount
@@ -216,9 +219,42 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
     if force:
         report_cmd.add_args("--force")
     report_cmd.add_args(project.dirn)
+    # Check if conda environments are enabled
+    conda_activate_cmd = None
+    if Settings().conda.enable_conda:
+        # Get location for conda environments
+        conda_env_dir = Settings().conda.env_dir
+        # Set up conda wrapper
+        conda = CondaWrapper(env_dir=conda_env_dir)
+        # Get environment for QC reporting
+        report_qc_conda_pkgs = ("multiqc=1.8",
+                                "pillow",
+                                "python=3.8")
+        env_name = make_conda_env_name(report_qc_conda_pkgs)
+        try:
+            conda.create_env(env_name,*report_qc_conda_pkgs)
+            conda_env = os.path.join(conda_env_dir,env_name)
+            # Script fragment to activate the environment
+            conda_activate_cmd = conda.activate_cmd(conda_env)
+        except CondaWrapperError as ex:
+            # Failed to acquire the environment
+            logger.warn("failed to acquire conda environment '%s': %s" %
+                        (env_name,ex))
+    # Wrap the command in a script
+    report_script = os.path.join(project.dirn,
+                                 "ScriptCode",
+                                 "report_qc.%s.sh" % project.name)
+    report_cmd.make_wrapper_script(filen=report_script,
+                                   prologue=conda_activate_cmd,
+                                   quote_spaces=True)
+    # Locate log dir
+    if log_dir is None:
+        log_dir = os.path.join(project.dirn,"logs")
+        if not os.path.isdir(log_dir):
+            log_dir = None
     # Run the command
     report = SchedulerJob(runner,
-                          report_cmd.command_line,
+                          Command('/bin/bash','-l',report_script).command_line,
                           name="report_qc.%s" % project.name,
                           working_dir=project.dirn,
                           log_dir=log_dir)
