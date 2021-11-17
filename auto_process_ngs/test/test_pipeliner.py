@@ -87,7 +87,6 @@ elif [ "$1" == "create" ] ; then
          shift
          ;;
        --override-channels)
-         shift
          ;;
        *)
          PACKAGES="$PACKAGES $2"
