@@ -230,12 +230,12 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         report_qc_conda_pkgs = ("multiqc=1.8",
                                 "pillow",
                                 "python=3.8")
-        env_name = make_conda_env_name(report_qc_conda_pkgs)
+        env_name = make_conda_env_name(*report_qc_conda_pkgs)
         try:
             conda.create_env(env_name,*report_qc_conda_pkgs)
             conda_env = os.path.join(conda_env_dir,env_name)
             # Script fragment to activate the environment
-            conda_activate_cmd = conda.activate_cmd(conda_env)
+            conda_activate_cmd = conda.activate_env_cmd(conda_env)
         except CondaWrapperError as ex:
             # Failed to acquire the environment
             logger.warn("failed to acquire conda environment '%s': %s" %
