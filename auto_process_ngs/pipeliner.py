@@ -1136,7 +1136,7 @@ class PipelineFailure(object):
     DEFERRED = 1
 
 # Default channels for conda dependency resolution
-CONDA_CHANNELS = (
+DEFAULT_CONDA_CHANNELS = (
     'conda-forge',
     'bioconda',
     'defaults',
@@ -2080,9 +2080,7 @@ class Pipeline(object):
             if not os.path.exists(conda_env_dir):
                 os.makedirs(conda_env_dir)
             # Set up wrapper class
-            conda = CondaWrapper(conda=conda,
-                                 env_dir=conda_env_dir,
-                                 channels=CONDA_CHANNELS)
+            conda = CondaWrapper(conda=conda,env_dir=conda_env_dir)
             if not conda.is_installed:
                 raise PipelineError("Conda dependency resolution enabled "
                                     "but conda couldn't be found")
@@ -2898,12 +2896,12 @@ class PipelineTask(object):
             (defaults to environments directory belonging to the
             supplied conda installation)
           channels (list): optional list of channel names to use
-            with conda operations
+            with conda operations (overrides defaults)
         """
         # Set up conda wrapper
         conda = CondaWrapper(conda=conda,
                              env_dir=env_dir,
-                             channels=CONDA_CHANNELS)
+                             channels=channels)
         # Make a name for the environment
         env_name = self.conda_env_name
         # Fetch the environment
@@ -4023,6 +4021,10 @@ class CondaWrapper(object):
         # Channels
         if channels:
             channels = [c for c in channels]
+        elif channels is None:
+            channels = DEFAULT_CONDA_CHANNELS
+        else:
+            channels = list()
         self._channels = channels
         # Lock for blocking operations
         self._lock_manager = ResourceLock()
