@@ -3722,6 +3722,18 @@ class TestCondaWrapper(unittest.TestCase):
         conda = CondaWrapper(conda=self.conda)
         self.assertEqual(conda.version,"4.10.3")
 
+    def test_conda_wrapper_conda_not_specified(self):
+        """
+        CondaWrapper: check properties when conda exe not specified
+        """
+        self._make_mock_conda(_Mock.conda)
+        print(os.environ['PATH'])
+        conda = CondaWrapper()
+        self.assertEqual(conda.conda,self.conda)
+        self.assertTrue(conda.is_installed)
+        self.assertEqual(conda.env_dir,self.conda_env_dir)
+        self.assertEqual(conda.list_envs,[])
+
     def test_conda_wrapper_conda_defaults(self):
         """
         CondaWrapper: check properties for default env dir
@@ -3752,12 +3764,15 @@ class TestCondaWrapper(unittest.TestCase):
         """
         CondaWrapper: check properties for 'null' wrapper
         """
+        save_path = os.environ['PATH']
+        os.environ['PATH'] = ''
         conda = CondaWrapper()
         self.assertEqual(conda.conda,None)
         self.assertFalse(conda.is_installed)
         self.assertEqual(conda.env_dir,None)
         self.assertEqual(conda.list_envs,[])
         self.assertEqual(conda.version,None)
+        os.environ['PATH'] = save_path
 
     def test_conda_wrapper_missing_conda_executable(self):
         """

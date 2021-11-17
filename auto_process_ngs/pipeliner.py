@@ -2070,25 +2070,22 @@ class Pipeline(object):
                                 "module '%s'" % name)
         # Set up conda if required
         if enable_conda:
-            if conda is None:
-                conda = find_program('conda')
-            if conda is None:
+            if conda_env_dir is None:
+                # Create a directory within the working
+                # dir to store conda environments that
+                # are created by the pipeline
+                conda_env_dir = os.path.join(working_dir,
+                                             "__conda",
+                                             "envs")
+            if not os.path.exists(conda_env_dir):
+                os.makedirs(conda_env_dir)
+            # Set up wrapper class
+            conda = CondaWrapper(conda=conda,
+                                 env_dir=conda_env_dir,
+                                 channels=CONDA_CHANNELS)
+            if not conda.is_installed:
                 raise PipelineError("Conda dependency resolution enabled "
                                     "but conda couldn't be found")
-            else:
-                if conda_env_dir is None:
-                    # Create a directory within the working
-                    # dir to store conda environments that
-                    # are created by the pipeline
-                    conda_env_dir = os.path.join(working_dir,
-                                                 "__conda",
-                                                 "envs")
-                if not os.path.exists(conda_env_dir):
-                    os.makedirs(conda_env_dir)
-                #
-                conda = CondaWrapper(conda=conda,
-                                     env_dir=conda_env_dir,
-                                     channels=CONDA_CHANNELS)
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -4014,9 +4011,12 @@ class CondaWrapper(object):
             channels to use for installing packages
         """
         # Conda executable
-        if conda:
-            conda_dir = os.sep.join(
-                os.path.abspath(conda).split(os.sep)[:-2])
+        if conda is None:
+            conda = find_program("conda")
+        self._conda = conda
+        if self._conda:
+            self._conda = os.path.abspath(self._conda)
+            conda_dir = os.sep.join(self._conda.split(os.sep)[:-2])
         else:
             conda_dir = None
         self._conda_dir = conda_dir
@@ -4038,10 +4038,7 @@ class CondaWrapper(object):
         """
         Path to conda executable
         """
-        if self._conda_dir:
-            return os.path.join(self._conda_dir,'bin','conda')
-        else:
-            return None
+        return self._conda
 
     @property
     def version(self):
