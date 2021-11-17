@@ -3352,14 +3352,8 @@ class PipelineCommand(object):
                 if module is not None:
                     prologue.append("module load %s" % module)
         if conda_env:
-            if not conda:
-                conda = find_program("conda")
-            if not conda:
-                raise PipelineError("Unable to locate conda")
-            conda_dir = os.sep.join(
-                os.path.abspath(conda).split(os.sep)[:-2])
             conda_activate_cmd = \
-                "source %s/bin/activate %s" % (conda_dir,conda_env)
+                str(CondaWrapper(conda).activate_env_cmd(conda_env))
             prologue.extend(["echo %s" % conda_activate_cmd,
                              conda_activate_cmd])
         if working_dir:
@@ -4163,6 +4157,26 @@ class CondaWrapper(object):
         self._lock_manager.release(lock)
         # Return name/path to conda environment
         return env_name
+
+    def activate_env_cmd(self,name):
+        """
+        Fetch command to activate a conda environment
+
+        Arguments:
+          name (str): name/path of the environment to
+            activate
+
+        Returns:
+          Command: Command instance to activate the
+            named environment.
+        """
+        if self._conda_dir:
+            return Command(
+                'source',
+                os.path.join(self._conda_dir,'bin','activate'),
+                name)
+        else:
+            return None
 
 class CondaWrapperError(Exception):
     """

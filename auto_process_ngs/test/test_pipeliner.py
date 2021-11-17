@@ -3831,6 +3831,18 @@ class TestCondaWrapper(unittest.TestCase):
             self.assertEqual(contents,
                              "fastqc=0.11.3 fastq-screen=0.14.0 bowtie=1.2.3")
 
+    def test_conda_wrapper_activate_command(self):
+        """
+        CondaWrapper: check environment activation command
+        """
+        self._make_mock_conda(_Mock.conda)
+        conda = CondaWrapper(conda=self.conda)
+        self.assertEqual(conda.activate_env_cmd("fastqc@0.11.3").command_line,
+                         Command(
+                             'source',
+                             os.path.join(self.conda_bin_dir,'activate'),
+                             'fastqc@0.11.3').command_line)
+
     def test_conda_wrapper_create_env_raise_exception_on_error(self):
         """
         CondaWrapper: raise exception on error when creating environment
