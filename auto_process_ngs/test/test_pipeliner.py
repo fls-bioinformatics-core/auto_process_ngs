@@ -3709,10 +3709,10 @@ class TestCondaWrapper(unittest.TestCase):
             os.makedirs(d)
         # Create mock conda using supplied function
         self.conda = mock_conda_func(self.conda_bin_dir)
-        # Update PATH
-        os.environ['PATH'] = os.environ['PATH'] + \
-                             os.sep + \
-                             self.conda_bin_dir
+        # Update PATH (put mock conda first)
+        os.environ['PATH'] = self.conda_bin_dir + \
+                             os.pathsep + \
+                             os.environ['PATH']
 
     def test_conda_wrapper_conda_version(self):
         """
