@@ -51,6 +51,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 
    Reporting analyses <using/report>
    Managing and sharing data <using/managing_data>
+   Importing projects </using/import_project>
    Running QC stand-alone <using/run_qc_standalone>
 
 .. _control-files:
