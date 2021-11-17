@@ -33,6 +33,7 @@ from auto_process_ngs.pipeliner import FunctionParam
 from auto_process_ngs.pipeliner import CondaWrapper
 from auto_process_ngs.pipeliner import PipelineError
 from auto_process_ngs.pipeliner import CondaCreateEnvError
+from auto_process_ngs.pipeliner import make_conda_env_name
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 
@@ -86,7 +87,6 @@ elif [ "$1" == "create" ] ; then
          shift
          ;;
        --override-channels)
-         shift
          ;;
        *)
          PACKAGES="$PACKAGES $2"
@@ -3709,10 +3709,10 @@ class TestCondaWrapper(unittest.TestCase):
             os.makedirs(d)
         # Create mock conda using supplied function
         self.conda = mock_conda_func(self.conda_bin_dir)
-        # Update PATH
-        os.environ['PATH'] = os.environ['PATH'] + \
-                             os.sep + \
-                             self.conda_bin_dir
+        # Update PATH (put mock conda first)
+        os.environ['PATH'] = self.conda_bin_dir + \
+                             os.pathsep + \
+                             os.environ['PATH']
 
     def test_conda_wrapper_conda_version(self):
         """
@@ -3721,6 +3721,18 @@ class TestCondaWrapper(unittest.TestCase):
         self._make_mock_conda(_Mock.conda)
         conda = CondaWrapper(conda=self.conda)
         self.assertEqual(conda.version,"4.10.3")
+
+    def test_conda_wrapper_conda_not_specified(self):
+        """
+        CondaWrapper: check properties when conda exe not specified
+        """
+        self._make_mock_conda(_Mock.conda)
+        print(os.environ['PATH'])
+        conda = CondaWrapper()
+        self.assertEqual(conda.conda,self.conda)
+        self.assertTrue(conda.is_installed)
+        self.assertEqual(conda.env_dir,self.conda_env_dir)
+        self.assertEqual(conda.list_envs,[])
 
     def test_conda_wrapper_conda_defaults(self):
         """
@@ -3752,12 +3764,15 @@ class TestCondaWrapper(unittest.TestCase):
         """
         CondaWrapper: check properties for 'null' wrapper
         """
+        save_path = os.environ['PATH']
+        os.environ['PATH'] = ''
         conda = CondaWrapper()
         self.assertEqual(conda.conda,None)
         self.assertFalse(conda.is_installed)
         self.assertEqual(conda.env_dir,None)
         self.assertEqual(conda.list_envs,[])
         self.assertEqual(conda.version,None)
+        os.environ['PATH'] = save_path
 
     def test_conda_wrapper_missing_conda_executable(self):
         """
@@ -3816,6 +3831,18 @@ class TestCondaWrapper(unittest.TestCase):
             self.assertEqual(contents,
                              "fastqc=0.11.3 fastq-screen=0.14.0 bowtie=1.2.3")
 
+    def test_conda_wrapper_activate_command(self):
+        """
+        CondaWrapper: check environment activation command
+        """
+        self._make_mock_conda(_Mock.conda)
+        conda = CondaWrapper(conda=self.conda)
+        self.assertEqual(conda.activate_env_cmd("fastqc@0.11.3").command_line,
+                         Command(
+                             'source',
+                             os.path.join(self.conda_bin_dir,'activate'),
+                             'fastqc@0.11.3').command_line)
+
     def test_conda_wrapper_create_env_raise_exception_on_error(self):
         """
         CondaWrapper: raise exception on error when creating environment
@@ -3828,6 +3855,19 @@ class TestCondaWrapper(unittest.TestCase):
                           "fastqc=0.11.3",
                           "fastq-screen=0.14.0",
                           "bowtie=1.2.3")
+
+class TestMakeCondaEnvName(unittest.TestCase):
+
+    def test_make_conda_env_name(self):
+        """
+        make_conda_env_name: returns consistent environment name
+        """
+        self.assertEqual(make_conda_env_name("fastq-screen=0.14.0",
+                                             "bowtie=1.2.3"),
+                         "bowtie@1.2.3+fastq-screen@0.14.0")
+        self.assertEqual(make_conda_env_name("bowtie=1.2.3",
+                                             "fastq-screen=0.14.0"),
+                         "bowtie@1.2.3+fastq-screen@0.14.0")
 
 class TestResolveParameter(unittest.TestCase):
 

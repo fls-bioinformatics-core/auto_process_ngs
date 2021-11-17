@@ -1136,7 +1136,7 @@ class PipelineFailure(object):
     DEFERRED = 1
 
 # Default channels for conda dependency resolution
-CONDA_CHANNELS = (
+DEFAULT_CONDA_CHANNELS = (
     'conda-forge',
     'bioconda',
     'defaults',
@@ -2070,25 +2070,20 @@ class Pipeline(object):
                                 "module '%s'" % name)
         # Set up conda if required
         if enable_conda:
-            if conda is None:
-                conda = find_program('conda')
-            if conda is None:
+            if conda_env_dir is None:
+                # Create a directory within the working
+                # dir to store conda environments that
+                # are created by the pipeline
+                conda_env_dir = os.path.join(working_dir,
+                                             "__conda",
+                                             "envs")
+            if not os.path.exists(conda_env_dir):
+                os.makedirs(conda_env_dir)
+            # Set up wrapper class
+            conda = CondaWrapper(conda=conda,env_dir=conda_env_dir)
+            if not conda.is_installed:
                 raise PipelineError("Conda dependency resolution enabled "
                                     "but conda couldn't be found")
-            else:
-                if conda_env_dir is None:
-                    # Create a directory within the working
-                    # dir to store conda environments that
-                    # are created by the pipeline
-                    conda_env_dir = os.path.join(working_dir,
-                                                 "__conda",
-                                                 "envs")
-                if not os.path.exists(conda_env_dir):
-                    os.makedirs(conda_env_dir)
-                #
-                conda = CondaWrapper(conda=conda,
-                                     env_dir=conda_env_dir,
-                                     channels=CONDA_CHANNELS)
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -2887,7 +2882,7 @@ class PipelineTask(object):
         Return a name for conda environment based on packages
         """
         if self.conda_dependencies:
-            return '+'.join(sorted(self.conda_dependencies)).replace('=','@')
+            return make_conda_env_name(*self.conda_dependencies)
         else:
             return None
 
@@ -2901,12 +2896,12 @@ class PipelineTask(object):
             (defaults to environments directory belonging to the
             supplied conda installation)
           channels (list): optional list of channel names to use
-            with conda operations
+            with conda operations (overrides defaults)
         """
         # Set up conda wrapper
         conda = CondaWrapper(conda=conda,
                              env_dir=env_dir,
-                             channels=CONDA_CHANNELS)
+                             channels=channels)
         # Make a name for the environment
         env_name = self.conda_env_name
         # Fetch the environment
@@ -3355,14 +3350,8 @@ class PipelineCommand(object):
                 if module is not None:
                     prologue.append("module load %s" % module)
         if conda_env:
-            if not conda:
-                conda = find_program("conda")
-            if not conda:
-                raise PipelineError("Unable to locate conda")
-            conda_dir = os.sep.join(
-                os.path.abspath(conda).split(os.sep)[:-2])
             conda_activate_cmd = \
-                "source %s/bin/activate %s" % (conda_dir,conda_env)
+                str(CondaWrapper(conda).activate_env_cmd(conda_env))
             prologue.extend(["echo %s" % conda_activate_cmd,
                              conda_activate_cmd])
         if working_dir:
@@ -4014,9 +4003,12 @@ class CondaWrapper(object):
             channels to use for installing packages
         """
         # Conda executable
-        if conda:
-            conda_dir = os.sep.join(
-                os.path.abspath(conda).split(os.sep)[:-2])
+        if conda is None:
+            conda = find_program("conda")
+        self._conda = conda
+        if self._conda:
+            self._conda = os.path.abspath(self._conda)
+            conda_dir = os.sep.join(self._conda.split(os.sep)[:-2])
         else:
             conda_dir = None
         self._conda_dir = conda_dir
@@ -4029,6 +4021,10 @@ class CondaWrapper(object):
         # Channels
         if channels:
             channels = [c for c in channels]
+        elif channels is None:
+            channels = DEFAULT_CONDA_CHANNELS
+        else:
+            channels = list()
         self._channels = channels
         # Lock for blocking operations
         self._lock_manager = ResourceLock()
@@ -4038,10 +4034,7 @@ class CondaWrapper(object):
         """
         Path to conda executable
         """
-        if self._conda_dir:
-            return os.path.join(self._conda_dir,'bin','conda')
-        else:
-            return None
+        return self._conda
 
     @property
     def version(self):
@@ -4167,6 +4160,26 @@ class CondaWrapper(object):
         # Return name/path to conda environment
         return env_name
 
+    def activate_env_cmd(self,name):
+        """
+        Fetch command to activate a conda environment
+
+        Arguments:
+          name (str): name/path of the environment to
+            activate
+
+        Returns:
+          Command: Command instance to activate the
+            named environment.
+        """
+        if self._conda_dir:
+            return Command(
+                'source',
+                os.path.join(self._conda_dir,'bin','activate'),
+                name)
+        else:
+            return None
+
 class CondaWrapperError(Exception):
     """
     Base class for conda-specific exceptions
@@ -4195,6 +4208,31 @@ class CondaCreateEnvError(CondaWrapperError):
         self.cmdline = cmdline
         self.output = output
         CondaWrapperError.__init__(self,self.message)
+
+def make_conda_env_name(*pkgs):
+    """
+    Return a name for a conda env based on package list
+
+    Constructs a name for a conda environment, based on
+    the packages specified for inclusion in the
+    environment.
+
+    The name consists of components of the form
+    "NAME[@VERSION]" for each package specification
+    "NAME[=VERSION]" (e.g. 'star=2.4.2a' becomes
+    'star@2.4.2a').
+
+    Components are joined by '+' and are sorted by package
+    name (regardless of the order they are supplied in).
+
+    Arguments:
+      pkgs (list): list of conda package specifiers
+
+    Returns:
+      String: environment name constructed from package
+        list.
+    """
+    return '+'.join(sorted([str(p) for p in pkgs])).replace('=','@')
 
 ######################################################################
 # Custom exceptions
