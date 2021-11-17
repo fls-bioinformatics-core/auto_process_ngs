@@ -241,8 +241,12 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
             logger.warn("failed to acquire conda environment '%s': %s" %
                         (env_name,ex))
     # Wrap the command in a script
-    report_script = os.path.join(project.dirn,
-                                 "ScriptCode",
+    scripts_dir = os.path.join(project.dirn,"ScriptCode")
+    if not os.path.isdir(scripts_dir):
+        logger.warn("no ScriptCode directory found in '%s'" %
+                    project.name)
+        scripts_dir = project.dirn
+    report_script = os.path.join(scripts_dir,
                                  "report_qc.%s.sh" % project.name)
     report_cmd.make_wrapper_script(filen=report_script,
                                    prologue=conda_activate_cmd,
