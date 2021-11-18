@@ -135,11 +135,14 @@ def import_project(ap,project_dir,runner=None):
             qc_info.save()
         if verify_qc(project,log_dir=ap.log_dir,runner=runner):
             try:
-                report_qc(project,
-                          zip_outputs=True,
-                          multiqc=True,
-                          runner=runner,
-                          log_dir=ap.log_dir)
+                status = report_qc(project,
+                                   zip_outputs=True,
+                                   multiqc=True,
+                                   runner=runner,
+                                   log_dir=ap.log_dir)
+                if status != 0:
+                    raise Exception("Report generation returned non-zero "
+                                    "exit code (%s)" % status)
                 print("Updated QC report for %s" % project.name)
             except Exception as ex:
                 raise Exception("Project '%s' imported but failed to "
