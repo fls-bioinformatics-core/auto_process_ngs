@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def import_project(ap,project_dir,runner=None):
+def import_project(ap,project_dir,comment=None,runner=None):
     """
     Import a project directory into an analysis directory
 
@@ -37,11 +37,16 @@ def import_project(ap,project_dir,runner=None):
       imported project
     - Updating the project metadata and the QC report
 
+    Optionally the comments associated with the project can
+    also be extended.
+
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the parent
         analysis directory
       project_dir (str): path to project directory to be
         imported
+      comment (str): optional comment to append to the
+        comments stored with the project after import
       runner (JobRunner): explicitly specify the job runner to
         send jobs to (overrides default runner set in the
         configuration)
@@ -94,6 +99,16 @@ def import_project(ap,project_dir,runner=None):
     print("Updating projects.info file with imported project")
     project_metadata = ap.load_project_metadata()
     sample_names = [s.name for s in project.samples]
+    comments = project.info.comments
+    if comment is not None:
+        comment = str(comment).strip()
+        print("Appending comment: '%s'" % comment)
+        if comments:
+            # Append
+            comments += "; %s" % comment
+        else:
+            # New comment
+            comments = comment
     project_metadata.add_project(
         project.name,
         sample_names,
@@ -102,7 +117,7 @@ def import_project(ap,project_dir,runner=None):
         single_cell_platform=project.info.single_cell_platform,
         organism=project.info.organism,
         PI=project.info.PI,
-        comments=project.info.comments)
+        comments=comments)
     project_metadata.save()
     # Report
     print("Projects now in metadata file:")
@@ -116,6 +131,7 @@ def import_project(ap,project_dir,runner=None):
                       % (project.name,ex))
         return
     project.info['run'] = ap.run_name
+    project.info['comments'] = comments
     project.info.save()
     print("Set run to %s for project '%s'" % (project.info.run,
                                               project.name))

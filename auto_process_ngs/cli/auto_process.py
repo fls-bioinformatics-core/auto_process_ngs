@@ -1040,6 +1040,10 @@ def add_import_project_command(cmdparser):
                    "to the current directory)")
     p.add_argument('project_dir',metavar="PROJECT_DIR",
                    help="path to project directory to import")
+    p.add_argument('--comment',action='store',
+                   dest='comment',default=None,
+                   help="specify comment text to be appended to the stored "
+                   "comments associated with the project")
 
 def add_update_fastq_stats_command(cmdparser):
     """
@@ -1569,7 +1573,8 @@ def import_project(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
-    d.import_project(args.project_dir)
+    d.import_project(args.project_dir,
+                     comment=args.comment)
 
 def update_fastq_stats(args):
     """

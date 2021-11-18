@@ -133,6 +133,44 @@ Comments\t1% PhiX spike in
             f = os.path.join(ap2.analysis_dir,'NewProj',f)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
 
+    def test_import_project_with_comment(self):
+        """import_project: check comment is appended
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        # Check that the project is not currently present
+        ap = AutoProcess(mockdir.dirn)
+        self.assertFalse('NewProj' in [p.name
+                                       for p in ap.get_analysis_projects()])
+        self.assertFalse('NewProj' in [p.name
+                                       for p in ap.get_analysis_projects_from_dirs()])
+        self.assertFalse(os.path.exists(os.path.join(ap.analysis_dir,'NewProj')))
+        # Import the project and append a comment
+        import_project(ap,self.new_project_dir,
+                       comment="imported from elsewhere")
+        self.assertTrue('NewProj' in [p.name
+                                      for p in ap.get_analysis_projects()])
+        self.assertTrue('NewProj' in [p.name
+                                      for p in ap.get_analysis_projects_from_dirs()])
+        self.assertTrue(os.path.exists(os.path.join(ap.analysis_dir,'NewProj')))
+        # Verify via fresh AutoProcess object
+        ap2 = AutoProcess(mockdir.dirn)
+        self.assertTrue('NewProj' in [p.name
+                                      for p in ap2.get_analysis_projects()])
+        self.assertTrue('NewProj' in [p.name
+                                      for p in ap2.get_analysis_projects_from_dirs()])
+        self.assertTrue(os.path.exists(os.path.join(ap2.analysis_dir,'NewProj')))
+        # Check the comment has been updated
+        with open(os.path.join(mockdir.dirn,'NewProj','README.info'),'rt') \
+             as fp:
+            self.assertTrue(
+                "Comments\t1% PhiX spike in; imported from elsewhere"
+                in fp.read())
+
     def test_import_project_already_in_metadata_file(self):
         """import_project: fails when project is already in projects.info
         """
