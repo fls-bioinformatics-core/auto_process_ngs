@@ -6,7 +6,7 @@ analysis projects from one analysis directory into another (for example,
 when the raw sequencing data has been reprocessed to generate new Fastqs
 using different parameters).
 
-While the required steps can be performed manually, in these cases the
+While the required steps can be performed manually, in these cases
 it is recommended that the ``import_project`` command is used as this
 automates the process.
 
