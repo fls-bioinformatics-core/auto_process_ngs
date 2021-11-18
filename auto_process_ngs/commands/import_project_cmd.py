@@ -66,7 +66,8 @@ def import_project(ap,project_dir,runner=None):
     print("Importing project directory contents for '%s'" % project.name)
     try:
         excludes = ['--exclude=tmp.*',
-                    '--exclude=qc_report.*']
+                    '--exclude=qc_report.*',
+                    '--exclude=multi_qc*']
         rsync = applications_general.rsync(project_dir,
                                            ap.analysis_dir,
                                            extra_options=excludes)
