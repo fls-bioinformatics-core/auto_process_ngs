@@ -1033,13 +1033,20 @@ def add_import_project_command(cmdparser):
     p = cmdparser.add_command('import_project',
                               help="Import a project directory",
                               description="Copy a project directory "
-                              "PROJECT_DIR into ANALYSIS_DIR.")
+                              "PROJECT_DIR from another analysis "
+                              "directory into ANALYSIS_DIR, update "
+                              "metadata appropriately, and regenerate "
+                              "QC reports.")
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
     p.add_argument('project_dir',metavar="PROJECT_DIR",
                    help="path to project directory to import")
+    p.add_argument('--comment',action='store',
+                   dest='comment',default=None,
+                   help="specify comment text to be appended to the stored "
+                   "comments associated with the project")
 
 def add_update_fastq_stats_command(cmdparser):
     """
@@ -1569,7 +1576,8 @@ def import_project(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
-    d.import_project(args.project_dir)
+    d.import_project(args.project_dir,
+                     comment=args.comment)
 
 def update_fastq_stats(args):
     """
