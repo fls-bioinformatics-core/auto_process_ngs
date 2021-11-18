@@ -31,7 +31,7 @@ class TestAutoProcessImportProject(unittest.TestCase):
         project_dir = os.path.join(self.dirn,'NewProj')
         os.mkdir(project_dir)
         os.mkdir(os.path.join(project_dir,'fastqs'))
-        for fq in ('NP01_S1_R1_001.fastq.gz','NP01_S1_R1_001.fastq.gz'):
+        for fq in ('NP01_S1_R1_001.fastq.gz','NP01_S1_R2_001.fastq.gz'):
             with open(os.path.join(project_dir,'fastqs',fq),'wt') as fp:
                 fp.write('')
         with open(os.path.join(project_dir,'README.info'),'wt') as fp:
