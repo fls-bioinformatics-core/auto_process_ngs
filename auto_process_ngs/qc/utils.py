@@ -22,9 +22,9 @@ import logging
 from ..analysis import AnalysisProject
 from ..command import Command
 from ..metadata import AnalysisProjectQCDirInfo
-from ..pipeliner import CondaWrapper
-from ..pipeliner import CondaWrapperError
-from ..pipeliner import make_conda_env_name
+from ..conda import CondaWrapper
+from ..conda import CondaWrapperError
+from ..conda import make_conda_env_name
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
 from .cellranger import CellrangerCount
