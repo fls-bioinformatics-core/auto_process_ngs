@@ -13,6 +13,7 @@ import platform
 import cloudpickle
 from builtins import range
 import auto_process_ngs.envmod as envmod
+from auto_process_ngs.mock import MockConda
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.command import Command
 from auto_process_ngs.pipeliner import Pipeline
@@ -43,120 +44,6 @@ class _Mock(object):
     """
     Helper class for mocking executables for testing
     """
-
-    @staticmethod
-    def conda(bin_dir):
-        """
-        Make a mock conda executable for testing
-
-        Arguments:
-          bin_dir (str): path to directory to put mock
-            'conda' executable into (must already exist)
-
-        Returns:
-           String: path to mock 'conda' executable.
-        """
-        conda_bin_dir = os.path.abspath(bin_dir)
-        conda_ = os.path.join(bin_dir,"conda")
-        with open(conda_,'wt') as fp:
-            fp.write("""#!/bin/bash
-if [ "$1" == "--version" ] ; then
-   echo "conda 4.10.3"
-   exit 0
-elif [ "$1" == "create" ] ; then
-   YES=
-   PREFIX=
-   PACKAGES=
-   while [ ! -z "$2" ] ; do
-     case "$2" in
-       -n)
-         shift
-         PREFIX=$(dirname $(dirname $0))/envs/${2}
-         ;;
-       --prefix)
-         shift
-         PREFIX=$2
-         ;;
-       -y)
-         YES=yes
-         ;;
-       -c)
-         shift
-         ;;
-       --override-channels)
-         ;;
-       *)
-         PACKAGES="$PACKAGES $2"
-         ;;
-     esac
-     shift
-   done
-fi
-if [ -z "$YES" ] ; then
-   echo "Need to supply -y option"
-   exit 1
-fi
-if [ -z "$PREFIX" ] ; then
-   echo "Need to supply either -n or --prefix"
-   exit 1
-fi
-# Make directory for new environment
-mkdir -p $PREFIX
-# Write package list to a 'packages.txt' file
-echo $PACKAGES >${PREFIX}/packages.txt
-# Make an executable script for each package name
-for pkg in $PACKAGES ; do
-   name=$(echo $pkg | cut -f1 -d=)
-   cat >${PREFIX}/${name} <<EOF
-#!/bin/bash
-echo \$1
-exit 0
-EOF
-   chmod +x ${PREFIX}/${name}
-done
-""")
-            os.chmod(conda_,0o755)
-        activate_ = os.path.join(bin_dir,"activate")
-        with open(activate_,'wt') as fp:
-            fp.write("""#!/bin/bash
-export PATH=$PATH:${1}
-""")
-            os.chmod(activate_,0o755)
-        # Return path to mock conda
-        return conda_
-
-    @staticmethod
-    def conda_with_failing_create(bin_dir):
-        """
-        Make a mock conda executable with failing 'create' command
-
-        Arguments:
-          bin_dir (str): path to directory to put mock
-            'conda' executable into (must already exist)
-
-        Returns:
-           String: path to mock 'conda' executable.
-        """
-        conda_ = os.path.join(bin_dir,"conda")
-        with open(conda_,'wt') as fp:
-            fp.write("""#!/bin/bash
-if [ "$1" == "--version" ] ; then
-   echo "conda 4.10.3"
-   exit 0
-elif [ "$1" == "create" ] ; then
-   echo "!!!! Failed to create environment !!!!"
-   exit 1
-fi
-""")
-            os.chmod(conda_,0o755)
-        activate_ = os.path.join(bin_dir,"activate")
-        with open(activate_,'wt') as fp:
-            fp.write("""#!/bin/bash
-export PATH=$PATH:${1}
-""")
-            os.chmod(activate_,0o755)
-        # Return path to mock conda
-        return conda_
 
     @staticmethod
     def fastqc(bin_dir):
@@ -925,12 +812,9 @@ prepend-path PATH %s
         """
         Pipeline: define and run pipeline with conda dependency resolution
         """
-        # Set up mock conda
-        bin_dir = os.path.join(self.working_dir,"conda","bin")
-        env_dir = os.path.join(self.working_dir,"conda","envs")
-        for d in (bin_dir,env_dir):
-            os.makedirs(d)
-        conda_ = _Mock.conda(bin_dir)
+        # Set up mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
         # Define a task
         class RunFastqc(PipelineTask):
             def init(self,*files):
@@ -966,11 +850,8 @@ prepend-path PATH %s
         Pipeline: use custom env directory with conda dependency resolution
         """
         # Set up mock conda
-        bin_dir = os.path.join(self.working_dir,"conda","bin")
-        env_dir = os.path.join(self.working_dir,"conda","envs")
-        for d in (bin_dir,env_dir):
-            os.makedirs(d)
-        conda_ = _Mock.conda(bin_dir)
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
         # Custom env dir
         custom_env_dir = os.path.join(self.working_dir,"__conda_envs")
         # Check custom env dir doesn't exist
@@ -1013,11 +894,9 @@ prepend-path PATH %s
         Pipeline: handle failure with conda dependency resolution
         """
         # Set up mock conda with failing create command
-        bin_dir = os.path.join(self.working_dir,"conda","bin")
-        env_dir = os.path.join(self.working_dir,"conda","envs")
-        for d in (bin_dir,env_dir):
-            os.makedirs(d)
-        conda_ = _Mock.conda_with_failing_create(bin_dir)
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"conda"),
+                                     create_fails=True)
+        conda_ = os.path.join(conda_dir,"bin","conda")
         # Define a task
         class RunFastqc(PipelineTask):
             def init(self,*files):
@@ -2654,12 +2533,9 @@ class TestPipelineTask(unittest.TestCase):
                 self.add_cmd(
                     PipelineCommandWrapper(
                         "Run FastQC","fastqc",self.args.fq))
-        # Create a mock conda instance
-        bin_dir = os.path.join(self.working_dir,"__conda","bin")
-        env_dir = os.path.join(self.working_dir,"__conda","envs")
-        for d in (bin_dir,env_dir):
-            os.makedirs(d)
-        conda_ = _Mock.conda(bin_dir)
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
         # Make a task instance
         task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
         # Setup conda environment
@@ -2667,7 +2543,8 @@ class TestPipelineTask(unittest.TestCase):
         # Check conda environment
         self.assertEqual(
             conda_env,
-            os.path.join(env_dir,
+            os.path.join(conda_dir,
+                         "envs",
                          "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3"))
         self.assertTrue(os.path.exists(conda_env))
 
@@ -2685,16 +2562,12 @@ class TestPipelineTask(unittest.TestCase):
                 self.add_cmd(
                     PipelineCommandWrapper(
                         "Run FastQC","fastqc",self.args.fq))
-        # Create a mock conda instance
-        bin_dir = os.path.join(self.working_dir,'__conda','bin')
-        env_dir = os.path.join(self.working_dir,'__conda','envs')
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
         alternative_env_dir = os.path.join(self.working_dir,
                                            '__my_conda_envs')
-        for d in (bin_dir,
-                  env_dir,
-                  alternative_env_dir):
-            os.makedirs(d)
-        conda_ = _Mock.conda(bin_dir)
+        os.makedirs(alternative_env_dir)
         # Make a task instance
         task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
         # Setup conda environment
@@ -2723,12 +2596,9 @@ class TestPipelineTask(unittest.TestCase):
                         "Run FastQC","fastqc",self.args.fq))
         # Make a task instance
         task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
-        # Create a mock conda instance
-        bin_dir = os.path.join(self.working_dir,'__conda','bin')
-        env_dir = os.path.join(self.working_dir,'__conda','envs')
-        for d in (bin_dir,env_dir):
-            os.makedirs(d)
-        conda_ = _Mock.conda(bin_dir)
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
         # Run the task
         task.run(sched=self.sched,
                  enable_conda=True,
@@ -2742,7 +2612,9 @@ class TestPipelineTask(unittest.TestCase):
         # Check conda environment
         self.assertTrue(
             os.path.exists(os.path.join(
-                env_dir,"bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3")))
+                conda_dir,
+                "envs",
+                "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3")))
 
     def test_pipelinetask_run_with_conda_dependencies_disabled(self):
         """
@@ -2760,12 +2632,9 @@ class TestPipelineTask(unittest.TestCase):
                         "Run FastQC","fastqc",self.args.fq))
         # Make a task instance
         task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
-        # Create a mock conda instance
-        bin_dir = os.path.join(self.working_dir,'__conda','bin')
-        env_dir = os.path.join(self.working_dir,'__conda','envs')
-        for d in (bin_dir,env_dir):
-            os.makedirs(d)
-        conda_ = _Mock.conda(bin_dir)
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
         # Create a mock FastQC instance
         fastq_bin_dir = os.path.join(self.working_dir,'__apps','bin')
         os.makedirs(fastq_bin_dir)
@@ -2784,7 +2653,8 @@ class TestPipelineTask(unittest.TestCase):
         # Check conda environment
         self.assertFalse(
             os.path.exists(os.path.join(
-                env_dir,
+                conda_dir,
+                "envs",
                 "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3")))
 
 class TestPipelineFunctionTask(unittest.TestCase):
