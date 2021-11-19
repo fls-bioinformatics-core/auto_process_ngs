@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#     pipeliner.py: utilities for managing conda environments
+#     conda.py: utilities for managing conda environments
 #     Copyright (C) University of Manchester 2021 Peter Briggs
 #
 """
