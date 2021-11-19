@@ -37,6 +37,7 @@ the external software required for parts of the pipeline:
 - MockIlluminaQCSh
 - MockMultiQC
 - MockFastqStrandPy
+- MockConda
 
 There also is a wrapper for the 'Mock10xPackageExe' class which
 is maintained for backwards compatibility:
@@ -2281,6 +2282,151 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
                     fp.write("%s	13.13	93.21\n" % genome)
         # Exit
         return self._exit_code
+
+class MockConda(object):
+    """
+    Create mock conda installation
+
+    This class can be used to create a mock conda
+    installation consisting of:
+
+    - ``bin`` subdirectory with mock ``conda`` executable
+      and 'activate' script
+    - ``envs`` subdirectory
+
+    This can be used in place of an actual conda
+    installation for testing purposes.
+
+    To create a mock installation, use the 'create'
+    static method, e.g.
+
+    >>> MockCondaExe.create("/tmpbin/conda")
+
+    The resulting ``conda`` executable supports
+    ``--version`` and the ``create`` command, and
+    will generate mock outputs for both.
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - the 'create' command can be forced to fail for
+      all inputs by setting the `create_fails` argument
+    - the reported version can be set via the `version`
+      argument
+    """
+
+    @staticmethod
+    def create(path,version="4.10.3",create_fails=False,exit_code=0):
+        """
+        Create a "mock" fastq_strand.py executable
+
+        Arguments:
+          path (str): path to the top-level directory
+            for the mock conda installation (which
+            must not exist, however the directory it
+            will be created in must be present).
+          version (str): version that mock conda
+            will claim to be
+          create_fails (bool): if True then the
+            'create' subcommand of the mock
+            conda executable will fail.
+          exit_code (int): exit code that the
+            mock executable should complete with
+        """
+        path = os.path.abspath(path)
+        print("Building mock installation: %s" % path)
+        # Don't clobber an existing installation
+        assert(os.path.exists(path) is False)
+        # Set up directories
+        os.mkdir(path)
+        for d in ("bin","envs"):
+            os.mkdir(os.path.join(path,d))
+        # Create mock files
+        bin_dir = os.path.join(path,"bin")
+        conda_ = os.path.join(bin_dir,"conda")
+        if not create_fails:
+            with open(conda_,'wt') as fp:
+                fp.write("""#!/bin/bash
+if [ "$1" == "--version" ] ; then
+   echo "conda %s"
+   exit 0
+elif [ "$1" == "create" ] ; then
+   YES=
+   PREFIX=
+   PACKAGES=
+   while [ ! -z "$2" ] ; do
+     case "$2" in
+       -n)
+         shift
+         PREFIX=$(dirname $(dirname $0))/envs/${2}
+         ;;
+       --prefix)
+         shift
+         PREFIX=$2
+         ;;
+       -y)
+         YES=yes
+         ;;
+       -c)
+         shift
+         ;;
+       --override-channels)
+         ;;
+       *)
+         PACKAGES="$PACKAGES $2"
+         ;;
+     esac
+     shift
+   done
+fi
+if [ -z "$YES" ] ; then
+   echo "Need to supply -y option"
+   exit 1
+fi
+if [ -z "$PREFIX" ] ; then
+   echo "Need to supply either -n or --prefix"
+   exit 1
+fi
+# Make directory for new environment
+mkdir -p $PREFIX
+# Write package list to a 'packages.txt' file
+echo $PACKAGES >${PREFIX}/packages.txt
+# Make an executable script for each package name
+for pkg in $PACKAGES ; do
+   name=$(echo $pkg | cut -f1 -d=)
+   cat >${PREFIX}/${name} <<EOF
+#!/bin/bash
+echo \$1
+exit %s
+EOF
+   chmod +x ${PREFIX}/${name}
+done
+""" % (version,exit_code))
+        else:
+            with open(conda_,'wt') as fp:
+                fp.write("""#!/bin/bash
+if [ "$1" == "--version" ] ; then
+   echo "conda %s"
+   exit 0
+elif [ "$1" == "create" ] ; then
+   echo "!!!! Failed to create environment !!!!"
+   exit 1
+fi
+""" % version)
+        os.chmod(conda_,0o775)
+        # Make mock 'activate' script
+        activate_ = os.path.join(bin_dir,"activate")
+        with open(activate_,'wt') as fp:
+            fp.write("""#!/bin/bash
+export PATH=$PATH:${1}
+""")
+            os.chmod(activate_,0o755)
+        with open(conda_,'rt') as fp:
+            print("conda:")
+            print("%s" % fp.read())
+        return path
 
 class MockCellrangerExe(Mock10xPackageExe):
     """
