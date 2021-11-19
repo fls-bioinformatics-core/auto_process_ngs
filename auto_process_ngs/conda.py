@@ -19,6 +19,7 @@ Module providing utility classes and functions to help with managing
 ######################################################################
 
 import os
+import tempfile
 import logging
 from bcftbx.JobRunner import ResourceLock
 from bcftbx.utils import find_program

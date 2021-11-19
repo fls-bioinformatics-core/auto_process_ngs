@@ -1086,7 +1086,6 @@ import traceback
 import string
 import cloudpickle
 import atexit
-import tempfile
 import textwrap
 import math
 from collections import Iterator
