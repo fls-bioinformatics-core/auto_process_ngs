@@ -1095,13 +1095,6 @@ try:
 except ImportError:
     # Python3
     from io import StringIO
-try:
-    from urllib.request import urlopen
-    from urllib.error import URLError
-except ImportError:
-    # Failed to get Python3 urlopen, fallback to Python2
-    from urllib2 import urlopen
-    from urllib2 import URLError
 from functools import reduce
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
