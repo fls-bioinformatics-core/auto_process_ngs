@@ -202,8 +202,8 @@ class CondaWrapper(object):
         else:
             # Create new environment
             if not self.is_installed:
-                raise PipelineError("Can't create environment: conda not "
-                                "installed")
+                raise CondaWrapperError("Can't create environment: conda not "
+                                        "installed")
             # Base command
             create_cmd = Command(self.conda,'create','-y',)
             # Channels
