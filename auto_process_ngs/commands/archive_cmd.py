@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
-#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
 #
 #########################################################################
 
@@ -12,6 +12,7 @@
 import os
 import time
 import logging
+from ..analysis import AnalysisDir
 from .. import applications
 from .. import fileops
 from .. import simple_scheduler
@@ -327,6 +328,27 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             logger.warning("One or more archiving jobs failed "
                            "(non-zero exit code returned)")
         else:
+            if final:
+                # Update the final stored Fastq paths for QC
+                staged_analysis_dir = os.path.join(
+                    archive_dir,
+                    staging)
+                archived_analysis_dir = os.path.abspath(
+                    os.path.join(
+                        archive_dir,
+                        final_dest))
+                for project in AnalysisDir(staged_analysis_dir).get_projects():
+                    qc_info = project.qc_info(project.qc_dir)
+                    if qc_info.fastq_dir:
+                        print("%s: updating stored Fastq directory for QC" %
+                              project.name)
+                        new_fastq_dir = os.path.join(archived_analysis_dir,
+                                                     os.path.relpath(
+                                                         qc_info.fastq_dir,
+                                                         ap.analysis_dir))
+                        print("-- updated Fastq directory: %s" % new_fastq_dir)
+                        qc_info['fastq_dir'] = new_fastq_dir
+                        qc_info.save()
             # Set the group
             if group is not None:
                 print("Setting group of archived files to '%s'" % group)
