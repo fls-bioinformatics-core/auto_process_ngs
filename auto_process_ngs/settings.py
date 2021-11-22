@@ -654,7 +654,7 @@ def get_install_dir():
     'auto_process.ini.sample' file, for example: if this file is
     located in
 
-    /opt/auto_process/lib/python2.7/site-packages/auto_process_ngs
+    /opt/auto_process/lib/python3.6/site-packages/auto_process_ngs
 
     then each level will be searched until a matching 'config' dir is
     located.
