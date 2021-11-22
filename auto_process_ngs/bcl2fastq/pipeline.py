@@ -843,11 +843,18 @@ class MakeFastqs(Pipeline):
         #################
         self.report("Building pipeline for lane subsets:")
         for s in self.subsets:
-            self.report("- Lanes: %s" % ','.join([str(l)
-                                                  for l in s['lanes']]))
+            self.report("- **** Lanes: %s ***" %
+                        (','.join([str(l) for l in s['lanes']])
+                         if s['lanes'] else 'all'))
             for attr in s:
                 if attr != 'lanes' and s[attr] is not None:
-                    self.report("-- %s: %s" % (attr,s[attr]))
+                    try:
+                        value = s[attr].value
+                    except AttributeError:
+                        value = s[attr]
+                    self.report("-- %s: %s" % (attr,
+                                               (value if value is not None
+                                                else '<not set>')))
 
         #####################
         # Fetch primary data
