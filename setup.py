@@ -2,7 +2,7 @@
 
 Setup script to install auto_process_ngs
 
-Copyright (C) University of Manchester 2013-20 Peter Briggs
+Copyright (C) University of Manchester 2013-2021 Peter Briggs
 
 """
 
@@ -14,19 +14,14 @@ for pattern in ('bin/*.py','bin/*.sh',):
     scripts.extend(glob(pattern))
 
 # Installation requirements
-install_requires = ['configparser',
-                    'pillow',
-                    'pandas',
-                    'cloudpickle',
-                    'psutil',
+install_requires = ['cloudpickle',
+                    'configparser',
                     'future',
-                    'genomics-bcftbx']
-# Handle matplotlib for Python2/3
-import sys
-if sys.version_info < (3,):
-    install_requires.append('matplotlib<=2.2.3')
-else:
-    install_requires.append('matplotlib')
+                    'genomics-bcftbx',
+                    'matplotlib',
+                    'pandas',
+                    'pillow',
+                    'psutil']
 
 # If we're on ReadTheDocs then we can reduce this
 # to a smaller set (to avoid build timeouts)
@@ -76,8 +71,6 @@ setup(name = "auto_process_ngs",
           "Operating System :: MacOS",
           "Topic :: Scientific/Engineering",
           "Topic :: Scientific/Engineering :: Bio-Informatics",
-          "Programming Language :: Python :: 2",
-          "Programming Language :: Python :: 2.7"
           "Programming Language :: Python :: 3",
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
