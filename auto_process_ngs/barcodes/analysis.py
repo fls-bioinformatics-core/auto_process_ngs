@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes/analysis.py: classes and functions for analysing barcodes
-#     Copyright (C) University of Manchester 2016-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2021 Peter Briggs
 #
 ########################################################################
 #
@@ -29,11 +29,6 @@ FASTQ read headers:
 #######################################################################
 
 import sys
-try:
-    # Python2
-    from itertools import izip as zip
-except ImportError:
-    pass
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import normalise_barcode
