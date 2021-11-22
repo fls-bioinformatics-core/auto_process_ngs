@@ -13,37 +13,33 @@ from auto_process_ngs.bcl2fastq.utils import *
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
-class MockBcl2fastq(object):
+class MockBaseExe(object):
     """
-    Class for setting up fake bcl2fastq conversion installs
+    Base class for mock BCL to Fastq converters
 
-    Usage:
+    Implements common methods for creating mock
+    versions of Casava, bcl2fastq/bcl2fastq2 and
+    BCL Convert:
 
-    Create a new MockBcl2fastq instance:
+    _makedirs: create subdirectory tree
+    _make_exe: create an executable file
 
-    >>> m = MockBcl2fastq()
+    Additional methods:
 
-    Set up mock bcl2fastq 1.8.3 and 1.8.4 installations:
+    set_path: sets PATH environment var to executables
 
-    >>> m.bcl2fastq_183()
-    >>> m.bcl2fastq_184()
+    Also implements the following methods:
 
-    Get a list of the executables that are defined:
+    paths: list of paths pointing to executables
+    exes: list of full paths to executables
 
-    >>> exes = m.exes
-
-    Prepend the paths for these installations to the PATH
-    environment variable:
-
-    >>> m.set_path(prepend=True)
-
-    Remove the base directory and contents:
-
-    >>> del(m)
-
+    Also implements the __del__ method to clean
+    when instances are garbage collected.
     """
-    def __init__(self):
-        self.dirn = tempfile.mkdtemp(suffix='mockbcl2fastq')
+    def __init__(self,name):
+        """
+        """
+        self.dirn = tempfile.mkdtemp(suffix=name)
         self._exes = []
 
     def __del__(self):
@@ -128,6 +124,37 @@ class MockBcl2fastq(object):
         """
         return [x for x in self._exes]
 
+class MockBcl2fastq(MockBaseExe):
+    """
+    Class for setting up fake bcl2fastq conversion installs
+
+    Usage:
+
+    Create a new MockBcl2fastq instance:
+
+    >>> m = MockBcl2fastq()
+
+    Set up mock bcl2fastq 1.8.3 and 1.8.4 installations:
+
+    >>> m.bcl2fastq_183()
+    >>> m.bcl2fastq_184()
+
+    Get a list of the executables that are defined:
+
+    >>> exes = m.exes
+
+    Prepend the paths for these installations to the PATH
+    environment variable:
+
+    >>> m.set_path(prepend=True)
+
+    Remove the base directory and contents:
+
+    >>> del(m)
+    """
+    def __init__(self):
+        MockBaseExe.__init__(self,name='mockbcl2fastq')
+
     def casava_no_version(self):
         """
         Add a mock CASAVA installation with no discernible version
@@ -187,6 +214,46 @@ class MockBcl2fastq(object):
         self._makedirs('bcl2fastq','2.20.0.422','etc','bcl2fastq-2.20.0.422')
         self._make_exe('bcl2fastq','2.20.0.422','bin','bcl2fastq',
                        content="#!/bin/bash\nif [ \"$1\" == \"--version\" ] ; then cat >&2 <<EOF\nBCL to FASTQ file converter\nbcl2fastq v2.20.0.422\nCopyright (c) 2007-2017 Illumina, Inc.\n\nEOF\nfi")
+
+class MockBclConvert(MockBaseExe):
+    """
+    Class for setting up fake bcl-convert installs
+
+    Usage:
+
+    Create a new MockBclConvert instance:
+
+    >>> m = MockBclConvert()
+
+    Set up mock bcl-convert 3.7.5 installation:
+
+    >>> m.bclconvert_375()
+
+    Get a list of the executables that are defined:
+
+    >>> exes = m.exes
+
+    Prepend the paths for these installations to the PATH
+    environment variable:
+
+    >>> m.set_path(prepend=True)
+
+    Remove the base directory and contents:
+
+    >>> del(m)
+    """
+    def __init__(self):
+        MockBaseExe.__init__(self,name='mockbclconvert')
+
+    def bclconvert_375(self):
+        """
+        Add a mock bcl-convert 3.7.5 installation
+
+        """
+        # bclconvert 3.7.5
+        self._makedirs('BCLConvert','3.7.5','bin')
+        self._make_exe('BCLConvert','3.7.5','bin','bcl-convert',
+                       content="#!/bin/bash\nif [ \"$1\" == \"-V\" ] ; then cat >&2 <<EOF\nbcl-convert Version 00.000.000.3.7.5\nCopyright (c) 2014-2018 Illumina, Inc.\nEOF\nfi")
 
 class TestGetSequencerPlatform(unittest.TestCase):
     """
@@ -657,6 +724,35 @@ class TestBclToFastqInfo(unittest.TestCase):
         self.assertEqual(path,exe)
         self.assertEqual(name,'')
         self.assertEqual(version,'')
+
+class TestBclConvertInfo(unittest.TestCase):
+    """
+    Tests for the bclconvert_info function
+
+    """
+    def setUp(self):
+        # Make some fake directories for different
+        # software versions
+        self.mockbclconvert = MockBclConvert()
+        self.original_path = os.environ['PATH']
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        os.environ['PATH'] = self.original_path
+        del(self.mockbclconvert)
+
+    def test_bclconvert_3_7_5(self):
+        """
+        Collect info for BCL Convert 3.7.5
+        """
+        # bcl-convert 3.7.5
+        self.mockbclconvert.bclconvert_375()
+        self.mockbclconvert.set_path()
+        exe = self.mockbclconvert.exes[0]
+        path,name,version = bclconvert_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'BCL Convert')
+        self.assertEqual(version,'3.7.5')
 
 class TestMakeCustomSampleSheet(unittest.TestCase):
     """Tests for the make_custom_sample_sheet function
@@ -1178,7 +1274,9 @@ class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 
     """
-    def test_n_mismatches(self):
+    def test_get_nmismatches(self):
+        """get_nmismatches: fetch mismatches in default mode
+        """
         self.assertEqual(get_nmismatches('y50'),0)
         self.assertEqual(get_nmismatches('y50,I4'),0)
         self.assertEqual(get_nmismatches('y50,I6'),1)
@@ -1193,6 +1291,202 @@ class TestGetNmismatches(unittest.TestCase):
         self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIN4'),0)
         self.assertEqual(get_nmismatches('y250,I4,I4,y250'),1)
 
-    def test_n_mismatches_invalid_input(self):
+    def test_get_nmismatches_multi_index(self):
+        """get_nmismatches: fetch mismatches in 'multi-index' mode
+        """
+        self.assertEqual(get_nmismatches('y50',
+                                         multi_index=True),[])
+        self.assertEqual(get_nmismatches('y50,I4',
+                                         multi_index=True),[0])
+        self.assertEqual(get_nmismatches('y50,I6',
+                                         multi_index=True),[1])
+        self.assertEqual(get_nmismatches('y101,I6,y101',
+                                         multi_index=True),[1])
+        self.assertEqual(get_nmismatches('y250,I8,I8,y250',
+                                         multi_index=True),[1,1])
+        self.assertEqual(get_nmismatches('y250,I6nn,I6nn,y250',
+                                         multi_index=True),[1,1])
+        self.assertEqual(get_nmismatches('y250,I6n2,I6n2,y250',
+                                         multi_index=True),[1,1])
+        self.assertEqual(get_nmismatches('y250,I16',
+                                         multi_index=True),[1])
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIII',
+                                         multi_index=True),[1])
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIINN',
+                                         multi_index=True),[0])
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIII',
+                                         multi_index=True),[0])
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIN4',
+                                         multi_index=True),[0])
+        self.assertEqual(get_nmismatches('y250,I4,I4,y250',
+                                         multi_index=True),[0,0])
+
+    def test_get_nmismatches_invalid_input(self):
+        """get_nmismatches: raise exception for invalid inputs
+        """
         self.assertRaises(Exception,get_nmismatches,'auto')
         self.assertRaises(Exception,get_nmismatches,123)
+
+class TestConvertBasesMaskToOverrideCycles(unittest.TestCase):
+    """Tests for the convert_bases_mask_to_override_cycles function
+    """
+    def test_convert_bases_mask_to_override_cycles(self):
+        """
+        convert_bases_mask_to_override_cycles: check conversions
+        """
+        self.assertEqual(
+            convert_bases_mask_to_override_cycles(
+                "y76,I10,I10,y76"),"Y76;I10;I10;Y76")
+        self.assertEqual(
+            convert_bases_mask_to_override_cycles(
+                "y76,I10,I10,n76"),"Y76;I10;I10;N76")
+        self.assertEqual(
+            convert_bases_mask_to_override_cycles(
+                "y76,I6n4,n10,y76"),"Y76;I6N4;N10;Y76")
+        self.assertEqual(
+            convert_bases_mask_to_override_cycles(
+                "y76,I6nnnn,nnnnnnnnnn,y76"),"Y76;I6N4;N10;Y76")
+
+class TestCheckBarcodeCollisions(unittest.TestCase):
+    """Tests for the check_barcode_collisions function
+    """
+    def setUp(self):
+        # Create a temporary working dir
+        self.wd = tempfile.mkdtemp()
+
+    def tearDown(self):
+        # Remove working dir
+        if self.wd is not None:
+            shutil.rmtree(self.wd)
+
+    def test_check_barcode_collisions_single_index(self):
+        """
+        check_barcode_collisions: single index, no indices collide
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTA,AB,
+AB2,AB2,,,D702,ATTCAG,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # No collisions for one or zero mismatches
+        self.assertEqual(check_barcode_collisions(sample_sheet,1),[])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0),[])
+
+    def test_check_barcode_collisions_single_index_with_collision(self):
+        """
+        check_barcode_collisions: single index, indices collide
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTA,AB,
+AB2,AB2,,,D702,CGTGTT,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Collisions for one mismatch, no collisions for zero
+        self.assertEqual(check_barcode_collisions(sample_sheet,1),
+                         [("CGTGTA","CGTGTT")])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0),
+                         [])
+
+    def test_check_barcode_collisions_dual_index(self):
+        """
+        check_barcode_collisions: dual index, no indices collide
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description1,
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+AB2,AB2,,,D701,TCGTGTAG,D501,CGACCTGT,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # No collisions for one or zero mismatches
+        self.assertEqual(check_barcode_collisions(sample_sheet,1),[])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0),[])
+
+    def test_check_barcode_collisions_dual_index_with_collision(self):
+        """
+        check_barcode_collisions: dual index, indices collide
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description1,
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+AB2,AB2,,,D701,TGTGTAGG,D501,TACCTGTA,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Collisions for one and two mismatches
+        self.assertEqual(check_barcode_collisions(sample_sheet,2),
+                         [("CGTGTAGGGACCTGTA","TGTGTAGGTACCTGTA")])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1),
+                         [("CGTGTAGGGACCTGTA","TGTGTAGGTACCTGTA")])
+        # No collisions for zero mismatches
+        self.assertEqual(check_barcode_collisions(sample_sheet,0),[])
+
+    def test_check_barcode_collisions_dual_index_only_i7_collides(self):
+        """
+        check_barcode_collisions: dual index (only i7 collides)
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description1,
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+AB2,AB2,,,D701,TGTGTAGG,D501,TAGGGTTC,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Collisions for one and two mismatches in i7
+        self.assertEqual(check_barcode_collisions(sample_sheet,2,use_index=1),
+                         [("CGTGTAGG","TGTGTAGG")])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1,use_index=1),
+                         [("CGTGTAGG","TGTGTAGG")])
+        # No collisions for zero mismatches in i7
+        self.assertEqual(check_barcode_collisions(sample_sheet,0,use_index=1),
+                         [])
+        # No collisions for two, one or zero mismatches in i5
+        self.assertEqual(check_barcode_collisions(sample_sheet,2,use_index=2),
+                         [])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1,use_index=2),
+                         [])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0,use_index=2),
+                         [])
+
+    def test_check_barcode_collisions_dual_index_only_i5_collides(self):
+        """
+        check_barcode_collisions: dual index (only i5 collides)
+        """
+        # Make a matching sample sheet
+        sample_sheet_content = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description1,
+AB1,AB1,,,D701,GACCTGTA,D501,CGTGTAGG,AB,
+AB2,AB2,,,D701,TAGGGTTC,D501,TGTGTAGG,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # No collisions for one and two mismatches in i7
+        self.assertEqual(check_barcode_collisions(sample_sheet,2,use_index=1),
+                         [])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1,use_index=1),
+                         [])
+        self.assertEqual(check_barcode_collisions(sample_sheet,0,use_index=1),
+                         [])
+        # Collisions for two or one mismatches in i5
+        self.assertEqual(check_barcode_collisions(sample_sheet,2,use_index=2),
+                         [("CGTGTAGG","TGTGTAGG")])
+        self.assertEqual(check_barcode_collisions(sample_sheet,1,use_index=2),
+                         [("CGTGTAGG","TGTGTAGG")])
+        # No collisions for zero mismatches in i5
+        self.assertEqual(check_barcode_collisions(sample_sheet,0,use_index=2),
+                         [])

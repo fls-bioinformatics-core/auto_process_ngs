@@ -56,11 +56,14 @@ To update the configuration file use the save method e.g.
 
 import os
 import sys
-import logging
 import bcftbx.JobRunner as JobRunner
 from bcftbx.utils import AttributeDictionary
 from .config import Config
 from .config import NoSectionError
+
+# Module specific logger
+import logging
+logger = logging.getLogger(__name__)
 
 #######################################################################
 # Classes
@@ -130,6 +133,8 @@ class Settings(object):
         self.modulefiles['make_fastqs'] = config.get('modulefiles',
                                                      'make_fastqs')
         self.modulefiles['bcl2fastq'] = config.get('modulefiles','bcl2fastq')
+        self.modulefiles['bcl_convert'] = config.get('modulefiles',
+                                                     'bcl_convert')
         self.modulefiles['cellranger_mkfastq'] = config.get('modulefiles',
                                                     'cellranger_mkfastq')
         self.modulefiles['cellranger_atac_mkfastq'] = config.get('modulefiles',
@@ -155,9 +160,15 @@ class Settings(object):
         self.conda['env_dir'] = config.get('conda','env_dir',None)
         if self.conda['env_dir']:
             self.conda['env_dir'] = os.path.expandvars(self.conda.env_dir)
-        # bcl2fastq
-        self.add_section('bcl2fastq')
-        self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)
+        # bcl_conversion
+        self.add_section('bcl_conversion')
+        # Add settings from legacy bcl2fastq section first
+        self.bcl_conversion = self.get_bcl_converter_config('bcl2fastq',
+                                                            config)
+        # Update with settings from bcl_conversion section
+        self.get_bcl_converter_config('bcl_conversion',
+                                      config,
+                                      self.bcl_conversion)
         # qc
         self.add_section('qc')
         self.qc['nprocessors'] = config.getint('qc','nprocessors',None)
@@ -177,9 +188,9 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['star_index'] = index_file
-            logging.warning("Added STAR index information from "
-                            "deprecated 'fastq_strand_indexes' section (use "
-                            "'organism:ORGANISM' sections instead)")
+            logger.warning("Added STAR index information from "
+                           "deprecated 'fastq_strand_indexes' section (use "
+                           "'organism:ORGANISM' sections instead)")
         except NoSectionError:
             pass
         # Legacy 10xgenomics transcriptome references
@@ -188,9 +199,9 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['cellranger_reference'] = reference
-            logging.warning("Added cellranger references from deprecated "
-                            "'10xgenomics_transcriptomes' section (use "
-                            "'organism:ORGANISM' sections instead)")
+            logger.warning("Added cellranger references from deprecated "
+                           "'10xgenomics_transcriptomes' section (use "
+                           "'organism:ORGANISM' sections instead)")
         except NoSectionError:
             pass
         # Legacy 10xgenomics snRNA-seq pre-mRNA references
@@ -199,10 +210,10 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['cellranger_premrna_reference'] = reference
-            logging.warning("Added cellranger pre-mRNA references from "
-                            "deprecated '10xgenomics_premrna_references' "
-                            "section (use 'organism:ORGANISM' sections "
-                            "instead)")
+            logger.warning("Added cellranger pre-mRNA references from "
+                           "deprecated '10xgenomics_premrna_references' "
+                           "section (use 'organism:ORGANISM' sections "
+                           "instead)")
         except NoSectionError:
             pass
         # Legacy 10xgenomics scATAC-seq genome references
@@ -211,9 +222,9 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['cellranger_atac_reference'] = reference
-            logging.warning("Added cellranger-atac references from deprecated "
-                            "'10xgenomics_atac_genome_references' section "
-                            "(use 'organism:ORGANISM' sections instead)")
+            logger.warning("Added cellranger-atac references from deprecated "
+                           "'10xgenomics_atac_genome_references' section "
+                           "(use 'organism:ORGANISM' sections instead)")
         except NoSectionError:
             pass
         # Legacy 10xGenomics cellranger ARC single cell multiome references
@@ -222,9 +233,9 @@ class Settings(object):
                 if organism not in self.organisms:
                     self.organisms[organism] = self.get_organism_config()
                 self['organisms'][organism]['cellranger_arc_reference'] = reference
-            logging.warning("Added cellranger-arc references from deprecated "
-                            "'10xgenomics_multiome_references' section "
-                            "(use 'organism:ORGANISM' sections instead)")
+            logger.warning("Added cellranger-arc references from deprecated "
+                           "'10xgenomics_multiome_references' section "
+                           "(use 'organism:ORGANISM' sections instead)")
         except NoSectionError:
             pass
         # Sequencers
@@ -242,10 +253,10 @@ class Settings(object):
                         AttributeDictionary(platform=None,
                                             model=None)
                 self['sequencers'][instrument]['platform'] = platform
-            logging.warning("Added sequencer information from "
-                            "deprecated 'sequencers' section (use "
-                            "'sequencer:INSTRUMENT' sections "
-                            "instead)")
+            logger.warning("Added sequencer information from "
+                           "deprecated 'sequencers' section (use "
+                           "'sequencer:INSTRUMENT' sections "
+                           "instead)")
         except NoSectionError:
             pass
         # Sequencing platform-specific defaults
@@ -253,19 +264,20 @@ class Settings(object):
         for section in filter(lambda x: x.startswith('platform:'),
                               config.sections()):
             platform = section.split(':')[1]
-            self.platform[platform] = self.get_bcl2fastq_config(section,config)
+            self.platform[platform] = self.get_bcl_converter_config(section,
+                                                                    config)
         # Handle deprecated bcl2fastq settings
         for platform in ('hiseq','miseq','nextseq'):
             if config.has_option('bcl2fastq',platform):
-                logging.warning("Deprecated setting in [bcl2fastq]: '%s'"
-                                % platform)
+                logger.warning("Deprecated setting in [bcl2fastq]: '%s'"
+                               % platform)
             try:
                 bcl2fastq = self.platform[platform]['bcl2fastq']
             except KeyError:
                 bcl2fastq = config.get('bcl2fastq',platform)
                 if bcl2fastq is None:
                     continue
-                logging.warning("Setting 'bcl2fastq' in '[platform:%s]' to '%s'"
+                logger.warning("Setting 'bcl2fastq' in '[platform:%s]' to '%s'"
                                 % (platform,bcl2fastq))
                 if platform not in self.platform:
                     self.platform[platform] = AttributeDictionary()
@@ -300,6 +312,7 @@ class Settings(object):
         # Define runners for specific jobs
         self.add_section('runners')
         for name in ('bcl2fastq',
+                     'bcl_convert',
                      'qc',
                      'star',
                      'stats',
@@ -333,7 +346,7 @@ class Settings(object):
             for template,fields in config.items('reporting_templates'):
                 self['reporting_templates'][template] = fields
         except NoSectionError:
-            logging.debug("No reporting templates defined")
+            logger.debug("No reporting templates defined")
         # Destinations for data transfer
         self.add_section('destination')
         for section in filter(lambda x: x.startswith('destination:'),
@@ -342,51 +355,66 @@ class Settings(object):
             self.destination[dest] = self.get_destination_config(
                 section,config)
 
-    def get_bcl2fastq_config(self,section,config):
+    def get_bcl_converter_config(self,section,config,attr_dict=None):
         """
-        Retrieve bcl2fastq configuration options from .ini file
+        Retrieve BCL conversion configuration options from .ini file
 
-        Given the name of a section (e.g. 'bcl2fastq',
-        'platform:miseq'), fetch the bcl2fastq settings and return
+        Given the name of a section (e.g. 'bcl_conversion',
+        'platform:miseq'), fetch the BCL converter settings and return
         in an AttributeDictionary object.
 
         The options that can be extracted are:
 
-        - default_version
-        - bcl2fastq
+        - bcl_converter
         - nprocessors
         - no_lane_splitting
         - create_empty_fastqs
+
+        There are also some legacy options:
+
+        - default_version
+        - bcl2fastq
 
         Arguments:
           section (str): name of the section to retrieve the
             settings from
           config (Config): Config object with settings loaded
+          attr_dict (AttributeDictionary): optional, existing
+            AttributeDictionary which will be added to
 
         Returns:
           AttributeDictionary: dictionary of option:value pairs.
 
         """
-        values = AttributeDictionary()
-        if section == 'bcl2fastq':
-            values['default_version'] = config.get(section,'default_version',
-                                                   None)
-            values['nprocessors'] = config.getint(section,'nprocessors',None)
-            values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
-                                                            False)
-            values['create_empty_fastqs'] = config.getboolean(
-                section,
-                'create_empty_fastqs',
-                True)
+        if attr_dict:
+            values = attr_dict
         else:
-            values['bcl2fastq'] = config.get(section,'bcl2fastq',None)
-            values['nprocessors'] = config.getint(section,'nprocessors',None)
-            values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
-                                                            None)
-            values['create_empty_fastqs'] = config.getboolean(
-                section,
-                'create_empty_fastqs',
-                None)
+            values = AttributeDictionary()
+        if section == 'bcl2fastq':
+            # Deprecated [bcl2fastq] section
+            value = config.get(section,'default_version',None)
+            if value:
+                values['bcl_converter'] = "bcl2fastq%s" % value
+        else:
+            # [bcl_conversion] and [platform:...] sections
+            bcl2fastq = config.get(section,'bcl2fastq',None)
+            value = config.get(section,'bcl_converter',None)
+            if value:
+                values['bcl_converter'] = value
+            elif bcl2fastq is not None:
+                values['bcl_converter'] = "bcl2fastq%s" % bcl2fastq
+            elif 'bcl_converter' not in values:
+                values['bcl_converter'] = None
+        # Common settings
+        value = config.getint(section,'nprocessors',None)
+        if value or 'nprocessors' not in values:
+            values['nprocessors'] = value
+        value = config.getboolean(section,'no_lane_splitting',None)
+        if value is not None or 'no_lane_splitting' not in values:
+            values['no_lane_splitting'] = value
+        value = config.getboolean(section,'create_empty_fastqs',None)
+        if value is not None or 'create_empty_fastqs' not in values:
+            values['create_empty_fastqs'] = value
         return values
 
     def get_destination_config(self,section,config):
@@ -584,7 +612,7 @@ class Settings(object):
                             config.set(name,attr,values[attr])
             config.write(open(self.settings_file,'w'))
         else:
-            logging.warning("No settings file found, nothing saved")
+            logger.warning("No settings file found, nothing saved")
     
     def report_settings(self):
         """
@@ -594,8 +622,8 @@ class Settings(object):
         if self.settings_file:
             text.append("Settings from %s" % self.settings_file)
         else:
-            logging.warning("No settings file found, reporting built-in "
-                            "defaults")
+            logger.warning("No settings file found, reporting built-in "
+                           "defaults")
         for section in self._sections:
             if section == 'sequencers':
                 display_name = 'sequencer'
@@ -640,7 +668,7 @@ def get_install_dir():
         if os.path.isdir(os.path.join(path,'config')) and \
            os.path.isfile(os.path.join(path,'config',
                                        'auto_process.ini.sample')):
-            logging.debug("Found install dir: %s" % path)
+            logger.debug("Found install dir: %s" % path)
             return os.path.abspath(os.path.normpath(path))
         path = os.path.dirname(path)
     return os.path.dirname(__file__)
@@ -654,7 +682,7 @@ def get_config_dir():
 
     """
     path = os.path.join(get_install_dir(),'config')
-    logging.debug("Putative config dir: %s" % path)
+    logger.debug("Putative config dir: %s" % path)
     if os.path.isdir(path):
         return path
     else:
@@ -714,17 +742,17 @@ def locate_settings_file(name='auto_process.ini',create_from_sample=True):
         settings_file = None
     # No settings file found anywhere on search path
     if settings_file is None:
-        logging.debug("No local settings file found in %s" %
-                      ', '.join(config_file_dirs))
+        logger.debug("No local settings file found in %s" %
+                     ', '.join(config_file_dirs))
         if sample_settings_file is not None and create_from_sample:
-            logging.warning("Attempting to make a copy from sample "
-                            "settings file")
+            logger.warning("Attempting to make a copy from sample "
+                           "settings file")
             settings_file = os.path.splitext(sample_settings_file)[0]
             try:
                 with open(settings_file,'w') as fp:
                     with open(sample_settings_file,'r') as fpp:
                         fp.write(fpp.read())
-                logging.warning("Created new file %s" % settings_file)
+                logger.warning("Created new file %s" % settings_file)
             except Exception as ex:
                 raise Exception("Failed to create %s: %s" %
                                 (settings_file,ex))

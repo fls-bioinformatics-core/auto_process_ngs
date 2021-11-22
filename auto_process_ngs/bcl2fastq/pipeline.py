@@ -16,12 +16,14 @@ Pipeline task classes:
 - FetchPrimaryData
 - MakeSampleSheet
 - GetBcl2Fastq
+- GetBclConvert
 - RestoreBackupDirectory
 - RunBcl2Fastq
 - GetBasesMaskIcell8
 - GetBasesMaskIcell8Atac
 - Get10xPackage
 - DemultiplexIcell8Atac
+- MergeFastqs
 - MergeFastqDirs
 - Run10xMkfastq
 - FastqStatistics
@@ -52,17 +54,20 @@ from bcftbx.IlluminaData import list_missing_fastqs
 from bcftbx.utils import find_program
 from bcftbx.utils import mkdirs
 from bcftbx.utils import walk
+from ..analysis import AnalysisFastq
 from ..applications import general as general_apps
 from ..applications import bcl2fastq as bcl2fastq_apps
 from ..barcodes.pipeline import AnalyseBarcodes
 from ..bcl2fastq.utils import available_bcl2fastq_versions
 from ..bcl2fastq.utils import bases_mask_is_valid
 from ..bcl2fastq.utils import bcl_to_fastq_info
+from ..bcl2fastq.utils import bclconvert_info
 from ..bcl2fastq.utils import check_barcode_collisions
 from ..bcl2fastq.utils import get_bases_mask
 from ..bcl2fastq.utils import get_nmismatches
 from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
+from ..bcl2fastq.utils import convert_bases_mask_to_override_cycles
 from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
 from ..fileops import Location
@@ -77,6 +82,7 @@ from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineFailure
 from ..pipeliner import PipelineParam as Param
 from ..pipeliner import FunctionParam
+from ..pipeliner import ListParam
 from ..pipeliner import PathExistsParam
 from ..pipeliner import PathJoinParam
 from ..pipeliner import resolve_parameter
@@ -85,6 +91,7 @@ from ..tenx_genomics_utils import cellranger_info
 from ..tenx_genomics_utils import spaceranger_info
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
 from ..tenx_genomics_utils import make_qc_summary_html
+from ..utils import find_executables
 from .reporting import ProcessingQCReport
 
 # Module specific logger
@@ -130,6 +137,7 @@ LANE_SUBSET_ATTRS = (
     'icell8_atac_reverse_complement',
     'analyse_barcodes',
     'masked_index',
+    'bcl_converter',
 )
 
 ######################################################################
@@ -174,6 +182,8 @@ class MakeFastqs(Pipeline):
         data exists
     - bcl2fastq_info: tuple with information on the bcl2fastq
         software used
+    - bclconvert_info: tuple with information on the BCL Convert
+        software used
     - cellranger_info: tuple with information on the cellranger
         software used
     - stats_file: path to the statistics file
@@ -185,7 +195,8 @@ class MakeFastqs(Pipeline):
         to generate
     """
     def __init__(self,run_dir,sample_sheet,protocol='standard',
-                 bases_mask="auto",platform=None,icell8_well_list=None,
+                 bases_mask="auto",bcl_converter='bcl2fastq',
+                 platform=None,icell8_well_list=None,
                  minimum_trimmed_read_length=None,
                  mask_short_adapter_reads=None,
                  adapter_sequence=None,adapter_sequence_read2=None,
@@ -204,6 +215,11 @@ class MakeFastqs(Pipeline):
             "standard")
           bases_mask (str): default bases mask to use (defaults
             to "auto")
+          bcl_converter (str): default BCL-to-Fastq conversion
+            software to use (can be one of 'bcl2fastq',
+            'bcl-convert'; defaults to "bcl2fastq"). Optionally
+            can include a version requirement (e.g.
+            "bcl2fastq>=2.20") which must also be satisfied
           platform (str): optionally specify the platform for
             the sequencer run (e.g. 'miseq', 'nextseq' etc)
           icell8_well_list (str): optionally specify path to a
@@ -303,6 +319,7 @@ class MakeFastqs(Pipeline):
             icell8_well_list = os.path.abspath(icell8_well_list)
         
         # Defaults
+        self._bcl_converter = bcl_converter
         self._bases_mask = bases_mask
         self._adapter_sequence = adapter_sequence
         self._adapter_sequence_read2 = adapter_sequence_read2
@@ -337,7 +354,6 @@ class MakeFastqs(Pipeline):
         self.add_param('per_lane_stats',type=str)
         self.add_param('per_lane_sample_stats',type=str)
         self.add_param('nprocessors',type=int)
-        self.add_param('require_bcl2fastq',type=str)
         self.add_param('cellranger_jobmode',value='local',type=str)
         self.add_param('cellranger_mempercore',type=int)
         self.add_param('cellranger_maxjobs',type=int)
@@ -348,6 +364,7 @@ class MakeFastqs(Pipeline):
         # Internal parameters
         self.add_param('_platform')
         self.add_param('_bcl2fastq_info')
+        self.add_param('_bclconvert_info')
         self.add_param('_cellranger_info')
         self.add_param('_cellranger_atac_info')
         self.add_param('_cellranger_arc_info')
@@ -357,6 +374,7 @@ class MakeFastqs(Pipeline):
         # Define runners
         self.add_runner('rsync_runner')
         self.add_runner('bcl2fastq_runner')
+        self.add_runner('bclconvert_runner')
         self.add_runner('demultiplex_icell8_atac_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('cellranger_atac_runner')
@@ -366,6 +384,7 @@ class MakeFastqs(Pipeline):
 
         # Define module environment modules
         self.add_envmodules('bcl2fastq')
+        self.add_envmodules('bcl_convert')
         self.add_envmodules('cellranger_mkfastq')
         self.add_envmodules('cellranger_atac_mkfastq')
         self.add_envmodules('cellranger_arc_mkfastq')
@@ -376,6 +395,7 @@ class MakeFastqs(Pipeline):
         self.add_output('primary_data_dir',self.params.primary_data_dir)
         self.add_output('acquired_primary_data',Param())
         self.add_output('bcl2fastq_info',self.params._bcl2fastq_info)
+        self.add_output('bclconvert_info',self.params._bclconvert_info)
         self.add_output('cellranger_info',self.params._cellranger_info)
         self.add_output('cellranger_atac_info',
                         self.params._cellranger_atac_info)
@@ -434,6 +454,7 @@ class MakeFastqs(Pipeline):
         for s in self.subsets:
             self._update_subset(
                 s,
+                bcl_converter=self._bcl_converter,
                 bases_mask=self._bases_mask,
                 trim_adapters=self._trim_adapters,
                 minimum_trimmed_read_length=\
@@ -826,7 +847,7 @@ class MakeFastqs(Pipeline):
                                                   for l in s['lanes']]))
             for attr in s:
                 if attr != 'lanes' and s[attr] is not None:
-                    self.report("- %s: %s" % (attr,s[attr]))
+                    self.report("-- %s: %s" % (attr,s[attr]))
 
         #####################
         # Fetch primary data
@@ -860,6 +881,7 @@ class MakeFastqs(Pipeline):
 
         # Placeholders for tasks acquiring software versions
         get_bcl2fastq = None
+        get_bclconvert = None
         get_bcl2fastq_for_10x = None
         get_bcl2fastq_for_10x_atac = None
         get_bcl2fastq_for_10x_visium = None
@@ -873,7 +895,7 @@ class MakeFastqs(Pipeline):
         # Merge Fastq directories
         #########################
         merge_fastq_dirs = MergeFastqDirs(
-            "Merge bcl2fastq output directories",
+            "Merge BCL to Fastq output directories",
             fastq_out_dirs,
             self.params.out_dir
         )
@@ -937,7 +959,7 @@ class MakeFastqs(Pipeline):
         if do_barcode_analysis:
             # Set up pipeline for barcode analysis
             self.report("Lanes for barcode analysis: %s" %
-                        lanes_for_barcode_analysis)
+                        ','.join([str(l) for l in lanes_for_barcode_analysis]))
             analyse_barcodes = AnalyseBarcodes(
                 sample_sheet=self._sample_sheet)
             self.add_pipeline(analyse_barcodes,
@@ -968,6 +990,21 @@ class MakeFastqs(Pipeline):
             # Protocol
             protocol = subset['protocol']
             self.report("- Protocol: %s" % protocol)
+
+            #########################
+            # BCL to Fastq converter
+            #########################
+            converter = subset['bcl_converter']
+            converter_version = None
+            for op in ('>=','=>','<=','=<','>','<','='):
+                if op in converter:
+                    converter = subset['bcl_converter'].split(op)[0]
+                    converter_version = op + \
+                                        subset['bcl_converter'].split(op)[1]
+                    break
+            if converter not in ('bcl2fastq','bcl-convert',):
+                raise Exception("%s: invalid BCL converter specified" %
+                                converter)
 
             #############
             # Bases mask
@@ -1076,46 +1113,198 @@ class MakeFastqs(Pipeline):
 
             # Standard protocols
             if protocol in ("standard","mirna"):
-                # Get bcl2fastq information
-                if get_bcl2fastq is None:
-                    # Create a new task only if one doesn't already
-                    # exist
-                    get_bcl2fastq = GetBcl2Fastq(
-                        "Get information on bcl2fastq",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
-                    self.add_task(get_bcl2fastq,
-                                  envmodules=self.envmodules['bcl2fastq'])
-                # Run standard bcl2fastq
-                make_fastqs = RunBcl2Fastq(
-                    "Run bcl2fastq%s" %
-                    (" for lanes %s" % ','.join([str(x) for x in lanes])
-                     if lanes else ""),
-                    fetch_primary_data.output.run_dir,
-                    fastq_out_dir,
-                    make_sample_sheet.output.custom_sample_sheet,
-                    bases_mask=bases_mask,
-                    minimum_trimmed_read_length=\
-                    minimum_trimmed_read_length,
-                    mask_short_adapter_reads=\
-                    mask_short_adapter_reads,
-                    nprocessors=self.params.nprocessors,
-                    no_lane_splitting=self.params.no_lane_splitting,
-                    create_fastq_for_index_read=\
-                    create_fastq_for_index_read,
-                    find_adapters_with_sliding_window=\
-                    find_adapters_with_sliding_window,
-                    create_empty_fastqs=self.params.create_empty_fastqs,
-                    platform=identify_platform.output.platform,
-                    bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
-                    bcl2fastq_version=\
-                    get_bcl2fastq.output.bcl2fastq_version,
-                    skip_bcl2fastq=final_output_exists)
-                # Add the Fastq generation task to the pipeline
-                self.add_task(make_fastqs,
-                              runner=self.runners['bcl2fastq_runner'],
-                              envmodules=self.envmodules['bcl2fastq'],
-                              requires=(restore_backup,))
 
+                if converter == "bcl2fastq":
+                    # Get bcl2fastq information
+                    if get_bcl2fastq is None:
+                        # Create a new task only if one doesn't already
+                        # exist
+                        get_bcl2fastq = GetBcl2Fastq(
+                            "Get information on bcl2fastq",
+                            require_version=converter_version)
+                        self.add_task(get_bcl2fastq,
+                                      envmodules=self.envmodules['bcl2fastq'])
+                    # Run standard bcl2fastq
+                    make_fastqs = RunBcl2Fastq(
+                        "Run bcl2fastq%s" %
+                        (" for lanes %s" % ','.join([str(x) for x in lanes])
+                         if lanes else ""),
+                        fetch_primary_data.output.run_dir,
+                        fastq_out_dir,
+                        make_sample_sheet.output.custom_sample_sheet,
+                        bases_mask=bases_mask,
+                        minimum_trimmed_read_length=\
+                        minimum_trimmed_read_length,
+                        mask_short_adapter_reads=\
+                        mask_short_adapter_reads,
+                        nprocessors=self.params.nprocessors,
+                        no_lane_splitting=self.params.no_lane_splitting,
+                        create_fastq_for_index_read=\
+                        create_fastq_for_index_read,
+                        find_adapters_with_sliding_window=\
+                        find_adapters_with_sliding_window,
+                        create_empty_fastqs=self.params.create_empty_fastqs,
+                        platform=identify_platform.output.platform,
+                        bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
+                        bcl2fastq_version=\
+                        get_bcl2fastq.output.bcl2fastq_version,
+                        skip_bcl2fastq=final_output_exists)
+                    # Add the Fastq generation task to the pipeline
+                    self.add_task(make_fastqs,
+                                  runner=self.runners['bcl2fastq_runner'],
+                                  envmodules=self.envmodules['bcl2fastq'],
+                                  requires=(restore_backup,))
+                elif converter == "bcl-convert":
+                    # Get BCL Convert information
+                    if get_bclconvert is None:
+                        # Create a new task only if one doesn't already
+                        # exist
+                        get_bclconvert = GetBclConvert(
+                            "Get information on BCL Convert",
+                            require_version=converter_version)
+                        self.add_task(get_bclconvert,
+                                      envmodules=self.envmodules['bcl_convert'])
+                    # Parameter to store intermediate output
+                    # directories for merging
+                    fastq_lanes_out_dirs = ListParam()
+                    if lanes:
+                        # Subset with multiple lanes
+                        #
+                        # Flag whether the final or intermediate output
+                        # directories already exist
+                        output_dirs_exist = FunctionParam(
+                            lambda final_out_dir,intermediate_out_dir:
+                            os.path.exists(final_out_dir) or
+                            os.path.exists(intermediate_out_dir),
+                            self.params.out_dir,
+                            fastq_out_dir)
+                        # Divide Fastq generation into individual lanes
+                        # then merge outputs at the end
+                        make_fastqs = MergeFastqs(
+                            "Merge Fastqs from lanes %s"
+                            % ','.join([str(l) for l in lanes]),
+                            fastq_lanes_out_dirs,
+                            fastq_out_dir,
+                            make_sample_sheet.output.custom_sample_sheet,
+                            no_lane_splitting=self.params.no_lane_splitting,
+                            create_empty_fastqs=
+                            self.params.create_empty_fastqs,
+                            skip_merge=output_dirs_exist)
+                        self.add_task(make_fastqs)
+                        # Run BCL Convert for each lane in subset
+                        for lane in lanes:
+                            # Output dir for this lane
+                            fastq_lane_out_dir = FunctionParam(
+                                lambda working_dir,out_dir,lane:
+                                os.path.join(
+                                    working_dir,
+                                    "%s.L%s" % (os.path.basename(out_dir),
+                                                lane)),
+                                self.params.WORKING_DIR,
+                                self.params.out_dir,
+                                lane)
+                            fastq_lanes_out_dirs.append(fastq_lane_out_dir)
+                            # Run BCL Convert
+                            bcl_convert = RunBclConvert(
+                                "Run BCL Convert for lane %s" % lane,
+                                fetch_primary_data.output.run_dir,
+                                fastq_lane_out_dir,
+                                make_sample_sheet.output.custom_sample_sheet,
+                                lane=lane,
+                                bases_mask=bases_mask,
+                                minimum_trimmed_read_length=\
+                                minimum_trimmed_read_length,
+                                mask_short_adapter_reads=\
+                                mask_short_adapter_reads,
+                                nprocessors=self.params.nprocessors,
+                                no_lane_splitting=False,
+                                create_fastq_for_index_read=\
+                                create_fastq_for_index_read,
+                                create_empty_fastqs=False,
+                                ignore_missing_fastqs=True,
+                                platform=identify_platform.output.platform,
+                                bclconvert_exe=\
+                                get_bclconvert.output.bclconvert_exe,
+                                bclconvert_version=\
+                                get_bclconvert.output.bclconvert_version,
+                                skip_bclconvert=output_dirs_exist)
+                            # Add the Fastq generation task to the pipeline
+                            self.add_task(
+                                bcl_convert,
+                                runner=self.runners['bclconvert_runner'],
+                                envmodules=self.envmodules['bcl_convert'],
+                                requires=(restore_backup,))
+                            # Merging task depends on BCL Convert
+                            make_fastqs.requires(bcl_convert)
+                    else:
+                        # Subset with no lanes specified
+                        #
+                        # Handle no lane splitting
+                        if sample_sheet.has_lanes:
+                            # BCL Convert cannot handle no lane splitting
+                            # directly for runs with "asymmetric" lanes
+                            # (e.g. HISeq) i.e. platforms where lanes are
+                            # explicitly specified in the sample sheet
+                            #
+                            # Delegate no lane splitting to final Fastq
+                            # merging task
+                            no_lane_splitting = False
+                        else:
+                            # Let BCL convert handle no lane splitting
+                            # (final Fastq merging task will do nothing)
+                            no_lane_splitting = \
+                                self.params.no_lane_splitting
+                        # Intermediate output Fastq dir
+                        tmp_fastq_out_dir = FunctionParam(
+                            lambda working_dir,out_dir:
+                            os.path.join(
+                                working_dir,
+                                "__%s.tmp" % os.path.basename(out_dir)),
+                            self.params.WORKING_DIR,
+                            self.params.out_dir)
+                        # Run BCL Convert for all lanes
+                        bcl_convert = RunBclConvert(
+                            "Run BCL Convert",
+                            fetch_primary_data.output.run_dir,
+                            tmp_fastq_out_dir,
+                            make_sample_sheet.output.custom_sample_sheet,
+                            bases_mask=bases_mask,
+                            minimum_trimmed_read_length=\
+                            minimum_trimmed_read_length,
+                            mask_short_adapter_reads=\
+                            mask_short_adapter_reads,
+                            nprocessors=self.params.nprocessors,
+                            no_lane_splitting=no_lane_splitting,
+                            create_fastq_for_index_read=\
+                            create_fastq_for_index_read,
+                            create_empty_fastqs=\
+                            self.params.create_empty_fastqs,
+                            platform=identify_platform.output.platform,
+                            bclconvert_exe=\
+                            get_bclconvert.output.bclconvert_exe,
+                            bclconvert_version=\
+                            get_bclconvert.output.bclconvert_version,
+                            skip_bclconvert=final_output_exists)
+                        # Add the Fastq generation task to the pipeline
+                        self.add_task(
+                            bcl_convert,
+                            runner=self.runners['bclconvert_runner'],
+                            envmodules=self.envmodules['bcl_convert'],
+                            requires=(restore_backup,))
+                        # Merge Fastqs (if requested) and move to
+                        # final location
+                        make_fastqs = MergeFastqs(
+                            "Merge Fastqs across lanes",
+                            ListParam((tmp_fastq_out_dir,)),
+                            fastq_out_dir,
+                            make_sample_sheet.output.custom_sample_sheet,
+                            no_lane_splitting=\
+                            self.params.no_lane_splitting,
+                            create_empty_fastqs=\
+                            self.params.create_empty_fastqs,
+                            skip_merge=final_output_exists)
+                        self.add_task(make_fastqs,
+                                      requires=(bcl_convert,))
             # ICELL8 RNA-seq
             if protocol == "icell8":
                 # Get bcl2fastq information
@@ -1124,7 +1313,7 @@ class MakeFastqs(Pipeline):
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
                         "Get information on bcl2fastq",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1150,6 +1339,8 @@ class MakeFastqs(Pipeline):
                     no_lane_splitting=self.params.no_lane_splitting,
                     create_fastq_for_index_read=\
                     create_fastq_for_index_read,
+                    find_adapters_with_sliding_window=\
+                    find_adapters_with_sliding_window,
                     create_empty_fastqs=self.params.create_empty_fastqs,
                     platform=identify_platform.output.platform,
                     bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
@@ -1176,7 +1367,7 @@ class MakeFastqs(Pipeline):
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
                         "Get information on bcl2fastq",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1201,6 +1392,8 @@ class MakeFastqs(Pipeline):
                     no_lane_splitting=self.params.no_lane_splitting,
                     create_fastq_for_index_read=\
                     create_fastq_for_index_read,
+                    find_adapters_with_sliding_window=\
+                    find_adapters_with_sliding_window,
                     create_empty_fastqs=self.params.create_empty_fastqs,
                     bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
                     bcl2fastq_version=get_bcl2fastq.output.bcl2fastq_version,
@@ -1232,7 +1425,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x is None:
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq_for_10x,
                                   envmodules=\
                                   self.envmodules['cellranger_mkfastq'])
@@ -1284,7 +1477,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_atac is None:
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-atac",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq_for_10x_atac,
                                   envmodules=\
                                   self.envmodules['cellranger_atac_mkfastq'])
@@ -1339,7 +1532,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_visium is None:
                     get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
                         "Get information on bcl2fastq for spaceranger",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq_for_10x_visium,
                                   envmodules=\
                                   self.envmodules['spaceranger_mkfastq'])
@@ -1394,7 +1587,7 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_multiome is None:
                     get_bcl2fastq_for_10x_multiome = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-arc",
-                        require_bcl2fastq=self.params.require_bcl2fastq)
+                        require_version=converter_version)
                     self.add_task(get_bcl2fastq_for_10x_multiome,
                                   envmodules=\
                                   self.envmodules['cellranger_arc_mkfastq'])
@@ -1470,6 +1663,11 @@ class MakeFastqs(Pipeline):
             self.params._bcl2fastq_info.set(
                 get_bcl2fastq.output.bcl2fastq_info)
 
+        # Update outputs with BCL Convert information
+        if get_bclconvert:
+            self.params._bclconvert_info.set(
+                get_bclconvert.output.bclconvert_info)
+
         # Update outputs with 10x package information
         if get_cellranger:
             self.params._cellranger_info.set(
@@ -1517,14 +1715,13 @@ class MakeFastqs(Pipeline):
             find_adapters_with_sliding_window=None,
             create_empty_fastqs=None,name=None,stats_file=None,
             stats_full=None,per_lane_stats=None,per_lane_sample_stats=None,
-            nprocessors=None,require_bcl2fastq=None,
-            cellranger_jobmode='local',cellranger_mempercore=None,
-            cellranger_maxjobs=None,cellranger_jobinterval=None,
-            cellranger_localcores=None,cellranger_localmem=None,
-            working_dir=None,log_dir=None,log_file=None,
-            batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
-            poll_interval=5,runners=None,default_runner=None,
-            envmodules=None,verbose=False):
+            nprocessors=None,cellranger_jobmode='local',
+            cellranger_mempercore=None,cellranger_maxjobs=None,
+            cellranger_jobinterval=None,cellranger_localcores=None,
+            cellranger_localmem=None,working_dir=None,log_dir=None,
+            log_file=None,batch_size=None,batch_limit=None,max_jobs=1,
+            max_slots=None,poll_interval=5,runners=None,
+            default_runner=None,envmodules=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -1562,10 +1759,6 @@ class MakeFastqs(Pipeline):
           nprocessors (int): number of threads to use for
             multithreaded applications (default is to take
             number of CPUs set in job runners)
-          require_bcl2fastq (str): if set then specify bcl2fastq
-            version requirement; should be a string of the form
-           '1.8.4' or '>2.0'. The pipeline will fail if this
-           requirement is not met
           cellranger_jobmode (str): job mode to run cellranger in
           cellranger_mempercore (int): memory assumed per core
           cellranger_maxjobs (int): maxiumum number of concurrent
@@ -1716,7 +1909,6 @@ class MakeFastqs(Pipeline):
             'per_lane_stats': per_lane_stats,
             'per_lane_sample_stats': per_lane_sample_stats,
             'nprocessors': nprocessors,
-            'require_bcl2fastq': require_bcl2fastq,
             'cellranger_jobmode': cellranger_jobmode,
             'cellranger_mempercore': cellranger_mempercore,
             'cellranger_maxjobs': cellranger_maxjobs,
@@ -1927,12 +2119,12 @@ class GetBcl2Fastq(PipelineFunctionTask):
     """
     Get information on the bcl2fastq executable
     """
-    def init(self,require_bcl2fastq=None):
+    def init(self,require_version=None):
         """
         Initialise the GetBcl2Fastq task
 
         Arguments:
-          require_bcl2fastq (str): if set then should be a
+          require_version (str): if set then should be a
             string of the form '1.8.4' or '>2.0', explicitly
             specifying the version of bcl2fastq to use. If
             not set then no version check will be made
@@ -1949,23 +2141,23 @@ class GetBcl2Fastq(PipelineFunctionTask):
         self.add_output('bcl2fastq_version',Param(type=str))
         self.add_output('bcl2fastq_info',Param())
     def setup(self):
-        if self.args.require_bcl2fastq:
+        if self.args.require_version:
             print("Requires bcl2fastq version %s" %
-                  self.args.require_bcl2fastq)
+                  self.args.require_version)
         self.add_call("Check bcl2fastq version",
                       self.get_bcl2fastq,
-                      self.args.require_bcl2fastq)
-    def get_bcl2fastq(self,require_bcl2fastq=None):
+                      self.args.require_version)
+    def get_bcl2fastq(self,require_version=None):
         # Get bcl2fastq
-        bcl2fastq = available_bcl2fastq_versions(require_bcl2fastq)
+        bcl2fastq = available_bcl2fastq_versions(require_version)
         if bcl2fastq:
             bcl2fastq_exe = bcl2fastq[0]
             bcl2fastq_info = bcl_to_fastq_info(bcl2fastq_exe)
         else:
             msg = "No appropriate bcl2fastq software located"
-            if not require_bcl2fastq:
+            if not require_version:
                 msg += " matching requirement '%s'" % \
-                       require_bcl2fastq
+                       require_version
             raise Exception(msg)
         # Return the information on bcl2fastq
         return (bcl2fastq_exe,bcl2fastq_info[1],bcl2fastq_info[2])
@@ -1985,6 +2177,71 @@ class GetBcl2Fastq(PipelineFunctionTask):
         print("Bcl2fastq exe    : %s" % bcl2fastq_exe)
         print("Bcl2fastq package: %s" % bcl2fastq_package)
         print("Bcl2fastq version: %s" % bcl2fastq_version)
+
+class GetBclConvert(PipelineFunctionTask):
+    """
+    Get information on the bcl-convert executable
+    """
+    def init(self,require_version=None):
+        """
+        Initialise the GetBcl2Fastq task
+
+        Arguments:
+          require_version (str): if set then should be a
+            string of the form '1.8.4' or '>2.0', explicitly
+            specifying the version of bcl-convert to use. If
+            not set then no version check will be made
+
+        Outputs:
+          bclconvert_exe (str): path to the bcl-convert executable
+          bclconvert_package (str): name of the bcl-convert package
+          bclconvert_version (str): the bcl-convert version
+          bclconvert_info (tuple): tuple consisting of
+            (exe,package,version)
+        """
+        self.add_output('bclconvert_exe',Param(type=str))
+        self.add_output('bclconvert_package',Param(type=str))
+        self.add_output('bclconvert_version',Param(type=str))
+        self.add_output('bclconvert_info',Param())
+    def setup(self):
+        if self.args.require_version:
+            print("Requires bcl-convert version %s" %
+                  self.args.require_version)
+        self.add_call("Check bcl-convert version",
+                      self.get_bclconvert,
+                      self.args.require_version)
+    def get_bclconvert(self,require_version=None):
+        # Get bcl-convert
+        bclconvert = find_executables(("bcl-convert",),
+                                      info_func=bclconvert_info,
+                                      reqs=require_version)
+        if bclconvert:
+            bclconvert_exe = bclconvert[0]
+            # Get information on the version etc
+            bclconvert_info_ = bclconvert_info(bclconvert_exe)
+        else:
+            msg = "No appropriate BCL Convert software located"
+            if require_version:
+                msg += " matching requirement '%s'" % require_version
+            raise Exception(msg)
+        # Return the information on bcl2fastq
+        return (bclconvert_exe,bclconvert_info_[1],bclconvert_info_[2])
+    def finish(self):
+        bclconvert = self.result()[0]
+        bclconvert_exe = bclconvert[0]
+        bclconvert_package = bclconvert[1]
+        bclconvert_version = bclconvert[2]
+        # Set outputs with info on bcl-convert executable
+        self.output.bclconvert_exe.set(bclconvert_exe)
+        self.output.bclconvert_package.set(bclconvert_package)
+        self.output.bclconvert_version.set(bclconvert_version)
+        self.output.bclconvert_info.set((bclconvert_exe,
+                                         bclconvert_package,
+                                         bclconvert_version))
+        # Report what was found
+        print("BCL Convert exe    : %s" % bclconvert_exe)
+        print("BCL Convert package: %s" % bclconvert_package)
+        print("BCL Convert version: %s" % bclconvert_version)
 
 class RestoreBackupDirectory(PipelineTask):
     """
@@ -2229,34 +2486,297 @@ class RunBcl2Fastq(PipelineTask):
             *bcl2fastq2_cmd.command_line))
     def finish(self):
         if self.tmp_out_dir:
-            # Verify outputs
-            illumina_data = IlluminaData(os.path.dirname(self.tmp_out_dir),
-                                         os.path.basename(self.tmp_out_dir))
-            if verify_run_against_sample_sheet(illumina_data,
-                                               self.args.sample_sheet):
-                print("Verified outputs against samplesheet")
-            else:
-                # Verification failed
-                print("Failed to verify outputs against samplesheet")
-                # List the missing Fastq files
-                missing_fastqs = list_missing_fastqs(illumina_data,
-                                                     self.args.sample_sheet)
-                print("Missing Fastqs:")
-                for fq in missing_fastqs:
-                    print("- %s" % fq)
-                    self.output.missing_fastqs.append(fq)
+            # Verify outputs and get list of missing Fastqs (if any)
+            missing_fastqs = verify_run(self.tmp_out_dir,
+                                        self.args.sample_sheet)
+            # Update output
+            for fq in missing_fastqs:
+                self.output.missing_fastqs.append(fq)
+            # Handle missing fastqs
+            if missing_fastqs:
                 if self.args.create_empty_fastqs:
                     # Create empty placeholder Fastqs
-                    print("Making empty placeholder Fastqs")
-                    for fq in missing_fastqs:
-                        fastq = os.path.join(self.tmp_out_dir,fq)
-                        # Make intermediate directory if required
-                        if not os.path.exists(os.path.dirname(fastq)):
-                            os.mkdir(os.path.dirname(fastq))
-                        # Make empty file
-                        with gzip.GzipFile(filename=fastq,mode='wb') as fp:
-                            fp.write(''.encode())
+                    create_placeholder_fastqs(missing_fastqs,
+                                              base_dir=self.tmp_out_dir)
                 else:
+                    # Terminate with an exception
+                    raise Exception("Failed to verify outputs against "
+                                    "samplesheet")
+            # Move to final location
+            print("Moving output to final location: %s" % self.args.out_dir)
+            os.rename(self.tmp_out_dir,self.args.out_dir)
+
+class RunBclConvert(PipelineTask):
+    """
+    Run BCL Convert to generate Fastqs from sequencing data
+    """
+    def init(self,run_dir,out_dir,sample_sheet,lane=None,
+             bases_mask='auto',ignore_missing_bcl=False,
+             no_lane_splitting=False,
+             minimum_trimmed_read_length=None,
+             mask_short_adapter_reads=None,
+             create_fastq_for_index_read=False,nprocessors=None,
+             create_empty_fastqs=False,ignore_missing_fastqs=False,
+             platform=None,bclconvert_exe=None,bclconvert_version=None,
+             skip_bclconvert=False):
+        """
+        Initialise the RunBclConvert task
+
+        Arguments:
+          run_dir (str): path to the source sequencing data
+          out_dir (str): output directory for bcl2fastq
+          sample_sheet (str): path to input samplesheet file
+          lane (int): optional, run bcl-convert on a single lane
+            with --bcl-only-lane
+          bases_mask (str): if set then use this as an
+            alternative bases mask setting
+          no_lane_splitting (bool): if True then run bcl-convert
+            with --no-lane-splitting
+          minimum_trimmed_read_length (int): if set then supply
+            to bcl-convert via sample sheet settings
+          mask_short_adapter_reads (int): if set then supply to
+            bcl-convert via sample sheet settings
+          create_fastq_for_index_read (boolean): if True then
+            also create Fastq files for index reads (default,
+            don't create index read Fastqs)
+          nprocessors (int): number of processors to use
+            (taken from job runner by default)
+          create_empty_fastqs (bool): if True then create empty
+            placeholder Fastq files for any that are missing
+            on successful completion of bcl-convert
+          ignore_missing_fastqs (bool): if True then ignore
+            missing Fastqs on successful completion of
+            bcl-convert
+          platform (str): optional, sequencing platform that
+            generated the data
+          bclconvert_exe (str): the path to the bcl-convert
+            executable to use
+          bclconvert_version (str): the version string for the
+            bcl-convert package
+          skip_bclconvert (bool): if True then sets the output
+            parameters but finishes before actually running
+            bcl-convert
+
+        Outputs:
+          bases_mask: actual bases mask used
+          mismatches: number of mismatches allowed
+          missing_fastqs: list of Fastqs missing after
+            Fastq generation
+        """
+        # Internal variables
+        self.supported_versions = ('3.7',)
+        self.tmp_out_dir = None
+        self.bclconvert_sample_sheet = None
+        # Outputs
+        self.add_output('bases_mask',Param(type='str'))
+        self.add_output('mismatches',Param(type='int'))
+        self.add_output('missing_fastqs',list())
+    def setup(self):
+        # Load input data
+        illumina_run = IlluminaRun(self.args.run_dir,
+                                   platform=self.args.platform)
+        # Set bases mask
+        if self.args.bases_mask == "auto":
+            print("Setting bases mask from RunInfo.xml")
+            bases_mask = get_bases_mask(illumina_run.runinfo_xml,
+                                        self.args.sample_sheet)
+        else:
+            bases_mask = self.args.bases_mask
+        if not bases_mask_is_valid(bases_mask):
+            raise Exception("Invalid bases mask: '%s'" %
+                            bases_mask)
+        self.output.bases_mask.set(bases_mask)
+        # Check sample sheet for collisions and set mismatches
+        # NB BCL Convert sets one mismatch value per index
+        mismatches = get_nmismatches(bases_mask,multi_index=True)
+        updated_mismatches = []
+        for ix,nmismatches in enumerate(mismatches,start=1):
+            while nmismatches >= 0:
+                if check_barcode_collisions(self.args.sample_sheet,
+                                            nmismatches,use_index=ix):
+                    nmismatches -= 1
+                else:
+                    break
+            if nmismatches < 0:
+                print("Warning: barcode collisions detected even with "
+                      "zero mismatches for index %s" % ix)
+            updated_mismatches.append(nmismatches)
+        if all([(m < 0) for m in updated_mismatches]):
+            # All index sequences are identical
+            raise Exception("Barcode collisions detected across all "
+                            "index sequences even with zero mismatches")
+        else:
+            # Reset the 'bad' mismatches to 1
+            updated_mismatches = [(m if m >= 0 else 1)
+                                  for m in updated_mismatches]
+        mismatches = updated_mismatches
+        self.output.mismatches.set(mismatches)
+        # Check if Fastq generation should be skipped
+        if self.args.skip_bclconvert:
+            print("Skipping BCL Convert run")
+            return
+        # Check that BCL Convert version is supported
+        supported_version = None
+        for version in self.supported_versions:
+            if self.args.bclconvert_version.startswith("%s." % version):
+                supported_version = version
+                break
+        if supported_version:
+            print("BCL Convert software matches supported version '%s'" %
+                  supported_version)
+        else:
+            raise Exception("Don't know how to run BCL Convert "
+                            "version %s" % self.args.bclconvert_version)
+        # Write an updated sample sheet with the required settings
+        sample_sheet = SampleSheet(self.args.sample_sheet)
+        if bases_mask:
+            # Convert bases mask to OverrideCycles format
+            # (convert delimiters from comma to semi-colon)
+            sample_sheet.settings['OverrideCycles'] = \
+                convert_bases_mask_to_override_cycles(bases_mask)
+        if mismatches:
+            # Mismatches are set independently for index1 and index2
+            for ix,nmismatches in enumerate(mismatches):
+                sample_sheet.settings['BarcodeMismatchesIndex%d' % (ix+1)] = \
+                    mismatches[ix]
+        if self.args.minimum_trimmed_read_length is not None:
+            sample_sheet.settings['MinimumTrimmedReadLength'] = \
+                self.args.minimum_trimmed_read_length
+        if self.args.mask_short_adapter_reads is not None:
+            sample_sheet.settings['MaskShortReads'] = \
+                self.args.mask_short_adapter_reads
+        if self.args.create_fastq_for_index_read:
+            sample_sheet.settings['CreateFastqForIndexReads'] = 1
+        else:
+            sample_sheet.settings['CreateFastqForIndexReads'] = 0
+        # Correct adapter setting settings for BCL Convert
+        if 'Adapter' in sample_sheet.settings:
+            # Update to 'AdapterRead1'
+            adapter_seq = sample_sheet.settings['Adapter']
+            sample_sheet.settings['AdapterRead1'] = adapter_seq
+            del(sample_sheet.settings['Adapter'])
+            print("Set 'AdapterRead1' to '%s'" % adapter_seq)
+            # Deal with 'AdapterRead2'
+            if 'AdapterRead2' not in sample_sheet.settings:
+                # Explicitly set to AdapterRead1 to mimick
+                # bcl2fastq behaviour (where AdapterRead2 is
+                # implicitly set to AdapterRead1 if not set)
+                sample_sheet.settings['AdapterRead2'] = adapter_seq
+                print("Set 'AdapterRead2' to '%s'" % adapter_seq)
+        # Remove unwanted lanes
+        if self.args.lane is not None:
+            i = 0
+            while i < len(sample_sheet):
+                if sample_sheet[i]['Lane'] != self.args.lane:
+                    # Drop this sample/lane
+                    del(sample_sheet[i])
+                else:
+                    # Keep this sample/lane
+                    i += 1
+        self.bclconvert_sample_sheet = os.path.join(
+            os.path.dirname(self.args.sample_sheet),
+            "SampleSheet.bclconvert%s.%s.csv" %
+            ('L%s' % self.args.lane if self.args.lane is not None else '',
+            time.strftime("%Y%m%d%H%M%S")))
+        sample_sheet.write(self.bclconvert_sample_sheet)
+        # Check if outputs already exist
+        if os.path.exists(self.args.out_dir):
+            print("Output directory %s already exists" %
+                  self.args.out_dir)
+            # Verify outputs
+            illumina_data = IlluminaData(os.path.dirname(self.args.out_dir),
+                                         os.path.basename(self.args.out_dir))
+            if verify_run_against_sample_sheet(illumina_data,
+                                               self.bclconvert_sample_sheet):
+                print("Verified existing outputs against samplesheet")
+                return
+            else:
+                raise Exception("Failed to verify existing outputs "
+                                "against samplesheet")
+        # Set up parameters
+        params = {
+            'no_lane_splitting': self.args.no_lane_splitting,
+            'sampleproject_subdirectories': True,
+            'num_parallel_tiles': None,
+            'num_conversion_threads': None,
+            'num_compression_threads': None,
+            'num_decompression_threads': None,
+            'bclconvert_exe': self.args.bclconvert_exe,
+        }
+        # Add lane
+        if self.args.lane:
+            params['lane'] = self.args.lane
+        # Update parameters based on bcl2fastq version
+        if self.args.nprocessors:
+            nprocessors = self.args.nprocessors
+        else:
+            nprocessors = self.runner_nslots
+        if nprocessors is not None:
+            # Explicitly set number of threads for each stage
+            print("Nprocessors: %s" % nprocessors)
+            params['num_parallel_tiles'] = 1
+            params['num_conversion_threads'] = min(8,nprocessors)
+            params['num_compression_threads'] = min(8,nprocessors)
+            params['num_decompression_threads'] = \
+                max(int(float(nprocessors)/2.0),1)
+        # Report settings
+        print("%-22s: %s" % ("Input Bcl dir",self.args.run_dir))
+        print("%-22s: %s" % ("Sample sheet",
+                             os.path.basename(self.bclconvert_sample_sheet)))
+        print("%-22s: %s" % ("Output dir",self.args.out_dir))
+        if self.args.lane:
+            print("%-22s: %s" % ("Lane",self.args.lane))
+        print("%-22s: %s" % ("Create empty Fastqs",
+                             self.args.create_empty_fastqs))
+        for item,desc in (('no_lane_splitting',"No lane splitting"),
+                          ('sampleproject_subdirectories',
+                           "Create SampleProject subdirs in output"),):
+            if item in params:
+                print("%-22s: %s" % (desc,params[item]))
+        print("Threads for each stage:")
+        for item,desc in (('nprocessors',"Nprocessors"),
+                          ('num_parallel_tiles',
+                           "Number of parallel tiles"),
+                          ('num_conversion_threads',
+                           "Threads per tile for Fastq conversion"),
+                          ('num_compression_threads',
+                           "Threads for compressing output Fastqs"),
+                          ('num_decompression_threads',
+                           "Threads for decompressing input BCLs")):
+            if item in params and params[item] is not None:
+                print("- %-38s: %s" % (desc,params[item]))
+        print("SampleSheet settings:")
+        for item in sample_sheet.settings_items:
+            print("%-22s: %s" % (item,sample_sheet.settings[item]))
+        # Set up temporary output dir
+        self.tmp_out_dir = os.path.abspath("__%s.work" %
+                                           os.path.basename(
+                                               self.args.out_dir))
+        # Build command to run bcl-convert
+        bclconvert_cmd = bcl2fastq_apps.bclconvert(
+            self.args.run_dir,
+            self.tmp_out_dir,
+            sample_sheet=self.bclconvert_sample_sheet,
+            **params)
+        print("Running %s" % bclconvert_cmd)
+        self.add_cmd(PipelineCommandWrapper(
+            "Run BCL Convert",
+            *bclconvert_cmd.command_line))
+    def finish(self):
+        if self.tmp_out_dir:
+            # Verify outputs and get list of missing Fastqs (if any)
+            missing_fastqs = verify_run(self.tmp_out_dir,
+                                        self.bclconvert_sample_sheet)
+            # Update output
+            for fq in missing_fastqs:
+                self.output.missing_fastqs.append(fq)
+            # Handle missing fastqs
+            if missing_fastqs:
+                if self.args.create_empty_fastqs:
+                    # Create empty placeholder Fastqs
+                    create_placeholder_fastqs(missing_fastqs,
+                                              base_dir=self.tmp_out_dir)
+                elif not self.args.ignore_missing_fastqs:
                     # Terminate with an exception
                     raise Exception("Failed to verify outputs against "
                                     "samplesheet")
@@ -2840,6 +3360,167 @@ class Run10xMkfastq(PipelineTask):
             print("Moving output to final location")
             os.rename(self.tmp_out_dir,self.args.out_dir)
 
+class MergeFastqs(PipelineTask):
+    """
+    Merges Fastqs across multiple lanes
+    """
+    def init(self,fastq_dirs,out_dir,sample_sheet=None,
+             no_lane_splitting=False,create_empty_fastqs=False,
+             skip_merge=False):
+        """
+        Initialise the MergeFastqs task
+
+        Arguments:
+          fastq_dirs (list): set of directories with
+            Fastqs in bcl2fastq-like structure, to
+            merge together
+          out_dir (str): path to output directory
+          sample_sheet (str): optional sample sheet file to
+            verify the merged files against
+          no_lane_splitting (bool): if True then merge
+            Fastqs across lanes
+          create_empty_fastqs (bool): if True then create empty
+            placeholder Fastq files for any that are missing
+            on successful completion of Fastq merging
+          skip_merge (bool): if True then skip running
+            the merging step within the task
+
+        Outputs:
+            missing_fastqs: list of Fastqs missing after
+              Fastq merging
+        """
+        # Internal variables
+        self.tmp_merge_dir = None
+        # Outputs
+        self.add_output('missing_fastqs',list())
+    def setup(self):
+        if self.args.skip_merge:
+            print("Skipping merge of Fastqs")
+            return
+        # Sort out the Fastqs in the input project directories
+        projects = dict()
+        for fastq_dir in self.args.fastq_dirs:
+            print("Examining %s" % fastq_dir)
+            illumina_data = IlluminaData(os.path.dirname(fastq_dir),
+                                         os.path.basename(fastq_dir))
+            for project in illumina_data.projects:
+                # Collect Fastqs in each sample for each project
+                if project.name not in projects:
+                    projects[project.name] = dict()
+                for sample in project.samples:
+                    if sample.name not in projects[project.name]:
+                        projects[project.name][sample.name] = list()
+                    projects[project.name][sample.name].extend(
+                        [os.path.join(sample.dirn,fq)
+                         for fq in sample.fastq])
+            # Add the 'undetermined' Fastqs
+            if illumina_data.undetermined:
+                if '__undetermined__' not in projects:
+                    projects['__undetermined__'] = dict(Undetermined=list())
+                for sample in illumina_data.undetermined.samples:
+                    projects['__undetermined__']['Undetermined'].extend(
+                        [os.path.join(sample.dirn,fq)
+                         for fq in sample.fastq])
+        # Assign indices to samples based on sample sheet
+        s_indices = {}
+        if self.args.sample_sheet:
+            sample_sheet = SampleSheet(self.args.sample_sheet)
+            s_index = 0
+            for line in sample_sheet:
+                sample_name = line[sample_sheet.sample_name_column]
+                if sample_name not in s_indices:
+                    s_index += 1
+                    s_indices[sample_name] = s_index
+        # Make a new directory for the merging
+        self.tmp_merge_dir = "__mergefastqs.%s.%s.tmp" % \
+                             (os.path.basename(self.args.out_dir),
+                             time.strftime("%Y%m%d%H%M%S"))
+        os.mkdir(self.tmp_merge_dir)
+        print("Made temporary directory for merging: %s" %
+              self.tmp_merge_dir)
+        # Merge each project
+        for project in projects:
+            print("Merging Fastqs in project '%s'" % project)
+            if project != '__undetermined__':
+                project_dir = os.path.join(self.tmp_merge_dir,project)
+                os.mkdir(project_dir)
+            else:
+                project_dir = self.tmp_merge_dir
+            # Handle each sample
+            for sample in projects[project]:
+                print("* %s" % sample)
+                # Group the Fastqs within the sample
+                fastq_groups = group_fastqs_by_name(
+                    projects[project][sample])
+                for idx in range(len(fastq_groups[0])):
+                    fastqs = [grp[idx] for grp in fastq_groups]
+                    if self.args.no_lane_splitting:
+                        # Merge Fastqs across lanes
+                        fastq_out = AnalysisFastq(fastqs[0])
+                        try:
+                            # Reset the Fastq sample index number
+                            fastq_out.sample_number = \
+                                s_indices[fastq_out.sample_name]
+                        except KeyError:
+                            pass
+                        fastq_out.lane_number = None
+                        fastq_out = os.path.join(project_dir,
+                                                 "%s.fastq.gz" %
+                                                 str(fastq_out))
+                        if len(fastqs) > 1:
+                            # Concatenate multiple Fastqs
+                            concat_cmd = Command('zcat')
+                            concat_cmd.add_args(*fastqs)
+                            concat_cmd.add_args('|','gzip','-c', #'--best',
+                                                '>',fastq_out)
+                            self.add_cmd(PipelineCommandWrapper(
+                                "Concatenate Fastqs for %s/%s" % (project,
+                                                                  sample),
+                                *concat_cmd.command_line))
+                        else:
+                            # Hard link to single Fastq
+                            os.link(fastqs[0],os.path.join(fastq_out))
+                    else:
+                        # No merging across lanes
+                        for fq in fastqs:
+                            # Construct final Fastq name
+                            fastq_out = AnalysisFastq(fq)
+                            try:
+                                # Reset the Fastq sample index number
+                                fastq_out.sample_number = \
+                                    s_indices[fastq_out.sample_name]
+                            except KeyError:
+                                pass
+                            # Hard link to individual Fastqs
+                            os.link(fq,os.path.join(project_dir,
+                                                    "%s.fastq.gz" %
+                                                    str(fastq_out)))
+        # Add 'Stats' and 'Reports' directories
+        for d in ("Stats","Reports"):
+            os.mkdir(os.path.join(self.tmp_merge_dir,d))
+            print("Made '%s' subdirectory" % d)
+    def finish(self):
+        if self.tmp_merge_dir:
+            if self.args.sample_sheet:
+                # Verify outputs and get list of missing Fastqs (if any)
+                missing_fastqs = verify_run(self.tmp_merge_dir,
+                                            self.args.sample_sheet)
+                # Update output
+                for fq in missing_fastqs:
+                    self.output.missing_fastqs.append(fq)
+                # Handle missing fastqs
+                if missing_fastqs:
+                    if self.args.create_empty_fastqs:
+                        # Create empty placeholder Fastqs
+                        create_placeholder_fastqs(missing_fastqs,
+                                                  base_dir=self.tmp_merge_dir)
+                    else:
+                        # Terminate with an exception
+                        raise Exception("Failed to verify outputs against "
+                                        "samplesheet")
+            print("Moving merged Fastqs to final location")
+            os.rename(self.tmp_merge_dir,self.args.out_dir)
+
 class MergeFastqDirs(PipelineFunctionTask):
     """
     Merges directories with subsets of Fastqs
@@ -3221,3 +3902,61 @@ def subset(lanes,**kws):
                            % attr)
         s[attr] = kws[attr]
     return s
+
+def verify_run(fastq_dir,sample_sheet):
+    """
+    Verify Fastq dir contents against sample sheet
+
+    Check the contents of a Bcl-to-Fastq output directory
+    against a sample sheet, and return a list of missing
+    Fastqs (or an empty list if all expected Fastqs are
+    present).
+
+    Arguments:
+      fastq_dir (str): path to Bcl-to-Fastq output directory
+      sample_sheet (str): path to sample sheet file
+
+    Returns:
+      List: list of missing Fastqs, or an empty list if
+        all expected Fastqs are present.
+    """
+    illumina_data = IlluminaData(os.path.dirname(fastq_dir),
+                                 os.path.basename(fastq_dir))
+    if verify_run_against_sample_sheet(illumina_data,sample_sheet):
+        # Verification ok
+        print("Verified Fastqs against samplesheet")
+        return []
+    else:
+        # Verification failed
+        print("Failed to verify outputs against samplesheet")
+        # List the missing Fastq files
+        missing_fastqs = list_missing_fastqs(illumina_data,
+                                             sample_sheet)
+        print("Missing Fastqs:")
+        for fq in missing_fastqs:
+            print("- %s" % fq)
+        return missing_fastqs
+
+def create_placeholder_fastqs(fastqs,base_dir=None):
+    """
+    Create empty 'placeholder' Fastq files
+
+    Arguments:
+      fastqs (list): paths to Fastq file names to
+        create
+      base_dir (str): if supplied then used as the base
+        directory; Fastqs will be created relative to
+        this dir
+    """
+    # Create empty placeholder Fastqs
+    print("Making empty placeholder Fastqs")
+    for fastq in fastqs:
+        # Prepend base dir
+        if base_dir:
+            fastq = os.path.join(base_dir,fastq)
+        # Make intermediate directory if required
+        if not os.path.exists(os.path.dirname(fastq)):
+            os.mkdir(os.path.dirname(fastq))
+        # Make empty file
+        with gzip.GzipFile(filename=fastq,mode='wb') as fp:
+            fp.write(''.encode())

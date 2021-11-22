@@ -26,9 +26,8 @@ logger = logging.getLogger(__name__)
 # Data
 #######################################################################
 
-BCL2FASTQ_VERSIONS = ('1.8','2.17','2.20',)
-
 BCL2FASTQ_DEFAULTS = {
+    "bcl_converter": 'bcl2fastq',
     "minimum_trimmed_read_length": 35,
     "mask_short_adapter_reads": 22,
 }
@@ -41,14 +40,14 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 unaligned_dir=None,sample_sheet=None,
                 name=None,lanes=None,lane_subsets=None,
                 icell8_well_list=None,
-                nprocessors=None,require_bcl2fastq_version=None,
-                bases_mask=None,no_lane_splitting=False,
+                nprocessors=None,bcl_converter=None,
+                bases_mask=None,no_lane_splitting=None,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
                 trim_adapters=True,
                 adapter_sequence=None,
                 adapter_sequence_read2=None,
-                create_fastq_for_index_read=False,
+                create_fastq_for_index_read=None,
                 find_adapters_with_sliding_window=None,
                 generate_stats=True,stats_file=None,
                 per_lane_stats_file=None,
@@ -115,10 +114,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
         for fastqs
       analyse_barcodes (bool): if True then (re)analyse barcodes for
         fastqs
-      require_bcl2fastq_version (str): (optional) specify bcl2fastq
-        version to use. Should be a string of the form '1.8.4' or
-        '>2.0'. Set to None to automatically determine required
-        bcl2fastq version.
+      bcl_converter (str): default BCL-to-Fastq conversion software to
+        use; optionally can include a version specification (e.g.
+        "bcl2fastq>2.0" or "bcl-convert=3.7.5"). Defaults to "bcl2fastq"
       bases_mask (str): if set then use this as an alternative bases
         mask setting
       no_lane_splitting (bool): if True then run bcl2fastq with
@@ -278,9 +276,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
     # Pipeline log file
     pipeline_log = os.path.join(ap.log_dir,"make_fastqs.log")
 
-    # Deal with platform information
-    if not platform:
-        platform = ap.metadata.platform
     # Bases mask
     if bases_mask is not None:
         ap.params['bases_mask'] = bases_mask
@@ -294,62 +289,51 @@ def make_fastqs(ap,protocol='standard',platform=None,
         mask_short_adapter_reads = \
                 BCL2FASTQ_DEFAULTS['mask_short_adapter_reads']
 
-    # No lane splitting
-    if no_lane_splitting is None:
-        # Look for platform-specific setting
-        try:
-            no_lane_splitting = \
-                ap.settings.platform[ap.metadata.platform].no_lane_splitting
-        except (KeyError,AttributeError):
-            pass
-    if no_lane_splitting is None:
-        # Look for default setting
-        no_lane_splitting = ap.settings.bcl2fastq.no_lane_splitting
+    # Get platform
+    if not platform:
+        platform = ap.metadata.platform
 
-    # Create empty placeholder Fastqs
-    if create_empty_fastqs is None:
-        # Look for platform-specific setting
-        try:
-            create_empty_fastqs = \
-                ap.settings.platform[ap.metadata.platform].create_empty_fastqs
-        except (KeyError,AttributeError):
-            pass
-    if create_empty_fastqs is None:
-        # Look for default setting
-        create_empty_fastqs = ap.settings.bcl2fastq.create_empty_fastqs
+    # Set options from supplied arguments, platform-specific settings
+    # and configured defaults
+    defaults = {
+        'bcl_converter': bcl_converter,
+        'nprocessors': nprocessors,
+        'no_lane_splitting': no_lane_splitting,
+        'create_empty_fastqs': create_empty_fastqs,
+    }
+    for item in ('bcl_converter',
+                 'nprocessors',
+                 'no_lane_splitting',
+                 'create_empty_fastqs',):
+        if defaults[item] is None:
+            value = None
+            if platform in ap.settings.platform:
+                value = ap.settings.platform[platform][item]
+            if value is None:
+                value = ap.settings.bcl_conversion[item]
+            defaults[item] = value
 
-    # Require specific bcl2fastq version
-    if require_bcl2fastq_version is None:
-        # Look for platform-specific requirement
-        try:
-            require_bcl2fastq_version = \
-                ap.settings.platform[ap.metadata.platform].bcl2fastq
-            print("Bcl2fastq version %s required for platform '%s'" %
-                  (ap.metadata.platform,require_bcl2fastq_version))
-        except (KeyError,AttributeError):
-            pass
-    if require_bcl2fastq_version is None:
-        # Look for default requirement
-        require_bcl2fastq_version = ap.settings.bcl2fastq.default_version
-        print("Bcl2fastq version %s required by default" %
-              require_bcl2fastq_version)
-    if require_bcl2fastq_version is not None:
-        # No version requirement
-        print("No bcl2fastq version explicitly specified")
+    # BCL converter
+    if defaults['bcl_converter'] is None:
+        bcl_converter = BCL2FASTQ_DEFAULTS['bcl_converter']
+    else:
+        bcl_converter = defaults['bcl_converter']
 
     # Number of processors
-    if not nprocessors:
-        # Look for platform-specific number of processors
-        if platform in ap.settings.platform:
-            nprocessors = ap.settings.platform[platform].nprocessors
-        if not nprocessors:
-            nprocessors = ap.settings.bcl2fastq.nprocessors
+    nprocessors = defaults['nprocessors']
+
+    # Split Fastqs across lanes
+    no_lane_splitting = defaults['no_lane_splitting']
+
+    # Create empty Fastqs
+    create_empty_fastqs = defaults['create_empty_fastqs']
 
     # Set up pipeline runners
     default_runner = ap.settings.general.default_runner
     runners = {
         'rsync_runner': ap.settings.runners.rsync,
         'bcl2fastq_runner': ap.settings.runners.bcl2fastq,
+        'bclconvert_runner': ap.settings.runners.bcl_convert,
         'demultiplex_icell8_atac_runner': ap.settings.runners.bcl2fastq,
         'cellranger_runner': ap.settings.runners.cellranger,
         'cellranger_atac_runner': ap.settings.runners.cellranger,
@@ -366,6 +350,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
     # Set up pipeline environment modules
     envmodules = {}
     for envmod in ('bcl2fastq',
+                   'bcl_convert',
                    'cellranger_mkfastq',
                    'cellranger_atac_mkfastq',
                    'cellranger_arc_mkfastq',
@@ -386,6 +371,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              ap.params.sample_sheet,
                              protocol=protocol,
                              bases_mask=bases_mask,
+                             bcl_converter=bcl_converter,
                              platform=platform,
                              icell8_well_list=icell8_well_list,
                              minimum_trimmed_read_length=\
@@ -421,7 +407,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              per_lane_stats=per_lane_stats_file,
                              nprocessors=nprocessors,
                              default_runner=default_runner,
-                             require_bcl2fastq=require_bcl2fastq_version,
                              cellranger_jobmode=cellranger_jobmode,
                              cellranger_mempercore=cellranger_mempercore,
                              cellranger_maxjobs=cellranger_maxjobs,
@@ -465,6 +450,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         outputs = make_fastqs.output
         if outputs.bcl2fastq_info:
             processing_software['bcl2fastq'] = outputs.bcl2fastq_info
+        if outputs.bclconvert_info:
+            processing_software['bcl-convert'] = outputs.bclconvert_info
         if outputs.cellranger_info:
             processing_software['cellranger'] = outputs.cellranger_info
         if outputs.cellranger_atac_info:

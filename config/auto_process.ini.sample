@@ -13,6 +13,7 @@ poll_interval = 5
 [modulefiles]
 make_fastqs = None
 bcl2fastq = None
+bcl_convert = None
 cellranger_mkfastq = None
 cellranger_atac_mkfastq = None
 cellranger_arc_mkfastq = None
@@ -32,12 +33,13 @@ fastq_screen = None
 enable_conda = False
 env_dir = None
 
-# bcl2fastq settings
-[bcl2fastq]
-nprocessors = 1
-default_version = >=1.8.4
+# BCL to Fastq conversion settings
+[bcl_conversion]
+bcl_converter = bcl2fastq>=1.8.4
 no_lane_splitting = False
-create_empty_fastqs = True
+create_empty_fastqs = False
+# By default nprocessors taken from runner
+#nprocessors = 1
 
 # Sequencers and platforms
 # Define a 'sequencer:INSTRUMENT' section for
@@ -69,8 +71,9 @@ create_empty_fastqs = True
 
 # QC settings
 [qc]
-nprocessors = 1
 fastq_screen_subset = 100000
+# By default nprocessors taken from runner
+#nprocessors = 1
 
 # icell8 settings
 [icell8]
@@ -101,7 +104,7 @@ cellranger_localcores = 1
 # override the default bcl2fastq settings (i.e. number of
 # processors, version, lane splitting etc)
 [platform:nextseq]
-bcl2fastq = >=2.0
+bcl_converter = bcl2fastq>=2.0
 no_lane_splitting = True
 
 # fastq_stats settings
@@ -111,6 +114,7 @@ nprocessors = 1
 # Define runners for specific jobs
 [runners]
 bcl2fastq = SimpleJobRunner
+bcl_convert = SimpleJobRunner
 qc = SimpleJobRunner
 star = SimpleJobRunner
 stats = SimpleJobRunner
