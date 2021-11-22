@@ -144,3 +144,16 @@ class MockQCOutputs(object):
                                         basename)
         with open(fastq_strand_txt,'w') as fp:
             fp.write(mockqcdata.FASTQ_STRAND_V0_0_4['fastq_strand.txt'])
+
+    @classmethod
+    def seqlens(self,fastq,qc_dir):
+        """
+        Create mock outputs from sequence length pipeline task
+        """
+        # Basename for sequence length outputs
+        basename = self.fastq_basename(fastq)
+        seq_lens_json = os.path.join(qc_dir,
+                                     "%s_seqlens.json" %
+                                     basename)
+        with open(seq_lens_json,'wt') as fp:
+            fp.write(mockqcdata.SEQ_LENS_JSON % { 'fastq': fastq })

@@ -184,7 +184,7 @@ class AnalyseBarcodes(Pipeline):
 
         # List the counts files
         list_counts_files = ListBarcodeCountFiles(
-            "Fetch the barcode counts files",
+            "Gather the barcode counts files",
             self.params.counts_dir)
         self.add_task(list_counts_files,
                       requires=count_tasks)

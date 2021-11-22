@@ -2,10 +2,15 @@
 #
 # fastqc library
 import os
+import logging
+from collections import OrderedDict
 from bcftbx.TabFile import TabFile
 from bcftbx.htmlpagewriter import PNGBase64Encoder
 from ..docwriter import Table
 from ..docwriter import Link
+
+# Module specific logger
+logger = logging.getLogger(__name__)
 
 """
 Example Fastqc summary text file (FASTQ_fastqc/summary.txt):
@@ -344,6 +349,13 @@ class FastqcData(object):
         """
         return self._data_file
 
+    @property
+    def modules(self):
+        """
+        List of the modules in the raw data
+        """
+        return self._modules
+
     def data(self,module):
         """
         Return the raw data for a module
@@ -396,3 +408,72 @@ class FastqcData(object):
             if key == measure:
                 return value
         raise KeyError("No measure '%s'" % measure)
+
+    def sequence_deduplication_percentage(self):
+        """
+        Return sequence deduplication percentage
+
+        Returns the percentage of sequences remaining
+        after deduplication according to FastQC.
+
+        Returns:
+          Float: percentage sequence deduplication
+            from FastQC.
+        """
+        # Get the raw sequence duplication data
+        data = self.data("Sequence Duplication Levels")
+        for line in data:
+            # Locate line of the form
+            # #Total Deduplicated Percentage	67.73267849677316
+            if line.startswith("#Total Deduplicated Percentage"):
+                return float(line.split('\t')[-1])
+
+    def adapter_content_summary(self):
+        """
+        Return summary data for adapter content
+
+        Summarises the amount of adapter present in a
+        Fastq file based on data in the
+        ``Adapter Content`` section, assigning a
+        decimal fraction for each adapter class.
+
+        The fraction is calculated by summing the
+        fraction of adapter across all bases, and
+        then normalising by the number of bases.
+
+        Returns:
+          OrderedDict: mapping adapter names to the
+            fraction representing the amount of
+            adapter present in the Fastq.
+        """
+        # Get the raw adapter content data
+        # i.e. table with adapter content at each base
+        # position for each adapter class
+        data = self.data("Adapter Content")
+        # Get the list of adapter names from table
+        # header
+        try:
+            adapters = data[0].split('\t')[1:]
+        except IndexError:
+            # It's possible that the adapter data is
+            # empty so issue a warning
+            logger.warn("Unable to extract list of adapters"
+                        "from FastQC output")
+            # Return empty (ordered) dictionary
+            return OrderedDict()
+        # Summarise content for each adapter across
+        # sequence by summing up content at each
+        # position and dividing by total area
+        summary = OrderedDict()
+        for adapter in adapters:
+            summary[adapter] = 0.0
+        for line in data[1:]:
+            content = line.split('\t')[1:]
+            for i,adapter in enumerate(adapters):
+                summary[adapter] += float(content[i])
+        # Normalise the sums
+        total_area = len(data[1:])*100.0
+        for adapter in adapters:
+            summary[adapter] = summary[adapter]/total_area
+        # Return content summary
+        return summary

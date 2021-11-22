@@ -143,6 +143,15 @@ if __name__ == "__main__":
                           "'human', 'mouse'). Multiple organisms "
                           "should be separated by commas (e.g. "
                           "'human,mouse')")
+    metadata.add_argument('--library-type',metavar='LIBRARY',
+                          action='store',dest='library_type',default=None,
+                          help="explicitly specify library type (e.g. "
+                          "'RNA-seq', 'ChIP-seq')")
+    metadata.add_argument('--single-cell-platform',metavar='PLATFORM',
+                          action='store',dest='single_cell_platform',
+                          default=None,
+                          help="explicitly specify the single cell "
+                          "platform (e.g. '10xGenomics Chromium 3'v3')")
     # QC pipeline options
     qc_options = p.add_argument_group('QC options')
     qc_options.add_argument('-p','--protocol',metavar='PROTOCOL',
@@ -151,7 +160,7 @@ if __name__ == "__main__":
                             help="explicitly specify the QC protocol to "
                             "use; can be one of %s. If not set then "
                             "protocol will be determined automatically "
-                            "based on directory contents." %
+                            "based on directory contents and metadata." %
                             ", ".join(["'%s'" % x for x in PROTOCOLS]))
     qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
                             action='store',dest='fastq_screen_subset',
@@ -197,6 +206,12 @@ if __name__ == "__main__":
                        help="use conda to resolve task dependencies; can "
                        "be 'yes' or 'no' (default: %s)" %
                        ("yes" if __settings.conda.enable_conda else "no"))
+    conda.add_argument('--conda-env-dir',action='store',
+                       dest="conda_env_dir",default=__settings.conda.env_dir,
+                       help="specify directory for conda enviroments "
+                       "(default: %s)" % ('temporary directory'
+                                          if not __settings.conda.env_dir else
+                                          __settings.conda.env_dir))
     # Pipeline/job options
     pipeline = p.add_argument_group('Job control options')
     pipeline.add_argument('--local',action='store_true',
@@ -445,29 +460,49 @@ if __name__ == "__main__":
     else:
         enable_conda = (args.enable_conda == "yes")
 
-    # Cellranger data
+    # STAR indexes
+    star_indexes = dict()
+    for organism in __settings.organisms:
+        star_index = __settings.organisms[organism].star_index
+        if star_index:
+            star_indexes[organism] = star_index
+
+    # Cellranger settings
     cellranger_settings = __settings['10xgenomics']
+
+    # Cellranger reference datasets
     cellranger_transcriptomes = dict()
-    if __settings['10xgenomics_transcriptomes']:
-        for organism in __settings['10xgenomics_transcriptomes']:
-            if organism not in cellranger_transcriptomes:
-                cellranger_transcriptomes[organism] = \
-                    __settings['10xgenomics_transcriptomes'][organism]
+    for organism in __settings.organisms:
+        if __settings.organisms[organism].cellranger_reference:
+            cellranger_transcriptomes[organism] = \
+                __settings.organisms[organism].cellranger_reference
+    cellranger_premrna_references = dict()
+    for organism in __settings.organisms:
+        if __settings.organisms[organism].cellranger_premrna_reference:
+            cellranger_premrna_references[organism] = \
+                __settings.organisms[organism].cellranger_premrna_reference
+    cellranger_atac_references = dict()
+    for organism in __settings.organisms:
+        if __settings.organisms[organism].cellranger_atac_reference:
+            cellranger_atac_references[organism] = \
+                __settings.organisms[organism].cellranger_atac_reference
+    cellranger_multiome_references = dict()
+    for organism in __settings.organisms:
+        if __settings.organisms[organism].cellranger_arc_reference:
+            cellranger_multiome_references[organism] = \
+                __settings.organisms[organism].cellranger_arc_reference
+
+    # Add in organism-specific references supplied on the command line
     if args.cellranger_transcriptomes:
         for transcriptome in args.cellranger_transcriptomes:
             organism,reference =  transcriptome.split('=')
             cellranger_transcriptomes[organism] = reference
-    cellranger_premrna_references = dict()
-    if __settings['10xgenomics_premrna_references']:
-        for organism in __settings['10xgenomics_premrna_references']:
-            if organism not in cellranger_premrna_references:
-                cellranger_premrna_references[organism] = \
-                    __settings['10xgenomics_premrna_references'][organism]
     if args.cellranger_premrna_references:
         for premrna_reference in args.cellranger_premrna_references:
             organism,reference =  premrna_reference.split('=')
             cellranger_premrna_references[organism] = reference
-    cellranger_atac_references = __settings['10xgenomics_atac_genome_references']
+
+    # Single reference supplied on command line
     cellranger_reference_dataset = args.cellranger_reference_dataset
     if cellranger_reference_dataset:
         cellranger_reference_dataset = os.path.abspath(
@@ -509,6 +544,13 @@ if __name__ == "__main__":
         else:
             nthreads = min(max_cores,8)
         print("-- Threads for QC: %s" % nthreads)
+        # Set number of threads for STAR jobs
+        if args.nthreads:
+            nthreads_star = args.nthreads
+        else:
+            mempercore = max_mem/float(max_cores)
+            nthreads_star = int(math.ceil(32.0/mempercore))
+        print("-- Threads for STAR: %s" % nthreads_star)
         # Remove limit on number of jobs
         print("-- Set maximum no of jobs to 'unlimited'")
         max_jobs = None
@@ -526,6 +568,7 @@ if __name__ == "__main__":
         runners = {
             'cellranger_runner': SimpleJobRunner(nslots=cellranger_localcores),
             'qc_runner': SimpleJobRunner(nslots=nthreads),
+            'star_runner': SimpleJobRunner(nslots=nthreads_star),
             'verify_runner': default_runner,
             'report_runner': default_runner,
         }
@@ -551,6 +594,7 @@ if __name__ == "__main__":
             runners = {
                 'cellranger_runner': default_runner,
                 'qc_runner': default_runner,
+                'star_runner': default_runner,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
             }
@@ -561,6 +605,7 @@ if __name__ == "__main__":
             runners = {
                 'cellranger_runner': __settings.runners.cellranger,
                 'qc_runner': __settings.runners.qc,
+                'star_runner': __settings.runners.star,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
             }
@@ -622,6 +667,10 @@ if __name__ == "__main__":
         project_metadata['name'] = os.path.basename(out_dir)
     if args.organism:
         project_metadata['organism'] = args.organism
+    if args.library_type:
+        project_metadata['library_type'] = args.library_type
+    if args.single_cell_platform:
+        project_metadata['single_cell_platform'] = args.single_cell_platform
 
     # Import extra files specified by the user
     for f in list(extra_files):
@@ -658,14 +707,14 @@ if __name__ == "__main__":
                       multiqc=(not args.no_multiqc))
     status = runqc.run(nthreads=nthreads,
                        fastq_subset=args.fastq_screen_subset,
-                       fastq_strand_indexes=
-                       __settings.fastq_strand_indexes,
+                       star_indexes=star_indexes,
                        cellranger_chemistry=\
                        args.cellranger_chemistry,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,
                        cellranger_atac_references=cellranger_atac_references,
+                       cellranger_arc_references=cellranger_multiome_references,
                        cellranger_jobmode=cellranger_jobmode,
                        cellranger_maxjobs=max_jobs,
                        cellranger_mempercore=cellranger_mempercore,
@@ -684,6 +733,7 @@ if __name__ == "__main__":
                        default_runner=default_runner,
                        envmodules=envmodules,
                        enable_conda=enable_conda,
+                       conda_env_dir=args.conda_env_dir,
                        working_dir=working_dir,
                        verbose=args.verbose)
     if status:

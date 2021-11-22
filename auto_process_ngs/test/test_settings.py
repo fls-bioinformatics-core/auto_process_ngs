@@ -43,6 +43,7 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.publish_qc,None)
         self.assertEqual(s.modulefiles.process_icell8,None)
         self.assertEqual(s.modulefiles.bcl2fastq,None)
+        self.assertEqual(s.modulefiles.bcl_convert,None)
         self.assertEqual(s.modulefiles.cellranger_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_arc_mkfastq,None)
@@ -53,18 +54,22 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.report_qc,None)
         # Conda
         self.assertEqual(s.conda.enable_conda,False)
-        # Bcl2fastq
-        self.assertEqual(s.bcl2fastq.nprocessors,1)
-        self.assertEqual(s.bcl2fastq.default_version,'>=1.8.4')
-        self.assertEqual(s.bcl2fastq.no_lane_splitting,False)
+        self.assertEqual(s.conda.env_dir,None)
+        # BCL conversion software
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl2fastq>=1.8.4')
+        self.assertEqual(s.bcl_conversion.nprocessors,None)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
         # NextSeq-specific
-        self.assertEqual(s.platform.nextseq.bcl2fastq,'>=2.0')
+        self.assertEqual(s.platform.nextseq.bcl_converter,'bcl2fastq>=2.0')
         self.assertEqual(s.platform.nextseq.no_lane_splitting,True)
         # Fastq_stats
         self.assertEqual(s.fastq_stats.nprocessors,1)
         # Job-specific runners
         self.assertTrue(isinstance(s.runners.bcl2fastq,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.qc,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.star,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.stats,SimpleJobRunner))
         # Archiving
         self.assertEqual(s.archive.dirn,None)
@@ -98,6 +103,7 @@ nprocessors = 8
         # Modulefiles
         self.assertEqual(s.modulefiles.make_fastqs,None)
         self.assertEqual(s.modulefiles.bcl2fastq,None)
+        self.assertEqual(s.modulefiles.bcl_convert,None)
         self.assertEqual(s.modulefiles.cellranger_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_arc_mkfastq,None)
@@ -105,6 +111,7 @@ nprocessors = 8
         self.assertEqual(s.modulefiles.run_qc,None)
         # Conda
         self.assertEqual(s.conda.enable_conda,False)
+        self.assertEqual(s.conda.env_dir,None)
         # Fastq_stats
         self.assertEqual(s.fastq_stats.nprocessors,8)
 
@@ -133,6 +140,40 @@ SN7001251 = hiseq
         self.assertTrue('SN7001251' in s.sequencers)
         self.assertEqual(s.sequencers['SN7001251']['platform'],'hiseq')
         self.assertEqual(s.sequencers.SN7001251.platform,'hiseq')
+
+    def test_conda_settings(self):
+        """Settings: check conda options are set correctly
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[conda]
+enable_conda = true
+env_dir = /scratch/conda_envs
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check conda settings
+        self.assertTrue(s.conda.enable_conda)
+        self.assertEqual(s.conda.env_dir,"/scratch/conda_envs")
+
+    def test_conda_env_dir(self):
+        """Settings: check conda env dir expands env variable
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[conda]
+enable_conda = true
+env_dir = /scratch/$USER/conda_envs
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check conda settings
+        self.assertTrue(s.conda.enable_conda)
+        self.assertEqual(s.conda.env_dir,os.path.join("/scratch",
+                                                      os.environ['USER'],
+                                                      "conda_envs"))
 
     def test_destination_definitions(self):
         """Settings: handle 'destination:...' sections
@@ -262,3 +303,242 @@ model = "HiSeq 2500"
         self.assertRaises(Exception,
                           Settings,
                           settings_file)
+
+    def test_organism_definitions(self):
+        """Settings: handle 'organism:...' sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[organism:human]
+star_index = /data/hg38/star
+bowtie_index = /data/hg38/bowtie
+cellranger_reference = /data/10x/refdata-gex-GRCh38-2020-A
+cellranger_premrna_reference = /data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna
+cellranger_atac_reference = /data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+cellranger_arc_reference = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
+
+[organism:mouse]
+star_index = /data/mm10/star
+bowtie_index = /data/mm10/bowtie
+cellranger_reference = /data/10x/refdata-gex-mm10-2020-A
+cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
+cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check organism settings
+        self.assertTrue('human' in s.organisms)
+        self.assertEqual(s.organisms['human']['star_index'],
+                         '/data/hg38/star')
+        self.assertEqual(s.organisms['human']['bowtie_index'],
+                         '/data/hg38/bowtie')
+        self.assertEqual(s.organisms['human']['cellranger_reference'],
+                         '/data/10x/refdata-gex-GRCh38-2020-A')
+        self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
+                         '/data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna')
+        self.assertEqual(s.organisms['human']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertTrue('mouse' in s.organisms)
+        self.assertEqual(s.organisms['mouse']['star_index'],
+                         '/data/mm10/star')
+        self.assertEqual(s.organisms['mouse']['bowtie_index'],
+                         '/data/mm10/bowtie')
+        self.assertEqual(s.organisms['mouse']['cellranger_reference'],
+                         '/data/10x/refdata-gex-mm10-2020-A')
+        self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
+                         None)
+        self.assertEqual(s.organisms['mouse']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+
+    def test_legacy_organism_definitions(self):
+        """Settings: handle sections for specific indices (no 'organism:...' sections)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[fastq_strand_indexes]
+human = /data/hg38/star
+mouse = /data/mm10/star
+
+[10xgenomics_transcriptomes]
+human = /data/10x/refdata-gex-GRCh38-2020-A
+mouse = /data/10x/refdata-gex-mm10-2020-A
+
+[10xgenomics_premrna_references]
+human = /data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna
+
+[10xgenomics_atac_genome_references]
+human = /data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+mouse = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
+
+[10xgenomics_multiome_references]
+human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
+mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check organism settings
+        self.assertTrue('human' in s.organisms)
+        self.assertEqual(s.organisms['human']['star_index'],
+                         '/data/hg38/star')
+        self.assertEqual(s.organisms['human']['bowtie_index'],None)
+        self.assertEqual(s.organisms['human']['cellranger_reference'],
+                         '/data/10x/refdata-gex-GRCh38-2020-A')
+        self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
+                         '/data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna')
+        self.assertEqual(s.organisms['human']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertTrue('mouse' in s.organisms)
+        self.assertEqual(s.organisms['mouse']['star_index'],
+                         '/data/mm10/star')
+        self.assertEqual(s.organisms['mouse']['bowtie_index'],None)
+        self.assertEqual(s.organisms['mouse']['cellranger_reference'],
+                         '/data/10x/refdata-gex-mm10-2020-A')
+        self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
+                         None)
+        self.assertEqual(s.organisms['mouse']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+
+    def test_mixed_organism_definitions(self):
+        """Settings: handle mixture of 'organism:...' and index sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[organism:human]
+bowtie_index = /data/hg38/bowtie
+
+[organism:mouse]
+star_index = /data/mm10/star
+bowtie_index = /data/mm10/bowtie
+cellranger_reference = /data/10x/refdata-gex-mm10-2020-A
+cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
+cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
+
+[fastq_strand_indexes]
+human = /data/hg38/star
+mouse = /data/mm10/star
+
+[10xgenomics_transcriptomes]
+human = /data/10x/refdata-gex-GRCh38-2020-A
+
+[10xgenomics_premrna_references]
+human = /data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna
+
+[10xgenomics_atac_genome_references]
+human = /data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+
+[10xgenomics_multiome_references]
+human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check organism settings
+        self.assertTrue('human' in s.organisms)
+        self.assertEqual(s.organisms['human']['star_index'],
+                         '/data/hg38/star')
+        self.assertEqual(s.organisms['human']['bowtie_index'],
+                         '/data/hg38/bowtie')
+        self.assertEqual(s.organisms['human']['cellranger_reference'],
+                         '/data/10x/refdata-gex-GRCh38-2020-A')
+        self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
+                         '/data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna')
+        self.assertEqual(s.organisms['human']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertTrue('mouse' in s.organisms)
+        self.assertEqual(s.organisms['mouse']['star_index'],
+                         '/data/mm10/star')
+        self.assertEqual(s.organisms['mouse']['bowtie_index'],
+                         '/data/mm10/bowtie')
+        self.assertEqual(s.organisms['mouse']['cellranger_reference'],
+                         '/data/10x/refdata-gex-mm10-2020-A')
+        self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
+                         None)
+        self.assertEqual(s.organisms['mouse']['cellranger_atac_reference'],
+                         '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
+                         '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+
+    def test_legacy_bcl2fastq_settings_no_bcl_conversion(self):
+        """Settings: handle legacy 'bcl2fastq' section (no 'bcl_conversion' settings)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[bcl2fastq]
+default_version = >=2.20
+nprocessors = 8
+no_lane_splitting = true
+create_empty_fastqs = false
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check bcl_conversion settings
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl2fastq>=2.20')
+        self.assertEqual(s.bcl_conversion.nprocessors,8)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,True)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
+
+    def test_legacy_platform_settings_no_bcl_conversion(self):
+        """Settings: handle legacy 'platform:...' section (no 'bcl_conversion' settings)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[platform:nextseq]
+bcl2fastq = >=2.20
+nprocessors = 1
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check bcl_conversion settings (should be defaults)
+        self.assertEqual(s.bcl_conversion.bcl_converter,None)
+        self.assertEqual(s.bcl_conversion.nprocessors,None)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,None)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,None)
+        # Check platform-specific options
+        self.assertEqual(s.platform['nextseq'].bcl_converter,
+                         'bcl2fastq>=2.20')
+        self.assertEqual(s.platform['nextseq'].nprocessors,1)
+
+    def test_platform_settings_override_bcl_conversion_section(self):
+        """Settings: 'platform:...' section overrides 'bcl_conversion' settings
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[bcl_conversion]
+bcl_converter = bcl-convert=3.7.5
+nprocessors = 16
+
+[platform:nextseq]
+bcl_converter = bcl2fastq>=2.20
+nprocessors = 8
+no_lane_splitting = true
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check bcl_conversion settings
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl-convert=3.7.5')
+        self.assertEqual(s.bcl_conversion.nprocessors,16)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,None)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,None)
+        # Check platform-specific options
+        self.assertEqual(s.platform['nextseq'].bcl_converter,
+                         'bcl2fastq>=2.20')
+        self.assertEqual(s.platform['nextseq'].nprocessors,8)
+        self.assertEqual(s.platform['nextseq'].no_lane_splitting,True)
+        self.assertEqual(s.platform['nextseq'].create_empty_fastqs,None)

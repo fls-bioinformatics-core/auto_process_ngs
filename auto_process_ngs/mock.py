@@ -33,10 +33,12 @@ It is also possible to make mock executables which mimick some of
 the external software required for parts of the pipeline:
 
 - MockBcl2fastq2Exe
+- MockBclConvertExe
 - Mock10xPackageExe
 - MockIlluminaQCSh
 - MockMultiQC
 - MockFastqStrandPy
+- MockConda
 
 There also is a wrapper for the 'Mock10xPackageExe' class which
 is maintained for backwards compatibility:
@@ -68,6 +70,7 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
+from .analysis import AnalysisFastq
 from .fastq_utils import pair_fastqs_by_name
 from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from .tenx_genomics_utils import flow_cell_id
@@ -383,7 +386,8 @@ class MockAnalysisProject(object):
         """
         self.fastq_names.append(fq)
 
-    def create(self,top_dir=None,readme=True,scriptcode=True):
+    def create(self,top_dir=None,readme=True,scriptcode=True,
+               populate_fastqs=True):
         """
         Build and populate the directory structure
 
@@ -393,7 +397,8 @@ class MockAnalysisProject(object):
           readme (boolean): if True then write a README file
           scriptcode (boolean): if True then write a ScriptCode
             subdirectory
-
+          populate_fastqs (boolean): if True then write content
+            to the Fastq files
         """
         # Create directory
         if top_dir is None:
@@ -407,8 +412,21 @@ class MockAnalysisProject(object):
         # Add Fastq files
         for fq in self.fastq_names:
             fq = os.path.basename(fq)
-            with open(os.path.join(fqs_dir,fq),'w') as fp:
-                fp.write('')
+            if populate_fastqs:
+                read_number = AnalysisFastq(fq).read_number
+                lane = AnalysisFastq(fq).lane_number
+                read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
+GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
++
+IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
+            else:
+                read = ""
+            if fq.endswith('.gz'):
+                with gzip.open(os.path.join(fqs_dir,fq),'wb') as fp:
+                    fp.write(read.encode())
+            else:
+                with open(os.path.join(fqs_dir,fq),'wt') as fp:
+                    fp.write(read)
         # Add README.info
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:
@@ -630,6 +648,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
     def add_qc_outputs(self,fastq_set=None,qc_dir=None,
                        protocol="standardPE",
                        include_fastq_strand=True,
+                       include_seqlens=True,
                        include_multiqc=True,
                        include_report=True,
                        include_zip_file=True,
@@ -646,6 +665,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
             protocol to use
           include_fastq_strand (bool): if True then
             add mock fastq_strand.py outputs
+          include_seqlens (bool): if True then add
+            mock sequence length outputs
           include_multiqc (bool): if True then add
             mock MultiQC outputs
           include_report (bool): if True then add
@@ -684,6 +705,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
                 MockQCOutputs.fastq_screen_v0_9_2(fq,
                                                   self._project.qc_dir,
                                                   screen)
+            if include_seqlens:
+                MockQCOutputs.seqlens(fq,self._project.qc_dir)
         # Handle fastq_strand, if requested
         if include_fastq_strand:
             fastq_strand_conf = os.path.join(self._project.dirn,
@@ -1328,6 +1351,391 @@ bcl2fastq v%s
                                     exclude_fastqs=self._missing_fastqs)
         # Move to final location
         os.rename(os.path.join(tmpname,"bcl2fastq"),
+                  output_dir)
+        shutil.rmtree(tmpname)
+        return self._exit_code
+
+class MockBclConvertExe(object):
+    """
+    Create mock bcl-convert executable
+
+    This class can be used to create a mock bcl-convert
+    executable, which in turn can be used in place of
+    the actual BCLConvert software for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockBclConvertExe.create("/tmpbin/bcl-convert")
+
+    The resulting executable will generate mock outputs
+    when run on actual or mock Illumina sequencer output
+    directories (mock versions can be produced using the
+    'mock.IlluminaRun' class in the genomics-bcftbx
+    package).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - Fastqs can be removed from the output by
+      specifying their names in the `missing_fastqs`
+      argument
+
+    The executable can also be configured to check
+    supplied values:
+
+    - the masking of cycles can be checked via the
+      `assert_override_cycles` argument
+    - lane splitting can be checked via the
+      `assert_no_lane_splitting` argument
+    - creation of Fastqs for index reads can
+      be checked via the
+      `assert_create_fastq_for_index_read`
+      argument
+    - adapter trimming and masking can be
+      checked via the
+      `assert_minimum_trimmed_read_length`
+      and `assert_mask_short_reads`
+      arguments
+    - adapater sequences can be checked via
+      the `assert_adapter1` and
+      `assert_adapter2` arguments
+    """
+
+    @staticmethod
+    def create(path,exit_code=0,missing_fastqs=None,
+               platform=None,assert_override_cycles=None,
+               assert_no_lane_splitting=None,
+               assert_create_fastq_for_index_read=None,
+               assert_minimum_trimmed_read_length=None,
+               assert_mask_short_reads=None,
+               assert_adapter1=None,assert_adapter2=None,
+               version='3.7.5'):
+        """
+        Create a "mock" bcl-convert executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+          missing_fastqs (list): list of Fastq
+            names that will not be created
+          platform (str): platform for primary
+            data (if it cannot be determined from
+            the directory/instrument name)
+          assert_override_cycles (str): if set then
+            assert that the 'OverrideCycles' setting
+            matches the supplied string
+          assert_lane_splitting (bool): if set
+            then assert that --no-lane-splitting
+            matches the supplied boolean value
+          assert_create_fastq_for_index_read
+            (bool): if set then assert that
+            --create-fastq-for-index-read
+            matches the supplied boolean value
+          assert_minimum_trimmed_read_length (int):
+            if set then assert that
+            --minimum-trimmed-read-length matches
+            the supplied value
+          assert_mask_short_reads (int):
+            if set then assert that
+            --mask-short-adapter-reads matches
+            the supplied value
+          assert_adapter1 (str): if set then
+            assert that the adapter sequence
+            in the sample sheet matches the
+            supplied value
+          assert_adapter2 (str): if set then
+            assert that the adapter sequence
+            for read2 in the sample sheet matches
+            the supplied value
+          version (str): version of BCLConvert
+            to imitate
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockBclConvertExe
+sys.exit(MockBclConvertExe(exit_code=%s,
+                           missing_fastqs=%s,
+                           platform=%s,
+                           assert_override_cycles=%s,
+                           assert_no_lane_splitting=%s,
+                           assert_create_fastq_for_index_read=%s,
+                           assert_minimum_trimmed_read_length=%s,
+                           assert_mask_short_reads=%s,
+                           assert_adapter1=%s,
+                           assert_adapter2=%s,
+                           version=%s).main(sys.argv[1:]))
+            """ % (exit_code,
+                   missing_fastqs,
+                   ("\"%s\"" % platform
+                    if platform is not None
+                    else None),
+                   ("\"%s\"" % assert_override_cycles
+                    if assert_override_cycles is not None
+                    else None),
+                   assert_no_lane_splitting,
+                   assert_create_fastq_for_index_read,
+                   assert_minimum_trimmed_read_length,
+                   assert_mask_short_reads,
+                   ("\"%s\"" % assert_adapter1
+                    if assert_adapter1 is not None
+                    else None),
+                   ("\"%s\"" % assert_adapter2
+                    if assert_adapter2 is not None
+                    else None),
+                   ("\"%s\"" % version
+                    if version is not None
+                    else None)))
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("bcl2fastq:")
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,exit_code=0,
+                 missing_fastqs=None,
+                 platform=None,
+                 assert_override_cycles=None,
+                 assert_no_lane_splitting=None,
+                 assert_create_fastq_for_index_read=None,
+                 assert_minimum_trimmed_read_length=None,
+                 assert_mask_short_reads=None,
+                 assert_adapter1=None,
+                 assert_adapter2=None,
+                 version=None):
+        """
+        Internal: configure the mock bcl-convert program
+        """
+        self._exit_code = exit_code
+        self._missing_fastqs = missing_fastqs
+        self._platform = platform
+        self._assert_override_cycles = assert_override_cycles
+        self._assert_no_lane_splitting = assert_no_lane_splitting
+        self._assert_create_fastq_for_index_read = \
+                                assert_create_fastq_for_index_read
+        self._assert_minimum_trimmed_read_length = \
+                                assert_minimum_trimmed_read_length
+        self._assert_mask_short_reads = assert_mask_short_reads
+        self._assert_adapter1 = assert_adapter1
+        self._assert_adapter2 = assert_adapter2
+        self._version = version
+
+    def main(self,args):
+        """
+        Internal: provides mock bcl-convert functionality
+        """
+        # Build generic header
+        header = """bcl-convert Version 00.000.000.%s
+Copyright (c) 2014-2018 Illumina, Inc.
+""" % self._version
+        # Handle version request
+        if "-V" in args:
+            print(header)
+            return self._exit_code
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("-r","--bcl-input-directory",action="store")
+        p.add_argument("-o","--output-dir",action="store")
+        p.add_argument("--sample-sheet",action="store")
+        p.add_argument("--bcl-only-lane",action="store")
+        p.add_argument("--mask-short-adapter-reads",action="store")
+        p.add_argument("--no-lane-splitting",action="store")
+        p.add_argument("--bcl-sampleproject-subdirectories",action="store")
+        p.add_argument("--bcl-num-parallel-tiles",action="store")
+        p.add_argument("--bcl-num-conversion-threads",action="store")
+        p.add_argument("--bcl-num-compression-threads",action="store")
+        p.add_argument("--bcl-num-decompression-threads",action="store")
+        args = p.parse_args(args)
+        # Check for input directory
+        input_dir = args.bcl_input_directory
+        print("BCL input directory: %s" % input_dir)
+        if not input_dir:
+            return 1
+        # Output directory
+        output_dir = args.output_dir
+        print("Output directory: %s" % output_dir)
+        if not output_dir:
+            return 1
+        elif os.path.exists(output_dir):
+            return 1
+        # Lane specified on command line
+        if args.bcl_only_lane:
+            try:
+                lanes = [int(args.bcl_only_lane)]
+            except ValueError:
+                return 1
+        else:
+            lanes = []
+        # Check for sample sheet file
+        if not args.sample_sheet:
+            # Default location is the root input folder
+            sample_sheet_file = os.path.join(input_dir,"SampleSheet.csv")
+        else:
+            sample_sheet_file = args.sample_sheet
+        print("Sample sheet: %s" % sample_sheet_file)
+        if not os.path.exists(sample_sheet_file):
+            return 1
+        # Extract default settings from the sample sheet
+        sample_sheet = SampleSheet(sample_sheet_file)
+        create_fastq_for_index_read = 0
+        barcode_mismatch_index1 = 1
+        barcode_mismatch_index2 = 1
+        adapter_sequence_read1 = None
+        adapter_sequence_read2 = None
+        minimum_trimmed_read_length = 35
+        mask_short_reads = 22
+        override_cycles = None
+        for item in sample_sheet.settings_items:
+            if item == "CreateFastqForIndexRead":
+                # Create index read Fastqs
+                create_fastq_for_index_read = \
+                    sample_sheet.settings['CreateFastqForIndexRead']
+            elif item.startswith("BarcodeMismatchIndex"):
+                # Number of mismatches allowed
+                indx = int(item[-1])
+                if indx == 1:
+                    barcode_mismatch_index1 = \
+                        sample_sheet.settings['BarcodeMismatchIndex1']
+                elif indx == 2:
+                    barcode_mismatch_index2 = \
+                        sample_sheet.settings['BarcodeMismatchIndex2']
+            elif item.startswith("AdapterRead"):
+                # Adapter sequences
+                indx = int(item[-1])
+                if indx == 1:
+                    adapter_sequence_read1 = \
+                        sample_sheet.settings['AdapterRead1']
+                elif indx == 2:
+                    adapter_sequence_read2 = \
+                        sample_sheet.settings['AdapterRead2']
+            elif item == "MinimumTrimmedReadLength":
+                # Minimum sequence length after trimming
+                minimum_trimmed_read_length = \
+                    sample_sheet.settings['MinimumTrimmedReadLength']
+            elif item == "MaskShortReads":
+                # Masking short reads
+                mask_short_reads = sample_sheet.settings['MaskShortReads']
+            elif item == "OverrideCycles":
+                override_cycles = sample_sheet.settings['OverrideCycles']
+        if sample_sheet.has_lanes and lanes:
+            # Check lane specifications match up between
+            # command line and sample sheet
+            sample_sheet_lanes = set()
+            for line in sample_sheet:
+                sample_sheet_lanes.add(int(line['Lane']))
+            sample_sheet_lanes = sorted(list(lanes))
+            if sample_sheet_lanes != lanes:
+                return 1
+        # Check the adapter sequences from the sample sheet
+        if (self._assert_adapter1 is not None) or \
+           (self._assert_adapter2 is not None):
+            # Extract adapter sequences
+            try:
+                adapter1 = sample_sheet.settings['AdapterRead1']
+            except KeyError:
+                adapter1 = ""
+            try:
+                adapter2 = sample_sheet.settings['AdapterRead2']
+            except KeyError:
+                adapter2 = ""
+            if self._assert_adapter1 is not None:
+                print("Check AdapterRead1: should be '%s', got '%s'" %
+                      (self._assert_adapter1,adapter1))
+                assert(self._assert_adapter1 == adapter1)
+            if self._assert_adapter2 is not None:
+                print("Check AdapterRead2: should be '%s', got '%s'" %
+                      (self._assert_adapter2,adapter2))
+                assert(self._assert_adapter2 == adapter2)
+        # No lane splitting
+        no_lane_splitting = False
+        if args.no_lane_splitting:
+            if args.no_lane_splitting == "true":
+                no_lane_splitting = True
+        # SampleProject subdirectories
+        sampleproject_subdirectories = False
+        if args.bcl_sampleproject_subdirectories:
+            if args.bcl_sampleproject_subdirectories == "true":
+                sampleproject_subdirectories = True
+        # Check override cycles
+        if self._assert_override_cycles:
+            print("Checking OverrideCycles: %s" % override_cycles)
+            assert(override_cycles == self._assert_override_cycles)
+        # Check CreateFastqForIndexRead
+        if self._assert_create_fastq_for_index_read is not None:
+            print("Checking CreateFastqForIndexRead: %s" %
+                  create_fastq_for_index_read)
+            assert(create_fastq_for_index_read ==
+                   self._assert_create_fastq_for_index_read)
+        # Check MinimumTrimmedReadLength
+        if self._assert_minimum_trimmed_read_length is not None:
+            print("Checking MinimumTrimmedReadLength: %s" %
+                  minimum_trimmed_read_length)
+            assert(int(minimum_trimmed_read_length) ==
+                   int(self._assert_minimum_trimmed_read_length))
+        # Check MaskShortReads
+        if self._assert_mask_short_reads is not None:
+            print("Checking MaskShortReads: %s" % mask_short_reads)
+            assert(int(mask_short_reads) ==
+                   int(self._assert_mask_short_reads))
+        # Check --no-lane-splitting
+        if self._assert_no_lane_splitting is not None:
+            print("Checking --no-lane-splitting: %s" % no_lane_splitting)
+            assert(no_lane_splitting == self._assert_no_lane_splitting)
+        # Platform
+        print("Platform (default): %s" % self._platform)
+        # RunInfo.xml
+        run_info_xml = os.path.join(input_dir,"RunInfo.xml")
+        if not os.path.exists(run_info_xml):
+            return 1
+        # Modifiers
+        no_lane_splitting = bool(args.no_lane_splitting)
+        print("No lane splitting: %s" % no_lane_splitting)
+        create_fastq_for_index_read = bool(create_fastq_for_index_read)
+        print("Create fastq for index read: %s" %
+              create_fastq_for_index_read)
+        # Get reads and determine if run is paired end
+        reads = []
+        ii = 1
+        ir = 1
+        for r in IlluminaRunInfo(run_info_xml).reads:
+            if r['is_indexed_read'] == 'N':
+                reads.append("R%d" % ir)
+                ir += 1
+            elif create_fastq_for_index_read:
+                reads.append("I%d" % ii)
+                ii += 1
+        if ir == 2:
+            paired_end = True
+        else:
+            paired_end = False
+        print("Paired-end: %s" % paired_end)
+        # Lanes
+        if not lanes:
+            # Include all lanes
+            lanes = IlluminaRun(input_dir,platform=self._platform).lanes
+        print("Lanes: %s" % lanes)
+        # Generate mock output based on inputs
+        tmpname = "tmp.%s" % uuid.uuid4()
+        make_mock_bcl2fastq2_output(os.path.join(tmpname,"bclconvert"),
+                                    lanes=lanes,
+                                    reads=reads,
+                                    sample_sheet=sample_sheet_file,
+                                    no_lane_splitting=no_lane_splitting,
+                                    exclude_fastqs=self._missing_fastqs)
+        # Move to final location
+        os.rename(os.path.join(tmpname,"bclconvert"),
                   output_dir)
         shutil.rmtree(tmpname)
         return self._exit_code
@@ -2260,6 +2668,151 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
                     fp.write("%s	13.13	93.21\n" % genome)
         # Exit
         return self._exit_code
+
+class MockConda(object):
+    """
+    Create mock conda installation
+
+    This class can be used to create a mock conda
+    installation consisting of:
+
+    - ``bin`` subdirectory with mock ``conda`` executable
+      and 'activate' script
+    - ``envs`` subdirectory
+
+    This can be used in place of an actual conda
+    installation for testing purposes.
+
+    To create a mock installation, use the 'create'
+    static method, e.g.
+
+    >>> MockCondaExe.create("/tmpbin/conda")
+
+    The resulting ``conda`` executable supports
+    ``--version`` and the ``create`` command, and
+    will generate mock outputs for both.
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - the 'create' command can be forced to fail for
+      all inputs by setting the `create_fails` argument
+    - the reported version can be set via the `version`
+      argument
+    """
+
+    @staticmethod
+    def create(path,version="4.10.3",create_fails=False,exit_code=0):
+        """
+        Create a "mock" fastq_strand.py executable
+
+        Arguments:
+          path (str): path to the top-level directory
+            for the mock conda installation (which
+            must not exist, however the directory it
+            will be created in must be present).
+          version (str): version that mock conda
+            will claim to be
+          create_fails (bool): if True then the
+            'create' subcommand of the mock
+            conda executable will fail.
+          exit_code (int): exit code that the
+            mock executable should complete with
+        """
+        path = os.path.abspath(path)
+        print("Building mock installation: %s" % path)
+        # Don't clobber an existing installation
+        assert(os.path.exists(path) is False)
+        # Set up directories
+        os.mkdir(path)
+        for d in ("bin","envs"):
+            os.mkdir(os.path.join(path,d))
+        # Create mock files
+        bin_dir = os.path.join(path,"bin")
+        conda_ = os.path.join(bin_dir,"conda")
+        if not create_fails:
+            with open(conda_,'wt') as fp:
+                fp.write("""#!/bin/bash
+if [ "$1" == "--version" ] ; then
+   echo "conda %s"
+   exit 0
+elif [ "$1" == "create" ] ; then
+   YES=
+   PREFIX=
+   PACKAGES=
+   while [ ! -z "$2" ] ; do
+     case "$2" in
+       -n)
+         shift
+         PREFIX=$(dirname $(dirname $0))/envs/${2}
+         ;;
+       --prefix)
+         shift
+         PREFIX=$2
+         ;;
+       -y)
+         YES=yes
+         ;;
+       -c)
+         shift
+         ;;
+       --override-channels)
+         ;;
+       *)
+         PACKAGES="$PACKAGES $2"
+         ;;
+     esac
+     shift
+   done
+fi
+if [ -z "$YES" ] ; then
+   echo "Need to supply -y option"
+   exit 1
+fi
+if [ -z "$PREFIX" ] ; then
+   echo "Need to supply either -n or --prefix"
+   exit 1
+fi
+# Make directory for new environment
+mkdir -p $PREFIX
+# Write package list to a 'packages.txt' file
+echo $PACKAGES >${PREFIX}/packages.txt
+# Make an executable script for each package name
+for pkg in $PACKAGES ; do
+   name=$(echo $pkg | cut -f1 -d=)
+   cat >${PREFIX}/${name} <<EOF
+#!/bin/bash
+echo \$1
+exit %s
+EOF
+   chmod +x ${PREFIX}/${name}
+done
+""" % (version,exit_code))
+        else:
+            with open(conda_,'wt') as fp:
+                fp.write("""#!/bin/bash
+if [ "$1" == "--version" ] ; then
+   echo "conda %s"
+   exit 0
+elif [ "$1" == "create" ] ; then
+   echo "!!!! Failed to create environment !!!!"
+   exit 1
+fi
+""" % version)
+        os.chmod(conda_,0o775)
+        # Make mock 'activate' script
+        activate_ = os.path.join(bin_dir,"activate")
+        with open(activate_,'wt') as fp:
+            fp.write("""#!/bin/bash
+export PATH=$PATH:${1}
+""")
+            os.chmod(activate_,0o755)
+        with open(conda_,'rt') as fp:
+            print("conda:")
+            print("%s" % fp.read())
+        return path
 
 class MockCellrangerExe(Mock10xPackageExe):
     """

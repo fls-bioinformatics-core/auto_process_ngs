@@ -14,13 +14,18 @@ bcl2fastq/utils.py
 
 Utility functions for bcl to fastq conversion operations:
 
+- get_sequencer_platform: get sequencing instrument platform
 - available_bcl2fastq_versions: list available bcl2fastq converters
 - bcl_to_fastq_info: retrieve information on the bcl2fastq software
+- bclconvert_info: retrieve information on the BCL Convert software
 - make_custom_sample_sheet: create a corrected copy of a sample sheet file
 - get_required_samplesheet_format: fetch format required by bcl2fastq version
-- get_nmismatches: determine number of mismatches from bases mask
-- check_barcode_collisions: look for too-similiar pairs of barcode sequences
 - get_bases_mask: get a bases mask string
+- bases_mask_is_valid: check if bases mask string is valid
+- get_nmismatches: determine number of mismatches from bases mask
+- convert_bases_mask_to_override_cycles: convert bases mask for BCL convert
+- check_barcode_collisions: look for too-similiar pairs of barcode sequences
+
 """
 
 #######################################################################
@@ -219,6 +224,61 @@ def bcl_to_fastq_info(path=None):
     # Return what we found
     return (bcl2fastq_path,package_name,package_version)
 
+def bclconvert_info(path=None):
+    """
+    Retrieve information on the bcl-convert software
+
+    If called without any arguments this will locate the first
+    bcl-concert executable that is available on the user's PATH.
+
+    Alternatively if the path to an executable is supplied then
+    the package name and version will be determined from that
+    instead.
+
+    If no package is identified then the script path is still
+    returned, but without any version info.
+
+    Returns:
+      Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
+        is the full path for the bcl-convert program, and PACKAGE
+        and VERSION the package/version that it belongs to (PACKAGE
+        will be 'BCL Convert' if a matching executable is located).
+        If any value can't be determined then it will be returned
+        as an empty string.
+
+    """
+    # Initialise
+    bclconvert_path = ''
+    package_name = ''
+    package_version = ''
+    # Locate the bcl-convert program
+    if not path:
+        bclconvert_path = bcf_utils.find_program('bcl-convert')
+    else:
+        bclconvert_path = os.path.abspath(path)
+    # Identify the version
+    if bclconvert_path:
+        # Run the program to get the version
+        version_cmd = Command('bcl-convert','-V')
+        output = version_cmd.subprocess_check_output()[1]
+        print(output)
+        for line in output.split('\n'):
+            if line.startswith('bcl-convert'):
+                # Extract version from line of the form
+                # bcl-convert Version 00.000.000.3.7.5
+                package_name = 'BCL Convert'
+                try:
+                    package_version = '.'.join(line.split('.')[-3:])
+                except Exception as ex:
+                    logger.warning("Unable to get version from '%s': %s" %
+                                   (line,ex))
+    else:
+        # No package supplied or located
+        logger.warning("Unable to identify BCLConvert package from '%s'" %
+                       bclconvert_path)
+    # Return what we found
+    return (bclconvert_path,package_name,package_version)
+
 def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
                              lanes=None,adapter=None,adapter_read2=None,
                              fmt=None):
@@ -290,7 +350,12 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
     # Update adapter sequences
     if adapter is not None:
         if adapter:
-            sample_sheet.settings['Adapter'] = str(adapter)
+            if 'AdapterRead1' in sample_sheet.settings:
+                # SampleSheet V2: set AdapterRead1
+                sample_sheet.settings['AdapterRead1'] = str(adapter)
+            else:
+                # SampleSheet IEM format: set Adapter
+                sample_sheet.settings['Adapter'] = str(adapter)
         else:
             try:
                 del(sample_sheet.settings['Adapter'])
@@ -391,7 +456,7 @@ def bases_mask_is_valid(bases_mask):
     except AttributeError:
         return False
 
-def get_nmismatches(bases_mask):
+def get_nmismatches(bases_mask,multi_index=False):
     """
     Determine number of mismatches from bases mask
 
@@ -409,19 +474,26 @@ def get_nmismatches(bases_mask):
 
     Arguments:
       bases_mask: bases mask string of the form e.g. 'y101,I6,y101'
+      multi_index: boolean flag, if False (default) then use the
+        total length of all indices and return a single integer
+        number of allowed mismatches; if True then return a list
+        with the number of mismatches for each index (so a dual
+        index will be a pair of allowed mismatches)
 
     Returns:
       Integer value of number of mismatches. (If the bases mask doesn't
-      contain any index reads then returns zero.)
+        contain any index reads then returns zero for single-index mode,
+        or an empty list for multi-read mode.)
 
     """
     # Check mask is valid
     if not bases_mask_is_valid(bases_mask):
         raise Exception("'%s': not a valid bases mask" % bases_mask)
-    # Total the length of all index reads
-    index_length = 0
+    # Get the lengths of each index read
+    index_lengths = []
     for read in bases_mask.upper().split(','):
         if read.startswith('I'):
+            index_length = 0
             try:
                 i = read.index('N')
                 read = read[:i]
@@ -431,13 +503,71 @@ def get_nmismatches(bases_mask):
                 index_length += int(read[1:])
             except ValueError:
                 index_length += len(read)
-    # Return number of mismatches
-    if index_length >= 6:
-        return 1
+            index_lengths.append(index_length)
+    if multi_index:
+        # Return list of mismatches
+        return [1 if index_length >= 6 else 0
+                for index_length in index_lengths]
     else:
-        return 0
+        # Total the length of all index reads
+        index_length = sum(index_lengths)
+        # Return number of mismatches
+        if index_length >= 6:
+            return 1
+        else:
+            return 0
 
-def check_barcode_collisions(sample_sheet_file,nmismatches):
+def convert_bases_mask_to_override_cycles(bases_mask):
+    """
+    Converts bcl2fastq-format bases mask to BCL Convert format
+
+    Given a bases mask string (e.g. 'y76,I8,I8,y76'), returns
+    the equivalent BCL Convert format for use with 'OverrideCycles'
+    in a sample sheet (e.g. 'Y76;I8;I8;Y76').
+
+    Arguments:
+      bases_mask (str): bcl2fastq bases mask string
+
+    Returns:
+      String: the original bases mask converted to BCL Convert
+        format
+    """
+    override_cycles = []
+    for item in str(bases_mask).upper().split(','):
+        value = ''
+        count = 0
+        for c in item:
+            if not value:
+                # First character
+                value += c
+            elif c.isdigit():
+                # Digit character
+                value += c
+            else:
+                # Non-digit character
+                if c == value[-1]:
+                    # Same as previous character
+                    count += 1
+                else:
+                    # Different from previous character
+                    if count:
+                        # Increase count by 1 to include
+                        # the very first character
+                        value += str(count+1)
+                        count = 0
+                    value += c
+        # Tidy up trailing count
+        if count:
+            # Increase count by 1 to include
+            # the very first character
+            value += str(count+1)
+        # Add converted item
+        override_cycles.append(value)
+    # Assemble with appropriate delimiter and return
+    return ';'.join(override_cycles)
+
+def check_barcode_collisions(sample_sheet_file,nmismatches,
+                             use_index='all'):
     """
     Check sample sheet for barcode collisions
 
@@ -459,6 +589,10 @@ def check_barcode_collisions(sample_sheet_file,nmismatches):
       sample_sheet_file (str): path to a SampleSheet.csv file
         to analyse for barcode collisions
       nmismatches (int): maximum number of mismatches to allow
+      use_index (str): flag indicating how to treat index
+        sequences: 'all' (the default) combines indexes into a
+        single sequence before checking for collisions, '1' only
+        checks index 1 (i7), and '2' only checks index 2 (i5)
 
     Returns:
       List: list of pairs of colliding barcodes (with each pair
@@ -468,6 +602,8 @@ def check_barcode_collisions(sample_sheet_file,nmismatches):
     """
     # Load the sample sheet data
     sample_sheet = IlluminaData.SampleSheet(sample_sheet_file)
+    # Convert index flag to string
+    use_index = str(use_index)
     # List of index sequences (barcodes)
     barcodes = {}
     has_lanes = sample_sheet.has_lanes
@@ -477,22 +613,39 @@ def check_barcode_collisions(sample_sheet_file,nmismatches):
             lane = line['Lane']
         else:
             lane = 1
-        # Index sequence
+        # Extract i7 index sequence
+        indx_i7 = None
         try:
-            # Try dual-indexed IEM4 format
-            indx = "%s%s" %(line['index'].strip(),
-                            line['index2'].strip())
+            # IEM4 format
+            indx_i7 = line['index'].strip()
         except KeyError:
-            # Try single indexed IEM4 (no index2)
+            # CASAVA format
             try:
-                indx = line['index'].strip()
+                indx_i7 = line['Index'].strip()
             except KeyError:
-                # Try CASAVA format
-                try:
-                    indx = line['Index'].strip()
-                except KeyError:
-                    # No index columns
-                    indx = ""
+                pass
+        # Extract i5 index sequence
+        indx_i5 = None
+        try:
+            # IEM4 format
+            indx_i5 = line['index2'].strip()
+        except KeyError:
+            # No i5 for CASAVA
+            pass
+        # Assemble index sequence to check for mismatches
+        if use_index == "all":
+            # Combine i5 and i7 into a single sequence
+            indx = "%s%s" % (indx_i7 if indx_i7 else '',
+                             indx_i5 if indx_i5 else '')
+        elif use_index == "1":
+            # Only use i7
+            indx = indx_i7
+        elif use_index == "2":
+            # Only use i5
+            indx = indx_i5
+        else:
+            # Undefined index type
+            raise Exception("Unrecognised index: '%s'" % use_index)
         # Explicitly set empty index to None
         if not indx:
             indx = None

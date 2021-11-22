@@ -31,3 +31,9 @@ PROTOCOLS = ('standardPE',
 FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
                  'rRNA',)
+
+# Sequence deduplication thresholds
+SEQUENCE_DEDUP_CUTOFFS = {
+    "warn": 0.3,
+    "fail": 0.2,
+}

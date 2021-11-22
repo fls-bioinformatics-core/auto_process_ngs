@@ -40,13 +40,6 @@ internal use:
 - collect_files: collect files based on glob patterns
 - resolve_parameter: get the value of arbitrary parameter or object
 
-In addition there are classes to help with managing ``conda``
-environments:
-
-- CondaWrapper: wrapper for ``conda``, including environment creation
-- CondaWrapperException: base class for exceptions from CondaWrapper
-- CondaCreateEnvError: exception for errors when creating environments
-
 Overview
 --------
 
@@ -1093,7 +1086,6 @@ import traceback
 import string
 import cloudpickle
 import atexit
-import tempfile
 import textwrap
 import math
 from collections import Iterator
@@ -1103,20 +1095,15 @@ try:
 except ImportError:
     # Python3
     from io import StringIO
-try:
-    from urllib.request import urlopen
-    from urllib.error import URLError
-except ImportError:
-    # Failed to get Python3 urlopen, fallback to Python2
-    from urllib2 import urlopen
-    from urllib2 import URLError
 from functools import reduce
 from bcftbx.utils import mkdir
-from bcftbx.utils import find_program
 from bcftbx.utils import AttributeDictionary
 from bcftbx.JobRunner import ResourceLock
 from bcftbx.JobRunner import SimpleJobRunner
 from .command import Command
+from .conda import CondaWrapper
+from .conda import CondaWrapperError
+from .conda import make_conda_env_name
 from .simple_scheduler import SimpleScheduler
 from .simple_scheduler import SchedulerReporter
 
@@ -1134,13 +1121,6 @@ ALLOWED_CHARS = string.ascii_lowercase + string.digits + "._-"
 class PipelineFailure(object):
     IMMEDIATE = 0
     DEFERRED = 1
-
-# Default channels for conda dependency resolution
-CONDA_CHANNELS = (
-    'conda-forge',
-    'bioconda',
-    'defaults',
-)
 
 ######################################################################
 # Generic pipeline base classes
@@ -2070,25 +2050,20 @@ class Pipeline(object):
                                 "module '%s'" % name)
         # Set up conda if required
         if enable_conda:
-            if conda is None:
-                conda = find_program('conda')
-            if conda is None:
+            if conda_env_dir is None:
+                # Create a directory within the working
+                # dir to store conda environments that
+                # are created by the pipeline
+                conda_env_dir = os.path.join(working_dir,
+                                             "__conda",
+                                             "envs")
+            if not os.path.exists(conda_env_dir):
+                os.makedirs(conda_env_dir)
+            # Set up wrapper class
+            conda = CondaWrapper(conda=conda,env_dir=conda_env_dir)
+            if not conda.is_installed:
                 raise PipelineError("Conda dependency resolution enabled "
                                     "but conda couldn't be found")
-            else:
-                if conda_env_dir is None:
-                    # Create a directory within the working
-                    # dir to store conda environments that
-                    # are created by the pipeline
-                    conda_env_dir = os.path.join(working_dir,
-                                                 "__conda",
-                                                 "envs")
-                if not os.path.exists(conda_env_dir):
-                    os.makedirs(conda_env_dir)
-                #
-                conda = CondaWrapper(conda=conda,
-                                     env_dir=conda_env_dir,
-                                     channels=CONDA_CHANNELS)
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -2887,7 +2862,7 @@ class PipelineTask(object):
         Return a name for conda environment based on packages
         """
         if self.conda_dependencies:
-            return '+'.join(sorted(self.conda_dependencies)).replace('=','@')
+            return make_conda_env_name(*self.conda_dependencies)
         else:
             return None
 
@@ -2901,12 +2876,12 @@ class PipelineTask(object):
             (defaults to environments directory belonging to the
             supplied conda installation)
           channels (list): optional list of channel names to use
-            with conda operations
+            with conda operations (overrides defaults)
         """
         # Set up conda wrapper
         conda = CondaWrapper(conda=conda,
                              env_dir=env_dir,
-                             channels=CONDA_CHANNELS)
+                             channels=channels)
         # Make a name for the environment
         env_name = self.conda_env_name
         # Fetch the environment
@@ -3355,14 +3330,8 @@ class PipelineCommand(object):
                 if module is not None:
                     prologue.append("module load %s" % module)
         if conda_env:
-            if not conda:
-                conda = find_program("conda")
-            if not conda:
-                raise PipelineError("Unable to locate conda")
-            conda_dir = os.sep.join(
-                os.path.abspath(conda).split(os.sep)[:-2])
             conda_activate_cmd = \
-                "source %s/bin/activate %s" % (conda_dir,conda_env)
+                str(CondaWrapper(conda).activate_env_cmd(conda_env))
             prologue.extend(["echo %s" % conda_activate_cmd,
                              conda_activate_cmd])
         if working_dir:
@@ -3978,223 +3947,6 @@ class Dispatcher(object):
         """
         with open(pickle_file,'rb') as fp:
             return self._pickler.loads(fp.read())
-
-######################################################################
-# Conda dependency handling
-######################################################################
-
-class CondaWrapper(object):
-    """
-    Class for installing conda and creating environments
-
-    Example usage:
-
-    >>> conda = Conda('/usr/local/miniconda/bin/conda',
-    ...               channels=('bioconda','conda-forge'),
-    ...               env_dir='_conda_envs')
-    >>> conda.install()
-    >>> conda.create_env('multiqc@1.9','multiqc=1.9')
-    """
-    # Details of Miniconda installer
-    _miniconda = {
-        'url':
-        "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh",
-        'sha256':
-        "1314b90489f154602fd794accfc90446111514a5a72fe1f71ab83e07de9504a7",
-    }
-    def __init__(self,conda=None,env_dir=None,channels=None):
-        """
-        Create a new CondaWrapper instance
-
-        Arguments:
-          conda (str): path to conda executable
-          env_dir (str): optional, non-default directory
-            for conda environments
-          channels (list): optional, list of non-default
-            channels to use for installing packages
-        """
-        # Conda executable
-        if conda:
-            conda_dir = os.sep.join(
-                os.path.abspath(conda).split(os.sep)[:-2])
-        else:
-            conda_dir = None
-        self._conda_dir = conda_dir
-        # Default location for environments
-        if env_dir:
-            env_dir = os.path.abspath(env_dir)
-        elif self._conda_dir:
-            env_dir = os.path.join(self._conda_dir,'envs')
-        self._env_dir = env_dir
-        # Channels
-        if channels:
-            channels = [c for c in channels]
-        self._channels = channels
-        # Lock for blocking operations
-        self._lock_manager = ResourceLock()
-
-    @property
-    def conda(self):
-        """
-        Path to conda executable
-        """
-        if self._conda_dir:
-            return os.path.join(self._conda_dir,'bin','conda')
-        else:
-            return None
-
-    @property
-    def version(self):
-        """
-        Return the conda version
-        """
-        if not self.is_installed:
-            return None
-        version_cmd = Command(self.conda,'--version')
-        output = version_cmd.subprocess_check_output()[1]
-        try:
-            return output.split()[1].strip()
-        except Exception as ex:
-            logger.warning("Unable to get conda version")
-
-    @property
-    def is_installed(self):
-        """
-        Check whether conda is installed
-        """
-        if self.conda:
-            return os.path.exists(self.conda)
-        return False
-
-    @property
-    def env_dir(self):
-        """
-        Path to the directory for conda environments
-        """
-        return self._env_dir
-
-    @property
-    def list_envs(self):
-        """
-        Return a list of environments in the 'envs' directory
-        """
-        if self._env_dir and os.path.exists(self._env_dir):
-            return sorted(os.listdir(self._env_dir))
-        else:
-            return []
-
-    def install(self):
-        """
-        Install conda
-
-        Downloads and runs the miniconda installer if
-        conda is not already installed
-        """
-        if self.is_installed:
-            # Already installed
-            return
-        # Download miniconda
-        tmpdir = tempfile.mkdtemp()
-        miniconda_installer = os.path.join(
-            tmpdir,
-            os.path.basename(self._miniconda['url'])
-        )
-        try:
-            url = urlopen(self._miniconda['url'])
-            with open(miniconda_installer,'wb') as fp:
-                fp.write(url.read())
-        except URLError as ex:
-            raise Exception("Failed to download miniconda installer from "
-                            "'%s': %s" (self._miniconda['url']))
-        # Run the installer in silent mode
-        install_cmd = Command('bash',
-                              miniconda_installer,
-                              '-b',
-                              '-p',self._conda_dir)
-        install_cmd.run_subprocess()
-
-    def create_env(self,name,*packages,**args):
-        """
-        Create a new conda environment
-
-        Arguments:
-          name (str): name of the new environment
-          packages (list): package specifications for
-            packages to install (e.g. 'fastqc=0.11.3')
-        """
-        # Get a lock on create operation
-        lock = self._lock_manager.acquire("conda.create_env")
-        if name in self.list_envs:
-            # Environment already exists
-            logger.warning("'%s': environment already exists" % name)
-        else:
-            # Create new environment
-            if not self.is_installed:
-                raise PipelineError("Can't create environment: conda not "
-                                "installed")
-            # Base command
-            create_cmd = Command(self.conda,'create','-y',)
-            # Channels
-            if self._channels:
-                create_cmd.add_args('--override-channels')
-                for channel in self._channels:
-                    create_cmd.add_args('-c',channel)
-            # Create environment in specific location
-            if self._env_dir:
-                create_cmd.add_args('--prefix',
-                                    os.path.join(self._env_dir,name))
-            else:
-                create_cmd.add_args('-n',name)
-            # Packages to install
-            create_cmd.add_args(*packages)
-            # Run the command
-            status,output = create_cmd.subprocess_check_output()
-            if status != 0:
-                # Release the lock
-                self._lock_manager.release(lock)
-                # Raise exception
-                raise CondaCreateEnvError(
-                    status=status,
-                    env_name=name,
-                    cmdline=str(create_cmd),
-                    output=output)
-        if self._env_dir:
-            env_name = os.path.join(self._env_dir,name)
-        else:
-            env_name = name
-        # Release the lock
-        self._lock_manager.release(lock)
-        # Return name/path to conda environment
-        return env_name
-
-class CondaWrapperError(Exception):
-    """
-    Base class for conda-specific exceptions
-    """
-
-class CondaCreateEnvError(CondaWrapperError):
-    """
-    Exception raised when CondaWrapper class fails
-    to create a new environment
-
-    Arguments:
-      message (str): error message
-      env_name (str): name of the environment
-      status (int): status returned by the conda command
-      cmdline (str): command line for the conda command
-        that generated the error
-      output (str): output from the conda command
-    """
-    def __init__(self,message=None,env_name=None,status=None,
-                 cmdline=None,output=None):
-        if message is None:
-            message = "Unable to create environment"
-        self.message = message
-        self.env_name = env_name
-        self.status = status
-        self.cmdline = cmdline
-        self.output = output
-        CondaWrapperError.__init__(self,self.message)
 
 ######################################################################
 # Custom exceptions

@@ -14,6 +14,7 @@ Pipeline classes:
 Pipeline task classes:
 
 - SetupQCDirs
+- GetSeqLengthStats
 - CheckIlluminaQCOutputs
 - RunIlluminaQC
 - SetupFastqStrandConf
@@ -77,6 +78,7 @@ from .outputs import expected_outputs
 from .utils import determine_qc_protocol
 from .utils import set_cell_count_for_project
 from .fastq_strand import build_fastq_strand_conf
+from .seqlens import get_sequence_lengths
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -109,7 +111,6 @@ class QCPipeline(Pipeline):
         # Define parameters
         self.add_param('nthreads',type=int)
         self.add_param('fastq_subset',type=int)
-        self.add_param('fastq_strand_indexes',type=dict)
         self.add_param('cellranger_exe',type=str)
         self.add_param('cellranger_reference_dataset',type=str)
         self.add_param('cellranger_out_dir',type=str)
@@ -124,10 +125,12 @@ class QCPipeline(Pipeline):
         self.add_param('cellranger_jobinterval',type=int)
         self.add_param('cellranger_localcores',type=int)
         self.add_param('cellranger_localmem',type=int)
+        self.add_param('star_indexes',type=dict)
 
         # Define runners
         self.add_runner('verify_runner')
         self.add_runner('qc_runner')
+        self.add_runner('star_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
@@ -241,6 +244,18 @@ class QCPipeline(Pipeline):
         update_qc_metadata_requires.append(setup_qc_dirs)
         qc_metadata['protocol'] = qc_protocol
 
+        # Get Fastq sequence length statistics
+        get_seq_lengths = GetSeqLengthStats(
+            "%s: get sequence length statistics" %
+            project_name,
+            project,
+            qc_dir,
+            qc_protocol=qc_protocol,
+            fastq_attrs=project.fastq_attrs)
+        self.add_task(get_seq_lengths,
+                      requires=(setup_qc_dirs,),
+                      log_dir=log_dir)
+
         # Check illumina_qc.sh is compatible version
         check_illumina_qc_version = CheckIlluminaQCVersion(
             "%s: check illumina_qc.sh version" %
@@ -288,7 +303,7 @@ class QCPipeline(Pipeline):
             project,
             qc_dir=qc_dir,
             organism=organism,
-            star_indexes=self.params.fastq_strand_indexes
+            star_indexes=self.params.star_indexes
         )
         self.add_task(setup_fastq_strand_conf,
                       requires=(setup_qc_dirs,),
@@ -322,7 +337,7 @@ class QCPipeline(Pipeline):
         )
         self.add_task(run_fastq_strand,
                       requires=(check_fastq_strand,),
-                      runner=self.runners['qc_runner'],
+                      runner=self.runners['star_runner'],
                       envmodules=self.envmodules['fastq_strand'],
                       log_dir=log_dir)
         report_requires.append(run_fastq_strand)
@@ -575,7 +590,7 @@ class QCPipeline(Pipeline):
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
 
-    def run(self,nthreads=None,fastq_strand_indexes=None,
+    def run(self,nthreads=None,star_indexes=None,
             fastq_subset=None,cellranger_chemistry='auto',
             cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
@@ -597,8 +612,8 @@ class QCPipeline(Pipeline):
           nthreads (int): number of threads/processors to
             use for QC jobs (defaults to number of slots set
             in job runners)
-          fastq_strand_indexes (dict): mapping of organism
-            IDs to directories with STAR index
+          star_indexes (dict): mapping of organism IDs to
+            directories with STAR indexes
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
           cellranger_chemistry (str): explicitly specify
@@ -668,7 +683,7 @@ class QCPipeline(Pipeline):
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
             instances; valid names are 'qc_runner',
-            'report_runner','cellranger_runner',
+            'star_runner','report_runner','cellranger_runner',
             'verify_runner','default'
           enable_conda (bool): if True then enable use of
             conda environments to satisfy task dependencies
@@ -718,7 +733,6 @@ class QCPipeline(Pipeline):
                               params={
                                   'nthreads': nthreads,
                                   'fastq_subset': fastq_subset,
-                                  'fastq_strand_indexes': fastq_strand_indexes,
                                   'cellranger_chemistry': cellranger_chemistry,
                                   'cellranger_transcriptomes':
                                   cellranger_transcriptomes,
@@ -738,6 +752,7 @@ class QCPipeline(Pipeline):
                                   'cellranger_reference_dataset':
                                   cellranger_reference_dataset,
                                   'cellranger_out_dir': cellranger_out_dir,
+                                  'star_indexes': star_indexes,
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
@@ -833,6 +848,60 @@ class UpdateQCMetadata(PipelineTask):
         qc_info['cellranger_version'] = self.args.cellranger_version
         qc_info['cellranger_refdata'] = self.args.cellranger_refdata
         qc_info.save()
+
+class GetSeqLengthStats(PipelineFunctionTask):
+    """
+    Get data on sequence lengths, masking and padding
+    for Fastqs in a project, and write the data to
+    JSON files.
+    """
+    def init(self,project,qc_dir,qc_protocol=None,fastq_attrs=None):
+        """
+        Initialise the GetSeqLengthStats task
+
+        Arguments:
+          project (AnalysisProject): project with Fastqs
+            to get the sequence length data from
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          qc_protocol (str): QC protocol being used
+          fastq_attrs (BaseFastqAttrs): class to use for
+            extracting data from Fastq names
+        """
+        self._fastqs = list()
+    def setup(self):
+        # Remove index Fastqs
+        self._fastqs = remove_index_fastqs(
+            self.args.project.fastqs,
+            fastq_attrs=self.args.fastq_attrs)
+        # Get sequence length data for Fastqs
+        for fastq in self._fastqs:
+            # Ignore the R2 reads for 10x single-cell ATAC
+            if self.args.qc_protocol in ('10x_scATAC',
+                                         '10x_Multiome_ATAC',):
+                if self.args.fastq_attrs(fastq).read_number == 2:
+                    continue
+            outfile = os.path.join(self.args.qc_dir,
+                                   "%s_seqlens.json" %
+                                   self.args.fastq_attrs(fastq))
+            if os.path.exists(outfile):
+                continue
+            self.add_call(
+                "Get read lengths for %s" % os.path.basename(fastq),
+                get_sequence_lengths,
+                fastq,
+                outfile=outfile)
+    def finish(self):
+        for result in self.result():
+            # Fastq name
+            fastq = result['fastq']
+            # Check output file exists
+            outfile = os.path.join(self.args.qc_dir,
+                                   "%s_seqlens.json" %
+                                   self.args.fastq_attrs(fastq))
+            if not os.path.exists(outfile):
+                raise Exception("Missing sequence length file: %s"  %
+                                outfile)
 
 class CheckIlluminaQCVersion(PipelineTask):
     """
@@ -930,6 +999,9 @@ class RunIlluminaQC(PipelineTask):
         self.conda("fastqc=0.11.3",
                    "fastq-screen=0.14.0",
                    "bowtie=1.2.3")
+        # Need older version of libwebp for compatibility
+        # with Perl GD
+        self.conda("libwebp=0.5.2")
         # Also need to specify tbb=2020.2 for bowtie
         # See https://www.biostars.org/p/494922/
         self.conda("tbb=2020.2")
@@ -1022,16 +1094,16 @@ class SetupFastqStrandConf(PipelineFunctionTask):
             print("No STAR indexes available")
             return
         print("STAR indexes: %s" % star_indexes)
-        fastq_strand_indexes = build_fastq_strand_conf(
+        star_indexes = build_fastq_strand_conf(
             get_organism_list(organism),
             star_indexes)
-        if not fastq_strand_indexes:
+        if not star_indexes:
             print("No matching indexes for strandedness determination")
             return
         # Create the conf file
         print("Writing conf file: %s" % fastq_strand_conf)
         with open(fastq_strand_conf,'wt') as fp:
-            fp.write("%s\n" % fastq_strand_indexes)
+            fp.write("%s\n" % star_indexes)
     def finish(self):
         if os.path.exists(self.fastq_strand_conf):
             self.output.fastq_strand_conf.set(

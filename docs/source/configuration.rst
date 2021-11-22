@@ -67,7 +67,7 @@ Basic configuration
 
 Using the basic ``auto_process`` Fastq generation requires minimal
 configuration when running locally; provided that the required
-``bcl2fastq`` software is available on the system (see
+BCL conversion software is available on the system (see
 :ref:`software_dependencies`) it should run without further setup.
 
 Running the QC pipeline requires additional software plus reference data
@@ -108,7 +108,6 @@ as follows:
 The instrument name can be derived from the name of the directories
 produced by the sequencer (see :ref:`run_and_fastq_naming_conventions`).
 
-
 .. note::
 
    These sections replace the old ``sequencers`` section used
@@ -120,6 +119,37 @@ produced by the sequencer (see :ref:`run_and_fastq_naming_conventions`).
       SN7001250 = hiseq4000
 
   This section is still supported but is now deprecated.
+
+Each platform referenced in the ``[sequencer:...]`` sections can
+optionally be defined in its own ``[platform:...]`` section, where
+platform-specific options for Fastq generation can be set to
+override those in the ``[bcl_conversion]`` section.
+
+The available options are:
+
+======================= ==============================================
+``bcl_converter``       Specify the BCL conversion software to be used
+                        when processing data from this platform (see
+			:ref:`specifying_bcl_conversion_software`)
+``nprocessors``         Optionally, specify the number of processors
+                        to use when performing the BCL to Fastq
+			conversion (deprecated, it is recommended to
+			set this implicitly via the job runners - see
+			:ref:`setting_number_of_cpus`)
+``no_lane_splitting``   Specify whether to merge Fastqs for the same
+                        sample across lanes (set to ``true``) or not
+			(set to ``false``)
+``create_empty_fastqs`` Specify whether to create "empty" placeholder
+                        Fastqs for samples where demultiplexing failed
+			to assign any reads
+======================= ==============================================
+
+For example:
+
+::
+
+   [platform:hiseq4000]
+   bcl_converter = bcl2fastq>=2.20
 
 ----------------
 Default metadata
@@ -176,6 +206,8 @@ section of the settings file:
 Runner name                   Used for
 ============================= =========================================
 ``bcl2fastq``                 Running ``bcl2fastq`` in Fastq generation
+``bcl_convert``               Running ``bcl-convert`` in Fastq
+                              generation
 ``stats``                     Running commands to generate statistics
                               after Fastq generation (e.g.
 			      ``fastq_statistics.py``)
@@ -184,7 +216,9 @@ Runner name                   Used for
                               generation, archiving etc)
 ``qc``                        Running computationally intensive QC
                               commands (e.g. ``FastQC``, ``Fastq_screen``,
-                              strandedness etc)
+                              etc)
+``star``                      Running pipeline tasks which use ``STAR``
+                              (e.g. strandedness, alignment etc)
 ``cellranger``                Running ``cellranger`` in Fastq generation
                               and QC pipelines
 ``icell8``                    Default runner for commands in the ICELL8
@@ -221,16 +255,16 @@ For ``GEJobRunners`` the number of available CPUs is inferred from the
 For some commands the number of available CPUs will be taken implicitly
 from this argument unless explicitly overridden by the following settings:
 
-=============== ================================== =====================
-Section         Setting                            Overrides runner
-=============== ================================== =====================
-``bcl2fastq``   ``nprocessors``                    ``bcl2fastq``
-``fastq_stats`` ``nprocessors``                    ``stats``
-``qc``          ``nprocessors``                    ``qc``
-``icell8``      ``nprocessors_contaminant_filter`` ``icell8_contaminant_filter``
-``icell8``      ``nprocessors_statistics``         ``icell8_statistics``
-``10xgenomics`` ``cellranger_localcores``          ``cellranger`` (*)
-=============== ================================== =====================
+================== ================================== =====================
+Section            Setting                            Overrides runner
+================== ================================== =====================
+``bcl_conversion`` ``nprocessors``                    ``bcl2fastq``/``bcl_convert``
+``fastq_stats``    ``nprocessors``                    ``stats``
+``qc``             ``nprocessors``                    ``qc``
+``icell8``         ``nprocessors_contaminant_filter`` ``icell8_contaminant_filter``
+``icell8``         ``nprocessors_statistics``         ``icell8_statistics``
+``10xgenomics``    ``cellranger_localcores``          ``cellranger`` (*)
+================== ================================== =====================
 
 (*) Used when ``cellranger`` is run with ``--jobmode=local``
 
@@ -364,6 +398,7 @@ For the ``make_fastqs`` stage, additional module files can be specified
 for individual tasks with the Fastq generation pipeline:
 
 * ``bcl2fastq``
+* ``bcl_convert``
 * ``cellranger_mkfastq``
 * ``cellranger_atac_mkfastq``
 * ``cellranger_arc_mkfastq``
@@ -406,48 +441,74 @@ To do this by default, set the ``enable_conda`` parameter in the
 Note that this requires ``conda`` to be installed and available on the
 user's ``PATH`` at run-time.
 
-.. _required_bcl2fastq_versions:
+By default a temporary directory will be used when creating and reusing
+``conda`` environments, but this can be overriden by setting the
+``env_dir`` parameter, e.g.::
 
----------------------------
-Required bcl2fastq versions
----------------------------
+    [conda]
+    enable_conda = true
+    env_dir = $HOME/conda_envs
 
-Different versions of Illumina's ``bcl2fastq`` software can be specified
-both as a default and dependent on the sequencer platform, by setting the
-appropriate parameters in the ``auto_process.ini`` file.
+.. _specifying_bcl_conversion_software:
 
-The ``[bcl2fastq]`` directive specifies the defaults to use for all
-platforms in the absence of more specific settings, for example::
+-------------------------------------------------------
+Specifying BCL to Fastq conversion software and options
+-------------------------------------------------------
 
-    [bcl2fastq]
-    default_version = 1.8.4
-    nprocessors = 8
+The ``[bcl_conversion]`` section sets the default settings for BCL
+to Fastq generation:
 
-These settings can be overriden for specific platforms, by creating optional
-directives of the form ``[platform:NAME]`` (where ``NAME`` is the name of the
-platform). For example to set the version to use when processing data from a
-NextSeq instrument to be specifically ``2.17.1.14``::
-
-    [platform:nextseq]
-    bcl2fastq = 2.17.1.14
-
-A range of versions can be specified by prefacing the version number by
-one of the operators ``>``, ``>=``, ``<=`` and ``<`` (``==`` can also be
-specified explicitly), for example::
-
-    bcl2fastq = >=2.0
-
-Alternatively a comma-separated list can be provided::
-
-    bcl2fastq = >=1.8.3,<2.0
-
-If no bcl2fastq version is explicitly specified then the highest available
-version will be used.
+======================= ==============================================
+``bcl_converter``       Specify the BCL conversion software to be used
+                        when processing data from this platform; see
+			below for more information
+``nprocessors``         Optionally, specify the number of processors
+                        to use when performing the BCL to Fastq
+			conversion (deprecated, it is recommended to
+			set this implicitly via the job runners - see
+			:ref:`setting_number_of_cpus`)
+``no_lane_splitting``   Specify whether to merge Fastqs for the same
+                        sample across lanes (set to ``true``) or not
+			(set to ``false``)
+``create_empty_fastqs`` Specify whether to create "empty" placeholder
+                        Fastqs for samples where demultiplexing failed
+			to assign any reads
+======================= ==============================================
 
 .. note::
 
-   This mechanism allows multiple ``bcl2fastq`` versions to be present
-   in the environment simultaneously.
+   This replaces the settings in the old ``[bcl2fastq]`` section,
+   which is now deprecated.
+
+The ``bcl_converter`` setting can be used to specify both the software
+package and optionally also a required version; it takes the general
+form:
+
+::
+
+   bcl_converter = PACKAGE[REQUIREMENT]
+
+Valid package names are:
+
+ * ``bcl2fastq``
+ * ``bcl-convert``
+
+Version requirements are specified by prefacing the version number by
+one of the operators ``>``, ``>=``, ``<=`` and ``<`` (``==`` can also
+be specified explicitly), for example:
+
+::
+
+    bcl_converter = bcl-convert>=3.7
+
+Alternatively a comma-separated list can be provided:
+
+::
+
+    bcl_converter = bcl2fastq>=1.8.3,<2.0
+
+If no version is explicitly specified then the highest available
+version will be used.
 
 .. _data_transfer_destinations:
 

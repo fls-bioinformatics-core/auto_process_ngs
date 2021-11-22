@@ -52,7 +52,13 @@ determine which metrics are run:
 
 * ``--protocol``: specify the QC protocol (see :doc:`run_qc`
   for a complete list)
-* ``--organism``: specify the organism(s)
+* ``--organism``: specify the organism(s) (e.g. ``human``,
+  ``mouse`` etc)
+* ``--library-type``: specify the library type (e.g. ``RNA-seq``,
+  ``ChIP-seq`` etc)
+* ``--single-cell-platform``: specify the name for the single
+  cell platform (e.g. ``10xGenomics Chromium 3'v3``; see
+  :doc:`projects_info` for a complete list)
 
 .. note::
 

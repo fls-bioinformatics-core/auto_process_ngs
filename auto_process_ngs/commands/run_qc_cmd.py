@@ -34,7 +34,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
            working_dir=None,verbose=None,
            max_jobs=None,max_cores=None,
            batch_limit=None,enable_conda=None,
-           poll_interval=None):
+           conda_env_dir=None,poll_interval=None):
     """Run QC pipeline script for projects
 
     Run the illumina_qc.sh script to perform QC on projects.
@@ -92,6 +92,8 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
          exceed this limit
       enable_conda (bool): if True then use conda to resolve
         dependencies declared on tasks in the pipeline
+      conda_env_dir (str): path to non-default directory for conda
+        environments
       poll_interval (float): specifies non-default polling
         interval for scheduler used for running QC
 
@@ -115,27 +117,50 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     if len(projects) == 0:
         logger.warning("No projects found for QC analysis")
         return 1
+    # Set up dictionaries for indices and reference data
+    # STAR indexes
+    star_indexes = dict()
+    for organism in ap.settings.organisms:
+        star_index = ap.settings.organisms[organism].star_index
+        if star_index:
+            star_indexes[organism] = star_index
     # Set 10x cellranger reference data
     if not cellranger_transcriptomes:
         cellranger_transcriptomes = dict()
-    if ap.settings['10xgenomics_transcriptomes']:
-        for organism in ap.settings['10xgenomics_transcriptomes']:
-            if organism not in cellranger_transcriptomes:
-                cellranger_transcriptomes[organism] = \
-                    ap.settings['10xgenomics_transcriptomes'][organism]
     if not cellranger_premrna_references:
         cellranger_premrna_references = dict()
-    if ap.settings['10xgenomics_premrna_references']:
-        for organism in ap.settings['10xgenomics_premrna_references']:
-            if organism not in cellranger_premrna_references:
-                cellranger_premrna_references[organism] = \
-                    ap.settings['10xgenomics_premrna_references'][organism]
+    cellranger_atac_references = dict()
+    cellranger_multiome_references = dict()
+    for organism in ap.settings.organisms:
+        reference_datasets = ap.settings.organisms[organism]
+        # Transcriptomes
+        cellranger_reference = reference_datasets.cellranger_reference
+        if cellranger_reference:
+            cellranger_transcriptomes[organism] = cellranger_reference
+        # Pre-mRNA references
+        cellranger_premrna_reference = \
+            reference_datasets.cellranger_premrna_reference
+        if cellranger_premrna_reference:
+            cellranger_premrna_references[organism] = \
+                cellranger_premrna_reference
+        # ATAC
+        cellranger_atac_reference = \
+            reference_datasets.cellranger_atac_reference
+        if cellranger_atac_reference:
+            cellranger_atac_references[organism] = cellranger_atac_reference
+        # Multiome
+        cellranger_arc_reference = \
+            reference_datasets.cellranger_arc_reference
+        if cellranger_arc_reference:
+            cellranger_multiome_references[organism] = \
+                cellranger_arc_reference
     # Set up runners
     if runner is None:
         default_runner = ap.settings.general.default_runner
         runners={
             'cellranger_runner': ap.settings.runners.cellranger,
             'qc_runner': ap.settings.runners.qc,
+            'star_runner': ap.settings.runners.star,
             'verify_runner': default_runner,
             'report_runner': default_runner,
         }
@@ -144,6 +169,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
         runners={
             'cellranger_runner': runner,
             'qc_runner': runner,
+            'star_runner': runner,
             'verify_runner': runner,
             'report_runner': runner,
         }
@@ -160,6 +186,8 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     # Conda dependency resolution
     if enable_conda is None:
         enable_conda = ap.settings.conda.enable_conda
+    if conda_env_dir is None:
+        conda_env_dir = ap.settings.conda.env_dir
     # Set scheduler parameters
     if poll_interval is None:
         poll_interval = ap.settings.general.poll_interval
@@ -186,12 +214,9 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     cellranger_jobinterval = cellranger_settings.cellranger_jobinterval
     cellranger_localcores = cellranger_settings.cellranger_localcores
     cellranger_localmem = cellranger_settings.cellranger_localmem
-    cellranger_atac_references = ap.settings['10xgenomics_atac_genome_references']
-    cellranger_multiome_references = ap.settings['10xgenomics_multiome_references']
     # Run the QC
     status = runqc.run(nthreads=nthreads,
-                       fastq_strand_indexes=
-                       ap.settings.fastq_strand_indexes,
+                       star_indexes=star_indexes,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,
@@ -212,6 +237,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
                        runners=runners,
                        default_runner=default_runner,
                        enable_conda=enable_conda,
+                       conda_env_dir=conda_env_dir,
                        envmodules=envmodules,
                        working_dir=working_dir,
                        verbose=verbose)

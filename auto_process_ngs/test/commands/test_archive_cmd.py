@@ -652,6 +652,82 @@ poll_interval = 0.5
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
 
+    def test_archive_rewrites_qc_info_fastq_dir(self):
+        """archive: test archiving rewrites the Fastq dir in 'qc.info'
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        os.makedirs(final_dir)
+        self.assertTrue(os.path.isdir(final_dir))
+        self.assertEqual(len(os.listdir(final_dir)),0)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        # Add QC outputs to projects
+        for p in ap.get_analysis_projects():
+            UpdateAnalysisProject(p).add_qc_outputs()
+        # Do archiving op
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=False,
+                         final=True)
+        self.assertEqual(status,0)
+        # Check that final dir exists
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.exists(final_archive_dir))
+        self.assertEqual(len(os.listdir(final_dir)),1)
+        # Check contents
+        dirs = ("AB","CDE","logs","undetermined")
+        for d in dirs:
+            d = os.path.join(final_archive_dir,d)
+            self.assertTrue(os.path.exists(d))
+        # Check Fastqs dir in qc.info files
+        for d in ("AB","CDE","undetermined"):
+            d = os.path.join(final_archive_dir,d)
+            qc_info_file = os.path.join(d,"qc","qc.info")
+            with open(qc_info_file,'rt') as fp:
+                for line in fp:
+                    item,value = line.strip().split('\t')
+                    if item == 'Fastq dir':
+                        self.assertEqual(value,
+                                         os.path.join(d,"fastqs"))
+                        break
+        files = ("auto_process.info",
+                 "custom_SampleSheet.csv",
+                 "metadata.info",
+                 "projects.info",
+                 "SampleSheet.orig.csv")
+        for f in files:
+            f = os.path.join(final_archive_dir,f)
+            self.assertTrue(os.path.exists(f))
+        # Check that Fastqs are not writable
+        for project in ("AB","CDE","undetermined"):
+            fq_dir = os.path.join(final_archive_dir,
+                                  project,
+                                  "fastqs")
+            self.assertTrue(os.path.exists(fq_dir))
+            fqs = os.listdir(fq_dir)
+            self.assertTrue(len(fqs) > 0)
+            for fq in fqs:
+                fq = os.path.join(fq_dir,fq)
+                self.assertTrue(os.access(fq,os.R_OK))
+                self.assertTrue(os.access(fq,os.W_OK))
+
     def test_archive_oserror_if_destination_doesnt_exist(self):
         """archive: test archiving raises OSError if destination doesn't exist
         """

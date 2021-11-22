@@ -55,6 +55,11 @@ For certain types of data there are additional files that should
 be added to the project directory manually after running
 ``setup_analysis_dirs``.
 
+Note that for some of these files ``setup_analysis_dirs`` will
+generate partially-populated template versions, with the
+``.template`` extension. These can be edited and renamed before
+use in downstream processing stages (e.g. the QC pipeline).
+
 .. _10x_multiome_libraries_info:
 
 10xGenomics single cell multiome linked samples
@@ -100,3 +105,39 @@ For example:
 
    Lines starting with a comment character (``#``) will be
    ignored when setting up the single library analysis.
+
+.. _setup_analysis_dirs-add-identifier:
+
+-----------------------------------------------
+Adding an identifier to project directory names
+-----------------------------------------------
+
+Sometimes it can be useful to create multiple projects in
+parallel from the same ``projects.info`` data (for example,
+when a run has been processed in several different ways -
+see :ref:`make_fastqs-processing-same-run-multiple-times`).
+
+In this case the ``--id`` option of the ``setup_analysis_dirs``
+command can be used to create project directories where
+each name is taken from the ``projects.info`` file but has
+an identifier (e.g. ``no_trimming``) appended.
+
+For example:
+
+::
+
+   auto_process.py setup_analysis_dirs --id=no_trimming
+
+would produce projects named ``<PROJECT>_no_trimming``.
+
+When multiple ``bcl2fastq`` output directories exist in the
+same analysis directory, the ``--id`` option can be paired with
+the ``--unaligned-dir`` option to produce sets of projects
+derived from specific ``bcl2fastq`` outputs.
+
+For example:
+
+::
+
+   auto_process.py setup_analysis_dirs \
+      --unaligned-dir=bcl2fastq_no_trimming --id=no_trimming

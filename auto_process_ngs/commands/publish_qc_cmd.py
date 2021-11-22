@@ -434,6 +434,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         except ValueError:
             pass
     for pkg in ("bcl2fastq",
+                "bcl-convert",
                 "cellranger",
                 "cellranger-atac",
                 "cellranger-arc",

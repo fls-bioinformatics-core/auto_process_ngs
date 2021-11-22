@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def setup_analysis_dirs(ap,
+                        name=None,
                         unaligned_dir=None,
                         project_metadata_file=None,
                         ignore_missing_metadata=False,
@@ -39,6 +40,8 @@ def setup_analysis_dirs(ap,
     Arguments:
       unaligned_dir (str): optional, name of 'unaligned'
         subdirectory (defaults to value stored in parameters)
+      name (str): (optional) identifier to append to output
+        project directories
       project_metadata_file (str): optional, name of the
         'projects.info' metadata file to take project
         information from
@@ -125,11 +128,16 @@ def setup_analysis_dirs(ap,
         if projects and project_name not in projects:
             logger.warning("Skipping '%s'" % project_name)
             continue
+        # Append the identifier, if supplied
+        if name:
+            new_project_name = project_name + '_' + name
+        else:
+            new_project_name = project_name
         # Create the project
         project = analysis.AnalysisProject(
-            project_name,
+            new_project_name,
             os.path.join(ap.analysis_dir,
-                         project_name),
+                         new_project_name),
             user=user,
             PI=PI,
             organism=organism,
@@ -143,7 +151,7 @@ def setup_analysis_dirs(ap,
             logging.warning("Project '%s' already exists, skipping" %
                             project.name)
             continue
-        print("Creating project: '%s'" % project_name)
+        print("Creating project: '%s'" % new_project_name)
         try:
             project.create_directory(
                 illumina_data.get_project(project_name),
@@ -152,8 +160,63 @@ def setup_analysis_dirs(ap,
             n_projects += 1
         except IlluminaData.IlluminaDataError as ex:
             logger.warning("Failed to create project '%s': %s" %
-                           (project_name,ex))
+                           (new_project_name,ex))
             continue
+        # Create template control files for 10xGenomics projects
+        if single_cell_platform == "10xGenomics Single Cell Multiome":
+            # Make template 10x_multiome_libraries.info file
+            f = "10x_multiome_libraries.info.template"
+            print("-- making %s" % f)
+            f = os.path.join(project.dirn,f)
+            try:
+                with open(f,'wt') as fp:
+                    fp.write("## 10x_multiome_libraries.info\n"
+                             "## Link samples with complementary samples\n"
+                             "## (can be in other runs and/or projects)\n"
+                             "## See https://auto-process-ngs.readthedocs.io/en/latest/using/setup_analysis_dirs.html#xgenomics-single-cell-multiome-linked-samples\n")
+                    for sample in project.samples:
+                        fp.write("#%s\t[RUN:][PROJECT][/SAMPLE]\n" % sample)
+            except Exception as ex:
+                logger.warning("Failed to create '%s': %s" % (f,ex))
+        if single_cell_platform.startswith("10xGenomics Chromium") and \
+           library_type.startswith("CellPlex"):
+            # Acquire reference dataset
+            try:
+                reference_dataset = ap.settings.organisms[organism].\
+                                    cellranger_reference
+            except Exception as ex:
+                logger.warning("Failed to locate 10xGenomics reference "
+                               "dataset for project '%s': %s" %
+                               (project_name,ex))
+                reference_dataset = None
+            # Make template 10x_multi_config.csv file
+            f = "10x_multi_config.csv.template"
+            print("-- making %s" % f)
+            f = os.path.join(project.dirn,f)
+            try:
+                with open(f,'wt') as fp:
+                    fp.write("## 10x_multi_config.csv\n"
+                             "## See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi\n")
+                    # Gene expression section
+                    fp.write("[gene-expression]\n"
+                             "reference,%s\n" %
+                             (reference_dataset if reference_dataset
+                              else "PATH_TO_REFERENCE_DATASET"))
+                    fp.write("\n")
+                    # Libraries section
+                    fp.write("[libraries]\n"
+                             "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
+                    for sample in project.samples:
+                        fp.write("{sample},{fastqs_dir},{sample},any,[gene expression|Multiplexing Capture],\n".format(
+                            sample=sample.name,
+                            fastqs_dir=project.fastq_dir))
+                    fp.write("\n")
+                    # Samples section
+                    fp.write("[samples]\n"
+                             "sample_id,cmo_ids,description\n"
+                             "MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION\n")
+            except Exception as ex:
+                logger.warning("Failed to create '%s': %s" % (f,ex))
         # Copy in additional data files
         if single_cell_platform == "ICELL8 ATAC":
             # Copy across the ATAC report files
@@ -198,6 +261,8 @@ def setup_analysis_dirs(ap,
     # Also set up analysis directory for undetermined reads
     if undetermined_project is None:
         undetermined_project = 'undetermined'
+        if name:
+            undetermined_project = undetermined_project + '_' + name
     undetermined = illumina_data.undetermined
     if illumina_data.undetermined is not None:
         undetermined = analysis.AnalysisProject(
