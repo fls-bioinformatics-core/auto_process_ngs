@@ -9,13 +9,8 @@ import os
 import uuid
 import shutil
 import logging
-try:
-    from urllib.request import urlopen
-    from urllib.error import URLError
-except ImportError:
-    # Failed to get Python3 urlopen, fallback to Python2
-    from urllib2 import urlopen
-    from urllib2 import URLError
+from urllib.request import urlopen
+from urllib.error import URLError
 from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..applications import general as general_applications
