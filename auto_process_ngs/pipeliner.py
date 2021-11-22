@@ -3820,7 +3820,7 @@ class Dispatcher(object):
                 print("Traceback:\n%s" %
                       ''.join(traceback.format_tb(ex.__traceback__)))
             except AttributeError:
-                # No __traceback__ for Python 2 exceptions
+                # No __traceback__ attribute?
                 pass
             result = ex
         # Pickle the result
