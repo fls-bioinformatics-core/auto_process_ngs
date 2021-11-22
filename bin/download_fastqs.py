@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     download_fastqs.py: utility to download fastq files from web server
-#     Copyright (C) University of Manchester 2015 Peter Briggs
+#     Copyright (C) University of Manchester 2015,2021 Peter Briggs
 #
 #########################################################################
 #
@@ -29,11 +29,7 @@ try:
 except ImportError:
     # hashlib not available, use deprecated md5 module
     import md5
-try:
-    from urllib.request import urlopen
-except ImportError:
-    # Failed to get Python3 urlopen, fallback to Python2
-    from urllib2 import urlopen
+from urllib.request import urlopen
 
 #######################################################################
 # Constants
