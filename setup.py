@@ -16,7 +16,6 @@ for pattern in ('bin/*.py','bin/*.sh',):
 # Installation requirements
 install_requires = ['cloudpickle',
                     'configparser',
-                    'future',
                     'genomics-bcftbx',
                     'matplotlib',
                     'pandas',
