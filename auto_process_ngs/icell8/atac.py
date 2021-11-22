@@ -26,11 +26,6 @@ import sys
 import os
 import glob
 import time
-try:
-    # Python 2
-    from itertools import izip as zip
-except ImportError:
-    pass
 from collections import defaultdict
 from bcftbx.FASTQFile import SequenceIdentifier
 from bcftbx.ngsutils import getreads

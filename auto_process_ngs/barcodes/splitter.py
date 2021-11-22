@@ -21,12 +21,6 @@ index sequences) from the read headers:
 
 """
 
-try:
-    # Python 2
-    from itertools import izip as zip
-except ImportError:
-    # Python 3
-    pass
 import logging
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.FASTQFile as FASTQFile
