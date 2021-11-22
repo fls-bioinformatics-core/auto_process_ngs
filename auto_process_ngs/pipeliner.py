@@ -1089,12 +1089,7 @@ import atexit
 import textwrap
 import math
 from collections import Iterator
-try:
-    # Python2
-    from cStringIO import StringIO
-except ImportError:
-    # Python3
-    from io import StringIO
+from io import StringIO
 from functools import reduce
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
@@ -1381,11 +1376,6 @@ class FileCollector(Iterator):
             self._files = None
             self._idx = None
             raise StopIteration
-    def next(self):
-        """
-        Implemented for Python2 compatibility
-        """
-        return self.__next__()
 
 # Capture stdout and stderr from a function call
 # Based on code from http://stackoverflow.com/a/16571630/579925
@@ -3504,7 +3494,7 @@ class PipelineScriptWrapper(PipelineCommand):
             # Multiple blocks
             blocks = []
             for block in self._scripts:
-                blocks.append("{\n%s\n}" % indent(block,"    "))
+                blocks.append("{\n%s\n}" % textwrap.indent(block,"    "))
             return Command(self._block_sep.join(blocks))
 
 ######################################################################
@@ -4016,15 +4006,3 @@ def resolve_parameter(p):
         return p.value
     except AttributeError:
         return p
-
-def indent(s,prefix):
-    """
-    Wrapper for textwrap.indent to handle Python2/3
-    """
-    try:
-        # Python3
-        return textwrap.indent(s,prefix)
-    except AttributeError:
-        # Python2
-        return '\n'.join([prefix+line.rstrip('\n')
-                          for line in s.splitlines(True)])
