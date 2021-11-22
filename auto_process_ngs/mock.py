@@ -422,11 +422,11 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
             else:
                 read = ""
             if fq.endswith('.gz'):
-                with gzip.open(os.path.join(fqs_dir,fq),'wb') as fp:
-                    fp.write(read.encode())
+                open_func = gzip.open
             else:
-                with open(os.path.join(fqs_dir,fq),'wt') as fp:
-                    fp.write(read)
+                open_func = open
+            with open_func(os.path.join(fqs_dir,fq),'wt') as fp:
+                fp.write(read)
         # Add README.info
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:
@@ -2942,7 +2942,7 @@ def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
             fastqs.append(os.path.join(s.dirn,fq))
     for fastq in fastqs:
         read_number = IlluminaFastq(fastq).read_number
-        with gzip.open(fastq,'wb') as fp:
+        with gzip.open(fastq,'wt') as fp:
             if no_lane_splitting:
                 # Add one read per lane
                 for lane in lanes:
@@ -2950,11 +2950,11 @@ def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
-                    fp.write(read.encode())
+                    fp.write(read)
             else:
                 lane = IlluminaFastq(fastq).lane_number
                 read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
-                fp.write(read.encode())
+                fp.write(read)

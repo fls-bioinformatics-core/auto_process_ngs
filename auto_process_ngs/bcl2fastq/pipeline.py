@@ -3333,8 +3333,8 @@ class Run10xMkfastq(PipelineTask):
                         if not os.path.exists(os.path.dirname(fastq)):
                             os.mkdir(os.path.dirname(fastq))
                         # Make empty file
-                        with gzip.GzipFile(filename=fastq,mode='wb') as fp:
-                            fp.write(''.encode())
+                        with gzip.GzipFile(filename=fastq,mode='wt') as fp:
+                            fp.write('')
                 else:
                     # Terminate with an exception
                     raise Exception("Failed to verify outputs against "
@@ -3965,5 +3965,5 @@ def create_placeholder_fastqs(fastqs,base_dir=None):
         if not os.path.exists(os.path.dirname(fastq)):
             os.mkdir(os.path.dirname(fastq))
         # Make empty file
-        with gzip.GzipFile(filename=fastq,mode='wb') as fp:
-            fp.write(''.encode())
+        with gzip.open(fastq,'wt') as fp:
+            fp.write('')

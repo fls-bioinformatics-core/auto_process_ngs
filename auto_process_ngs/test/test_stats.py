@@ -142,11 +142,11 @@ class AugmentedMockIlluminaData(MockIlluminaData):
         # Create or append fake reads to a FASTQ file
         fastq = os.path.join(self.unaligned_dir,path)
         if append:
-            mode = 'ab'
+            mode = 'at'
         else:
-            mode = 'wb'
+            mode = 'wt'
         # Write the required number of reads to the file
-        with gzip.GzipFile(fastq,mode) as fq:
+        with gzip.open(fastq,mode) as fq:
             if read_number == 1:
                 r = """@HISEQ:1:000000000-A2Y1L:%s:1101:19264:2433 1:N:0:AGATCGC
 AGATAGCCGA
@@ -160,7 +160,7 @@ GCCGATATGC
 ??A??ABBDD
 """ % lane
             for i in range(nreads):
-                fq.write(r.encode())
+                fq.write(r)
 
 # FastqStatistics
 class TestFastqStatisticsCasava(unittest.TestCase):
