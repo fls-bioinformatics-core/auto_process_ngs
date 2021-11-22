@@ -481,9 +481,6 @@ class ICell8FastqIterator(Iterator):
             print("-- Read 2:\n%s" % r2)
             logging.critical("Failed to create read pair: %s" % ex)
             raise ex
-    def next(self):
-        # Implement 'next' method for Python 2
-        return self.__next__()
 
 class ICell8StatsCollector(object):
     """
