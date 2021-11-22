@@ -26,12 +26,7 @@ import os
 import sys
 import re
 import threading
-try:
-    # Python 3
-    import queue
-except ImportError:
-    # Python 2
-    import Queue as queue
+import queue
 import logging
 
 #######################################################################
