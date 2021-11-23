@@ -10,28 +10,26 @@
 #########################################################################
 
 """
-analysis.py
-
 Classes and functions for handling analysis directories and
 projects.
 
 Classes:
 
-- AnalysisFastq:
-- AnalysisDir:
-- AnalysisProject:
-- AnalysisSample:
+- AnalysisFastq: extract information from Fastq name
+- AnalysisDir: API for sequencing run analysis directory
+- AnalysisProject: API for project in an analysis directory
+- AnalysisSample: API for sample in an analysis project
 
 Functions:
 
-- run_reference_id:
-- split_sample_name:
-- split_sample_reference:
-- match_run_id:
-- locate_run:
-- locate_project:
-- locate_project_info_file:
-- copy_analysis_project:
+- run_reference_id: fetch identifier for sequencing run
+- split_sample_name: split sample name into components
+- split_sample_reference: split sample reference ID into components
+- match_run_id: check if directory matches run identifier
+- locate_run: search for an analysis directory by ID
+- locate_project: search for an analysis project by ID
+- locate_project_info_file: search for 'project.info' file
+- copy_analysis_project: make copy of an AnalysisDir
 """
 
 #######################################################################
@@ -84,29 +82,33 @@ class AnalysisFastq(BaseFastqAttrs):
     Instances of this class have the following attributes
     (defined in the base class):
 
-    fastq:            the original fastq file name
-    basename:         basename with NGS extensions stripped
-    extension:        full extension e.g. '.fastq.gz'
-    sample_name:      name of the sample
-    sample_number:    integer (or None if no sample number)
-    barcode_sequence: barcode sequence (string or None)
-    lane_number:      integer (or None if no lane number)
-    read_number:      integer (or None if no read number)
-    set_number:       integer (or None if no set number)
-    is_index_read:    boolean (True if index read, False if not)
+    * fastq:            the original fastq file name
+    * basename:         basename with NGS extensions stripped
+    * extension:        full extension e.g. '.fastq.gz'
+    * sample_name:      name of the sample
+    * sample_number:    integer (or None if no sample number)
+    * barcode_sequence: barcode sequence (string or None)
+    * lane_number:      integer (or None if no lane number)
+    * read_number:      integer (or None if no read number)
+    * set_number:       integer (or None if no set number)
+    * is_index_read:    boolean (True if index read, False if not)
 
     There are three additional attributes:
 
-    format:           string identifying the format of the
-                      Fastq name ('Illumina', 'SRA', or None)
-    canonical_name:   the 'canonical' part of the name (string,
-                      or None if no canonical part could be
-                      extracted)
-    extras:           the 'extra' part of the name (string,
-                      or None if there was no trailing extra
-                      part)
+    * format: string identifying the format of the Fastq name
+      ('Illumina', 'SRA', or None)
+    * canonical_name: the 'canonical' part of the name (string,
+      or None if no canonical part could be extracted)
+    * extras: the 'extra' part of the name (string, or None if
+      there was no trailing extra part)
+
+    Arguments:
+      fastq (str): path or name of Fastq file
     """
     def __init__(self,fastq):
+        """
+        Create a new AnalysisFastq instance
+        """
         # Initialise the base class
         BaseFastqAttrs.__init__(self,fastq)
         # Additional attributes
@@ -184,7 +186,8 @@ class AnalysisFastq(BaseFastqAttrs):
             return self.basename
 
 class AnalysisDir:
-    """Class describing an analysis directory
+    """
+    Class describing an analysis directory
 
     Conceptually an analysis directory maps onto a sequencing run.
     It consists of one or more sets of samples from that run,
@@ -195,27 +198,26 @@ class AnalysisDir:
 
     Properties:
 
-    analysis_dir: full path to the directory
-    run_name: the name of the parent sequencing run
-    metadata: metadata items associated with the run
-    projects: list of AnalysisProject objects
-    undetermined: AnalysisProject object for 'undetermined'
-    sequencing_data: list of IlluminaData objects
-    projects_metadata: metadata from the 'projects.info' file
-    datestamp: datestamp extracted from run name
-    instrument_name: instrument name extracted from run name
-    instrument_run_number: run number extracted from run name
-    n_projects: number of projects
-    n_sequencing_data: number of sequencing data directories
-    paired_end: whether data are paired ended
+    * analysis_dir: full path to the directory
+    * run_name: the name of the parent sequencing run
+    * metadata: metadata items associated with the run
+    * projects: list of AnalysisProject objects
+    * undetermined: AnalysisProject object for 'undetermined'
+    * sequencing_data: list of IlluminaData objects
+    * projects_metadata: metadata from the 'projects.info' file
+    * datestamp: datestamp extracted from run name
+    * instrument_name: instrument name extracted from run name
+    * instrument_run_number: run number extracted from run name
+    * n_projects: number of projects
+    * n_sequencing_data: number of sequencing data directories
+    * paired_end: whether data are paired ended
 
+    Arguments:
+      analysis_dir (str): name (and path) to analysis directory
     """
     def __init__(self,analysis_dir):
-        """Create a new AnalysisDir instance for a specified directory
-
-        Arguments:
-          analysis_dir: name (and path) to analysis directory
-
+        """
+        Create a new AnalysisDir instance
         """
         # Store location
         self._analysis_dir = os.path.abspath(analysis_dir)
@@ -323,34 +325,35 @@ class AnalysisDir:
 
     @property
     def analysis_dir(self):
-        """Return the path to the analysis directory
-
+        """
+        Return the path to the analysis directory
         """
         return self._analysis_dir
 
     @property
     def n_projects(self):
-        """Return number of projects found
-
+        """
+        Return number of projects found
         """
         return len(self.projects)
 
     @property
     def n_sequencing_data(self):
-        """Return number of sequencing data dirs found
-
+        """
+        Return number of sequencing data dirs found
         """
         return len(self.sequencing_data)
 
     @property
     def paired_end(self):
-        """Return True if run is paired end, False if single end
-
+        """
+        Return True if run is paired end, False if single end
         """
         return reduce(lambda x,y: x and y.info.paired_end,self.projects,True)
 
     def get_projects(self,pattern=None,include_undetermined=True):
-        """Return the analysis projects in a list
+        """
+        Return the analysis projects in a list
 
         By default returns all projects within the analysis
         
@@ -361,6 +364,14 @@ class AnalysisDir:
         If 'include_undetermined' is True then the undetermined
         project will also be included; otherwise it will be omitted.
 
+        Arguments:
+          pattern (str): (optional) glob-style pattern to match
+            project names against
+          include_undetermined (bool): if True (the default) then
+            include the 'Undetermined' project
+
+        Returns:
+          List: list of AnalysisProject instances.
         """
         projects = [p for p in self.projects]
         if include_undetermined and self.undetermined:
@@ -373,7 +384,8 @@ class AnalysisDir:
         return projects
         
 class AnalysisProject:
-    """Class describing an analysis project
+    """
+    Class describing an analysis project
 
     Conceptually an analysis project consists of a set of samples
     from a single sequencing experiment, plus associated data e.g.
@@ -384,33 +396,34 @@ class AnalysisProject:
 
     Provides the following properties:
 
-    name        : name of the project
-    dirn        : associated directory (full path)
-    fastq_dirs  : list of all subdirectories with fastq files (relative
-                  to dirn)
-    fastq_dir   : directory with 'active' fastq file set (full path)
-    fastqs      : list of fastq files in fastq_dir
-    samples     : list of AnalysisSample objects generated from fastq_dir
-    multiple_fastqs: True if at least one sample has more than one fastq
-                     file per read associated with it
-    fastq_format: either 'fastqgz' or 'fastq'
+    * name: name of the project
+    * dirn: associated directory (full path)
+    * fastq_dirs: list of all subdirectories with fastq files (relative
+      to dirn)
+    * fastq_dir: directory with 'active' fastq file set (full path)
+    * fastqs: list of fastq files in fastq_dir
+    * samples: list of AnalysisSample objects generated from fastq_dir
+    * multiple_fastqs: True if at least one sample has more than one fastq
+      file per read associated with it
+    * fastq_format: either 'fastqgz' or 'fastq'
 
     There is also an 'info' property with the following additional
     properties:
 
-    run         : run name
-    user        : user name
-    PI          : PI name
-    library_type: library type, either None or e.g. 'RNA-seq' etc
-    single_cell_platform: single cell prep platform, either None or 'ICell8' etc
-    number of cells: number of cells in single cell projects
-    ICELL8 well list: well list file for ICELL8 single cell projects
-    organism    : organism, either None or e.g. 'Human' etc
-    platform    : sequencing platform, either None or e.g. 'miseq' etc
-    comments    : additional comments, either None or else string of text
-    paired_end  : True if data is paired end, False if not
-    primary_fastq_dir: subdirectory holding the 'primary' fastq set
-    sequencer_model: model of sequencer used to generate the data
+    * run: run name
+    * user: user name
+    * PI: PI name
+    * library_type: library type, either None or e.g. 'RNA-seq' etc
+    * single_cell_platform: single cell prep platform, either None or
+      'ICell8' etc
+    * number of cells: number of cells in single cell projects
+    * ICELL8 well list: well list file for ICELL8 single cell projects
+    * organism: organism, either None or e.g. 'Human' etc
+    * platform: sequencing platform, either None or e.g. 'miseq' etc
+    * comments: additional comments, either None or else string of text
+    * paired_end: True if data is paired end, False if not
+    * primary_fastq_dir: subdirectory holding the 'primary' fastq set
+    * sequencer_model: model of sequencer used to generate the data
 
     It is possible for a project to have multiple sets of associated
     fastq files, held within separate subdirectories of the project
@@ -428,38 +441,42 @@ class AnalysisProject:
     the project directory (by default this is the 'fastqs' subdirectory
     of the project directory). It can be changed using the
     'set_primary_fastq_dir' method.
+
+    Arguments:
+      name (str): name of the project (or path to project
+        directory, if 'dirn' not supplied)
+      dirn (str): optional, project directory (can be full or
+        relative path)
+      user (str): optional, specify name of the user
+        PI (str): optional, specify name of the principal
+        investigator(s)
+      library_type (str): optional, specify library type e.g.
+        'RNA-seq', 'miRNA' etc
+      single_cell_platform (str): optional, specify single cell
+        preparation platform e.g. 'Icell8', '10xGenomics' etc
+      organism (str): optional, specify organism e.g. 'Human',
+        'Mouse' etc (separate multiple organisms with ';',
+        use '?' if organism is not known)
+      platform (str): optional, specify sequencing platform
+        e.g 'miseq'
+      run (str): optional, name of the run
+      comments (str): optional, free text comments associated
+        with the run (separate multiple commenst with ';')
+      fastq_attrs (BaseFastqAttrs): optional, specify a class
+        to use to get attributes from a Fastq file name (e.g.
+      sample name, read number etc). Defaults to
+        'AnalysisFastq'.
+      fastq_dir (str): optional, explicitly specify the
+        subdirectory holding the set of Fastq files to load;
+        defaults to 'fastq' (if present) or to the top-level
+        of the project directory (if absent).
     """
     def __init__(self,name,dirn=None,user=None,PI=None,library_type=None,
                  single_cell_platform=None,organism=None,run=None,
                  comments=None,platform=None,sequencer_model=None,
                  fastq_attrs=None,fastq_dir=None):
-        """Create a new AnalysisProject instance
-
-        Arguments:
-          name: name of the project (or path to project directory,
-            if 'dirn' not supplied)
-          dirn: optional, project directory (can be full or relative
-            path)
-          user: optional, specify name of the user
-          PI: optional, specify name of the principal investigator
-          library_type: optional, specify library type e.g. 'RNA-seq',
-            'miRNA' etc
-          single_cell_platform: optional, specify single cell
-            preparation platform e.g. 'Icell8', '10xGenomics' etc
-          organism: optional, specify organism e.g. 'Human', 'Mouse'
-            etc
-          platform: optional, specify sequencing platform e.g 'miseq'
-          run: optional, name of the run
-          comments: optional, free text comments associated with the
-            run
-          fastq_attrs: optional, specify a class to use to get
-            attributes from a Fastq file name (e.g. sample name, read
-            number etc). The supplied class should be a subclass of
-            BaseFastqAttrs; defaults to 'AnalysisFastq'.
-          fastq_dir: optional, explicitly specify the subdirectory
-            holding the set of Fastq files to load; defaults to
-            'fastq' (if present) or to the top-level of the project
-            directory (if absent).
+        """
+        Create a new AnalysisProject instance
         """
         if dirn is not None:
             self.dirn = os.path.abspath(dirn)
@@ -511,8 +528,13 @@ class AnalysisProject:
             self.info['comments'] = comments
 
     def populate(self,fastq_dir=None):
-        """Populate data structure from directory contents
+        """
+        Populate data structure from directory contents
 
+        Arguments:
+          fastq_dir (str): (optional) specify the
+            subdirectory with Fastq files to use for
+            populating the 'AnalysisProject'
         """
         if not os.path.exists(self.dirn):
             # Nothing to do, yet
@@ -590,6 +612,12 @@ class AnalysisProject:
     def find_fastqs(self,dirn):
         """
         Return list of Fastq files found in directory
+
+        Arguments:
+          dirn (str): path to directory to search
+
+        Returns:
+          List: list of Fastq file names.
         """
         logger.debug("Searching '%s' for fastqs" % dirn)
         fastq_tuples = Pipeline.GetFastqGzFiles(dirn)
@@ -606,6 +634,12 @@ class AnalysisProject:
     def determine_fastq_format(self,fastq):
         """
         Return type for Fastq file ('fastq' or 'fastqgz')
+
+        Arguments:
+          fastq (str): path or name of Fastq file
+
+        Returns:
+          String: either 'fastqgz' or 'fastq'.
         """
         if fastq.endswith('.gz'):
             return 'fastqgz'
@@ -629,6 +663,14 @@ class AnalysisProject:
 
         Note that it doesn't change the active fastq set;
         use the 'use_fastq_dir' method to do this.
+
+        Arguments:
+          new_primary_fastq_dir (str): path to the
+            (sub)directory to be treated as the primary
+            Fastq directory for the project
+
+        Raises:
+          Exception: if specified directory doesn't exist.
         """
         if not os.path.isabs(new_primary_fastq_dir):
             full_fastq_dir = os.path.join(self.dirn,
@@ -665,6 +707,10 @@ class AnalysisProject:
             the project; otherwise an exception is raised.
             Setting 'strict' to False allows the fastq dir
             to be outside of the project
+
+        Raises:
+          Exception: if specified directory is not a
+            subdirectory of the project.
         """
         if fastq_dir is None:
             fastq_dir = self.info.primary_fastq_dir
@@ -771,6 +817,13 @@ class AnalysisProject:
     def qc_info(self,qc_dir):
         """
         Fetch the metadata object for with QC dir
+
+        Arguments:
+          qc_dir (str): path to QC outputs directory
+
+        Returns:
+          AnalysisProjectQCDirInfo: metadata object
+            with the metadata for the QC directory.
         """
         if not os.path.isabs(qc_dir):
             qc_dir = os.path.join(self.dirn,qc_dir)
@@ -789,25 +842,28 @@ class AnalysisProject:
 
         The directory structure it creates is:
 
-        dir/
-           fastqs/
-           logs/
-           ScriptCode/
+        ::
+
+            dir/
+               fastqs/
+               logs/
+               ScriptCode/
 
         It also creates an info file with metadata about the project.
 
         Arguments:
-          illumina_project: (optional) populated IlluminaProject object
-            from which the analysis directory will be populated
-          fastqs: (optional) list of fastq files to import
-          fastq_dir: (optional) name of subdirectory to put fastq files
-            into; defaults to 'fastqs'
-          short_fastq_names: (optional) if True then transform fastq file
-            names to be the shortest possible unique names; if False
-            (default) then use the original fastq names
-          link_to_fastqs: (optional) if True then make symbolic links to
-            to the fastq files; if False (default) then make hard links
-    
+          illumina_project (IlluminaProject): (optional) populated
+            IlluminaProject object from which the analysis directory
+            will be populated
+          fastqs (list): (optional) list of Fastq files to import
+          fastq_dir (str): (optional) name of subdirectory to put
+            Fastq files into; defaults to 'fastqs'
+          short_fastq_names (bool): (optional) if True then transform
+            Fastq file names to be the shortest possible unique names;
+            if False (default) then use the original Fastq names
+          link_to_fastqs (bool): (optional) if True then make symbolic
+            links to the Fastq files; if False (default) then make hard
+            links
         """
         logger.debug("Creating analysis directory for project '%s'" % self.name)
         # Check for & create directory
@@ -868,14 +924,20 @@ class AnalysisProject:
         self.info.save(self.info_file)
 
     def sample_summary(self):
-        """Generate a summary of the sample names
+        """
+        Generate a summary of the sample names
 
         Generates a description string which summarises
         the number and names of samples in the project.
 
         The description is of the form:
 
-        2 samples (PJB1, PJB2)
+        ::
+
+            2 samples (PJB1, PJB2)
+
+        Returns:
+          String: summary of sample names.
         """
         # Get Fastqs
         fq_dir = os.path.join(self.dirn,
@@ -928,8 +990,8 @@ class AnalysisProject:
 
     @property
     def exists(self):
-        """Check if analysis project directory already exists
-
+        """
+        Check if analysis project directory already exists
         """
         return os.path.exists(self.dirn)
 
@@ -978,32 +1040,10 @@ class AnalysisProject:
         return qc_dirs
 
     @property
-    def qc(self):
-        """
-        Return QCReporter instance for QC outputs
-
-        Not supported after version 0.15.0
-
-        Raises exception if invoked
-        """
-        raise Exception("%s.qc method no longer supported"
-                        % self.__class__)
-
-    def qc_report(self,title=None,report_html=None,qc_dir=None,
-                  force=False):
-        """
-        Report QC outputs for project
-
-        Not supported after version 0.15.0
-
-        Use the 'report_qc' function from qc.utils instead.
-        """
-        raise Exception("%s.qc_report method no longer supported"
-                        % self.__class__)
-
-    @property
     def multiple_fastqs(self):
-        # Determine if there are multiple fastqs per sample
+        """
+        Determine if there are multiple Fastqs per sample
+        """
         if not len(self.samples):
             return False
         else:
@@ -1012,8 +1052,8 @@ class AnalysisProject:
 
     @property
     def fastqs(self):
-        """Return a list of fastqs
-
+        """
+        Return a list of Fastqs
         """
         fastqs = []
         for s in self.samples:
@@ -1022,51 +1062,41 @@ class AnalysisProject:
 
     @property
     def fastqs_are_symlinks(self):
-        """Return True if fastq files are symbolic links, False if not
-
+        """
+        Return True if Fastq files are symbolic links, False if not
         """
         for s in self.samples:
             if s.fastqs_are_symlinks:
                 return True
         return False
 
-    def verify_qc(self,qc_dir=None):
-        """
-        Check if QC run has completed successfully
-
-        Not supported after version 0.15.0
-
-        Use the 'verify_qc' function from the qc.utils module
-        instead.
-        """
-        raise Exception("%s.qc_report method no longer supported"
-                        % self.__class__)
-
     def get_sample(self,name):
-        """Return sample that matches 'name'
+        """
+        Return sample that matches 'name'
 
         Arguments:
-          name: name of a sample
+          name (str): name of a sample
 
         Returns:
-          AnalysisSample object with the matching name; raises
-          KeyError exception if no match is found.
+          AnalysisSample: sample object with the matching name
 
+        Raises
+          KeyError: if no match is found.
         """
         for sample in self.samples:
             if sample.name == name: return sample
         raise KeyError("No matching sample for '%s'" % name)
 
     def get_samples(self,pattern):
-        """Return list of sample matching pattern
+        """
+        Return list of sample matching pattern
 
         Arguments:
-          pattern: simple 'glob' style pattern
+          pattern (str): simple 'glob' style pattern
 
         Returns:
-          Python list of samples with names matching the supplied
-          pattern (or an empty list if no names match).
-
+          List: list of samples with names matching the supplied
+            pattern (or an empty list if no names match).
         """
         samples = []
         for sample in self.samples:
@@ -1075,40 +1105,42 @@ class AnalysisProject:
         return samples
 
     def prettyPrintSamples(self):
-        """Return a nicely formatted string describing the sample names
+        """
+        Return a nicely formatted string describing the sample names
 
         Wraps a call to 'pretty_print_names' function.
 
+        Returns:
+          String: pretty description of sample names.
         """
         return bcf_utils.pretty_print_names(self.samples)
 
 class AnalysisSample:
-    """Class describing an analysis sample
+    """
+    Class describing an analysis sample
 
-    An analysis sample consists of a set of fastqs file corresponding
-    to single sample.
+    An analysis sample consists of a set of Fastqs files
+    corresponding to a single sample.
 
     AnalysisSample has the following properties:
 
-    name      : name of the sample
-    fastq     : list of fastq files associated with the sample
-    paired_end: True if sample is paired end, False if not
+    * name: name of the sample
+    * fastq: list of Fastq files associated with the sample
+    * paired_end: True if sample is paired end, False if not
 
     Note that the 'fastq' list will include any index read fastqs
     (i.e. I1/I2) as well as R1/R2 fastqs.
 
+    Arguments:
+      name (str): sample name
+      fastq_attrs (BaseFastqAttrs): optional, specify a
+        class to use to get attributes from a Fastq file name
+        (e.g. sample name, read number etc). Defaults to
+        'AnalysisFastq'.
     """
-
     def __init__(self,name,fastq_attrs=None):
-        """Create a new AnalysisSample instance
-
-        Arguments:
-          name: sample name
-          fastq_attrs: optional, specify a class to use to get
-            attributes from a Fastq file name (e.g. sample name, read
-            number etc). The supplied class should be a subclass of
-            BaseFastqAttrs; defaults to 'AnalysisFastq'.
-
+        """
+        Create a new AnalysisSample instance
         """
         self.name = name
         self.fastq = []
@@ -1120,11 +1152,11 @@ class AnalysisSample:
             self.fastq_attrs = fastq_attrs
 
     def add_fastq(self,fastq):
-        """Add a reference to a fastq file in the sample
+        """
+        Add a reference to a Fastq file in the sample
 
         Arguments:
-          fastq: full path for the fastq file
-
+          fastq (str): full path for the Fastq file
         """
         assert(os.path.isabs(fastq))
         self.fastq.append(fastq)
@@ -1137,17 +1169,19 @@ class AnalysisSample:
                 self.paired_end = True
 
     def fastq_subset(self,read_number=None):
-        """Return a subset of fastq files from the sample
+        """
+        Return a subset of Fastq files from the sample
 
         Note that only R1/R2 files will be returned; index read
         fastqs (i.e. I1/I2) are excluded regardless of read number.
 
         Arguments:
-          read_number: select subset based on read_number (1 or 2)
+          read_number (int): select subset based on read_number
+            (1 or 2)
 
         Returns:
-          List of full paths to fastq files matching the selection criteria.
-
+          List: list of full paths to Fastq files matching the
+            selection criteria.
         """
         # Build list of fastqs that match the selection criteria
         fastqs = []
@@ -1170,40 +1204,21 @@ class AnalysisSample:
 
     @property
     def fastqs_are_symlinks(self):
-        """Return True if fastq files are symlinked, False if not
-
+        """
+        Return True if Fastq files are symlinked, False if not
         """
         for fastq in self.fastq:
             if os.path.islink(fastq):
                 return True
         return False
 
-    def qc_sample(self):
-        """Fetch QCSample object for this sample
-
-        Not supported after version 0.15.0
-
-        Raises exception if invoked
-        """
-        raise Exception("%s.qc_sample method no longer supported"
-                        % self.__class__)
-
-    def verify_qc(self,qc_dir,fastq):
-        """Check if QC completed for a fastq file
-
-        Not supported after version 0.15.0
-
-        Raises exception if invoked
-        """
-        raise Exception("%s.verify_qc method no longer supported"
-                        % self.__class__)
-
     def __repr__(self):
-        """Implement __repr__ built-in
+        """
+        Implement __repr__ built-in
 
-        Return string representation for the sample -
-        i.e. the sample name.
-
+        Returns:
+          String: representation for the sample (i.e. the
+            sample name).
         """
         return str(self.name)
 
@@ -1212,12 +1227,13 @@ class AnalysisSample:
 #######################################################################
 
 def run_reference_id(run_name,platform=None,facility_run_number=None):
-    """Return a run reference id e.g. 'HISEQ_140701/242#22'
+    """
+    Return a run reference id e.g. 'HISEQ_140701/242#22'
 
     The run reference code is a code that identifies the sequencing
     run, and has the general form:
 
-    PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER
+    ``PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER``
 
     - PLATFORM is always uppercased e.g. HISEQ, MISEQ, GA2X
     - DATESTAMP is the YYMMDD code e.g. 140701
@@ -1233,17 +1249,17 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
     If the platform isn't supplied then the instrument name is
     used instead, e.g.:
 
-    'SN0123_140701/242#22'
+    ``SN0123_140701/242#22``
 
     If the run name can't be split into components then the
     general form will be:
 
-    [PLATFORM_]RUN_NAME[#FACILITY_RUN_NUMBER]
+    ``[PLATFORM_]RUN_NAME[#FACILITY_RUN_NUMBER]``
 
     depending on whether platform and/or facility run number have
     been supplied. For example for a run called 'rag_05_2017':
 
-    'MISEQ_rag_05_2017#90'
+    ``MISEQ_rag_05_2017#90``
 
     Arguments:
       run_name (str): the run name (can be a path)
@@ -1251,6 +1267,9 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
       facility_run_number (int): the run number assigned by the
         local facility (can be different from the instrument
         run number) (optional)
+
+    Returns:
+      String: run reference identifier.
     """
     # Extract information from run name
     run_name = os.path.basename(os.path.normpath(run_name))
@@ -1299,7 +1318,8 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
     return run_id
 
 def split_sample_name(s):
-    """Split sample name into numerical and non-numerical parts
+    """
+    Split sample name into numerical and non-numerical parts
 
     Utility function which splits the supplied sample name
     into numerical (i.e. integer) and non-numerical (i.e. all
@@ -1352,6 +1372,9 @@ def split_sample_reference(s):
 
     A subset of elements can be present, in which case
     the missing components will be returned as None.
+
+    Arguments:
+      s (str): sample reference identifier
 
     Returns:
       Tuple: tuple of the form (RUN,PROJECT,SAMPLE)
@@ -1416,6 +1439,10 @@ def match_run_id(run,d):
       run (str): run identifier
       d (str): path to a run to check against
         the supplied identifier
+
+    Returns:
+      Boolean: True if directory matches run ID, False
+        if not.
     """
     # Check if run specification is actually a path
     logger.debug("%s: checking full path" % d)
