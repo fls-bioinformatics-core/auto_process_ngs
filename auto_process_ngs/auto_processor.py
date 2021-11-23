@@ -112,7 +112,7 @@ def add_command(name,f):
 @add_command("update_fastq_stats",commands.update_fastq_stats)
 @add_command("import_project",commands.import_project)
 @add_command("clone",commands.clone)
-class AutoProcess(object):
+class AutoProcess:
     """
     Class implementing an automatic fastq generation and QC
     processing procedure for Illumina sequencing data

@@ -59,13 +59,13 @@ poll_interval = 0.5
                     fastq = os.path.join(s.dirn,fq)
                     self.assertTrue(os.path.exists(fastq),
                                     "Missing %s" % fastq)
-                    with gzip.open(fastq,'wb') as fp:
+                    with gzip.open(fastq,'wt') as fp:
                         fp.write(
                             """@ILLUMINA-545855:49:FC61RLR:2:1:10979:1695 1:N:0:TCCTGA
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
-                            """.encode())
+""")
 
     def test_analyse_barcodes_with_stored_bases_mask(self):
         """analyse_barcodes: test with stored bases mask

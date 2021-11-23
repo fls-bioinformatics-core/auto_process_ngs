@@ -355,7 +355,7 @@ class MockAnalysisDir(MockIlluminaData):
         # Finished
         return self.dirn
 
-class MockAnalysisProject(object):
+class MockAnalysisProject:
     """
     Utility class for creating mock auto-process project directories
 
@@ -422,11 +422,11 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
             else:
                 read = ""
             if fq.endswith('.gz'):
-                with gzip.open(os.path.join(fqs_dir,fq),'wb') as fp:
-                    fp.write(read.encode())
+                open_func = gzip.open
             else:
-                with open(os.path.join(fqs_dir,fq),'wt') as fp:
-                    fp.write(read)
+                open_func = open
+            with open_func(os.path.join(fqs_dir,fq),'wt') as fp:
+                fp.write(read)
         # Add README.info
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:
@@ -440,7 +440,7 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
 # Classes for updating directories with mock artefacts
 #######################################################################
 
-class DirectoryUpdater(object):
+class DirectoryUpdater:
     """
     Base class for updating mock directories
 
@@ -934,7 +934,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
 # Factory classes for quickly generating mock directories
 #######################################################################
 
-class MockAnalysisDirFactory(object):
+class MockAnalysisDirFactory:
     """
     Collection of convenient pre-populated test cases
     """
@@ -1006,7 +1006,7 @@ class MockAnalysisDirFactory(object):
 # Classes for making mock executables
 #######################################################################
 
-class MockBcl2fastq2Exe(object):
+class MockBcl2fastq2Exe:
     """
     Create mock bcl2fastq2 executable
 
@@ -1355,7 +1355,7 @@ bcl2fastq v%s
         shutil.rmtree(tmpname)
         return self._exit_code
 
-class MockBclConvertExe(object):
+class MockBclConvertExe:
     """
     Create mock bcl-convert executable
 
@@ -1740,7 +1740,7 @@ Copyright (c) 2014-2018 Illumina, Inc.
         shutil.rmtree(tmpname)
         return self._exit_code
 
-class Mock10xPackageExe(object):
+class Mock10xPackageExe:
     """
     Create mock 10xGenomics pipeline executable
 
@@ -2302,7 +2302,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         print("Return exit code: %s" % self._exit_code)
         return self._exit_code
 
-class MockIlluminaQcSh(object):
+class MockIlluminaQcSh:
     """
     Create mock illumina_qc.sh
 
@@ -2448,7 +2448,7 @@ fastqc\t/opt/apps/bin/fastqc\t0.11.3
             MockQCOutputs.fastqc_v0_11_2(args.fastq,qc_dir)
         return self._exit_code
 
-class MockMultiQC(object):
+class MockMultiQC:
     """
     Create mock MultiQC executable
 
@@ -2557,7 +2557,7 @@ For more help, run 'multiqc --help' or visit http://multiqc.info
         # Exit
         return self._exit_code
 
-class MockFastqStrandPy(object):
+class MockFastqStrandPy:
     """
     Create mock fastq_strand.py executable
 
@@ -2669,7 +2669,7 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
         # Exit
         return self._exit_code
 
-class MockConda(object):
+class MockConda:
     """
     Create mock conda installation
 
@@ -2942,7 +2942,7 @@ def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
             fastqs.append(os.path.join(s.dirn,fq))
     for fastq in fastqs:
         read_number = IlluminaFastq(fastq).read_number
-        with gzip.open(fastq,'wb') as fp:
+        with gzip.open(fastq,'wt') as fp:
             if no_lane_splitting:
                 # Add one read per lane
                 for lane in lanes:
@@ -2950,11 +2950,11 @@ def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
-                    fp.write(read.encode())
+                    fp.write(read)
             else:
                 lane = IlluminaFastq(fastq).lane_number
                 read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
-                fp.write(read.encode())
+                fp.write(read)

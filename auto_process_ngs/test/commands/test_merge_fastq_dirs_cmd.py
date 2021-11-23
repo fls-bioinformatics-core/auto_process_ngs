@@ -99,14 +99,14 @@ poll_interval = 0.5
         for n,dirn in enumerate(('bcl2fastq.AB','bcl2fastq.CDE')):
             undetermined_r1 = os.path.join(m1,dirn,'Undetermined_S0_R1_001.fastq.gz')
             undetermined_r2 = os.path.join(m1,dirn,'Undetermined_S0_R2_001.fastq.gz')
-            with gzip.GzipFile(undetermined_r1,'wb') as fq:
+            with gzip.open(undetermined_r1,'wt') as fq:
                 for i in range(4):
                     reads = "%s\n" % fastq_reads_r1[n*4+i]
-                    fq.write(reads.encode())
-            with gzip.GzipFile(undetermined_r2,'wb') as fq:
+                    fq.write(reads)
+            with gzip.open(undetermined_r2,'wt') as fq:
                 for i in range(4):
                     reads = "%s\n" % fastq_reads_r2[n*4+i]
-                    fq.write(reads.encode())
+                    fq.write(reads)
         print(m2)
         return m1
 

@@ -50,7 +50,7 @@ rcentile
 
 """
 
-class Fastqc(object):
+class Fastqc:
     """
     Wrapper class for handling outputs from FastQC
 
@@ -293,7 +293,7 @@ class FastqcSummary(TabFile):
                             self.status(name)))
         return tbl.html()
 
-class FastqcData(object):
+class FastqcData:
     """
     Class representing data from a Fastqc data file
 

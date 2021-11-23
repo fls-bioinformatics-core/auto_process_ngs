@@ -20,7 +20,6 @@ to build command lines to execute applications.
 
 import subprocess
 import logging
-import tempfile
 from bcftbx.utils import find_program
 
 # Module specific logger
@@ -31,7 +30,7 @@ logger.addHandler(logging.NullHandler())
 # Classes
 #######################################################################
 
-class Command(object):
+class Command:
     """Class for creating and executing command lines
 
     The Command class is intended to help with building and
@@ -187,13 +186,9 @@ class Command(object):
     def subprocess_check_output(self,include_err=True,working_dir=None):
         """Run the command and capture the output
 
-        This runs the command using the subprocess.call() and
-        captures the output in a string which is returned to the
-        calling subprogram (along with the return code from the
+        This runs the command using ``subprocess.check_output`` and
+        returns the output (along with the return code from the
         command).
-
-        Nb it would be better if we could use the subprocess.check_output
-        function (but this is not available in Python 2.6).
 
         Arguments:
           include_err: optional, if True then stderr is included in
@@ -210,13 +205,15 @@ class Command(object):
             stderr = subprocess.STDOUT
         else:
             stderr = None
-        # Create a temporary file-like object to capture output
-        with tempfile.TemporaryFile(mode='w+t') as ftmp:
-            status = subprocess.call(self.command_line,stdout=ftmp,
-                                     cwd=working_dir,stderr=stderr)
-            # Read the output
-            ftmp.seek(0)
-            output = ftmp.read()
+        try:
+            output = subprocess.check_output(self.command_line,
+                                             cwd=working_dir,
+                                             stderr=stderr,
+                                             universal_newlines=True)
+            status = 0
+        except subprocess.CalledProcessError as ex:
+            output = ex.output
+            status = ex.returncode
         return (status,output)
 
     def make_wrapper_script(self,shell=None,filen=None,fp=None,

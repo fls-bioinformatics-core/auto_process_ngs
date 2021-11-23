@@ -66,7 +66,7 @@ DEFAULT_BUFFER_SIZE = 8192
 # Classes
 #######################################################################
 
-class OutputFiles(object):
+class OutputFiles:
     """Class for managing multiple output files
 
     Usage:
@@ -314,7 +314,7 @@ class BufferedOutputFiles(OutputFiles):
             for name in names:
                 self.close(name)
 
-class ZipArchive(object):
+class ZipArchive:
     """
     Utility class for creating .zip archive files
 
@@ -398,7 +398,7 @@ class ZipArchive(object):
     def __del__(self):
         self.close()
 
-class ProgressChecker(object):
+class ProgressChecker:
     """
     Check if an index is a multiple of a value or percentage
 

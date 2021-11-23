@@ -421,11 +421,11 @@ class TestFastqReadCounter(unittest.TestCase):
         self._make_working_dir()
         filen = os.path.join(self.wd,name)
         if filen.endswith(".gz"):
-            with gzip.GzipFile(filen,'wb') as fp:
-                fp.write(contents.encode())
+            open_func = gzip.open
         else:
-            with open(filen,'wt') as fp:
-                fp.write(contents)
+            open_func = open
+        with open_func(filen,'wt') as fp:
+            fp.write(contents)
         return filen
 
     def tearDown(self):

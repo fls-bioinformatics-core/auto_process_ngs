@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes/analysis.py: classes and functions for analysing barcodes
-#     Copyright (C) University of Manchester 2016-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2021 Peter Briggs
 #
 ########################################################################
 #
@@ -29,11 +29,6 @@ FASTQ read headers:
 #######################################################################
 
 import sys
-try:
-    # Python2
-    from itertools import izip as zip
-except ImportError:
-    pass
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import normalise_barcode
@@ -58,7 +53,7 @@ PROBLEMS_DETECTED_TEXT = "One or more lanes have problems"
 # Classes
 #######################################################################
 
-class BarcodeCounter(object):
+class BarcodeCounter:
     """
     Utility class to mange counts of barcode sequences
 
@@ -542,7 +537,7 @@ class BarcodeCounter(object):
         analysis['coverage'] = cum_reads
         return analysis
 
-class BarcodeGroup(object):
+class BarcodeGroup:
     """
     Class for storing groups of related barcodes
 
@@ -679,7 +674,7 @@ class BarcodeGroup(object):
     def __len__(self):
         return len(self._sequences)
 
-class SampleSheetBarcodes(object):
+class SampleSheetBarcodes:
     """
     Class for handling index sequences from a sample sheet
 
@@ -852,7 +847,7 @@ class SampleSheetBarcodes(object):
         else:
             raise KeyError("Lane %s not in sample sheet" % lane)
 
-class Reporter(object):
+class Reporter:
     """
     Class for generating reports of barcode statistics
 

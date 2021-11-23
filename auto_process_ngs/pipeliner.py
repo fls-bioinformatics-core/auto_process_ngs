@@ -1089,12 +1089,7 @@ import atexit
 import textwrap
 import math
 from collections import Iterator
-try:
-    # Python2
-    from cStringIO import StringIO
-except ImportError:
-    # Python3
-    from io import StringIO
+from io import StringIO
 from functools import reduce
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
@@ -1118,7 +1113,7 @@ logger.addHandler(logging.NullHandler())
 ALLOWED_CHARS = string.ascii_lowercase + string.digits + "._-"
 
 # Pipeline failure modes
-class PipelineFailure(object):
+class PipelineFailure:
     IMMEDIATE = 0
     DEFERRED = 1
 
@@ -1126,7 +1121,7 @@ class PipelineFailure(object):
 # Generic pipeline base classes
 ######################################################################
 
-class BaseParam(object):
+class BaseParam:
     """
     Provide base class for PipelineParam-type classes
 
@@ -1381,11 +1376,6 @@ class FileCollector(Iterator):
             self._files = None
             self._idx = None
             raise StopIteration
-    def next(self):
-        """
-        Implemented for Python2 compatibility
-        """
-        return self.__next__()
 
 # Capture stdout and stderr from a function call
 # Based on code from http://stackoverflow.com/a/16571630/579925
@@ -1398,7 +1388,7 @@ class FileCollector(Iterator):
 # ...     print("Line: %s" % line)
 # >>> for line in output.stderr:
 # ...     print("Err: %s" % line)
-class Capturing(object):
+class Capturing:
     def __init__(self):
         self.stdout = list()
         self.stderr = list()
@@ -1416,7 +1406,7 @@ class Capturing(object):
         sys.stdout = self._stdout
         sys.stderr = self._stderr
 
-class Pipeline(object):
+class Pipeline:
     """
     Class to define and run a 'pipeline' of 'tasks'
 
@@ -2367,7 +2357,7 @@ class Pipeline(object):
             self.report("Completed: ok")
             return 0
 
-class PipelineTask(object):
+class PipelineTask:
     """
     Base class defining a 'task' to run as part of a pipeline
 
@@ -3247,7 +3237,7 @@ class PipelineFunctionTask(PipelineTask):
         """
         return self._result
 
-class PipelineCommand(object):
+class PipelineCommand:
     """
     Base class for constructing program command lines
 
@@ -3504,7 +3494,7 @@ class PipelineScriptWrapper(PipelineCommand):
             # Multiple blocks
             blocks = []
             for block in self._scripts:
-                blocks.append("{\n%s\n}" % indent(block,"    "))
+                blocks.append("{\n%s\n}" % textwrap.indent(block,"    "))
             return Command(self._block_sep.join(blocks))
 
 ######################################################################
@@ -3707,7 +3697,7 @@ class PathExistsParam(FunctionParam):
 # Dispatching Python functions as separate processes
 ######################################################################
 
-class Dispatcher(object):
+class Dispatcher:
     """
     Class to invoke Python functions in external processes
 
@@ -3830,7 +3820,7 @@ class Dispatcher(object):
                 print("Traceback:\n%s" %
                       ''.join(traceback.format_tb(ex.__traceback__)))
             except AttributeError:
-                # No __traceback__ for Python 2 exceptions
+                # No __traceback__ attribute?
                 pass
             result = ex
         # Pickle the result
@@ -4016,15 +4006,3 @@ def resolve_parameter(p):
         return p.value
     except AttributeError:
         return p
-
-def indent(s,prefix):
-    """
-    Wrapper for textwrap.indent to handle Python2/3
-    """
-    try:
-        # Python3
-        return textwrap.indent(s,prefix)
-    except AttributeError:
-        # Python2
-        return '\n'.join([prefix+line.rstrip('\n')
-                          for line in s.splitlines(True)])

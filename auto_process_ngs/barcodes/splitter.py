@@ -21,12 +21,6 @@ index sequences) from the read headers:
 
 """
 
-try:
-    # Python 2
-    from itertools import izip as zip
-except ImportError:
-    # Python 3
-    pass
 import logging
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.FASTQFile as FASTQFile
@@ -36,7 +30,7 @@ from ..utils import OutputFiles
 # Classes
 #########################################################################
 
-class HammingMetrics(object):
+class HammingMetrics:
     """
     Calculate Hamming distances between two strings
 
@@ -89,7 +83,7 @@ class HammingMetrics(object):
         return sum((ch1 != ch2 or ch1 == 'N' or ch2 == 'N') \
                    for ch1, ch2 in zip(s1, s2))
 
-class HammingLookup(object):
+class HammingLookup:
     """
     Class for handling Hamming distances for multiple sequences
 
@@ -136,7 +130,7 @@ class HammingLookup(object):
         self._distances[s1][s2] = self._hamming(s1,s2)
         return self._distances[s1][s2]
 
-class BarcodeMatcher(object):
+class BarcodeMatcher:
     """
     Class to match barcode sequences against reference set
     """

@@ -21,13 +21,8 @@ Module providing utility classes and functions to help with managing
 import os
 import tempfile
 import logging
-try:
-    from urllib.request import urlopen
-    from urllib.error import URLError
-except ImportError:
-    # Failed to get Python3 urlopen, fallback to Python2
-    from urllib2 import urlopen
-    from urllib2 import URLError
+from urllib.request import urlopen
+from urllib.error import URLError
 from bcftbx.JobRunner import ResourceLock
 from bcftbx.utils import find_program
 from .command import Command
@@ -51,7 +46,7 @@ DEFAULT_CONDA_CHANNELS = (
 # Classes
 ######################################################################
 
-class CondaWrapper(object):
+class CondaWrapper:
     """
     Class for installing conda and creating environments
 

@@ -22,11 +22,6 @@ import tempfile
 import shutil
 import json
 from argparse import ArgumentParser
-try:
-    # Python 2
-    from itertools import izip as zip
-except ImportError:
-    pass
 from multiprocessing import Pool
 from bcftbx.simple_xls import XLSWorkBook
 from auto_process_ngs import get_version

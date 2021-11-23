@@ -26,12 +26,7 @@ import os
 import sys
 import re
 import threading
-try:
-    # Python 3
-    import queue
-except ImportError:
-    # Python 2
-    import Queue as queue
+import queue
 import logging
 
 #######################################################################
@@ -598,7 +593,7 @@ class SimpleScheduler(threading.Thread):
             # Wait before going round again
             time.sleep(self.__poll_interval)
 
-class SchedulerGroup(object):
+class SchedulerGroup:
     """Class providing an interface to schedule a group of jobs
 
     SchedulerGroup instances should normally be returned by a
@@ -956,7 +951,7 @@ class SchedulerJob(Job):
         """
         return ' '.join([str(x) for x in ([self.script,] + self.args)])
 
-class SchedulerCallback(object):
+class SchedulerCallback:
     """Class providing an interface to scheduled callbacks
 
     SchedulerJob instances should normally be returned by a
@@ -983,7 +978,7 @@ class SchedulerCallback(object):
             logging.error("Exception invoking callback function '%s': %s (ignored)" % \
                           (self.callback_name,ex))
 
-class SchedulerReporter(object):
+class SchedulerReporter:
     """Class to report on scheduler operations
 
     SimpleScheduler calls methods of the SchedulerReporter when

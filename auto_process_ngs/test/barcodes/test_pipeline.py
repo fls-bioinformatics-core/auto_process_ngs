@@ -45,13 +45,13 @@ class TestAnalyseBarcodes(unittest.TestCase):
                     lane = IlluminaFastq(fq).lane_number
                     self.assertTrue(os.path.exists(fastq),
                                     "Missing %s" % fastq)
-                    with gzip.open(fastq,'wb') as fp:
+                    with gzip.open(fastq,'wt') as fp:
                         data = """@ILLUMINA-545855:49:FC61RLR:%d:1:10979:1695 1:N:0:TCCTGA
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
                             """ % lane
-                        fp.write(data.encode())
+                        fp.write(data)
 
     def test_analyse_barcodes_with_bcl2fastq_dir_no_samplesheet(self):
         """

@@ -473,7 +473,7 @@ class MultiplexSummary(MetricsSummary):
         """
         return self.fetch('Median UMI counts per cell')
 
-class MultiomeLibraries(object):
+class MultiomeLibraries:
     """
     Class to handle '10x_multiome_libraries.info' files
 
@@ -621,7 +621,7 @@ class MultiomeLibraries(object):
                               project.info.library_type)))
             print("Generated %s" % filen)
 
-class CellrangerMultiConfigCsv(object):
+class CellrangerMultiConfigCsv:
     """
     Class to handle cellranger multi 'config.csv' files
 

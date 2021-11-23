@@ -27,11 +27,6 @@ import tempfile
 import logging
 import argparse
 import shutil
-try:
-    # Python 2
-    from itertools import izip as zip
-except ImportError:
-    pass
 from bcftbx.utils import mkdir
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.utils import strip_ext

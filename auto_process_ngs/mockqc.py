@@ -29,7 +29,7 @@ from . import mockqcdata
 # Class definitions
 #######################################################################
 
-class MockQCOutputs(object):
+class MockQCOutputs:
     """
     Utility class for creating mock auto-process QC outputs
     """

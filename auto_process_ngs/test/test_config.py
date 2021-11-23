@@ -3,11 +3,7 @@
 #######################################################################
 
 import unittest
-try:
-    from cStringIO import StringIO
-except ImportError:
-    # cStringIO not available in Python3
-    from io import StringIO
+from io import StringIO
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from auto_process_ngs.config import *
 

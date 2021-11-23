@@ -13,7 +13,7 @@ from auto_process_ngs.bcl2fastq.utils import *
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
-class MockBaseExe(object):
+class MockBaseExe:
     """
     Base class for mock BCL to Fastq converters
 
