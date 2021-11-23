@@ -197,7 +197,7 @@ table th { border-bottom: solid 1px lightgray; }
 # Classes
 #######################################################################
 
-class QCReporter(object):
+class QCReporter:
     """
     Class describing QC results for an AnalysisProject
 
@@ -276,7 +276,7 @@ class QCReporter(object):
                       relative_links=relative_links,
                       make_zip=make_zip)
 
-class QCProject(object):
+class QCProject:
     """
     Gather information about the QC associated with a project
 
@@ -860,7 +860,7 @@ class QCProject(object):
             # No data for any read
             self.stats['max_sequence_length'] = None
 
-class FastqSet(object):
+class FastqSet:
     """
     Class describing a set of Fastq files
 
@@ -1917,7 +1917,7 @@ class QCReport(Document):
             # Turn off display of warnings section
             self.warnings.add_css_classes("hide")
 
-class QCReportSample(object):
+class QCReportSample:
     """
     Utility class for reporting the QC for a sample
 
@@ -2407,7 +2407,7 @@ class QCReportSample(object):
                            "table" % field)
         return value
 
-class QCReportFastqGroup(object):
+class QCReportFastqGroup:
     """
     Utility class for reporting the QC for a Fastq group
 
@@ -2906,7 +2906,7 @@ class QCReportFastqGroup(object):
                            "table" % field)
         return value
 
-class QCReportFastq(object):
+class QCReportFastq:
     """
     Provides interface to QC outputs for Fastq file
 

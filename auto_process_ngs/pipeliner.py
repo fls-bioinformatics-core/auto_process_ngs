@@ -1113,7 +1113,7 @@ logger.addHandler(logging.NullHandler())
 ALLOWED_CHARS = string.ascii_lowercase + string.digits + "._-"
 
 # Pipeline failure modes
-class PipelineFailure(object):
+class PipelineFailure:
     IMMEDIATE = 0
     DEFERRED = 1
 
@@ -1121,7 +1121,7 @@ class PipelineFailure(object):
 # Generic pipeline base classes
 ######################################################################
 
-class BaseParam(object):
+class BaseParam:
     """
     Provide base class for PipelineParam-type classes
 
@@ -1388,7 +1388,7 @@ class FileCollector(Iterator):
 # ...     print("Line: %s" % line)
 # >>> for line in output.stderr:
 # ...     print("Err: %s" % line)
-class Capturing(object):
+class Capturing:
     def __init__(self):
         self.stdout = list()
         self.stderr = list()
@@ -1406,7 +1406,7 @@ class Capturing(object):
         sys.stdout = self._stdout
         sys.stderr = self._stderr
 
-class Pipeline(object):
+class Pipeline:
     """
     Class to define and run a 'pipeline' of 'tasks'
 
@@ -2357,7 +2357,7 @@ class Pipeline(object):
             self.report("Completed: ok")
             return 0
 
-class PipelineTask(object):
+class PipelineTask:
     """
     Base class defining a 'task' to run as part of a pipeline
 
@@ -3237,7 +3237,7 @@ class PipelineFunctionTask(PipelineTask):
         """
         return self._result
 
-class PipelineCommand(object):
+class PipelineCommand:
     """
     Base class for constructing program command lines
 
@@ -3697,7 +3697,7 @@ class PathExistsParam(FunctionParam):
 # Dispatching Python functions as separate processes
 ######################################################################
 
-class Dispatcher(object):
+class Dispatcher:
     """
     Class to invoke Python functions in external processes
 

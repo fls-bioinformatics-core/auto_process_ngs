@@ -9,7 +9,7 @@ from bcftbx.FASTQFile import FastqIterator
 # Module specific logger
 logger = logging.getLogger(__name__)
 
-class SeqLens(object):
+class SeqLens:
     """
     Wrapper class for handling sequence length data
 

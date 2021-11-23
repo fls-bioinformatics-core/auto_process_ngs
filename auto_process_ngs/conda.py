@@ -46,7 +46,7 @@ DEFAULT_CONDA_CHANNELS = (
 # Classes
 ######################################################################
 
-class CondaWrapper(object):
+class CondaWrapper:
     """
     Class for installing conda and creating environments
 

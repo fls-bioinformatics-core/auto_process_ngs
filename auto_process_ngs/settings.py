@@ -69,7 +69,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #######################################################################
 
-class Settings(object):
+class Settings:
     """
     Load parameter values from an external config file
 

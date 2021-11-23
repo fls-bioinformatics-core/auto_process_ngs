@@ -68,7 +68,7 @@ WARNING_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAkFBMVEX/
 # Classes
 #######################################################################
 
-class Document(object):
+class Document:
     """
     Utility class for constructing documents
 
@@ -196,7 +196,7 @@ class Document(object):
         html.add(self.html())
         html.write("%s" % outfile)
 
-class Section(object):
+class Section:
     """
     Class representing a generic document section
 
@@ -376,7 +376,7 @@ class Section(object):
         html.append('</div>')
         return '\n'.join(html)
 
-class Table(object):
+class Table:
     """
     Utility class for constructing HTML tables
 
@@ -615,7 +615,7 @@ class Table(object):
         html.append("</table>")
         return '\n'.join(html)
 
-class List(object):
+class List:
     """
     Utility class for creating ordered and unordered lists
 
@@ -692,7 +692,7 @@ class List(object):
         html.append("</%s>" % tag)
         return "".join(html)
 
-class Img(object):
+class Img:
     """
     Utility class for embedding <img> tags
 
@@ -772,7 +772,7 @@ class Img(object):
     def __repr__(self):
         return self.html()
 
-class Link(object):
+class Link:
     """
     Utility class for embedding <a href=...> tags
 
@@ -831,7 +831,7 @@ class Link(object):
     def __repr__(self):
         return self.html()
 
-class Target(object):
+class Target:
     """
     Utility class for embedding <a id=... /> tags
 
@@ -874,7 +874,7 @@ class Target(object):
         # Build the anchor
         return "<a id='%s' />" % self._name
 
-class Para(object):
+class Para:
     """
     Utility to wrap heterogeneous items into a single block
 

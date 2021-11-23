@@ -52,7 +52,7 @@ from .bcl2fastq.utils import get_nmismatches
 # Classes
 #######################################################################
 
-class bcl2fastq(object):
+class bcl2fastq:
     """Bcl to fastq conversion line applications
  
     Provides static methods to create Command instances for command line
@@ -314,7 +314,7 @@ class bcl2fastq(object):
                                     num_decompression_threads)
         return bclconvert_cmd
 
-class general(object):
+class general:
     """General command line applications (e.g. rsync, make)
  
     Provides static methods to create Command instances for a class of

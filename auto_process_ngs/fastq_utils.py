@@ -44,7 +44,7 @@ from bcftbx.qc.report import strip_ngs_extensions
 # Classes
 #######################################################################
 
-class BaseFastqAttrs(object):
+class BaseFastqAttrs:
     """
     Base class for extracting information about a Fastq file
 
@@ -306,7 +306,7 @@ class IlluminaFastqAttrs(BaseFastqAttrs):
             fq.append("%03d" % self.set_number)
         return self.delimiter.join(fq)
 
-class FastqReadCounter(object):
+class FastqReadCounter:
     """
     Implements various methods for counting reads in FASTQ file
 

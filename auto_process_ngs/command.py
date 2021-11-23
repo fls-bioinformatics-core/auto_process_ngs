@@ -30,7 +30,7 @@ logger.addHandler(logging.NullHandler())
 # Classes
 #######################################################################
 
-class Command(object):
+class Command:
     """Class for creating and executing command lines
 
     The Command class is intended to help with building and

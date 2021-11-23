@@ -40,7 +40,7 @@ REMOVE_TEST_OUTPUTS = True
 
 # Helpers
 
-class _Mock(object):
+class _Mock:
     """
     Helper class for mocking executables for testing
     """

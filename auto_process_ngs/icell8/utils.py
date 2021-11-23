@@ -310,7 +310,7 @@ def pass_quality_filter(s,cutoff):
 # Classes
 ######################################################################
 
-class ICell8WellList(object):
+class ICell8WellList:
     """
     Class representing an ICELL8 well list file
 
@@ -354,7 +354,7 @@ class ICell8WellList(object):
         except IndexError:
             raise KeyError("Failed to locate sample for '%s'" % barcode)
 
-class ICell8Read1(object):
+class ICell8Read1:
     """
     Class representing an ICELL8 R1 read
     """
@@ -482,7 +482,7 @@ class ICell8FastqIterator(Iterator):
             logging.critical("Failed to create read pair: %s" % ex)
             raise ex
 
-class ICell8StatsCollector(object):
+class ICell8StatsCollector:
     """
     Class to collect ICELL8 barcode and UMI counts
 
@@ -585,7 +585,7 @@ class ICell8StatsCollector(object):
         print("collect_fastq_stats: returning: %s" % fastq)
         return (fastq,counts,umis)
 
-class ICell8Stats(object):
+class ICell8Stats:
     """
     Class for gathering statistics on ICELL8 FASTQ R1 files
 

@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Constants
 #######################################################################
 
-class ReportingMode(object):
+class ReportingMode:
     CONCISE = 0
     SUMMARY = 1
     PROJECTS = 2

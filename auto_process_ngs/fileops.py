@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #########################################################################
 
-class Location(object):
+class Location:
     """
     Class for examining a file-system location specifier
 

@@ -8,7 +8,7 @@ from ..tenx_genomics_utils import MultiplexSummary
 from ..tenx_genomics_utils import MultiomeSummary
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 
-class CellrangerCount(object):
+class CellrangerCount:
     """
     Wrapper class for handling outputs from cellranger count
 
@@ -204,7 +204,7 @@ class CellrangerCount(object):
         else:
             return None
 
-class CellrangerMulti(object):
+class CellrangerMulti:
     """
     Wrapper class for handling outputs from cellranger multi
 

@@ -63,7 +63,7 @@ class MockJobRunner(BaseJobRunner):
         # Allow error state on jobs to be set manually for testing
         self.__error_states[job_id] = state
 
-class CallbackTester(object):
+class CallbackTester:
     """Utility class for testing callbacks from scheduler
 
     To use: create a CallbackTester instance e.g.:

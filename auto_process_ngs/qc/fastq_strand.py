@@ -24,7 +24,7 @@ Example with count data:
 Genome1	13.13	93.21	391087	51339	364535
 """
 
-class Fastqstrand(object):
+class Fastqstrand:
     """
     Class representing data from a fastq_strand.py run
 
