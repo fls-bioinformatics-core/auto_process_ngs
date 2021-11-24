@@ -90,13 +90,13 @@ class Document:
     method writes the full HTML document to
     file, including the document header, CSS
     rules etc.
+
+    Arguments:
+      title (str): title for the document
     """
     def __init__(self,title=None):
         """
         Create a new Document instance
-
-        Arguments:
-          title (str): title for the document
         """
         self._title = title
         self._sections = []
@@ -233,22 +233,21 @@ class Section:
     >>> results = paper.add_subsection("Results)
     >>> result.add("Some nice figures")
     >>> result.add(Img("graph.png"))
+
+    Arguments:
+      title (str): title text
+      name (str): name used for the 'id' of
+        the section
+      level (int): section heading level
+        (defaults to 2)
+      css_classes (list): list or iterable with
+        names of CSS classes to associate with
+        the section
     """
     def __init__(self,title=None,name=None,level=2,
                  css_classes=None):
         """
         Create a new Section instance
-
-        Arguments:
-          title (str): title text
-          name (str): name used for the 'id' of
-            the section
-          level (int): section heading level
-            (defaults to 2)
-          css_classes (list): list or iterable with
-            names of CSS classes to associate with
-            the section
-
         """
         self._title = title
         self._name = name
@@ -352,6 +351,10 @@ class Section:
     def html(self):
         """
         Generate HTML version of the section
+
+        Returns:
+          String: HTML representation of the section
+            content.
         """
         if self._title is None and \
            not self._content and \
@@ -433,16 +436,16 @@ class Table:
     - append_columns: add additional columns to the table
     - add_row: append a row to the table
     - set_value: set the value in a table cell
+
+    Arguments:
+      columns (list): list of column ids
+      aliases (mapping): optional, mapping of
+        column ids to aliases (i.e. actual
+        names)
     """
     def __init__(self,columns,**aliases):
         """
         Create a new Table instance
-
-        Arguments:
-          columns (list): list of column ids
-          aliases (mapping): optional, mapping of
-            column ids to aliases (i.e. actual
-            names)
         """
         self._columns = [x for x in columns]
         self._rows = []
@@ -562,6 +565,12 @@ class Table:
         """
         Generate HTML version of the table contents
 
+        Arguments:
+          css_id (str): optional, string to write
+            into the CSS ``id`` attribute
+
+        Returns:
+          String: HTML representation of the table.
         """
         html = []
         # Opening tag
@@ -664,6 +673,9 @@ class List:
     def html(self):
         """
         Generate HTML version of the list
+
+        Returns:
+          String: HTML representation of the list.
         """
         # Empty list?
         if not self._items:
@@ -702,28 +714,26 @@ class Img:
     >>> img.html()
     "<img src='picture.png' width='150' />"
 
+    Arguments:
+      src (str): string to use as the 'src'
+        attribute for the <img.../> tag
+      name (str): string to use as the 'id'
+        attribute for the <img.../> tag
+      height (int): optional height (pixels)
+      width (int): optional width (pixels)
+      href (str): if specified then the <img.../>
+        will be wrapped in <a href..>...</a> with
+        this used as the link target
+      alt (str): if specified then used as the
+        'alternative text' ('alt' attribute
+        for <img.../> tag)
+      title (str): if specified then assigned
+        to the <img../> tag's 'title' attribute
     """
     def __init__(self,src,name=None,height=None,width=None,href=None,
                  alt=None,title=None):
         """
         Create a new Img instance
-
-        Arguments:
-          src (str): string to use as the 'src'
-            attribute for the <img.../> tag
-          name (str): string to use as the 'id'
-            attribute for the <img.../> tag
-          height (int): optional height (pixels)
-          width (int): optional width (pixels)
-          href (str): if specified then the <img.../>
-            will be wrapped in <a href..>...</a> with
-            this used as the link target
-          alt (str): if specified then used as the
-            'alternative text' ('alt' attribute
-            for <img.../> tag
-          title (str): if specified then assigned
-            to the <img../> tag's 'title' attribute
-
         """
         self._src = src
         self._height = height
@@ -743,6 +753,9 @@ class Img:
     def html(self):
         """
         Generate HTML version of the image tag
+
+        Returns:
+          String: HTML representation of the image.
         """
         # Build the tag contents
         html = []
@@ -794,16 +807,15 @@ class Link:
     >>> ahref.href
     '#new_section'
 
+    Arguments:
+      text (str): text to display for the link
+      target (Object): target to link to; if not
+        supplied then 'text' will be used as the
+        link target
     """
     def __init__(self,text,target=None):
         """
         Create a new Link instance
-
-        Arguments:
-          text (str): text to display for the link
-          target (Object): target to link to; if not
-            supplied then 'text' will be used as the
-            link target
         """
         self._text = text
         if target is None:
@@ -824,6 +836,9 @@ class Link:
     def html(self):
         """
         Generate HTML version of the link
+
+        Returns:
+          String: HTML representation of the link.
         """
         # Build the tag contents
         return "<a href='%s'>%s</a>" % (self.href,self._text)
@@ -849,14 +864,13 @@ class Target:
     >>> ahref.html()
     "<a href='#my_target'>My target</a>"
 
+    Arguments:
+      name (str): name (i.e. 'id') for the
+        target
     """
     def __init__(self,name):
         """
         Create a new Target instance
-
-        Arguments:
-          name (str): name (i.e. 'id') for the
-            target
         """
         self._name = name
 
@@ -870,6 +884,10 @@ class Target:
     def html(self):
         """
         Generate HTML version of the target
+
+        Returns:
+          String: HTML representation of the
+            target.
         """
         # Build the anchor
         return "<a id='%s' />" % self._name
@@ -893,18 +911,17 @@ class Para:
     string-like) content element being wrapped in its
     own <p>...</p> pair; instead only the completely
     assembled Para HTML is enclosed in <p>...</p>.
-    """
 
+    Arguments:
+      items (sequence): optional, set of
+        items to add to the block
+      css_classes (list): list or iterable with
+        names of CSS classes to associate with
+        the section
+    """
     def __init__(self,*items,**kws):
         """
         Create a new Para instance
-
-        Arguments:
-          items (sequence): optional, set of
-            items to add to the block
-          css_classes (list): list or iterable with
-            names of CSS classes to associate with
-            the section
         """
         self._content = [x for x in items]
         self._delimiter = " "
@@ -945,6 +962,9 @@ class Para:
     def html(self):
         """
         Generate HTML version of the block
+
+        Returns:
+          String: HTML representation of the block.
         """
         if not self._content:
             return ""
@@ -978,16 +998,16 @@ class Para:
 class WarningIcon(Img):
     """
     Create image with an inline warning icon
+
+    Arguments:
+      title (str): optional, content to mark with
+        the warning
+      size (int): optional height/width specifier for
+        the icon (defaults to 25)
     """
     def __init__(self,title=None,size=25):
         """
         Create new WarningIcon instance
-
-        Arguments:
-          title (str): optional, content to mark with
-            the warning
-          size (int): optional height/width specifier for
-            the icon (defaults to 25)
         """
         Img.__init__(self,
                      "data:image/png;base64,%s" % WARNING_ICON_BASE64,

@@ -744,18 +744,19 @@ Setting pipeline parameters at execution time
 ---------------------------------------------
 
 When building pipelines, it is sometimes necessary or desirable
-a parameter into a task where the value of the parameter isn't
-known until execution time (via the ``run`` method).
+to supply a parameter to a task where the value of that parameter
+isn't known until execution time (via the ``run`` method).
 
 For example, a task in the pipeline might need to know the
 number of cores or the location of a temporary directory to be
-used, which only be set this at execution time.
+used, which can only be set at execution time.
 
 To handle these situations, it possible to define arbitrary
-parameters within the ``Pipeline`` class at build time and then
-set the values of these parameters at execution time.
+parameters within the ``Pipeline`` class at build time which are
+passed to tasks as placeholders, and then set the values of these
+parameters at execution time.
 
-Use the ``add_param`` method is used to define a parameter, for
+The ``add_param`` method is used to define a parameter, for
 example:
 
 ::
@@ -945,7 +946,7 @@ method:
 
 1. ``enable_conda`` must be set to ``True``, and
 2. The path to an existing ``conda`` installation must be supplied
-   using via ``conda`` argument.
+   via ``conda`` argument.
 
 For example:
 
@@ -1249,22 +1250,22 @@ class PipelineParam(BaseParam):
     This feature allows parameters defined in one context
     to be matched with parameters in another (for example
     when tasks from one pipeline are imported into another).
+
+    Arguments:
+      value (object): optional, initial value to assign
+        to the instance
+      type (function): optional, function used to convert
+        the stored value when fetched via the `value`
+        property
+      default (function): optional, function which will
+        return a default value if no explicit value is
+        set (i.e. value is `None`)
+      name (str): optional, name to associate with the
+        instance
     """
     def __init__(self,value=None,type=None,default=None,name=None):
         """
         Create a new PipelineParam instance
-
-        Arguments:
-          value (object): optional, initial value to assign
-            to the instance
-          type (function): optional, function used to convert
-            the stored value when fetched via the `value`
-            property
-          default (function): optional, function which will
-            return a default value if no explicit value is
-            set (i.e. value is `None`)
-          name (str): optional, name to associate with the
-            instance
         """
         BaseParam.__init__(self)
         self._name = None
@@ -1352,6 +1353,14 @@ class PipelineParam(BaseParam):
 class FileCollector(Iterator):
     """
     Class to return set of files based on glob pattern
+
+    Arguments:
+      dirn (str): directory to search
+      pattern (str): glob pattern to match files
+        against
+
+    Yields:
+      String: path of matching file.
     """
     def __init__(self,dirn,pattern):
         self._dirn = os.path.abspath(dirn)
@@ -1377,18 +1386,23 @@ class FileCollector(Iterator):
             self._idx = None
             raise StopIteration
 
-# Capture stdout and stderr from a function call
-# Based on code from http://stackoverflow.com/a/16571630/579925
-# Modified to handle both stdout and stderr (original version
-# only handled stdout)
-# Usage:
-# >>> with Capturing() as output:
-# ...     print("Hello!")
-# >>> for line in output.stdout:
-# ...     print("Line: %s" % line)
-# >>> for line in output.stderr:
-# ...     print("Err: %s" % line)
 class Capturing:
+    """
+    Capture stdout and stderr from a function call
+
+    Based on code from http://stackoverflow.com/a/16571630/579925
+    modified to handle both stdout and stderr (original version
+    only handled stdout)
+
+    Usage:
+
+    >>> with Capturing() as output:
+    ...     print("Hello!")
+    >>> for line in output.stdout:
+    ...     print("Line: %s" % line)
+    >>> for line in output.stderr:
+    ...     print("Err: %s" % line
+    """
     def __init__(self):
         self.stdout = list()
         self.stderr = list()
@@ -1427,13 +1441,13 @@ class Pipeline:
     Tasks will only run when all requirements have
     completed (or will run immediately if they don't
     have any requirements).
+
+    Arguments:
+      name (str): optional name for the pipeline
     """
     def __init__(self,name="PIPELINE"):
         """
         Create a new Pipeline instance
-
-        Arguments:
-          name (str): optional name for the pipeline
         """
         self._name = str(name)
         self._id = "%s.%s" % (sanitize_name(self._name),
@@ -1515,6 +1529,9 @@ class Pipeline:
     def report(self,s):
         """
         Internal: report messages from the pipeline
+
+        Arguments:
+          s (str): message to report
         """
         report = []
         for line in s.split('\n'):
@@ -1830,6 +1847,9 @@ class Pipeline:
     def task_list(self):
         """
         Return a list of task ids
+
+        Returns:
+          List: list of task IDs in the pipeline.
         """
         return list(self._tasks.keys())
 
@@ -1927,6 +1947,9 @@ class Pipeline:
     def get_dependent_tasks(self,task_id):
         """
         Return task ids that depend on supplied task id
+
+        Returns:
+          List: list of IDs for dependent tasks.
         """
         dependents = set()
         for id_ in self.task_list():
@@ -2010,6 +2033,10 @@ class Pipeline:
           finalize_outputs (bool): if True then convert any
             pipeline outputs from PipelineParams to an
             actual value (this is the default)
+
+        Returns:
+          Integer: 0 for successful completion, 1 if there
+            was an error.
         """
         # Deal with working directory
         if working_dir is None:
@@ -2372,20 +2399,19 @@ class PipelineTask:
     The 'add_cmd' method can be used within 'setup' to add one
     or more 'PipelineCommand' instances.
 
+    Arguments:
+      _name (str): an arbitrary user-friendly name for the
+        task instance
+      args (List): list of arguments to be supplied to
+        the subclass (must match those defined in the
+        'init' method)
+      kws (Dictionary): dictionary of keyword-value pairs
+        to be supplied to the subclass (must match those
+        defined in the 'init' method)
     """
     def __init__(self,_name,*args,**kws):
         """
         Create a new PipelineTask instance
-
-        Arguments:
-          _name (str): an arbitrary user-friendly name for the
-            task instance
-          args (List): list of arguments to be supplied to
-            the subclass (must match those defined in the
-            'init' method)
-          kws (Dictionary): dictionary of keyword-value pairs
-            to be supplied to the subclass (must match those
-            defined in the 'init' method)
         """
         self._name = str(_name)
         self._args = args
@@ -2451,6 +2477,11 @@ class PipelineTask:
     def args(self):
         """
         Fetch parameters supplied to the instance
+
+        Returns:
+          List: list of arguments (with any pipeline
+            parameter instances resolved to their
+            current values).
         """
         args = AttributeDictionary(**self._callargs)
         for a in args:
@@ -2461,6 +2492,10 @@ class PipelineTask:
     def completed(self):
         """
         Check if the task has completed
+
+        Returns:
+          Boolean: True if task has completed, False
+            if not.
         """
         return self._completed
 
@@ -2468,6 +2503,10 @@ class PipelineTask:
     def updated(self):
         """
         Check if the task has been updated since the last check
+
+        Returns:
+          Boolean: True if task has been updated, False
+            if not.
         """
         njobs,ncompleted = self.njobs()
         updated = ncompleted > self._ncompleted
@@ -2566,6 +2605,9 @@ class PipelineTask:
     def report(self,s):
         """
         Internal: report messages from the task
+
+        Arguments:
+          s (str): message to report.
         """
         report = []
         for line in s.split('\n'):
@@ -2835,6 +2877,10 @@ class PipelineTask:
 
         Package requirements can be either unversioned
         (e.g. 'multiqc') or versioned (e.g. 'multiqc=1.8').
+
+        Arguments:
+          reqs (list): one or more Conda package
+            specifiers.
         """
         for req in reqs:
             self._conda_pkgs.append(req)
@@ -2867,6 +2913,9 @@ class PipelineTask:
             supplied conda installation)
           channels (list): optional list of channel names to use
             with conda operations (overrides defaults)
+
+        Returns:
+          String: path to Conda environment.
         """
         # Set up conda wrapper
         conda = CondaWrapper(conda=conda,
@@ -3146,10 +3195,35 @@ class PipelineTask:
             job.terminate()
 
     def init(self,*args,**kws):
+        """
+        Initialise the task
+
+        Defines the arguments and keywords required
+        by the task and sets up output parameters and
+        any internal variables required by ``setup``
+        and ``finish``.
+
+        Must be implemented by the subclass
+        """
         pass
     def setup(self):
+        """
+        Set up commands to be performed by the task
+
+        Must be implemented by the subclass
+        """
         raise NotImplementedError("Subclass must implement 'setup' method")
     def finish(self):
+        """
+        Perform actions on task completion
+
+        Performs any actions that are required on
+        completion of the task, such as moving or
+        copying data, and setting the values of
+        any output parameters.
+
+        Must be implemented by the subclass
+        """
         raise NotImplementedError("Subclass must implement 'finish' method")
 
 class PipelineFunctionTask(PipelineTask):
@@ -3730,17 +3804,17 @@ class Dispatcher:
 
     Currently uses cloudpickle as the pickling module:
     https://pypi.org/project/cloudpickle/
+
+    Arguments:
+      working_dir (str): optional, explicitly specify the
+        directory where pickled files and other
+        intermediates will be stored
+      cleanup (bool): if True then remove the working
+        directory on exit
     """
     def __init__(self,working_dir=None,cleanup=True):
         """
         Create a new Dispatcher instance
-
-        Arguments:
-          working_dir (str): optional, explicitly specify the
-            directory where pickled files and other
-            intermediates will be stored
-          cleanup (bool): if True then remove the working
-            directory on exit
         """
         self._id = str(uuid.uuid4())
         if not working_dir:
