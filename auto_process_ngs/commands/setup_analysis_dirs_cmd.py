@@ -181,9 +181,13 @@ def setup_analysis_dirs(ap,
         if single_cell_platform.startswith("10xGenomics Chromium") and \
            library_type.startswith("CellPlex"):
             # Acquire reference dataset
+            print("-- looking up reference for '%s'" % organism)
             try:
-                reference_dataset = ap.settings.organisms[organism].\
+                organism_id = organism.lower().replace(' ','_')
+                print("-- using ID '%s'" % organism_id)
+                reference_dataset = ap.settings.organisms[organism_id].\
                                     cellranger_reference
+                print("-- found %s" % reference_dataset)
             except Exception as ex:
                 logger.warning("Failed to locate 10xGenomics reference "
                                "dataset for project '%s': %s" %
@@ -207,7 +211,7 @@ def setup_analysis_dirs(ap,
                     fp.write("[libraries]\n"
                              "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
                     for sample in project.samples:
-                        fp.write("{sample},{fastqs_dir},{sample},any,[gene expression|Multiplexing Capture],\n".format(
+                        fp.write("{sample},{fastqs_dir},any,{sample},[gene expression|Multiplexing Capture],\n".format(
                             sample=sample.name,
                             fastqs_dir=project.fastq_dir))
                     fp.write("\n")
