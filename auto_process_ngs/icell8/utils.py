@@ -470,8 +470,8 @@ class ICell8FastqIterator(Iterator):
         self._fqr2 = FastqIterator(fqr2)
     def __next__(self):
         self._read_count += 1
-        r1 = self._fqr1.next()
-        r2 = self._fqr2.next()
+        r1 = next(self._fqr1)
+        r2 = next(self._fqr2)
         try:
             return ICell8ReadPair(r1,r2)
         except Exception as ex:
