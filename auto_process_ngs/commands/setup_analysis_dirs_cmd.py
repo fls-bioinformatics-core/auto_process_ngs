@@ -207,7 +207,7 @@ def setup_analysis_dirs(ap,
                     fp.write("[libraries]\n"
                              "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
                     for sample in project.samples:
-                        fp.write("{sample},{fastqs_dir},{sample},any,[gene expression|Multiplexing Capture],\n".format(
+                        fp.write("{sample},{fastqs_dir},any,{sample},[gene expression|Multiplexing Capture],\n".format(
                             sample=sample.name,
                             fastqs_dir=project.fastq_dir))
                     fp.write("\n")
