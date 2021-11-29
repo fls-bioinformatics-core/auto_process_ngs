@@ -1611,8 +1611,15 @@ class QCReport(Document):
             "Multiplexing analysis",
             name="multiplexing_analysis_%s" % sanitize_name(project.id),
             css_classes=('single_library_summary',))
+        # Generate headers for table
+        tbl_headers = {
+            f: "<space title=\"%s\">%s</span>" %
+            ('\n'.join(textwrap.wrap(self.field_descriptions[f][1],width=20)),
+             self.field_descriptions[f][0])
+            for f in self.field_descriptions.keys()
+        }
         # Create the table
-        multiplexing_tbl = Table(fields,**self.field_descriptions)
+        multiplexing_tbl = Table(fields,**tbl_headers)
         multiplexing_tbl.add_css_classes('summary','single_library_summary')
         # Append to the summary section
         section.add(multiplexing_tbl)
