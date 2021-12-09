@@ -1075,6 +1075,38 @@ class TestExpectedOutputs(unittest.TestCase):
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
+                                    qc_protocol="standardPE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
+        for e in expected:
+            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
+                                                             p.name,
+                                                             "qc"))
+            self.assertTrue(os.path.basename(e) in reference_outputs)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
+
+    def test_expected_outputs_standardPE_no_screens(self):
+        """
+        expected_outputs: standard paired-end, no screens
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Reference outputs
+        reference_outputs = ("PJB1_S1_R1_001_fastqc",
+                             "PJB1_S1_R1_001_fastqc.html",
+                             "PJB1_S1_R1_001_fastqc.zip",
+                             "PJB1_S1_R2_001_fastqc",
+                             "PJB1_S1_R2_001_fastqc.html",
+                             "PJB1_S1_R2_001_fastqc.zip",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
                                     qc_protocol="standardPE")
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
@@ -1124,7 +1156,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="standardPE")
+                                    qc_protocol="standardPE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1155,7 +1190,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
-                                    qc_protocol="standardSE")
+                                    qc_protocol="standardSE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1194,7 +1232,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="standardSE")
+                                    qc_protocol="standardSE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1229,7 +1270,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
-                                    qc_protocol="singlecell")
+                                    qc_protocol="singlecell",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1272,7 +1316,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="singlecell")
+                                    qc_protocol="singlecell",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1320,7 +1367,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-GRCh38-1.2.0",
-                                    qc_protocol="10x_scRNAseq")
+                                    qc_protocol="10x_scRNAseq",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1370,7 +1420,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     cellranger_version="5.0.1",
                                     cellranger_refdata=
                                     "/data/refdata-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_scRNAseq")
+                                    qc_protocol="10x_scRNAseq",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1432,7 +1485,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-atac-GRCh38-1.2.0",
-                                    qc_protocol="10x_scATAC")
+                                    qc_protocol="10x_scATAC",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1495,7 +1551,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     cellranger_version="1.2.0",
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-atac-GRCh38-1.2.0",
-                                    qc_protocol="10x_scATAC")
+                                    qc_protocol="10x_scATAC",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1541,7 +1600,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_scRNAseq")
+                                    qc_protocol="10x_scRNAseq",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1587,7 +1649,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_Visium")
+                                    qc_protocol="10x_Visium",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1647,7 +1712,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_Multiome_ATAC")
+                                    qc_protocol="10x_Multiome_ATAC",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1700,7 +1768,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_Multiome_GEX")
+                                    qc_protocol="10x_Multiome_GEX",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1772,7 +1843,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-arc-GRCh38-2020-A",
-                                    qc_protocol="10x_Multiome_ATAC")
+                                    qc_protocol="10x_Multiome_ATAC",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1838,7 +1912,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-arc-GRCh38-2020-A",
-                                    qc_protocol="10x_Multiome_GEX")
+                                    qc_protocol="10x_Multiome_GEX",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1928,7 +2005,10 @@ PBB,CMO302,PBB
                                     cellranger_version="6.0.0",
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_CellPlex")
+                                    qc_protocol="10x_CellPlex",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1992,7 +2072,10 @@ PBB,CMO302,PBB
                                     cellranger_version="6.0.0",
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_CellPlex")
+                                    qc_protocol="10x_CellPlex",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)

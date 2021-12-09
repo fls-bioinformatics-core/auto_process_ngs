@@ -511,9 +511,10 @@ def check_cellranger_arc_count_outputs(project,qc_dir=None,
                 samples.add(sample.name)
     return sorted(list(samples))
 
-def expected_outputs(project,qc_dir,fastq_strand_conf=None,
-                     cellranger_version=None,cellranger_refdata=None,
-                     cellranger_multi_config=None,qc_protocol=None):
+def expected_outputs(project,qc_dir,fastq_screens=None,
+                     fastq_strand_conf=None,cellranger_version=None,
+                     cellranger_refdata=None,cellranger_multi_config=None,
+                     qc_protocol=None):
     """
     Return expected QC outputs for a project
 
@@ -523,6 +524,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
       qc_dir (str): path to the QC directory (relative
         path is assumed to be a subdirectory of the
         project)
+      fastq_screens (list): list of screen names used
+        with fastq_screen
       fastq_strand_conf (str): path to a fastq_strand
         config file; strandedness QC outputs will be
         included unless the path is `None` or the
@@ -577,10 +580,11 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
             # No screens for R1 for single cell, Visium,
             # multiome GEX or CellPlex
             continue
-        for screen in FASTQ_SCREENS:
-            for output in [os.path.join(qc_dir,f)
-                        for f in fastq_screen_output(fastq,screen)]:
-                outputs.add(output)
+        if fastq_screens:
+            for screen in fastq_screens:
+                for output in [os.path.join(qc_dir,f)
+                               for f in fastq_screen_output(fastq,screen)]:
+                    outputs.add(output)
     if fastq_strand_conf and os.path.exists(fastq_strand_conf):
         for fq_group in group_fastqs_by_name(
                 remove_index_fastqs(project.fastqs,
