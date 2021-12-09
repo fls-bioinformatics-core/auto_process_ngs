@@ -550,22 +550,24 @@ class QCProject:
         logger.debug("Screens: %s" % screens)
         print("\t- %d fastq_screen files" % len(screens))
         fastq_names = set()
+        fastq_screens = set()
         if screens:
             versions = set()
             # Pull out the Fastq names from the .txt files
             for screen in list(filter(lambda s:
                                       s.endswith("_screen.txt"),
                                       screens)):
-                screen_base = os.path.splitext(screen)[0]
-                s = os.path.basename(screen_base)[:-len("_screen")]
-                for name in FASTQ_SCREENS:
-                    if s.endswith("_%s" % name):
-                        fq = self.fastq_attrs(s[:-len("_%s" % name)])
-                        outputs.add("screens_%s%s" %
-                                    (('i' if fq.is_index_read else 'r'),
-                                     (fq.read_number
-                                      if fq.read_number is not None else '1')))
-                        fastq_names.add(s[:-len("_%s" % name)])
+                # Assumes that the Fastqs have canonical Illumina
+                # style names
+                fq = self.fastq_attrs(screen[:-len("_screen.txt")])
+                fastq_name = fq.canonical_name
+                screen_name = fq.extras.strip('_')
+                outputs.add("screens_%s%s" %
+                            (('i' if fq.is_index_read else 'r'),
+                             (fq.read_number
+                              if fq.read_number is not None else '1')))
+                fastq_names.add(fastq_name)
+                fastq_screens.add(screen_name)
                 versions.add(Fastqscreen(screen).version)
             if versions:
                 software['fastq_screen'] = sorted(list(versions))
@@ -822,6 +824,8 @@ class QCProject:
             samples.add(s)
         self.samples = sorted(list(samples),
                               key=lambda s: split_sample_name(s))
+        # Fastq screens
+        self.fastq_screens = sorted(list(fastq_screens))
         # Single library analyses reference data
         self.cellranger_references = sorted(list(cellranger_references))
         # Multiplexed samples
@@ -1190,6 +1194,10 @@ class QCReport(Document):
                     print("\t- %s" % output)
             else:
                 logger.warning("%s: no QC outputs found" % project.name)
+            if project.fastq_screens:
+                print("Fastq screens:")
+                for screen in project.fastq_screens:
+                    print("\t- %s" % screen)
             if project.stats.max_seqs:
                 print("Maximum number of sequences: %d" %
                       project.stats.max_seqs)
@@ -2989,18 +2997,26 @@ class QCReportFastq:
         # Fastqscreen
         self.fastq_screen = AttributeDictionary()
         self.fastq_screen['names'] = list()
-        for name in FASTQ_SCREENS:
-            png,txt = fastq_screen_output(fastq,name)
+        fastq_base = self.fastq_attrs(fastq).basename
+        for f in list(filter(lambda f:
+                             f.startswith(fastq_base) and
+                             f.endswith("_screen.txt"),
+                             os.listdir(qc_dir))):
+            fq = self.fastq_attrs(f[:-len("_screen.txt")])
+            screen_name = fq.extras.strip('_')
+            png,txt = fastq_screen_output(fastq,screen_name)
             png = os.path.join(qc_dir,png)
             txt = os.path.join(qc_dir,txt)
             if os.path.exists(png) and os.path.exists(txt):
-                self.fastq_screen['names'].append(name)
-                self.fastq_screen[name] = AttributeDictionary()
-                self.fastq_screen[name]["description"] = \
-                                        name.replace('_',' ').title()
-                self.fastq_screen[name]["png"] = png
-                self.fastq_screen[name]["txt"] = txt
-                self.fastq_screen[name]["version"] = Fastqscreen(txt).version
+                self.fastq_screen['names'].append(screen_name)
+                self.fastq_screen[screen_name] = AttributeDictionary()
+                self.fastq_screen[screen_name]["description"] = \
+                                        screen_name.replace('_',' ').title()
+                self.fastq_screen[screen_name]["png"] = png
+                self.fastq_screen[screen_name]["txt"] = txt
+                self.fastq_screen[screen_name]["version"] = \
+                                        Fastqscreen(txt).version
+        self.fastq_screen['names'] = sorted(self.fastq_screen['names'])
         # Sequence lengths
         try:
             self.sequence_lengths = SeqLens(
