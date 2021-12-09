@@ -665,6 +665,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     organism: the organism(s) that the QC was run with
     cellranger_version: version of cellranger/10x software used
     cellranger_refdata: reference datasets used with cellranger
+    fastq_screens: names of panels used with fastq_screen
     """
     def __init__(self,filen=None):
         """Create a new AnalysisProjectQCDirInfo instance
@@ -682,6 +683,8 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                                   'Cellranger version',
                                   'cellranger_refdata':
                                   'Cellranger reference datasets',
+                                  'fastq_screens':
+                                  'FastqScreen panels',
                               },
                               order = (
                                   'fastq_dir',
