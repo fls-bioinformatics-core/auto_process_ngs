@@ -10,7 +10,8 @@ import zipfile
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
-from auto_process_ngs.mock import MockIlluminaQcSh
+from auto_process_ngs.mock import MockFastqScreen
+from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockFastqStrandPy
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import MockMultiQC
@@ -30,6 +31,21 @@ class TestAutoProcessRunQc(unittest.TestCase):
         # Create a temp 'bin' dir
         self.bin = os.path.join(self.dirn,"bin")
         os.mkdir(self.bin)
+        # Create a temp 'data' dir
+        self.data = os.path.join(self.dirn,"data")
+        os.mkdir(self.data)
+        # Add (empty) FastqScreen conf files
+        self.fastq_screens = {
+            'model_organisms': "fastq_screen_model_organisms.conf",
+            'other_organisms': "fastq_screen_other_organisms.conf",
+            'rRNA': "fastq_screen_rRNA.conf",
+        }
+        for screen in self.fastq_screens:
+            conf_file = os.path.join(self.data,
+                                     self.fastq_screens[screen])
+            with open(conf_file,'wt') as fp:
+                fp.write("")
+            self.fastq_screens[screen] = conf_file
         # Store original location so we can get back at the end
         self.pwd = os.getcwd()
         # Store original PATH
@@ -51,9 +67,9 @@ class TestAutoProcessRunQc(unittest.TestCase):
     def test_run_qc(self):
         """run_qc: standard QC run
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -75,6 +91,7 @@ poll_interval = 0.5
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -104,9 +121,9 @@ poll_interval = 0.5
     def test_run_qc_with_strandedness(self):
         """run_qc: standard QC run with strandedness determination
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -139,6 +156,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -180,9 +198,9 @@ star_index = /data/genomeIndexes/mm10/STAR
     def test_run_qc_single_end_with_strandedness(self):
         """run_qc: single-end QC run with strandedness determination
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -216,6 +234,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -257,9 +276,9 @@ star_index = /data/genomeIndexes/mm10/STAR
     def test_run_qc_single_cell_with_strandedness(self):
         """run_qc: ICELL8 scRNA-seq run with strandedness determination
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -294,6 +313,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -335,9 +355,9 @@ star_index = /data/genomeIndexes/mm10/STAR
     def test_run_qc_10x_scRNAseq(self):
         """run_qc: 10x scRNA-seq with strandedness and single library analysis
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
@@ -379,6 +399,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -425,9 +446,9 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
     def test_run_qc_10x_snRNAseq_310(self):
         """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 3.1.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
@@ -471,6 +492,7 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -518,9 +540,9 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
     def test_run_qc_10x_snRNAseq_501(self):
         """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 5.0.1)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
@@ -564,6 +586,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -611,9 +634,9 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
     def test_run_qc_10x_snRNAseq_600(self):
         """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 6.0.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
@@ -657,6 +680,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -704,9 +728,9 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
     def test_run_qc_10x_scATACseq(self):
         """run_qc: 10x scATAC-seq with strandedness and single library analysis
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"))
@@ -749,6 +773,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -795,9 +820,9 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
     def test_run_qc_10x_visium(self):
         """run_qc: 10x Visium spatial RNA-seq with strandedness
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -836,6 +861,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -877,9 +903,9 @@ star_index = /data/genomeIndexes/mm10/STAR
     def test_run_qc_10x_multiome_atac(self):
         """run_qc: 10x Multiome ATAC with strandedness
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -915,6 +941,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
@@ -956,9 +983,9 @@ star_index = /data/genomeIndexes/mm10/STAR
     def test_run_qc_10x_multiome_gex(self):
         """run_qc: 10x Multiome GEX with strandedness
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -994,6 +1021,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                          settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)

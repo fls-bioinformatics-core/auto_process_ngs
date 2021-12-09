@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def run_qc(ap,projects=None,ungzip_fastqs=False,
+def run_qc(ap,projects=None,fastq_screens=None,ungzip_fastqs=False,
            fastq_screen_subset=100000,nthreads=None,
            runner=None,fastq_dir=None,qc_dir=None,
            cellranger_chemistry='auto',
@@ -54,6 +54,8 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
         the '--ungzip-fastqs' option to create decompressed
         copies of any fastq.gz inputs (default: False i.e. don't
         decompress the input files)
+      fastq_screens (dict): mapping of Fastq screen names to
+        corresponding conf files, to use for contaminant screens
       fastq_screen_subset (int): subset of reads to use in
         FastQScreen, set to zero or None to use all reads
         (default: 100000)
@@ -216,6 +218,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     cellranger_localmem = cellranger_settings.cellranger_localmem
     # Run the QC
     status = runqc.run(nthreads=nthreads,
+                       fastq_screens=fastq_screens,
                        star_indexes=star_indexes,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
