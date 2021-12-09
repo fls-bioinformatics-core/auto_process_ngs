@@ -36,8 +36,10 @@ the external software required for parts of the pipeline:
 - MockBclConvertExe
 - Mock10xPackageExe
 - MockIlluminaQCSh
-- MockMultiQC
+- MockFastqScreen
+- MockFastQC
 - MockFastqStrandPy
+- MockMultiQC
 - MockConda
 
 There also is a wrapper for the 'Mock10xPackageExe' class which
@@ -2484,6 +2486,224 @@ fastqc\t/opt/apps/bin/fastqc\t0.11.3
         # Create FastQC outputs
         if self._fastqc:
             MockQCOutputs.fastqc_v0_11_2(args.fastq,qc_dir)
+        return self._exit_code
+
+class MockFastqScreen:
+    """
+    Create mock fastq_screen
+
+    This class can be used to create a mock
+    fastq_screen executable, which in turn can be used
+    in place of the actual fastq_screen program for
+    testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockFastqScreen.create("/tmpbin/fastq_screen")
+
+    The resulting executable will generate mock outputs
+    when run on a Fastq file (ignoring its content).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - outputs for specific stages can be removed by
+      specifying their names in the `missing_fastqs`
+      argument
+    """
+
+    @staticmethod
+    def create(path,version=None,no_outputs=False,
+               exit_code=0):
+        """
+        Create a "mock" fastq_screen executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          version (str): explicit version string
+          no_outputs (bool): if True then don't
+            create outputs (default: False, do
+            create outputs)
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockFastqScreen
+sys.exit(MockFastqScreen(version=%s,
+                         no_outputs=%s,
+                         exit_code=%s).main(sys.argv[1:]))
+            """ % (("\"%s\"" % version
+                    if version is not None
+                    else None),
+                   no_outputs,
+                   exit_code))
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("fastq_screen:")
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,version=None,no_outputs=False,exit_code=0):
+        """
+        Internal: configure the fastq_screen
+        """
+        if version is None:
+            version = "0.14.0"
+        self._version = str(version)
+        self._no_outputs = no_outputs
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock fastq_screen functionality
+        """
+        # No args
+        if not args:
+            return self._exit_code
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("--conf",action="store")
+        p.add_argument("--outdir",action="store")
+        p.add_argument("--threads",action="store")
+        p.add_argument("--subset",action="store")
+        p.add_argument("--force",action="store_true")
+        p.add_argument("fastq")
+        args = p.parse_args(args)
+        # Check input file
+        if not os.path.exists(args.fastq):
+            print("%s: fastq file not found" % args.fastq)
+            return 1
+        # Output dir
+        if args.outdir:
+            outdir = args.outdir
+        else:
+            outdir = os.getcwd()
+        outdir = os.path.abspath(outdir)
+        # Fastq base name
+        fastq_base = MockQCOutputs.fastq_basename(args.fastq)
+        # Create screen outputs
+        if not self._no_outputs:
+            MockQCOutputs.fastq_screen_v0_9_2(args.fastq,outdir)
+        return self._exit_code
+
+class MockFastQC:
+    """
+    Create mock fastqc
+
+    This class can be used to create a mock
+    fastqc executable, which in turn can be used
+    in place of the actual fastqc program for
+    testing purposes.
+
+    To create a mock script, use the 'create' static
+    method, e.g.
+
+    >>> MockFastQC.create("/tmpbin/fastqc")
+
+    The resulting executable will generate mock outputs
+    when run on Fastq files (ignoring their content).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,version=None,no_outputs=False,
+               exit_code=0):
+        """
+        Create a "mock" illumina.sh "script"
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          version (str): explicit version string
+          no_outputs (bool): if True then make
+            don't create mock outputs for FastQC
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockFastQC
+sys.exit(MockFastQC(version=%s,
+                    no_outputs=%s,
+                    exit_code=%s).main(sys.argv[1:]))
+            """ % (("\"%s\"" % version
+                    if version is not None
+                    else None),
+                   no_outputs,
+                   exit_code))
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("fastqc:")
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,version=None,no_outputs=False,
+                 exit_code=0):
+        """
+        Internal: configure the mock fastqc
+        """
+        if version is None:
+            version = "0.11.3"
+        self._version = str(version)
+        self._no_outputs = no_outputs
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock fastqc functionality
+        """
+        # No args
+        if not args:
+            return self._exit_code
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("--threads",action="store")
+        p.add_argument("--outdir",action="store")
+        p.add_argument("--nogroup",action="store_true")
+        p.add_argument("--extract",action="store_true")
+        p.add_argument("fastq",nargs='+')
+        args = p.parse_args(args)
+        # Output dir
+        if args.outdir:
+            outdir = args.outdir
+        else:
+            outdir = os.getcwd()
+        outdir = os.path.abspath(outdir)
+        # Create FastQC outputs
+        if not self._no_outputs:
+            for fastq in args.fastq:
+                # Check input file
+                if not os.path.exists(fastq):
+                    print("%s: fastq file not found" % fastq)
+                    return 1
+                # Fastq base name
+                MockQCOutputs.fastqc_v0_11_2(fastq,outdir)
         return self._exit_code
 
 class MockMultiQC:
