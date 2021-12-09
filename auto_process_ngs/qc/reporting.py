@@ -3298,6 +3298,7 @@ def verify(project,qc_dir=None,qc_protocol=None):
                  fastq_strand_conf)
     cellranger_version = None
     cellranger_refdata = None
+    fastq_screens = None
     qc_info_file = os.path.join(qc_dir,"qc.info")
     if os.path.exists(qc_info_file):
         qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
@@ -3309,13 +3310,23 @@ def verify(project,qc_dir=None,qc_protocol=None):
             cellranger_version = qc_info['cellranger_version']
         except KeyError:
             pass
+        try:
+            fastq_screens = qc_info['fastq_screens']
+            if fastq_screens:
+                fastq_screens = fastq_screens.split(',')
+            elif 'fastq_screens' not in qc_info.keys_in_file():
+                fastq_screens = FASTQ_SCREENS
+        except KeyError:
+            pass
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
+    logger.debug("verify: fastq screens : %s" % fastq_screens)
     cellranger_multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
     if not os.path.exists(cellranger_multi_config):
         cellranger_multi_config = None
     verified = True
     for f in expected_outputs(project,qc_dir,
+                              fastq_screens=fastq_screens,
                               fastq_strand_conf=fastq_strand_conf,
                               cellranger_version=cellranger_version,
                               cellranger_refdata=cellranger_refdata,
