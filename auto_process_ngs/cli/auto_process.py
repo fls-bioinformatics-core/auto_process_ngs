@@ -1338,6 +1338,13 @@ def run_qc(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
+    # Fastq screens
+    if __settings.qc.fastq_screens:
+        fastq_screens = dict()
+        for screen in __settings.qc.fastq_screens.split(','):
+            fastq_screens[screen] = __settings.screens[screen].conf_file
+    else:
+        fastq_screens = None
     # Handle 10x transcriptomes
     cellranger_transcriptomes = dict()
     if args.cellranger_transcriptomes:
@@ -1358,6 +1365,7 @@ def run_qc(args):
     # Do the run_qc step
     retcode = d.run_qc(projects=args.project_pattern,
                        ungzip_fastqs=args.ungzip_fastqs,
+                       fastq_screens=fastq_screens,
                        fastq_screen_subset=args.subset,
                        nthreads=args.nthreads,
                        fastq_dir=args.fastq_dir,
