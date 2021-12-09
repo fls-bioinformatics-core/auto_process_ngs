@@ -338,6 +338,92 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
                     fastqs.add(fastq)
     return sorted(list(fastqs))
 
+def check_fastq_screen_outputs(project,qc_dir,screen,qc_protocol=None):
+    """
+    Return Fastqs missing QC outputs from FastqScreen
+
+    Returns a list of the Fastqs from a project for which
+    one or more associated outputs from FastqScreen
+    don't exist in the specified QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+      qc_dir (str): path to the QC directory (relative
+        path is assumed to be a subdirectory of the
+        project)
+      screen (str): screen name to check
+      qc_protocol (str): QC protocol to predict outputs
+        for; if not set then defaults to standard QC
+        based on ended-ness
+
+    Returns:
+      List: list of Fastq files with missing outputs.
+    """
+    if not os.path.isabs(qc_dir):
+        qc_dir = os.path.join(project.dirn,qc_dir)
+    fastqs = set()
+    for fastq in remove_index_fastqs(project.fastqs,
+                                     project.fastq_attrs):
+        if qc_protocol in ('10x_scATAC',
+                           '10x_Multiome_ATAC',):
+            if project.fastq_attrs(fastq).read_number == 2:
+                # Ignore the R2 reads for 10x single-cell ATAC
+                continue
+        # Fastq_screen
+        if qc_protocol in ('singlecell',
+                           '10x_scRNAseq',
+                           '10x_snRNAseq',
+                           '10x_Visium',
+                           '10x_Multiome_GEX',
+                           '10x_CellPlex',):
+            if project.fastq_attrs(fastq).read_number == 1:
+                # No screens for R1 for single cell
+                continue
+        for output in [os.path.join(qc_dir,f)
+                       for f in fastq_screen_output(fastq,screen)]:
+            if not os.path.exists(output):
+                fastqs.add(fastq)
+    return sorted(list(fastqs))
+
+def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
+    """
+    Return Fastqs missing QC outputs from FastQC
+
+    Returns a list of the Fastqs from a project for which
+    one or more associated outputs from FastQC don't exist
+    in the specified QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+      qc_dir (str): path to the QC directory (relative
+        path is assumed to be a subdirectory of the
+        project)
+      qc_protocol (str): QC protocol to predict outputs
+        for; if not set then defaults to standard QC
+        based on ended-ness
+
+    Returns:
+      List: list of Fastq files with missing outputs.
+    """
+    if not os.path.isabs(qc_dir):
+        qc_dir = os.path.join(project.dirn,qc_dir)
+    fastqs = set()
+    for fastq in remove_index_fastqs(project.fastqs,
+                                     project.fastq_attrs):
+        if qc_protocol in ('10x_scATAC',
+                           '10x_Multiome_ATAC',):
+            if project.fastq_attrs(fastq).read_number == 2:
+                # Ignore the R2 reads for 10x single-cell ATAC
+                continue
+        # FastQC
+        for output in [os.path.join(qc_dir,f)
+                       for f in fastqc_output(fastq)]:
+            if not os.path.exists(output):
+                fastqs.add(fastq)
+    return sorted(list(fastqs))
+
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
                                qc_protocol=None):
     """

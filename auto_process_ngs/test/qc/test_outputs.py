@@ -18,6 +18,8 @@ from auto_process_ngs.qc.outputs import cellranger_atac_count_output
 from auto_process_ngs.qc.outputs import cellranger_arc_count_output
 from auto_process_ngs.qc.outputs import cellranger_multi_output
 from auto_process_ngs.qc.outputs import check_illumina_qc_outputs
+from auto_process_ngs.qc.outputs import check_fastq_screen_outputs
+from auto_process_ngs.qc.outputs import check_fastqc_outputs
 from auto_process_ngs.qc.outputs import check_fastq_strand_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_count_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_atac_count_outputs
@@ -493,6 +495,406 @@ class TestCheckIlluminaQcOutputs(unittest.TestCase):
                                                    qc_protocol="singlecell"),
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R2_001.fastq.gz")])
+
+class TestCheckFastqScreenOutputs(unittest.TestCase):
+    """
+    Tests for the 'check_fastq_screen_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCheckFastqScreenOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_check_fastq_screen_outputs_standardPE_all_missing(self):
+        """
+        check_fastq_screen_outputs: all screen outputs missing (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardPE"),
+                         project.fastqs)
+
+    def test_check_fastq_screen_outputs_standardPE_all_present(self):
+        """
+        check_fastq_screen_outputs: all screen outputs present (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardPE"),
+                         [])
+
+    def test_check_fastq_screen_outputs_standardPE_some_missing(self):
+        """
+        check_fastq_screen_outputs: some screen outputs missing (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a screen output
+        os.remove(os.path.join(
+            project.qc_dir,
+            "PJB1_S1_R1_001_model_organisms_screen.txt"))
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardPE"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
+
+    def test_check_fastq_screen_outputs_standardSE_all_missing(self):
+        """
+        check_fastq_screen_outputs: all screen outputs missing (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardSE"),
+                         project.fastqs)
+
+    def test_check_fastq_screen_outputs_standardSE_all_present(self):
+        """
+        check_fastq_screen_outputs: all screen outputs present (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardSE"),
+                         [])
+
+    def test_check_fastq_screen_outputs_standardSE_some_missing(self):
+        """
+        check_fastq_screen_outputs: some screen outputs missing (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a screen output
+        os.remove(os.path.join(
+            project.qc_dir,
+            "PJB1_S1_R1_001_model_organisms_screen.txt"))
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardSE"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
+
+    def test_check_fastq_screen_outputs_singlecell_all_missing(self):
+        """
+        check_fastq_screen_outputs: all screen outputs missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        # NB no screens expected for R1 (only R2)
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="singlecell"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R2_001.fastq.gz")])
+
+    def test_check_fastq_screen_outputs_singlecell_all_present(self):
+        """
+        check_fastq_screen_outputs: all screen outputs present (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="singlecell"),
+                         [])
+
+    def test_check_fastq_screen_outputs_singlecell_some_missing(self):
+        """
+        check_fastq_screen_outputs: some screen outputs missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a screen output
+        os.remove(os.path.join(
+            project.qc_dir,
+            "PJB1_S1_R2_001_model_organisms_screen.txt"))
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="singlecell"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R2_001.fastq.gz")])
+
+class TestCheckFastQCOutputs(unittest.TestCase):
+    """
+    Tests for the 'check_fastqc_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestFastQCOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_check_fastqc_outputs_standardPE_all_missing(self):
+        """
+        check_fastqc_outputs: all FastQC outputs missing (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardPE"),
+                         project.fastqs)
+
+    def test_check_fastqc_outputs_standardPE_all_present(self):
+        """
+        check_fastqc_outputs: all FastQC outputs present (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardPE"),
+                         [])
+
+    def test_check_fastqc_outputs_standardPE_some_missing(self):
+        """
+        check_fastqc_outputs: some FastQC outputs missing (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a FastQC output
+        os.remove(os.path.join(project.qc_dir,
+                               "PJB1_S1_R1_001_fastqc.html"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardPE"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
+
+    def test_check_fastqc_outputs_standardSE_all_missing(self):
+        """
+        check_fastqc_outputs: all FastQC outputs missing (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardSE"),
+                         project.fastqs)
+
+    def test_check_fastqc_outputs_standardSE_all_present(self):
+        """
+        check_fastqc_outputs: all FastQC outputs present (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardSE"),
+                         [])
+
+    def test_check_fastqc_outputs_standardSE_some_missing(self):
+        """
+        check_fastqc_outputs: some FastQC outputs missing (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a FastQC output
+        os.remove(os.path.join(project.qc_dir,
+                               "PJB1_S1_R1_001_fastqc.html"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardSE"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
+
+    def test_check_fastqc_outputs_singlecell_all_missing(self):
+        """
+        check_fastqc_outputs: all FastQC outputs missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="singlecell"),
+                         project.fastqs)
+
+    def test_check_fastqc_outputs_singlecell_all_present(self):
+        """
+        check_fastqc_outputs: all FastQC outputs present (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="singlecell"),
+                         [])
+
+    def test_check_fastqc_outputs_singlecell_some_missing(self):
+        """
+        check_fastqc_outputs: some FastQC outputs missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a FastQC output
+        os.remove(os.path.join(project.qc_dir,
+                               "PJB1_S1_R1_001_fastqc.html"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="singlecell"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
 
 class TestCheckFastqStrandOutputs(unittest.TestCase):
     """
