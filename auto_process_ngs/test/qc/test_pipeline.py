@@ -7,9 +7,10 @@ import tempfile
 import shutil
 import os
 from bcftbx.JobRunner import SimpleJobRunner
-from auto_process_ngs.mock import MockIlluminaQcSh
-from auto_process_ngs.mock import MockMultiQC
+from auto_process_ngs.mock import MockFastqScreen
+from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockFastqStrandPy
+from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
@@ -23,12 +24,28 @@ class TestQCPipeline(unittest.TestCase):
     """
     Tests for QCPipeline class
     """
+    
     def setUp(self):
         # Create a temp working dir
         self.wd = tempfile.mkdtemp(suffix='TestQCPipeline')
         # Create a temp 'bin' dir
         self.bin = os.path.join(self.wd,"bin")
         os.mkdir(self.bin)
+        # Create a temp 'data' dir
+        self.data = os.path.join(self.wd,"data")
+        os.mkdir(self.data)
+        # Add (empty) FastqScreen conf files
+        self.fastq_screens = {
+            'model_organisms': "fastq_screen_model_organisms.conf",
+            'other_organisms': "fastq_screen_other_organisms.conf",
+            'rRNA': "fastq_screen_rRNA.conf",
+        }
+        for screen in self.fastq_screens:
+            conf_file = os.path.join(self.data,
+                                     self.fastq_screens[screen])
+            with open(conf_file,'wt') as fp:
+                fp.write("")
+            self.fastq_screens[screen] = conf_file
         # Store original location
         self.pwd = os.getcwd()
         # Store original PATH
@@ -48,9 +65,43 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline(self):
         """QCPipeline: standard QC run
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+
+    def test_qcpipeline_with_no_screens(self):
+        """QCPipeline: standard QC run with no screens defined
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -81,11 +132,11 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_strandedness(self):
         """QCPipeline: standard QC run with strandedness determination
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -100,7 +151,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
                            max_jobs=1,
@@ -118,12 +170,12 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_missing_strandedness(self):
         """QCPipeline: standard QC fails with missing strandedness outputs
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"),
                                  no_outputs=True)
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -138,7 +190,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
                            max_jobs=1,
@@ -157,9 +210,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_no_multiqc(self):
         """QCPipeline: standard QC run (no MultiQC)
         """
-        # Make mock illumina_qc.sh
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -173,7 +226,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=False)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -192,11 +246,11 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipelne_with_missing_fastq_screen_outputs(self):
         """QCPipeline: standard QC fails for missing FastQScreen outputs
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"),
-                                fastq_screen=False,
-                                exit_code=1)
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"),
+                                            no_outputs=True,
+                                            exit_code=1)
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -209,7 +263,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -226,11 +281,11 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_missing_fastqc_outputs(self):
         """QCPipeline: standard QC fails for missing FastQC outputs
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"),
-                                fastqc=False,
-                                exit_code=1)
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"),
+                                       no_outputs=True,
+                                       exit_code=1)
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -243,7 +298,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -260,9 +316,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_missing_multiqc_outputs(self):
         """QCPipeline: standard QC fails for missing MultiQC outputs
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"),
                            no_outputs=True)
         os.environ['PATH'] = "%s:%s" % (self.bin,
@@ -276,7 +332,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -295,9 +352,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_non_default_fastq_dir(self):
         """QCPipeline: standard QC run using non-default Fastq dir
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -313,7 +370,8 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           fastq_dir="fastqs.cells",
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -329,9 +387,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_non_default_output_dir(self):
         """QCPipeline: standard QC run using non-default output dir
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -345,7 +403,8 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           qc_dir="qc.non_default",
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -367,9 +426,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_single_end(self):
         """QCPipeline: standard QC run (single-end data)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -382,7 +441,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -398,9 +458,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_multiple_projects(self):
         """QCPipeline: standard QC run (multiple projects)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -421,7 +481,8 @@ class TestQCPipeline(unittest.TestCase):
             runqc.add_project(AnalysisProject(p,
                                               os.path.join(self.wd,p)),
                               multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -437,9 +498,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_index_reads(self):
         """QCPipeline: standard QC run for project with index reads
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -456,7 +517,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -472,9 +534,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_batching(self):
         """QCPipeline: standard QC run with batching
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -489,7 +551,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            batch_size=3,
                            runners={ 'default': SimpleJobRunner(), })
@@ -506,11 +569,11 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_batching_fails_for_missing_outputs(self):
         """QCPipeline: standard QC run with batching fails for missing outputs
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"),
-                                fastqc=False,
-                                exit_code=1)
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"),
+                                       no_outputs=True,
+                                       exit_code=1)
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -525,7 +588,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            batch_size=3,
                            runners={ 'default': SimpleJobRunner(), })
@@ -543,9 +607,9 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_non_default_log_dir(self):
         """QCPipeline: standard QC run using non-default log dir
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -563,7 +627,8 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True,
                           log_dir=log_dir)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
@@ -585,14 +650,14 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_count_scRNA_seq_310(self):
         """QCPipeline: single cell RNA-seq QC run with 'cellranger count' (v3.1.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="3.1.0",
                                  assert_include_introns=False)
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -610,7 +675,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0' },
@@ -644,14 +710,14 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_count_scRNA_seq_501(self):
         """QCPipeline: single cell RNA-seq QC run with 'cellranger count' (v5.0.1)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="5.0.1",
                                  assert_include_introns=False)
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -669,7 +735,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -703,14 +770,14 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_count_scRNA_seq_600(self):
         """QCPipeline: single cell RNA-seq QC run with 'cellranger count' (v6.0.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0",
                                  assert_include_introns=False)
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -728,7 +795,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -762,11 +830,11 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_count_specify_exe(self):
         """QCPipeline: single cell RNA-seq QC run with 'cellranger count' (specify cellranger exe)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock cellranger not on PATH
@@ -790,7 +858,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -826,14 +895,14 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_count_snRNA_seq_310(self):
         """QCPipeline: single nuclei RNA-seq QC run with 'cellranger count' (v3.1.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="3.1.0",
                                  assert_include_introns=False)
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -851,7 +920,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_premrna_references=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0_premrna' },
@@ -885,11 +955,11 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_count_snRNA_seq_501(self):
         """QCPipeline: single nuclei RNA-seq QC run with 'cellranger count' (v5.0.1)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         # Mock cellranger 5.0.1 with check on --include-introns
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="5.0.1",
@@ -911,7 +981,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -945,11 +1016,11 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_count_snRNA_seq_600(self):
         """QCPipeline: single nuclei RNA-seq QC run with 'cellranger count' (v6.0.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         # Mock cellranger 5.0.1 with check on --include-introns
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0",
@@ -971,7 +1042,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -1005,13 +1077,13 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_atac_count_1_2_0(self):
         """QCPipeline: single cell ATAC QC run with 'cellranger-atac count' (1.2.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
                                  version="1.2.0")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -1031,7 +1103,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_atac_references=
                            { 'human':
@@ -1066,13 +1139,13 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_with_cellranger_atac_count_2_0_0(self):
         """QCPipeline: single cell ATAC QC run with 'cellranger-atac count' (2.0.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
                                  version="2.0.0")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -1092,7 +1165,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_atac_references=
                            { 'human':
@@ -1128,12 +1202,12 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_multiome_atac(self):
         """QCPipeline: single cell multiome ATAC QC run
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock multiome ATAC analysis project
@@ -1152,7 +1226,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1174,12 +1249,12 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_multiome_gex(self):
         """QCPipeline: single cell multiome GEX QC run
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock multiome GEX analysis project
@@ -1196,7 +1271,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1218,13 +1294,13 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_multiome_atac_with_cellranger_arc_count_1_0_0(self):
         """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count' (Cellranger ARC 1.0.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="1.0.0")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock multiome ATAC analysis project
@@ -1270,7 +1346,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1306,13 +1383,13 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_multiome_atac_with_cellranger_arc_count_2_0_0(self):
         """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count' (Cellranger ARC 2.0.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="2.0.0")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock multiome ATAC analysis project
@@ -1358,7 +1435,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1394,13 +1472,13 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_multiome_gex_with_cellranger_arc_count_1_0_0(self):
         """QCPipeline: single cell multiome GEX QC run with 'cellranger-arc count' (Cellranger ARC 1.0.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="1.0.0")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock multiome GEX analysis project
@@ -1446,7 +1524,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1482,13 +1561,13 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_multiome_gex_with_cellranger_arc_count_2_0_0(self):
         """QCPipeline: single cell multiome GEX QC run with 'cellranger-arc count' (Cellranger ARC 2.0.0)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="2.0.0")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock multiome GEX analysis project
@@ -1534,7 +1613,8 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1570,13 +1650,13 @@ class TestQCPipeline(unittest.TestCase):
     def test_qcpipeline_cellplex_with_cellranger_multi(self):
         """QCPipeline: 10xGenomics Cellplex run with 'cellranger multi'
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock 10x Cellplex analysis project
@@ -1613,7 +1693,8 @@ PBB,CMO302,PBB
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_arc_references=
                            { 'human':
@@ -1648,13 +1729,13 @@ PBB,CMO302,PBB
     def test_qcpipeline_with_10x_scRNAseq_no_project_metadata(self):
         """QCPipeline: single cell RNA-seq QC run with no project metadata
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version='5.0.1')
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -1673,7 +1754,8 @@ PBB,CMO302,PBB
                           multiqc=True,
                           qc_protocol="10x_scRNAseq",
                           organism="human")
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
@@ -1707,13 +1789,13 @@ PBB,CMO302,PBB
     def test_qcpipeline_with_cellranger_count_no_references(self):
         """QCPipeline: single cell QC run with 'cellranger count' (no reference data)
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="5.0.1")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -1731,7 +1813,8 @@ PBB,CMO302,PBB
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(star_indexes=
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
                            max_jobs=1,
@@ -1749,9 +1832,9 @@ PBB,CMO302,PBB
     def test_qcpipeline_rerun_with_protocol_mismatch(self):
         """QCPipeline: handle QC protocol mismatch when rerunning pipeline
         """
-        # Make mock illumina_qc.sh and multiqc
-        MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -1773,7 +1856,8 @@ PBB,CMO302,PBB
                                           os.path.join(self.wd,"PJB")),
                           qc_protocol="standardPE",
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
