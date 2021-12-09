@@ -460,6 +460,14 @@ if __name__ == "__main__":
     else:
         enable_conda = (args.enable_conda == "yes")
 
+    # Fastq screens
+    if __settings.qc.fastq_screens:
+        fastq_screens = dict()
+        for screen in __settings.qc.fastq_screens.split(','):
+            fastq_screens[screen] = __settings.screens[screen].conf_file
+    else:
+        fastq_screens = None
+
     # STAR indexes
     star_indexes = dict()
     for organism in __settings.organisms:
@@ -706,6 +714,7 @@ if __name__ == "__main__":
                       report_html=out_file,
                       multiqc=(not args.no_multiqc))
     status = runqc.run(nthreads=nthreads,
+                       fastq_screens=fastq_screens,
                        fastq_subset=args.fastq_screen_subset,
                        star_indexes=star_indexes,
                        cellranger_chemistry=\
