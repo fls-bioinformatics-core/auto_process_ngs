@@ -101,7 +101,10 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         Arguments:
           attributes: dictionary defining metadata items
           filen: (optional) name of the tab-delimited file
-            with key-value pairs to load in.
+            with key-value pairs to load in
+          enable_fallback (bool): if True then try matching
+            keys directly if lookup fails when reading file
+            (default: False, don't enable fallback)
 
         """
         bcf_utils.AttributeDictionary.__init__(self)
@@ -110,8 +113,9 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         self.__attributes = attributes
         for key in self.__attributes:
             self[key] = None
+        # Load data from external file
+        self.__file_keys = list()
         if self.__filen:
-            # Load data from external file
             if os.path.exists(self.__filen):
                 self.load(self.__filen)
         # Set up order of keys for output
@@ -137,7 +141,8 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     def __iter__(self):
         return iter(self.__key_order)
 
-    def load(self,filen,strict=True,fail_on_error=False):
+    def load(self,filen,strict=True,fail_on_error=False,
+             enable_fallback=False):
         """Load key-value pairs from a tab-delimited file
         
         Loads the key-value pairs from a previously created
@@ -174,13 +179,18 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                 elif value == 'N' or value == 'False':
                     value = False
                 # Locate dictionary key matching file key
-                found_key = False
+                found_key = None
                 for key in self.__attributes:
                     if self.__attributes[key] == attr:
                         self[key] = value
-                        found_key = True
+                        found_key = key
                         break
-                if not found_key:
+                # Fallback to matching keys directly
+                if found_key is None and enable_fallback:
+                    if attr in self.__attributes:
+                        self[attr] = value
+                        found_key = attr
+                if found_key is None:
                     if strict:
                         logger.warning("Unrecognised key in %s: %s"
                                        % (filen,attr))
@@ -193,6 +203,9 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                         self.__attributes[attr] = attr
                         self.__key_order.append(attr)
                         self[attr] = value
+                # Store keys found in file
+                if found_key:
+                    self.__file_keys.append(found_key)
             except IndexError:
                 logger.warning("Bad line in %s: %s" % (filen,line))
                 if fail_on_error:
@@ -244,6 +257,13 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         metadata.write(tmp_filen)
         # Move to final destination
         os.rename(tmp_filen,self.__filen)
+
+    def keys_in_file(self):
+        """
+        Return a list of the key names found explicitly in the file
+
+        """
+        return [k for k in self.__file_keys]
 
     def null_items(self):
         """

@@ -55,6 +55,8 @@ class TestMetadataDict(unittest.TestCase):
         self.assertEqual(metadata2.salutation,"hello")
         self.assertEqual(metadata2.valediction,"goodbye")
         self.assertEqual(metadata2.chat,None)
+        self.assertEqual(metadata2.keys_in_file(),
+                         ['chat','salutation','valediction'])
 
     def test_dont_save_to_missing_file(self):
         """Check 'save' operation is ignored if no file is specified
@@ -105,6 +107,35 @@ class TestMetadataDict(unittest.TestCase):
             for line,expected_key in zip(fp,expected_keys):
                 self.assertEqual(line.split('\t')[0],expected_key)
 
+    def test_enable_fallback(self):
+        """Check fallback when initial keys can't be matched
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        with open(self.metadata_file,'wt') as fp:
+            fp.write("""salutation\thello
+valediction\tgoodbye
+chat\tawight
+""")
+        # No fallback
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'})
+        metadata.load(self.metadata_file)
+        self.assertEqual(metadata.salutation,None)
+        self.assertEqual(metadata.valediction,None)
+        self.assertEqual(metadata.chat,None)
+        self.assertEqual(sorted(metadata.keys_in_file()),[])
+        # Enable fallback
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'})
+        metadata.load(self.metadata_file,enable_fallback=True)
+        self.assertEqual(metadata.salutation,"hello")
+        self.assertEqual(metadata.valediction,"goodbye")
+        self.assertEqual(metadata.chat,"awight")
+        self.assertEqual(sorted(metadata.keys_in_file()),
+                         ['chat','salutation','valediction'])
+
     def test_get_null_items(self):
         """Check fetching of items with null values
         """
@@ -143,6 +174,8 @@ class TestMetadataDict(unittest.TestCase):
         self.assertEqual(metadata.salutation,'hello')
         self.assertEqual(metadata.valediction,'goodbye')
         self.assertEqual(metadata.chit_chat,'stuff')
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
 
     def test_cloudpickle_metadata(self):
         """Check Metadata object can be serialised with 'cloudpickle'
