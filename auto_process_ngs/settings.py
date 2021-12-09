@@ -172,9 +172,19 @@ class Settings:
         # qc
         self.add_section('qc')
         self.qc['nprocessors'] = config.getint('qc','nprocessors',None)
+        self.qc['fastq_screens'] = config.get('qc','fastq_screens',None)
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
+        # Fastq screens
+        self.add_section('screens')
+        for section in filter(lambda x: x.startswith('screen:'),
+                              config.sections()):
+            screen = section.split(':')[1]
+            self.screens[screen] = AttributeDictionary(conf_file=None)
+            self.screens[screen]['conf_file'] = config.get(section,
+                                                           'conf_file',
+                                                           None)
         # Organisms
         self.add_section('organisms')
         for section in filter(lambda x: x.startswith('organism:'),
@@ -629,6 +639,8 @@ class Settings:
                 display_name = 'sequencer'
             elif section == 'organisms':
                 display_name = 'organism'
+            elif section == 'screens':
+                display_name = 'screen'
             else:
                 display_name = section
             if self.has_subsections(section):

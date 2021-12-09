@@ -470,6 +470,32 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
         self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
 
+    def test_screen_definitions(self):
+        """Settings: handle 'screen:...' sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[qc]
+fastq_screens = model_organisms,other_organisms
+
+[screen:other_organisms]
+conf_file = /data/fastq_screen/other_organisms.conf
+
+[screen:model_organisms]
+conf_file = /data/fastq_screen/model_organisms.conf
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check screen settings
+        self.assertTrue('model_organisms' in s.screens)
+        self.assertEqual(s.screens['model_organisms']['conf_file'],
+                         '/data/fastq_screen/model_organisms.conf')
+        self.assertEqual(s.screens['other_organisms']['conf_file'],
+                         '/data/fastq_screen/other_organisms.conf')
+        self.assertEqual(s.qc.fastq_screens,
+                         "model_organisms,other_organisms")
+
     def test_legacy_bcl2fastq_settings_no_bcl_conversion(self):
         """Settings: handle legacy 'bcl2fastq' section (no 'bcl_conversion' settings)
         """
