@@ -257,6 +257,7 @@ class QCPipeline(Pipeline):
             fastq_attrs=project.fastq_attrs)
         self.add_task(get_seq_lengths,
                       requires=(setup_qc_dirs,),
+                      runner=self.runners['fastqc_runner'],
                       log_dir=log_dir)
 
         # Check outputs for FastqScreen
