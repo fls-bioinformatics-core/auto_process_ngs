@@ -6,7 +6,6 @@ import unittest
 import tempfile
 import shutil
 import os
-from auto_process_ngs.mock import MockIlluminaQcSh
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
