@@ -32,7 +32,6 @@ Provides the following functions:
 import os
 from bcftbx.qc.report import strip_ngs_extensions
 import logging
-from .constants import FASTQ_SCREENS
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
