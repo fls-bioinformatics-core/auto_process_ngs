@@ -145,13 +145,27 @@ class Settings:
                                                     'spaceranger_mkfastq')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
         self.modulefiles['publish_qc'] = config.get('modulefiles','publish_qc')
-        self.modulefiles['process_icell8'] = config.get('modulefiles','process_icell8')
-        self.modulefiles['illumina_qc'] = config.get('modulefiles','illumina_qc')
-        self.modulefiles['fastq_strand'] = config.get('modulefiles','fastq_strand')
+        self.modulefiles['process_icell8'] = config.get('modulefiles',
+                                                        'process_icell8')
+        self.modulefiles['fastqc'] = config.get('modulefiles','fastqc')
+        self.modulefiles['fastq_screen'] = config.get('modulefiles',
+                                                      'fastq_screen')
         self.modulefiles['cellranger'] = config.get('modulefiles','cellranger')
         self.modulefiles['report_qc'] = config.get('modulefiles','report_qc')
         self.modulefiles['cutadapt'] = config.get('modulefiles','cutadapt')
-        self.modulefiles['fastq_screen'] = config.get('modulefiles','fastq_screen')
+        # Handle legacy 'illumina_qc' modulefile
+        legacy_illumina_qc_modulefiles = config.get('modulefiles',
+                                                    'illumina_qc')
+        if legacy_illumina_qc_modulefiles:
+            if not self.modulefiles['fastqc']:
+                logger.warning("Setting 'fastqc' modulefile parameter "
+                               "using deprecated 'illumina_qc' parameter")
+                self.modulefiles['fastqc'] = legacy_illumina_qc_modulefiles
+            if not self.modulefiles['fastq_screen']:
+                logger.warning("Setting 'fastq_screen' modulefile parameter "
+                               "using deprecated 'illumina_qc' parameter")
+                self.modulefiles['fastq_screen'] = \
+                                legacy_illumina_qc_modulefiles
         # conda
         self.add_section('conda')
         self.conda['enable_conda'] = config.getboolean('conda',
@@ -334,6 +348,11 @@ class Settings:
                      'cellranger',):
             self.runners[name] = config.getrunner('runners',name,
                                                   default_runner)
+        # Handle new runners that default to the 'qc' runner
+        for name in ('fastqc',
+                     'fastq_screen',):
+            self.runners[name] = config.getrunner('runners',name,
+                                                  self.runners.qc)
         # Information for archiving analyses
         # dirn should be a directory in the form [[user@]host:]path]
         self.add_section('archive')

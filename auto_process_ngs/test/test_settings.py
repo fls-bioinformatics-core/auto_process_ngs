@@ -48,8 +48,8 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_arc_mkfastq,None)
         self.assertEqual(s.modulefiles.spaceranger_mkfastq,None)
-        self.assertEqual(s.modulefiles.illumina_qc,None)
-        self.assertEqual(s.modulefiles.fastq_strand,None)
+        self.assertEqual(s.modulefiles.fastqc,None)
+        self.assertEqual(s.modulefiles.fastq_screen,None)
         self.assertEqual(s.modulefiles.cellranger,None)
         self.assertEqual(s.modulefiles.report_qc,None)
         # Conda
@@ -495,6 +495,38 @@ conf_file = /data/fastq_screen/model_organisms.conf
                          '/data/fastq_screen/other_organisms.conf')
         self.assertEqual(s.qc.fastq_screens,
                          "model_organisms,other_organisms")
+
+    def test_legacy_illumina_qc_modulefile_setting(self):
+        """Settings: handle legacy 'illumina_qc' modulefile setting
+        """
+        # Settings file with 'illumina_qc' only
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[modulefiles]
+illumina_qc = SimpleJobRunner(nslots=12)
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check fastqc and fastq_screen modulefile settings
+        self.assertEqual(str(s.modulefiles.fastqc),
+                         'SimpleJobRunner(nslots=12)')
+        self.assertEqual(str(s.modulefiles.fastq_screen),
+                         'SimpleJobRunner(nslots=12)')
+        # Settings file with 'illumina_qc' and 'fastqc' and
+        # 'fastq_screen'
+        with open(settings_file,'w') as s:
+            s.write("""[modulefiles]
+illumina_qc = SimpleJobRunner(nslots=12)
+fastqc = SimpleJobRunner(nslots=1)
+fastq_screen = SimpleJobRunner(nslots=8)
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check fastqc and fastq_screen modulefile settings
+        self.assertEqual(str(s.modulefiles.fastqc),
+                         'SimpleJobRunner(nslots=1)')
+        self.assertEqual(str(s.modulefiles.fastq_screen),
+                         'SimpleJobRunner(nslots=8)')
 
     def test_legacy_bcl2fastq_settings_no_bcl_conversion(self):
         """Settings: handle legacy 'bcl2fastq' section (no 'bcl_conversion' settings)
