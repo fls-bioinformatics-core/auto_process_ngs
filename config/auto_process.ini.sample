@@ -19,14 +19,14 @@ cellranger_atac_mkfastq = None
 cellranger_arc_mkfastq = None
 spaceranger_mkfastq = None
 run_qc = None
-illumina_qc = None
+fastq_screen = None
+fastqc = None
 fastq_strand = None
 cellranger = None
 report_qc = None
 publish_qc = None
 process_icell8 = None
 cutadapt = None
-fastq_screen = None
 
 # Conda dependency resolution
 [conda]
@@ -126,7 +126,8 @@ nprocessors = 1
 [runners]
 bcl2fastq = SimpleJobRunner
 bcl_convert = SimpleJobRunner
-qc = SimpleJobRunner
+fastqc = SimpleJobRunner
+fastq_screen  = SimpleJobRunner
 star = SimpleJobRunner
 stats = SimpleJobRunner
 rsync = SimpleJobRunner
