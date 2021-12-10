@@ -255,9 +255,9 @@ if __name__ == "__main__":
     advanced.add_argument('-r','--runner',metavar='RUNNER',action='store',
                           dest="runner",default=None,
                           help="explicitly specify runner definition for "
-                          "running QC script. RUNNER must be a valid job "
+                          "running QC components. RUNNER must be a valid job "
                           "runner specification e.g. 'GEJobRunner(-j y)' "
-                          "(default: '%s')" % __settings.runners.qc)
+                          "(default: use runners set in configuration)")
     advanced.add_argument('-s','--batch_size',metavar='N',action='store',
                           dest='batch_size',type=int, default=None,
                           help="batch QC commands with N commands per job "
@@ -440,7 +440,8 @@ if __name__ == "__main__":
             envmod.load(modulefile)
 
     # Per task environment modules
-    for name in ('illumina_qc',
+    for name in ('fastqc',
+                 'fastq_screen',
                  'fastq_strand',
                  'cellranger',
                  'report_qc',):
@@ -575,7 +576,8 @@ if __name__ == "__main__":
         default_runner = SimpleJobRunner()
         runners = {
             'cellranger_runner': SimpleJobRunner(nslots=cellranger_localcores),
-            'qc_runner': SimpleJobRunner(nslots=nthreads),
+            'fastqc_runner': SimpleJobRunner(nslots=nthreads),
+            'fastq_screen_runner': SimpleJobRunner(nslots=nthreads),
             'star_runner': SimpleJobRunner(nslots=nthreads_star),
             'verify_runner': default_runner,
             'report_runner': default_runner,
@@ -601,7 +603,8 @@ if __name__ == "__main__":
             default_runner = fetch_runner(args.runner)
             runners = {
                 'cellranger_runner': default_runner,
-                'qc_runner': default_runner,
+                'fastqc_runner': default_runner,
+                'fastq_screen_runner': default_runner,
                 'star_runner': default_runner,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
@@ -612,7 +615,8 @@ if __name__ == "__main__":
             default_runner = __settings.general.default_runner
             runners = {
                 'cellranger_runner': __settings.runners.cellranger,
-                'qc_runner': __settings.runners.qc,
+                'fastqc_runner': __settings.runners.fastqc,
+                'fastq_screen_runner': __settings.runners.fastq_screen,
                 'star_runner': __settings.runners.star,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,

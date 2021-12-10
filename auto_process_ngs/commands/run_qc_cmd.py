@@ -157,7 +157,12 @@ def run_qc(ap,projects=None,fastq_screens=None,
         default_runner = ap.settings.general.default_runner
         runners={
             'cellranger_runner': ap.settings.runners.cellranger,
-            'qc_runner': ap.settings.runners.qc,
+            'fastqc_runner': (ap.settings.runners.fastqc
+                              if ap.settings.runners.fastqc
+                              else ap.settings.runners.qc),
+            'fastq_screen_runner': (ap.settings.runners.fastq_screen
+                                    if ap.settings.runners.fastq_screen
+                                    else ap.settings.runners.qc),
             'star_runner': ap.settings.runners.star,
             'verify_runner': default_runner,
             'report_runner': default_runner,
@@ -166,14 +171,16 @@ def run_qc(ap,projects=None,fastq_screens=None,
         default_runner = runner
         runners={
             'cellranger_runner': runner,
-            'qc_runner': runner,
+            'fastqc_runner': runner,
+            'fastq_screen_runner': runner,
             'star_runner': runner,
             'verify_runner': runner,
             'report_runner': runner,
         }
     # Get environment modules
     envmodules = dict()
-    for name in ('illumina_qc',
+    for name in ('fastqc',
+                 'fastq_screen',
                  'fastq_strand',
                  'cellranger',
                  'report_qc',):
