@@ -130,13 +130,15 @@ class QCPipeline(Pipeline):
 
         # Define runners
         self.add_runner('verify_runner')
-        self.add_runner('qc_runner')
+        self.add_runner('fastq_screen_runner')
+        self.add_runner('fastqc_runner')
         self.add_runner('star_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
         # Define module environment modules
-        self.add_envmodules('illumina_qc')
+        self.add_envmodules('fastqc')
+        self.add_envmodules('fastq_screen')
         self.add_envmodules('fastq_strand')
         self.add_envmodules('cellranger')
         self.add_envmodules('report_qc')
@@ -285,8 +287,8 @@ class QCPipeline(Pipeline):
         )
         self.add_task(run_fastq_screen,
                       requires=(check_fastq_screen,),
-                      runner=self.runners['qc_runner'],
-                      envmodules=self.envmodules['illumina_qc'],
+                      runner=self.runners['fastq_screen_runner'],
+                      envmodules=self.envmodules['fastq_screen'],
                       log_dir=log_dir)
         qc_metadata['fastq_screens'] = self.params.fastq_screens
         report_requires.append(run_fastq_screen)
@@ -313,8 +315,8 @@ class QCPipeline(Pipeline):
         )
         self.add_task(run_fastqc,
                       requires=(check_fastqc,),
-                      runner=self.runners['qc_runner'],
-                      envmodules=self.envmodules['illumina_qc'],
+                      runner=self.runners['fastqc_runner'],
+                      envmodules=self.envmodules['fastqc'],
                       log_dir=log_dir)
         report_requires.append(run_fastqc)
 
@@ -706,9 +708,10 @@ class QCPipeline(Pipeline):
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
-            instances; valid names are 'qc_runner',
-            'star_runner','report_runner','cellranger_runner',
-            'verify_runner','default'
+            instances; valid names are 'fastqc_runner',
+            'fastq_screen_runner','star_runner',
+            'report_runner','cellranger_runner',
+            'verify_runner', and 'default'
           enable_conda (bool): if True then enable use of
             conda environments to satisfy task dependencies
           conda (str): path to conda
@@ -716,7 +719,7 @@ class QCPipeline(Pipeline):
             directory for conda environments
           envmodules (mapping): mapping of names to
             environment module file lists; valid names are
-            'illumina_qc','fastq_strand','cellranger',
+            'fastqc','fastq_screen','fastq_strand','cellranger',
             'report_qc'
           default_runner (JobRunner): optional default
             job runner to use
@@ -1032,7 +1035,7 @@ class RunFastqScreen(PipelineTask):
         if not self.args.fastqs:
             print("Nothing to do")
             return
-        # Set up the illumina_qc.sh runs for each Fastq
+        # Set up the FastqScreen runs for each Fastq
         for fastq in self.args.fastqs:
             # No screens for R1 reads for single cell
             if self.args.qc_protocol in ('singlecell',
