@@ -653,6 +653,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
                        include_multiqc=True,
                        include_report=True,
                        include_zip_file=True,
+                       legacy_screens=False,
                        legacy_zip_name=False):
         """
         Add mock QC outputs
@@ -674,6 +675,9 @@ class UpdateAnalysisProject(DirectoryUpdater):
             mock QC report outputs
           include_zip_file (bool): if True then add
             mock ZIP archive for QC report
+          legacy_screens (bool): if True then use
+            old-style 'illumina_qc.sh' naming
+            conventions for FastqScreen outputs
           legacy_zip_name (bool): if True then use
             old-style naming convention for ZIP file
             with QC outputs
@@ -705,7 +709,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
                            "rRNA"):
                 MockQCOutputs.fastq_screen_v0_9_2(fq,
                                                   self._project.qc_dir,
-                                                  screen)
+                                                  screen,
+                                                  legacy=legacy_screens)
             if include_seqlens:
                 MockQCOutputs.seqlens(fq,self._project.qc_dir)
         # Handle fastq_strand, if requested
@@ -728,6 +733,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
         qc_info = self._project.qc_info(self._project.qc_dir)
         qc_info['protocol'] = protocol
         qc_info['fastq_dir'] = self._project.fastq_dir
+        if not legacy_screens:
+            qc_info['fastq_screens'] = "model_organisms,other_organisms,rRNA"
         qc_info.save()
         # Make mock report
         fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]

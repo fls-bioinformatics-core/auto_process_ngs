@@ -113,7 +113,8 @@ class MockQCOutputs:
                 fp.write(base64.b64decode(mockqcdata.BASE64_PNG_DATA))
 
     @classmethod
-    def fastq_screen_v0_9_2(self,fastq,qc_dir,screen_name=None):
+    def fastq_screen_v0_9_2(self,fastq,qc_dir,screen_name=None,
+                            legacy=False):
         """
         Create mock outputs from Fastq_screen v0.9.2
         """
@@ -123,8 +124,11 @@ class MockQCOutputs:
             screen = "_%s" % screen_name
         else:
             screen = ''
-        screen_basename = os.path.join(qc_dir,
-                                       "%s%s_screen." % (basename,screen))
+        if not legacy:
+            screen_basename = "%s_screen%s." % (basename,screen)
+        else:
+            screen_basename = "%s%s_screen." % (basename,screen)
+        screen_basename = os.path.join(qc_dir,screen_basename)
         # Raw data
         with open(screen_basename+'txt','w') as fp:
             fp.write(mockqcdata.FASTQ_SCREEN_V0_9_2['screen.txt'])
