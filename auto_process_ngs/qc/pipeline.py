@@ -1059,7 +1059,7 @@ class RunFastqScreen(PipelineTask):
                     raise Exception("%s: conf file not found (or is not "
                                     "a file)" % fastq_screen_conf)
                 # Determine base name for outputs
-                screen_basename = "%s_%s_screen" % (fastq_basename,
+                screen_basename = "%s_screen_%s" % (fastq_basename,
                                                     screen)
                 # Set parameters
                 if self.args.nthreads:
