@@ -586,7 +586,8 @@ class QCProject:
             for screen in list(filter(lambda s: s.endswith(".txt"),
                                       screens)):
                 # Assume that names are 'FASTQ_screen_SCREENNAME.txt'
-                fastq_name,screen_name = screen[:-len(".txt")].\
+                fastq_name,screen_name = os.path.basename(screen)\
+                                         [:-len(".txt")].\
                                          split("_screen_")
                 fq = self.fastq_attrs(fastq_name)
                 outputs.add("screens_%s%s" %
