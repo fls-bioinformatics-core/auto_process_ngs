@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     simple_scheduler.py: provide basic scheduler capability
-#     Copyright (C) University of Manchester 2013-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2022 Peter Briggs
 #
 ########################################################################
 #
@@ -27,7 +27,17 @@ import sys
 import re
 import threading
 import queue
+import random
 import logging
+
+######################################################################
+# Constants
+######################################################################
+
+# Scheduler submission mode flags
+class SubmissionMode:
+    QUEUE  = 0 # Jobs submitted in queue order
+    RANDOM = 1 # Jobs submitted in random order
 
 #######################################################################
 # Classes
@@ -70,7 +80,8 @@ class SimpleScheduler(threading.Thread):
                  max_slots=None,
                  poll_interval=5,
                  job_interval=0.1,
-                 max_restarts=1):
+                 max_restarts=1,
+                 submission_mode=SubmissionMode.RANDOM):
         """Create a new SimpleScheduler instance
 
         Arguments:
@@ -91,6 +102,8 @@ class SimpleScheduler(threading.Thread):
             jobs that are in an error state up to this many times. Set to
             zero to turn off restarting jobs in error states (they will
             be terminated instead). (default: 1)
+          submission_mode: flag indicating how the scheduler will
+            submit jobs (default is to submit in random order)
 
         """
 
@@ -122,6 +135,8 @@ class SimpleScheduler(threading.Thread):
         self.__running = []
         # Dictionary with all jobs
         self.__jobs = dict()
+        # Job submission mode
+        self.__submission_mode = submission_mode
         # Handle names
         self.__names = []
         self.__finished_names = []
@@ -555,6 +570,9 @@ class SimpleScheduler(threading.Thread):
                 self.__scheduled.append(job)
                 logging.debug("Added job #%d (%s): \"%s\"" % (job.job_number,job.name,job))
             remaining_jobs = []
+            if self.__submission_mode == SubmissionMode.RANDOM:
+                # Randomise the order of the scheduled jobs
+                random.shuffle(self.__scheduled)
             for job in self.__scheduled:
                 ok_to_run = True
                 if self.__max_concurrent is not None and \
