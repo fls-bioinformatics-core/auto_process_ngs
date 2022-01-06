@@ -784,10 +784,12 @@ class QCProject:
             # Store cellranger versions
             if cellranger_name and versions:
                 if cellranger_name not in software:
-                    software[cellranger_name] = sorted(list(versions))
+                    software[cellranger_name] = list(versions)
                 else:
-                    software[cellranger_name] = sorted(
-                        software[cellranger_name].extend(list(versions)))
+                    for v in list(versions):
+                        if v not in software[cellranger_name]:
+                            software[cellranger_name].append(v)
+                software[cellranger_name] = sorted(software[cellranger_name])
         # Look for MultiQC report
         multiqc_dir = os.path.dirname(self.qc_dir)
         print("Checking for MultiQC report in %s" % multiqc_dir)
