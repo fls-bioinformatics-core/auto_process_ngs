@@ -37,7 +37,10 @@ class TestQCReporter(unittest.TestCase):
             self.wd = tempfile.mkdtemp(suffix='.test_QCReporter')
     def _make_analysis_project(self,paired_end=True,fastq_dir=None,
                                qc_dir="qc",fastq_names=None,
-                               include_seqlens=True):
+                               include_seqlens=True,
+                               include_cellranger_count=False,
+                               include_cellranger_multi=False,
+                               legacy_screens=False):
         # Create a mock Analysis Project directory
         self._make_working_dir()
         # Generate names for fastq files to add
@@ -70,6 +73,48 @@ class TestQCReporter(unittest.TestCase):
             # Sequence lengths
             if include_seqlens:
                 MockQCOutputs.seqlens(fq,qc_dir)
+        # Cellranger count
+        if include_cellranger_count:
+            project_dir = os.path.join(self.wd,self.analysis_dir.name)
+            UpdateAnalysisProject(AnalysisProject(project_dir)).\
+                add_cellranger_count_outputs(
+                    reference_data_path="/data/refdata-cellranger-2020-A",
+                    qc_dir=qc_dir,
+                    cellranger='cellranger',
+                    prefix=os.path.join("cellranger_count",
+                                        "6.1.2",
+                                        "refdata-cellranger-2020-A"))
+        # Cellranger multi
+        if include_cellranger_multi:
+            project_dir = os.path.join(self.wd,self.analysis_dir.name)
+            # Add the cellranger multi config.csv file
+            multi_config = os.path.join(project_dir,"10x_multi_config.csv")
+            with open(multi_config,'wt') as fp:
+                fastq_dir = os.path.join(self.wd,
+                                         "PJB",
+                                         "fastqs")
+                fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,%s,any,PJB1,gene expression,
+PJB2_MC,%s,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PJB_CML1,CMO301,CML1
+PBB_CML2,CMO302,CML2
+""" % (fastq_dir,fastq_dir))
+            UpdateAnalysisProject(AnalysisProject(project_dir)).\
+                add_cellranger_multi_outputs(
+                    config_csv=multi_config,
+                    #sample_names=("PJB_CML1","PJB_CML2",),
+                    #reference_data_path="/data/refdata-cellranger-2020-A",
+                    qc_dir=qc_dir,
+                    prefix=os.path.join("cellranger_multi",
+                                        "6.1.2",
+                                        "refdata-cellranger-2020-A"))
         return os.path.join(self.wd,self.analysis_dir.name)
     def test_qcreporter_single_end(self):
         """QCReporter: single-end data
@@ -96,6 +141,43 @@ class TestQCReporter(unittest.TestCase):
         """QCReporter: paired-end data
         """
         analysis_dir = self._make_analysis_project(paired_end=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_cellranger_count(self):
+        """QCReporter: paired-end data with cellranger 'count'
+        """
+        analysis_dir = self._make_analysis_project(
+            paired_end=True,
+            include_cellranger_count=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_cellranger_multi(self):
+        """QCReporter: paired-end data with cellranger 'multi'
+        """
+        analysis_dir = self._make_analysis_project(
+            paired_end=True,
+            include_cellranger_multi=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_cellranger_count_and_multi(self):
+        """QCReporter: paired-end data with cellranger 'count' and 'multi'
+        """
+        analysis_dir = self._make_analysis_project(
+            paired_end=True,
+            include_cellranger_count=True,
+            include_cellranger_multi=True)
         project = AnalysisProject('PJB',analysis_dir)
         reporter = QCReporter(project)
         self.assertTrue(reporter.verify())
