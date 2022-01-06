@@ -797,6 +797,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
         self._reload_project()
 
     def add_cellranger_count_outputs(self,qc_dir=None,cellranger='cellranger',
+                                     reference_data_path=
+                                     "/data/refdata-cellranger-1.2.0",
                                      prefix="cellranger_count",
                                      legacy=False):
         """
@@ -808,6 +810,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
           cellranger (str): specify the 10xGenomics software
             package to add outputs for (defaults to
             'cellranger'; alternatives are 'cellranger-atac')
+          reference_data_path (str): optionally specify path
+            for reference dataset (doesn't need to exist)
           prefix (str): leading subdirectory for cellranger
             count outputs (defaults to 'cellranger_count';
             ignored if 'legacy' style outputs are generated)
@@ -827,10 +831,21 @@ class UpdateAnalysisProject(DirectoryUpdater):
                 self.add_subdir(self._project.qc_dir)
             self.add_subdir(os.path.join(self._project.qc_dir,prefix))
         if cellranger == 'cellranger':
+            cmdline = "cellranger --transcriptome %s" \
+                      % reference_data_path
+            metrics_data = mock10xdata.METRICS_SUMMARY
             cellranger_output_files = ("web_summary.html",
                                        "metrics_summary.csv")
-        elif cellranger in ('cellranger-atac',
-                            'cellranger-arc',):
+        elif cellranger == 'cellranger-atac':
+            cmdline = "cellranger --reference %s" \
+                      % reference_data_path
+            metrics_data = mock10xdata.ATAC_SUMMARY_2_0_0
+            cellranger_output_files = ("web_summary.html",
+                                       "summary.csv")
+        elif cellranger == 'cellranger-arc':
+            cmdline = "cellranger --reference %s" \
+                      % reference_data_path
+            metrics_data = mock10xdata.MULTIOME_SUMMARY_2_0_0
             cellranger_output_files = ("web_summary.html",
                                        "summary.csv")
         for sample in self._project.samples:
@@ -845,9 +860,11 @@ class UpdateAnalysisProject(DirectoryUpdater):
             self.add_subdir(sample_dir)
             self.add_subdir(os.path.join(sample_dir,"outs"))
             for f in cellranger_output_files:
-                self.add_file(os.path.join(sample_dir,"outs",f))
+                self.add_file(os.path.join(sample_dir,"outs",f),
+                              content=metrics_data)
             for f in ("_cmdline",):
-                self.add_file(os.path.join(sample_dir,f))
+                self.add_file(os.path.join(sample_dir,f),
+                              content=cmdline)
         # Build ZIP archive
         if legacy:
             analysis_dir = os.path.basename(self._parent_dir())
@@ -868,7 +885,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
         # Update cellranger reference data in qc.info
         if not legacy:
             qc_info = self._project.qc_info(self._project.qc_dir)
-            qc_info['cellranger_refdata'] = "/data/refdata-cellranger-1.2.0"
+            qc_info['cellranger_refdata'] = reference_data_path
             qc_info.save()
         self._reload_project()
 
