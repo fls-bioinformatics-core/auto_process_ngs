@@ -1652,7 +1652,7 @@ class RunCellrangerCount(PipelineTask):
                     run_cellranger_count = True
                     break
             if not run_cellranger_count:
-                print("Sample '%s': found existing outputs")
+                print("Sample '%s': found existing outputs" % sample)
                 continue
             # Create a working directory for this sample
             work_dir = os.path.join(self._working_dir,
