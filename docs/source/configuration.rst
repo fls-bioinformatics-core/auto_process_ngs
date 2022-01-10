@@ -214,13 +214,16 @@ Runner name                   Used for
 ``rsync``                     Running commands for transferring data
                               (e.g. copying primary data for Fastq
                               generation, archiving etc)
-``qc``                        Running computationally intensive QC
-                              commands (e.g. ``FastQC``, ``Fastq_screen``,
-                              etc)
+``fastqc``                    Running ``FastQC`` in the QC pipeline
+``fastq_screen``              Running ``FastqScreen`` in the QC pipeline
 ``star``                      Running pipeline tasks which use ``STAR``
                               (e.g. strandedness, alignment etc)
 ``cellranger``                Running ``cellranger`` in Fastq generation
                               and QC pipelines
+``qc``                        Running generally computationally intensive
+                              QC commands (used as a fallback if
+                              ``fastqc``, ``fastq_screen`` or ``star``
+                              runners are not explicitly set)
 ``icell8``                    Default runner for commands in the ICELL8
                               processing pipeline
 ``icell8_contaminant_filter`` Running the contaminant filtering in the
@@ -412,13 +415,23 @@ Environment modules for the QC pipeline
 For the ``run_qc`` stage, additional module files can be specified for
 individual tasks within the QC pipeline:
 
- * ``illumina_qc``
+ * ``fastqc``
+ * ``fastq_screen``
  * ``fastq_strand``
  * ``cellranger``
  * ``report_qc``
 
 If any of these are defined then they will be loaded for the relevant
 tasks in the QC pipeline.
+
+.. note::
+
+   In older pipeline versions the ``illumina_qc`` module file setting
+   was used for the ``illumina_qc.sh`` script, which ran both
+   FastQC and FastqScreen. ``illumina_qc.sh`` has now been dropped
+   however if the ``illumina_qc`` modulefile is still set in the
+   configuration then this will be used as a fallback if ``fastqc``
+   and ``fastq_screen`` module files are not set explicitly.
 
 .. _conda_dependency_resolution:
 
