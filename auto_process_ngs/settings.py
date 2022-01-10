@@ -350,7 +350,8 @@ class Settings:
                                                   default_runner)
         # Handle new runners that default to the 'qc' runner
         for name in ('fastqc',
-                     'fastq_screen',):
+                     'fastq_screen',
+                     'star',):
             self.runners[name] = config.getrunner('runners',name,
                                                   self.runners.qc)
         # Information for archiving analyses
