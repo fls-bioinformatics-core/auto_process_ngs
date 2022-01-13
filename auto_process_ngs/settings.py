@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2022 Peter Briggs
 #
 #########################################################################
 #
@@ -190,6 +190,11 @@ class Settings:
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
+        self.qc['use_legacy_screen_names'] = \
+                                             config.getboolean(
+                                                 'qc',
+                                                 'use_legacy_screen_names',
+                                                 False)
         # Fastq screens
         self.add_section('screens')
         for section in filter(lambda x: x.startswith('screen:'),

@@ -496,6 +496,39 @@ conf_file = /data/fastq_screen/model_organisms.conf
         self.assertEqual(s.qc.fastq_screens,
                          "model_organisms,other_organisms")
 
+    def test_legacy_fastq_screen_naming_setting(self):
+        """Settings: handle 'use_legacy_screen_names' setting
+        """
+        # Settings file without 'use_legacy_screen_names'
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[qc]
+#use_legacy_screen_names = False
+""")
+        # Load and check settings
+        s = Settings(settings_file)
+        self.assertEqual(s.qc.use_legacy_screen_names,False)
+        # Settings file with 'use_legacy_screen_names' turned off
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[qc]
+use_legacy_screen_names = False
+""")
+        # Load and check settings
+        s = Settings(settings_file)
+        self.assertEqual(s.qc.use_legacy_screen_names,False)
+        # Settings file with 'use_legacy_screen_names' turned on
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[qc]
+use_legacy_screen_names = True
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Load and check settings
+        s = Settings(settings_file)
+        self.assertEqual(s.qc.use_legacy_screen_names,True)
+
     def test_legacy_illumina_qc_modulefile_setting(self):
         """Settings: handle legacy 'illumina_qc' modulefile setting
         """

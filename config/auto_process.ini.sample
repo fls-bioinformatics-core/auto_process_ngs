@@ -78,6 +78,9 @@ create_empty_fastqs = False
 fastq_screen_subset = 100000
 # By default nprocessors taken from runner
 #nprocessors = 1
+# Whether to use 'legacy' naming convention for FastqScreen
+# output files
+#use_legacy_screen_names = False
 
 # Fastq screen panels
 # Define a 'screen:NAME' section for each panel
