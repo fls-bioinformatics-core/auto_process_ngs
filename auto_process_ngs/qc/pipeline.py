@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
 #
 
 """
@@ -127,6 +127,7 @@ class QCPipeline(Pipeline):
         self.add_param('cellranger_localmem',type=int)
         self.add_param('fastq_screens',type=dict)
         self.add_param('star_indexes',type=dict)
+        self.add_param('legacy_screens',type=bool,value=False)
 
         # Define runners
         self.add_runner('verify_runner')
@@ -268,6 +269,7 @@ class QCPipeline(Pipeline):
             qc_dir,
             self.params.fastq_screens,
             qc_protocol=qc_protocol,
+            legacy=self.params.legacy_screens,
             verbose=self.params.VERBOSE
         )
         self.add_task(check_fastq_screen,
@@ -284,7 +286,8 @@ class QCPipeline(Pipeline):
             subset=self.params.fastq_subset,
             nthreads=self.params.nthreads,
             qc_protocol=qc_protocol,
-            fastq_attrs=project.fastq_attrs
+            fastq_attrs=project.fastq_attrs,
+            legacy=self.params.legacy_screens
         )
         self.add_task(run_fastq_screen,
                       requires=(check_fastq_screen,),
@@ -292,6 +295,7 @@ class QCPipeline(Pipeline):
                       envmodules=self.envmodules['fastq_screen'],
                       log_dir=log_dir)
         qc_metadata['fastq_screens'] = self.params.fastq_screens
+        qc_metadata['legacy_screens'] = self.params.legacy_screens
         report_requires.append(run_fastq_screen)
 
         # Check outputs for FastQC
@@ -629,7 +633,7 @@ class QCPipeline(Pipeline):
             batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
             poll_interval=5,runners=None,default_runner=None,
             enable_conda=False,conda=None,conda_env_dir=None,
-            envmodules=None,verbose=False):
+            envmodules=None,legacy_screens=False,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -724,6 +728,8 @@ class QCPipeline(Pipeline):
             'report_qc'
           default_runner (JobRunner): optional default
             job runner to use
+          legacy_screens (bool): if True then use 'legacy'
+            naming convention for FastqScreen outputs
           verbose (bool): if True then report additional
             information for diagnostics
         """
@@ -782,6 +788,7 @@ class QCPipeline(Pipeline):
                                   'cellranger_out_dir': cellranger_out_dir,
                                   'fastq_screens': fastq_screens,
                                   'star_indexes': star_indexes,
+                                  'legacy_screens': legacy_screens,
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
@@ -849,7 +856,7 @@ class UpdateQCMetadata(PipelineTask):
     """
     def init(self,project,qc_dir,protocol=None,organism=None,
              cellranger_version=None,cellranger_refdata=None,
-             fastq_screens=None):
+             fastq_screens=None,legacy_screens=False):
         """
         Initialise the UpdateQCMetadata task
 
@@ -869,6 +876,8 @@ class UpdateQCMetadata(PipelineTask):
             used by cellranger count
           fastq_screens (str): comma separated list of
             panel names used with FastqScreen
+          legacy_screens (bool): if True then suppress listing
+            screen names
         """
         pass
     def setup(self):
@@ -879,7 +888,7 @@ class UpdateQCMetadata(PipelineTask):
         qc_info['organism'] = self.args.organism
         qc_info['cellranger_version'] = self.args.cellranger_version
         qc_info['cellranger_refdata'] = self.args.cellranger_refdata
-        if self.args.fastq_screens:
+        if self.args.fastq_screens and not self.args.legacy_screens:
             qc_info['fastq_screens'] = ','.join(
                 [s for s in self.args.fastq_screens])
         else:
@@ -945,7 +954,7 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
     Check the outputs from FastqScreen
     """
     def init(self,project,qc_dir,screens,qc_protocol=None,
-             verbose=False):
+             legacy=False,verbose=False):
         """
         Initialise the CheckFastqScreenOutputs task.
 
@@ -957,6 +966,9 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
           screens (mapping): mapping of screen names to
             FastqScreen conf files
           qc_protocol (str): QC protocol to use
+          legacy (bool): if True then use 'legacy' naming
+            convention for output files (default is to
+            use new format)
           verbose (bool): if True then print additional
             information from the task
 
@@ -971,6 +983,9 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
             print("No screens supplied: no missing QC outputs from "
                   "FastqScreen:")
             return
+        # Report if legacy naming convention will be used
+        if self.args.legacy:
+            print("Checking for legacy FastqScreen output names")
         for screen in self.args.screens:
             self.add_call("Check FastqScreen outputs for %s (%s)"
                           % (self.args.project.name,screen),
@@ -978,7 +993,8 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
                           self.args.project,
                           self.args.qc_dir,
                           screen,
-                          self.args.qc_protocol)
+                          self.args.qc_protocol,
+                          legacy=self.args.legacy)
     def finish(self):
         fastqs = set()
         for result in self.result():
@@ -1003,7 +1019,7 @@ class RunFastqScreen(PipelineTask):
     Run FastqScreen
     """
     def init(self,fastqs,qc_dir,screens,subset=None,nthreads=None,
-             qc_protocol=None,fastq_attrs=None):
+             qc_protocol=None,fastq_attrs=None,legacy=False):
         """
         Initialise the RunIlluminaQC task.
 
@@ -1023,6 +1039,9 @@ class RunFastqScreen(PipelineTask):
           qc_protocol (str): QC protocol to use
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
+          legacy (bool): if True then use 'legacy' naming
+            convention for output files (default is to
+            use new format)
         """
         self.conda("fastq-screen=0.14.0",
                    "bowtie=1.2.3")
@@ -1036,6 +1055,9 @@ class RunFastqScreen(PipelineTask):
         if not self.args.fastqs:
             print("Nothing to do")
             return
+        # Report if legacy naming convention will be used
+        if self.args.legacy:
+            print("Using legacy FastqScreen output names")
         # Set up the FastqScreen runs for each Fastq
         for fastq in self.args.fastqs:
             # No screens for R1 reads for single cell
@@ -1059,8 +1081,12 @@ class RunFastqScreen(PipelineTask):
                     raise Exception("%s: conf file not found (or is not "
                                     "a file)" % fastq_screen_conf)
                 # Determine base name for outputs
-                screen_basename = "%s_screen_%s" % (fastq_basename,
-                                                    screen)
+                if self.args.legacy:
+                    screen_basename = "%s_%s_screen" % (fastq_basename,
+                                                        screen)
+                else:
+                    screen_basename = "%s_screen_%s" % (fastq_basename,
+                                                        screen)
                 # Set parameters
                 if self.args.nthreads:
                     nthreads = self.args.nthreads

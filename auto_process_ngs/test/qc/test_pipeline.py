@@ -278,6 +278,45 @@ class TestQCPipeline(unittest.TestCase):
                                                         "PJB",f)),
                              "Found %s, shouldn't be present" % f)
 
+    def test_qcpipelne_with_legacy_fastq_screen_outputs(self):
+        """QCPipeline: standard QC with legacy naming for FastQScreen outputs
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           legacy_screens=True,
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                             "Missing %s" % f)
+        # Check legacy FastqScreen naming convention was used
+        self.assertTrue(os.path.exists(os.path.join(
+            self.wd,
+            "PJB",
+            "qc",
+            "PJB1_S1_R1_001_model_organisms_screen.txt")))
+
     def test_qcpipeline_with_missing_fastqc_outputs(self):
         """QCPipeline: standard QC fails for missing FastQC outputs
         """
