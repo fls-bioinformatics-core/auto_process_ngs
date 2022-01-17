@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc_cmd.py: implement auto process run_qc command
-#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 #########################################################################
 
@@ -152,6 +152,8 @@ def run_qc(ap,projects=None,fastq_screens=None,
         if cellranger_arc_reference:
             cellranger_multiome_references[organism] = \
                 cellranger_arc_reference
+    # Legacy FastqScreen naming convention
+    legacy_screens = bool(ap.settings.qc.use_legacy_screen_names)
     # Set up runners
     if runner is None:
         default_runner = ap.settings.general.default_runner
@@ -246,5 +248,6 @@ def run_qc(ap,projects=None,fastq_screens=None,
                        conda_env_dir=conda_env_dir,
                        envmodules=envmodules,
                        working_dir=working_dir,
+                       legacy_screens=legacy_screens,
                        verbose=verbose)
     return status
