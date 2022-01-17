@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc.py: run QC pipeline on arbitrary fastq files
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 #########################################################################
 #
@@ -267,6 +267,13 @@ if __name__ == "__main__":
                           help="ignore information from project metadata "
                           "file even if one is located (default is to use "
                           "project metadata)")
+    advanced.add_argument('--use-legacy-screen-names',choices=['yes','no'],
+                          dest="use_legacy_screen_names",default=None,
+                          help="use 'legacy' naming convention for "
+                          "FastqScreen output files; can be 'yes' or 'no' "
+                          "(default: %s)" %
+                          ("yes" if __settings.qc.use_legacy_screen_names
+                           else "no"))
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
@@ -468,6 +475,11 @@ if __name__ == "__main__":
             fastq_screens[screen] = __settings.screens[screen].conf_file
     else:
         fastq_screens = None
+    use_legacy_screen_names = args.use_legacy_screen_names
+    if use_legacy_screen_names is None:
+        use_legacy_screen_names = __settings.qc.use_legacy_screen_names
+    else:
+        use_legacy_screen_names = (use_legacy_screen_names == "yes")
 
     # STAR indexes
     star_indexes = dict()
@@ -748,6 +760,7 @@ if __name__ == "__main__":
                        enable_conda=enable_conda,
                        conda_env_dir=args.conda_env_dir,
                        working_dir=working_dir,
+                       legacy_screens=use_legacy_screen_names,
                        verbose=args.verbose)
     if status:
         logger.critical("QC failed (see warnings above)")
