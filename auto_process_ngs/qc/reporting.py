@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 
 #######################################################################
