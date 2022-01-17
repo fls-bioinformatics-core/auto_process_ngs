@@ -125,6 +125,7 @@ The screens to use in the pipeline must be set using the
 
    [qc]
    fastq_screens = model_organisms,other_organisms,rRNA
+   ...
 
 .. note::
 
@@ -133,6 +134,37 @@ The screens to use in the pipeline must be set using the
    files, used in earlier versions of the pipeline. Note
    that ``qc.setup`` is not longer needed (and will be ignored
    if present).
+
+The default size of the subset of reads used by FastqScreen
+when generating the screens can be set using the
+``fastq_screen_subset`` parameter in the ``qc`` section, e.g.:
+
+::
+
+   [qc]
+   fastq_screen_subset = 10000
+   ...
+
+Finally: by default the QC pipeline creates FastqScreen
+outputs using the following naming convention:
+
+::
+
+   {FASTQ}_screen_{SCREEN_NAME}.png
+   {FASTQ}_screen_{SCREEN_NAME}.txt
+
+for example ``PJB_S1_L001_R1_001_screen_model_organisms.png``.
+
+It is possible to revert to the older "legacy" naming
+convention (``{FASTQ}_{SCREEN_NAME}_screen.png`` etc) by
+setting the ``use_legacy_screen_names`` parameter in the ``qc``
+section:
+
+::
+
+   [qc]
+   use_legacy_screen_names = True
+   ...
 
 Strandedness and single cell analyses
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
