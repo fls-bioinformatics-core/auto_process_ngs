@@ -150,6 +150,8 @@ class Settings:
         self.modulefiles['fastqc'] = config.get('modulefiles','fastqc')
         self.modulefiles['fastq_screen'] = config.get('modulefiles',
                                                       'fastq_screen')
+        self.modulefiles['fastq_strand'] = config.get('modulefiles',
+                                                      'fastq_strand')
         self.modulefiles['cellranger'] = config.get('modulefiles','cellranger')
         self.modulefiles['report_qc'] = config.get('modulefiles','report_qc')
         self.modulefiles['cutadapt'] = config.get('modulefiles','cutadapt')
