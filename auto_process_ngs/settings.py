@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2022 Peter Briggs
 #
 #########################################################################
 #
@@ -145,13 +145,29 @@ class Settings:
                                                     'spaceranger_mkfastq')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
         self.modulefiles['publish_qc'] = config.get('modulefiles','publish_qc')
-        self.modulefiles['process_icell8'] = config.get('modulefiles','process_icell8')
-        self.modulefiles['illumina_qc'] = config.get('modulefiles','illumina_qc')
-        self.modulefiles['fastq_strand'] = config.get('modulefiles','fastq_strand')
+        self.modulefiles['process_icell8'] = config.get('modulefiles',
+                                                        'process_icell8')
+        self.modulefiles['fastqc'] = config.get('modulefiles','fastqc')
+        self.modulefiles['fastq_screen'] = config.get('modulefiles',
+                                                      'fastq_screen')
+        self.modulefiles['fastq_strand'] = config.get('modulefiles',
+                                                      'fastq_strand')
         self.modulefiles['cellranger'] = config.get('modulefiles','cellranger')
         self.modulefiles['report_qc'] = config.get('modulefiles','report_qc')
         self.modulefiles['cutadapt'] = config.get('modulefiles','cutadapt')
-        self.modulefiles['fastq_screen'] = config.get('modulefiles','fastq_screen')
+        # Handle legacy 'illumina_qc' modulefile
+        legacy_illumina_qc_modulefiles = config.get('modulefiles',
+                                                    'illumina_qc')
+        if legacy_illumina_qc_modulefiles:
+            if not self.modulefiles['fastqc']:
+                logger.warning("Setting 'fastqc' modulefile parameter "
+                               "using deprecated 'illumina_qc' parameter")
+                self.modulefiles['fastqc'] = legacy_illumina_qc_modulefiles
+            if not self.modulefiles['fastq_screen']:
+                logger.warning("Setting 'fastq_screen' modulefile parameter "
+                               "using deprecated 'illumina_qc' parameter")
+                self.modulefiles['fastq_screen'] = \
+                                legacy_illumina_qc_modulefiles
         # conda
         self.add_section('conda')
         self.conda['enable_conda'] = config.getboolean('conda',
@@ -172,9 +188,24 @@ class Settings:
         # qc
         self.add_section('qc')
         self.qc['nprocessors'] = config.getint('qc','nprocessors',None)
+        self.qc['fastq_screens'] = config.get('qc','fastq_screens',None)
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
+        self.qc['use_legacy_screen_names'] = \
+                                             config.getboolean(
+                                                 'qc',
+                                                 'use_legacy_screen_names',
+                                                 False)
+        # Fastq screens
+        self.add_section('screens')
+        for section in filter(lambda x: x.startswith('screen:'),
+                              config.sections()):
+            screen = section.split(':')[1]
+            self.screens[screen] = AttributeDictionary(conf_file=None)
+            self.screens[screen]['conf_file'] = config.get(section,
+                                                           'conf_file',
+                                                           None)
         # Organisms
         self.add_section('organisms')
         for section in filter(lambda x: x.startswith('organism:'),
@@ -324,6 +355,12 @@ class Settings:
                      'cellranger',):
             self.runners[name] = config.getrunner('runners',name,
                                                   default_runner)
+        # Handle new runners that default to the 'qc' runner
+        for name in ('fastqc',
+                     'fastq_screen',
+                     'star',):
+            self.runners[name] = config.getrunner('runners',name,
+                                                  self.runners.qc)
         # Information for archiving analyses
         # dirn should be a directory in the form [[user@]host:]path]
         self.add_section('archive')
@@ -629,6 +666,8 @@ class Settings:
                 display_name = 'sequencer'
             elif section == 'organisms':
                 display_name = 'organism'
+            elif section == 'screens':
+                display_name = 'screen'
             else:
                 display_name = section
             if self.has_subsections(section):

@@ -96,32 +96,97 @@ data:
 run_qc
 ------
 
-The QC pipeline uses the ``illumina_qc.sh`` script from
-`genomics-bcftbx <https://genomics-bcftbx.readthedocs.io/>`_,
-which requires a set of ``fastq_screen`` conf files and
-underlying ``bowtie`` indexes to be created - these are
-described here:
+Reference data required for the calculation of various QC metrics
+are described in the sections below, along with the configuration
+settings needed to make them available to the QC pipeline.
 
-* https://genomics-bcftbx.readthedocs.io/en/latest/config.html#set-up-reference-data
+FastqScreen
+^^^^^^^^^^^
 
-Other reference data are required for the calculation of
-various QC metrics:
+FastqScreen requires one or more ``conf`` files (each of which
+defines a specific "screen") along with the underlying ``bowtie``
+indexes for each organism which are included in the screens.
 
-* Strandedness determination requires ``STAR`` indexes for
-  each organism of interest;
-* Single library analyses of 10xGenomics single cell data
-  require the appropriate compatible reference datasets for
-  ``cellranger[-atac|-arc] count``:
-  - **scRNA-seq data**: transcriptome reference data set
-  - **snRNA-seq data**: "pre-mRNA" reference data set (which
-    includes both intronic and exonic information)
-  - **sc/snATAC-seq**: Cell Ranger ATAC compatible genome
-    reference
-  - **single cell multiome GEX+ATAC data**: ``cellranger-arc``
-    compatible reference package
+Both the indexes and the ``conf`` files must be created manually
+(see the `FastqScreen documentation <https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/_build/html/index.html#configuration>`_);
+each screen can then be added to the configuration using a
+``screen`` section which references the corresponding ``conf``
+file, e.g.:
 
-These can be defined in ``[organism:...]`` sections of the
-``auto_process.ini`` file, for example:
+::
+
+   [screen:model_organisms]
+   conf_file = /data/model_organisms.conf
+
+The screens to use in the pipeline must be set using the
+``fastq_screens`` parameter in the ``qc`` section, e.g.:
+
+::
+
+   [qc]
+   fastq_screens = model_organisms,other_organisms,rRNA
+   ...
+
+.. note::
+
+   This replaces the old ``qc.setup`` script that was used
+   to define the location of a set of standard screen ``conf``
+   files, used in earlier versions of the pipeline. Note
+   that ``qc.setup`` is not longer needed (and will be ignored
+   if present).
+
+The default size of the subset of reads used by FastqScreen
+when generating the screens can be set using the
+``fastq_screen_subset`` parameter in the ``qc`` section, e.g.:
+
+::
+
+   [qc]
+   fastq_screen_subset = 10000
+   ...
+
+Finally: by default the QC pipeline creates FastqScreen
+outputs using the following naming convention:
+
+::
+
+   {FASTQ}_screen_{SCREEN_NAME}.png
+   {FASTQ}_screen_{SCREEN_NAME}.txt
+
+for example ``PJB_S1_L001_R1_001_screen_model_organisms.png``.
+
+It is possible to revert to the older "legacy" naming
+convention (``{FASTQ}_{SCREEN_NAME}_screen.png`` etc) by
+setting the ``use_legacy_screen_names`` parameter in the ``qc``
+section:
+
+::
+
+   [qc]
+   use_legacy_screen_names = True
+   ...
+
+Strandedness and single cell analyses
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Strandedness determination requires ``STAR`` indexes for each
+organism of interest.
+
+Single library analyses of 10xGenomics single cell data require
+the appropriate compatible reference datasets for
+``cellranger[-atac|-arc] count``:
+
+* **scRNA-seq data**: transcriptome reference data set
+* **snRNA-seq data**: "pre-mRNA" reference data set (which
+  includes both intronic and exonic information)
+* **sc/snATAC-seq**: Cell Ranger ATAC compatible genome
+  reference
+* **single cell multiome GEX+ATAC data**: ``cellranger-arc``
+  compatible reference package
+
+These can all be defined using appropriate settings in
+``[organism:...]`` sections of the ``auto_process.ini`` file,
+for example:
 
 ::
 

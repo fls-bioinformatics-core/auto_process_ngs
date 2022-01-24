@@ -48,8 +48,8 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_arc_mkfastq,None)
         self.assertEqual(s.modulefiles.spaceranger_mkfastq,None)
-        self.assertEqual(s.modulefiles.illumina_qc,None)
-        self.assertEqual(s.modulefiles.fastq_strand,None)
+        self.assertEqual(s.modulefiles.fastqc,None)
+        self.assertEqual(s.modulefiles.fastq_screen,None)
         self.assertEqual(s.modulefiles.cellranger,None)
         self.assertEqual(s.modulefiles.report_qc,None)
         # Conda
@@ -469,6 +469,97 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
                          '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
         self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+
+    def test_screen_definitions(self):
+        """Settings: handle 'screen:...' sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[qc]
+fastq_screens = model_organisms,other_organisms
+
+[screen:other_organisms]
+conf_file = /data/fastq_screen/other_organisms.conf
+
+[screen:model_organisms]
+conf_file = /data/fastq_screen/model_organisms.conf
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check screen settings
+        self.assertTrue('model_organisms' in s.screens)
+        self.assertEqual(s.screens['model_organisms']['conf_file'],
+                         '/data/fastq_screen/model_organisms.conf')
+        self.assertEqual(s.screens['other_organisms']['conf_file'],
+                         '/data/fastq_screen/other_organisms.conf')
+        self.assertEqual(s.qc.fastq_screens,
+                         "model_organisms,other_organisms")
+
+    def test_legacy_fastq_screen_naming_setting(self):
+        """Settings: handle 'use_legacy_screen_names' setting
+        """
+        # Settings file without 'use_legacy_screen_names'
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[qc]
+#use_legacy_screen_names = False
+""")
+        # Load and check settings
+        s = Settings(settings_file)
+        self.assertEqual(s.qc.use_legacy_screen_names,False)
+        # Settings file with 'use_legacy_screen_names' turned off
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[qc]
+use_legacy_screen_names = False
+""")
+        # Load and check settings
+        s = Settings(settings_file)
+        self.assertEqual(s.qc.use_legacy_screen_names,False)
+        # Settings file with 'use_legacy_screen_names' turned on
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[qc]
+use_legacy_screen_names = True
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Load and check settings
+        s = Settings(settings_file)
+        self.assertEqual(s.qc.use_legacy_screen_names,True)
+
+    def test_legacy_illumina_qc_modulefile_setting(self):
+        """Settings: handle legacy 'illumina_qc' modulefile setting
+        """
+        # Settings file with 'illumina_qc' only
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[modulefiles]
+illumina_qc = SimpleJobRunner(nslots=12)
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check fastqc and fastq_screen modulefile settings
+        self.assertEqual(str(s.modulefiles.fastqc),
+                         'SimpleJobRunner(nslots=12)')
+        self.assertEqual(str(s.modulefiles.fastq_screen),
+                         'SimpleJobRunner(nslots=12)')
+        # Settings file with 'illumina_qc' and 'fastqc' and
+        # 'fastq_screen'
+        with open(settings_file,'w') as s:
+            s.write("""[modulefiles]
+illumina_qc = SimpleJobRunner(nslots=12)
+fastqc = SimpleJobRunner(nslots=1)
+fastq_screen = SimpleJobRunner(nslots=8)
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check fastqc and fastq_screen modulefile settings
+        self.assertEqual(str(s.modulefiles.fastqc),
+                         'SimpleJobRunner(nslots=1)')
+        self.assertEqual(str(s.modulefiles.fastq_screen),
+                         'SimpleJobRunner(nslots=8)')
 
     def test_legacy_bcl2fastq_settings_no_bcl_conversion(self):
         """Settings: handle legacy 'bcl2fastq' section (no 'bcl_conversion' settings)

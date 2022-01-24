@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
 #
 
 """
@@ -15,8 +15,10 @@ Pipeline task classes:
 
 - SetupQCDirs
 - GetSeqLengthStats
-- CheckIlluminaQCOutputs
-- RunIlluminaQC
+- CheckFastqScreenOutputs
+- RunFastqScreen
+- CheckFastQCOutputs
+- RunFastQC
 - SetupFastqStrandConf
 - CheckFastqStrandOutputs
 - RunFastqStrand
@@ -65,16 +67,14 @@ from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..tenx_genomics_utils import add_cellranger_args
 from ..utils import get_organism_list
-from .constants import FASTQ_SCREENS
-from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
-from .outputs import check_illumina_qc_outputs
+from .outputs import check_fastq_screen_outputs
+from .outputs import check_fastqc_outputs
 from .outputs import check_fastq_strand_outputs
 from .outputs import check_cellranger_count_outputs
 from .outputs import check_cellranger_atac_count_outputs
 from .outputs import check_cellranger_arc_count_outputs
-from .outputs import expected_outputs
 from .utils import determine_qc_protocol
 from .utils import set_cell_count_for_project
 from .fastq_strand import build_fastq_strand_conf
@@ -125,17 +125,21 @@ class QCPipeline(Pipeline):
         self.add_param('cellranger_jobinterval',type=int)
         self.add_param('cellranger_localcores',type=int)
         self.add_param('cellranger_localmem',type=int)
+        self.add_param('fastq_screens',type=dict)
         self.add_param('star_indexes',type=dict)
+        self.add_param('legacy_screens',type=bool,value=False)
 
         # Define runners
         self.add_runner('verify_runner')
-        self.add_runner('qc_runner')
+        self.add_runner('fastq_screen_runner')
+        self.add_runner('fastqc_runner')
         self.add_runner('star_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
         # Define module environment modules
-        self.add_envmodules('illumina_qc')
+        self.add_envmodules('fastqc')
+        self.add_envmodules('fastq_screen')
         self.add_envmodules('fastq_strand')
         self.add_envmodules('cellranger')
         self.add_envmodules('report_qc')
@@ -254,47 +258,72 @@ class QCPipeline(Pipeline):
             fastq_attrs=project.fastq_attrs)
         self.add_task(get_seq_lengths,
                       requires=(setup_qc_dirs,),
+                      runner=self.runners['fastqc_runner'],
                       log_dir=log_dir)
 
-        # Check illumina_qc.sh is compatible version
-        check_illumina_qc_version = CheckIlluminaQCVersion(
-            "%s: check illumina_qc.sh version" %
-            project_name)
-        self.add_task(check_illumina_qc_version,
-                      envmodules=self.envmodules['illumina_qc'],
-                      log_dir=log_dir)
-
-        # Check outputs for illumina_qc.sh
-        check_illumina_qc = CheckIlluminaQCOutputs(
-            "%s: check basic QC outputs (illumina_qc.sh)" %
+        # Check outputs for FastqScreen
+        check_fastq_screen = CheckFastqScreenOutputs(
+            "%s: check FastqScreen outputs" %
             project_name,
             project,
             qc_dir,
+            self.params.fastq_screens,
             qc_protocol=qc_protocol,
+            legacy=self.params.legacy_screens,
             verbose=self.params.VERBOSE
         )
-        self.add_task(check_illumina_qc,
-                      requires=(setup_qc_dirs,
-                                check_illumina_qc_version,),
+        self.add_task(check_fastq_screen,
+                      requires=(setup_qc_dirs,),
                       runner=self.runners['verify_runner'],
                       log_dir=log_dir)
 
-        # Run illumina_qc.sh
-        run_illumina_qc = RunIlluminaQC(
-            "%s: basic QC (illumina_qc.sh)" % project_name,
-            check_illumina_qc.output.fastqs,
+        # Run FastqScreen
+        run_fastq_screen = RunFastqScreen(
+            "%s: FastqScreen" % project_name,
+            check_fastq_screen.output.fastqs,
             qc_dir,
-            fastq_screen_subset=self.params.fastq_subset,
+            self.params.fastq_screens,
+            subset=self.params.fastq_subset,
             nthreads=self.params.nthreads,
             qc_protocol=qc_protocol,
-            fastq_attrs=project.fastq_attrs
+            fastq_attrs=project.fastq_attrs,
+            legacy=self.params.legacy_screens
         )
-        self.add_task(run_illumina_qc,
-                      requires=(check_illumina_qc,),
-                      runner=self.runners['qc_runner'],
-                      envmodules=self.envmodules['illumina_qc'],
+        self.add_task(run_fastq_screen,
+                      requires=(check_fastq_screen,),
+                      runner=self.runners['fastq_screen_runner'],
+                      envmodules=self.envmodules['fastq_screen'],
                       log_dir=log_dir)
-        report_requires.append(run_illumina_qc)
+        qc_metadata['fastq_screens'] = self.params.fastq_screens
+        qc_metadata['legacy_screens'] = self.params.legacy_screens
+        report_requires.append(run_fastq_screen)
+
+        # Check outputs for FastQC
+        check_fastqc = CheckFastQCOutputs(
+            "%s: check FastQC outputs" %
+            project_name,
+            project,
+            qc_dir,
+            verbose=self.params.VERBOSE
+        )
+        self.add_task(check_fastqc,
+                      requires=(setup_qc_dirs,),
+                      runner=self.runners['verify_runner'],
+                      log_dir=log_dir)
+
+        # Run FastqQC
+        run_fastqc = RunFastQC(
+            "%s: FastQC" % project_name,
+            check_fastqc.output.fastqs,
+            qc_dir,
+            nthreads=self.params.nthreads
+        )
+        self.add_task(run_fastqc,
+                      requires=(check_fastqc,),
+                      runner=self.runners['fastqc_runner'],
+                      envmodules=self.envmodules['fastqc'],
+                      log_dir=log_dir)
+        report_requires.append(run_fastqc)
 
         # Set up fastq_strand.conf file
         setup_fastq_strand_conf = SetupFastqStrandConf(
@@ -590,7 +619,7 @@ class QCPipeline(Pipeline):
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
 
-    def run(self,nthreads=None,star_indexes=None,
+    def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             fastq_subset=None,cellranger_chemistry='auto',
             cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
@@ -604,7 +633,7 @@ class QCPipeline(Pipeline):
             batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
             poll_interval=5,runners=None,default_runner=None,
             enable_conda=False,conda=None,conda_env_dir=None,
-            envmodules=None,verbose=False):
+            envmodules=None,legacy_screens=False,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -612,6 +641,8 @@ class QCPipeline(Pipeline):
           nthreads (int): number of threads/processors to
             use for QC jobs (defaults to number of slots set
             in job runners)
+          fastq_screens (dict): mapping of screen IDs to
+            FastqScreen conf files
           star_indexes (dict): mapping of organism IDs to
             directories with STAR indexes
           fastq_subset (int): explicitly specify
@@ -682,9 +713,10 @@ class QCPipeline(Pipeline):
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
-            instances; valid names are 'qc_runner',
-            'star_runner','report_runner','cellranger_runner',
-            'verify_runner','default'
+            instances; valid names are 'fastqc_runner',
+            'fastq_screen_runner','star_runner',
+            'report_runner','cellranger_runner',
+            'verify_runner', and 'default'
           enable_conda (bool): if True then enable use of
             conda environments to satisfy task dependencies
           conda (str): path to conda
@@ -692,10 +724,12 @@ class QCPipeline(Pipeline):
             directory for conda environments
           envmodules (mapping): mapping of names to
             environment module file lists; valid names are
-            'illumina_qc','fastq_strand','cellranger',
+            'fastqc','fastq_screen','fastq_strand','cellranger',
             'report_qc'
           default_runner (JobRunner): optional default
             job runner to use
+          legacy_screens (bool): if True then use 'legacy'
+            naming convention for FastqScreen outputs
           verbose (bool): if True then report additional
             information for diagnostics
         """
@@ -752,7 +786,9 @@ class QCPipeline(Pipeline):
                                   'cellranger_reference_dataset':
                                   cellranger_reference_dataset,
                                   'cellranger_out_dir': cellranger_out_dir,
+                                  'fastq_screens': fastq_screens,
                                   'star_indexes': star_indexes,
+                                  'legacy_screens': legacy_screens,
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
@@ -819,7 +855,8 @@ class UpdateQCMetadata(PipelineTask):
     Update the metadata stored for this QC run
     """
     def init(self,project,qc_dir,protocol=None,organism=None,
-             cellranger_version=None,cellranger_refdata=None):
+             cellranger_version=None,cellranger_refdata=None,
+             fastq_screens=None,legacy_screens=False):
         """
         Initialise the UpdateQCMetadata task
 
@@ -837,6 +874,10 @@ class UpdateQCMetadata(PipelineTask):
             software used
           cellranger_refdata (str): path to reference datasets
             used by cellranger count
+          fastq_screens (str): comma separated list of
+            panel names used with FastqScreen
+          legacy_screens (bool): if True then suppress listing
+            screen names
         """
         pass
     def setup(self):
@@ -847,6 +888,11 @@ class UpdateQCMetadata(PipelineTask):
         qc_info['organism'] = self.args.organism
         qc_info['cellranger_version'] = self.args.cellranger_version
         qc_info['cellranger_refdata'] = self.args.cellranger_refdata
+        if self.args.fastq_screens and not self.args.legacy_screens:
+            qc_info['fastq_screens'] = ','.join(
+                [s for s in self.args.fastq_screens])
+        else:
+            qc_info['fastq_screens'] = None
         qc_info.save()
 
 class GetSeqLengthStats(PipelineFunctionTask):
@@ -903,101 +949,101 @@ class GetSeqLengthStats(PipelineFunctionTask):
                 raise Exception("Missing sequence length file: %s"  %
                                 outfile)
 
-class CheckIlluminaQCVersion(PipelineTask):
+class CheckFastqScreenOutputs(PipelineFunctionTask):
     """
-    Check the illumina_qc.sh version is compatible with the pipeline
+    Check the outputs from FastqScreen
     """
-    def init(self,compatible_versions=('1.3.2','1.3.3')):
+    def init(self,project,qc_dir,screens,qc_protocol=None,
+             legacy=False,verbose=False):
         """
-        Initialise the CheckIlluminaQC task
-        """
-        pass
-    def setup(self):
-        version = self.illumina_qc_version()
-        if version not in self.args.compatible_versions:
-            self.fail(message="QC script version is %s, needs %s" %
-                      (version,'/'.join(self.args.compatible_versions)))
-    def illumina_qc_version(self):
-        # Return version of illumina_qc.sh script
-        status,qc_script_info = Command(
-            'illumina_qc.sh',
-            '--version').subprocess_check_output()
-        if status == 0:
-            return qc_script_info.strip().split()[-1]
-
-class CheckIlluminaQCOutputs(PipelineFunctionTask):
-    """
-    Check the outputs from the illumina_qc.sh script
-    """
-    def init(self,project,qc_dir,qc_protocol=None,
-             verbose=False):
-        """
-        Initialise the CheckIlluminaQCOutputs task.
+        Initialise the CheckFastqScreenOutputs task.
 
         Arguments:
           project (AnalysisProject): project to run
             QC for
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
+          screens (mapping): mapping of screen names to
+            FastqScreen conf files
           qc_protocol (str): QC protocol to use
+          legacy (bool): if True then use 'legacy' naming
+            convention for output files (default is to
+            use new format)
           verbose (bool): if True then print additional
             information from the task
 
         Outputs:
           fastqs (list): list of Fastqs that have
-            missing outputs from illumina_qc.sh under
-            the specified QC protocol
+            missing FastqScreen outputs under the specified
+            QC protocol
         """
         self.add_output('fastqs',list())
     def setup(self):
-        self.add_call("Check illumina_qc.sh outputs for %s"
-                      % self.args.project.name,
-                      check_illumina_qc_outputs,
-                      self.args.project,
-                      self.args.qc_dir,
-                      self.args.qc_protocol)
+        if self.args.screens is None:
+            print("No screens supplied: no missing QC outputs from "
+                  "FastqScreen:")
+            return
+        # Report if legacy naming convention will be used
+        if self.args.legacy:
+            print("Checking for legacy FastqScreen output names")
+        for screen in self.args.screens:
+            self.add_call("Check FastqScreen outputs for %s (%s)"
+                          % (self.args.project.name,screen),
+                          check_fastq_screen_outputs,
+                          self.args.project,
+                          self.args.qc_dir,
+                          screen,
+                          self.args.qc_protocol,
+                          legacy=self.args.legacy)
     def finish(self):
+        fastqs = set()
         for result in self.result():
-            self.output.fastqs.extend(result)
+            for fq in result:
+                fastqs.add(fq)
+        self.output.fastqs.extend(list(fastqs))
         if self.output.fastqs:
             if self.args.verbose:
                 print("Fastqs with missing QC outputs from "
-                      "illumina_qc.sh:")
+                      "FastqScreen:")
                 for fq in self.output.fastqs:
                     print("-- %s" % fq)
             else:
                 print("%s Fastqs with missing QC outputs from "
-                      "illumina_qc.sh" % len(self.output.fastqs))
+                      "FastqScreen" % len(self.output.fastqs))
         else:
             print("No Fastqs with missing QC outputs from "
-                  "illumina_qc.sh")
+                  "FastqScreen")
 
-class RunIlluminaQC(PipelineTask):
+class RunFastqScreen(PipelineTask):
     """
-    Run the illumina_qc.sh script
+    Run FastqScreen
     """
-    def init(self,fastqs,qc_dir,fastq_screen_subset=None,nthreads=None,
-             qc_protocol=None,fastq_attrs=None):
+    def init(self,fastqs,qc_dir,screens,subset=None,nthreads=None,
+             qc_protocol=None,fastq_attrs=None,legacy=False):
         """
         Initialise the RunIlluminaQC task.
 
         Arguments:
           fastqs (list): list of paths to Fastq files to
-            run the illumina_qc.sh script on (it is
-            expected that this list will come from the
-            CheckIlluminaQCOutputs task)
+            run Fastq Screen on (it is expected that this
+            list will come from the CheckIlluminaQCOutputs
+            task)
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
-          fastq_screen_subset (int): explicitly specify
-            the subset size for running Fastq_screen
+          screens (mapping): mapping of screen names to
+            FastqScreen conf files
+          subset (int): explicitly specify the subset size
+            for running Fastq_screen
           nthreads (int): number of threads/processors to
             use (defaults to number of slots set in runner)
           qc_protocol (str): QC protocol to use
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
+          legacy (bool): if True then use 'legacy' naming
+            convention for output files (default is to
+            use new format)
         """
-        self.conda("fastqc=0.11.3",
-                   "fastq-screen=0.14.0",
+        self.conda("fastq-screen=0.14.0",
                    "bowtie=1.2.3")
         # Need older version of libwebp for compatibility
         # with Perl GD
@@ -1009,18 +1055,11 @@ class RunIlluminaQC(PipelineTask):
         if not self.args.fastqs:
             print("Nothing to do")
             return
-        # Set up the illumina_qc.sh runs for each Fastq
+        # Report if legacy naming convention will be used
+        if self.args.legacy:
+            print("Using legacy FastqScreen output names")
+        # Set up the FastqScreen runs for each Fastq
         for fastq in self.args.fastqs:
-            cmd = PipelineCommandWrapper(
-                "Run illumina_qc.sh for %s" % os.path.basename(fastq),
-                'illumina_qc.sh',fastq,
-                '--qc_dir',os.path.abspath(self.args.qc_dir))
-            if self.args.nthreads:
-                cmd.add_args('--threads',self.args.nthreads)
-            else:
-                cmd.add_args('--threads',self.runner_nslots)
-            if self.args.fastq_screen_subset is not None:
-                cmd.add_args('--subset',self.args.fastq_screen_subset)
             # No screens for R1 reads for single cell
             if self.args.qc_protocol in ('singlecell',
                                          '10x_scRNAseq',
@@ -1029,9 +1068,153 @@ class RunIlluminaQC(PipelineTask):
                                          '10x_Multiome_GEX',
                                          '10x_CellPlex',) \
                 and self.args.fastq_attrs(fastq).read_number == 1:
-                cmd.add_args('--no-screens')
-            # Add the command
-            self.add_cmd(cmd)
+                continue
+            # Base name for Fastq file
+            fastq_basename = os.path.basename(fastq)
+            while fastq_basename.split('.')[-1] in ('fastq','gz'):
+                fastq_basename = '.'.join(fastq_basename.split('.')[:-1])
+            # Run FastqScreen for each screen
+            for screen in self.args.screens:
+                # Locate the FastqScreen conf file
+                fastq_screen_conf = os.path.abspath(self.args.screens[screen])
+                if not os.path.isfile(fastq_screen_conf):
+                    raise Exception("%s: conf file not found (or is not "
+                                    "a file)" % fastq_screen_conf)
+                # Determine base name for outputs
+                if self.args.legacy:
+                    screen_basename = "%s_%s_screen" % (fastq_basename,
+                                                        screen)
+                else:
+                    screen_basename = "%s_screen_%s" % (fastq_basename,
+                                                        screen)
+                # Set parameters
+                if self.args.nthreads:
+                    nthreads = self.args.nthreads
+                else:
+                    nthreads = self.runner_nslots
+                if self.args.subset is not None:
+                    subset_option = "--subset %d" %  self.args.subset
+                else:
+                    subset_option = ""
+                # Run FastqScreen
+                self.add_cmd(
+                    "Run FastqScreen '%s' on %s" % (screen,
+                                                    os.path.basename(fastq)),
+                    """
+                    # Make temporary working directory
+                    WORKDIR=$(mktemp -d --tmpdir=.)
+                    cd $WORKDIR
+                    # Run FastqScreen: {screen_name}
+                    fastq_screen \\
+                    --conf {fastq_screen_conf} \\
+                    --threads {nthreads} {subset_option} \\
+                    --outdir . --force \\
+                    {fastq}
+                    # Rename and move outputs to final location
+                    /bin/mv {fastq_basename}_screen.txt \\
+                        {qc_dir}/{screen_basename}.txt
+                    /bin/mv {fastq_basename}_screen.png \\
+                        {qc_dir}/{screen_basename}.png
+                    # Return to initial directory
+                    cd ..
+                    """.format(screen_name=screen,
+                               fastq=fastq,
+                               qc_dir=self.args.qc_dir,
+                               fastq_screen_conf=fastq_screen_conf,
+                               nthreads=nthreads,
+                               subset_option=subset_option,
+                               fastq_basename=fastq_basename,
+                               screen_basename=screen_basename))
+
+class CheckFastQCOutputs(PipelineFunctionTask):
+    """
+    Check the outputs from FastQC
+    """
+    def init(self,project,qc_dir,verbose=False):
+        """
+        Initialise the CheckFastQCOutputs task.
+
+        Arguments:
+          project (AnalysisProject): project to run
+            QC for
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          verbose (bool): if True then print additional
+            information from the task
+
+        Outputs:
+          fastqs (list): list of Fastqs that have
+            missing FastQC outputs under the specified
+            QC protocol
+        """
+        self.add_output('fastqs',list())
+    def setup(self):
+        self.add_call("Check FastQC outputs for %s"
+                          % self.args.project.name,
+                          check_fastqc_outputs,
+                          self.args.project,
+                          self.args.qc_dir)
+    def finish(self):
+        fastqs = set()
+        for result in self.result():
+            for fq in result:
+                fastqs.add(fq)
+        self.output.fastqs.extend(list(fastqs))
+        if self.output.fastqs:
+            if self.args.verbose:
+                print("Fastqs with missing QC outputs from "
+                      "FastQC:")
+                for fq in self.output.fastqs:
+                    print("-- %s" % fq)
+            else:
+                print("%s Fastqs with missing QC outputs from "
+                      "FastQC" % len(self.output.fastqs))
+        else:
+            print("No Fastqs with missing QC outputs from "
+                  "FastQC")
+
+class RunFastQC(PipelineTask):
+    """
+    Run FastQC
+    """
+    def init(self,fastqs,qc_dir,nthreads=None):
+        """
+        Initialise the RunIlluminaQC task.
+
+        Arguments:
+          fastqs (list): list of paths to Fastq files to
+            run Fastq Screen on (it is expected that this
+            list will come from the CheckIlluminaQCOutputs
+            task)
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          nthreads (int): number of threads/processors to
+            use (defaults to number of slots set in runner)
+        """
+        self.conda("fastqc=0.11.3")
+    def setup(self):
+        if not self.args.fastqs:
+            print("Nothing to do")
+            return
+        # Set number of threads
+        if self.args.nthreads:
+            nthreads = self.args.nthreads
+        else:
+            nthreads = self.runner_nslots
+        # Run FastQC for each Fastq
+        for fastq in self.args.fastqs:
+            self.add_cmd(
+                "Run FastQC on %s" % os.path.basename(fastq),
+                """
+                # Run FastQC
+                fastqc \\
+                --outdir {qc_dir} \\
+                --threads {nthreads} \\
+                --nogroup --extract \\
+                {fastq}
+                """.format(qc_dir=self.args.qc_dir,
+                           nthreads=nthreads,
+                           fastq=fastq))
 
 class SetupFastqStrandConf(PipelineFunctionTask):
     """

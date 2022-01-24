@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc_cmd.py: implement auto process run_qc command
-#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 #########################################################################
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def run_qc(ap,projects=None,ungzip_fastqs=False,
+def run_qc(ap,projects=None,fastq_screens=None,
            fastq_screen_subset=100000,nthreads=None,
            runner=None,fastq_dir=None,qc_dir=None,
            cellranger_chemistry='auto',
@@ -50,10 +50,8 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
       projects (str): specify a pattern to match one or more
         projects to run the QC for (default is to run QC for all
         projects)
-      ungzip_fastqs (bool): if True then run the QC script with
-        the '--ungzip-fastqs' option to create decompressed
-        copies of any fastq.gz inputs (default: False i.e. don't
-        decompress the input files)
+      fastq_screens (dict): mapping of Fastq screen names to
+        corresponding conf files, to use for contaminant screens
       fastq_screen_subset (int): subset of reads to use in
         FastQScreen, set to zero or None to use all reads
         (default: 100000)
@@ -154,12 +152,19 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
         if cellranger_arc_reference:
             cellranger_multiome_references[organism] = \
                 cellranger_arc_reference
+    # Legacy FastqScreen naming convention
+    legacy_screens = bool(ap.settings.qc.use_legacy_screen_names)
     # Set up runners
     if runner is None:
         default_runner = ap.settings.general.default_runner
         runners={
             'cellranger_runner': ap.settings.runners.cellranger,
-            'qc_runner': ap.settings.runners.qc,
+            'fastqc_runner': (ap.settings.runners.fastqc
+                              if ap.settings.runners.fastqc
+                              else ap.settings.runners.qc),
+            'fastq_screen_runner': (ap.settings.runners.fastq_screen
+                                    if ap.settings.runners.fastq_screen
+                                    else ap.settings.runners.qc),
             'star_runner': ap.settings.runners.star,
             'verify_runner': default_runner,
             'report_runner': default_runner,
@@ -168,14 +173,16 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
         default_runner = runner
         runners={
             'cellranger_runner': runner,
-            'qc_runner': runner,
+            'fastqc_runner': runner,
+            'fastq_screen_runner': runner,
             'star_runner': runner,
             'verify_runner': runner,
             'report_runner': runner,
         }
     # Get environment modules
     envmodules = dict()
-    for name in ('illumina_qc',
+    for name in ('fastqc',
+                 'fastq_screen',
                  'fastq_strand',
                  'cellranger',
                  'report_qc',):
@@ -216,6 +223,7 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
     cellranger_localmem = cellranger_settings.cellranger_localmem
     # Run the QC
     status = runqc.run(nthreads=nthreads,
+                       fastq_screens=fastq_screens,
                        star_indexes=star_indexes,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
@@ -240,5 +248,6 @@ def run_qc(ap,projects=None,ungzip_fastqs=False,
                        conda_env_dir=conda_env_dir,
                        envmodules=envmodules,
                        working_dir=working_dir,
+                       legacy_screens=legacy_screens,
                        verbose=verbose)
     return status

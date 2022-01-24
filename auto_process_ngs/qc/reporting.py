@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 
 #######################################################################
@@ -542,30 +542,60 @@ class QCProject:
                  for f in os.listdir(self.qc_dir)]
         print("\t- %d objects found" % len(files))
         logger.debug("files: %s" % files)
-        # Look for screen files
+        # Look for legacy screen files
+        legacy_screens = list(filter(lambda f:
+                                     f.endswith("_screen.txt") or
+                                     f.endswith("_screen.png"),
+                                     files))
+        logger.debug("Screens (legacy): %s" % legacy_screens)
+        # Look for new-style screen files
         screens = list(filter(lambda f:
-                              f.endswith("_screen.txt") or
-                              f.endswith("_screen.png"),
-                              files))
+                              "_screen_" in os.path.basename(f) and
+                              (f.endswith(".txt") or
+                               f.endswith(".png")),
+                               files))
         logger.debug("Screens: %s" % screens)
-        print("\t- %d fastq_screen files" % len(screens))
+        print("\t- %d fastq_screen files" % (len(legacy_screens) +
+                                             len(screens)))
         fastq_names = set()
+        fastq_screens = set()
+        if legacy_screens:
+            versions = set()
+            for screen_name in FASTQ_SCREENS:
+                # Explicitly check for legacy screens
+                for screen in list(filter(lambda s:
+                                          s.endswith("_%s_screen.txt" %
+                                                     screen_name),
+                                          legacy_screens)):
+                    fq = self.fastq_attrs(screen[:-len("_screen.txt")])
+                    fastq_name = str(fq)[:-len("_%s" % screen_name)]
+                    outputs.add("screens_%s%s" %
+                                (('i' if fq.is_index_read else 'r'),
+                                 (fq.read_number
+                                  if fq.read_number is not None else '1')))
+                    fastq_names.add(fastq_name)
+                    fastq_screens.add(screen_name)
+                    versions.add(Fastqscreen(screen).version)
+            if versions:
+                software['fastq_screen'] = sorted(list(versions))
+            # Store the legacy screen files
+            output_files.extend(legacy_screens)
         if screens:
             versions = set()
             # Pull out the Fastq names from the .txt files
-            for screen in list(filter(lambda s:
-                                      s.endswith("_screen.txt"),
+            for screen in list(filter(lambda s: s.endswith(".txt"),
                                       screens)):
-                screen_base = os.path.splitext(screen)[0]
-                s = os.path.basename(screen_base)[:-len("_screen")]
-                for name in FASTQ_SCREENS:
-                    if s.endswith("_%s" % name):
-                        fq = self.fastq_attrs(s[:-len("_%s" % name)])
-                        outputs.add("screens_%s%s" %
-                                    (('i' if fq.is_index_read else 'r'),
-                                     (fq.read_number
-                                      if fq.read_number is not None else '1')))
-                        fastq_names.add(s[:-len("_%s" % name)])
+                # Assume that names are 'FASTQ_screen_SCREENNAME.txt'
+                fastq_name,screen_name = os.path.basename(screen)\
+                                         [:-len(".txt")].\
+                                         split("_screen_")
+                fq = self.fastq_attrs(fastq_name)
+                outputs.add("screens_%s%s" %
+                            (('i' if fq.is_index_read else 'r'),
+                             (fq.read_number
+                              if fq.read_number is not None else '1')))
+                fastq_names.add(fastq_name)
+                fastq_screens.add(screen_name)
                 versions.add(Fastqscreen(screen).version)
             if versions:
                 software['fastq_screen'] = sorted(list(versions))
@@ -822,6 +852,8 @@ class QCProject:
             samples.add(s)
         self.samples = sorted(list(samples),
                               key=lambda s: split_sample_name(s))
+        # Fastq screens
+        self.fastq_screens = sorted(list(fastq_screens))
         # Single library analyses reference data
         self.cellranger_references = sorted(list(cellranger_references))
         # Multiplexed samples
@@ -1190,6 +1222,10 @@ class QCReport(Document):
                     print("\t- %s" % output)
             else:
                 logger.warning("%s: no QC outputs found" % project.name)
+            if project.fastq_screens:
+                print("Fastq screens:")
+                for screen in project.fastq_screens:
+                    print("\t- %s" % screen)
             if project.stats.max_seqs:
                 print("Maximum number of sequences: %d" %
                       project.stats.max_seqs)
@@ -2989,18 +3025,47 @@ class QCReportFastq:
         # Fastqscreen
         self.fastq_screen = AttributeDictionary()
         self.fastq_screen['names'] = list()
-        for name in FASTQ_SCREENS:
-            png,txt = fastq_screen_output(fastq,name)
+        fastq_base = self.fastq_attrs(fastq).basename
+        # Legacy screens
+        for screen_name in FASTQ_SCREENS:
+            for f in list(filter(lambda f:
+                                 f.startswith(fastq_base) and
+                                 f.endswith("_%s_screen.txt" % screen_name),
+                                 os.listdir(qc_dir))):
+                screen_name = f[:-len("_screen.txt")]
+                png,txt = fastq_screen_output(fastq,screen_name,
+                                              legacy=True)
+                png = os.path.join(qc_dir,png)
+                txt = os.path.join(qc_dir,txt)
+                if os.path.exists(png) and os.path.exists(txt):
+                    self.fastq_screen['names'].append(screen_name)
+                    self.fastq_screen[screen_name] = AttributeDictionary()
+                    self.fastq_screen[screen_name]["description"] = \
+                                        screen_name.replace('_',' ').title()
+                    self.fastq_screen[screen_name]["png"] = png
+                    self.fastq_screen[screen_name]["txt"] = txt
+                    self.fastq_screen[screen_name]["version"] = \
+                                        Fastqscreen(txt).version
+        # New-style screens (FASTQ_screen_SCREENNAME)
+        for f in list(filter(lambda f:
+                             f.startswith(fastq_base) and
+                             f.endswith(".txt") and
+                             "_screen_" in f,
+                             os.listdir(qc_dir))):
+            screen_name = f[:-len(".txt")].split("_screen_")[1]
+            png,txt = fastq_screen_output(fastq,screen_name)
             png = os.path.join(qc_dir,png)
             txt = os.path.join(qc_dir,txt)
             if os.path.exists(png) and os.path.exists(txt):
-                self.fastq_screen['names'].append(name)
-                self.fastq_screen[name] = AttributeDictionary()
-                self.fastq_screen[name]["description"] = \
-                                        name.replace('_',' ').title()
-                self.fastq_screen[name]["png"] = png
-                self.fastq_screen[name]["txt"] = txt
-                self.fastq_screen[name]["version"] = Fastqscreen(txt).version
+                self.fastq_screen['names'].append(screen_name)
+                self.fastq_screen[screen_name] = AttributeDictionary()
+                self.fastq_screen[screen_name]["description"] = \
+                                        screen_name.replace('_',' ').title()
+                self.fastq_screen[screen_name]["png"] = png
+                self.fastq_screen[screen_name]["txt"] = txt
+                self.fastq_screen[screen_name]["version"] = \
+                                        Fastqscreen(txt).version
+        self.fastq_screen['names'] = sorted(self.fastq_screen['names'])
         # Sequence lengths
         try:
             self.sequence_lengths = SeqLens(
@@ -3298,6 +3363,7 @@ def verify(project,qc_dir=None,qc_protocol=None):
                  fastq_strand_conf)
     cellranger_version = None
     cellranger_refdata = None
+    fastq_screens = None
     qc_info_file = os.path.join(qc_dir,"qc.info")
     if os.path.exists(qc_info_file):
         qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
@@ -3309,13 +3375,23 @@ def verify(project,qc_dir=None,qc_protocol=None):
             cellranger_version = qc_info['cellranger_version']
         except KeyError:
             pass
+        try:
+            fastq_screens = qc_info['fastq_screens']
+            if fastq_screens:
+                fastq_screens = fastq_screens.split(',')
+            elif 'fastq_screens' not in qc_info.keys_in_file():
+                fastq_screens = FASTQ_SCREENS
+        except KeyError:
+            pass
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
+    logger.debug("verify: fastq screens : %s" % fastq_screens)
     cellranger_multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
     if not os.path.exists(cellranger_multi_config):
         cellranger_multi_config = None
     verified = True
     for f in expected_outputs(project,qc_dir,
+                              fastq_screens=fastq_screens,
                               fastq_strand_conf=fastq_strand_conf,
                               cellranger_version=cellranger_version,
                               cellranger_refdata=cellranger_refdata,

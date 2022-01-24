@@ -19,14 +19,14 @@ cellranger_atac_mkfastq = None
 cellranger_arc_mkfastq = None
 spaceranger_mkfastq = None
 run_qc = None
-illumina_qc = None
+fastq_screen = None
+fastqc = None
 fastq_strand = None
 cellranger = None
 report_qc = None
 publish_qc = None
 process_icell8 = None
 cutadapt = None
-fastq_screen = None
 
 # Conda dependency resolution
 [conda]
@@ -51,9 +51,9 @@ create_empty_fastqs = False
 #platform = hiseq
 
 # Organisms
-# Define an 'organism:NAME' section for each
-# organism and set the corresponding parameters
-# pointing to the reference datasets:
+# Define an 'organism:NAME' section for each organism
+# and set the corresponding parameters  pointing to the
+# reference datasets:
 # - star_index
 # - bowtie_index
 # - cellranger_reference
@@ -71,9 +71,23 @@ create_empty_fastqs = False
 
 # QC settings
 [qc]
+# FastqScreen
+# Comma-separated list of panel names
+# Each panel needs to be defined in its own 'screen:...' section
+#fastq_screens = model_organisms,other_organisms,rRNA
 fastq_screen_subset = 100000
 # By default nprocessors taken from runner
 #nprocessors = 1
+# Whether to use 'legacy' naming convention for FastqScreen
+# output files
+#use_legacy_screen_names = False
+
+# Fastq screen panels
+# Define a 'screen:NAME' section for each panel
+# and set the 'conf_file' parameter to point to the
+# corresponding FastqScreen configuration file
+#[screen:model_organisms]
+#conf_file = /data/fastq_screen/model_organisms.conf
 
 # icell8 settings
 [icell8]
@@ -115,7 +129,8 @@ nprocessors = 1
 [runners]
 bcl2fastq = SimpleJobRunner
 bcl_convert = SimpleJobRunner
-qc = SimpleJobRunner
+fastqc = SimpleJobRunner
+fastq_screen  = SimpleJobRunner
 star = SimpleJobRunner
 stats = SimpleJobRunner
 rsync = SimpleJobRunner

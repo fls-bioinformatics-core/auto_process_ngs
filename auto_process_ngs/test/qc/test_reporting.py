@@ -67,9 +67,12 @@ class TestQCReporter(unittest.TestCase):
             # FastQC
             MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
             # Fastq_screen
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms')
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
+            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms',
+                                              legacy=legacy_screens)
+            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms',
+                                              legacy=legacy_screens)
+            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'rRNA',
+                                              legacy=legacy_screens)
             # Sequence lengths
             if include_seqlens:
                 MockQCOutputs.seqlens(fq,qc_dir)
@@ -244,10 +247,59 @@ PBB_CML2,CMO302,CML2
         reporter.report(filename=os.path.join(self.wd,'report.non_canonical.html'))
         self.assertTrue(os.path.exists(
             os.path.join(self.wd,'report.non_canonical.html')))
+    def test_qcreporter_paired_end_with_legacy_screens(self):
+        """QCReporter: paired-end data with legacy screen names
+        """
+        analysis_dir = self._make_analysis_project(paired_end=True,
+                                                   legacy_screens=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
     def test_qcreporter_single_end_make_zip_file(self):
         """QCReporter: single-end data: make ZIP file
         """
         analysis_dir = self._make_analysis_project(paired_end=False)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,
+                                              'PJB',
+                                              'report.SE.html'),
+                        make_zip=True)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'PJB','report.SE.html')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'PJB','report.SE.PJB.zip')))
+        contents = zipfile.ZipFile(
+            os.path.join(self.wd,'PJB',
+                         'report.SE.PJB.zip')).namelist()
+        print(contents)
+        expected = (
+            'report.SE.PJB/report.SE.html',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_fastqc.html',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_rRNA.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_rRNA.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_fastqc.html',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_rRNA.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_rRNA.txt')
+        for f in expected:
+            self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
+    def test_qcreporter_single_end_make_zip_file_legacy_screens(self):
+        """QCReporter: single-end data: make ZIP file (legacy screens)
+        """
+        analysis_dir = self._make_analysis_project(paired_end=False,
+                                                   legacy_screens=True)
         project = AnalysisProject('PJB',analysis_dir)
         reporter = QCReporter(project)
         self.assertTrue(reporter.verify())
@@ -333,7 +385,8 @@ class TestVerifyFunction(unittest.TestCase):
         if self.wd is None:
             self.wd = tempfile.mkdtemp(suffix='.test_QCReporter')
     def _make_analysis_project(self,paired_end=True,fastq_dir=None,
-                               qc_dir="qc",fastq_names=None):
+                               qc_dir="qc",fastq_names=None,
+                               legacy_screens=False):
         # Create a mock Analysis Project directory
         self._make_working_dir()
         # Generate names for fastq files to add
@@ -357,7 +410,8 @@ class TestVerifyFunction(unittest.TestCase):
             add_qc_outputs(qc_dir=qc_dir,
                            include_report=False,
                            include_zip_file=False,
-                           include_multiqc=False)
+                           include_multiqc=False,
+                           legacy_screens=legacy_screens)
         return project_dir
     def test_verify_single_end(self):
         """verify: single-end data
@@ -404,6 +458,14 @@ class TestVerifyFunction(unittest.TestCase):
              "PJB2_S2_R2_001_paired.fastq.gz",))
         project = AnalysisProject('PJB',analysis_dir)
         self.assertTrue(verify(project))
+        self.assertTrue(verify(project))
+    def test_verify_paired_end_with_no_fastq_dir(self):
+        """verify: paired-end data with legacy screen names
+        """
+        analysis_dir = self._make_analysis_project(paired_end=True,
+                                                   legacy_screens=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        self.assertTrue(verify(project))
 
 class TestReportFunction(unittest.TestCase):
     def setUp(self):
@@ -423,7 +485,8 @@ class TestReportFunction(unittest.TestCase):
             self.top_dir = os.path.join(self.wd,"Test")
             os.mkdir(self.top_dir)
     def _make_analysis_project(self,name="PJB",paired_end=True,fastq_dir=None,
-                               qc_dir="qc",sample_names=None,fastq_names=None):
+                               qc_dir="qc",sample_names=None,fastq_names=None,
+                               legacy_screens=False):
         # Create a mock Analysis Project directory
         self._make_working_dir()
         # Generate names for fastq files to add
@@ -448,7 +511,8 @@ class TestReportFunction(unittest.TestCase):
             add_qc_outputs(qc_dir=qc_dir,
                            include_report=False,
                            include_zip_file=False,
-                           include_multiqc=True)
+                           include_multiqc=True,
+                           legacy_screens=legacy_screens)
         return project_dir
     def test_report_single_end(self):
         """report: single-end data
@@ -515,6 +579,16 @@ class TestReportFunction(unittest.TestCase):
                                      'report.non_canonical.html'))
         self.assertTrue(os.path.exists(
             os.path.join(self.top_dir,'report.non_canonical.html')))
+    def test_report_paired_end_with_legacy_screens(self):
+        """report: paired-end data with legacy screen names
+        """
+        analysis_dir = self._make_analysis_project(paired_end=True,
+                                                   legacy_screens=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
     def test_report_single_end_multiple_projects(self):
         """report: single-end data: two projects in one report
         """
@@ -558,19 +632,19 @@ class TestReportFunction(unittest.TestCase):
         print(contents)
         expected = (
             'PJB1_S1_R1_001_fastqc.html',
-            'PJB1_S1_R1_001_model_organisms_screen.png',
-            'PJB1_S1_R1_001_model_organisms_screen.txt',
-            'PJB1_S1_R1_001_other_organisms_screen.png',
-            'PJB1_S1_R1_001_other_organisms_screen.txt',
-            'PJB1_S1_R1_001_rRNA_screen.png',
-            'PJB1_S1_R1_001_rRNA_screen.txt',
+            'PJB1_S1_R1_001_screen_model_organisms.png',
+            'PJB1_S1_R1_001_screen_model_organisms.txt',
+            'PJB1_S1_R1_001_screen_other_organisms.png',
+            'PJB1_S1_R1_001_screen_other_organisms.txt',
+            'PJB1_S1_R1_001_screen_rRNA.png',
+            'PJB1_S1_R1_001_screen_rRNA.txt',
             'PJB2_S2_R1_001_fastqc.html',
-            'PJB2_S2_R1_001_model_organisms_screen.png',
-            'PJB2_S2_R1_001_model_organisms_screen.txt',
-            'PJB2_S2_R1_001_other_organisms_screen.png',
-            'PJB2_S2_R1_001_other_organisms_screen.txt',
-            'PJB2_S2_R1_001_rRNA_screen.png',
-            'PJB2_S2_R1_001_rRNA_screen.txt')
+            'PJB2_S2_R1_001_screen_model_organisms.png',
+            'PJB2_S2_R1_001_screen_model_organisms.txt',
+            'PJB2_S2_R1_001_screen_other_organisms.png',
+            'PJB2_S2_R1_001_screen_other_organisms.txt',
+            'PJB2_S2_R1_001_screen_rRNA.png',
+            'PJB2_S2_R1_001_screen_rRNA.txt')
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from data dir" % f)
         self.assertTrue(os.path.exists(os.path.join(self.top_dir,
@@ -583,6 +657,43 @@ class TestReportFunction(unittest.TestCase):
         """report: single-end data: make ZIP file
         """
         analysis_dir = self._make_analysis_project(paired_end=False)
+        project = AnalysisProject('PJB',analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'PJB',
+                                                'report.SE.html'),
+               make_zip=True)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'PJB','report.SE.html')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'PJB','report.SE.PJB.zip')))
+        contents = zipfile.ZipFile(
+            os.path.join(self.top_dir,'PJB',
+                         'report.SE.PJB.zip')).namelist()
+        print(contents)
+        expected = (
+            'report.SE.PJB/report.SE.html',
+            'report.SE.PJB/multiqc_report.html',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_fastqc.html',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_rRNA.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_rRNA.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_fastqc.html',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_rRNA.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_rRNA.txt')
+        for f in expected:
+            self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
+    def test_report_single_end_make_zip_file_legacy_screens(self):
+        """report: single-end data: make ZIP file with legacy screens
+        """
+        analysis_dir = self._make_analysis_project(paired_end=False,
+                                                   legacy_screens=True)
         project = AnalysisProject('PJB',analysis_dir)
         report((project,),filename=os.path.join(self.top_dir,
                                                 'PJB',
@@ -639,19 +750,19 @@ class TestReportFunction(unittest.TestCase):
             'report.SE.PJB/report.SE.html',
             'report.SE.PJB/report.SE_data/Test_PJB/multiqc_report.html',
             'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_fastqc.html',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_model_organisms_screen.png',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_model_organisms_screen.txt',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_other_organisms_screen.png',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_other_organisms_screen.txt',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_rRNA_screen.png',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_rRNA_screen.txt',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_screen_rRNA.png',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_screen_rRNA.txt',
             'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_fastqc.html',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_model_organisms_screen.png',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_model_organisms_screen.txt',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_other_organisms_screen.png',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_other_organisms_screen.txt',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_rRNA_screen.png',
-            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_rRNA_screen.txt')
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_rRNA.png',
+            'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_rRNA.txt')
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
     def test_report_single_end_multiple_projects_with_zip_file_no_data_dir(self):
@@ -733,34 +844,34 @@ class TestReportFunction(unittest.TestCase):
             'report.multiple_projects.PJB/report.multiple_projects.html',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/multiqc_report.html',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_fastqc.html',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_model_organisms_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_model_organisms_screen.txt',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_other_organisms_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_other_organisms_screen.txt',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_rRNA_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_rRNA_screen.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_screen_model_organisms.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_screen_model_organisms.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_screen_other_organisms.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_screen_other_organisms.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_screen_rRNA.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_screen_rRNA.txt',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_fastqc.html',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_model_organisms_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_model_organisms_screen.txt',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_other_organisms_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_other_organisms_screen.txt',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_rRNA_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_rRNA_screen.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_screen_model_organisms.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_screen_model_organisms.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_screen_other_organisms.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_screen_other_organisms.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_screen_rRNA.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_screen_rRNA.txt',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/multiqc_report.html',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_fastqc.html',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_model_organisms_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_model_organisms_screen.txt',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_other_organisms_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_other_organisms_screen.txt',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_rRNA_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_rRNA_screen.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_screen_model_organisms.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_screen_model_organisms.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_screen_other_organisms.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_screen_other_organisms.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_screen_rRNA.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_screen_rRNA.txt',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_fastqc.html',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_model_organisms_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_model_organisms_screen.txt',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_other_organisms_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_other_organisms_screen.txt',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_rRNA_screen.png',
-            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_rRNA_screen.txt')
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_screen_model_organisms.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_screen_model_organisms.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_screen_other_organisms.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_screen_other_organisms.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_screen_rRNA.png',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_screen_rRNA.txt')
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
 

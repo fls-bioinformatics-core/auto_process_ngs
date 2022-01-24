@@ -6,7 +6,6 @@ import unittest
 import tempfile
 import shutil
 import os
-from auto_process_ngs.mock import MockIlluminaQcSh
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
@@ -17,7 +16,8 @@ from auto_process_ngs.qc.outputs import cellranger_count_output
 from auto_process_ngs.qc.outputs import cellranger_atac_count_output
 from auto_process_ngs.qc.outputs import cellranger_arc_count_output
 from auto_process_ngs.qc.outputs import cellranger_multi_output
-from auto_process_ngs.qc.outputs import check_illumina_qc_outputs
+from auto_process_ngs.qc.outputs import check_fastq_screen_outputs
+from auto_process_ngs.qc.outputs import check_fastqc_outputs
 from auto_process_ngs.qc.outputs import check_fastq_strand_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_count_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_atac_count_outputs
@@ -33,13 +33,21 @@ class TestFastqScreenOutputFunction(unittest.TestCase):
         """
         self.assertEqual(fastq_screen_output('/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
                                              'model_organisms'),
-                         ('PB1_ATTAGG_L001_R1_001_model_organisms_screen.png',
-                          'PB1_ATTAGG_L001_R1_001_model_organisms_screen.txt'))
+                         ('PB1_ATTAGG_L001_R1_001_screen_model_organisms.png',
+                          'PB1_ATTAGG_L001_R1_001_screen_model_organisms.txt'))
     def test_fastq_screen_output_fastqgz(self):
         """fastq_screen_output: handles fastq.gz file
         """
         self.assertEqual(fastq_screen_output('/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz',
                                              'model_organisms'),
+                         ('PB1_ATTAGG_L001_R1_001_screen_model_organisms.png',
+                          'PB1_ATTAGG_L001_R1_001_screen_model_organisms.txt'))
+    def test_fastq_screen_output_legacy_naming(self):
+        """fastq_screen_output: handles legacy naming convention
+        """
+        self.assertEqual(fastq_screen_output('/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz',
+                                             'model_organisms',
+                                             legacy=True),
                          ('PB1_ATTAGG_L001_R1_001_model_organisms_screen.png',
                           'PB1_ATTAGG_L001_R1_001_model_organisms_screen.txt'))
 
@@ -298,22 +306,22 @@ PBB,CMO302,PBB
         config_csv = os.path.join(self.wd,"PJB","10x_multi_config.csv.missing")
         self.assertEqual(cellranger_multi_output(project,config_csv),[])
 
-class TestCheckIlluminaQcOutputs(unittest.TestCase):
+class TestCheckFastqScreenOutputs(unittest.TestCase):
     """
-    Tests for the 'check_illumina_qc_outputs' function
+    Tests for the 'check_fastq_screen_outputs' function
     """
     def setUp(self):
         # Create a temp working dir
-        self.wd = tempfile.mkdtemp(suffix='TestIlluminaQcOutputs')
+        self.wd = tempfile.mkdtemp(suffix='TestCheckFastqScreenOutputs')
 
     def tearDown(self):
         # Remove the temporary test directory
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
 
-    def test_check_illumina_qc_outputs_standardPE_all_missing(self):
+    def test_check_fastq_screen_outputs_standardPE_all_missing(self):
         """
-        check_illumina_qc_outputs: all illumina_qc.sh outputs missing (standardPE)
+        check_fastq_screen_outputs: all screen outputs missing (standardPE)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -323,14 +331,15 @@ class TestCheckIlluminaQcOutputs(unittest.TestCase):
         # Get the outputs
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="standardPE"),
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardPE"),
                          project.fastqs)
 
-    def test_check_illumina_qc_outputs_standardPE_all_present(self):
+    def test_check_fastq_screen_outputs_standardPE_all_present(self):
         """
-        check_illumina_qc_outputs: all illumina_qc.sh outputs present (standardPE)
+        check_fastq_screen_outputs: all screen outputs present (standardPE)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -343,14 +352,15 @@ class TestCheckIlluminaQcOutputs(unittest.TestCase):
             include_fastq_strand=False,
             include_multiqc=False)
         # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="standardPE"),
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardPE"),
                          [])
 
-    def test_check_illumina_qc_outputs_standardPE_some_missing(self):
+    def test_check_fastq_screen_outputs_standardPE_some_missing(self):
         """
-        check_illumina_qc_outputs: some illumina_qc.sh outputs missing (standardPE)
+        check_fastq_screen_outputs: some screen outputs missing (standardPE)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -362,20 +372,44 @@ class TestCheckIlluminaQcOutputs(unittest.TestCase):
         UpdateAnalysisProject(project).add_qc_outputs(
             include_fastq_strand=False,
             include_multiqc=False)
-        # Remove some outputs
-        for f in ("PJB1_S1_R1_001_fastqc.html",
-                  "PJB1_S1_R1_001_model_organisms_screen.txt",):
-            os.remove(os.path.join(project.qc_dir,f))
+        # Remove a screen output
+        os.remove(os.path.join(
+            project.qc_dir,
+            "PJB1_S1_R1_001_screen_model_organisms.txt"))
         # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="standardPE"),
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardPE"),
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R1_001.fastq.gz")])
 
-    def test_check_illumina_qc_outputs_standardSE_all_missing(self):
+    def test_check_fastq_screen_outputs_standardPE_legacy(self):
         """
-        check_illumina_qc_outputs: all illumina_qc.sh outputs missing (standardSE)
+        check_fastq_screen_outputs: all screen outputs present (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False,
+            legacy_screens=True)
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardPE",
+                                                    legacy=True),
+                         [])
+
+    def test_check_fastq_screen_outputs_standardSE_all_missing(self):
+        """
+        check_fastq_screen_outputs: all screen outputs missing (standardSE)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
@@ -384,14 +418,15 @@ class TestCheckIlluminaQcOutputs(unittest.TestCase):
         # Get the outputs
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="standardSE"),
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardSE"),
                          project.fastqs)
 
-    def test_check_illumina_qc_outputs_standardSE_all_present(self):
+    def test_check_fastq_screen_outputs_standardSE_all_present(self):
         """
-        check_illumina_qc_outputs: all illumina_qc.sh outputs present (standardSE)
+        check_fastq_screen_outputs: all screen outputs present (standardSE)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
@@ -403,14 +438,15 @@ class TestCheckIlluminaQcOutputs(unittest.TestCase):
             include_fastq_strand=False,
             include_multiqc=False)
         # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="standardSE"),
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardSE"),
                          [])
 
-    def test_check_illumina_qc_outputs_standardSE_some_missing(self):
+    def test_check_fastq_screen_outputs_standardSE_some_missing(self):
         """
-        check_illumina_qc_outputs: some illumina_qc.sh outputs missing (standardSE)
+        check_fastq_screen_outputs: some screen outputs missing (standardSE)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
@@ -421,20 +457,21 @@ class TestCheckIlluminaQcOutputs(unittest.TestCase):
         UpdateAnalysisProject(project).add_qc_outputs(
             include_fastq_strand=False,
             include_multiqc=False)
-        # Remove some outputs
-        for f in ("PJB1_S1_R1_001_fastqc.html",
-                  "PJB1_S1_R1_001_model_organisms_screen.txt",):
-            os.remove(os.path.join(project.qc_dir,f))
+        # Remove a screen output
+        os.remove(os.path.join(
+            project.qc_dir,
+            "PJB1_S1_R1_001_screen_model_organisms.txt"))
         # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="standardSE"),
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="standardSE"),
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R1_001.fastq.gz")])
 
-    def test_check_illumina_qc_outputs_singlecell_all_missing(self):
+    def test_check_fastq_screen_outputs_singlecell_all_missing(self):
         """
-        check_illumina_qc_outputs: all illumina_qc.sh outputs missing (singlecell)
+        check_fastq_screen_outputs: all screen outputs missing (singlecell)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -444,55 +481,253 @@ class TestCheckIlluminaQcOutputs(unittest.TestCase):
         # Get the outputs
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="singlecell"),
-                         project.fastqs)
-
-    def test_check_illumina_qc_outputs_singlecell_all_present(self):
-        """
-        check_illumina_qc_outputs: all illumina_qc.sh outputs present (singlecell)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Add QC artefacts
-        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
-        UpdateAnalysisProject(project).add_qc_outputs(
-            include_fastq_strand=False,
-            include_multiqc=False)
-        # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="singlecell"),
-                         [])
-
-    def test_check_illumina_qc_outputs_singlecell_some_missing(self):
-        """
-        check_illumina_qc_outputs: some illumina_qc.sh outputs missing (singlecell)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Add QC artefacts
-        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
-        UpdateAnalysisProject(project).add_qc_outputs(
-            include_fastq_strand=False,
-            include_multiqc=False)
-        # Remove some outputs
-        for f in ("PJB1_S1_R2_001_fastqc.html",
-                  "PJB1_S1_R2_001_model_organisms_screen.txt",):
-            os.remove(os.path.join(project.qc_dir,f))
-        # Check
-        self.assertEqual(check_illumina_qc_outputs(project,
-                                                   qc_dir="qc",
-                                                   qc_protocol="singlecell"),
+        # NB no screens expected for R1 (only R2)
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="singlecell"),
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R2_001.fastq.gz")])
+
+    def test_check_fastq_screen_outputs_singlecell_all_present(self):
+        """
+        check_fastq_screen_outputs: all screen outputs present (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="singlecell"),
+                         [])
+
+    def test_check_fastq_screen_outputs_singlecell_some_missing(self):
+        """
+        check_fastq_screen_outputs: some screen outputs missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a screen output
+        os.remove(os.path.join(
+            project.qc_dir,
+            "PJB1_S1_R2_001_screen_model_organisms.txt"))
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="singlecell"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R2_001.fastq.gz")])
+
+class TestCheckFastQCOutputs(unittest.TestCase):
+    """
+    Tests for the 'check_fastqc_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestFastQCOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_check_fastqc_outputs_standardPE_all_missing(self):
+        """
+        check_fastqc_outputs: all FastQC outputs missing (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardPE"),
+                         project.fastqs)
+
+    def test_check_fastqc_outputs_standardPE_all_present(self):
+        """
+        check_fastqc_outputs: all FastQC outputs present (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardPE"),
+                         [])
+
+    def test_check_fastqc_outputs_standardPE_some_missing(self):
+        """
+        check_fastqc_outputs: some FastQC outputs missing (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a FastQC output
+        os.remove(os.path.join(project.qc_dir,
+                               "PJB1_S1_R1_001_fastqc.html"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardPE"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
+
+    def test_check_fastqc_outputs_standardSE_all_missing(self):
+        """
+        check_fastqc_outputs: all FastQC outputs missing (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardSE"),
+                         project.fastqs)
+
+    def test_check_fastqc_outputs_standardSE_all_present(self):
+        """
+        check_fastqc_outputs: all FastQC outputs present (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardSE"),
+                         [])
+
+    def test_check_fastqc_outputs_standardSE_some_missing(self):
+        """
+        check_fastqc_outputs: some FastQC outputs missing (standardSE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a FastQC output
+        os.remove(os.path.join(project.qc_dir,
+                               "PJB1_S1_R1_001_fastqc.html"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="standardSE"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
+
+    def test_check_fastqc_outputs_singlecell_all_missing(self):
+        """
+        check_fastqc_outputs: all FastQC outputs missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="singlecell"),
+                         project.fastqs)
+
+    def test_check_fastqc_outputs_singlecell_all_present(self):
+        """
+        check_fastqc_outputs: all FastQC outputs present (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="singlecell"),
+                         [])
+
+    def test_check_fastqc_outputs_singlecell_some_missing(self):
+        """
+        check_fastqc_outputs: some FastQC outputs missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a FastQC output
+        os.remove(os.path.join(project.qc_dir,
+                               "PJB1_S1_R1_001_fastqc.html"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              qc_protocol="singlecell"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
 
 class TestCheckFastqStrandOutputs(unittest.TestCase):
     """
@@ -1056,21 +1291,53 @@ class TestExpectedOutputs(unittest.TestCase):
         reference_outputs = ("PJB1_S1_R1_001_fastqc",
                              "PJB1_S1_R1_001_fastqc.html",
                              "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R1_001_model_organisms_screen.png",
-                             "PJB1_S1_R1_001_model_organisms_screen.txt",
-                             "PJB1_S1_R1_001_other_organisms_screen.png",
-                             "PJB1_S1_R1_001_other_organisms_screen.txt",
-                             "PJB1_S1_R1_001_rRNA_screen.png",
-                             "PJB1_S1_R1_001_rRNA_screen.txt",
+                             "PJB1_S1_R1_001_screen_model_organisms.png",
+                             "PJB1_S1_R1_001_screen_model_organisms.txt",
+                             "PJB1_S1_R1_001_screen_other_organisms.png",
+                             "PJB1_S1_R1_001_screen_other_organisms.txt",
+                             "PJB1_S1_R1_001_screen_rRNA.png",
+                             "PJB1_S1_R1_001_screen_rRNA.txt",
                              "PJB1_S1_R2_001_fastqc",
                              "PJB1_S1_R2_001_fastqc.html",
                              "PJB1_S1_R2_001_fastqc.zip",
-                             "PJB1_S1_R2_001_model_organisms_screen.png",
-                             "PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "PJB1_S1_R2_001_other_organisms_screen.png",
-                             "PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "PJB1_S1_R2_001_rRNA_screen.png",
-                             "PJB1_S1_R2_001_rRNA_screen.txt",)
+                             "PJB1_S1_R2_001_screen_model_organisms.png",
+                             "PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "PJB1_S1_R2_001_screen_other_organisms.png",
+                             "PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "PJB1_S1_R2_001_screen_rRNA.png",
+                             "PJB1_S1_R2_001_screen_rRNA.txt",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    qc_protocol="standardPE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
+        for e in expected:
+            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
+                                                             p.name,
+                                                             "qc"))
+            self.assertTrue(os.path.basename(e) in reference_outputs)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
+
+    def test_expected_outputs_standardPE_no_screens(self):
+        """
+        expected_outputs: standard paired-end, no screens
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Reference outputs
+        reference_outputs = ("PJB1_S1_R1_001_fastqc",
+                             "PJB1_S1_R1_001_fastqc.html",
+                             "PJB1_S1_R1_001_fastqc.zip",
+                             "PJB1_S1_R2_001_fastqc",
+                             "PJB1_S1_R2_001_fastqc.html",
+                             "PJB1_S1_R2_001_fastqc.zip",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
@@ -1103,6 +1370,52 @@ class TestExpectedOutputs(unittest.TestCase):
         reference_outputs = ("PJB1_S1_R1_001_fastqc",
                              "PJB1_S1_R1_001_fastqc.html",
                              "PJB1_S1_R1_001_fastqc.zip",
+                             "PJB1_S1_R1_001_screen_model_organisms.png",
+                             "PJB1_S1_R1_001_screen_model_organisms.txt",
+                             "PJB1_S1_R1_001_screen_other_organisms.png",
+                             "PJB1_S1_R1_001_screen_other_organisms.txt",
+                             "PJB1_S1_R1_001_screen_rRNA.png",
+                             "PJB1_S1_R1_001_screen_rRNA.txt",
+                             "PJB1_S1_R2_001_fastqc",
+                             "PJB1_S1_R2_001_fastqc.html",
+                             "PJB1_S1_R2_001_fastqc.zip",
+                             "PJB1_S1_R2_001_screen_model_organisms.png",
+                             "PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "PJB1_S1_R2_001_screen_other_organisms.png",
+                             "PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "PJB1_S1_R2_001_screen_rRNA.png",
+                             "PJB1_S1_R2_001_screen_rRNA.txt",
+                             "PJB1_S1_R1_001_fastq_strand.txt",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    fastq_strand_conf=mock_fastq_strand_conf,
+                                    qc_protocol="standardPE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
+        for e in expected:
+            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
+                                                             p.name,
+                                                             "qc"))
+            self.assertTrue(os.path.basename(e) in reference_outputs)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
+
+    def test_expected_outputs_standardPE_legacy_screens(self):
+        """
+        expected_outputs: standard paired-end (no strandedness, legacy screens)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Reference outputs
+        reference_outputs = ("PJB1_S1_R1_001_fastqc",
+                             "PJB1_S1_R1_001_fastqc.html",
+                             "PJB1_S1_R1_001_fastqc.zip",
                              "PJB1_S1_R1_001_model_organisms_screen.png",
                              "PJB1_S1_R1_001_model_organisms_screen.txt",
                              "PJB1_S1_R1_001_other_organisms_screen.png",
@@ -1117,14 +1430,16 @@ class TestExpectedOutputs(unittest.TestCase):
                              "PJB1_S1_R2_001_other_organisms_screen.png",
                              "PJB1_S1_R2_001_other_organisms_screen.txt",
                              "PJB1_S1_R2_001_rRNA_screen.png",
-                             "PJB1_S1_R2_001_rRNA_screen.txt",
-                             "PJB1_S1_R1_001_fastq_strand.txt",)
+                             "PJB1_S1_R2_001_rRNA_screen.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="standardPE")
+                                    qc_protocol="standardPE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'),
+                                    legacy_screens=True)
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1145,17 +1460,20 @@ class TestExpectedOutputs(unittest.TestCase):
         reference_outputs = ("PJB1_S1_R1_001_fastqc",
                              "PJB1_S1_R1_001_fastqc.html",
                              "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R1_001_model_organisms_screen.png",
-                             "PJB1_S1_R1_001_model_organisms_screen.txt",
-                             "PJB1_S1_R1_001_other_organisms_screen.png",
-                             "PJB1_S1_R1_001_other_organisms_screen.txt",
-                             "PJB1_S1_R1_001_rRNA_screen.png",
-                             "PJB1_S1_R1_001_rRNA_screen.txt",)
+                             "PJB1_S1_R1_001_screen_model_organisms.png",
+                             "PJB1_S1_R1_001_screen_model_organisms.txt",
+                             "PJB1_S1_R1_001_screen_other_organisms.png",
+                             "PJB1_S1_R1_001_screen_other_organisms.txt",
+                             "PJB1_S1_R1_001_screen_rRNA.png",
+                             "PJB1_S1_R1_001_screen_rRNA.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
-                                    qc_protocol="standardSE")
+                                    qc_protocol="standardSE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1182,19 +1500,22 @@ class TestExpectedOutputs(unittest.TestCase):
         reference_outputs = ("PJB1_S1_R1_001_fastqc",
                              "PJB1_S1_R1_001_fastqc.html",
                              "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R1_001_model_organisms_screen.png",
-                             "PJB1_S1_R1_001_model_organisms_screen.txt",
-                             "PJB1_S1_R1_001_other_organisms_screen.png",
-                             "PJB1_S1_R1_001_other_organisms_screen.txt",
-                             "PJB1_S1_R1_001_rRNA_screen.png",
-                             "PJB1_S1_R1_001_rRNA_screen.txt",
+                             "PJB1_S1_R1_001_screen_model_organisms.png",
+                             "PJB1_S1_R1_001_screen_model_organisms.txt",
+                             "PJB1_S1_R1_001_screen_other_organisms.png",
+                             "PJB1_S1_R1_001_screen_other_organisms.txt",
+                             "PJB1_S1_R1_001_screen_rRNA.png",
+                             "PJB1_S1_R1_001_screen_rRNA.txt",
                              "PJB1_S1_R1_001_fastq_strand.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="standardSE")
+                                    qc_protocol="standardSE",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1219,17 +1540,20 @@ class TestExpectedOutputs(unittest.TestCase):
                              "PJB1_S1_R2_001_fastqc",
                              "PJB1_S1_R2_001_fastqc.html",
                              "PJB1_S1_R2_001_fastqc.zip",
-                             "PJB1_S1_R2_001_model_organisms_screen.png",
-                             "PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "PJB1_S1_R2_001_other_organisms_screen.png",
-                             "PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "PJB1_S1_R2_001_rRNA_screen.png",
-                             "PJB1_S1_R2_001_rRNA_screen.txt",)
+                             "PJB1_S1_R2_001_screen_model_organisms.png",
+                             "PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "PJB1_S1_R2_001_screen_other_organisms.png",
+                             "PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "PJB1_S1_R2_001_screen_rRNA.png",
+                             "PJB1_S1_R2_001_screen_rRNA.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
-                                    qc_protocol="singlecell")
+                                    qc_protocol="singlecell",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1260,19 +1584,22 @@ class TestExpectedOutputs(unittest.TestCase):
                              "PJB1_S1_R2_001_fastqc",
                              "PJB1_S1_R2_001_fastqc.html",
                              "PJB1_S1_R2_001_fastqc.zip",
-                             "PJB1_S1_R2_001_model_organisms_screen.png",
-                             "PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "PJB1_S1_R2_001_other_organisms_screen.png",
-                             "PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "PJB1_S1_R2_001_rRNA_screen.png",
-                             "PJB1_S1_R2_001_rRNA_screen.txt",
+                             "PJB1_S1_R2_001_screen_model_organisms.png",
+                             "PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "PJB1_S1_R2_001_screen_other_organisms.png",
+                             "PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "PJB1_S1_R2_001_screen_rRNA.png",
+                             "PJB1_S1_R2_001_screen_rRNA.txt",
                              "PJB1_S1_R2_001_fastq_strand.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="singlecell")
+                                    qc_protocol="singlecell",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
                                                              p.name,
@@ -1304,12 +1631,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R2_001_fastqc",
                              "qc/PJB1_S1_R2_001_fastqc.html",
                              "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
                              "qc/PJB1_S1_R2_001_fastq_strand.txt",
                              "qc/cellranger_count/PJB1/outs/metrics_summary.csv",
                              "qc/cellranger_count/PJB1/outs/web_summary.html",)
@@ -1320,7 +1647,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-GRCh38-1.2.0",
-                                    qc_protocol="10x_scRNAseq")
+                                    qc_protocol="10x_scRNAseq",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1353,12 +1683,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R2_001_fastqc",
                              "qc/PJB1_S1_R2_001_fastqc.html",
                              "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
                              "qc/PJB1_S1_R2_001_fastq_strand.txt",
                              "qc/cellranger_count/5.0.1/refdata-gex-GRCh38-2020-A/PJB1/outs/metrics_summary.csv",
                              "qc/cellranger_count/5.0.1/refdata-gex-GRCh38-2020-A/PJB1/outs/web_summary.html",)
@@ -1370,7 +1700,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     cellranger_version="5.0.1",
                                     cellranger_refdata=
                                     "/data/refdata-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_scRNAseq")
+                                    qc_protocol="10x_scRNAseq",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1404,12 +1737,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R1_001_fastqc",
                              "qc/PJB1_S1_R1_001_fastqc.html",
                              "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R1_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R1_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R1_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R1_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R1_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R1_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R1_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R1_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R1_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R1_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R1_001_screen_rRNA.txt",
                              "qc/PJB1_S1_R1_001_fastq_strand.txt",
                              "qc/PJB1_S1_R3_001_fastqc",
                              "qc/PJB1_S1_R3_001_fastqc.html",
@@ -1417,12 +1750,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R3_001_fastqc",
                              "qc/PJB1_S1_R3_001_fastqc.html",
                              "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R3_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R3_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R3_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R3_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R3_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R3_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R3_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R3_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R3_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R3_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R3_001_screen_rRNA.txt",
                              "qc/cellranger_count/PJB1/outs/summary.csv",
                              "qc/cellranger_count/PJB1/outs/web_summary.html",)
         expected = expected_outputs(AnalysisProject(p.name,
@@ -1432,7 +1765,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-atac-GRCh38-1.2.0",
-                                    qc_protocol="10x_scATAC")
+                                    qc_protocol="10x_scATAC",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1466,12 +1802,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R1_001_fastqc",
                              "qc/PJB1_S1_R1_001_fastqc.html",
                              "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R1_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R1_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R1_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R1_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R1_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R1_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R1_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R1_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R1_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R1_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R1_001_screen_rRNA.txt",
                              "qc/PJB1_S1_R1_001_fastq_strand.txt",
                              "qc/PJB1_S1_R3_001_fastqc",
                              "qc/PJB1_S1_R3_001_fastqc.html",
@@ -1479,12 +1815,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R3_001_fastqc",
                              "qc/PJB1_S1_R3_001_fastqc.html",
                              "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R3_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R3_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R3_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R3_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R3_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R3_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R3_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R3_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R3_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R3_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R3_001_screen_rRNA.txt",
                              "qc/cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB1/outs/summary.csv",
                              "qc/cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB1/outs/web_summary.html",)
         expected = expected_outputs(AnalysisProject(p.name,
@@ -1495,7 +1831,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     cellranger_version="1.2.0",
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-atac-GRCh38-1.2.0",
-                                    qc_protocol="10x_scATAC")
+                                    qc_protocol="10x_scATAC",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1528,12 +1867,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R2_001_fastqc",
                              "qc/PJB1_S1_R2_001_fastqc.html",
                              "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
                              "qc/PJB1_S1_R2_001_fastq_strand.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
@@ -1541,7 +1880,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_scRNAseq")
+                                    qc_protocol="10x_scRNAseq",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1574,12 +1916,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R2_001_fastqc",
                              "qc/PJB1_S1_R2_001_fastqc.html",
                              "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
                              "qc/PJB1_S1_R2_001_fastq_strand.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
@@ -1587,7 +1929,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_Visium")
+                                    qc_protocol="10x_Visium",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1622,12 +1967,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R1_001_fastqc",
                              "qc/PJB1_S1_R1_001_fastqc.html",
                              "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R1_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R1_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R1_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R1_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R1_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R1_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R1_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R1_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R1_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R1_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R1_001_screen_rRNA.txt",
                              "qc/PJB1_S1_R1_001_fastq_strand.txt",
                              "qc/PJB1_S1_R3_001_fastqc",
                              "qc/PJB1_S1_R3_001_fastqc.html",
@@ -1635,19 +1980,22 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R3_001_fastqc",
                              "qc/PJB1_S1_R3_001_fastqc.html",
                              "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R3_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R3_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R3_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R3_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R3_001_rRNA_screen.txt",)
+                             "qc/PJB1_S1_R3_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R3_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R3_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R3_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R3_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R3_001_screen_rRNA.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_Multiome_ATAC")
+                                    qc_protocol="10x_Multiome_ATAC",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1688,19 +2036,22 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R2_001_fastqc.html",
                              "qc/PJB1_S1_R2_001_fastqc.zip",
                              "qc/PJB1_S1_R2_001_fastq_strand.txt",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",)
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_Multiome_GEX")
+                                    qc_protocol="10x_Multiome_GEX",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1745,12 +2096,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R1_001_fastqc",
                              "qc/PJB1_S1_R1_001_fastqc.html",
                              "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R1_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R1_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R1_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R1_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R1_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R1_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R1_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R1_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R1_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R1_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R1_001_screen_rRNA.txt",
                              "qc/PJB1_S1_R1_001_fastq_strand.txt",
                              "qc/PJB1_S1_R3_001_fastqc",
                              "qc/PJB1_S1_R3_001_fastqc.html",
@@ -1758,12 +2109,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R3_001_fastqc",
                              "qc/PJB1_S1_R3_001_fastqc.html",
                              "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R3_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R3_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R3_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R3_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R3_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R3_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R3_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R3_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R3_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R3_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R3_001_screen_rRNA.txt",
                              "qc/cellranger_count/PJB1/outs/summary.csv",
                              "qc/cellranger_count/PJB1/outs/web_summary.html",)
         expected = expected_outputs(AnalysisProject(os.path.join(self.wd,
@@ -1772,7 +2123,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-arc-GRCh38-2020-A",
-                                    qc_protocol="10x_Multiome_ATAC")
+                                    qc_protocol="10x_Multiome_ATAC",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1823,12 +2177,12 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R2_001_fastqc.html",
                              "qc/PJB1_S1_R2_001_fastqc.zip",
                              "qc/PJB1_S1_R2_001_fastq_strand.txt",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
-                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
-                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
+                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
+                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
                              "qc/cellranger_count/PJB1/outs/summary.csv",
                              "qc/cellranger_count/PJB1/outs/web_summary.html",)
         expected = expected_outputs(AnalysisProject(p.name,
@@ -1838,7 +2192,10 @@ class TestExpectedOutputs(unittest.TestCase):
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-arc-GRCh38-2020-A",
-                                    qc_protocol="10x_Multiome_GEX")
+                                    qc_protocol="10x_Multiome_GEX",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1894,12 +2251,12 @@ PBB,CMO302,PBB
                              "qc/PJB1_GEX_S1_R2_001_fastqc",
                              "qc/PJB1_GEX_S1_R2_001_fastqc.html",
                              "qc/PJB1_GEX_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_GEX_S1_R2_001_model_organisms_screen.png",
-                             "qc/PJB1_GEX_S1_R2_001_model_organisms_screen.txt",
-                             "qc/PJB1_GEX_S1_R2_001_other_organisms_screen.png",
-                             "qc/PJB1_GEX_S1_R2_001_other_organisms_screen.txt",
-                             "qc/PJB1_GEX_S1_R2_001_rRNA_screen.png",
-                             "qc/PJB1_GEX_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_GEX_S1_R2_001_screen_model_organisms.png",
+                             "qc/PJB1_GEX_S1_R2_001_screen_model_organisms.txt",
+                             "qc/PJB1_GEX_S1_R2_001_screen_other_organisms.png",
+                             "qc/PJB1_GEX_S1_R2_001_screen_other_organisms.txt",
+                             "qc/PJB1_GEX_S1_R2_001_screen_rRNA.png",
+                             "qc/PJB1_GEX_S1_R2_001_screen_rRNA.txt",
                              "qc/PJB1_GEX_S1_R2_001_fastq_strand.txt",
                              "qc/PJB2_MC_S2_R1_001_fastqc",
                              "qc/PJB2_MC_S2_R1_001_fastqc.html",
@@ -1907,12 +2264,12 @@ PBB,CMO302,PBB
                              "qc/PJB2_MC_S2_R2_001_fastqc",
                              "qc/PJB2_MC_S2_R2_001_fastqc.html",
                              "qc/PJB2_MC_S2_R2_001_fastqc.zip",
-                             "qc/PJB2_MC_S2_R2_001_model_organisms_screen.png",
-                             "qc/PJB2_MC_S2_R2_001_model_organisms_screen.txt",
-                             "qc/PJB2_MC_S2_R2_001_other_organisms_screen.png",
-                             "qc/PJB2_MC_S2_R2_001_other_organisms_screen.txt",
-                             "qc/PJB2_MC_S2_R2_001_rRNA_screen.png",
-                             "qc/PJB2_MC_S2_R2_001_rRNA_screen.txt",
+                             "qc/PJB2_MC_S2_R2_001_screen_model_organisms.png",
+                             "qc/PJB2_MC_S2_R2_001_screen_model_organisms.txt",
+                             "qc/PJB2_MC_S2_R2_001_screen_other_organisms.png",
+                             "qc/PJB2_MC_S2_R2_001_screen_other_organisms.txt",
+                             "qc/PJB2_MC_S2_R2_001_screen_rRNA.png",
+                             "qc/PJB2_MC_S2_R2_001_screen_rRNA.txt",
                              "qc/PJB2_MC_S2_R2_001_fastq_strand.txt",
                              "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/metrics_summary.csv",
                              "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/web_summary.html",
@@ -1928,7 +2285,10 @@ PBB,CMO302,PBB
                                     cellranger_version="6.0.0",
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_CellPlex")
+                                    qc_protocol="10x_CellPlex",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1963,12 +2323,12 @@ PBB,CMO302,PBB
                              "qc/PJB1_GEX_S1_R2_001_fastqc",
                              "qc/PJB1_GEX_S1_R2_001_fastqc.html",
                              "qc/PJB1_GEX_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_GEX_S1_R2_001_model_organisms_screen.png",
-                             "qc/PJB1_GEX_S1_R2_001_model_organisms_screen.txt",
-                             "qc/PJB1_GEX_S1_R2_001_other_organisms_screen.png",
-                             "qc/PJB1_GEX_S1_R2_001_other_organisms_screen.txt",
-                             "qc/PJB1_GEX_S1_R2_001_rRNA_screen.png",
-                             "qc/PJB1_GEX_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_GEX_S1_R2_001_screen_model_organisms.png",
+                             "qc/PJB1_GEX_S1_R2_001_screen_model_organisms.txt",
+                             "qc/PJB1_GEX_S1_R2_001_screen_other_organisms.png",
+                             "qc/PJB1_GEX_S1_R2_001_screen_other_organisms.txt",
+                             "qc/PJB1_GEX_S1_R2_001_screen_rRNA.png",
+                             "qc/PJB1_GEX_S1_R2_001_screen_rRNA.txt",
                              "qc/PJB1_GEX_S1_R2_001_fastq_strand.txt",
                              "qc/PJB2_MC_S2_R1_001_fastqc",
                              "qc/PJB2_MC_S2_R1_001_fastqc.html",
@@ -1976,12 +2336,12 @@ PBB,CMO302,PBB
                              "qc/PJB2_MC_S2_R2_001_fastqc",
                              "qc/PJB2_MC_S2_R2_001_fastqc.html",
                              "qc/PJB2_MC_S2_R2_001_fastqc.zip",
-                             "qc/PJB2_MC_S2_R2_001_model_organisms_screen.png",
-                             "qc/PJB2_MC_S2_R2_001_model_organisms_screen.txt",
-                             "qc/PJB2_MC_S2_R2_001_other_organisms_screen.png",
-                             "qc/PJB2_MC_S2_R2_001_other_organisms_screen.txt",
-                             "qc/PJB2_MC_S2_R2_001_rRNA_screen.png",
-                             "qc/PJB2_MC_S2_R2_001_rRNA_screen.txt",
+                             "qc/PJB2_MC_S2_R2_001_screen_model_organisms.png",
+                             "qc/PJB2_MC_S2_R2_001_screen_model_organisms.txt",
+                             "qc/PJB2_MC_S2_R2_001_screen_other_organisms.png",
+                             "qc/PJB2_MC_S2_R2_001_screen_other_organisms.txt",
+                             "qc/PJB2_MC_S2_R2_001_screen_rRNA.png",
+                             "qc/PJB2_MC_S2_R2_001_screen_rRNA.txt",
                              "qc/PJB2_MC_S2_R2_001_fastq_strand.txt",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
@@ -1992,7 +2352,10 @@ PBB,CMO302,PBB
                                     cellranger_version="6.0.0",
                                     cellranger_refdata=
                                     "/data/refdata-cellranger-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_CellPlex")
+                                    qc_protocol="10x_CellPlex",
+                                    fastq_screens=('model_organisms',
+                                                   'other_organisms',
+                                                   'rRNA'))
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)

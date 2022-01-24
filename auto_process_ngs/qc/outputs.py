@@ -15,7 +15,6 @@ Provides the following functions:
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - cellranger_arc_count_output: get names for cellranger-arc count output
 - cellranger_multi_output: get names for cellranger multi output
-- check_illumina_qc_outputs: fetch Fastqs without illumina_qc.sh outputs
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 - check_cellranger_count_outputs: fetch sample names without cellranger
   count outputs
@@ -33,7 +32,6 @@ Provides the following functions:
 import os
 from bcftbx.qc.report import strip_ngs_extensions
 import logging
-from .constants import FASTQ_SCREENS
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
@@ -45,12 +43,17 @@ logger = logging.getLogger(__name__)
 # Functions
 #######################################################################
 
-def fastq_screen_output(fastq,screen_name):
+def fastq_screen_output(fastq,screen_name,legacy=False):
     """
     Generate name of fastq_screen output files
 
     Given a Fastq file name and a screen name, the outputs from
     fastq_screen will look like:
+
+    - {FASTQ}_screen_{SCREEN_NAME}.png
+    - {FASTQ}_screen_{SCREEN_NAME}.txt
+
+    "Legacy" screen outputs look like:
 
     - {FASTQ}_{SCREEN_NAME}_screen.png
     - {FASTQ}_{SCREEN_NAME}_screen.txt
@@ -58,14 +61,19 @@ def fastq_screen_output(fastq,screen_name):
     Arguments:
        fastq (str): name of Fastq file
        screen_name (str): name of screen
+       legacy (bool): if True then use 'legacy' (old-style)
+         naming convention (default: False)
 
     Returns:
        tuple: fastq_screen output names (without leading path)
 
     """
-    base_name = "%s_%s_screen" % (strip_ngs_extensions(os.path.basename(fastq)),
-                                  str(screen_name))
-
+    if not legacy:
+        base_name = "%s_screen_%s"
+    else:
+        base_name = "%s_%s_screen"
+    base_name = base_name  % (strip_ngs_extensions(os.path.basename(fastq)),
+                              str(screen_name))
     return (base_name+'.png',base_name+'.txt')
 
 def fastqc_output(fastq):
@@ -285,13 +293,65 @@ def cellranger_multi_output(project,config_csv,sample_name=None,
         outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
 
-def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
+def check_fastq_screen_outputs(project,qc_dir,screen,qc_protocol=None,
+                               legacy=False):
     """
-    Return Fastqs missing QC outputs from illumina_qc.sh
+    Return Fastqs missing QC outputs from FastqScreen
 
     Returns a list of the Fastqs from a project for which
-    one or more associated outputs from `illumina_qc.sh`
+    one or more associated outputs from FastqScreen
     don't exist in the specified QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+      qc_dir (str): path to the QC directory (relative
+        path is assumed to be a subdirectory of the
+        project)
+      screen (str): screen name to check
+      qc_protocol (str): QC protocol to predict outputs
+        for; if not set then defaults to standard QC
+        based on ended-ness
+      legacy (bool): if True then check for 'legacy'-style
+         names (defult: False)
+
+    Returns:
+      List: list of Fastq files with missing outputs.
+    """
+    if not os.path.isabs(qc_dir):
+        qc_dir = os.path.join(project.dirn,qc_dir)
+    fastqs = set()
+    for fastq in remove_index_fastqs(project.fastqs,
+                                     project.fastq_attrs):
+        if qc_protocol in ('10x_scATAC',
+                           '10x_Multiome_ATAC',):
+            if project.fastq_attrs(fastq).read_number == 2:
+                # Ignore the R2 reads for 10x single-cell ATAC
+                continue
+        # Fastq_screen
+        if qc_protocol in ('singlecell',
+                           '10x_scRNAseq',
+                           '10x_snRNAseq',
+                           '10x_Visium',
+                           '10x_Multiome_GEX',
+                           '10x_CellPlex',):
+            if project.fastq_attrs(fastq).read_number == 1:
+                # No screens for R1 for single cell
+                continue
+        for output in [os.path.join(qc_dir,f)
+                       for f in fastq_screen_output(fastq,screen,
+                                                    legacy=legacy)]:
+            if not os.path.exists(output):
+                fastqs.add(fastq)
+    return sorted(list(fastqs))
+
+def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
+    """
+    Return Fastqs missing QC outputs from FastQC
+
+    Returns a list of the Fastqs from a project for which
+    one or more associated outputs from FastQC don't exist
+    in the specified QC directory.
 
     Arguments:
       project (AnalysisProject): project to check the
@@ -321,21 +381,6 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
                        for f in fastqc_output(fastq)]:
             if not os.path.exists(output):
                 fastqs.add(fastq)
-        # Fastq_screen
-        if qc_protocol in ('singlecell',
-                           '10x_scRNAseq',
-                           '10x_snRNAseq',
-                           '10x_Visium',
-                           '10x_Multiome_GEX',
-                           '10x_CellPlex',):
-            if project.fastq_attrs(fastq).read_number == 1:
-                # No screens for R1 for single cell
-                continue
-        for screen in FASTQ_SCREENS:
-            for output in [os.path.join(qc_dir,f)
-                        for f in fastq_screen_output(fastq,screen)]:
-                if not os.path.exists(output):
-                    fastqs.add(fastq)
     return sorted(list(fastqs))
 
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
@@ -511,9 +556,10 @@ def check_cellranger_arc_count_outputs(project,qc_dir=None,
                 samples.add(sample.name)
     return sorted(list(samples))
 
-def expected_outputs(project,qc_dir,fastq_strand_conf=None,
-                     cellranger_version=None,cellranger_refdata=None,
-                     cellranger_multi_config=None,qc_protocol=None):
+def expected_outputs(project,qc_dir,fastq_screens=None,
+                     fastq_strand_conf=None,cellranger_version=None,
+                     cellranger_refdata=None,cellranger_multi_config=None,
+                     qc_protocol=None,legacy_screens=False):
     """
     Return expected QC outputs for a project
 
@@ -523,6 +569,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
       qc_dir (str): path to the QC directory (relative
         path is assumed to be a subdirectory of the
         project)
+      fastq_screens (list): list of screen names used
+        with fastq_screen
       fastq_strand_conf (str): path to a fastq_strand
         config file; strandedness QC outputs will be
         included unless the path is `None` or the
@@ -541,6 +589,9 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
       qc_protocol (str): QC protocol to predict outputs
         for; if not set then defaults to standard QC
         based on ended-ness
+      legacy_screens (bool): if True then check for
+        'legacy'-style names for FastqScreen outputs
+        (default: False)
 
     Returns:
       List: list of full paths to the expected QC
@@ -577,10 +628,13 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
             # No screens for R1 for single cell, Visium,
             # multiome GEX or CellPlex
             continue
-        for screen in FASTQ_SCREENS:
-            for output in [os.path.join(qc_dir,f)
-                        for f in fastq_screen_output(fastq,screen)]:
-                outputs.add(output)
+        if fastq_screens:
+            for screen in fastq_screens:
+                for output in [os.path.join(qc_dir,f)
+                               for f in fastq_screen_output(fastq,screen,
+                                                            legacy=
+                                                            legacy_screens)]:
+                    outputs.add(output)
     if fastq_strand_conf and os.path.exists(fastq_strand_conf):
         for fq_group in group_fastqs_by_name(
                 remove_index_fastqs(project.fastqs,

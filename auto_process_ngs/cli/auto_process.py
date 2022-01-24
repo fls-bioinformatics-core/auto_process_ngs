@@ -609,8 +609,6 @@ def add_run_qc_command(cmdparser):
                    "(default: %s)" % ('taken from job runner'
                                       if not default_nthreads
                                       else default_nthreads,))
-    p.add_argument('--ungzip-fastqs',action='store_true',dest='ungzip_fastqs',
-                   help="create decompressed copies of fastq.gz files")
     p.add_argument('--max-jobs',action='store',
                    dest='max_jobs',default=max_concurrent_jobs,type=int,
                    help="explicitly specify maximum number of concurrent QC "
@@ -692,14 +690,6 @@ def add_run_qc_command(cmdparser):
                           help="specify the working directory for the "
                           "pipeline operations")
     add_debug_option(advanced)
-    # Deprecated options
-    deprecated = p.add_argument_group('Deprecated/defunct options')
-    deprecated.add_argument('--no-ungzip-fastqs',action='store_true',
-                            dest='no_ungzip_fastqs',
-                            help="don't create uncompressed copies of "
-                            "fastq.gz files (does nothing; this is now the "
-                            "default, use --ungzip-fastqs to turn on "
-                            "decompression)")
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
@@ -1338,6 +1328,13 @@ def run_qc(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
+    # Fastq screens
+    if __settings.qc.fastq_screens:
+        fastq_screens = dict()
+        for screen in __settings.qc.fastq_screens.split(','):
+            fastq_screens[screen] = __settings.screens[screen].conf_file
+    else:
+        fastq_screens = None
     # Handle 10x transcriptomes
     cellranger_transcriptomes = dict()
     if args.cellranger_transcriptomes:
@@ -1357,7 +1354,7 @@ def run_qc(args):
         runner = None
     # Do the run_qc step
     retcode = d.run_qc(projects=args.project_pattern,
-                       ungzip_fastqs=args.ungzip_fastqs,
+                       fastq_screens=fastq_screens,
                        fastq_screen_subset=args.subset,
                        nthreads=args.nthreads,
                        fastq_dir=args.fastq_dir,

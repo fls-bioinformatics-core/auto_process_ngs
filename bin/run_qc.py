@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc.py: run QC pipeline on arbitrary fastq files
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 #########################################################################
 #
@@ -255,9 +255,9 @@ if __name__ == "__main__":
     advanced.add_argument('-r','--runner',metavar='RUNNER',action='store',
                           dest="runner",default=None,
                           help="explicitly specify runner definition for "
-                          "running QC script. RUNNER must be a valid job "
+                          "running QC components. RUNNER must be a valid job "
                           "runner specification e.g. 'GEJobRunner(-j y)' "
-                          "(default: '%s')" % __settings.runners.qc)
+                          "(default: use runners set in configuration)")
     advanced.add_argument('-s','--batch_size',metavar='N',action='store',
                           dest='batch_size',type=int, default=None,
                           help="batch QC commands with N commands per job "
@@ -267,6 +267,13 @@ if __name__ == "__main__":
                           help="ignore information from project metadata "
                           "file even if one is located (default is to use "
                           "project metadata)")
+    advanced.add_argument('--use-legacy-screen-names',choices=['yes','no'],
+                          dest="use_legacy_screen_names",default=None,
+                          help="use 'legacy' naming convention for "
+                          "FastqScreen output files; can be 'yes' or 'no' "
+                          "(default: %s)" %
+                          ("yes" if __settings.qc.use_legacy_screen_names
+                           else "no"))
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
@@ -440,7 +447,8 @@ if __name__ == "__main__":
             envmod.load(modulefile)
 
     # Per task environment modules
-    for name in ('illumina_qc',
+    for name in ('fastqc',
+                 'fastq_screen',
                  'fastq_strand',
                  'cellranger',
                  'report_qc',):
@@ -459,6 +467,19 @@ if __name__ == "__main__":
         enable_conda = __settings.conda.enable_conda
     else:
         enable_conda = (args.enable_conda == "yes")
+
+    # Fastq screens
+    if __settings.qc.fastq_screens:
+        fastq_screens = dict()
+        for screen in __settings.qc.fastq_screens.split(','):
+            fastq_screens[screen] = __settings.screens[screen].conf_file
+    else:
+        fastq_screens = None
+    use_legacy_screen_names = args.use_legacy_screen_names
+    if use_legacy_screen_names is None:
+        use_legacy_screen_names = __settings.qc.use_legacy_screen_names
+    else:
+        use_legacy_screen_names = (use_legacy_screen_names == "yes")
 
     # STAR indexes
     star_indexes = dict()
@@ -567,7 +588,8 @@ if __name__ == "__main__":
         default_runner = SimpleJobRunner()
         runners = {
             'cellranger_runner': SimpleJobRunner(nslots=cellranger_localcores),
-            'qc_runner': SimpleJobRunner(nslots=nthreads),
+            'fastqc_runner': SimpleJobRunner(nslots=nthreads),
+            'fastq_screen_runner': SimpleJobRunner(nslots=nthreads),
             'star_runner': SimpleJobRunner(nslots=nthreads_star),
             'verify_runner': default_runner,
             'report_runner': default_runner,
@@ -593,7 +615,8 @@ if __name__ == "__main__":
             default_runner = fetch_runner(args.runner)
             runners = {
                 'cellranger_runner': default_runner,
-                'qc_runner': default_runner,
+                'fastqc_runner': default_runner,
+                'fastq_screen_runner': default_runner,
                 'star_runner': default_runner,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
@@ -604,7 +627,8 @@ if __name__ == "__main__":
             default_runner = __settings.general.default_runner
             runners = {
                 'cellranger_runner': __settings.runners.cellranger,
-                'qc_runner': __settings.runners.qc,
+                'fastqc_runner': __settings.runners.fastqc,
+                'fastq_screen_runner': __settings.runners.fastq_screen,
                 'star_runner': __settings.runners.star,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
@@ -706,6 +730,7 @@ if __name__ == "__main__":
                       report_html=out_file,
                       multiqc=(not args.no_multiqc))
     status = runqc.run(nthreads=nthreads,
+                       fastq_screens=fastq_screens,
                        fastq_subset=args.fastq_screen_subset,
                        star_indexes=star_indexes,
                        cellranger_chemistry=\
@@ -735,6 +760,7 @@ if __name__ == "__main__":
                        enable_conda=enable_conda,
                        conda_env_dir=args.conda_env_dir,
                        working_dir=working_dir,
+                       legacy_screens=use_legacy_screen_names,
                        verbose=args.verbose)
     if status:
         logger.critical("QC failed (see warnings above)")
