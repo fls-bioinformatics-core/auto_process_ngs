@@ -17,7 +17,7 @@ class SeqLens:
     length data output from the 'get_sequence_lengths'
     function.
     """
-    def __init__(self,json_file):
+    def __init__(self,json_file=None,data=None,fastq=None):
         """
         Initialise new SeqLens class
 
@@ -25,15 +25,28 @@ class SeqLens:
           json_file (str): path to JSON file with
             sequence length data output from the
             ``get_sequence_lengths`` function
+          data (dict): dictionary with sequence length
+            data output from the ``get_sequence_lengths``
+            function
+          fastq (str): path to Fastq file to extract
+            sequence length data from (using the
+            ``get_sequence_lengths`` function)
         """
-        self._json_file = os.path.abspath(json_file)
-        try:
-            with open(self._json_file,'rt') as fp:
-                self._data = json.load(fp)
-        except Exception as ex:
-            logger.warn("Failed to load data from '%s': %s"
-                        % (self._json_file,ex))
-            self._data = None
+        self._data = None
+        if json_file:
+            self._json_file = os.path.abspath(json_file)
+            try:
+                with open(self._json_file,'rt') as fp:
+                    self._data = json.load(fp)
+            except Exception as ex:
+                logger.warn("Failed to load data from '%s': %s"
+                            % (self._json_file,ex))
+        elif data:
+            self._data = { k:data[k] for k in data }
+        elif fastq:
+            self._data = get_sequence_lengths(fastq)
+        else:
+            raise Exception("No data source specified")
 
     @property
     def data(self):
