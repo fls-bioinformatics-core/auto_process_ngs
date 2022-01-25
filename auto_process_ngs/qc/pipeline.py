@@ -1787,6 +1787,10 @@ class RunCellrangerCount(PipelineTask):
             can request in jobmode 'local' (default: None)
           qc_protocol (str): QC protocol to use
         """
+        # Add outputs
+        self.add_output('cellranger_version',Param(type=str))
+        self.add_output('cellranger_refdata',Param(type=str))
+        self.add_output('cellranger_exe',Param(type=str))
         # Internal: top-level working directory
         self._working_dir = None
     def setup(self):
@@ -1914,6 +1918,10 @@ class RunCellrangerCount(PipelineTask):
             print("No reference data: single library analysis was "
                   "skipped")
             return
+        # Set outputs
+        self.output.cellranger_exe.set(self.args.cellranger_exe)
+        self.output.cellranger_refdata.set(self.args.reference_data_path)
+        self.output.cellranger_version.set(self.args.cellranger_version)
         # Handle outputs from cellranger count
         has_errors = False
         for sample in self.args.samples:
