@@ -709,6 +709,7 @@ class QCProject:
         cellranger_samples = []
         cellranger_references = set()
         if os.path.isdir(cellranger_count_dir):
+            cellranger_versioned_samples = {}
             cellranger_name = None
             versions = set()
             # Old-style (unversioned)
@@ -725,24 +726,34 @@ class QCProject:
                     cellranger_samples.append(d)
                     cellranger_name = cellranger.pipeline_name
                     cellranger_references.add(cellranger.reference_data)
+                    # Store as version '?'
+                    ref = os.path.basename(cellranger.reference_data)
+                    if cellranger_name not in cellranger_versioned_samples:
+                        cellranger_versioned_samples[cellranger_name] = {}
+                    if '?' not in cellranger_versioned_samples[cellranger_name]:
+                        cellranger_versioned_samples[cellranger_name]['?'] = {}
+                    if ref not in \
+                       cellranger_versioned_samples[cellranger_name]['?']:
+                        cellranger_versioned_samples[cellranger_name]['?'][ref] = []
+                    cellranger_versioned_samples[cellranger_name]['?'][ref].append(d)
+                    versions.add('?')
                 except OSError:
                     pass
             if cellranger_samples:
-                outputs.add("cellranger_count")
+                outputs.add("%s_count" % cellranger_name)
             # New-style (versioned)
-            cellranger_versioned_samples = {}
+            cellranger_name = None
             for ver in filter(
                     lambda f:
                     os.path.isdir(os.path.join(cellranger_count_dir,f)),
                     os.listdir(cellranger_count_dir)):
                 # Check putative version numbers
-                cellranger_versioned_samples[ver] = {}
                 for ref in filter(
                         lambda f:
                         os.path.isdir(os.path.join(cellranger_count_dir,ver,f)),
                         os.listdir(os.path.join(cellranger_count_dir,ver))):
                     # Check putative reference dataset names
-                    cellranger_versioned_samples[ver][ref] = []
+                    samples = []
                     for smpl in filter(
                             lambda f:
                             os.path.isdir(os.path.join(cellranger_count_dir,
@@ -751,27 +762,33 @@ class QCProject:
                                                     ver,ref))):
                         sample_dir = os.path.join(cellranger_count_dir,
                                                   ver,ref,smpl)
+                        cellranger_name = None
                         try:
                             cellranger = CellrangerCount(sample_dir)
                             output_files.append(cellranger.web_summary)
                             output_files.append(cellranger.metrics_csv)
                             output_files.append(cellranger.cmdline_file)
-                            cellranger_versioned_samples[ver][ref].append(smpl)
+                            samples.append(smpl)
                             cellranger_name = cellranger.pipeline_name
                             cellranger_references.add(
                                 cellranger.reference_data)
                         except OSError:
                             pass
                     # Add outputs, samples and version
-                    if cellranger_versioned_samples[ver][ref]:
-                        outputs.add("cellranger_count")
+                    if samples:
+                        outputs.add("%s_count" % cellranger_name)
+                        if cellranger_name not in cellranger_versioned_samples:
+                            cellranger_versioned_samples[cellranger_name] = {}
+                        if ver not in cellranger_versioned_samples[cellranger_name]:
+                            cellranger_versioned_samples[cellranger_name][ver] = {}
+                        cellranger_versioned_samples[cellranger_name][ver][ref] = samples
                         versions.add(ver)
-                    for smpl in cellranger_versioned_samples[ver][ref]:
-                        if smpl not in cellranger_samples:
-                            cellranger_samples.append(smpl)
+                        for smpl in cellranger_versioned_samples[cellranger_name][ver][ref]:
+                            if smpl not in cellranger_samples:
+                                cellranger_samples.append(smpl)
             # Store cellranger versions
-            if cellranger_name and versions:
-                software[cellranger_name] = sorted(list(versions))
+            for cellranger_name in cellranger_versioned_samples:
+                software[cellranger_name] = sorted(list(cellranger_versioned_samples[cellranger_name].keys()))
         # Look for cellranger multi outputs
         cellranger_multi_dir = os.path.join(self.qc_dir,
                                             "cellranger_multi")
@@ -1322,60 +1339,67 @@ class QCReport(Document):
                 self.report_sample(project,sample,report_attrs_,
                                    summary_table,summary_fields_)
             # Report single library analyses
-            if 'cellranger_count' in project.outputs and \
-               self.use_single_library_table:
-                # Set up fields for reporting
-                if 'cellranger' in project.software:
-                    pkg = 'cellranger'
-                    single_library_fields = ['sample',
-                                             '10x_cells',
-                                             '10x_frac_reads_in_cell',
-                                             '10x_reads_per_cell',
-                                             '10x_genes_per_cell']
-                elif 'cellranger-atac' in project.software:
-                    pkg = 'cellranger-atac'
-                    single_library_fields = ['sample',
-                                             '10x_cells',
-                                             '10x_fragments_per_cell',
-                                             '10x_tss_enrichment_score']
-                    for v in project.software[pkg]:
-                        # Add version specific fields to summary table
-                        v = v.split('.')
-                        if v[0] == '2':
-                            extra_fields = ['10x_fragments_overlapping_peaks']
-                        else:
-                            extra_fields = ['10x_fragments_overlapping_targets']
-                        for f in extra_fields:
-                            if f not in single_library_fields:
-                                single_library_fields.append(f)
-                elif 'cellranger-arc' in project.software:
-                    pkg = 'cellranger-arc'
-                    single_library_fields = ['sample',
-                                             'linked_sample',
-                                             '10x_cells',
-                                             '10x_atac_fragments_per_cell',
-                                             '10x_gex_genes_per_cell']
-                # Add column for multiple versions
-                if len(project.software[pkg]) > 1:
-                    single_library_fields.append('10x_pipeline')
-                # Add column for multiple reference datasets
-                if len(project.cellranger_references) > 1:
-                    single_library_fields.append('10x_reference')
-                # Always link to web summary
-                single_library_fields.append('10x_web_summary')
-                # Create a new table
-                single_library_analysis_table = \
-                    self.add_single_library_analysis_table(
-                        project,
-                        single_library_fields,
-                        section=project_summary)
-                # Report analyses for each sample
-                for sample in project.samples:
-                    self.report_single_library_analyses(
-                        project,
-                        sample,
-                        single_library_analysis_table,
-                        single_library_fields)
+            if self.use_single_library_table:
+                for single_library in ('cellranger_count',
+                                       'cellranger-atac_count',
+                                       'cellranger-arc_count'):
+                    if single_library not in project.outputs:
+                        # Skip missing analysis
+                        continue
+                    # Set up fields for reporting
+                    if single_library == 'cellranger_count':
+                        pkg = 'cellranger'
+                        single_library_fields = ['sample',
+                                                 '10x_cells',
+                                                 '10x_frac_reads_in_cell',
+                                                 '10x_reads_per_cell',
+                                                 '10x_genes_per_cell']
+                    elif single_library == 'cellranger-atac_count':
+                        pkg = 'cellranger-atac'
+                        single_library_fields = ['sample',
+                                                 '10x_cells',
+                                                 '10x_fragments_per_cell',
+                                                 '10x_tss_enrichment_score']
+                        for v in project.software[pkg]:
+                            # Add version specific fields to summary table
+                            v = v.split('.')
+                            if v[0] == '2':
+                                extra_fields = ['10x_fragments_overlapping_peaks']
+                            else:
+                                extra_fields = ['10x_fragments_overlapping_targets']
+                            for f in extra_fields:
+                                if f not in single_library_fields:
+                                    single_library_fields.append(f)
+                    elif single_library == 'cellranger-arc_count':
+                        pkg = 'cellranger-arc'
+                        single_library_fields = ['sample',
+                                                 'linked_sample',
+                                                 '10x_cells',
+                                                 '10x_atac_fragments_per_cell',
+                                                 '10x_gex_genes_per_cell']
+                    # Add column for multiple versions
+                    if len(project.software[pkg]) > 1:
+                        single_library_fields.append('10x_pipeline')
+                    # Add column for multiple reference datasets
+                    if len(project.cellranger_references) > 1:
+                        single_library_fields.append('10x_reference')
+                    # Always link to web summary
+                    single_library_fields.append('10x_web_summary')
+                    # Create a new table
+                    single_library_analysis_table = \
+                        self.add_single_library_analysis_table(
+                            pkg,
+                            project,
+                            single_library_fields,
+                            section=project_summary)
+                    # Report analyses for each sample
+                    for sample in project.samples:
+                        self.report_single_library_analyses(
+                            pkg,
+                            project,
+                            sample,
+                            single_library_analysis_table,
+                            single_library_fields)
             # Report 10x multiplexing analyses
             if 'cellranger_multi' in project.outputs:
                 # Set up fields for reporting
@@ -1617,14 +1641,16 @@ class QCReport(Document):
         section.add(summary_tbl)
         return summary_tbl
 
-    def add_single_library_analysis_table(self,project,fields,section):
+    def add_single_library_analysis_table(self,package,project,fields,
+                                          section):
         """
         Create a new table for summarising 10x single library analyses
         """
         # Add title
         section = section.add_subsection(
-            "Single library analysis",
-            name="single_library_analysis_%s" % sanitize_name(project.id),
+            "Single library analysis (%s)" % package,
+            name="single_library_analysis_%s_%s" % (package,
+                                                    sanitize_name(project.id)),
             css_classes=('single_library_summary',))
         # Generate headers for table
         tbl_headers = {
@@ -1875,7 +1901,7 @@ class QCReport(Document):
             # report
             self.status = False
 
-    def report_single_library_analyses(self,project,sample,
+    def report_single_library_analyses(self,package,project,sample,
                                        single_library_analysis_table,
                                        fields):
         """
@@ -1886,6 +1912,7 @@ class QCReport(Document):
         with the specified sample.
 
         Arguments:
+          package (str): name of 10x package to report
           project (QCProject): project to report
           sample (str): name of sample to report
           single_library_analysis_table (Table): summary table
@@ -1907,6 +1934,7 @@ class QCReport(Document):
                                   fastq_attrs=project.fastq_attrs)
         # Update the single library analysis table
         status = reporter.update_single_library_table(
+            package,
             single_library_analysis_table,
             fields,
             relpath=self.relpath)
@@ -2184,8 +2212,8 @@ class QCReportSample:
             first_line = False
         return (not has_problems)
 
-    def update_single_library_table(self,single_library_table,fields=None,
-                                    relpath=None):
+    def update_single_library_table(self,package,single_library_table,
+                                    fields=None,relpath=None):
         """
         Add lines to a table reporting single library analyses
 
@@ -2197,6 +2225,7 @@ class QCReportSample:
         method.
 
         Arguments:
+          package (str): 10x package to report on
           summary_table (Table): table to update
           fields (list): list of custom fields to report
           relpath (str): if set then make link paths
@@ -2212,6 +2241,10 @@ class QCReportSample:
         first_line = True
         # Report each single library analysis
         for cellranger_count in self.cellranger_count:
+            # Check package
+            if cellranger_count.pipeline_name != package:
+                # Skip
+                return True
             # Shortcut to metrics
             metrics = cellranger_count.metrics
             web_summary = cellranger_count.web_summary

@@ -40,7 +40,9 @@ class TestQCReporter(unittest.TestCase):
                                include_seqlens=True,
                                include_cellranger_count=False,
                                include_cellranger_multi=False,
-                               legacy_screens=False):
+                               cellranger_pipelines=('cellranger',),
+                               legacy_screens=False,
+                               legacy_cellranger_outs=False):
         # Create a mock Analysis Project directory
         self._make_working_dir()
         # Generate names for fastq files to add
@@ -78,15 +80,30 @@ class TestQCReporter(unittest.TestCase):
                 MockQCOutputs.seqlens(fq,qc_dir)
         # Cellranger count
         if include_cellranger_count:
-            project_dir = os.path.join(self.wd,self.analysis_dir.name)
-            UpdateAnalysisProject(AnalysisProject(project_dir)).\
-                add_cellranger_count_outputs(
-                    reference_data_path="/data/refdata-cellranger-2020-A",
-                    qc_dir=qc_dir,
-                    cellranger='cellranger',
-                    prefix=os.path.join("cellranger_count",
-                                        "6.1.2",
-                                        "refdata-cellranger-2020-A"))
+            for cellranger in cellranger_pipelines:
+                if cellranger == "cellranger":
+                    version = "6.1.2"
+                    refdata = "/data/refdata-cellranger-2020-A"
+                elif cellranger == "cellranger-atac":
+                    version = "2.0.0"
+                    refdata = "/data/refdata-cellranger-atac-2020-A"
+                elif cellranger == "cellranger-arc":
+                    version = "2.0.0"
+                    refdata = "/data/refdata-cellranger-arc-2020-A"
+                project_dir = os.path.join(self.wd,
+                                           self.analysis_dir.name)
+                if not legacy_cellranger_outs:
+                    count_dir = os.path.join("cellranger_count",
+                                             version,
+                                             os.path.basename(refdata))
+                else:
+                    count_dir = "cellranger_count"
+                UpdateAnalysisProject(AnalysisProject(project_dir)).\
+                    add_cellranger_count_outputs(
+                        reference_data_path=refdata,
+                        qc_dir=qc_dir,
+                        cellranger=cellranger,
+                        prefix=count_dir)
         # Cellranger multi
         if include_cellranger_multi:
             project_dir = os.path.join(self.wd,self.analysis_dir.name)
@@ -112,8 +129,6 @@ PBB_CML2,CMO302,CML2
             UpdateAnalysisProject(AnalysisProject(project_dir)).\
                 add_cellranger_multi_outputs(
                     config_csv=multi_config,
-                    #sample_names=("PJB_CML1","PJB_CML2",),
-                    #reference_data_path="/data/refdata-cellranger-2020-A",
                     qc_dir=qc_dir,
                     prefix=os.path.join("cellranger_multi",
                                         "6.1.2",
@@ -181,6 +196,46 @@ PBB_CML2,CMO302,CML2
             paired_end=True,
             include_cellranger_count=True,
             include_cellranger_multi=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_cellranger_count_multiome(self):
+        """QCReporter: paired-end data with cellranger 'count' (multiome)
+        """
+        analysis_dir = self._make_analysis_project(
+            paired_end=True,
+            cellranger_pipelines=('cellranger-arc',),
+            include_cellranger_count=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_cellranger_count_multiome_and_scrnaseq(self):
+        """QCReporter: paired-end data with cellranger 'count' (multiome+scRNAseq)
+        """
+        analysis_dir = self._make_analysis_project(
+            paired_end=True,
+            cellranger_pipelines=('cellranger',
+                                  'cellranger-arc',),
+            include_cellranger_count=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_legacy_cellranger_count(self):
+        """QCReporter: paired-end data with cellranger 'count' (legacy)
+        """
+        analysis_dir = self._make_analysis_project(
+            paired_end=True,
+            include_cellranger_count=True,
+            legacy_cellranger_outs=True)
         project = AnalysisProject('PJB',analysis_dir)
         reporter = QCReporter(project)
         self.assertTrue(reporter.verify())
