@@ -134,7 +134,8 @@ class TestPipeline(unittest.TestCase):
                         ">>",self.args.f))
         # Build the pipeline
         ppl = Pipeline()
-        task1 = Echo("Write item1","out.txt","item1")
+        out_file = os.path.join(self.working_dir,"out.txt")
+        task1 = Echo("Write item1",out_file,"item1")
         task2 = Echo("Write item2",task1.output.file,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
@@ -142,7 +143,6 @@ class TestPipeline(unittest.TestCase):
                               poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
-        out_file = os.path.join(self.working_dir,"out.txt")
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             self.assertEqual(fp.read(),"item1\nitem2\n")
@@ -167,18 +167,17 @@ class TestPipeline(unittest.TestCase):
                 for f,s in self.args.s:
                     self.output.files.append(f)
         # Build the pipeline
+        out_files = [os.path.join(self.working_dir,f)
+                     for f in ("out1.txt","out2.txt")]
+        inputs = [(f,"item") for f in out_files]
         ppl = Pipeline()
-        task = EchoMany("Write items",
-                        ("out1.txt","item"),
-                        ("out2.txt","item"),)
+        task = EchoMany("Write items",*inputs)
         ppl.add_task(task)
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
                               poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
-        out_files = [os.path.join(self.working_dir,f)
-                     for f in ("out1.txt","out2.txt")]
         for out_file in out_files:
             self.assertTrue(os.path.exists(out_file))
             with open(out_file,'rt') as fp:
@@ -205,12 +204,14 @@ class TestPipeline(unittest.TestCase):
                     self.output.files.append(f)
         # Build the pipeline
         ppl = Pipeline()
-        task = EchoMany("Write items",
-                        ("out1.txt","item"),
-                        ("out2.txt","item"),
-                        ("out3.txt","item"),
-                        ("out4.txt","item"),
-                        ("out5.txt","item"),)
+        out_files = [os.path.join(self.working_dir,f)
+                     for f in ("out1.txt",
+                               "out2.txt",
+                               "out3.txt",
+                               "out4.txt",
+                               "out5.txt")]
+        inputs = [(f,"item") for f in out_files]
+        task = EchoMany("Write items",*inputs)
         ppl.add_task(task)
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
@@ -218,14 +219,9 @@ class TestPipeline(unittest.TestCase):
                               batch_size=2)
         # Check the outputs
         self.assertEqual(exit_status,0)
-        out_files = [os.path.join(self.working_dir,f)
-                     for f in ("out1.txt",
-                               "out2.txt",
-                               "out3.txt",
-                               "out4.txt",
-                               "out5.txt")]
         for out_file in out_files:
-            self.assertTrue(os.path.exists(out_file))
+            self.assertTrue(os.path.exists(out_file),
+                            "Missing %s" % out_file)
             with open(out_file,'rt') as fp:
                 self.assertEqual(fp.read(),"item\n")
 
@@ -250,12 +246,14 @@ class TestPipeline(unittest.TestCase):
                     self.output.files.append(f)
         # Build the pipeline
         ppl = Pipeline()
-        task = EchoMany("Write items",
-                        ("out1.txt","item"),
-                        ("out2.txt","item"),
-                        ("out3.txt","item"),
-                        ("out4.txt","item"),
-                        ("out5.txt","item"),)
+        out_files = [os.path.join(self.working_dir,f)
+                     for f in ("out1.txt",
+                               "out2.txt",
+                               "out3.txt",
+                               "out4.txt",
+                               "out5.txt")]
+        inputs = [(f,"item") for f in out_files]
+        task = EchoMany("Write items",*inputs)
         ppl.add_task(task)
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
@@ -263,14 +261,9 @@ class TestPipeline(unittest.TestCase):
                               batch_limit=3)
         # Check the outputs
         self.assertEqual(exit_status,0)
-        out_files = [os.path.join(self.working_dir,f)
-                     for f in ("out1.txt",
-                               "out2.txt",
-                               "out3.txt",
-                               "out4.txt",
-                               "out5.txt")]
         for out_file in out_files:
-            self.assertTrue(os.path.exists(out_file))
+            self.assertTrue(os.path.exists(out_file),
+                            "Missing %s" % out_file)
             with open(out_file,'rt') as fp:
                 self.assertEqual(fp.read(),"item\n")
 
@@ -293,8 +286,9 @@ class TestPipeline(unittest.TestCase):
         s = PipelineParam("hello")
         self.assertEqual(s.value,"hello")
         # Build the pipeline
+        out_file = os.path.join(self.working_dir,"out.txt")
         ppl = Pipeline()
-        task = Echo("Write item1","out.txt",s)
+        task = Echo("Write item1",out_file,s)
         ppl.add_task(task)
         # Update the pipeline param
         s.set("goodbye")
@@ -303,7 +297,6 @@ class TestPipeline(unittest.TestCase):
                               poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
-        out_file = os.path.join(self.working_dir,"out.txt")
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             self.assertEqual(fp.read(),"goodbye\n")
@@ -325,7 +318,8 @@ class TestPipeline(unittest.TestCase):
                         ">>",self.args.f))
         # Build the pipeline
         ppl = Pipeline()
-        task1 = Echo("Write item1","out.txt","item1")
+        out_file = os.path.join(self.working_dir,"out.txt")
+        task1 = Echo("Write item1",out_file,"item1")
         task2 = Echo("Write item2",task1.output.file,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Get a scheduler
@@ -336,47 +330,151 @@ class TestPipeline(unittest.TestCase):
                               poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
-        out_file = os.path.join(self.working_dir,"out.txt")
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             self.assertEqual(fp.read(),"item1\nitem2\n")
 
-    def test_pipeline_working_dir_is_respected(self):
+    def test_pipeline_task_working_dirs_isolation(self):
         """
-        Pipeline: check pipeline respects the working directory
+        Pipeline: check pipeline with isolation of task working directories
         """
         # Define tasks
-        # Echoes/appends text to a file via shell command
-        class Echo(PipelineTask):
-            def init(self,f,s):
+        # Echoes/appends working dir to a file via shell command
+        class EchoWorkDir(PipelineTask):
+            def init(self,f):
                 self.add_output('file',f)
             def setup(self):
                 self.add_cmd(
                     PipelineCommandWrapper(
-                        "Echo text to file",
-                        "echo",self.args.s,
+                        "Echo working dir to file",
+                        "echo","$(pwd)",
                         ">>",self.args.f))
-        # Writes text to a file via Python
-        class Print(PipelineTask):
-            def init(self,f,s):
-                self.add_output('file',f)
-            def setup(self):
-                with open(self.args.f,'a') as fp:
-                    fp.write("%s\n" % self.args.s)
         # Build the pipeline
+        out_file = os.path.join(self.working_dir,"dirs.txt")
         ppl = Pipeline()
-        task1 = Echo("Echo item1","out.txt","item1")
-        task2 = Print("Print item2",task1.output.file,"item2")
+        task1 = EchoWorkDir("First task work dir",out_file)
+        task2 = EchoWorkDir("Second task work dir",task1.output.file)
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
+                              isolate_tasks=True,
                               poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
-        out_file = os.path.join(self.working_dir,"out.txt")
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
-            self.assertEqual(fp.read(),"item1\nitem2\n")
+            work_dirs = fp.read().strip().split()
+            # Directories for each task should be different
+            self.assertNotEqual(work_dirs[0],work_dirs[1])
+
+    def test_pipeline_task_working_dirs_no_isolation(self):
+        """
+        Pipeline: check pipeline with no isolation of task working directories
+        """
+        # Define tasks
+        # Echoes/appends working dir to a file via shell command
+        class EchoWorkDir(PipelineTask):
+            def init(self,f):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo working dir to file",
+                        "echo","$(pwd)",
+                        ">>",self.args.f))
+        # Build the pipeline
+        out_file = os.path.join(self.working_dir,"dirs.txt")
+        ppl = Pipeline()
+        task1 = EchoWorkDir("First task work dir",out_file)
+        task2 = EchoWorkDir("Second task work dir",task1.output.file)
+        ppl.add_task(task2,requires=(task1,))
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              isolate_tasks=False,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            for work_dir in fp.read().strip().split():
+                # Directories should be top-level working dir
+                self.assertEqual(work_dir,self.working_dir)
+
+    def test_pipeline_task_working_dirs_isolation_set_work_dir(self):
+        """
+        Pipeline: check pipeline sets top-level tasks work dir (with isolation)
+        """
+        # Define tasks
+        # Echoes/appends working dir to a file via shell command
+        class EchoWorkDir(PipelineTask):
+            def init(self,f):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo working dir to file",
+                        "echo","$(pwd)",
+                        ">>",self.args.f))
+        # Build the pipeline
+        out_file = os.path.join(self.working_dir,"dirs.txt")
+        ppl = Pipeline()
+        task1 = EchoWorkDir("First task work dir",out_file)
+        task2 = EchoWorkDir("Second task work dir",task1.output.file)
+        ppl.add_task(task2,requires=(task1,))
+        # Run the pipeline
+        tasks_work_dir = os.path.join(self.working_dir,
+                                      "tasks_work_dirs")
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              tasks_work_dir="tasks_work_dirs",
+                              isolate_tasks=True,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            work_dirs = fp.read().strip().split()
+            # Directories for each task should be different
+            self.assertNotEqual(work_dirs[0],work_dirs[1])
+            # Task dirs should be subdirs of tasks_work_dir
+            for work_dir in work_dirs:
+                self.assertEqual(os.path.dirname(work_dir),
+                                 tasks_work_dir)
+
+    def test_pipeline_task_working_dirs_no_isolation_set_work_dir(self):
+        """
+        Pipeline: check pipeline sets top-level tasks work dir (no isolation)
+        """
+        # Define tasks
+        # Echoes/appends working dir to a file via shell command
+        class EchoWorkDir(PipelineTask):
+            def init(self,f):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo working dir to file",
+                        "echo","$(pwd)",
+                        ">>",self.args.f))
+        # Build the pipeline
+        out_file = os.path.join(self.working_dir,"dirs.txt")
+        ppl = Pipeline()
+        task1 = EchoWorkDir("First task work dir",out_file)
+        task2 = EchoWorkDir("Second task work dir",task1.output.file)
+        ppl.add_task(task2,requires=(task1,))
+        # Run the pipeline
+        tasks_work_dir = os.path.join(self.working_dir,
+                                      "tasks_work_dirs")
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              tasks_work_dir="tasks_work_dirs",
+                              isolate_tasks=False,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            for work_dir in fp.read().strip().split():
+                # Directories should be top-level tasks working dir
+                self.assertEqual(work_dir,tasks_work_dir)
 
     def test_pipeline_stops_on_task_failure(self):
         """

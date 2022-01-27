@@ -265,6 +265,22 @@ reference to the output list, which can then be passed to another task.
 The list will be populated when the reverse task runs, at which point
 the output will be available to the following tasks.
 
+Task working directory isolation
+--------------------------------
+
+By default each task is run in its own specially created directory,
+to isolate it from other tasks (note that jobs run by the same task
+will share this directory).
+
+Isolation of task working directories can be disabled for all tasks
+within a pipeline at runtime, by setting the ``isolate_tasks``
+parameter of the pipeline's ``run`` method to ``False``.
+
+Alternatively it can be disabled for individual task instances by
+explicitly setting the ``make_task_working_dir`` parameter for that
+task instance to ``False`` when it is created (this will override
+the setting specified within the pipeline at runtime).
+
 Specialised task input/output classes
 -------------------------------------
 
@@ -1961,24 +1977,27 @@ class Pipeline:
                     break
         return list(dependents)
 
-    def run(self,working_dir=None,log_dir=None,scripts_dir=None,
-            log_file=None,sched=None,default_runner=None,max_jobs=1,
-            max_slots=None,poll_interval=5,params=None,runners=None,
-            envmodules=None,batch_size=None,batch_limit=None,
+    def run(self,working_dir=None,tasks_work_dir=None,log_dir=None,
+            scripts_dir=None,log_file=None,sched=None,default_runner=None,
+            max_jobs=1,max_slots=None,poll_interval=5,params=None,
+            runners=None,envmodules=None,batch_size=None,batch_limit=None,
             verbose=False,enable_conda=False,conda=None,
-            conda_env_dir=None,use_locking=True,
+            conda_env_dir=None,use_locking=True,isolate_tasks=True,
             exit_on_failure=PipelineFailure.IMMEDIATE,
             finalize_outputs=True):
         """
         Run the tasks in the pipeline
 
         Arguments:
-          working_dir (str): optional path to a working
-            directory (defaults to the current directory)
+          working_dir (str): optional path to top-level
+            working directory (defaults to the current
+            directory)
           log_dir (str): path of directory where log files
             will be written to
           scripts_dir (str): path of directory where script
             files will be written to
+          tasks_work_dir (str): path to directory where tasks
+            will be run
           log_file (str): path to file to write pipeline
             log messages to (in addition to stdout)
           sched (SimpleScheduler): a scheduler to use for
@@ -2024,6 +2043,8 @@ class Pipeline:
             information for diagnostics
           use_locking (book): if True then lock invocations
             of task methods
+          isolate_tasks (bool): if True then automatically
+            create dedicated working directories for each task
           exit_on_failure (int): either IMMEDIATE (any
             task failures cause immediate termination of
             of the pipeline; this is the default) or
@@ -2091,6 +2112,19 @@ class Pipeline:
         # Deal with lock manager
         if use_locking:
             self._lock_manager = ResourceLock()
+        # Deal with task working directory
+        if tasks_work_dir is None:
+            if isolate_tasks:
+                # Make a specific subdirectory
+                tasks_work_dir = "%s.work" % self._id
+            else:
+                # Default to the top-level working directory
+                # (i.e. legacy behaviour)
+                tasks_work_dir = working_dir
+        if not os.path.isabs(tasks_work_dir):
+            tasks_work_dir = os.path.join(working_dir,tasks_work_dir)
+        if not os.path.exists(tasks_work_dir):
+            os.mkdir(tasks_work_dir)
         # Deal with log directory
         if log_dir is None:
             log_dir = "%s.logs" % self._id
@@ -2120,6 +2154,7 @@ class Pipeline:
         # Execute the pipeline
         self.report("Started")
         self.report("-- working directory: %s" % working_dir)
+        self.report("-- tasks working dir: %s" % tasks_work_dir)
         self.report("-- log directory    : %s" % log_dir)
         self.report("-- scripts directory: %s" % scripts_dir)
         self.report("-- log file         : %s" % ('<not set>'
@@ -2131,6 +2166,9 @@ class Pipeline:
         self.report("-- batch limit      : %s" % ('<not set>'
                                                   if batch_limit is None
                                                   else batch_limit))
+        self.report("-- isolate tasks    : %s" % ('yes'
+                                                  if isolate_tasks
+                                                  else 'no'))
         self.report("-- verbose output   : %s" % ('yes'
                                                   if verbose
                                                   else 'no'))
@@ -2234,7 +2272,7 @@ class Pipeline:
                     if 'runner' not in kws:
                         kws['runner'] = default_runner
                     if 'working_dir' not in kws:
-                        kws['working_dir'] = working_dir
+                        kws['working_dir'] = tasks_work_dir
                     if 'log_dir' not in kws:
                         kws['log_dir'] = log_dir
                     if 'scripts_dir' not in kws:
@@ -2243,6 +2281,8 @@ class Pipeline:
                         kws['batch_size'] = batch_size
                     if 'batch_limit' not in kws:
                         kws['batch_limit'] = batch_limit
+                    if 'make_task_working_dir' not in kws:
+                        kws['make_task_working_dir'] = isolate_tasks
                     if 'verbose' not in kws:
                         kws['verbose'] = verbose
                     kws['log_file'] = self._log_file
@@ -2962,7 +3002,7 @@ class PipelineTask:
             conda=None,conda_env_dir=None,working_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,wait_for=(),asynchronous=True,
             poll_interval=5,batch_size=None,batch_limit=None,
-            lock_manager=None,verbose=False):
+            lock_manager=None,verbose=False,make_task_working_dir=False):
         """
         Run the task
 
@@ -3000,7 +3040,7 @@ class PipelineTask:
             each task in batches, with each batch running
             this many commands at a time (default is to run
             one command per job)
-        batch_limit (int): if set then run commands in
+          batch_limit (int): if set then run commands in
             batches, with the batch size automatically set so
             that the number of batches doesn't exceed this
             limit; ignored if batch_size is explicitly set
@@ -3008,11 +3048,23 @@ class PipelineTask:
           lock_manager (ResourceLock): inter-task lock manager
           verbose (bool): if True then report additional
             information for diagnostics
+          make_task_working_dir (bool): if True then create a
+            new task-specific working directory under the
+            top-level working directory
         """
         # Initialise
         if working_dir is None:
             working_dir = os.getcwd()
-        self._working_dir = os.path.abspath(working_dir)
+        if make_task_working_dir:
+            # Create a task-specific working directory
+            self._working_dir = os.path.join(os.path.abspath(working_dir),
+                                             self._task_name)
+        else:
+            # Use the top-level (shared working directory)
+            self._working_dir = os.path.abspath(working_dir)
+        if not os.path.exists(self._working_dir):
+            self.report("Making working directory %s" % self._working_dir)
+            os.makedirs(self._working_dir)
         if scripts_dir is None:
             scripts_dir = self._working_dir
         if log_dir is None:

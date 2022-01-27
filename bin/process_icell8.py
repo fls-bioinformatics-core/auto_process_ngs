@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     process_icell8.py: perform processing of Wafergen iCell8 data
-#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 """
 process_icell8.py
@@ -437,7 +437,8 @@ if __name__ == "__main__":
                           runners=runners,
                           envmodules=envmodules,
                           max_jobs=max_jobs,
-                          verbose=args.verbose)
+                          verbose=args.verbose,
+                          isolate_tasks=False)
     if exit_status != 0:
         # Finished with error
         logger.critical("Pipeline failed: exit status %s" % exit_status)
