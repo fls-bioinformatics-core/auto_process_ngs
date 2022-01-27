@@ -745,6 +745,7 @@ class QCPipeline(Pipeline):
             mkdir(working_dir)
 
         # Log and script directories
+        tasks_work_dir = os.path.join(working_dir,"work")
         log_dir = os.path.join(working_dir,"logs")
         scripts_dir = os.path.join(working_dir,"scripts")
 
@@ -755,6 +756,7 @@ class QCPipeline(Pipeline):
         # Execute the pipeline
         status = Pipeline.run(self,
                               working_dir=working_dir,
+                              tasks_work_dir=tasks_work_dir,
                               log_dir=log_dir,
                               scripts_dir=scripts_dir,
                               log_file=log_file,
