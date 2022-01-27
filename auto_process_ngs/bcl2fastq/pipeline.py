@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq.pipeline.py: pipelines for Fastq generation
-#     Copyright (C) University of Manchester 2020-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2020-2022 Peter Briggs
 #
 
 """
@@ -1367,7 +1367,9 @@ class MakeFastqs(Pipeline):
                     PathExistsParam(fastq_out_dir))
                 
                 # Temporary dir for intermediate Fastqs
-                tmp_bcl2fastq_dir = "bcl2fastq.icell8_atac%s" % lanes_id
+                tmp_bcl2fastq_dir = PathJoinParam(
+                    self.params.WORKING_DIR,
+                    "bcl2fastq.icell8_atac%s" % lanes_id)
                 # Get bcl2fastq information
                 if get_bcl2fastq is None:
                     # Create a new task only if one doesn't already
@@ -1886,10 +1888,11 @@ class MakeFastqs(Pipeline):
             barcode_analysis_dir = os.path.join(analysis_dir,
                                                 barcode_analysis_dir)
 
-        # Log and script directories
+        # Log, script and task directories
         if log_dir is None:
             log_dir = os.path.join(working_dir,"logs")
         scripts_dir = os.path.join(working_dir,"scripts")
+        tasks_work_dir = os.path.join(working_dir,"work")
 
         # Runners
         if runners is None:
@@ -1930,6 +1933,7 @@ class MakeFastqs(Pipeline):
                               log_dir=log_dir,
                               scripts_dir=scripts_dir,
                               log_file=log_file,
+                              tasks_work_dir=tasks_work_dir,
                               batch_size=batch_size,
                               batch_limit=batch_limit,
                               exit_on_failure=PipelineFailure.DEFERRED,
