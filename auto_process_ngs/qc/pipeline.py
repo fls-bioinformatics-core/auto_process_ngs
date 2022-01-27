@@ -631,7 +631,6 @@ class QCPipeline(Pipeline):
             get_cellranger_reference_data.output.reference_data_path,
             cellranger_out_dir,
             qc_dir=qc_dir,
-            working_dir=self.params.WORKING_DIR,
             cellranger_exe=get_cellranger.output.package_exe,
             cellranger_version=get_cellranger.output.package_version,
             chemistry=self.params.cellranger_chemistry,
@@ -1774,8 +1773,7 @@ class RunCellrangerCount(PipelineTask):
              chemistry='auto',cellranger_jobmode='local',
              cellranger_maxjobs=None,cellranger_mempercore=None,
              cellranger_jobinterval=None,cellranger_localcores=None,
-             cellranger_localmem=None,qc_protocol=None,
-             working_dir=None):
+             cellranger_localmem=None,qc_protocol=None):
         """
         Initialise the RunCellrangerCount task.
 
@@ -1825,8 +1823,6 @@ class RunCellrangerCount(PipelineTask):
         self.add_output('cellranger_version',Param(type=str))
         self.add_output('cellranger_refdata',Param(type=str))
         self.add_output('cellranger_exe',Param(type=str))
-        # Internal: top-level working directory
-        self._working_dir = None
     def setup(self):
         # Check if there's anything to do
         if not self.args.samples:
@@ -1840,8 +1836,6 @@ class RunCellrangerCount(PipelineTask):
         if not (self.args.out_dir or self.args.qc_dir):
             raise Exception("Need to provide at least one of "
                             "output directory and QC directory")
-        # Top-level working directory
-        self._working_dir = self.args.working_dir
         # Cellranger details
         cellranger_exe = self.args.cellranger_exe
         cellranger_package = os.path.basename(cellranger_exe)
@@ -1881,8 +1875,7 @@ class RunCellrangerCount(PipelineTask):
                 print("Sample '%s': found existing outputs" % sample)
                 continue
             # Create a working directory for this sample
-            work_dir = os.path.join(self._working_dir,
-                                    "tmp.count.%s" % sample)
+            work_dir = "tmp.count.%s" % sample
             # Build cellranger command
             cmd = Command(cellranger_exe,
                           "count",
@@ -1960,8 +1953,7 @@ class RunCellrangerCount(PipelineTask):
         has_errors = False
         for sample in self.args.samples:
             # Check outputs
-            top_dir = os.path.join(self._working_dir,
-                                   "tmp.count.%s" % sample,
+            top_dir = os.path.join("tmp.count.%s" % sample,
                                    sample)
             print("Sample: %s" % sample)
             if not os.path.exists(top_dir):
