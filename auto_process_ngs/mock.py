@@ -2126,6 +2126,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 count.add_argument("--r2-length",action="store")
         elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
+            if version[0] >= 2:
+                count.add_argument("--chemistry",action="store")
         elif self._package_name == "cellranger-arc":
             count.add_argument("--reference",action="store")
             count.add_argument("--libraries",action="store")
