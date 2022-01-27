@@ -296,9 +296,10 @@ class AnalyseBarcodes(Pipeline):
         if not os.path.exists(working_dir):
             os.mkdir(working_dir)
 
-        # Log and script directories
+        # Log, script and task directories
         log_dir = os.path.join(working_dir,"logs")
         scripts_dir = os.path.join(working_dir,"scripts")
+        tasks_work_dir = os.path.join(working_dir,"work")
 
         # Input bcl2fastq directory
         if self._bcl2fastq_dir is not None:
@@ -335,6 +336,7 @@ class AnalyseBarcodes(Pipeline):
                               log_dir=log_dir,
                               scripts_dir=scripts_dir,
                               log_file=log_file,
+                              tasks_work_dir=tasks_work_dir,
                               batch_size=batch_size,
                               exit_on_failure=PipelineFailure.IMMEDIATE,
                               params={
