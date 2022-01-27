@@ -385,7 +385,8 @@ class QCPipeline(Pipeline):
                 organism,
                 fastq_dir,
                 qc_protocol,
-                log_dir,
+                chemistry=self.params.cellranger_chemistry,
+                log_dir=log_dir,
                 required_tasks=(setup_qc_dirs,))
 
             # Update metadata
@@ -405,6 +406,39 @@ class QCPipeline(Pipeline):
             self.add_task(set_cellranger_cell_count,
                           requires=(run_cellranger_count,),)
             report_requires.append(set_cellranger_cell_count)
+
+            # Extra protocols for multiome
+            if qc_protocol == "10x_Multiome_ATAC":
+                # See https://kb.10xgenomics.com/hc/en-us/articles/360061165691
+                # Need to set the chemistry to indicate it's
+                # multiome ATAC data
+                run_cellranger_count = self.add_cellranger_count(
+                    project_name,
+                    project,
+                    qc_dir,
+                    organism,
+                    fastq_dir,
+                    qc_protocol="10x_scATAC",
+                    chemistry="ARC-v1",
+                    log_dir=log_dir,
+                    required_tasks=(setup_qc_dirs,))
+                report_requires.append(run_cellranger_count)
+
+            elif qc_protocol == "10x_Multiome_GEX":
+                # See https://kb.10xgenomics.com/hc/en-us/articles/360059656912
+                # Need to set the chemistry to indicate it's
+                # multiome snRNA-seq data
+                run_cellranger_count = self.add_cellranger_count(
+                    project_name,
+                    project,
+                    qc_dir,
+                    organism,
+                    fastq_dir,
+                    qc_protocol="10x_snRNAseq",
+                    chemistry="ARC-v1",
+                    log_dir=log_dir,
+                    required_tasks=(setup_qc_dirs,))
+                report_requires.append(run_cellranger_count)
 
         elif qc_protocol in ("10x_CellPlex",):
 
@@ -521,7 +555,8 @@ class QCPipeline(Pipeline):
 
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_protocol,
-                             log_dir,required_tasks=None):
+                             chemistry,log_dir,
+                             required_tasks=None):
         """
         Add tasks to pipeline to run 'cellranger* count'
 
@@ -535,6 +570,8 @@ class QCPipeline(Pipeline):
           organism (str): organism for pipeline
           fastq_dir (str): directory holding Fastq files
           qc_protocol (str): QC protocol to use
+          chemistry (str): chemistry to use in single
+            library analysis
           log_dir (str): directory to write log files to
           required_tasks (list): list of tasks that the
             cellranger pipeline should wait for
@@ -633,7 +670,7 @@ class QCPipeline(Pipeline):
             qc_dir=qc_dir,
             cellranger_exe=get_cellranger.output.package_exe,
             cellranger_version=get_cellranger.output.package_version,
-            chemistry=self.params.cellranger_chemistry,
+            chemistry=chemistry,
             cellranger_jobmode=self.params.cellranger_jobmode,
             cellranger_maxjobs=self.params.cellranger_maxjobs,
             cellranger_mempercore=self.params.cellranger_mempercore,
@@ -1902,6 +1939,10 @@ class RunCellrangerCount(PipelineTask):
                              "--sample",sample,
                              "--reference",
                              self.args.reference_data_path)
+                # Additional options for cellranger-atac 2+
+                if cellranger_major_version >= 2:
+                    # Enable chemistry to be specified
+                    cmd.add_args("--chemistry",self.args.chemistry)
             elif cellranger_package == "cellranger-arc":
                 # Cellranger-ARC (multiome GEX + ATAC data)
                 cmd.add_args("--reference",
