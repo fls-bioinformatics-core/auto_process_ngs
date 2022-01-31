@@ -2244,7 +2244,7 @@ class QCReportSample:
             # Check package
             if cellranger_count.pipeline_name != package:
                 # Skip
-                return True
+                continue
             # Shortcut to metrics
             metrics = cellranger_count.metrics
             web_summary = cellranger_count.web_summary
