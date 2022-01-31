@@ -3032,7 +3032,6 @@ class QCReportFastq:
                                  f.startswith(fastq_base) and
                                  f.endswith("_%s_screen.txt" % screen_name),
                                  os.listdir(qc_dir))):
-                screen_name = f[:-len("_screen.txt")]
                 png,txt = fastq_screen_output(fastq,screen_name,
                                               legacy=True)
                 png = os.path.join(qc_dir,png)
