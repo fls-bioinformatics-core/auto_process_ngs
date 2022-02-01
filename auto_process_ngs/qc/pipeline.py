@@ -386,6 +386,7 @@ class QCPipeline(Pipeline):
                 fastq_dir,
                 qc_protocol,
                 chemistry=self.params.cellranger_chemistry,
+                reference_dataset=self.params.cellranger_reference_dataset,
                 log_dir=log_dir,
                 required_tasks=(setup_qc_dirs,))
 
@@ -420,6 +421,8 @@ class QCPipeline(Pipeline):
                     fastq_dir,
                     qc_protocol="10x_scATAC",
                     chemistry="ARC-v1",
+                    reference_dataset=\
+                    self.params.cellranger_reference_dataset,
                     log_dir=log_dir,
                     required_tasks=(setup_qc_dirs,))
                 report_requires.append(run_cellranger_count)
@@ -436,6 +439,8 @@ class QCPipeline(Pipeline):
                     fastq_dir,
                     qc_protocol="10x_snRNAseq",
                     chemistry="ARC-v1",
+                    reference_dataset=\
+                    self.params.cellranger_reference_dataset,
                     log_dir=log_dir,
                     required_tasks=(setup_qc_dirs,))
                 report_requires.append(run_cellranger_count)
@@ -529,6 +534,23 @@ class QCPipeline(Pipeline):
                           requires=(run_cellranger_multi,),)
             report_requires.append(set_cellranger_cell_count)
 
+            # Extra protocol for cellplex data
+            # (NB only run on the GEX "samples")
+            run_cellranger_count = self.add_cellranger_count(
+                project_name,
+                project,
+                qc_dir,
+                organism,
+                fastq_dir,
+                qc_protocol="10x_scRNAseq",
+                chemistry=self.params.cellranger_chemistry,
+                log_dir=log_dir,
+                samples=get_cellranger_multi_config.output.gex_libraries,
+                reference_dataset=\
+                get_cellranger_multi_config.output.reference_data_path,
+                required_tasks=(setup_qc_dirs,))
+            report_requires.append(run_cellranger_count)
+
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
             "%s: update QC metadata" % project_name,
@@ -555,7 +577,8 @@ class QCPipeline(Pipeline):
 
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_protocol,
-                             chemistry,log_dir,
+                             chemistry,log_dir,samples=None,
+                             reference_dataset=None,
                              required_tasks=None):
         """
         Add tasks to pipeline to run 'cellranger* count'
@@ -573,6 +596,12 @@ class QCPipeline(Pipeline):
           chemistry (str): chemistry to use in single
             library analysis
           log_dir (str): directory to write log files to
+          samples (list): optional, list of samples to
+            restrict single library analyses to (or None
+            to use all samples in project)
+          reference_dataset (str): optional, path to
+            reference dataset (otherwise will be determined
+            automatically based on organism)
           required_tasks (list): list of tasks that the
             cellranger pipeline should wait for
         """
@@ -609,7 +638,7 @@ class QCPipeline(Pipeline):
             cellranger_exe=get_cellranger.output.package_exe,
             cellranger_version=get_cellranger.output.package_version,
             qc_protocol=qc_protocol,
-            force_reference_data=self.params.cellranger_reference_dataset
+            force_reference_data=reference_dataset
         )
         self.add_task(get_cellranger_reference_data,
                       requires=(get_cellranger,),
@@ -638,6 +667,7 @@ class QCPipeline(Pipeline):
             project_name,
             project,
             fastq_dir=fastq_dir,
+            samples=samples,
             qc_dir=qc_dir,
             qc_protocol=qc_protocol,
             cellranger_version=get_cellranger.output.package_version,
@@ -1690,6 +1720,7 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         """
         self.add_output('config_csv',Param(type=str))
         self.add_output('samples',ListParam())
+        self.add_output('gex_libraries',ListParam())
         self.add_output('reference_data_path',Param(type=str))
     def setup(self):
         # Check for top-level libraries file
@@ -1704,10 +1735,14 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         print("Reading config.csv file")
         config_csv = CellrangerMultiConfigCsv(config_file)
         samples = config_csv.sample_names
+        gex_libraries = config_csv.gex_libraries
         reference_data_path = config_csv.reference_data_path
         print("Samples:")
         for sample in samples:
             print("- %s" % sample)
+        print("GEX libraries:")
+        for library in gex_libraries:
+            print("- %s" % library)
         print("Reference dataset: %s" % reference_data_path)
         # Copy config file to QC dir
         print("Copy '%s' into %s" % (config_file,self.args.qc_dir))
@@ -1716,13 +1751,14 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         self.output.config_csv.set(os.path.join(self.args.qc_dir,
                                                 os.path.basename(config_file)))
         self.output.samples.extend(samples)
+        self.output.gex_libraries.extend(gex_libraries)
         self.output.reference_data_path.set(reference_data_path)
 
 class CheckCellrangerCountOutputs(PipelineFunctionTask):
     """
     Check the outputs from cellranger(-atac) count
     """
-    def init(self,project,fastq_dir=None,qc_dir=None,
+    def init(self,project,fastq_dir=None,samples=None,qc_dir=None,
              qc_protocol=None,cellranger_version=None,
              cellranger_ref_data=None,verbose=False):
         """
@@ -1733,6 +1769,9 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             QC for
           fastq_dir (str): directory holding Fastq files
             (defaults to current fastq_dir in project)
+          samples (list): list of samples to restrict
+            checks to (all samples in project are checked
+            by default)
           qc_dir (str): top-level QC directory to look
             for 'count' QC outputs (e.g. metrics CSV and
             summary HTML files)
@@ -1784,7 +1823,9 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             return
         # Collect the sample names with missing outputs
         for result in self.result():
-            self.output.samples.extend(result)
+            for smpl in result:
+                if not self.args.samples or smpl in self.args.samples:
+                    self.output.samples.append(smpl)
         if self.output.samples:
             if self.args.verbose:
                 print("Samples with missing outputs from "
