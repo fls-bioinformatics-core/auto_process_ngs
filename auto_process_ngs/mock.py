@@ -845,13 +845,13 @@ class UpdateAnalysisProject(DirectoryUpdater):
             cellranger_output_files = ("web_summary.html",
                                        "metrics_summary.csv")
         elif cellranger == 'cellranger-atac':
-            cmdline = "cellranger --reference %s" \
+            cmdline = "cellranger-atac --reference %s" \
                       % reference_data_path
             metrics_data = mock10xdata.ATAC_SUMMARY_2_0_0
             cellranger_output_files = ("web_summary.html",
                                        "summary.csv")
         elif cellranger == 'cellranger-arc':
-            cmdline = "cellranger --reference %s" \
+            cmdline = "cellranger-arc --reference %s" \
                       % reference_data_path
             metrics_data = mock10xdata.MULTIOME_SUMMARY_2_0_0
             cellranger_output_files = ("web_summary.html",
