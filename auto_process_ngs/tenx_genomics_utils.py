@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx_genomics_utils.py: utility functions for handling 10xGenomics data
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 
 """
@@ -631,10 +631,14 @@ class CellrangerMultiConfigCsv:
 
     - sample_names: list of sample names
     - reference_data_path: path to the reference dataset
+    - gex_libraries: list of Fastq IDs associated
+      with GEX data
 
     Provides the following methods:
 
     - sample: returns information on a specific sample
+    - gex_library: returns information on a specific GEX
+      library
     """
     def __init__(self,filen):
         """
@@ -647,6 +651,7 @@ class CellrangerMultiConfigCsv:
         self._filen = os.path.abspath(filen)
         self._samples = {}
         self._reference_data_path = None
+        self._gex_libraries = {}
         self._read_config_csv()
 
     def _read_config_csv(self):
@@ -663,6 +668,9 @@ class CellrangerMultiConfigCsv:
                     continue
                 elif line == "[gene-expression]":
                     current_section = "gene-expression"
+                    continue
+                elif line == "[libraries]":
+                    current_section = "libraries"
                     continue
                 elif not line:
                     # Blank line ends section
@@ -685,6 +693,25 @@ class CellrangerMultiConfigCsv:
                             line.split(',')[1:]).strip()
                         logger.debug("Found reference dataset '%s'" %
                                      self._reference_data_path)
+                elif current_section == "libraries":
+                    if line.startswith('fastq_id,fastqs,lanes,physical_library_id,feature_types'):
+                        # Header line, skip
+                        continue
+                    else:
+                        # Extract data
+                        name,fastqs,lanes,library_id,feature_type,\
+                            subsample_rate = \
+                                [x.strip() for x in line.split(',')]
+                        if feature_type != "gene expression":
+                            # Ignore
+                            continue
+                        self._gex_libraries[name] = {
+                            'fastqs': fastqs,
+                            'lanes': lanes,
+                            'library_id': library_id,
+                            'feature_type': feature_type,
+                            'subsample_rate': subsample_rate
+                        }
 
     @property
     def sample_names(self):
@@ -702,11 +729,20 @@ class CellrangerMultiConfigCsv:
         """
         return self._reference_data_path
 
+    @property
+    def gex_libraries(self):
+        """
+        Return the library names associated with GEX data from config.csv
+
+        Libraries are listed in the '[libraries]' section
+        """
+        return sorted(list(self._gex_libraries.keys()))
+
     def sample(self,sample_name):
         """
         Return dictionary of values associated with sample
 
-        Keys include 'cmp' (list of CMO ids) and 'description'
+        Keys include 'cmo' (list of CMO ids) and 'description'
         (description text) associated with the sample in the
         '[samples]' section of the config.csv file.
 
@@ -714,6 +750,23 @@ class CellrangerMultiConfigCsv:
           sample_name (str): name of the sample of interest
         """
         return self._samples[sample_name]
+
+    def gex_library(self,name):
+        """
+        Return dictionary of values associated with library
+
+        Keys include:
+
+        - 'fastqs' (path to Fastqs)
+        - 'lanes' (associated lanes)
+        - 'library_id' (physical library ID)
+        - 'feature_type' (will be 'gene expression')
+        - 'subsample_rate' (the associated subsampling rate)
+
+        Arguments:
+          sample_name (str): name of the sample of interest
+        """
+        return self._gex_libraries[name]
 
 #######################################################################
 # Functions
