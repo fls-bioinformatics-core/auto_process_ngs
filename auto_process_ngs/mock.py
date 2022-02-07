@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2022 Peter Briggs
 #
 ########################################################################
 
@@ -697,6 +697,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
         # Generate base QC outputs (one set per fastq)
         for fq in self._project.fastqs:
             print("Adding outputs for %s" % fq)
+            if include_seqlens:
+                MockQCOutputs.seqlens(fq,self._project.qc_dir)
             MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
             if protocol in ('singlecell',
                             '10x_scRNAseq',
@@ -711,8 +713,6 @@ class UpdateAnalysisProject(DirectoryUpdater):
                                                   self._project.qc_dir,
                                                   screen,
                                                   legacy=legacy_screens)
-            if include_seqlens:
-                MockQCOutputs.seqlens(fq,self._project.qc_dir)
         # Handle fastq_strand, if requested
         if include_fastq_strand:
             fastq_strand_conf = os.path.join(self._project.dirn,
