@@ -912,46 +912,16 @@ class UpdateAnalysisProject(DirectoryUpdater):
         print("- QC dir: %s" % self._project.qc_dir)
         if not os.path.exists(self._project.qc_dir):
             self.add_subdir(self._project.qc_dir)
-        self.add_subdir(os.path.join(self._project.qc_dir,prefix))
         # Read in multiplexing config
         if config_csv:
             config = CellrangerMultiConfigCsv(config_csv)
             sample_names = [s for s in config.sample_names]
             reference_data_path = config.reference_data_path
-            cmdline = "cellranger --csv %s" % config_csv
-        else:
-            cmdline = "cellranger"
-        # Per sample outputs
-        per_sample_output_files = ("web_summary.html",
-                                   "metrics_summary.csv")
-        for sample in sample_names:
-            sample_dir = os.path.join(self._project.qc_dir,
-                                      prefix,
-                                      "outs",
-                                      "per_sample_outs",
-                                      sample)
-            self.add_subdir(sample_dir)
-            for f in per_sample_output_files:
-                self.add_file(os.path.join(sample_dir,f),
-                              content=mock10xdata.CELLPLEX_METRICS_SUMMARY)
-        # Multiplexing analysis outputs
-        multiplexing_output_files = ("assignment_confidence_table.csv",
-                                     "cells_per_tag.json",
-                                     "tag_calls_per_cell.csv",
-                                     "tag_calls_summary.csv")
-        multiplexing_dir = os.path.join(self._project.qc_dir,
-                                        prefix,
-                                        "outs",
-                                        "multi",
-                                        "multiplexing_analysis")
-        self.add_subdir(multiplexing_dir)
-        for f in multiplexing_output_files:
-            self.add_file(os.path.join(multiplexing_dir,f))
-        # Top-level outputs
-        for f in ("_cmdline",):
-            self.add_file(os.path.join(self._project.qc_dir,
-                                       prefix,f),
-                          content=cmdline)
+        # Add outputs
+        MockQCOutputs.cellranger_multi(sample_names,
+                                       self._project.qc_dir,
+                                       config_csv=config_csv,
+                                       prefix=prefix)
         # Update cellranger reference data in qc.info
         qc_info = self._project.qc_info(self._project.qc_dir)
         qc_info['cellranger_refdata'] = reference_data_path
