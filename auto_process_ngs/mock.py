@@ -838,42 +838,23 @@ class UpdateAnalysisProject(DirectoryUpdater):
             print("- QC dir: %s" % self._project.qc_dir)
             if not os.path.exists(self._project.qc_dir):
                 self.add_subdir(self._project.qc_dir)
-            self.add_subdir(os.path.join(self._project.qc_dir,prefix))
-        if cellranger == 'cellranger':
-            cmdline = "cellranger --transcriptome %s" \
-                      % reference_data_path
-            metrics_data = mock10xdata.METRICS_SUMMARY
-            cellranger_output_files = ("web_summary.html",
-                                       "metrics_summary.csv")
-        elif cellranger == 'cellranger-atac':
-            cmdline = "cellranger-atac --reference %s" \
-                      % reference_data_path
-            metrics_data = mock10xdata.ATAC_SUMMARY_2_0_0
-            cellranger_output_files = ("web_summary.html",
-                                       "summary.csv")
-        elif cellranger == 'cellranger-arc':
-            cmdline = "cellranger-arc --reference %s" \
-                      % reference_data_path
-            metrics_data = mock10xdata.MULTIOME_SUMMARY_2_0_0
-            cellranger_output_files = ("web_summary.html",
-                                       "summary.csv")
         for sample in self._project.samples:
             if legacy:
-                sample_dir = os.path.join(self._project.dirn,
-                                          "cellranger_count",
-                                          sample.name)
+                MockQCOutputs.cellranger_count(
+                    sample.name,
+                    self._project.qc_dir,
+                    cellranger=cellranger,
+                    reference_data_path=
+                    reference_data_path,
+                    prefix="cellranger_count")
             else:
-                sample_dir = os.path.join(self._project.qc_dir,
-                                          prefix,
-                                          sample.name)
-            self.add_subdir(sample_dir)
-            self.add_subdir(os.path.join(sample_dir,"outs"))
-            for f in cellranger_output_files:
-                self.add_file(os.path.join(sample_dir,"outs",f),
-                              content=metrics_data)
-            for f in ("_cmdline",):
-                self.add_file(os.path.join(sample_dir,f),
-                              content=cmdline)
+                MockQCOutputs.cellranger_count(
+                    sample.name,
+                    self._project.qc_dir,
+                    cellranger=cellranger,
+                    reference_data_path=
+                    reference_data_path,
+                    prefix=prefix)
         # Build ZIP archive
         if legacy:
             analysis_dir = os.path.basename(self._parent_dir())
