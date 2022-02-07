@@ -304,7 +304,6 @@ Sample,Gene Expression,Physical library ID,JR_10K_gex,Cell-associated barcodes i
 Sample,Gene Expression,Physical library ID,JR_10K_gex,Cell-associated barcodes not assigned any CMOs,1635 (12.03%)
 Sample,Gene Expression,Physical library ID,JR_10K_gex,Cells assigned to other samples,5875 (43.24%)
 Sample,Gene Expression,Physical library ID,JR_10K_gex,Cells assigned to this sample,5175 (38.09%)
->>>>>>> tenx_genomics_utils: update MetricsSummary to handle multi-line files, and implement new MultiplexSummary class.
 """
 
 MULTIOME_LIBRARIES = """#Local sample\tLinked sample
