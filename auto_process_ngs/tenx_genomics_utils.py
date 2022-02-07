@@ -14,7 +14,9 @@ platforms:
 - GexSummary
 - AtacSummary
 - MultiomeSummary
+- MultiplexSummary
 - MultiomeLibraries
+- CellrangerMultiConfigCsv
 - flow_cell_id
 - has_10x_indices
 - has_chromium_sc_indices
