@@ -1,5 +1,5 @@
 #     mockqc.py: module providing mock Illumina QC data for testing
-#     Copyright (C) University of Manchester 2016-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2022 Peter Briggs
 #
 ########################################################################
 
@@ -23,7 +23,9 @@ import os
 import base64
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
+from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from . import mockqcdata
+from . import mock10xdata
 
 #######################################################################
 # Class definitions
@@ -161,3 +163,131 @@ class MockQCOutputs:
                                      basename)
         with open(seq_lens_json,'wt') as fp:
             fp.write(mockqcdata.SEQ_LENS_JSON % { 'fastq': fastq })
+
+    @classmethod
+    def multiqc_v1_8(self,qc_dir,multiqc_name=None):
+        """
+        Create mock output from MultiQC v1.8
+        """
+        if multiqc_name is None:
+            multiqc_name = "multi%s_report" % os.path.basename(qc_dir)
+        multiqc_html = os.path.join(os.path.dirname(qc_dir),
+                                    "%s.html" % multiqc_name)
+        with open(multiqc_html,'wt') as fp:
+            fp.write("   <a href=\"http://multiqc.info\" "
+                     "target=\"_blank\">MultiQC v1.8</a>\n")
+
+    @classmethod
+    def cellranger_count(self,sample,qc_dir,cellranger='cellranger',
+                         version=None,reference_data_path=
+                         "/data/refdata-cellranger-1.2.0",
+                         prefix="cellranger_count"):
+        """
+        Create mock outputs for 'cellranger[-atac|-arc] count'
+
+        Arguments:
+          sample (str): sample name to create mock outputs
+            for
+          qc_dir (str): path to top level QC directory
+          cellranger (str): pipeline name; one of 'cellranger',
+            'cellranger-atac' or 'cellranger-arc' (default:
+            'cellranger')
+          version (str): explicit version of 10x pipeline to
+            associate with mock outputs (default: determined
+            from pipeline name)
+          reference_data_path (str): explicit path to
+            reference dataset (doesn't have to exist)
+          prefix (str): relative path to QC directory to put
+            mock outputs into (default: 'cellranger_count')
+        """
+        # Set internals based on 10x pipeline
+        if cellranger == 'cellranger':
+            if not version:
+                version = '6.1.2'
+            cmdline = "cellranger --transcriptome %s" \
+                      % reference_data_path
+            metrics_data = mock10xdata.METRICS_SUMMARY
+            cellranger_output_files = ("web_summary.html",
+                                       "metrics_summary.csv")
+        elif cellranger == 'cellranger-atac':
+            if not version:
+                version = '2.0.0'
+            cmdline = "cellranger-atac --reference %s" \
+                      % reference_data_path
+            metrics_data = mock10xdata.ATAC_SUMMARY_2_0_0
+            cellranger_output_files = ("web_summary.html",
+                                       "summary.csv")
+        elif cellranger == 'cellranger-arc':
+            if not version:
+                version = '2.0.0'
+            cmdline = "cellranger-arc --reference %s" \
+                      % reference_data_path
+            metrics_data = mock10xdata.MULTIOME_SUMMARY_2_0_0
+            cellranger_output_files = ("web_summary.html",
+                                       "summary.csv")
+        # Create and populate the directory for the sample
+        sample_dir = os.path.join(qc_dir,
+                                  prefix,
+                                  sample)
+        os.makedirs(sample_dir)
+        os.makedirs(os.path.join(sample_dir,"outs"))
+        for f in cellranger_output_files:
+            with open(os.path.join(sample_dir,"outs",f),'wt') as fp:
+                fp.write(metrics_data)
+        for f in ("_cmdline",):
+            with open(os.path.join(sample_dir,f),'wt') as fp:
+                fp.write(cmdline)
+
+    @classmethod
+    def cellranger_multi(self,samples,qc_dir,config_csv=None,
+                         prefix='cellranger_multi'):
+        """
+        Create mock outputs for 'cellranger multi'
+
+        Arguments:
+          samples (list): sample names to create mock outputs
+            for
+          qc_dir (str): path to top level QC directory
+          config_csv (str): path to an associated CSV config
+            file
+          prefix (str): relative path to QC directory to put
+            mock outputs into (default: 'cellranger_multi')
+        """
+        # Read in multiplexing config
+        if config_csv:
+            config = CellrangerMultiConfigCsv(config_csv)
+            reference_data_path = config.reference_data_path
+            cmdline = "cellranger --csv %s" % config_csv
+        else:
+            cmdline = "cellranger"
+        # Per sample outputs
+        per_sample_output_files = ("web_summary.html",
+                                   "metrics_summary.csv")
+        for sample in samples:
+            sample_dir = os.path.join(qc_dir,
+                                      prefix,
+                                      "outs",
+                                      "per_sample_outs",
+                                      sample)
+            os.makedirs(sample_dir)
+            for f in per_sample_output_files:
+                with open(os.path.join(sample_dir,f),'wt') as fp:
+                    fp.write(mock10xdata.CELLPLEX_METRICS_SUMMARY)
+        # Multiplexing analysis outputs
+        multiplexing_output_files = ("assignment_confidence_table.csv",
+                                     "cells_per_tag.json",
+                                     "tag_calls_per_cell.csv",
+                                     "tag_calls_summary.csv")
+        multiplexing_dir = os.path.join(qc_dir,
+                                        prefix,
+                                        "outs",
+                                        "multi",
+                                        "multiplexing_analysis")
+        os.makedirs(multiplexing_dir)
+        for f in multiplexing_output_files:
+            with open(os.path.join(multiplexing_dir,f),'wt') as fp:
+                fp.write("")
+        # Top-level outputs
+        for f in ("_cmdline",):
+            with open(os.path.join(qc_dir,prefix,f),'wt') as fp:
+                fp.write(cmdline)
