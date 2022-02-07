@@ -165,17 +165,17 @@ class MockQCOutputs:
             fp.write(mockqcdata.SEQ_LENS_JSON % { 'fastq': fastq })
 
     @classmethod
-    def multiqc_v1_8(self,qc_dir,multiqc_name=None):
+    def multiqc(self,dirn,multiqc_html=None,version="1.8"):
         """
-        Create mock output from MultiQC v1.8
+        Create mock output from MultiQC
         """
-        if multiqc_name is None:
-            multiqc_name = "multi%s_report" % os.path.basename(qc_dir)
-        multiqc_html = os.path.join(os.path.dirname(qc_dir),
-                                    "%s.html" % multiqc_name)
+        if multiqc_html is None:
+            multiqc_html = "multiqc_report.html"
+        multiqc_html = os.path.join(dirn,multiqc_html)
         with open(multiqc_html,'wt') as fp:
             fp.write("   <a href=\"http://multiqc.info\" "
-                     "target=\"_blank\">MultiQC v1.8</a>\n")
+                     "target=\"_blank\">MultiQC v%s</a>\n" %
+                     version)
 
     @classmethod
     def cellranger_count(self,sample,qc_dir,cellranger='cellranger',
