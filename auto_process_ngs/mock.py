@@ -743,8 +743,9 @@ class UpdateAnalysisProject(DirectoryUpdater):
             self.add_file("%s.html" % qc_name)
         # MultiQC report
         if include_multiqc:
-            multiqc_name = "multiqc%s_report" % fastq_set_name
-            self.add_file("%s.html" % multiqc_name)
+            MockQCOutputs.multiqc(self._project.dirn,
+                                  multiqc_html="multiqc%s_report.html"
+                                  % fastq_set_name)
         # Make mock ZIP archive
         if include_zip_file:
             analysis_name = os.path.basename(self._parent_dir())
@@ -2616,7 +2617,8 @@ class MockMultiQC:
     """
 
     @staticmethod
-    def create(path,no_outputs=False,exit_code=0):
+    def create(path,version=None,no_outputs=False,
+               exit_code=0):
         """
         Create a "mock" multiqc executable
 
@@ -2625,6 +2627,7 @@ class MockMultiQC:
             to create. The final executable must
             not exist, however the directory it
             will be created in must.
+          version (str): explicit version string
           no_outputs (bool): if True then don't
             create any of the expected outputs
           exit_code (int): exit code that the
@@ -2639,19 +2642,26 @@ class MockMultiQC:
             fp.write("""#!/usr/bin/env python
 import sys
 from auto_process_ngs.mock import MockMultiQC
-sys.exit(MockMultiQC(no_outputs=%s,
+sys.exit(MockMultiQC(version=%s,
+                     no_outputs=%s,
                      exit_code=%s).main(sys.argv[1:]))
-            """ % (no_outputs,exit_code))
+            """ % (("\"%s\"" % version if version else None),
+                   no_outputs,
+                   exit_code))
             os.chmod(path,0o775)
         with open(path,'r') as fp:
             print("multiqc:")
             print("%s" % fp.read())
         return path
 
-    def __init__(self,no_outputs=False,exit_code=0):
+    def __init__(self,version=None,no_outputs=False,exit_code=0):
         """
         Internal: configure the mock multiqc
         """
+        if version:
+            self._version = version
+        else:
+            self._version = "1.5"
         self._no_outputs = no_outputs
         self._exit_code = exit_code
 
@@ -2664,7 +2674,7 @@ sys.exit(MockMultiQC(no_outputs=%s,
             return self._exit_code
         # Handle version request
         if args[0] == "--version":
-            print("multiqc, version 1.5")
+            print("multiqc, version %s" % self._version)
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
@@ -2680,10 +2690,10 @@ sys.exit(MockMultiQC(no_outputs=%s,
 
 Error: Invalid value for "analysis_dir": Path "%s" does not exist.
 
-This is MultiQC v1.5
+This is MultiQC v%s
 
 For more help, run 'multiqc --help' or visit http://multiqc.info
-""" % d)
+""" % (d,self._version))
                 return 2
         # Outputs
         if args.filename is None:
@@ -2693,8 +2703,8 @@ For more help, run 'multiqc --help' or visit http://multiqc.info
             out_file = args.filename
             out_dir = "%s_data" % os.path.splitext(out_file)[0]
         if not self._no_outputs:
-            with open(out_file,'w') as fp:
-                fp.write("MultiQC HTML report")
+            MockQCOutputs.multiqc(d,multiqc_html=out_file,
+                                  version=self._version)
             os.mkdir(out_dir)
         # Exit
         return self._exit_code

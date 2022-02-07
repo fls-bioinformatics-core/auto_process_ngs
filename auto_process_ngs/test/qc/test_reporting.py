@@ -440,7 +440,10 @@ class TestQCOutputs(unittest.TestCase):
                 MockQCOutputs.seqlens(fq,qc_dir)
         # MultiQC
         if include_multiqc:
-            MockQCOutputs.multiqc_v1_8(qc_dir)
+            out_file = "multi%s_report.html" % os.path.basename(qc_dir)
+            MockQCOutputs.multiqc(self.wd,
+                                  multiqc_html=out_file,
+                                  version="1.8")
         # Cellranger count
         if include_cellranger_count:
             for cellranger in cellranger_pipelines:
