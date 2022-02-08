@@ -610,14 +610,15 @@ class QCPipeline(Pipeline):
 
         # Locate cellranger
         required_cellranger = DetermineRequired10xPackage(
-            "%s: determine required 'cellranger' package" %
-            project_name,
+            "%s: determine required 10x pipeline package (%s)" %
+            (project_name,qc_protocol),
             qc_protocol,
             self.params.cellranger_exe)
         self.add_task(required_cellranger)
 
         get_cellranger = Get10xPackage(
-            "%s: get information on cellranger" % project_name,
+            "%s: get information on 10x pipeline package (%s)" %
+            (project_name,qc_protocol),
             require_package=\
             required_cellranger.output.require_cellranger)
         self.add_task(get_cellranger,
@@ -627,8 +628,8 @@ class QCPipeline(Pipeline):
 
         # Get reference data for cellranger
         get_cellranger_reference_data = GetCellrangerReferenceData(
-            "%s: get 'cellranger count' reference data" %
-            project_name,
+            "%s: get single library analysis reference data (%s)" %
+            (project_name,qc_protocol),
             project,
             organism=organism,
             transcriptomes=self.params.cellranger_transcriptomes,
@@ -663,8 +664,8 @@ class QCPipeline(Pipeline):
 
         # Check QC outputs for cellranger count
         check_cellranger_count = CheckCellrangerCountOutputs(
-            "%s: check single library analysis (cellranger)" %
-            project_name,
+            "%s: check for single library analysis outputs (%s)" %
+            (project_name,qc_protocol),
             project,
             fastq_dir=fastq_dir,
             samples=samples,
@@ -691,8 +692,8 @@ class QCPipeline(Pipeline):
 
         # Run cellranger count
         run_cellranger_count = RunCellrangerCount(
-            "%s: run single library analysis (cellranger count)" %
-            project_name,
+            "%s: run single library analysis (%s)" %
+            (project_name,qc_protocol),
             check_cellranger_count.output.samples,
             check_cellranger_count.output.fastq_dir,
             get_cellranger_reference_data.output.reference_data_path,
