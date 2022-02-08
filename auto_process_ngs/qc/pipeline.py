@@ -546,6 +546,7 @@ class QCPipeline(Pipeline):
                 chemistry=self.params.cellranger_chemistry,
                 log_dir=log_dir,
                 samples=get_cellranger_multi_config.output.gex_libraries,
+                fastq_dirs=get_cellranger_multi_config.output.fastq_dirs,
                 reference_dataset=\
                 get_cellranger_multi_config.output.reference_data_path,
                 required_tasks=(setup_qc_dirs,))
@@ -578,7 +579,7 @@ class QCPipeline(Pipeline):
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_protocol,
                              chemistry,log_dir,samples=None,
-                             reference_dataset=None,
+                             fastq_dirs=None,reference_dataset=None,
                              required_tasks=None):
         """
         Add tasks to pipeline to run 'cellranger* count'
@@ -599,6 +600,10 @@ class QCPipeline(Pipeline):
           samples (list): optional, list of samples to
             restrict single library analyses to (or None
             to use all samples in project)
+          fastq_dirs (dict): optional, a dictionary mapping
+            sample names to Fastq directories which will
+            be used to override the paths set by the
+            'fastq_dirs' argument
           reference_dataset (str): optional, path to
             reference dataset (otherwise will be determined
             automatically based on organism)
@@ -702,6 +707,7 @@ class QCPipeline(Pipeline):
             cellranger_exe=get_cellranger.output.package_exe,
             cellranger_version=get_cellranger.output.package_version,
             chemistry=chemistry,
+            fastq_dirs=fastq_dirs,
             cellranger_jobmode=self.params.cellranger_jobmode,
             cellranger_maxjobs=self.params.cellranger_maxjobs,
             cellranger_mempercore=self.params.cellranger_mempercore,
@@ -1722,6 +1728,7 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         self.add_output('config_csv',Param(type=str))
         self.add_output('samples',ListParam())
         self.add_output('gex_libraries',ListParam())
+        self.add_output('fastq_dirs',dict())
         self.add_output('reference_data_path',Param(type=str))
     def setup(self):
         # Check for top-level libraries file
@@ -1738,6 +1745,7 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         samples = config_csv.sample_names
         gex_libraries = config_csv.gex_libraries
         reference_data_path = config_csv.reference_data_path
+        fastq_dirs = config_csv.fastq_dirs
         print("Samples:")
         for sample in samples:
             print("- %s" % sample)
@@ -1754,6 +1762,8 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         self.output.samples.extend(samples)
         self.output.gex_libraries.extend(gex_libraries)
         self.output.reference_data_path.set(reference_data_path)
+        for sample in fastq_dirs:
+            self.output.fastq_dirs[sample] = fastq_dirs[sample]
 
 class CheckCellrangerCountOutputs(PipelineFunctionTask):
     """
@@ -1849,7 +1859,7 @@ class RunCellrangerCount(PipelineTask):
     """
     def init(self,samples,fastq_dir,reference_data_path,out_dir,
              qc_dir=None,cellranger_exe=None,cellranger_version=None,
-             chemistry='auto',cellranger_jobmode='local',
+             chemistry='auto',fastq_dirs=None,cellranger_jobmode='local',
              cellranger_maxjobs=None,cellranger_mempercore=None,
              cellranger_jobinterval=None,cellranger_localcores=None,
              cellranger_localmem=None,qc_protocol=None):
@@ -1877,6 +1887,10 @@ class RunCellrangerCount(PipelineTask):
             'cellranger-atac', 'spaceranger')
           cellranger_version (str): the version string for
             the Cellranger package
+          fastq_dirs (dict): optional, a dictionary mapping
+            sample names to Fastq directories which will
+            be used to override the paths set by the
+            'fastq_dirs' argument
           chemistry (str): assay configuration (set to
             'auto' to let cellranger determine this
             automatically; ignored if not scRNA-seq)
@@ -1955,6 +1969,11 @@ class RunCellrangerCount(PipelineTask):
                 continue
             # Create a working directory for this sample
             work_dir = "tmp.count.%s" % sample
+            # Get the path(s) to the Fastq directory(ies)
+            if self.args.fastq_dirs and sample in self.args.fastq_dirs:
+                fastq_dir = self.args.fastq_dirs[sample]
+            else:
+                fastq_dir = self.args.fastq_dir
             # Build cellranger command
             cmd = Command(cellranger_exe,
                           "count",
@@ -1977,7 +1996,7 @@ class RunCellrangerCount(PipelineTask):
                         cmd.add_args("--include-introns")
             elif cellranger_package == "cellranger-atac":
                 # Cellranger-ATAC
-                cmd.add_args("--fastqs",self.args.fastq_dir,
+                cmd.add_args("--fastqs",fastq_dir,
                              "--sample",sample,
                              "--reference",
                              self.args.reference_data_path)
