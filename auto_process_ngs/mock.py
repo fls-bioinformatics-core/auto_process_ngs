@@ -842,7 +842,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
             if legacy:
                 MockQCOutputs.cellranger_count(
                     sample.name,
-                    self._project.qc_dir,
+                    self._project.dirn,
                     cellranger=cellranger,
                     reference_data_path=
                     reference_data_path,
