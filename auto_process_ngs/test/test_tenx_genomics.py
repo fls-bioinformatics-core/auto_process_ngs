@@ -771,3 +771,7 @@ PBB,CMO302,PBB
                            'feature_type': 'gene expression',
                            'subsample_rate': ''
                          })
+        self.assertEqual(config_csv.fastq_dirs,
+                         { 'PJB1_GEX': '/data/runs/fastqs_gex',
+                           'PJB2_MC': '/data/runs/fastqs_mc'
+                         })

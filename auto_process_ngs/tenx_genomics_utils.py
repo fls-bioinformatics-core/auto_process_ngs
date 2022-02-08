@@ -639,6 +639,8 @@ class CellrangerMultiConfigCsv:
     - sample: returns information on a specific sample
     - gex_library: returns information on a specific GEX
       library
+    - fastq_dirs: returns mapping of library names to the
+      associated Fastq directory paths
     """
     def __init__(self,filen):
         """
@@ -652,6 +654,7 @@ class CellrangerMultiConfigCsv:
         self._samples = {}
         self._reference_data_path = None
         self._gex_libraries = {}
+        self._fastq_dirs = {}
         self._read_config_csv()
 
     def _read_config_csv(self):
@@ -702,6 +705,9 @@ class CellrangerMultiConfigCsv:
                         name,fastqs,lanes,library_id,feature_type,\
                             subsample_rate = \
                                 [x.strip() for x in line.split(',')]
+                        # Store Fastq dir
+                        self._fastq_dirs[name] = fastqs
+                        # Store GEX libraries
                         if feature_type != "gene expression":
                             # Ignore
                             continue
@@ -737,6 +743,13 @@ class CellrangerMultiConfigCsv:
         Libraries are listed in the '[libraries]' section
         """
         return sorted(list(self._gex_libraries.keys()))
+
+    @property
+    def fastq_dirs(self):
+        """
+        Return mapping of library names to Fastq directories
+        """
+        return { k: self._fastq_dirs[k] for k in self._fastq_dirs }
 
     def sample(self,sample_name):
         """
