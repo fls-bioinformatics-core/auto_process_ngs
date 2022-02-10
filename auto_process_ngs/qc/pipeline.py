@@ -1048,9 +1048,6 @@ class RunFastqScreen(PipelineTask):
         """
         self.conda("fastq-screen=0.14.0",
                    "bowtie=1.2.3")
-        # Need older version of libwebp for compatibility
-        # with Perl GD
-        self.conda("libwebp=0.5.2")
         # Also need to specify tbb=2020.2 for bowtie
         # See https://www.biostars.org/p/494922/
         self.conda("tbb=2020.2")
