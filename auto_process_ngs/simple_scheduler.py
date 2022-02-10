@@ -157,10 +157,19 @@ class SimpleScheduler(threading.Thread):
         self.__reporter = reporter
 
     def stop(self):
-        """Stop the scheduler
+        """Stop the scheduler and terminate running jobs
 
         """
         self.__active = False
+        if self.__running:
+            logging.debug("Terminating running jobs:")
+            for job in self.__running:
+                logging.debug("\t#%d (%s): \"%s\" (%s)" % (
+                    job.job_number,
+                    job.job_id,
+                    job.name,
+                    date_and_time(job.start_time)))
+                job.terminate()
 
     @property
     def n_waiting(self):
@@ -266,13 +275,6 @@ class SimpleScheduler(threading.Thread):
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
             self.stop()
-            print("Terminating running jobs:")
-            for job in self.__running:
-                print("\t#%d (%s): \"%s\" (%s)" % (job.job_number,
-                                                   job.job_id,
-                                                   job.name,
-                                                   date_and_time(job.start_time)))
-                job.terminate()
             print("Finished")
 
     def wait_for(self,names,timeout=None):

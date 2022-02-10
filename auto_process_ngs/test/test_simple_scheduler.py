@@ -197,6 +197,32 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertTrue(sched.is_empty())
         sched.stop()
 
+    def test_simple_scheduler_run_multiple_jobs(self):
+        """
+        SimpleScheduler: 'stop' terminates running jobs
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),
+                                poll_interval=0.01)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'])
+        job_2 = sched.submit(['sleep','20'])
+        job_3 = sched.submit(['sleep','30'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertFalse(sched.is_empty())
+        self.assertTrue(job_1.is_running)
+        self.assertTrue(job_2.is_running)
+        self.assertTrue(job_3.is_running)
+        # Halt scheduler, wait for scheduler to catch up
+        sched.stop()
+        time.sleep(0.1)
+        # Check that running jobs have been terminated
+        self.assertFalse(job_1.is_running)
+        self.assertFalse(job_2.is_running)
+        self.assertFalse(job_3.is_running)
+
     def test_simple_scheduler_run_multiple_jobs_with_limit(self):
         """Run several jobs with limit on maximum concurrent jobs
 
