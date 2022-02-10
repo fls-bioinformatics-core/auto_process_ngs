@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_ngs module
-#     Copyright (C) University of Manchester 2013-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2022 Peter Briggs
 #
 ########################################################################
 #
@@ -9,8 +9,7 @@
 #
 #########################################################################
 
-"""utils
-
+"""
 Utility classes and functions to support auto_process_ngs module.
 
 Classes:
@@ -19,6 +18,8 @@ Classes:
 - BufferedOutputFiles:
 - ZipArchive:
 - ProgressChecker:
+- FileLock:
+- FileLockError:
 
 Functions:
 
@@ -48,6 +49,8 @@ import gzip
 import pydoc
 import tempfile
 import operator
+import time
+import fcntl
 from .command import Command
 import bcftbx.utils as bcf_utils
 from bcftbx.Md5sum import md5sum
@@ -466,6 +469,143 @@ class ProgressChecker:
             total number of items.
         """
         return float(i)/float(self._total)*100.0
+
+class FileLock:
+    """
+    Class for locking filesystem objects across processes
+
+    Usage:
+
+    >>> # Make new FileLock instance for cwd
+    >>> lock = FileLock('.')
+    >>> # Check that instance doesn't hold the lock
+    >>> lock.has_lock
+    False
+    >>> # Acquire the lock
+    >>> lock.acquire()
+    >>> lock.has_lock
+    True
+    >>> # Release the lock
+    >>> lock.release()
+
+    If another FileLock instance holds the lock (within this
+    process, or within another) then ``FileLock.acquire()``
+    will raise an immediate ``FileLockError``; however,
+    specifying a timeout period means that the instance will
+    keep retrying to acquire the lock until either it is
+    successful, or the timeout period is exceeded (again
+    returning a ``FileLockError`` exception).
+
+    The FileLock class can also be used as a context
+    manager, e.g.
+
+    >>> with FileLock('.'):
+    ...   # Lock pwd while you do stuff
+
+    Uses the fcntl module (see
+    https://docs.python.org/3.6/library/fcntl.html,
+    https://stackoverflow.com/a/32650956 and
+    https://stackoverflow.com/a/55011593)
+
+    Arguments:
+      f (str): path to filesystem object (file or directory)
+        to lock
+      timeout (float): optional, specifies a timeout period
+        after which failure to acquire the lock raises an
+        exception
+    """
+    def __init__(self,f,timeout=None):
+        # Filesystem object
+        self._f = os.path.abspath(f)
+        # Corresponding file descriptor
+        self._lockfd = None
+        # Timeout
+        self._timeout = timeout
+
+    def __enter__(self):
+        """
+        Called by 'with' statement to enter runtime context
+
+        Attempts to acquire lock on specified file system
+        object, and returns itself.
+        """
+        self.acquire()
+        return self
+
+    def __exit__(self,*args):
+        """
+        Called when execution leaves 'with' code block
+
+        Releases lock on file system object that was
+        acquired by ``__enter__``.
+        """
+        self.release()
+
+    def acquire(self,timeout=None):
+        """
+        Acquire the lock on the filesystem object
+
+        Arguments:
+          timeout (float): optional, specifies a
+            timeout period after which failure to
+            acquire the lock raises an exception
+            (NB overrides timeout set on
+            instantiation).
+        """
+        start_time = time.time()
+        if timeout is None:
+            timeout = self._timeout
+        if timeout is not None:
+            interval = max(0.01,timeout/100.0)
+        else:
+            interval = None
+        lockfd = os.open(self._f,os.O_RDONLY)
+        while not self.has_lock:
+            try:
+                # Try to obtain an exclusive lock on the object
+                fcntl.flock(lockfd,fcntl.LOCK_EX | fcntl.LOCK_NB)
+                self._lockfd = lockfd
+            except BlockingIOError:
+                # The object is already locked by something else
+                if timeout is not None and \
+                   (time.time() - start_time) <= timeout:
+                    # Timeout specified but not yet exceeded
+                    # Wait a bit before trying again
+                    logger.debug("FileLock: waiting for lock on %s" %
+                                 self._f)
+                    time.sleep(interval)
+                else:
+                    # No timeout, or timeout period exceeded
+                    # so give up
+                    break
+        if not self.has_lock:
+            # Failed to acquire the lock so clean up
+            # and raise exception
+            os.close(lockfd)
+            msg = "Failed to acquire lock for %s" % self._f
+            if timeout:
+                msg += ": timed out after %s seconds" % timeout
+            raise FileLockError(msg)
+
+    def release(self):
+        """
+        Release the lock on the filesystem object
+        """
+        if self.has_lock:
+            os.close(self._lockfd)
+            self._lockfd = None
+
+    @property
+    def has_lock(self):
+        """
+        Check if the FileLock instance holds the lock
+        """
+        return (self._lockfd is not None)
+
+class FileLockError(Exception):
+    """
+    Exceptions associated with the FileLock class
+    """
 
 #######################################################################
 # Functions

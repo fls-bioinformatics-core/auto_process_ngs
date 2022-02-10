@@ -418,6 +418,107 @@ class TestShowProgressChecker(unittest.TestCase):
         self.assertEqual(progress.percent(610),610.0/12209.0*100.0)
         self.assertEqual(progress.percent(12209),float(100))
 
+class TestFileLock(unittest.TestCase):
+    """
+    Tests for the FileLock class
+    """
+    def setUp(self):
+        self.wd = tempfile.mkdtemp(suffix='TestFileLock')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.wd)
+
+    def test_file_lock_on_file(self):
+        """
+        FileLock: lock a file
+        """
+        # Make a file to lock
+        f = os.path.join(self.wd,"test.txt")
+        with open(f,'wt') as fp:
+            fp.write("Text\n")
+        # Set up file lock
+        flock = FileLock(f)
+        self.assertFalse(flock.has_lock)
+        # Acquire lock
+        flock.acquire()
+        self.assertTrue(flock.has_lock)
+        # Check that a second lock can't be
+        # acquired
+        flock2 = FileLock(f)
+        self.assertFalse(flock2.has_lock)
+        self.assertRaises(FileLockError,
+                          flock2.acquire)
+        self.assertFalse(flock2.has_lock)
+        # Release first lock
+        flock.release()
+        self.assertFalse(flock.has_lock)
+        # Check second lock can now be
+        # acquired
+        flock2.acquire()
+        self.assertTrue(flock2.has_lock)
+        flock2.release()
+        self.assertFalse(flock2.has_lock)
+
+    def test_file_lock_on_directory(self):
+        """
+        FileLock: lock a directory
+        """
+        # Make a directory to lock
+        d = os.path.join(self.wd,"test")
+        os.mkdir(d)
+        # Set up directory lock
+        flock = FileLock(d)
+        self.assertFalse(flock.has_lock)
+        # Acquire lock
+        flock.acquire()
+        self.assertTrue(flock.has_lock)
+        # Check that a second lock can't be
+        # acquired
+        flock2 = FileLock(d)
+        self.assertFalse(flock2.has_lock)
+        self.assertRaises(FileLockError,
+                          flock2.acquire)
+        self.assertFalse(flock2.has_lock)
+        # Release first lock
+        flock.release()
+        self.assertFalse(flock.has_lock)
+        # Check second lock can now be
+        # acquired
+        flock2.acquire()
+        self.assertTrue(flock2.has_lock)
+        flock2.release()
+        self.assertFalse(flock2.has_lock)
+
+    @unittest.skip("Not implemented")
+    def test_file_lock_timeout(self):
+        """
+        FileLock: use timeout when acquiring lock
+        """
+        pass
+
+    def test_file_lock_using_with(self):
+        """
+        FileLock: using as part of 'with' statement
+        """
+        # Make a file to lock
+        f = os.path.join(self.wd,"test.txt")
+        with open(f,'wt') as fp:
+            fp.write("Text\n")
+        # 'Probe' file lock instance
+        flock = FileLock(f)
+        self.assertFalse(flock.has_lock)
+        # Acquire lock using with statement
+        with FileLock(f) as fl:
+            self.assertTrue(fl.has_lock)
+            self.assertRaises(FileLockError,
+                              flock.acquire)
+        # Exiting context should release the lock
+        # and enable another file lock to be acquired
+        flock.acquire()
+        self.assertTrue(flock.has_lock)
+        flock.release()
+
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
 
