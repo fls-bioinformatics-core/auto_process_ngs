@@ -1106,20 +1106,27 @@ class RunFastqScreen(PipelineTask):
                     """
                     # Make temporary working directory
                     WORKDIR=$(mktemp -d --tmpdir=.)
-                    cd $WORKDIR
                     # Run FastqScreen: {screen_name}
                     fastq_screen \\
                     --conf {fastq_screen_conf} \\
                     --threads {nthreads} {subset_option} \\
-                    --outdir . --force \\
+                    --outdir $WORKDIR --force \\
                     {fastq}
                     # Rename and move outputs to final location
-                    /bin/mv {fastq_basename}_screen.txt \\
-                        {qc_dir}/{screen_basename}.txt
-                    /bin/mv {fastq_basename}_screen.png \\
-                        {qc_dir}/{screen_basename}.png
-                    # Return to initial directory
-                    cd ..
+                    out_txt=$WORKDIR/{fastq_basename}_screen.txt
+                    if [ -e $out_txt ] ; then
+                        /bin/mv $out_txt {qc_dir}/{screen_basename}.txt
+                    else
+                       echo "ERROR missing $out_txt" >&2
+                       exit 1
+                    fi
+                    out_png=$WORKDIR/{fastq_basename}_screen.png
+                    if [ -e $out_png ] ; then
+                        /bin/mv $out_png {qc_dir}/{screen_basename}.png
+                    else
+                       echo "ERROR missing $out_png output" >&2
+                       exit 1
+                    fi
                     """.format(screen_name=screen,
                                fastq=fastq,
                                qc_dir=self.args.qc_dir,
