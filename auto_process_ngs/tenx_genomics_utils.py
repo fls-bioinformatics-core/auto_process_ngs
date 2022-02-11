@@ -1017,13 +1017,26 @@ def spaceranger_info(path=None,name=None):
         # Run the program to get the version
         version_cmd = Command(spaceranger_path,'--version')
         output = version_cmd.subprocess_check_output()[1]
-        # Extract version from line of the from
-        # spaceranger 1.1.0
-        try:
-            package_version = output.split()[-1]
-        except Exception as ex:
-            logger.warning("Unable to get version from '%s': %s" %
-                           (output,ex))
+        for line in output.split('\n'):
+            try:
+                if line.startswith("%s %s-" % (package_name,
+                                               package_name)):
+                    # Extract version from line of the form
+                    # spaceranger spaceranger-1.3.1
+                    package_version = line.split('-')[-1]
+                elif line.startswith("%s " % package_name):
+                    # Extract version from line of the from
+                    # spaceranger 1.1.0
+                    package_version = line.split()[-1]
+                else:
+                    # Raise an exception
+                    raise("unrecognised version format")
+            except Exception as ex:
+                logger.warning("Unable to get version from '%s': %s" %
+                               (output,ex))
+            if package_version:
+                # Acquired version, stop processing lines
+                break
     else:
         # No package supplied or located
         logger.warning("Unable to identify spaceranger package "
