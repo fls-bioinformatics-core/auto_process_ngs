@@ -1907,7 +1907,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
             elif self._package_name == 'cellranger-arc':
                 self._version = '2.0.0'
             elif self._package_name == 'spaceranger':
-                self._version = '1.1.0'
+                self._version = '1.3.1'
         else:
             self._version = version
         self._exit_code = exit_code
@@ -2099,6 +2099,10 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         elif self._package_name == "cellranger-arc" and version[0] >= 2:
             # --qc removed in cellranger-arc 2.0.0
             include_qc_arg = False
+        elif self._package_name == "spaceranger" and \
+             (version[0] >= 2 or (version[0] == 1 and version[1] >= 3)):
+            # --qc removed in spaceranger 1.3.0?
+             include_qc_arg = False
         if include_qc_arg:
             mkfastq.add_argument("--qc",action="store_true")
         # count subparser
