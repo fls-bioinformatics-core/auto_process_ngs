@@ -3258,6 +3258,7 @@ class Run10xMkfastq(PipelineTask):
                               "--output-dir",self.tmp_out_dir)
         include_qc_argument = True
         pkg_major_version = int(self.args.pkg_version.split('.')[0])
+        pkg_minor_version = int(self.args.pkg_version.split('.')[1])
         if self.pkg == "cellranger":
             if pkg_major_version >= 6:
                 # --qc removed in cellranger 6.0.0
@@ -3270,6 +3271,12 @@ class Run10xMkfastq(PipelineTask):
                 self.expect_qc_summary_json = False
         elif self.pkg == "cellranger-arc":
             if pkg_major_version >= 2:
+                # --qc removed in cellranger-atac 2.0.0
+                include_qc_argument = False
+                self.expect_qc_summary_json = False
+        elif self.pkg == "spaceranger":
+            if pkg_major_version >= 2 or (pkg_major_version == 1 and
+                                          pkg_minor_version >= 3):
                 # --qc removed in cellranger-atac 2.0.0
                 include_qc_argument = False
                 self.expect_qc_summary_json = False
