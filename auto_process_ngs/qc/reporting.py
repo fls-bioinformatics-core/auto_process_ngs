@@ -586,6 +586,8 @@ class QCOutputs:
     - 'icell8_report'
     - 'cellranger_count'
     - 'cellranger_multi'
+    - 'cellranger-atac_count'
+    - 'cellranger-arc_count'
     - 'multiqc'
 
     Arguments:
