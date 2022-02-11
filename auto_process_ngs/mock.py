@@ -2064,7 +2064,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if version[0] >= 2:
                 header += '\n'
         elif self._package_name in ('spaceranger,'):
-            header = "%s %s" % (self._package_name,self._version)
+            if version[0] >= 2 or (version[0] == 1 and version[1] >= 3):
+               header = "%s %s-%s\n" % (self._package_name,self._package_name,
+                                        self._version)
+            else:
+                header = "%s %s" % (self._package_name,self._version)
         # Handle version request or no args
         sys.stdout.write(header)
         if cmd == " --version" or not cmd:
