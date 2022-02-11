@@ -473,6 +473,14 @@ class TestSpacerangerInfo(unittest.TestCase):
         os.chmod(spaceranger_110,0o775)
         return spaceranger_110
 
+    def _make_mock_spaceranger_131(self):
+        # Make a fake spaceranger 1.3.1 executable
+        spaceranger_110 = os.path.join(self.wd,"spaceranger")
+        with open(spaceranger_110,'w') as fp:
+            fp.write("#!/bin/bash\necho -n spaceranger spaceranger-1.3.1")
+        os.chmod(spaceranger_110,0o775)
+        return spaceranger_110
+
     def test_spaceranger_110(self):
         """spaceranger_info: collect info for spaceranger 1.1.0
         """
@@ -489,6 +497,24 @@ class TestSpacerangerInfo(unittest.TestCase):
         spaceranger = self._make_mock_spaceranger_110()
         self.assertEqual(spaceranger_info(name='spaceranger'),
                          (spaceranger,'spaceranger','1.1.0'))
+
+    def test_spaceranger_131(self):
+        """spaceranger_info: collect info for spaceranger 1.3.1
+        """
+        spaceranger = self._make_mock_spaceranger_131()
+        self.assertEqual(spaceranger_info(path=spaceranger),
+                         (spaceranger,'spaceranger','1.3.1'))
+
+    def test_spaceranger_131_on_path(self):
+        """spaceranger_info: collect info for spaceranger 1.3.1 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        spaceranger = self._make_mock_spaceranger_131()
+        self.assertEqual(spaceranger_info(name='spaceranger'),
+                         (spaceranger,'spaceranger','1.3.1'))
+
 
 class TestGexSummary(unittest.TestCase):
     """
