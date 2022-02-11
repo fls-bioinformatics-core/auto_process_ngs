@@ -3063,7 +3063,9 @@ class PipelineTask:
             # Use the top-level (shared working directory)
             self._working_dir = os.path.abspath(working_dir)
         if not os.path.exists(self._working_dir):
-            self.report("Making working directory %s" % self._working_dir)
+            if verbose:
+                self.report("Making working directory %s" %
+                            self._working_dir)
             os.makedirs(self._working_dir)
         if scripts_dir is None:
             scripts_dir = self._working_dir
