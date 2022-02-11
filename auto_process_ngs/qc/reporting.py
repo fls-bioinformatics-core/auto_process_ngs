@@ -574,6 +574,8 @@ class QCOutputs:
       QC software packages
     - stats: AttrtibuteDictionary with useful stats from
       across the project
+    - config_files: list of QC configuration files found
+      in the QC directory
 
     The following are valid values for the 'outputs'
     property:
@@ -615,6 +617,7 @@ class QCOutputs:
         self.software = {}
         self.outputs = set()
         self.output_files = []
+        self.config_files = []
         # Raw QC output data
         self._qc_data = {}
         # Scan the directory for QC outputs
@@ -639,6 +642,9 @@ class QCOutputs:
         print("Screens:")
         for scrn in self.fastq_screens:
             print("- %s" % scrn)
+        print("QC config files:")
+        for cfg in self.config_files:
+            print("- %s" % cfg)
 
     def data(self,name):
         """
@@ -679,6 +685,8 @@ class QCOutputs:
                 self._collect_cellranger_multi(self.qc_dir),
                 self._collect_multiqc(self.qc_dir),):
             self._add_qc_outputs(qc_data)
+        # Collect QC config files
+        self.config_files = self._collect_qc_config_files(files)
         # Fastq screens
         fastq_screen = self.data('fastq_screen')
         self.fastq_screens = sorted(fastq_screen.screen_names)
@@ -1370,6 +1378,37 @@ class QCOutputs:
             output_files=output_files,
             tags=sorted(list(tags))
         )
+
+    def _collect_qc_config_files(self,files):
+        """
+        Collect information on QC config files
+
+        Returns a list of QC configuration (if any) found
+        in the supplied list (with the leading paths
+        removed).
+
+        The following configuration files are checked for:
+
+        - fastq_strand.conf
+        - 10x_multi_config.csv
+        - libraries.<SAMPLE>.csv
+
+        Arguments:
+          files (list): list of file names to examine.
+        """
+        config_files = set()
+        # Strand and cellranger multi configs
+        for f in ("fastq_strand.conf",
+                  "10x_multi_config.csv",):
+            if os.path.join(self.qc_dir,f) in files:
+                config_files.add(f)
+        # Cellranger-arc configs ('libraries.SAMPLE.csv')
+        for f in list(filter(lambda f:
+                             f.endswith(".csv") and
+                             os.path.basename(f).startswith("libraries."),
+                             files)):
+            config_files.add(os.path.basename(f))
+        return sorted(list(config_files))
 
 class FastqSet:
     """

@@ -438,6 +438,11 @@ class TestQCOutputs(unittest.TestCase):
             # Sequence lengths
             if include_seqlens:
                 MockQCOutputs.seqlens(fq,qc_dir)
+        # Strandedness conf file
+        if include_strandedness:
+            with open(os.path.join(qc_dir,
+                                   "fastq_strand.conf"),'wt') as fp:
+                fp.write("Placeholder\n")
         # MultiQC
         if include_multiqc:
             out_file = "multi%s_report.html" % os.path.basename(qc_dir)
@@ -473,10 +478,16 @@ class TestQCOutputs(unittest.TestCase):
                         version=version,
                         reference_data_path=refdata,
                         prefix=count_dir)
+                    if cellranger == "cellranger-arc":
+                        multiome_config = os.path.join(qc_dir,
+                                                       "libraries.%s.csv" %
+                                                       sample)
+                        with open(multiome_config,'wt') as fp:
+                            fp.write("Placeholder\n")
         # Cellranger multi
         if include_cellranger_multi:
             # Make cellranger multi config.csv file
-            multi_config = os.path.join(self.wd,"10x_multi_config.csv")
+            multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
             with open(multi_config,'wt') as fp:
                 fastq_dir = os.path.join(self.wd,
                                          "PJB",
@@ -547,6 +558,8 @@ PJB_CML2,CMO302,CML2
                          ['r1'])
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_single_end_no_fastqc(self):
         """
@@ -589,6 +602,8 @@ PJB_CML2,CMO302,CML2
                          ['r1'])
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_single_end_no_screens(self):
         """
@@ -628,6 +643,8 @@ PJB_CML2,CMO302,CML2
                          ['r1'])
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_single_end_no_seqlens(self):
         """
@@ -669,6 +686,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(sorted(
             list(qc_outputs.stats.min_sequence_length_read.keys())),
                          [])
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_single_end_no_standedness(self):
         """
@@ -711,6 +730,7 @@ PJB_CML2,CMO302,CML2
                          ['r1'])
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,[])
 
     def test_qcoutputs_single_end_no_multiqc(self):
         """
@@ -753,6 +773,8 @@ PJB_CML2,CMO302,CML2
                          ['r1'])
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_single_end_legacy_screen_naming(self):
         """
@@ -797,6 +819,8 @@ PJB_CML2,CMO302,CML2
                          ['r1'])
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_paired_end(self):
         """
@@ -848,6 +872,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_paired_end_no_fastqc(self):
         """
@@ -897,6 +923,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_paired_end_no_screens(self):
         """
@@ -943,6 +971,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_paired_end_no_seqlens(self):
         """
@@ -989,6 +1019,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length,None)
         self.assertEqual(sorted(
             list(qc_outputs.stats.min_sequence_length_read.keys())),[])
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_paired_end_no_strandedness(self):
         """
@@ -1034,6 +1066,7 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,[])
 
     def test_qcoutputs_paired_end_no_multiqc(self):
         """
@@ -1084,6 +1117,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_paired_end_legacy_screen_naming(self):
         """
@@ -1136,6 +1171,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_10x_cellranger_count(self):
         """
@@ -1196,6 +1233,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_10x_cellranger_count_legacy(self):
         """
@@ -1257,6 +1296,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_10x_cellranger_atac_count(self):
         """
@@ -1317,6 +1358,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r3'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r3'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_10x_multiome_gex(self):
         """
@@ -1381,6 +1424,10 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf',
+                          'libraries.PJB1.csv',
+                          'libraries.PJB2.csv'])
 
     def test_qcoutputs_10x_multiome_atac(self):
         """
@@ -1445,6 +1492,10 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r3'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r3'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf',
+                          'libraries.PJB1.csv',
+                          'libraries.PJB2.csv'])
 
     def test_qcoutputs_10x_cellranger_multi(self):
         """
@@ -1510,6 +1561,9 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
 
     def test_qcoutputs_10x_cellranger_multi_and_count(self):
         """
@@ -1577,6 +1631,9 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
 
     def test_qcoutputs_with_non_standard_qc_dir(self):
         """
@@ -1628,6 +1685,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_with_non_canonical_fastq_names(self):
         """
@@ -1679,6 +1738,8 @@ PJB_CML2,CMO302,CML2
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
         self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
 class TestFastqSet(unittest.TestCase):
     def test_fastqset_PE(self):
