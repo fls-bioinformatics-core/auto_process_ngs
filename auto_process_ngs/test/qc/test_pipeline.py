@@ -1245,6 +1245,9 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
+                                 version="2.0.0",
+                                 assert_chemistry="ARC-v1")
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
@@ -1268,6 +1271,9 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           cellranger_atac_references=
+                           { 'human':
+                             '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
@@ -1279,6 +1285,20 @@ class TestQCPipeline(unittest.TestCase):
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB_ATAC.zip",
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/summary.csv",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/summary.csv",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/summary.csv",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB_ATAC",f)),
@@ -1292,6 +1312,10 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 version="6.0.0",
+                                 assert_include_introns=True,
+                                 assert_chemistry="ARC-v1")
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
@@ -1313,6 +1337,8 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           cellranger_transcriptomes=
+                           { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
@@ -1324,6 +1350,20 @@ class TestQCPipeline(unittest.TestCase):
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB_GEX.zip",
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/metrics_summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/metrics_summary.csv",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB_GEX",f)),
@@ -1337,6 +1377,9 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
+                                 version="2.0.0",
+                                 assert_chemistry="ARC-v1")
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="1.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1388,6 +1431,9 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           cellranger_atac_references=
+                           { 'human':
+                             '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
@@ -1400,6 +1446,19 @@ class TestQCPipeline(unittest.TestCase):
                   "qc_report.html",
                   "qc_report.PJB_ATAC.zip",
                   "qc/cellranger_count",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/summary.csv",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/summary.csv",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/summary.csv",
                   "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
                   "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
                   "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
@@ -1426,6 +1485,9 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
+                                 version="2.0.0",
+                                 assert_chemistry="ARC-v1")
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="2.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1477,6 +1539,9 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           cellranger_atac_references=
+                           { 'human':
+                             '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
@@ -1489,6 +1554,12 @@ class TestQCPipeline(unittest.TestCase):
                   "qc_report.html",
                   "qc_report.PJB_ATAC.zip",
                   "qc/cellranger_count",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/summary.csv",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/_cmdline",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/summary.csv",
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
@@ -1496,6 +1567,12 @@ class TestQCPipeline(unittest.TestCase):
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
                   "cellranger_count",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB1_ATAC/outs/summary.csv",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/_cmdline",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/web_summary.html",
+                  "cellranger_count/2.0.0/refdata-cellranger-atac-GRCh38-2020-A-2.0.0/PJB2_ATAC/outs/summary.csv",
                   "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
                   "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
                   "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
@@ -1515,6 +1592,10 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 version="6.0.0",
+                                 assert_include_introns=True,
+                                 assert_chemistry="ARC-v1")
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="1.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1566,6 +1647,8 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           cellranger_transcriptomes=
+                           { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
@@ -1578,6 +1661,12 @@ class TestQCPipeline(unittest.TestCase):
                   "qc_report.html",
                   "qc_report.PJB_GEX.zip",
                   "qc/cellranger_count",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/metrics_summary.csv",
                   "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
                   "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
                   "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
@@ -1585,6 +1674,12 @@ class TestQCPipeline(unittest.TestCase):
                   "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
                   "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
                   "cellranger_count",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/metrics_summary.csv",
                   "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
                   "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
                   "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
@@ -1604,6 +1699,10 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 version="6.0.0",
+                                 assert_include_introns=True,
+                                 assert_chemistry="ARC-v1")
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="2.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1655,6 +1754,8 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           cellranger_transcriptomes=
+                           { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
@@ -1667,6 +1768,12 @@ class TestQCPipeline(unittest.TestCase):
                   "qc_report.html",
                   "qc_report.PJB_GEX.zip",
                   "qc/cellranger_count",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/metrics_summary.csv",
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
@@ -1674,6 +1781,12 @@ class TestQCPipeline(unittest.TestCase):
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
                   "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
                   "cellranger_count",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                  "cellranger_count/6.0.0/refdata-gex-GRCh38-2020-A/PJB2_GEX/outs/metrics_summary.csv",
                   "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
                   "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
                   "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
@@ -1760,6 +1873,14 @@ PBB,CMO302,PBB
                   "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/web_summary.html",
                   "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/metrics_summary.csv",
                   "cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/multi/multiplexing_analysis/tag_calls_summary.csv",
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "qc/cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                  "cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                  "cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),

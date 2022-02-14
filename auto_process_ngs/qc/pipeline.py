@@ -377,124 +377,25 @@ class QCPipeline(Pipeline):
                            "10x_scATAC",
                            "10x_Multiome_ATAC",
                            "10x_Multiome_GEX",):
-
-            # Tasks 'check_cellranger_count' depends on
-            check_cellranger_count_requires = []
-
-            # Locate cellranger
-            required_cellranger = DetermineRequired10xPackage(
-                "%s: determine required 'cellranger' package" %
+            # Run cellranger* count
+            run_cellranger_count = self.add_cellranger_count(
                 project_name,
+                project,
+                qc_dir,
+                organism,
+                fastq_dir,
                 qc_protocol,
-                self.params.cellranger_exe)
-            self.add_task(required_cellranger)
-
-            get_cellranger = Get10xPackage(
-                "%s: get information on cellranger" % project_name,
-                require_package=\
-                required_cellranger.output.require_cellranger)
-            self.add_task(get_cellranger,
-                          requires=(required_cellranger,),
-                          envmodules=self.envmodules['cellranger'])
-            check_cellranger_count_requires.append(get_cellranger)
-            update_qc_metadata_requires.append(get_cellranger)
-            qc_metadata['cellranger_version'] = \
-                    get_cellranger.output.package_version
-
-            # Get reference data for cellranger
-            get_cellranger_reference_data = GetCellrangerReferenceData(
-                "%s: get 'cellranger count' reference data" %
-                project_name,
-                project,
-                organism=organism,
-                transcriptomes=self.params.cellranger_transcriptomes,
-                premrna_references=self.params.cellranger_premrna_references,
-                atac_references=self.params.cellranger_atac_references,
-                multiome_references=self.params.cellranger_arc_references,
-                cellranger_exe=get_cellranger.output.package_exe,
-                cellranger_version=get_cellranger.output.package_version,
-                qc_protocol=qc_protocol,
-                force_reference_data=self.params.cellranger_reference_dataset
-            )
-            self.add_task(get_cellranger_reference_data,
-                          requires=(get_cellranger,),
-                          runner=self.runners['verify_runner'],
-                          log_dir=log_dir)
-            check_cellranger_count_requires.append(get_cellranger_reference_data)
-            update_qc_metadata_requires.append(get_cellranger_reference_data)
-            qc_metadata['cellranger_refdata'] = \
-                    get_cellranger_reference_data.output.reference_data_path
-
-            # Make libraries.csv files (cellranger-arc only)
-            if qc_protocol in ("10x_Multiome_ATAC",
-                               "10x_Multiome_GEX",):
-                make_cellranger_libraries = MakeCellrangerArcCountLibraries(
-                    "%s: make libraries files for 'cellranger-arc count'" %
-                    project_name,
-                    project,
-                    qc_dir
-                )
-                self.add_task(make_cellranger_libraries,
-                              requires=(setup_qc_dirs,),
-                              log_dir=log_dir)
-                check_cellranger_count_requires.append(
-                    make_cellranger_libraries)
-
-            # Check QC outputs for cellranger count
-            check_cellranger_count = CheckCellrangerCountOutputs(
-                "%s: check single library analysis (cellranger)" %
-                project_name,
-                project,
-                fastq_dir=fastq_dir,
-                qc_dir=qc_dir,
-                qc_protocol=qc_protocol,
-                cellranger_version=get_cellranger.output.package_version,
-                cellranger_ref_data=\
-                get_cellranger_reference_data.output.reference_data_path,
-                verbose=self.params.VERBOSE
-            )
-            self.add_task(check_cellranger_count,
-                          requires=check_cellranger_count_requires,
-                          runner=self.runners['verify_runner'],
-                          log_dir=log_dir)
-
-            # Parent directory for cellranger count outputs
-            # Set to project directory unless the 'cellranger_out_dir'
-            # parameter is set
-            cellranger_out_dir = FunctionParam(
-                lambda out_dir,project_dir:
-                out_dir if out_dir is not None else project_dir,
-                self.params.cellranger_out_dir,
-                project.dirn)
-
-            # Run cellranger count
-            run_cellranger_count = RunCellrangerCount(
-                "%s: run single library analysis (cellranger count)" %
-                project_name,
-                check_cellranger_count.output.samples,
-                check_cellranger_count.output.fastq_dir,
-                get_cellranger_reference_data.output.reference_data_path,
-                cellranger_out_dir,
-                qc_dir=qc_dir,
-                working_dir=self.params.WORKING_DIR,
-                cellranger_exe=get_cellranger.output.package_exe,
-                cellranger_version=get_cellranger.output.package_version,
                 chemistry=self.params.cellranger_chemistry,
-                cellranger_jobmode=self.params.cellranger_jobmode,
-                cellranger_maxjobs=self.params.cellranger_maxjobs,
-                cellranger_mempercore=self.params.cellranger_mempercore,
-                cellranger_jobinterval=self.params.cellranger_jobinterval,
-                cellranger_localcores=self.params.cellranger_localcores,
-                cellranger_localmem=self.params.cellranger_localmem,
-                qc_protocol=qc_protocol
-            )
-            self.add_task(run_cellranger_count,
-                          requires=(get_cellranger,
-                                    get_cellranger_reference_data,
-                                    check_cellranger_count,),
-                          runner=self.runners['cellranger_runner'],
-                          envmodules=self.envmodules['cellranger'],
-                          log_dir=log_dir)
+                reference_dataset=self.params.cellranger_reference_dataset,
+                log_dir=log_dir,
+                required_tasks=(setup_qc_dirs,))
+
+            # Update metadata
+            qc_metadata['cellranger_version'] = \
+                    run_cellranger_count.output.cellranger_version
+            qc_metadata['cellranger_refdata'] = \
+                    run_cellranger_count.output.cellranger_refdata
+            update_qc_metadata_requires.append(run_cellranger_count)
 
             # Set cell count
             set_cellranger_cell_count = SetCellCountFromCellrangerCount(
@@ -506,6 +407,43 @@ class QCPipeline(Pipeline):
             self.add_task(set_cellranger_cell_count,
                           requires=(run_cellranger_count,),)
             report_requires.append(set_cellranger_cell_count)
+
+            # Extra protocols for multiome
+            if qc_protocol == "10x_Multiome_ATAC":
+                # See https://kb.10xgenomics.com/hc/en-us/articles/360061165691
+                # Need to set the chemistry to indicate it's
+                # multiome ATAC data
+                run_cellranger_count = self.add_cellranger_count(
+                    project_name,
+                    project,
+                    qc_dir,
+                    organism,
+                    fastq_dir,
+                    qc_protocol="10x_scATAC",
+                    chemistry="ARC-v1",
+                    reference_dataset=\
+                    self.params.cellranger_reference_dataset,
+                    log_dir=log_dir,
+                    required_tasks=(setup_qc_dirs,))
+                report_requires.append(run_cellranger_count)
+
+            elif qc_protocol == "10x_Multiome_GEX":
+                # See https://kb.10xgenomics.com/hc/en-us/articles/360059656912
+                # Need to set the chemistry to indicate it's
+                # multiome snRNA-seq data
+                run_cellranger_count = self.add_cellranger_count(
+                    project_name,
+                    project,
+                    qc_dir,
+                    organism,
+                    fastq_dir,
+                    qc_protocol="10x_snRNAseq",
+                    chemistry="ARC-v1",
+                    reference_dataset=\
+                    self.params.cellranger_reference_dataset,
+                    log_dir=log_dir,
+                    required_tasks=(setup_qc_dirs,))
+                report_requires.append(run_cellranger_count)
 
         elif qc_protocol in ("10x_CellPlex",):
 
@@ -596,6 +534,24 @@ class QCPipeline(Pipeline):
                           requires=(run_cellranger_multi,),)
             report_requires.append(set_cellranger_cell_count)
 
+            # Extra protocol for cellplex data
+            # (NB only run on the GEX "samples")
+            run_cellranger_count = self.add_cellranger_count(
+                project_name,
+                project,
+                qc_dir,
+                organism,
+                fastq_dir,
+                qc_protocol="10x_scRNAseq",
+                chemistry=self.params.cellranger_chemistry,
+                log_dir=log_dir,
+                samples=get_cellranger_multi_config.output.gex_libraries,
+                fastq_dirs=get_cellranger_multi_config.output.fastq_dirs,
+                reference_dataset=\
+                get_cellranger_multi_config.output.reference_data_path,
+                required_tasks=(setup_qc_dirs,))
+            report_requires.append(run_cellranger_count)
+
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
             "%s: update QC metadata" % project_name,
@@ -619,6 +575,157 @@ class QCPipeline(Pipeline):
                       runner=self.runners['report_runner'],
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
+
+    def add_cellranger_count(self,project_name,project,qc_dir,
+                             organism,fastq_dir,qc_protocol,
+                             chemistry,log_dir,samples=None,
+                             fastq_dirs=None,reference_dataset=None,
+                             required_tasks=None):
+        """
+        Add tasks to pipeline to run 'cellranger* count'
+
+        Arguments:
+          project_name (str): name to associate with project for
+            reporting tasks
+          project (AnalysisProject): project to run 10x
+            cellranger pipeline within
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          organism (str): organism for pipeline
+          fastq_dir (str): directory holding Fastq files
+          qc_protocol (str): QC protocol to use
+          chemistry (str): chemistry to use in single
+            library analysis
+          log_dir (str): directory to write log files to
+          samples (list): optional, list of samples to
+            restrict single library analyses to (or None
+            to use all samples in project)
+          fastq_dirs (dict): optional, a dictionary mapping
+            sample names to Fastq directories which will
+            be used to override the paths set by the
+            'fastq_dirs' argument
+          reference_dataset (str): optional, path to
+            reference dataset (otherwise will be determined
+            automatically based on organism)
+          required_tasks (list): list of tasks that the
+            cellranger pipeline should wait for
+        """
+        # Tasks 'check_cellranger_count' depends on
+        check_cellranger_count_requires = []
+
+        # Locate cellranger
+        required_cellranger = DetermineRequired10xPackage(
+            "%s: determine required 10x pipeline package (%s)" %
+            (project_name,qc_protocol),
+            qc_protocol,
+            self.params.cellranger_exe)
+        self.add_task(required_cellranger)
+
+        get_cellranger = Get10xPackage(
+            "%s: get information on 10x pipeline package (%s)" %
+            (project_name,qc_protocol),
+            require_package=\
+            required_cellranger.output.require_cellranger)
+        self.add_task(get_cellranger,
+                      requires=(required_cellranger,),
+                      envmodules=self.envmodules['cellranger'])
+        check_cellranger_count_requires.append(get_cellranger)
+
+        # Get reference data for cellranger
+        get_cellranger_reference_data = GetCellrangerReferenceData(
+            "%s: get single library analysis reference data (%s)" %
+            (project_name,qc_protocol),
+            project,
+            organism=organism,
+            transcriptomes=self.params.cellranger_transcriptomes,
+            premrna_references=self.params.cellranger_premrna_references,
+            atac_references=self.params.cellranger_atac_references,
+            multiome_references=self.params.cellranger_arc_references,
+            cellranger_exe=get_cellranger.output.package_exe,
+            cellranger_version=get_cellranger.output.package_version,
+            qc_protocol=qc_protocol,
+            force_reference_data=reference_dataset
+        )
+        self.add_task(get_cellranger_reference_data,
+                      requires=(get_cellranger,),
+                      runner=self.runners['verify_runner'],
+                      log_dir=log_dir)
+        check_cellranger_count_requires.append(get_cellranger_reference_data)
+
+        # Make libraries.csv files (cellranger-arc only)
+        if qc_protocol in ("10x_Multiome_ATAC",
+                           "10x_Multiome_GEX",):
+            make_cellranger_libraries = MakeCellrangerArcCountLibraries(
+                "%s: make libraries files for 'cellranger-arc count'" %
+                project_name,
+                project,
+                qc_dir
+            )
+            self.add_task(make_cellranger_libraries,
+                          requires=required_tasks,
+                          log_dir=log_dir)
+            check_cellranger_count_requires.append(
+                make_cellranger_libraries)
+
+        # Check QC outputs for cellranger count
+        check_cellranger_count = CheckCellrangerCountOutputs(
+            "%s: check for single library analysis outputs (%s)" %
+            (project_name,qc_protocol),
+            project,
+            fastq_dir=fastq_dir,
+            samples=samples,
+            qc_dir=qc_dir,
+            qc_protocol=qc_protocol,
+            cellranger_version=get_cellranger.output.package_version,
+            cellranger_ref_data=\
+            get_cellranger_reference_data.output.reference_data_path,
+            verbose=self.params.VERBOSE
+        )
+        self.add_task(check_cellranger_count,
+                      requires=check_cellranger_count_requires,
+                      runner=self.runners['verify_runner'],
+                      log_dir=log_dir)
+
+        # Parent directory for cellranger count outputs
+        # Set to project directory unless the 'cellranger_out_dir'
+        # parameter is set
+        cellranger_out_dir = FunctionParam(
+            lambda out_dir,project_dir:
+            out_dir if out_dir is not None else project_dir,
+            self.params.cellranger_out_dir,
+            project.dirn)
+
+        # Run cellranger count
+        run_cellranger_count = RunCellrangerCount(
+            "%s: run single library analysis (%s)" %
+            (project_name,qc_protocol),
+            check_cellranger_count.output.samples,
+            check_cellranger_count.output.fastq_dir,
+            get_cellranger_reference_data.output.reference_data_path,
+            cellranger_out_dir,
+            qc_dir=qc_dir,
+            cellranger_exe=get_cellranger.output.package_exe,
+            cellranger_version=get_cellranger.output.package_version,
+            chemistry=chemistry,
+            fastq_dirs=fastq_dirs,
+            cellranger_jobmode=self.params.cellranger_jobmode,
+            cellranger_maxjobs=self.params.cellranger_maxjobs,
+            cellranger_mempercore=self.params.cellranger_mempercore,
+            cellranger_jobinterval=self.params.cellranger_jobinterval,
+            cellranger_localcores=self.params.cellranger_localcores,
+            cellranger_localmem=self.params.cellranger_localmem,
+            qc_protocol=qc_protocol
+        )
+        self.add_task(run_cellranger_count,
+                      requires=(get_cellranger,
+                                get_cellranger_reference_data,
+                                check_cellranger_count,),
+                      runner=self.runners['cellranger_runner'],
+                      envmodules=self.envmodules['cellranger'],
+                      log_dir=log_dir)
+
+        # Return the 'cellranger count' task
+        return run_cellranger_count
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             fastq_subset=None,cellranger_chemistry='auto',
@@ -1620,6 +1727,8 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         """
         self.add_output('config_csv',Param(type=str))
         self.add_output('samples',ListParam())
+        self.add_output('gex_libraries',ListParam())
+        self.add_output('fastq_dirs',dict())
         self.add_output('reference_data_path',Param(type=str))
     def setup(self):
         # Check for top-level libraries file
@@ -1634,10 +1743,15 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         print("Reading config.csv file")
         config_csv = CellrangerMultiConfigCsv(config_file)
         samples = config_csv.sample_names
+        gex_libraries = config_csv.gex_libraries
         reference_data_path = config_csv.reference_data_path
+        fastq_dirs = config_csv.fastq_dirs
         print("Samples:")
         for sample in samples:
             print("- %s" % sample)
+        print("GEX libraries:")
+        for library in gex_libraries:
+            print("- %s" % library)
         print("Reference dataset: %s" % reference_data_path)
         # Copy config file to QC dir
         print("Copy '%s' into %s" % (config_file,self.args.qc_dir))
@@ -1646,13 +1760,16 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         self.output.config_csv.set(os.path.join(self.args.qc_dir,
                                                 os.path.basename(config_file)))
         self.output.samples.extend(samples)
+        self.output.gex_libraries.extend(gex_libraries)
         self.output.reference_data_path.set(reference_data_path)
+        for sample in fastq_dirs:
+            self.output.fastq_dirs[sample] = fastq_dirs[sample]
 
 class CheckCellrangerCountOutputs(PipelineFunctionTask):
     """
     Check the outputs from cellranger(-atac) count
     """
-    def init(self,project,fastq_dir=None,qc_dir=None,
+    def init(self,project,fastq_dir=None,samples=None,qc_dir=None,
              qc_protocol=None,cellranger_version=None,
              cellranger_ref_data=None,verbose=False):
         """
@@ -1663,6 +1780,9 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             QC for
           fastq_dir (str): directory holding Fastq files
             (defaults to current fastq_dir in project)
+          samples (list): list of samples to restrict
+            checks to (all samples in project are checked
+            by default)
           qc_dir (str): top-level QC directory to look
             for 'count' QC outputs (e.g. metrics CSV and
             summary HTML files)
@@ -1714,7 +1834,9 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             return
         # Collect the sample names with missing outputs
         for result in self.result():
-            self.output.samples.extend(result)
+            for smpl in result:
+                if not self.args.samples or smpl in self.args.samples:
+                    self.output.samples.append(smpl)
         if self.output.samples:
             if self.args.verbose:
                 print("Samples with missing outputs from "
@@ -1737,11 +1859,10 @@ class RunCellrangerCount(PipelineTask):
     """
     def init(self,samples,fastq_dir,reference_data_path,out_dir,
              qc_dir=None,cellranger_exe=None,cellranger_version=None,
-             chemistry='auto',cellranger_jobmode='local',
+             chemistry='auto',fastq_dirs=None,cellranger_jobmode='local',
              cellranger_maxjobs=None,cellranger_mempercore=None,
              cellranger_jobinterval=None,cellranger_localcores=None,
-             cellranger_localmem=None,qc_protocol=None,
-             working_dir=None):
+             cellranger_localmem=None,qc_protocol=None):
         """
         Initialise the RunCellrangerCount task.
 
@@ -1766,6 +1887,10 @@ class RunCellrangerCount(PipelineTask):
             'cellranger-atac', 'spaceranger')
           cellranger_version (str): the version string for
             the Cellranger package
+          fastq_dirs (dict): optional, a dictionary mapping
+            sample names to Fastq directories which will
+            be used to override the paths set by the
+            'fastq_dirs' argument
           chemistry (str): assay configuration (set to
             'auto' to let cellranger determine this
             automatically; ignored if not scRNA-seq)
@@ -1787,8 +1912,10 @@ class RunCellrangerCount(PipelineTask):
             can request in jobmode 'local' (default: None)
           qc_protocol (str): QC protocol to use
         """
-        # Internal: top-level working directory
-        self._working_dir = None
+        # Add outputs
+        self.add_output('cellranger_version',Param(type=str))
+        self.add_output('cellranger_refdata',Param(type=str))
+        self.add_output('cellranger_exe',Param(type=str))
     def setup(self):
         # Check if there's anything to do
         if not self.args.samples:
@@ -1802,8 +1929,6 @@ class RunCellrangerCount(PipelineTask):
         if not (self.args.out_dir or self.args.qc_dir):
             raise Exception("Need to provide at least one of "
                             "output directory and QC directory")
-        # Top-level working directory
-        self._working_dir = self.args.working_dir
         # Cellranger details
         cellranger_exe = self.args.cellranger_exe
         cellranger_package = os.path.basename(cellranger_exe)
@@ -1843,8 +1968,12 @@ class RunCellrangerCount(PipelineTask):
                 print("Sample '%s': found existing outputs" % sample)
                 continue
             # Create a working directory for this sample
-            work_dir = os.path.join(self._working_dir,
-                                    "tmp.count.%s" % sample)
+            work_dir = "tmp.count.%s" % sample
+            # Get the path(s) to the Fastq directory(ies)
+            if self.args.fastq_dirs and sample in self.args.fastq_dirs:
+                fastq_dir = self.args.fastq_dirs[sample]
+            else:
+                fastq_dir = self.args.fastq_dir
             # Build cellranger command
             cmd = Command(cellranger_exe,
                           "count",
@@ -1867,10 +1996,14 @@ class RunCellrangerCount(PipelineTask):
                         cmd.add_args("--include-introns")
             elif cellranger_package == "cellranger-atac":
                 # Cellranger-ATAC
-                cmd.add_args("--fastqs",self.args.fastq_dir,
+                cmd.add_args("--fastqs",fastq_dir,
                              "--sample",sample,
                              "--reference",
                              self.args.reference_data_path)
+                # Additional options for cellranger-atac 2+
+                if cellranger_major_version >= 2:
+                    # Enable chemistry to be specified
+                    cmd.add_args("--chemistry",self.args.chemistry)
             elif cellranger_package == "cellranger-arc":
                 # Cellranger-ARC (multiome GEX + ATAC data)
                 cmd.add_args("--reference",
@@ -1914,12 +2047,15 @@ class RunCellrangerCount(PipelineTask):
             print("No reference data: single library analysis was "
                   "skipped")
             return
+        # Set outputs
+        self.output.cellranger_exe.set(self.args.cellranger_exe)
+        self.output.cellranger_refdata.set(self.args.reference_data_path)
+        self.output.cellranger_version.set(self.args.cellranger_version)
         # Handle outputs from cellranger count
         has_errors = False
         for sample in self.args.samples:
             # Check outputs
-            top_dir = os.path.join(self._working_dir,
-                                   "tmp.count.%s" % sample,
+            top_dir = os.path.join("tmp.count.%s" % sample,
                                    sample)
             print("Sample: %s" % sample)
             if not os.path.exists(top_dir):

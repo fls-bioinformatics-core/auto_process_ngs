@@ -788,3 +788,16 @@ PBB,CMO302,PBB
         self.assertEqual(config_csv.sample_names,['PBA','PBB'])
         self.assertEqual(config_csv.reference_data_path,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
+        self.assertEqual(config_csv.gex_libraries,
+                         ['PJB1_GEX',])
+        self.assertEqual(config_csv.gex_library('PJB1_GEX'),
+                         { 'fastqs': '/data/runs/fastqs_gex',
+                           'lanes': 'any',
+                           'library_id': 'PJB1',
+                           'feature_type': 'gene expression',
+                           'subsample_rate': ''
+                         })
+        self.assertEqual(config_csv.fastq_dirs,
+                         { 'PJB1_GEX': '/data/runs/fastqs_gex',
+                           'PJB2_MC': '/data/runs/fastqs_mc'
+                         })

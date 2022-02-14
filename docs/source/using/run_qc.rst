@@ -67,16 +67,49 @@ data:
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
 .. _fastq_strand: https://genomics-bcftbx.readthedocs.io/en/latest/reference/qc_pipeline.html#fastq-strand
 
-In addition for 10xGenomics scRNA-seq, snRNA-seq and scATAC data:
+Additional analyses may be run for 10xGenomics single cell datasets:
 
- * Single library analysis is run using the ``count`` command of
-   either `cellranger`_ or `cellranger_atac`_ (as appropriate)
+==================== ================== ======================================
+10xGenomics Platform Library type       Analyses
+==================== ================== ======================================
+Chromium 3'          scRNA-seq          Single library analysis for each
+                                        sample using `cellranger`_ ``count``
+Chromium 3'          snRNA-seq          See 'scRNA-seq'
+Chromium 3'          CellPlex           Multiplexing analysis using
+                                        `cellranger`_ ``multi`` (if
+                                        :ref:`10x_multi_config.csv <10x_multi_config_csv_file>`
+                                        file is present, plus single library
+                                        analysis for each GEX sample using
+                                        `cellranger`_ ``count``
+Chromium 3'          CellPlex scRNA-seq See 'CellPlex'
+Chromium 3'          CellPlex snRNA-seq See 'CellPlex'
+Single Cell ATAC     scATAC-seq         Single library analysis for each
+                                        sample using `cellranger_atac`_
+					``count``
+Single Cell Multiome GEX                Multiome analysis using
+                                        `cellranger_arc`_ ``count`` (if
+                                        :ref:`10x_multiome_libraries.info <10x_multiome_libraries_info_file>`
+                                        file is present), plus single library
+                                        analysis for each GEX sample using
+                                        `cellranger`_ ``count``
+Single Cell Multiome ATAC               Multiome analysis using
+                                        `cellranger_arc`_ ``count``  (if
+                                        :ref:`10x_multiome_libraries.info <10x_multiome_libraries_info_file>`
+                                        file is present), plus single library
+                                        analysis for each ATAC sample using
+                                        `cellranger_atac`_ ``count``
+10xGenomics Visium   Spatial RNA-seq    No additional analyses
+==================== ================== ======================================
 
-See :ref:`run_qc_additional_files` for additional analyses that
-may be triggered by the presence of certain special files.
+.. note::
+
+   Appropriate reference data must be defined and certain
+   :ref:`run_qc_additional_files` may be required for some
+   of these analyses to run.
 
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger_atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
+.. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
 
 `multiQC`_ is also run to summarise the QC from all the Fastqs in the
 project.
@@ -101,13 +134,16 @@ there for sharing using the :doc:`publish_qc command <publish_qc>`.
 Additional Files
 ----------------
 
+.. _10x_multiome_libraries_info_file:
+
 10xGenomics Single Cell Multiome Data
 *************************************
 
 If a ``10x_multiome_libraries.info`` file is present then the single
 library will be run for single cell multiome data via the ``count``
 command of `cellranger_arc`_ (see :ref:`10x_multiome_libraries_info`).
-.. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
+
+.. _10x_multi_config_csv_file:
 
 10xGenomics CellPlex Data
 *************************

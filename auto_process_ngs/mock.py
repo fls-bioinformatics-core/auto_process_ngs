@@ -1817,6 +1817,7 @@ class Mock10xPackageExe:
     def create(path,exit_code=0,missing_fastqs=None,
                platform=None,assert_bases_mask=None,
                assert_include_introns=None,
+               assert_chemistry=None,
                reads=None,multiome_data=None,
                version=None):
         """
@@ -1837,11 +1838,14 @@ class Mock10xPackageExe:
             the directory/instrument name)
           assert_bases_mask (str): if set then
             check that the supplied bases mask
-            matches this value (not implemented)
+            matches this value
           assert_include_introns (bool): if set
             to True/False then check that the
             '--include-introns' option was/n't
             set (ignored if set to None)
+          assert_chemistry (str): if set then
+            check that the supplied chemistry
+            specification matches this value
           reads (list): list of 'reads' that
             will be created
           multiome_data (str): either 'GEX' or
@@ -1862,6 +1866,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            platform=%s,
                            assert_bases_mask=%s,
                            assert_include_introns=%s,
+                           assert_chemistry=%s,
                            reads=%s,
                            multiome_data=%s,
                            version=%s).main(sys.argv[1:]))
@@ -1873,6 +1878,9 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                     if assert_bases_mask is not None
                     else None),
                    assert_include_introns,
+                   ("\"%s\"" % assert_chemistry
+                    if assert_chemistry is not None
+                    else None),
                    reads,
                    ("\"%s\"" % multiome_data
                     if multiome_data is not None
@@ -1891,6 +1899,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                  platform=None,
                  assert_bases_mask=None,
                  assert_include_introns=None,
+                 assert_chemistry=None,
                  reads=None,
                  multiome_data=None,
                  version=None):
@@ -1914,6 +1923,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
         self._assert_include_introns = assert_include_introns
+        self._assert_chemistry = assert_chemistry
         self._multiome_data = str(multiome_data).upper()
         if self._package_name == 'cellranger-arc':
             assert self._multiome_data is not None
@@ -2124,6 +2134,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 count.add_argument("--r2-length",action="store")
         elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
+            if version[0] >= 2:
+                count.add_argument("--chemistry",action="store")
         elif self._package_name == "cellranger-arc":
             count.add_argument("--reference",action="store")
             count.add_argument("--libraries",action="store")
@@ -2156,6 +2168,10 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             print("Checking --include-introns")
             assert(("--include-introns" in cmdline.split()) ==
                    self._assert_include_introns)
+        # Check --chemistry
+        if self._assert_chemistry:
+            print("Checking chemistry: %s" % args.chemistry)
+            assert(args.chemistry == self._assert_chemistry)
         # Handle commands
         if args.command == "mkfastq":
             ##################
