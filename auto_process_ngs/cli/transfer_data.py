@@ -12,7 +12,7 @@
 import os
 import re
 import argparse
-import tempfile
+import time
 from random import shuffle
 from datetime import date
 from bcftbx.JobRunner import fetch_runner
@@ -22,6 +22,7 @@ from bcftbx.utils import format_file_size
 from ..analysis import AnalysisDir
 from ..command import Command
 from ..simple_scheduler import SimpleScheduler
+from ..fileops import Location
 from ..fileops import exists
 from ..fileops import mkdir
 from ..fileops import copy_command
@@ -219,6 +220,8 @@ def main():
           (nfastqs,len(samples),format_file_size(fsize)))
 
     # Check target dir
+    if not Location(target_dir).is_remote:
+        target_dir = os.path.abspath(target_dir)
     if not exists(target_dir):
         print("'%s': target directory not found" % target_dir)
         return
@@ -330,6 +333,18 @@ def main():
     else:
         runner = default_runner
 
+    # Set identifier for jobs
+    job_id = "%s%s" % (project_name,
+                       (".%s" % fastq_dir
+                        if fastq_dir is not None
+                        else ''))
+
+    # Set the working directory
+    working_dir = os.path.abspath("transfer.%s.%s" % (job_id,
+                                                      int(time.time())))
+    os.mkdir(working_dir)
+    print("Created working dir %s" % working_dir)
+
     # Construct the README
     if readme_template:
         # Check that template file exists
@@ -372,22 +387,12 @@ def main():
                             value,
                             readme)
         # Write out a temporary README file
-        tmpdir = tempfile.mkdtemp()
-        readme_file = os.path.join(tmpdir,"README")
+        readme_file = os.path.join(working_dir,"README")
         with open(readme_file,'wt') as fp:
             fp.write(readme)
     else:
         # No README
         readme_file = None
-
-    # Set the working directory
-    working_dir = os.getcwd()
-
-    # Set identifier for jobs
-    job_id = "%s%s" % (project_name,
-                       (".%s" % fastq_dir
-                        if fastq_dir is not None
-                        else ''))
 
     # Start a scheduler to run jobs
     sched = SimpleScheduler(runner=runner,
@@ -480,15 +485,6 @@ def main():
                                     runner=SimpleJobRunner(),
                                     wd=working_dir,
                                     wait_for=(targz_job.job_name,))
-            # Remove the targz file
-            rm_cmd = Command("/bin/rm","-f",targz)
-            sched.submit(rm_cmd.command_line,
-                         name="rmtgz.%s.%s" % (
-                             job_id,
-                             os.path.basename(cellranger_dir)),
-                         runner=SimpleJobRunner(),
-                         wd=working_dir,
-                         wait_for=(copy_job.job_name,))
 
     # Wait for scheduler jobs to complete
     sched.wait()
