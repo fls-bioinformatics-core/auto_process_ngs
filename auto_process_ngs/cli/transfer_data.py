@@ -95,13 +95,16 @@ def main():
     p.add_argument('--include_qc_report',action='store_true',
                    help="copy the zipped QC reports to the final "
                    "location")
+    p.add_argument('--include_10x_outputs',action='store_true',
+                   help="copy outputs from 10xGenomics pipelines (e.g. "
+                   "'cellranger count') to the final location")
     p.add_argument('--link',action='store_true',
                    help="hard link files instead of copying")
     p.add_argument('--runner',action='store',
                    help="specify the job runner to use for executing "
-                   "the checksumming and Fastq copy operations "
-                   "(defaults to job runner defined for copying in "
-                   "config file [%s])" % default_runner)
+                   "the checksumming, Fastq copy and tar gzipping "
+                   "operations (defaults to job runner defined for "
+                   "copying in config file [%s])" % default_runner)
     p.add_argument('dest',action='store',metavar="DEST",
                    help="destination to copy Fastqs to; can be the "
                    "name of a destination defined in the configuration "
@@ -260,6 +263,23 @@ def main():
             return 1
     else:
         qc_zips = None
+
+    # Locate 10xGenomics outputs
+    if args.include_10x_outputs:
+        print("Locating outputs from 10xGenomics pipelines for "
+              "inclusion")
+        cellranger_dirs = list()
+        for subdir in ('cellranger_count',
+                       'cellranger_multi',):
+            cellranger_dir = os.path.join(project.dirn,subdir)
+            if os.path.isdir(cellranger_dir):
+                print("... found %s" % cellranger_dir)
+                cellranger_dirs.append(cellranger_dir)
+        if not cellranger_dirs:
+            logger.error("No outputs from 10xGenomics pipelines found")
+            return 1
+    else:
+        cellranger_dirs = None
 
     # Determine subdirectory
     if subdir == "random_bin":
@@ -423,6 +443,52 @@ def main():
                                                 os.path.basename(qc_zip)),
                          runner=SimpleJobRunner(),
                          wd=working_dir)
+
+    # Tar and copy 10xGenomics outputs
+    if cellranger_dirs:
+        for cellranger_dir in cellranger_dirs:
+            print("Tar gzipping and copying '%s'" %
+                  os.path.basename(cellranger_dir))
+            # Tar & gzip data
+            targz = os.path.join(working_dir,
+                                 "%s.%s.%s.tgz" % (
+                                     os.path.basename(
+                                         cellranger_dir),
+                                     project_name,
+                                     project.info.run))
+            targz_cmd = Command("tar",
+                                "czvf",
+                                targz,
+                                "-C",
+                                os.path.dirname(cellranger_dir),
+                                os.path.basename(cellranger_dir))
+            print("Running %s" % targz_cmd)
+            targz_job = sched.submit(targz_cmd.command_line,
+                                     name="targz.%s.%s" % (
+                                         job_id,
+                                         os.path.basename(cellranger_dir)),
+                                     wd=working_dir)
+            # Copy the targz file
+            copy_cmd = copy_command(targz,
+                                    os.path.join(target_dir,
+                                                 os.path.basename(targz)))
+            print("Running %s" % copy_cmd)
+            copy_job = sched.submit(copy_cmd.command_line,
+                                    name="copytgz.%s.%s" % (
+                                        job_id,
+                                        os.path.basename(cellranger_dir)),
+                                    runner=SimpleJobRunner(),
+                                    wd=working_dir,
+                                    wait_for=(targz_job.job_name,))
+            # Remove the targz file
+            rm_cmd = Command("/bin/rm","-f",targz)
+            sched.submit(rm_cmd.command_line,
+                         name="rmtgz.%s.%s" % (
+                             job_id,
+                             os.path.basename(cellranger_dir)),
+                         runner=SimpleJobRunner(),
+                         wd=working_dir,
+                         wait_for=(copy_job.job_name,))
 
     # Wait for scheduler jobs to complete
     sched.wait()
