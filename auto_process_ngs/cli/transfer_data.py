@@ -22,6 +22,7 @@ from bcftbx.utils import format_file_size
 from ..analysis import AnalysisDir
 from ..command import Command
 from ..simple_scheduler import SimpleScheduler
+from ..simple_scheduler import SchedulerReporter
 from ..fileops import Location
 from ..fileops import exists
 from ..fileops import mkdir
@@ -50,6 +51,23 @@ def get_templates_dir():
         return path
     else:
         return None
+
+class TransferDataSchedulerReporter(SchedulerReporter):
+    """
+    Custom reporter for scheduler
+    """
+    def __init__(self):
+        SchedulerReporter.__init__(
+            self,
+            scheduler_status="[%(time_stamp)s] %(n_running)d running, "
+            "%(n_waiting)d waiting, %(n_finished)d finished",
+            job_scheduled="[%(time_stamp)s] scheduled job '%(job_name)s' "
+            "#%(job_number)d",
+            job_start="[%(time_stamp)s] started job '%(job_name)s' "
+            "#%(job_number)d (%(job_id)s)",
+            job_end="[%(time_stamp)s] completed job '%(job_name)s' "
+            "#%(job_number)d (%(job_id)s)"
+        )
 
 # Main function
 
@@ -396,6 +414,7 @@ def main():
 
     # Start a scheduler to run jobs
     sched = SimpleScheduler(runner=runner,
+                            reporter=TransferDataSchedulerReporter(),
                             poll_interval=settings.general.poll_interval)
     sched.start()
 
