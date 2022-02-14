@@ -234,8 +234,18 @@ def main():
         for fq in sample.fastq:
             fsize += os.lstat(fq).st_size
             nfastqs += 1
-    print("%d Fastqs from %d samples totalling %s" %
-          (nfastqs,len(samples),format_file_size(fsize)))
+    nsamples = len(samples)
+    dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
+                                if project.info.single_cell_platform else '',
+                                project.info.library_type)
+    endedness = "paired-end" if project.info.paired_end else "single-end"
+    print("%s with %d Fastqs from %d %s sample%s totalling %s" %
+          (dataset,
+           nfastqs,
+           nsamples,
+           endedness,
+           's' if nsamples != 1 else '',
+           format_file_size(fsize)))
 
     # Check target dir
     if not Location(target_dir).is_remote:
