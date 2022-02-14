@@ -28,6 +28,7 @@ import re
 import threading
 import queue
 import random
+import atexit
 import logging
 
 ######################################################################
@@ -155,12 +156,23 @@ class SimpleScheduler(threading.Thread):
         if reporter is None:
             reporter = default_scheduler_reporter()
         self.__reporter = reporter
+        # Stop scheduler on exit
+        atexit.register(cleanup_atexit,self)
 
     def stop(self):
-        """Stop the scheduler
+        """Stop the scheduler and terminate running jobs
 
         """
         self.__active = False
+        if self.__running:
+            logging.debug("Terminating running jobs:")
+            for job in self.__running:
+                logging.debug("\t#%d (%s): \"%s\" (%s)" % (
+                    job.job_number,
+                    job.job_id,
+                    job.name,
+                    date_and_time(job.start_time)))
+                job.terminate()
 
     @property
     def n_waiting(self):
@@ -266,13 +278,6 @@ class SimpleScheduler(threading.Thread):
         except KeyboardInterrupt:
             print("KeyboardInterrupt")
             self.stop()
-            print("Terminating running jobs:")
-            for job in self.__running:
-                print("\t#%d (%s): \"%s\" (%s)" % (job.job_number,
-                                                   job.job_id,
-                                                   job.name,
-                                                   date_and_time(job.start_time)))
-                job.terminate()
             print("Finished")
 
     def wait_for(self,names,timeout=None):
@@ -1220,6 +1225,18 @@ def default_scheduler_reporter():
         group_added="Group has been added: #%(group_id)d: \"%(group_name)s\" (%(time_stamp)s)",
         group_end="Group completed: #%(group_id)d: \"%(group_name)s\" (%(time_stamp)s)"
     )
+
+def cleanup_atexit(sched):
+    """
+    Perform clean up actions on exit
+
+    Stops the scheduler which should kill any running jobs
+    """
+    try:
+        print("Stopping scheduler")
+        sched.stop()
+    except Exception as ex:
+        print("Exception stopping scheduler (ignored): %s" % ex)
 
 #######################################################################
 # Exception classes
