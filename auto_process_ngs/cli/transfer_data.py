@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
 #
 #########################################################################
 #
@@ -16,14 +16,15 @@ import tempfile
 from random import shuffle
 from datetime import date
 from bcftbx.JobRunner import fetch_runner
+from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
 from bcftbx.utils import format_file_size
 from ..analysis import AnalysisDir
 from ..command import Command
-from ..simple_scheduler import SchedulerJob
+from ..simple_scheduler import SimpleScheduler
 from ..fileops import exists
 from ..fileops import mkdir
-from ..fileops import copy
+from ..fileops import copy_command
 from ..settings import Settings
 from ..settings import get_config_dir
 from .. import get_version
@@ -359,6 +360,20 @@ def main():
         # No README
         readme_file = None
 
+    # Set the working directory
+    working_dir = os.getcwd()
+
+    # Set identifier for jobs
+    job_id = "%s%s" % (project_name,
+                       (".%s" % fastq_dir
+                        if fastq_dir is not None
+                        else ''))
+
+    # Start a scheduler to run jobs
+    sched = SimpleScheduler(runner=runner,
+                            poll_interval=settings.general.poll_interval)
+    sched.start()
+
     # Build command to run manage_fastqs.py
     copy_cmd = Command("manage_fastqs.py")
     if hard_links:
@@ -369,48 +384,59 @@ def main():
         copy_cmd.add_args(fastq_dir)
     copy_cmd.add_args("copy",target_dir)
     print("Running %s" % copy_cmd)
-    copy_job = SchedulerJob(runner,
-                            copy_cmd.command_line,
-                            name="copy.%s%s" % (project_name,
-                                                (fastq_dir
-                                                 if fastq_dir is not None
-                                                 else '')),
-                            working_dir=os.getcwd())
-    copy_job.start()
-    try:
-        copy_job.wait(poll_interval=settings.general.poll_interval)
-    except KeyboardInterrupt as ex:
-        logger.error("Keyboard interrupt, terminating file copy")
-        copy_job.terminate()
-        return 1
-    exit_code = copy_job.exit_code
-    if exit_code != 0:
-        logger.error("File copy exited with an error")
-        return exit_code
+    copy_job = sched.submit(copy_cmd.command_line,
+                            name="copy.%s" % job_id,
+                            wd=working_dir)
 
     # Copy README
     if readme_file is not None:
         print("Copying README file")
-        copy(readme_file,os.path.join(target_dir,"README"))
+        copy_cmd = copy_command(readme_file,
+                                os.path.join(target_dir,"README"))
+        sched.submit(copy_cmd.command_line,
+                     name="copy.%s.readme" % job_id,
+                     runner=SimpleJobRunner(),
+                     wd=working_dir)
 
     # Copy download_fastqs.py
     if downloader:
         print("Copying downloader")
-        copy(downloader,
-             os.path.join(target_dir,os.path.basename(downloader)))
+        copy_cmd = copy_command(downloader,
+                                os.path.join(
+                                    target_dir,
+                                    os.path.basename(downloader)))
+        sched.submit(copy_cmd.command_line,
+                     name="copy.%s.downloader" % job_id,
+                     runner=SimpleJobRunner(),
+                     wd=working_dir)
 
     # Copy QC reports
     if qc_zips:
         for qc_zip in qc_zips:
             print("Copying '%s'" % os.path.basename(qc_zip))
-            copy(qc_zip,
-                 os.path.join(target_dir,os.path.basename(qc_zip)),
-                 link=hard_links)
+            copy_cmd = copy_command(
+                qc_zip,
+                os.path.join(target_dir,os.path.basename(qc_zip)),
+                link=hard_links)
+            sched.submit(copy_cmd.command_line,
+                         name="copy.%s.%s" % (job_id,
+                                                os.path.basename(qc_zip)),
+                         runner=SimpleJobRunner(),
+                         wd=working_dir)
 
-    print("Files now at %s" % target_dir)
-    if weburl:
-        url = weburl
-        if subdir is not None:
-            url = os.path.join(url,subdir)
-        print("URL: %s" % url)
-    print("Done")
+    # Wait for scheduler jobs to complete
+    sched.wait()
+
+    # Check exit code for Fastq copying
+    exit_code = copy_job.exit_code
+    if exit_code != 0:
+        logger.error("File copy exited with an error")
+        return exit_code
+    else:
+        print("Files now at %s" % target_dir)
+        if weburl:
+            url = weburl
+            if subdir is not None:
+                url = os.path.join(url,subdir)
+            print("URL: %s" % url)
+        print("Done")
