@@ -300,9 +300,9 @@ def main():
         print("Locating outputs from 10xGenomics pipelines for "
               "inclusion")
         cellranger_dirs = list()
-        for subdir in ('cellranger_count',
-                       'cellranger_multi',):
-            cellranger_dir = os.path.join(project.dirn,subdir)
+        for d in ('cellranger_count',
+                  'cellranger_multi',):
+            cellranger_dir = os.path.join(project.dirn,d)
             if os.path.isdir(cellranger_dir):
                 print("... found %s" % cellranger_dir)
                 cellranger_dirs.append(cellranger_dir)
