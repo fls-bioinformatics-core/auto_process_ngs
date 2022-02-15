@@ -471,7 +471,7 @@ def main():
                                      project_name,
                                      project.info.run))
             targz_cmd = Command("tar",
-                                "czvf",
+                                "czvhf",
                                 targz,
                                 "-C",
                                 os.path.dirname(cellranger_dir),
