@@ -370,7 +370,7 @@ def main():
     # Set the working directory
     working_dir = os.path.abspath("transfer.%s.%s" % (job_id,
                                                       int(time.time())))
-    os.mkdir(working_dir)
+    mkdir(working_dir)
     print("Created working dir %s" % working_dir)
 
     # Construct the README
