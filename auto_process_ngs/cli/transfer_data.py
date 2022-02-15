@@ -20,6 +20,7 @@ from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
 from bcftbx.utils import format_file_size
 from ..analysis import AnalysisDir
+from ..analysis import AnalysisProject
 from ..command import Command
 from ..simple_scheduler import SimpleScheduler
 from ..simple_scheduler import SchedulerReporter
@@ -133,15 +134,10 @@ def main():
                      (','.join("'%s'" % d for d in sorted(destinations))))
                     if destinations else
                     "no destinations currently defined"))
-    p.add_argument('analysis_dir',action='store',
-                   metavar="ANALYSIS_DIR",
-                   help="analysis directory holding the project to "
-                   "copy Fastqs from")
-    p.add_argument('project',action='store',nargs='?',
-                   metavar="PROJECT[:FASTQ_SET]",
-                   help="project directory to copy Fastqs from; "
-                   "specifying an optional FASTQ_SET copies them "
-                   "from the named Fastq subdirectory")
+    p.add_argument('project',action='store',
+                   metavar="PROJECT",
+                   help="path to project directory (or to a Fastqs "
+                   "subdirectory in a project) to copy Fastqs from")
 
     # Process command line
     args = p.parse_args()
@@ -180,49 +176,33 @@ def main():
     if args.link:
         hard_links = args.link
 
-    # Load analysis directory and projects
-    analysis_dir = AnalysisDir(args.analysis_dir)
-    projects = analysis_dir.projects
-
-    # If no project supplied then list projects
-    if args.project is None:
-        if len(projects) == 0:
-            print("No projects found")
-        else:
-            for project in projects:
-                print("%s" % project.name)
-                if len(project.fastq_dirs) > 1:
-                    # List the fastq sets if there are more than one
-                    # and flag the primary set with an asterisk
-                    for d in project.fastq_dirs:
-                        is_primary = (d == project.info.primary_fastq_dir)
-                        print("- %s%s" % (d,
-                                          (" *" if is_primary else "")))
-        if analysis_dir.undetermined:
-            print("_undetermined")
-        return
-
-    # Sort out project and Fastq dir
-    try:
-        project_name,fastq_dir = args.project.split(':')
-    except ValueError:
-        project_name = args.project
+    # Sort out project directory
+    project = AnalysisProject(args.project)
+    if not project.is_analysis_dir:
+        # Assume it's the Fastq dir
+        fastq_dir = os.path.basename(args.project)
+        project = AnalysisProject(os.path.dirname(args.project))
+    else:
         fastq_dir = None
-    project = None
-    for p in projects:
-        if project_name == p.name:
-            project = p
-            break
-    if project is None:
-        logger.error("'%s': project not found" % project_name)
+    if not project.is_analysis_dir:
+        logger.error("'%s': project not found" % args.project)
         return 1
+    project_name = project.name
+
+    # Parent analysis directory
+    analysis_dir = AnalysisDir(os.path.dirname(project.dirn))
+
+    # Fastqs directory
     try:
         project.use_fastq_dir(fastq_dir)
     except Exception as ex:
         logger.error("'%s': failed to load Fastq set '%s': %s" %
                      (project.name,fastq_dir,ex))
         return 1
-    print("Transferring data from '%s'" % project.name)
+
+    # Report
+    print("Transferring data from '%s' (%s)" % (project.name,
+                                                project.dirn))
     print("Fastqs in %s" % project.fastq_dir)
 
     # Summarise samples and Fastqs
