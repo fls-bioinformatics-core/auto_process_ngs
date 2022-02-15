@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
 #
 #########################################################################
 #
@@ -12,18 +12,22 @@
 import os
 import re
 import argparse
-import tempfile
+import time
 from random import shuffle
 from datetime import date
 from bcftbx.JobRunner import fetch_runner
+from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
 from bcftbx.utils import format_file_size
 from ..analysis import AnalysisDir
+from ..analysis import AnalysisProject
 from ..command import Command
-from ..simple_scheduler import SchedulerJob
+from ..simple_scheduler import SimpleScheduler
+from ..simple_scheduler import SchedulerReporter
+from ..fileops import Location
 from ..fileops import exists
 from ..fileops import mkdir
-from ..fileops import copy
+from ..fileops import copy_command
 from ..settings import Settings
 from ..settings import get_config_dir
 from .. import get_version
@@ -48,6 +52,23 @@ def get_templates_dir():
         return path
     else:
         return None
+
+class TransferDataSchedulerReporter(SchedulerReporter):
+    """
+    Custom reporter for scheduler
+    """
+    def __init__(self):
+        SchedulerReporter.__init__(
+            self,
+            scheduler_status="[%(time_stamp)s] %(n_running)d running, "
+            "%(n_waiting)d waiting, %(n_finished)d finished",
+            job_scheduled="[%(time_stamp)s] scheduled job '%(job_name)s' "
+            "#%(job_number)d",
+            job_start="[%(time_stamp)s] started job '%(job_name)s' "
+            "#%(job_number)d (%(job_id)s)",
+            job_end="[%(time_stamp)s] completed job '%(job_name)s' "
+            "#%(job_number)d (%(job_id)s)"
+        )
 
 # Main function
 
@@ -94,13 +115,16 @@ def main():
     p.add_argument('--include_qc_report',action='store_true',
                    help="copy the zipped QC reports to the final "
                    "location")
+    p.add_argument('--include_10x_outputs',action='store_true',
+                   help="copy outputs from 10xGenomics pipelines (e.g. "
+                   "'cellranger count') to the final location")
     p.add_argument('--link',action='store_true',
                    help="hard link files instead of copying")
     p.add_argument('--runner',action='store',
                    help="specify the job runner to use for executing "
-                   "the checksumming and Fastq copy operations "
-                   "(defaults to job runner defined for copying in "
-                   "config file [%s])" % default_runner)
+                   "the checksumming, Fastq copy and tar gzipping "
+                   "operations (defaults to job runner defined for "
+                   "copying in config file [%s])" % default_runner)
     p.add_argument('dest',action='store',metavar="DEST",
                    help="destination to copy Fastqs to; can be the "
                    "name of a destination defined in the configuration "
@@ -110,15 +134,10 @@ def main():
                      (','.join("'%s'" % d for d in sorted(destinations))))
                     if destinations else
                     "no destinations currently defined"))
-    p.add_argument('analysis_dir',action='store',
-                   metavar="ANALYSIS_DIR",
-                   help="analysis directory holding the project to "
-                   "copy Fastqs from")
-    p.add_argument('project',action='store',nargs='?',
-                   metavar="PROJECT[:FASTQ_SET]",
-                   help="project directory to copy Fastqs from; "
-                   "specifying an optional FASTQ_SET copies them "
-                   "from the named Fastq subdirectory")
+    p.add_argument('project',action='store',
+                   metavar="PROJECT",
+                   help="path to project directory (or to a Fastqs "
+                   "subdirectory in a project) to copy Fastqs from")
 
     # Process command line
     args = p.parse_args()
@@ -157,49 +176,33 @@ def main():
     if args.link:
         hard_links = args.link
 
-    # Load analysis directory and projects
-    analysis_dir = AnalysisDir(args.analysis_dir)
-    projects = analysis_dir.projects
-
-    # If no project supplied then list projects
-    if args.project is None:
-        if len(projects) == 0:
-            print("No projects found")
-        else:
-            for project in projects:
-                print("%s" % project.name)
-                if len(project.fastq_dirs) > 1:
-                    # List the fastq sets if there are more than one
-                    # and flag the primary set with an asterisk
-                    for d in project.fastq_dirs:
-                        is_primary = (d == project.info.primary_fastq_dir)
-                        print("- %s%s" % (d,
-                                          (" *" if is_primary else "")))
-        if analysis_dir.undetermined:
-            print("_undetermined")
-        return
-
-    # Sort out project and Fastq dir
-    try:
-        project_name,fastq_dir = args.project.split(':')
-    except ValueError:
-        project_name = args.project
+    # Sort out project directory
+    project = AnalysisProject(args.project)
+    if not project.is_analysis_dir:
+        # Assume it's the Fastq dir
+        fastq_dir = os.path.basename(args.project)
+        project = AnalysisProject(os.path.dirname(args.project))
+    else:
         fastq_dir = None
-    project = None
-    for p in projects:
-        if project_name == p.name:
-            project = p
-            break
-    if project is None:
-        logger.error("'%s': project not found" % project_name)
+    if not project.is_analysis_dir:
+        logger.error("'%s': project not found" % args.project)
         return 1
+    project_name = project.name
+
+    # Parent analysis directory
+    analysis_dir = AnalysisDir(os.path.dirname(project.dirn))
+
+    # Fastqs directory
     try:
         project.use_fastq_dir(fastq_dir)
     except Exception as ex:
         logger.error("'%s': failed to load Fastq set '%s': %s" %
                      (project.name,fastq_dir,ex))
         return 1
-    print("Transferring data from '%s'" % project.name)
+
+    # Report
+    print("Transferring data from '%s' (%s)" % (project.name,
+                                                project.dirn))
     print("Fastqs in %s" % project.fastq_dir)
 
     # Summarise samples and Fastqs
@@ -211,10 +214,22 @@ def main():
         for fq in sample.fastq:
             fsize += os.lstat(fq).st_size
             nfastqs += 1
-    print("%d Fastqs from %d samples totalling %s" %
-          (nfastqs,len(samples),format_file_size(fsize)))
+    nsamples = len(samples)
+    dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
+                                if project.info.single_cell_platform else '',
+                                project.info.library_type)
+    endedness = "paired-end" if project.info.paired_end else "single-end"
+    print("%s with %d Fastqs from %d %s sample%s totalling %s" %
+          (dataset,
+           nfastqs,
+           nsamples,
+           endedness,
+           's' if nsamples != 1 else '',
+           format_file_size(fsize)))
 
     # Check target dir
+    if not Location(target_dir).is_remote:
+        target_dir = os.path.abspath(target_dir)
     if not exists(target_dir):
         print("'%s': target directory not found" % target_dir)
         return
@@ -259,6 +274,23 @@ def main():
             return 1
     else:
         qc_zips = None
+
+    # Locate 10xGenomics outputs
+    if args.include_10x_outputs:
+        print("Locating outputs from 10xGenomics pipelines for "
+              "inclusion")
+        cellranger_dirs = list()
+        for d in ('cellranger_count',
+                  'cellranger_multi',):
+            cellranger_dir = os.path.join(project.dirn,d)
+            if os.path.isdir(cellranger_dir):
+                print("... found %s" % cellranger_dir)
+                cellranger_dirs.append(cellranger_dir)
+        if not cellranger_dirs:
+            logger.error("No outputs from 10xGenomics pipelines found")
+            return 1
+    else:
+        cellranger_dirs = None
 
     # Determine subdirectory
     if subdir == "random_bin":
@@ -309,6 +341,18 @@ def main():
     else:
         runner = default_runner
 
+    # Set identifier for jobs
+    job_id = "%s%s" % (project_name,
+                       (".%s" % fastq_dir
+                        if fastq_dir is not None
+                        else ''))
+
+    # Set the working directory
+    working_dir = os.path.abspath("transfer.%s.%s" % (job_id,
+                                                      int(time.time())))
+    mkdir(working_dir)
+    print("Created working dir %s" % working_dir)
+
     # Construct the README
     if readme_template:
         # Check that template file exists
@@ -351,13 +395,18 @@ def main():
                             value,
                             readme)
         # Write out a temporary README file
-        tmpdir = tempfile.mkdtemp()
-        readme_file = os.path.join(tmpdir,"README")
+        readme_file = os.path.join(working_dir,"README")
         with open(readme_file,'wt') as fp:
             fp.write(readme)
     else:
         # No README
         readme_file = None
+
+    # Start a scheduler to run jobs
+    sched = SimpleScheduler(runner=runner,
+                            reporter=TransferDataSchedulerReporter(),
+                            poll_interval=settings.general.poll_interval)
+    sched.start()
 
     # Build command to run manage_fastqs.py
     copy_cmd = Command("manage_fastqs.py")
@@ -369,48 +418,96 @@ def main():
         copy_cmd.add_args(fastq_dir)
     copy_cmd.add_args("copy",target_dir)
     print("Running %s" % copy_cmd)
-    copy_job = SchedulerJob(runner,
-                            copy_cmd.command_line,
-                            name="copy.%s%s" % (project_name,
-                                                (fastq_dir
-                                                 if fastq_dir is not None
-                                                 else '')),
-                            working_dir=os.getcwd())
-    copy_job.start()
-    try:
-        copy_job.wait(poll_interval=settings.general.poll_interval)
-    except KeyboardInterrupt as ex:
-        logger.error("Keyboard interrupt, terminating file copy")
-        copy_job.terminate()
-        return 1
-    exit_code = copy_job.exit_code
-    if exit_code != 0:
-        logger.error("File copy exited with an error")
-        return exit_code
+    copy_job = sched.submit(copy_cmd.command_line,
+                            name="copy.%s" % job_id,
+                            wd=working_dir)
 
     # Copy README
     if readme_file is not None:
         print("Copying README file")
-        copy(readme_file,os.path.join(target_dir,"README"))
+        copy_cmd = copy_command(readme_file,
+                                os.path.join(target_dir,"README"))
+        sched.submit(copy_cmd.command_line,
+                     name="copy.%s.readme" % job_id,
+                     runner=SimpleJobRunner(),
+                     wd=working_dir)
 
     # Copy download_fastqs.py
     if downloader:
         print("Copying downloader")
-        copy(downloader,
-             os.path.join(target_dir,os.path.basename(downloader)))
+        copy_cmd = copy_command(downloader,
+                                os.path.join(
+                                    target_dir,
+                                    os.path.basename(downloader)))
+        sched.submit(copy_cmd.command_line,
+                     name="copy.%s.downloader" % job_id,
+                     runner=SimpleJobRunner(),
+                     wd=working_dir)
 
     # Copy QC reports
     if qc_zips:
         for qc_zip in qc_zips:
             print("Copying '%s'" % os.path.basename(qc_zip))
-            copy(qc_zip,
-                 os.path.join(target_dir,os.path.basename(qc_zip)),
-                 link=hard_links)
+            copy_cmd = copy_command(
+                qc_zip,
+                os.path.join(target_dir,os.path.basename(qc_zip)),
+                link=hard_links)
+            sched.submit(copy_cmd.command_line,
+                         name="copy.%s.%s" % (job_id,
+                                                os.path.basename(qc_zip)),
+                         runner=SimpleJobRunner(),
+                         wd=working_dir)
 
-    print("Files now at %s" % target_dir)
-    if weburl:
-        url = weburl
-        if subdir is not None:
-            url = os.path.join(url,subdir)
-        print("URL: %s" % url)
-    print("Done")
+    # Tar and copy 10xGenomics outputs
+    if cellranger_dirs:
+        for cellranger_dir in cellranger_dirs:
+            print("Tar gzipping and copying '%s'" %
+                  os.path.basename(cellranger_dir))
+            # Tar & gzip data
+            targz = os.path.join(working_dir,
+                                 "%s.%s.%s.tgz" % (
+                                     os.path.basename(
+                                         cellranger_dir),
+                                     project_name,
+                                     project.info.run))
+            targz_cmd = Command("tar",
+                                "czvhf",
+                                targz,
+                                "-C",
+                                os.path.dirname(cellranger_dir),
+                                os.path.basename(cellranger_dir))
+            print("Running %s" % targz_cmd)
+            targz_job = sched.submit(targz_cmd.command_line,
+                                     name="targz.%s.%s" % (
+                                         job_id,
+                                         os.path.basename(cellranger_dir)),
+                                     wd=working_dir)
+            # Copy the targz file
+            copy_cmd = copy_command(targz,
+                                    os.path.join(target_dir,
+                                                 os.path.basename(targz)))
+            print("Running %s" % copy_cmd)
+            copy_job = sched.submit(copy_cmd.command_line,
+                                    name="copytgz.%s.%s" % (
+                                        job_id,
+                                        os.path.basename(cellranger_dir)),
+                                    runner=SimpleJobRunner(),
+                                    wd=working_dir,
+                                    wait_for=(targz_job.job_name,))
+
+    # Wait for scheduler jobs to complete
+    sched.wait()
+
+    # Check exit code for Fastq copying
+    exit_code = copy_job.exit_code
+    if exit_code != 0:
+        logger.error("File copy exited with an error")
+        return exit_code
+    else:
+        print("Files now at %s" % target_dir)
+        if weburl:
+            url = weburl
+            if subdir is not None:
+                url = os.path.join(url,subdir)
+            print("URL: %s" % url)
+        print("Done")

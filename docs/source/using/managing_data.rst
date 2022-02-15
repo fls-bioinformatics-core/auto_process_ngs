@@ -84,6 +84,9 @@ For example to only copy ``R1`` files::
 ``transfer_data.py``: copying data for transfer to end users
 ************************************************************
 
+Overview
+--------
+
 The ``transfer_data.py`` utility can be used to copy data from analysis
 projects to different destinations, typically to transfer copies of
 data to end users.
@@ -93,10 +96,10 @@ will be copied, for example in its most basic mode:
 
 ::
 
-    transfer_data.py /mnt/data/shared ANALYSIS_DIR PROJECT
+    transfer_data.py /mnt/data/shared PROJECT_DIR
 
-will copy Fastq files from the ``PROJECT`` project in ``ANALYSIS_DIR``
-to the local directory ``/mnt/data/shared``.
+will copy Fastq files from the project referenced by ``PROJECT_PATH`` to
+the local directory ``/mnt/data/shared``.
 
 Destinations can also be defined in the configuration file (see
 :ref:`data_transfer_destinations`) and then referred to by their
@@ -106,7 +109,7 @@ For example:
 
 ::
 
-    transfer_data.py webserver ANALYSIS_DIR PROJECT
+    transfer_data.py webserver PROJECT_DIR
 
 where ``webserver`` is a pre-defined destination.
 
@@ -158,8 +161,8 @@ Placeholder       Value
 ``%TODAY%``       Today's date
 ================  =================================
 
-Including downloader and QC reports
------------------------------------
+Including downloader, QC reports and 10xGenomics pipeline outputs
+-----------------------------------------------------------------
 
 By default only Fastqs are copied by ``transfer_data.py``, however it
 is possible to include additional files:
@@ -170,6 +173,9 @@ is possible to include additional files:
  * The zipped QC reports for the project (specify the
    ``--include_qc_report`` option or set the ``include_qc_report``
    parameter)
+ * Outputs from 10xGenomics pipelines (e.g. ``cellranger count``)
+   packaged into a ``tgz`` archive (specify the
+   ``--include_10x_outputs`` option)
 
 Hard linking Fastqs
 -------------------
