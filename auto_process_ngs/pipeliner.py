@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 """
 Module providing utility classes and functions for building simple
@@ -1118,6 +1118,8 @@ from .conda import CondaWrapperError
 from .conda import make_conda_env_name
 from .simple_scheduler import SimpleScheduler
 from .simple_scheduler import SchedulerReporter
+from .utils import FileLock
+from .utils import FileLockError
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -1417,7 +1419,7 @@ class Capturing:
     >>> for line in output.stdout:
     ...     print("Line: %s" % line)
     >>> for line in output.stderr:
-    ...     print("Err: %s" % line
+    ...     print("Err: %s" % line)
     """
     def __init__(self):
         self.stdout = list()
@@ -2096,7 +2098,7 @@ class Pipeline:
                                              "__conda",
                                              "envs")
             if not os.path.exists(conda_env_dir):
-                os.makedirs(conda_env_dir)
+                os.makedirs(conda_env_dir,exist_ok=True)
             # Set up wrapper class
             conda = CondaWrapper(conda=conda,env_dir=conda_env_dir)
             if not conda.is_installed:
@@ -3086,8 +3088,21 @@ class PipelineTask:
             self.report("using conda to resolve dependencies:")
             for dep in self.conda_dependencies:
                 self.report("- %s" % dep)
-            conda_env = self.setup_conda_env(conda,
-                                             env_dir=conda_env_dir)
+            conda_env_dir = CondaWrapper(conda=conda,
+                                         env_dir=conda_env_dir).env_dir
+            try:
+                with FileLock(conda_env_dir,timeout=600):
+                    conda_env = self.setup_conda_env(
+                        conda,
+                        env_dir=conda_env_dir)
+            except Exception as ex:
+                # Failure attempting to acquire conda env
+                self.report("ERROR failed to acquire conda "
+                            "environment: %s" % ex)
+                # Force premature exit with failure
+                self._exit_code = 1
+                self.finish_task()
+                return
         else:
             conda_env = None
         # Handle command batching
