@@ -1011,11 +1011,45 @@ prepend-path PATH %s
                     self.output.files.append(f)
         # Build the pipeline
         ppl = Pipeline()
-        ppl.add_envmodules("fastqc")
         task = RunFastqc("Run Fastqc",
                          "sample1.fastq","sample2.fastq")
-        ppl.add_task(task,
-                     envmodules=ppl.envmodules["fastqc"])
+        ppl.add_task(task)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              enable_conda=True,
+                              conda=conda_,
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the outputs
+        self.assertEqual(exit_status,1)
+
+    def test_pipeline_with_conda_fail_to_activate_environment(self):
+        """
+        Pipeline: handle failure with activating conda environment
+        """
+        # Set up mock conda with failing create command
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"conda"),
+                                     activate_fails=True)
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.conda("fastqc=0.11.3")
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task)
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
                               enable_conda=True,
@@ -3023,6 +3057,10 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### START $(date)\"\n"
                 "echo source /usr/local/conda/bin/activate /work/__conda/envs\n"
                 "source /usr/local/conda/bin/activate /work/__conda/envs\n"
+                "if [ $? -ne 0 ] ; then\n"
+                "  echo Failed to activate conda environment >&2\n"
+                "  exit 1\n"
+                "fi\n"
                 "echo \"#### CWD $(pwd)\"\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"

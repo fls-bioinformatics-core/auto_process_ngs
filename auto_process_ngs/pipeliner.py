@@ -3465,8 +3465,14 @@ class PipelineCommand:
         if conda_env:
             conda_activate_cmd = \
                 str(CondaWrapper(conda).activate_env_cmd(conda_env))
-            prologue.extend(["echo %s" % conda_activate_cmd,
-                             conda_activate_cmd])
+            conda_script = \
+                        ["echo %s" % conda_activate_cmd,
+                         conda_activate_cmd,
+                         "if [ $? -ne 0 ] ; then",
+                         "  echo Failed to activate conda environment >&2",
+                         "  exit 1",
+                         "fi"]
+            prologue.extend(conda_script)
         if working_dir:
             prologue.append("cd %s" % working_dir)
         prologue.append("echo \"#### CWD $(pwd)\"")
