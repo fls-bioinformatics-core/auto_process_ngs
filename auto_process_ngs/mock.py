@@ -2846,7 +2846,8 @@ class MockConda:
     """
 
     @staticmethod
-    def create(path,version="4.10.3",create_fails=False,exit_code=0):
+    def create(path,version="4.10.3",create_fails=False,
+               activate_fails=False,exit_code=0):
         """
         Create a "mock" fastq_strand.py executable
 
@@ -2860,6 +2861,10 @@ class MockConda:
           create_fails (bool): if True then the
             'create' subcommand of the mock
             conda executable will fail.
+          activate_fails (bool): if True then
+            the 'activate' script in the mock conda
+            installation will return with value 1
+            (i.e. an error code).
           exit_code (int): exit code that the
             mock executable should complete with
         """
@@ -2949,6 +2954,10 @@ fi
         with open(activate_,'wt') as fp:
             fp.write("""#!/bin/bash
 export PATH=$PATH:${1}
+""")
+            if activate_fails:
+                fp.write("""echo Activate failed
+return 1
 """)
             os.chmod(activate_,0o755)
         with open(conda_,'rt') as fp:
