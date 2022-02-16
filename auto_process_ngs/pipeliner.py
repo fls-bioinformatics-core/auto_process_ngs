@@ -3461,7 +3461,13 @@ class PipelineCommand:
                 pass
             for module in envmodules:
                 if module is not None:
-                    prologue.append("module load %s" % module)
+                    module_script = \
+                        ["module load %s" % module,
+                         "if [ $? -ne 0 ] ; then",
+                         "  echo Failed to load environment module >&2",
+                         "  exit 1",
+                         "fi"]
+                    prologue.extend(module_script)
         if conda_env:
             conda_activate_cmd = \
                 str(CondaWrapper(conda).activate_env_cmd(conda_env))
