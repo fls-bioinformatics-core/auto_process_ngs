@@ -2967,7 +2967,21 @@ class PipelineTask:
         env_name = self.conda_env_name
         # Fetch the environment
         conda_env = None
-        if env_name not in conda.list_envs:
+        if env_name in conda.list_envs:
+            # Use existing environment
+            self.report("using existing conda environment "
+                        "'%s'" % env_name)
+            conda_env = os.path.join(conda.env_dir,
+                                     env_name)
+            # Check that environment can be activated
+            if conda_env:
+                if not conda.verify_env(conda_env):
+                    # Can't activate the environment
+                    self.report("WARNING the task may fail as the "
+                                "required conda environment '%s' "
+                                "cannot be activated successfully"
+                                % env_name)
+        else:
             # Create new environment
             self.report("attempting to create new conda "
                         "environment '%s'" % env_name)
@@ -2992,20 +3006,6 @@ class PipelineTask:
                 self.report("WARNING the task may fail "
                             "as the required environment "
                             "couldn't be created")
-        else:
-            # Use existing environment
-            self.report("using existing conda environment "
-                        "'%s'" % env_name)
-            conda_env = os.path.join(conda.env_dir,
-                                     env_name)
-            # Check that environment can be activated
-            if conda_env:
-                if not conda.verify_env(conda_env):
-                    # Can't activate the environment
-                    self.report("WARNING the task may fail as the "
-                                "required conda environment '%s' "
-                                "cannot be activated successfully"
-                                % env_name)
         return conda_env
 
     def run(self,sched=None,runner=None,envmodules=None,enable_conda=False,
