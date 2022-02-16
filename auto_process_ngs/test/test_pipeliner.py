@@ -929,11 +929,9 @@ prepend-path PATH %s
                     self.output.files.append(f)
         # Build the pipeline
         ppl = Pipeline()
-        ppl.add_envmodules("fastqc")
         task = RunFastqc("Run Fastqc",
                          "sample1.fastq","sample2.fastq")
-        ppl.add_task(task,
-                     envmodules=ppl.envmodules["fastqc"])
+        ppl.add_task(task)
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
                               enable_conda=True,
@@ -970,11 +968,9 @@ prepend-path PATH %s
                     self.output.files.append(f)
         # Build the pipeline
         ppl = Pipeline()
-        ppl.add_envmodules("fastqc")
         task = RunFastqc("Run Fastqc",
                          "sample1.fastq","sample2.fastq")
-        ppl.add_task(task,
-                     envmodules=ppl.envmodules["fastqc"])
+        ppl.add_task(task)
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
                               enable_conda=True,
