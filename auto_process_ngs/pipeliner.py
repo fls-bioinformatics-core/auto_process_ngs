@@ -2998,6 +2998,14 @@ class PipelineTask:
                         "'%s'" % env_name)
             conda_env = os.path.join(conda.env_dir,
                                      env_name)
+            # Check that environment can be activated
+            if conda_env:
+                if not conda.verify_env(conda_env):
+                    # Can't activate the environment
+                    self.report("WARNING the task may fail as the "
+                                "required conda environment '%s' "
+                                "cannot be activated successfully"
+                                % env_name)
         return conda_env
 
     def run(self,sched=None,runner=None,envmodules=None,enable_conda=False,

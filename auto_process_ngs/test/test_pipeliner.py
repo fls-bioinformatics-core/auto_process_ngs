@@ -941,6 +941,51 @@ prepend-path PATH %s
         # Check the outputs
         self.assertEqual(exit_status,0)
 
+    def test_pipeline_with_conda_existing_environment(self):
+        """
+        Pipeline: run with existing conda environment
+        """
+        # Set up mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.conda("fastqc=0.11.3")
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Mock an existing conda environment (with a mock
+        # 'fastqc' exe) for the task
+        env_path = os.path.join(self.working_dir,
+                                "__conda",
+                                "envs",
+                                "fastqc@0.11.3")
+        os.makedirs(env_path)
+        with open(os.path.join(env_path,"fastqc"),'wt') as fp:
+            fp.write("#!/bin/bash\necho $1\exit 0\n")
+        os.chmod(os.path.join(env_path,"fastqc"),0o755)
+        # Build the pipeline
+        ppl = Pipeline()
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              enable_conda=True,
+                              conda=conda_,
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+
     def test_pipeline_with_conda_custom_env_dir(self):
         """
         Pipeline: use custom env directory with conda dependency resolution
@@ -1019,9 +1064,9 @@ prepend-path PATH %s
         # Check the outputs
         self.assertEqual(exit_status,1)
 
-    def test_pipeline_with_conda_fail_to_activate_environment(self):
+    def test_pipeline_with_conda_fail_to_activate_new_environment(self):
         """
-        Pipeline: handle failure with activating conda environment
+        Pipeline: handle failure to activate new conda environment
         """
         # Set up mock conda with failing create command
         conda_dir = MockConda.create(os.path.join(self.working_dir,"conda"),
@@ -1041,6 +1086,47 @@ prepend-path PATH %s
             def finish(self):
                 for f in self.args.files:
                     self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              enable_conda=True,
+                              conda=conda_,
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the outputs
+        self.assertEqual(exit_status,1)
+
+    def test_pipeline_with_conda_fail_to_activate_existing_environment(self):
+        """
+        Pipeline: handle failure to activate existing conda environment
+        """
+        # Set up mock conda with failing create command
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"conda"),
+                                     activate_fails=True)
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.conda("fastqc=0.11.3")
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Mock an existing conda environment for the task
+        os.makedirs(os.path.join(self.working_dir,
+                                 "__conda",
+                                 "envs",
+                                 "fastqc@0.11.3"))
         # Build the pipeline
         ppl = Pipeline()
         task = RunFastqc("Run Fastqc",
