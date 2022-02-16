@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     conda.py: utilities for managing conda environments
-#     Copyright (C) University of Manchester 2021 Peter Briggs
+#     Copyright (C) University of Manchester 2021-2022 Peter Briggs
 #
 """
 Module providing utility classes and functions to help with managing
@@ -21,6 +21,7 @@ Module providing utility classes and functions to help with managing
 import os
 import tempfile
 import logging
+import subprocess
 from urllib.request import urlopen
 from urllib.error import URLError
 from bcftbx.JobRunner import ResourceLock
@@ -253,6 +254,31 @@ class CondaWrapper:
                 name)
         else:
             return None
+
+    def verify_env(self,name):
+        """
+        Check whether conda environment can be activated
+
+        Arguments:
+          name (str): name/path of the environment to
+            check
+
+        Returns:
+          Boolean: True if activate command returned status
+            zero, False otherwise.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            script_file = os.path.join(d,"verify_env.sh")
+            self.activate_env_cmd(name).make_wrapper_script(
+                shell="/bin/bash",
+                epilogue=\
+                "if [ $? -ne 0 ] ; then\n  exit 1\nfi\n",
+                filen=script_file)
+            os.chmod(script_file,0o755)
+            retcode = subprocess.run([script_file,],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE).returncode
+            return (retcode == 0)
 
 ######################################################################
 # Custom exceptions

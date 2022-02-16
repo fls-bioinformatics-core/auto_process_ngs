@@ -33,7 +33,8 @@ class TestCondaWrapper(unittest.TestCase):
         # Restore PATH
         os.environ['PATH'] = self.save_path
 
-    def _make_mock_conda(self,create_fails=False):
+    def _make_mock_conda(self,create_fails=False,
+                         activate_fails=False):
         # Internal: make a mock conda installation
         self.conda_dir = os.path.join(self.working_dir,
                                       "conda")
@@ -43,7 +44,8 @@ class TestCondaWrapper(unittest.TestCase):
                                           "envs")
         # Create mock conda using supplied options
         MockConda.create(self.conda_dir,
-                         create_fails=create_fails)
+                         create_fails=create_fails,
+                         activate_fails=activate_fails)
         self.conda = os.path.join(self.conda_bin_dir,"conda")
         # Update PATH (put mock conda first)
         os.environ['PATH'] = self.conda_bin_dir + \
@@ -178,6 +180,24 @@ class TestCondaWrapper(unittest.TestCase):
                              'source',
                              os.path.join(self.conda_bin_dir,'activate'),
                              'fastqc@0.11.3').command_line)
+
+    def test_conda_wrapper_verify_environment(self):
+        """
+        CondaWrapper: verify environment can be activated
+        """
+        self._make_mock_conda()
+        os.makedirs(os.path.join(self.conda_env_dir,'fastqc@0.11.3'))
+        conda = CondaWrapper(conda=self.conda)
+        self.assertTrue(conda.verify_env("fastqc@0.11.3"))
+
+    def test_conda_wrapper_verify_fails_for_bad_environment(self):
+        """
+        CondaWrapper: verify fails for 'bad' environment
+        """
+        self._make_mock_conda(activate_fails=True)
+        os.makedirs(os.path.join(self.conda_env_dir,'fastqc@0.11.3'))
+        conda = CondaWrapper(conda=self.conda)
+        self.assertFalse(conda.verify_env("fastqc@0.11.3"))
 
     def test_conda_wrapper_create_env_raise_exception_on_error(self):
         """

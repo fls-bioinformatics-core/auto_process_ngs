@@ -1233,7 +1233,6 @@ def cleanup_atexit(sched):
     Stops the scheduler which should kill any running jobs
     """
     try:
-        print("Stopping scheduler")
         sched.stop()
     except Exception as ex:
         print("Exception stopping scheduler (ignored): %s" % ex)

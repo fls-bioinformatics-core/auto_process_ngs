@@ -2967,7 +2967,21 @@ class PipelineTask:
         env_name = self.conda_env_name
         # Fetch the environment
         conda_env = None
-        if env_name not in conda.list_envs:
+        if env_name in conda.list_envs:
+            # Use existing environment
+            self.report("using existing conda environment "
+                        "'%s'" % env_name)
+            conda_env = os.path.join(conda.env_dir,
+                                     env_name)
+            # Check that environment can be activated
+            if conda_env:
+                if not conda.verify_env(conda_env):
+                    # Can't activate the environment
+                    self.report("WARNING the task may fail as the "
+                                "required conda environment '%s' "
+                                "cannot be activated successfully"
+                                % env_name)
+        else:
             # Create new environment
             self.report("attempting to create new conda "
                         "environment '%s'" % env_name)
@@ -2992,12 +3006,6 @@ class PipelineTask:
                 self.report("WARNING the task may fail "
                             "as the required environment "
                             "couldn't be created")
-        else:
-            # Use existing environment
-            self.report("using existing conda environment "
-                        "'%s'" % env_name)
-            conda_env = os.path.join(conda.env_dir,
-                                     env_name)
         return conda_env
 
     def run(self,sched=None,runner=None,envmodules=None,enable_conda=False,
@@ -3461,12 +3469,24 @@ class PipelineCommand:
                 pass
             for module in envmodules:
                 if module is not None:
-                    prologue.append("module load %s" % module)
+                    module_script = \
+                        ["module load %s" % module,
+                         "if [ $? -ne 0 ] ; then",
+                         "  echo Failed to load environment module >&2",
+                         "  exit 1",
+                         "fi"]
+                    prologue.extend(module_script)
         if conda_env:
             conda_activate_cmd = \
                 str(CondaWrapper(conda).activate_env_cmd(conda_env))
-            prologue.extend(["echo %s" % conda_activate_cmd,
-                             conda_activate_cmd])
+            conda_script = \
+                        ["echo %s" % conda_activate_cmd,
+                         conda_activate_cmd,
+                         "if [ $? -ne 0 ] ; then",
+                         "  echo Failed to activate conda environment >&2",
+                         "  exit 1",
+                         "fi"]
+            prologue.extend(conda_script)
         if working_dir:
             prologue.append("cd %s" % working_dir)
         prologue.append("echo \"#### CWD $(pwd)\"")
