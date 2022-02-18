@@ -289,6 +289,14 @@ if __name__ == "__main__":
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
+    # Experimental options
+    experimental = p.add_argument_group('Experimental options')
+    experimental.add_argument("--include-extended-metrics",
+                              dest="include_extended_metrics",
+                              action='store_true',
+                              help="include generation of additional "
+                              "QC metrics (e.g. insert size, gene "
+                              "body coverage etc)")
     # Debugging options
     debugging = p.add_argument_group('Debugging options')
     debugging.add_argument('--verbose',action="store_true",
@@ -752,7 +760,8 @@ if __name__ == "__main__":
                       qc_dir=qc_dir,
                       qc_protocol=args.qc_protocol,
                       report_html=out_file,
-                      multiqc=(not args.no_multiqc))
+                      multiqc=(not args.no_multiqc),
+                      include_extended_metrics=args.include_extended_metrics)
     status = runqc.run(nthreads=nthreads,
                        fastq_screens=fastq_screens,
                        fastq_subset=args.fastq_screen_subset,
