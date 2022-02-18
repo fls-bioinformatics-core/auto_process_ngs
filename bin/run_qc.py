@@ -500,6 +500,18 @@ if __name__ == "__main__":
         if star_index:
             star_indexes[organism] = star_index
 
+    # Annotation files
+    annotation_bed_files = dict()
+    for organism in __settings.organisms:
+        annotation_bed_file = __settings.organisms[organism].annotation_bed
+        if annotation_bed_file:
+            annotation_bed_files[organism] = annotation_bed_file
+    annotation_gtf_files = dict()
+    for organism in __settings.organisms:
+        annotation_gtf_file = __settings.organisms[organism].annotation_gtf
+        if annotation_gtf_file:
+            annotation_gtf_files[organism] = annotation_gtf_file
+
     # Cellranger settings
     cellranger_settings = __settings['10xgenomics']
 
@@ -745,6 +757,8 @@ if __name__ == "__main__":
                        fastq_screens=fastq_screens,
                        fastq_subset=args.fastq_screen_subset,
                        star_indexes=star_indexes,
+                       annotation_bed_files=annotation_bed_files,
+                       annotation_gtf_files=annotation_gtf_files,
                        cellranger_chemistry=\
                        args.cellranger_chemistry,
                        cellranger_force_cells=\
