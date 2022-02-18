@@ -30,6 +30,8 @@ Pipeline task classes:
 - RunCellrangerCount
 - RunCellrangerMulti
 - SetCellCountFromCellrangerCount
+- GetReferenceDataset
+- GetBAMFiles
 - ReportQC
 
 Also imports the following pipeline tasks:
@@ -46,15 +48,20 @@ import os
 import logging
 import tempfile
 import shutil
+import random
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
+from bcftbx.ngsutils import getreads
+from bcftbx.ngsutils import getreads_subset
+from ..analysis import AnalysisFastq
 from ..analysis import copy_analysis_project
 from ..bcl2fastq.pipeline import Get10xPackage
 from ..bcl2fastq.pipeline import FunctionParam
 from ..command import Command
 from ..fastq_utils import pair_fastqs_by_name
+from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline
 from ..pipeliner import PipelineTask
@@ -150,7 +157,8 @@ class QCPipeline(Pipeline):
 
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
                     qc_protocol=None,report_html=None,multiqc=False,
-                    sample_pattern=None,log_dir=None):
+                    sample_pattern=None,log_dir=None,
+                    include_extended_metrics=False):
         """
         Add a project to the QC pipeline
 
@@ -173,6 +181,9 @@ class QCPipeline(Pipeline):
           log_dir (str): directory to write log files to
             (defaults to 'logs' subdirectory of the QC
             directory)
+          include_extended_metrics (bool): if True then
+            include generation of extended QC metrics in
+            the pipeline (experimental feature)
         """
         ###################
         # Do internal setup
@@ -212,6 +223,7 @@ class QCPipeline(Pipeline):
         self.report("-- Library   : %s" % project.info.library_type)
         self.report("-- Organism  : %s" % organism)
         self.report("-- Report    : %s" % report_html)
+        self.report("-- ExtendedQC: %s" % include_extended_metrics)
 
         ####################
         # Build the pipeline
@@ -590,6 +602,16 @@ class QCPipeline(Pipeline):
                 required_tasks=(setup_qc_dirs,))
             verify_qc.requires(run_cellranger_count)
 
+        # Optional additional QC metrics
+        if include_extended_metrics and organism:
+            self.add_extended_metrics(project,
+                                      qc_protocol,
+                                      qc_dir,
+                                      organism,
+                                      log_dir,
+                                      pre_tasks=(setup_qc_dirs,),
+                                      post_tasks=(report_qc,))
+
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_protocol,chemistry,
                              force_cells,log_dir,samples=None,
@@ -749,6 +771,76 @@ class QCPipeline(Pipeline):
 
         # Return the 'cellranger count' task
         return run_cellranger_count
+
+    def add_extended_metrics(self,project,qc_protocol,qc_dir,
+                             organism,log_dir,pre_tasks,post_tasks):
+        """
+        Add additional optional QC metrics for a project
+
+        Arguments:
+          project (AnalysisProject): project to run additional
+            QC metrics for
+          qc_protocol (str): QC protocol to use
+          qc_dir (str): directory for QC outputs
+          organism (str): organism(s) associated with the
+            run
+          log_dir (str): directory for log files (defaults
+            to 'logs' subdirectory of the QC directory
+          pre_tasks (list): list of tasks that must complete
+            before the extended metrics tasks can run
+          post_tasks (list): list of tasks that depend on
+            for the extended metrics to complete
+        """
+        # Read numbers with sequence data (based on protocol)
+        # Used to set which Fastqs should be mapped
+        if qc_protocol == "standardPE":
+            use_reads = (1,2)
+        elif qc_protocol == "standardSE":
+            use_reads = (1,)
+        elif qc_protocol in ("singlecell",
+                             "10x_scRNAseq",
+                             "10x_snRNAseq",
+                             "10x_Visium",
+                             "10x_Multiome_GEX",
+                             "10x_CellPlex",):
+            use_reads = (2,)
+        elif qc_protocol in ("10x_scATAC",
+                             "10x_snATAC",
+                             "10x_Multiome_ATAC",):
+            use_reads = (1,3)
+        else:
+            raise PipelineError("%s: unrecognised protocol for "
+                                "extended QC metrics" % qc_protocol)
+
+        # Sanitise organism name
+        organism_name = str(organism).\
+                        strip().\
+                        lower().\
+                        replace(' ','_')
+
+        # Indicate if data are paired
+        paired = (len(use_reads) > 1)
+
+        # Set up tasks for BAM file generation
+        get_star_index = GetReferenceDataset(
+            "%s: get STAR index for '%s'" % (project.name,
+                                             organism),
+            organism,
+            self.params.star_indexes)
+        self.add_task(get_star_index)
+        get_bam_files = GetBAMFiles(
+            "%s: get BAM files" % project.name,
+            project.fastqs,
+            get_star_index.output.reference_dataset,
+            os.path.join(qc_dir,'bam_files',organism_name),
+            self.params.fastq_subset,
+            self.params.nthreads,
+            reads=use_reads,
+            verbose=self.params.VERBOSE)
+        self.add_task(get_bam_files,
+                      requires=pre_tasks,
+                      runner=self.runners['star_runner'],
+                      log_dir=log_dir)
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             fastq_subset=None,cellranger_chemistry='auto',
@@ -2513,6 +2605,246 @@ class SetCellCountFromCellrangerCount(PipelineTask):
                                        self.args.qc_dir)
         except Exception as ex:
             print("Failed to set the cell count: %s" % ex)
+
+class GetReferenceDataset(PipelineTask):
+    """
+    Acquire reference data for an organism from mapping
+
+    Generic lookup task which attempts to locate the matching
+    reference dataset from a mapping/dictionary.
+    """
+    def init(self,organism,references):
+        """
+        Initialise the GetReferenceDataset task
+
+        Arguments:
+          organism (str): name of the organism
+          references (mapping): mapping with organism names
+            as keys and reference datasets as corresponding
+            values
+
+        Outputs:
+          reference_dataset: reference dataset (set to None
+            if no dataset could be located)
+        """
+        self.add_output('reference_dataset',Param(type='str'))
+    def setup(self):
+        organism = str(self.args.organism).lower()
+        try:
+            self.output.reference_dataset.set(self.args.references[organism])
+            print("%s: located %s" % (organism,
+                                      self.output.reference_dataset.value))
+        except Exception as ex:
+            print("Unable to locate reference data for organism '%s'"
+                  % organism)
+
+class GetBAMFiles(PipelineFunctionTask):
+    """
+    Create BAM files from Fastqs using STAR
+
+    Runs STAR to generate BAM files from Fastq files. The
+    BAMs are then sorted and indexed using samtools.
+    """
+    def init(self,fastqs,star_index,out_dir,subset_size=None,
+             nthreads=None,reads=None,fastq_attrs=None,
+             verbose=False):
+        """
+        Initialise the GetBamFiles task
+
+        Arguments:
+          fastqs (list): list of Fastq files to generate
+            BAM files from
+          star_index (str): path to STAR index to use
+          out_dir (str): path to directory to write final
+            BAM files to
+          subset_size (int): specify size of a random subset
+            of reads to use in BAM file generation
+          nthreads (int): number of cores for STAR
+            to use
+          reads (list): optional, list of read numbers to
+            include (e.g. [1,2], [2] etc)
+          fastq_attrs (IlluminaFastq): optional, class to
+            use for extracting information from Fastq file
+            names
+          verbose (bool): if True then print additional
+            information from the task
+
+        Outputs:
+          bam_files: list of sorted BAM files
+        """
+        # Conda dependencies
+        self.conda("star=2.4.2a",
+                   "samtools")
+        # Internal variables
+        self._bam_files = list()
+        # Outputs
+        self.add_output('bam_files',ListParam())
+    def setup(self):
+        # Check for STAR index
+        if self.args.star_index:
+            print("STAR index: %s" % self.args.star_index)
+        else:
+            self.report("STAR index is not set, cannot generate BAM files")
+            return
+        # Remove index reads and group Fastqs
+        fq_pairs = group_fastqs_by_name(
+            remove_index_fastqs(self.args.fastqs))
+        # Filter reads
+        if self.args.fastq_attrs:
+            fastq_attrs = self.args.fastq_attrs
+        else:
+            fastq_attrs = AnalysisFastq
+        if self.args.reads:
+            filtered_pairs = []
+            for fq_pair in fq_pairs:
+                filtered_pair = []
+                for fq in fq_pair:
+                    if fastq_attrs(fq).read_number in self.args.reads:
+                        filtered_pair.append(fq)
+                filtered_pairs.append(filtered_pair)
+            fq_pairs = filtered_pairs
+        # Deal with threads
+        if self.args.nthreads:
+            nthreads = self.args.nthreads
+        else:
+            nthreads = self.runner_nslots
+        # Check for output directory
+        if not os.path.exists(self.args.out_dir):
+            print("Making output dir: %s" % self.args.out_dir)
+            os.makedirs(self.args.out_dir)
+        # Check each Fastq pair to see if a corresponding
+        # BAM file already exists
+        for fq_pair in fq_pairs:
+            if self.args.verbose:
+                print("-- Fastq pair: %s" % fq_pair)
+            bam_file = os.path.basename(fq_pair[0])
+            while bam_file.split('.')[-1] in ('fastq','gz'):
+                bam_file = '.'.join(bam_file.split('.')[:-1])
+            bam_file = os.path.join(self.args.out_dir,
+                                    "%s.bam" % bam_file)
+            if self.args.verbose:
+                print("   BAM file: %s" % bam_file)
+            # Add to the list of expected outputs
+            self._bam_files.append(bam_file)
+            if not os.path.exists(bam_file) and self.args.star_index:
+                # Generate BAM file
+                self.add_call("Make BAM file",
+                              self.make_bam_file,
+                              fq_pair,
+                              self.args.star_index,
+                              bam_file,
+                              size=self.args.subset_size,
+                              nthreads=nthreads)
+    def make_bam_file(self,fastqs,genomedir,bam_file,size=None,
+                      nthreads=None):
+        ##############################
+        # Generate and sort a BAM file
+        ##############################
+        # Basename and prefix for output files
+        basename = os.path.basename(bam_file[:-4])
+        prefix = "%s_" % basename
+        # Make a temporary directory for fastqs
+        if size:
+            fastqs_dir = os.path.abspath("__%s_subset%d" % (basename,size))
+        else:
+            fastqs_dir = os.path.abspath("__%s" % basename)
+        print("Creating directory for Fastq subsetting: %s" % fastqs_dir)
+        mkdir(fastqs_dir)
+        # Generate subset of input reads
+        nreads = sum(1 for i in getreads(os.path.abspath(fastqs[0])))
+        if not size:
+            print("Using all reads/read pairs in Fastq file(s)")
+            size = nreads
+        elif size > nreads:
+            print("Number of reads smaller than requested subset")
+            size = nreads
+        else:
+            print("Using random subset of %d reads/read pairs"
+                  % size)
+        # Generate subset indices to extract
+        if size == nreads:
+            subset_indices = [i for i in range(nreads)]
+        else:
+            subset_indices = random.sample(range(nreads),size)
+        # Do the subsetting
+        fqs_in = filter(lambda fq: fq is not None,fastqs)
+        fastqs = []
+        for fq in fqs_in:
+            fq_subset = os.path.join(fastqs_dir,os.path.basename(fq))
+            if fq_subset.endswith(".gz"):
+                fq_subset = '.'.join(fq_subset.split('.')[:-1])
+            with open(fq_subset,'w') as fp:
+                for read in getreads_subset(os.path.abspath(fq),
+                                            subset_indices):
+                    fp.write('\n'.join(read) + '\n')
+                fastqs.append(fq_subset)
+        # Make a temporary directory for STAR
+        star_dir = os.path.abspath("__%s_STAR" % basename)
+        print("Creating directory for STAR subsetting: %s" % star_dir)
+        mkdir(star_dir)
+        # Output BAM file name will be "<prefix>Aligned.out.bam"
+        star_bam_file = os.path.join(star_dir,
+                                     "%sAligned.out.bam" % prefix)
+        # Build the STAR command line for mapping
+        star_cmd = Command('STAR',
+                           '--runMode','alignReads',
+                           '--genomeLoad','NoSharedMemory',
+                           '--genomeDir',os.path.abspath(genomedir),
+                           '--readFilesIn',fastqs[0])
+        if len(fastqs) > 1:
+            star_cmd.add_args(fastqs[1])
+        star_cmd.add_args('--outSAMtype','BAM','Unsorted',
+                          '--outSAMstrandField','intronMotif',
+                          '--outFileNamePrefix',prefix,
+                          '--runThreadN',nthreads)
+        print("Running %s" % star_cmd)
+        status = star_cmd.run_subprocess(working_dir=star_dir)
+        if status != 0:
+            raise Exception("STAR returned non-zero exit code: %s"
+                            % status)
+        # Make a temporary directory for sorting the BAM file
+        sort_dir = os.path.abspath("__%s_sort" % basename)
+        print("Creating directory for sorting BAM file: %s" % sort_dir)
+        mkdir(sort_dir)
+        # Sort the BAM file
+        sorted_bam_file = os.path.join(sort_dir,
+                                       "%s.sorted.bam" %
+                                       os.path.basename(star_bam_file)[:-4])
+        # Run the sorting
+        samtools_sort_cmd = Command('samtools',
+                                    'sort',
+                                    '-o',
+                                    sorted_bam_file,
+                                    star_bam_file)
+        print("Running %s" % samtools_sort_cmd)
+        status = samtools_sort_cmd.run_subprocess(working_dir=sort_dir)
+        if status != 0:
+            raise Exception("samtools sort returned non-zero exit code: %s" %
+                            status)
+        # Index the sorted BAM file (makes BAI file)
+        sorted_bam_file_index = "%s.bai" % sorted_bam_file
+        samtools_index_cmd = Command('samtools',
+                                     'index',
+                                     sorted_bam_file,
+                                     sorted_bam_file_index)
+        print("Running %s" % samtools_index_cmd)
+        status = samtools_index_cmd.run_subprocess(working_dir=sort_dir)
+        if status != 0:
+            raise Exception("samtools index returned non-zero exit code: %s" %
+                            status)
+        # Move the BAM and BAI files to final location
+        os.rename(sorted_bam_file,bam_file)
+        os.rename(sorted_bam_file_index,"%s.bai" % bam_file)
+        # Remove the temporary working directories
+        for dirn in (fastqs_dir,star_dir,sort_dir):
+            print("Removing %s" % dirn)
+            shutil.rmtree(dirn)
+        # Return the BAM file name
+        return bam_file
+    def finish(self):
+        for bam_file in self._bam_files:
+            if os.path.exists(bam_file):
+                self.output.bam_files.append(bam_file)
 
 class VerifyQC(PipelineFunctionTask):
     """
