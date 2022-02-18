@@ -816,8 +816,8 @@ class QCPipeline(Pipeline):
                              "10x_Multiome_ATAC",):
             use_reads = (1,3)
         else:
-            raise PipelineError("%s: unrecognised protocol for "
-                                "extended QC metrics" % qc_protocol)
+            raise Exception("%s: unrecognised protocol for "
+                            "extended QC metrics" % qc_protocol)
 
         # Sanitise organism name
         organism_name = str(organism).\
