@@ -505,6 +505,8 @@ class Settings:
 
         - star_index (str, path to STAR index)
         - bowtie_index (str, path to Bowtie index)
+        - annotation_bed (str, path to BED file with annotation)
+        - annotation_gtf (str, path to GTF file with annotation)
         - cellranger_reference (str)
         - cellranger_premrna_reference (str)
         - cellranger_atac_reference (str)
@@ -523,6 +525,8 @@ class Settings:
                 'star_index',
                 'bowtie_index',
                 'cellranger_reference',
+                'annotation_bed',
+                'annotation_gtf',
                 'cellranger_premrna_reference',
                 'cellranger_atac_reference',
                 'cellranger_arc_reference'):

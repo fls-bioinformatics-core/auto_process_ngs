@@ -56,6 +56,8 @@ create_empty_fastqs = False
 # reference datasets:
 # - star_index
 # - bowtie_index
+# - annotation_bed
+# - annotation_gtf
 # - cellranger_reference
 # - cellranger_premrna_reference
 # - cellranger_atac_reference
@@ -64,6 +66,8 @@ create_empty_fastqs = False
 #[organism:human]
 #star_index = /data/genomeIndexes/hg38/STAR/
 #bowtie_index = /data/genomeIndexes/hg38/bowtie/
+#annotation_bed = /data/genomeIndexes/hg38/annotation/hg38.bed
+#annotation_gtf = /data/genomeIndexes/hg38/annotation/hg38.gtf
 #cellranger_reference = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
 #cellranger_premrna_reference = /data/cellranger/refdata-cellranger-GRCh38-1.0.1-pre_mrna
 #cellranger_atac_reference = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1

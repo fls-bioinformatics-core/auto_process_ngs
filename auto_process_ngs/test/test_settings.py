@@ -313,6 +313,8 @@ model = "HiSeq 2500"
             s.write("""[organism:human]
 star_index = /data/hg38/star
 bowtie_index = /data/hg38/bowtie
+annotation_bed = /data/hg38/annotation/hg38.bed
+annotation_gtf = /data/hg38/annotation/hg38.gtf
 cellranger_reference = /data/10x/refdata-gex-GRCh38-2020-A
 cellranger_premrna_reference = /data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna
 cellranger_atac_reference = /data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
@@ -321,6 +323,8 @@ cellranger_arc_reference = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
 [organism:mouse]
 star_index = /data/mm10/star
 bowtie_index = /data/mm10/bowtie
+annotation_bed = /data/mm10/annotation/mm10.bed
+annotation_gtf = /data/mm10/annotation/mm10.gtf
 cellranger_reference = /data/10x/refdata-gex-mm10-2020-A
 cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
 cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
@@ -333,6 +337,10 @@ cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/hg38/star')
         self.assertEqual(s.organisms['human']['bowtie_index'],
                          '/data/hg38/bowtie')
+        self.assertEqual(s.organisms['human']['annotation_bed'],
+                         '/data/hg38/annotation/hg38.bed')
+        self.assertEqual(s.organisms['human']['annotation_gft'],
+                         '/data/hg38/annotation/hg38.gtf')
         self.assertEqual(s.organisms['human']['cellranger_reference'],
                          '/data/10x/refdata-gex-GRCh38-2020-A')
         self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
@@ -346,6 +354,10 @@ cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/mm10/star')
         self.assertEqual(s.organisms['mouse']['bowtie_index'],
                          '/data/mm10/bowtie')
+        self.assertEqual(s.organisms['mouse']['annotation_bed'],
+                         '/data/mm10/annotation/mm10.bed')
+        self.assertEqual(s.organisms['mouse']['annotation_gtf'],
+                         '/data/mm10/annotation/mm10.gtf')
         self.assertEqual(s.organisms['mouse']['cellranger_reference'],
                          '/data/10x/refdata-gex-mm10-2020-A')
         self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
@@ -387,6 +399,8 @@ mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
         self.assertEqual(s.organisms['human']['star_index'],
                          '/data/hg38/star')
         self.assertEqual(s.organisms['human']['bowtie_index'],None)
+        self.assertEqual(s.organisms['human']['annotation_bed'],None)
+        self.assertEqual(s.organisms['human']['annotation_gtf'],None)
         self.assertEqual(s.organisms['human']['cellranger_reference'],
                          '/data/10x/refdata-gex-GRCh38-2020-A')
         self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
@@ -399,6 +413,8 @@ mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
         self.assertEqual(s.organisms['mouse']['star_index'],
                          '/data/mm10/star')
         self.assertEqual(s.organisms['mouse']['bowtie_index'],None)
+        self.assertEqual(s.organisms['mouse']['annotation_bed'],None)
+        self.assertEqual(s.organisms['mouse']['annotation_gft'],None)
         self.assertEqual(s.organisms['mouse']['cellranger_reference'],
                          '/data/10x/refdata-gex-mm10-2020-A')
         self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
@@ -416,10 +432,14 @@ mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
         with open(settings_file,'w') as s:
             s.write("""[organism:human]
 bowtie_index = /data/hg38/bowtie
+annotation_bed = /data/hg38/annotation/hg38.bed
+annotation_gtf = /data/hg38/annotation/hg38.gtf
 
 [organism:mouse]
 star_index = /data/mm10/star
 bowtie_index = /data/mm10/bowtie
+annotation_bed = /data/mm10/annotation/mm10.bed
+annotation_gtf = /data/mm10/annotation/mm10.gtf
 cellranger_reference = /data/10x/refdata-gex-mm10-2020-A
 cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
 cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
@@ -448,6 +468,10 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
                          '/data/hg38/star')
         self.assertEqual(s.organisms['human']['bowtie_index'],
                          '/data/hg38/bowtie')
+        self.assertEqual(s.organisms['human']['annotation_bed'],
+                         '/data/hg38/annotation/hg38.bed')
+        self.assertEqual(s.organisms['human']['annotation_gtf'],
+                         '/data/hg38/annotation/hg38.gtf')
         self.assertEqual(s.organisms['human']['cellranger_reference'],
                          '/data/10x/refdata-gex-GRCh38-2020-A')
         self.assertEqual(s.organisms['human']['cellranger_premrna_reference'],
@@ -461,6 +485,10 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
                          '/data/mm10/star')
         self.assertEqual(s.organisms['mouse']['bowtie_index'],
                          '/data/mm10/bowtie')
+        self.assertEqual(s.organisms['mouse']['annotation_bed'],
+                         '/data/mm10/annotation/mm10.bed')
+        self.assertEqual(s.organisms['mouse']['annotation_gtf'],
+                         '/data/mm10/annotation/mm10.gtf')
         self.assertEqual(s.organisms['mouse']['cellranger_reference'],
                          '/data/10x/refdata-gex-mm10-2020-A')
         self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],

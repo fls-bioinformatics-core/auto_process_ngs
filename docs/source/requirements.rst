@@ -166,11 +166,31 @@ section:
    use_legacy_screen_names = True
    ...
 
-Strandedness and single cell analyses
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Strandedness
+^^^^^^^^^^^^
 
 Strandedness determination requires ``STAR`` indexes for each
-organism of interest.
+organism of interest. These can be defined using appropriate
+settings in ``[organism:...]`` sections of the ``auto_process.ini``
+file, for example:
+
+::
+
+   [organism: human]
+   star_index = /data/genomeIndexes/hg38/STAR/
+
+   [organism: mouse]
+   star_index = /data/genomeIndexes/mm10/STAR/
+
+.. note::
+
+   The ``[organism:...]`` sections supersede the old
+   ``fastq_strand_indexes`` section of the ``auto_process.ini``
+   file; the older section is still recognised for now but is
+   deprecated and likely to be dropped in future.
+
+Single cell analyses
+^^^^^^^^^^^^^^^^^^^^
 
 Single library analyses of 10xGenomics single cell data require
 the appropriate compatible reference datasets for
@@ -191,14 +211,12 @@ for example:
 ::
 
    [organism: human]
-   star_index = /data/genomeIndexes/hg38/STAR/
    cellranger_reference = /data/10x/refdata-cellranger-GRCh38-1.2.0
    cellranger_premrna_reference = /data/10x/refdata-cellranger-GRCh38-1.2.0_premrna
    cellranger_atac_reference = /data/10x/refdata-cellranger-atac-GRCh38-1.0.1
    cellranger_arc_reference = /data/10x/refdata-cellranger-arc-GRCh38-2020-A
-   
+
    [organism: mouse]
-   star_index = /data/genomeIndexes/mm10/STAR/
    cellranger_reference = /data/10x/refdata-cellranger-mm10-1.2.0
    cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-1.0.1
    cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A
@@ -229,10 +247,29 @@ explains how to generate a custom reference package for these data:
 .. note::
 
    The ``[organism:...]`` sections supersede the old
-   ``fastq_strand_indexes`` and ``10xgenomics...`` sections
-   of the ``auto_process.ini`` file; the old sections are
-   still recognised for now but are deprecated and likely to
-   be dropped in future.
+   ``10xgenomics...`` sections of the ``auto_process.ini`` file;
+   the old sections are still recognised for now but are
+   deprecated and likely to be dropped in future.
+
+Annotation data
+^^^^^^^^^^^^^^^
+
+Annotation data in BED and GTF formats can be specified for
+organisms of interest via the ``annotation_bed`` and ``annotation_gtf``
+settings respectively in ``[organism:...]`` sections of the
+``auto_process.ini`` file.
+
+For example:
+
+::
+
+   [organism: human]
+   annotation_bed = /data/genomeIndexes/hg38/annotation/hg38_NCBI_RefSeq_All.bed
+   annotation_gtf = /data/genomeIndexes/hg38/annotation/hg38_NCBI_RefSeq_All.gtf
+
+   [organism: mouse]
+   annotation_bed = /data/genomeIndexes/mm10/annotation/gencode.vM25.annotation.bed
+   annotation_gtf = /data/genomeIndexes/mm10/annotation/gencode.vM25.annotation.gtf
   
 .. _auto_process_reference_data_icell8:
 
