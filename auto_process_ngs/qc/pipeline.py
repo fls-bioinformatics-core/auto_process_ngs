@@ -32,6 +32,7 @@ Pipeline task classes:
 - SetCellCountFromCellrangerCount
 - GetReferenceDataset
 - GetBAMFiles
+- RunPicardCollectInsertSizeMetrics
 - ReportQC
 
 Also imports the following pipeline tasks:
@@ -841,6 +842,17 @@ class QCPipeline(Pipeline):
                       requires=pre_tasks,
                       runner=self.runners['star_runner'],
                       log_dir=log_dir)
+
+        # Run Picard's CollectInsertSizeMetrics
+        insert_size_metrics = RunPicardCollectInsertSizeMetrics(
+            "%s: Picard: collect insert size metrics" % project.name,
+            get_bam_files.output.bam_files,
+            os.path.join(qc_dir,'picard',organism_name),
+            bam_properties=rseqc_infer_experiment.output.experiments)
+        self.add_task(insert_size_metrics,
+                      log_dir=log_dir)
+        for task in post_tasks:
+            insert_size_metrics.required_by(task)
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             fastq_subset=None,cellranger_chemistry='auto',
@@ -2845,6 +2857,102 @@ class GetBAMFiles(PipelineFunctionTask):
         for bam_file in self._bam_files:
             if os.path.exists(bam_file):
                 self.output.bam_files.append(bam_file)
+
+class RunPicardCollectInsertSizeMetrics(PipelineTask):
+    """
+    Run Picard 'CollectInsertSizeMetrics' on BAM files
+
+    Given a list of BAM files, for each file first runs
+    the Picard 'CleanSam' utility (to remove alignments
+    that would otherwise cause problems for the insert
+    size calculations) and then 'CollectInsertSizeMetrics'
+    to generate the insert size metrics.
+
+    Note that this task should only be run on BAM files
+    with paired-end data.
+
+    For each BAM (<BASENAME>.bam) the task generates a pair
+    of files:
+
+    - <BASENAME>.insert_size_metrics.txt
+    - <BASENAME>.insert_size_histogram.pdf
+    """
+    def init(self,bam_files,out_dir,bam_properties):
+        """
+        Initialise the RunPicardCollectInsertSizeMetrics
+        task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to run CollectInsertSizeMetrics on
+          out_dir (str): path to a directory where the
+            output files will be written
+          bam_properties (mapping): properties for each
+            BAM file from RSeQC 'infer_experiment.py'
+            (used to determine if BAM is paired and
+            what the strand-specificity is)R
+        """
+        # Conda dependencies
+        self.conda("picard",
+                   "readline=6.2")
+        # Output file extensions
+        self.insert_size_metrics_outputs = (
+            '.insert_size_metrics.txt',
+            '.insert_size_histogram.pdf'
+        )
+    def setup(self):
+        # Set up commands to run CleanSam and
+        # CollectInsertSizeMetrics for each BAM file
+        for bam in self.args.bam_files:
+            # Check if BAM file is paired
+            paired_end = self.args.bam_properties[bam]['paired_end']
+            if not paired_end:
+                # Skip this BAM
+                continue
+            # Check if outputs already exist
+            outputs_exist = True
+            for ext in self.insert_size_metrics_outputs:
+                f = os.path.join(self.args.out_dir,
+                                 "%s%s" % (os.path.basename(bam)[:-4],ext))
+                outputs_exist = (outputs_exist and os.path.exists(f))
+            if outputs_exist:
+                # Skip this BAM
+                continue
+            # Add command to get insert sizes
+            self.add_cmd("%s: collect insert size metrics" %
+                         os.path.basename(bam),
+                         """
+                         picard CleanSam \\
+                             -I {bam} \\
+                             -O {basename}.bam \\
+                             -XX:ActiveProcessorCount={nslots} \\
+                         && \\
+                         picard CollectInsertSizeMetrics \\
+                             -I {basename}.bam \\
+                             -O {basename}.insert_size_metrics.txt \\
+                             -H {basename}.insert_size_histogram.pdf \\
+                             -XX:ActiveProcessorCount={nslots}
+                         """.format(bam=bam,
+                                    basename=os.path.basename(bam)[:-4],
+                                    nslots=self.runner_nslots))
+    def finish(self):
+        # Copy outputs to final location
+        if not os.path.exists(self.args.out_dir):
+            print("Creating output dir '%s'" % self.args.out_dir)
+            os.makedirs(self.args.out_dir)
+        for bam in self.args.bam_files:
+            for ext in (".insert_size_metrics.txt",
+                        ".insert_size_histogram.pdf",):
+                f = "%s%s" % (os.path.basename(bam)[:-4],ext)
+                if os.path.exists(os.path.join(self.args.out_dir,f)):
+                    # Output file exists
+                    continue
+                else:
+                    # Copy new version to ouput location
+                    if os.path.exists(f):
+                        shutil.copy(f,self.args.out_dir)
+                    else:
+                        raise Exception("Missing file: %s" % f)
 
 class VerifyQC(PipelineFunctionTask):
     """
