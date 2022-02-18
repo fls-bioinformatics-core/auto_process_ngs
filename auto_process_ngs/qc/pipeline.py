@@ -32,6 +32,7 @@ Pipeline task classes:
 - SetCellCountFromCellrangerCount
 - GetReferenceDataset
 - GetBAMFiles
+- RunRSeQCGenebodyCoverage
 - RunPicardCollectInsertSizeMetrics
 - ReportQC
 
@@ -120,6 +121,7 @@ class QCPipeline(Pipeline):
 
         # Define parameters
         self.add_param('nthreads',type=int)
+        self.add_param('annotation_bed_files',type=dict)
         self.add_param('fastq_subset',type=int)
         self.add_param('cellranger_exe',type=str)
         self.add_param('cellranger_reference_dataset',type=str)
@@ -843,6 +845,27 @@ class QCPipeline(Pipeline):
                       runner=self.runners['star_runner'],
                       log_dir=log_dir)
 
+        # Get reference gene model for RSeQC
+        get_reference_gene_model = GetReferenceDataset(
+            "%s: get BED reference gene model for '%s'" % (project.name,
+                                                           organism),
+            organism,
+            self.params.annotation_bed_files)
+        self.add_task(get_reference_gene_model,
+                      log_dir=log_dir)
+
+        # Run RSeQC gene body coverage
+        rseqc_gene_body_coverage = RunRSeQCGenebodyCoverage(
+            "%s: calculate gene body coverage (RSeQC)" % project.name,
+            get_bam_files.output.bam_files,
+            get_reference_gene_model.output.reference_dataset,
+            os.path.join(qc_dir,'rseqc_genebody_coverage',organism_name),
+            name=project.name)
+        self.add_task(rseqc_gene_body_coverage,
+                      log_dir=log_dir)
+        for task in post_tasks:
+            rseqc_gene_body_coverage.required_by(task)
+
         # Run Picard's CollectInsertSizeMetrics
         insert_size_metrics = RunPicardCollectInsertSizeMetrics(
             "%s: Picard: collect insert size metrics" % project.name,
@@ -855,6 +878,7 @@ class QCPipeline(Pipeline):
             insert_size_metrics.required_by(task)
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
+            annotation_bed_files=None,
             fastq_subset=None,cellranger_chemistry='auto',
             cellranger_force_cells=None,cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
@@ -880,6 +904,8 @@ class QCPipeline(Pipeline):
             FastqScreen conf files
           star_indexes (dict): mapping of organism IDs to
             directories with STAR indexes
+          annotation_bed_files (dict): mapping of organism
+            IDs to BED files with annotation data
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
           cellranger_chemistry (str): explicitly specify
@@ -1010,6 +1036,7 @@ class QCPipeline(Pipeline):
                               exit_on_failure=PipelineFailure.DEFERRED,
                               params={
                                   'nthreads': nthreads,
+                                  'annotation_bed_files': annotation_bed_files,
                                   'fastq_subset': fastq_subset,
                                   'cellranger_chemistry': cellranger_chemistry,
                                   'cellranger_force_cells':
@@ -2857,6 +2884,89 @@ class GetBAMFiles(PipelineFunctionTask):
         for bam_file in self._bam_files:
             if os.path.exists(bam_file):
                 self.output.bam_files.append(bam_file)
+
+class RunRSeQCGenebodyCoverage(PipelineTask):
+    """
+    Run RSeQC's 'genebody_coverage.py' on BAM files
+
+    Given a collection of BAM files, runs the RSeQC
+    'genebody_coverage.py' utility
+    (http://rseqc.sourceforge.net/#genebody-coverage-py).
+
+    Produces the following set of files:
+
+    - <NAME>.geneBodyCoverage.curves.png
+    - <NAME>.geneBodyCoverage.r
+    - <NAME>.geneBodyCoverage.txt
+    """
+    def init(self,bam_files,reference_gene_model,out_dir,name="rseqc"):
+        """
+        Initialise the RunRSeQCGenebodyCoverage task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to run genebody_coverage.py on
+          reference_gene_model (str): path to BED file
+            with the reference gene model data
+          out_dir (str): path to a directory where the
+            output files will be written
+          name (str): optional basename for the output
+            files (defaults to 'rseqc')
+        """
+        # Conda dependencies
+        self.conda("rseqc=4.0.0",
+                   "r-base=4")
+        # Output file extensions
+        self.genebody_coverage_outputs = ('geneBodyCoverage.curves.png',
+                                          'geneBodyCoverage.r',
+                                          'geneBodyCoverage.txt')
+        # Internal variables
+        self._basename = None
+    def setup(self):
+        # Check if outputs already exist
+        outputs_exist = True
+        for output in self.genebody_coverage_outputs:
+            f = os.path.join(self.args.out_dir,
+                             "%s.%s" % (self.args.name,output))
+            outputs_exist = (outputs_exist and os.path.exists(f))
+        if outputs_exist:
+            print("All outputs exist already, nothing to do")
+            return
+        # Check for reference gene model
+        if self.args.reference_gene_model:
+            print("Reference gene model: %s" %
+                  self.args.reference_gene_model)
+        else:
+            print("Reference gene model is not set, cannot run RSeQC "
+                  "genebody_coverage.py")
+            return
+        # Set up command to run genebody_coverage.py
+        self.add_cmd("Run RSeQC genebody_coverage.py",
+                     """
+                     geneBody_coverage.py \\
+                         -r {reference_gene_model} \\
+                         -i {bam_files} \\
+                         -f png \\
+                         -o {basename}
+                     """.format(
+                         reference_gene_model=self.args.reference_gene_model,
+                         bam_files=','.join(self.args.bam_files),
+                         basename=self.args.name))
+    def finish(self):
+        if not self.args.reference_gene_model:
+            return
+        # Copy outputs to final location
+        if not os.path.exists(self.args.out_dir):
+            os.makedirs(self.args.out_dir,exist_ok=True)
+        for output in self.genebody_coverage_outputs:
+            f = "%s.%s" % (self.args.name,output)
+            if os.path.exists(os.path.join(self.args.out_dir,f)):
+                # Output file exists
+                continue
+            else:
+                # Copy new version to ouput location
+                if os.path.exists(f):
+                    shutil.copy(f,self.args.out_dir)
 
 class RunPicardCollectInsertSizeMetrics(PipelineTask):
     """
