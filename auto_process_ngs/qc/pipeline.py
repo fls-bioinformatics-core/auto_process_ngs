@@ -34,6 +34,8 @@ Pipeline task classes:
 - GetBAMFiles
 - RunRSeQCGenebodyCoverage
 - RunPicardCollectInsertSizeMetrics
+- RunRSeQCInferExperiment
+- RunQualimapRnaseq
 - ReportQC
 
 Also imports the following pipeline tasks:
@@ -86,6 +88,7 @@ from .outputs import check_cellranger_atac_count_outputs
 from .outputs import check_cellranger_arc_count_outputs
 from .protocols import determine_qc_protocol
 from .protocols import get_read_numbers
+from .rseqc import InferExperiment
 from .utils import set_cell_count_for_project
 from .verification import verify_project
 from .fastq_strand import build_fastq_strand_conf
@@ -122,6 +125,7 @@ class QCPipeline(Pipeline):
         # Define parameters
         self.add_param('nthreads',type=int)
         self.add_param('annotation_bed_files',type=dict)
+        self.add_param('annotation_gtf_files',type=dict)
         self.add_param('fastq_subset',type=int)
         self.add_param('cellranger_exe',type=str)
         self.add_param('cellranger_reference_dataset',type=str)
@@ -854,6 +858,15 @@ class QCPipeline(Pipeline):
         self.add_task(get_reference_gene_model,
                       log_dir=log_dir)
 
+        # Run RSeQC infer experiment
+        rseqc_infer_experiment = RunRSeQCInferExperiment(
+            "%s: infer experiment from BAM files (RSeQC)" % project.name,
+            get_bam_files.output.bam_files,
+            get_reference_gene_model.output.reference_dataset,
+            os.path.join(qc_dir,'rseqc_infer_experiment',organism_name))
+        self.add_task(rseqc_infer_experiment,
+                      log_dir=log_dir)
+
         # Run RSeQC gene body coverage
         rseqc_gene_body_coverage = RunRSeQCGenebodyCoverage(
             "%s: calculate gene body coverage (RSeQC)" % project.name,
@@ -877,8 +890,29 @@ class QCPipeline(Pipeline):
         for task in post_tasks:
             insert_size_metrics.required_by(task)
 
+        # Get reference gene model
+        get_annotation_gtf = GetReferenceDataset(
+            "%s: get GTF annotation for '%s'" % (project.name,
+                                                 organism),
+            organism,
+            self.params.annotation_gtf_files)
+        self.add_task(get_annotation_gtf,
+                      log_dir=log_dir)
+
+        # Run Qualimap RNA-seq analysis
+        qualimap_rnaseq = RunQualimapRnaseq(
+            "%s: Qualimap rnaseq: RNA-seq metrics" % project.name,
+            get_bam_files.output.bam_files,
+            get_annotation_gtf.output.reference_dataset,
+            os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
+            bam_properties=rseqc_infer_experiment.output.experiments)
+        self.add_task(qualimap_rnaseq,
+                      log_dir=log_dir)
+        for task in post_tasks:
+            qualimap_rnaseq.required_by(task)
+
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
-            annotation_bed_files=None,
+            annotation_bed_files=None,annotation_gtf_files=None,
             fastq_subset=None,cellranger_chemistry='auto',
             cellranger_force_cells=None,cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
@@ -906,6 +940,8 @@ class QCPipeline(Pipeline):
             directories with STAR indexes
           annotation_bed_files (dict): mapping of organism
             IDs to BED files with annotation data
+          annotation_gtf_files (dict): mapping of organism
+            IDs to GTF files with annotation data
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
           cellranger_chemistry (str): explicitly specify
@@ -1037,6 +1073,7 @@ class QCPipeline(Pipeline):
                               params={
                                   'nthreads': nthreads,
                                   'annotation_bed_files': annotation_bed_files,
+                                  'annotation_gtf_files': annotation_gtf_files,
                                   'fastq_subset': fastq_subset,
                                   'cellranger_chemistry': cellranger_chemistry,
                                   'cellranger_force_cells':
@@ -2885,6 +2922,94 @@ class GetBAMFiles(PipelineFunctionTask):
             if os.path.exists(bam_file):
                 self.output.bam_files.append(bam_file)
 
+class RunRSeQCInferExperiment(PipelineTask):
+    """
+    Run RSeQC's 'infer_experiment.py' on BAM files
+
+    Given a list of BAM files, for each file runs the
+    RSeQC 'infer_experiment.py' utility
+    (http://rseqc.sourceforge.net/#infer-experiment-py).
+
+    The log for each run is written to a file called
+    '<BASENAME>.infer_experiment.log'; the data are
+    also extracted and put into an output parameter
+    for direct consumption by downstream tasks.
+    """
+    def init(self,bam_files,reference_gene_model,out_dir):
+        """
+        Initialise the RunRSeQCInferExperiment task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to run infer_experiment.py on
+          reference_gene_model (str): path to BED file
+            with the reference gene model data
+          out_dir (str): path to a directory where the
+            output files will be written
+
+        Outputs:
+          experiments: a dictionary with BAM files as
+            keys; each value is another dictionary with
+            keys 'paired_end' (True for paired-end data,
+            False for single-end), 'reverse', 'forward'
+            and 'unstranded' (fractions of reads mapped
+            in each configuration).
+        """
+        # Conda dependencies
+        self.conda("rseqc=4.0.0",
+                   "r-base=4")
+        # Outputs
+        self.add_output('experiments',Param())
+    def setup(self):
+        # Check for reference gene model
+        if self.args.reference_gene_model:
+            print("Reference gene model: %s" %
+                  self.args.reference_gene_model)
+        else:
+            print("Reference gene model is not set, cannot "
+                  "run RSeQC infer_experiment.py")
+            return
+        # Set up command to run infer_experiment.py
+        for bam_file in self.args.bam_files:
+            if not os.path.exists(os.path.join(
+                    self.args.out_dir,
+                    "%s.infer_experiment.log" %
+                    os.path.basename(bam_file)[:-4])):
+                self.add_cmd("Run RSeQC infer_experiment.py",
+                             """
+                             infer_experiment.py \\
+                             -r {reference_gene_model} \\
+                             -i {bam_file} >{basename}.infer_experiment.log
+                             """.format(
+                                 reference_gene_model=\
+                                 self.args.reference_gene_model,
+                                 bam_file=bam_file,
+                                 basename=os.path.basename(bam_file)[:-4]))
+    def finish(self):
+        outputs = dict()
+        for bam_file in self.args.bam_files:
+            infer_expt_log = os.path.join(self._working_dir,
+                                          "%s.infer_experiment.log" %
+                                          os.path.basename(bam_file)[:-4])
+            # Copy to final destination
+            if os.path.exists(infer_expt_log):
+                if not os.path.exists(self.args.out_dir):
+                    os.makedirs(self.args.out_dir)
+                shutil.copy(infer_expt_log,self.args.out_dir)
+            # Load data from log file
+            infer_expt_log = os.path.join(self.args.out_dir,
+                                          os.path.basename(infer_expt_log))
+            infer_expt = InferExperiment(infer_expt_log)
+            # Dump data associated with previous BAM
+            outputs[bam_file] = {
+                'paired_end': infer_expt.paired_end,
+                'unstranded': infer_expt.unstranded,
+                'forward': infer_expt.forward,
+                'reverse': infer_expt.reverse,
+            }
+        # Set output
+        self.output.experiments.set(outputs)
+
 class RunRSeQCGenebodyCoverage(PipelineTask):
     """
     Run RSeQC's 'genebody_coverage.py' on BAM files
@@ -3063,6 +3188,105 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                         shutil.copy(f,self.args.out_dir)
                     else:
                         raise Exception("Missing file: %s" % f)
+
+class RunQualimapRnaseq(PipelineTask):
+    """
+    Run Qualimap's 'rnaseq' module on BAM files
+
+    Given a list of BAM files, for each file runs the
+    Qualimap 'rnaseq' module
+    (http://qualimap.conesalab.org/doc_html/command_line.html#rna-seq-qc)
+    """
+    def init(self,bam_files,feature_file,out_dir,
+             bam_properties):
+        """
+        Initialise the RunQualimapRnaseq task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to run Qualimap rnaseq on
+          feature_file (str): path to GTF file with the
+            reference annotation data
+          out_dir (str): path to a directory where the
+            output files will be written
+          bam_properties (mapping): properties for each
+            BAM file from RSeQC 'infer_experiment.py'
+            (used to determine if BAM is paired and
+            what the strand-specificity is)
+        """
+        self.conda("qualimap=2.2")
+        self.java_mem_size = '8G'
+        # Outputs
+        self.qualimap_rnaseq_outputs = (
+            'qualimapReport.html',
+            'rnaseq_qc_results.txt'
+        )
+    def setup(self):
+        # Check for feature file
+        if self.args.feature_file:
+            print("Feature file: %s" % self.args.feature_file)
+        else:
+            print("Feature file is not set, cannot run Qualimap rnaseq")
+            return
+        # Set up Qualimap rnaseq for each BAM file
+        for bam in self.args.bam_files:
+            # Output directory for individual BAM file
+            bam_name = os.path.basename(bam)[:-4]
+            out_dir = os.path.join(self.args.out_dir,bam_name)
+            # Check for existing outputs
+            outputs_exist = True
+            for output_file in self.qualimap_rnaseq_outputs:
+                f = os.path.join(out_dir,output_file)
+                outputs_exist = (outputs_exist and os.path.exists(f))
+            if outputs_exist:
+                # Skip running Qualimap for this BAM
+                continue
+            # Get properties for BAM file
+            paired_end = self.args.bam_properties[bam]['paired_end']
+            unstranded = self.args.bam_properties[bam]['unstranded']
+            forward = self.args.bam_properties[bam]['forward']
+            reverse = self.args.bam_properties[bam]['reverse']
+            # Set sequencing protocol (aka strand specificity)
+            # Qualimap sequencing protocol can be
+            # 'strand-specific-forward', 'strand-specific-reverse',
+            # or 'non-strand-specific'
+            if reverse > forward and reverse > unstranded:
+                seq_protocol = "strand-specific-reverse"
+            elif forward > reverse and forward > unstranded:
+                seq_protocol = "strand-specific-forward"
+            else:
+                seq_protocol = "non-strand-specific"
+            # Run Qualimap
+            self.add_cmd("Run qualimap rnaseq on %s" %
+                         os.path.basename(bam),
+                         """
+                         qualimap rnaseq \\
+                             -bam {bam} \\
+                             -gtf {feature_file} \\
+                             -p {sequencing_protocol} \\
+                             {paired} \\
+                             -outdir {out_dir} \\
+                             -outformat HTML \\
+                             --java-mem-size={java_mem_size}
+                         """.format(
+                             bam=bam,
+                             feature_file=self.args.feature_file,
+                             sequencing_protocol=seq_protocol,
+                             paired=('-pe' if paired_end else ''),
+                             out_dir=bam_name,
+                             java_mem_size=self.java_mem_size))
+    def finish(self):
+        for bam in self.args.bam_files:
+            bam_name = os.path.basename(bam)[:-4]
+            out_dir = os.path.join(self.args.out_dir,bam_name)
+            if os.path.exists(out_dir):
+                print("outputs already exist for %s" % bam_name)
+                continue
+            os.makedirs(self.args.out_dir,exist_ok=True)
+            print("copying outputs for %s" % bam_name)
+            shutil.copytree(bam_name,
+                            os.path.join(self.args.out_dir,
+                                         bam_name))
 
 class VerifyQC(PipelineFunctionTask):
     """
