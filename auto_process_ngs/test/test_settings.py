@@ -339,7 +339,7 @@ cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/hg38/bowtie')
         self.assertEqual(s.organisms['human']['annotation_bed'],
                          '/data/hg38/annotation/hg38.bed')
-        self.assertEqual(s.organisms['human']['annotation_gft'],
+        self.assertEqual(s.organisms['human']['annotation_gtf'],
                          '/data/hg38/annotation/hg38.gtf')
         self.assertEqual(s.organisms['human']['cellranger_reference'],
                          '/data/10x/refdata-gex-GRCh38-2020-A')
@@ -414,7 +414,7 @@ mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/mm10/star')
         self.assertEqual(s.organisms['mouse']['bowtie_index'],None)
         self.assertEqual(s.organisms['mouse']['annotation_bed'],None)
-        self.assertEqual(s.organisms['mouse']['annotation_gft'],None)
+        self.assertEqual(s.organisms['mouse']['annotation_gtf'],None)
         self.assertEqual(s.organisms['mouse']['cellranger_reference'],
                          '/data/10x/refdata-gex-mm10-2020-A')
         self.assertEqual(s.organisms['mouse']['cellranger_premrna_reference'],
