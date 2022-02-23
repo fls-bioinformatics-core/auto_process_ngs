@@ -807,6 +807,9 @@ class QCOutputs:
         - software: dictionary of software and versions
         - screen_names: list of associated panel names
         - fastqs: list of associated Fastq names
+        - fastqs_for_screen: dictionary of panel names
+          and lists of Fastq names associated with each
+          panel
         - output_files: list of associated output files
         - tags: list of associated output classes
 
@@ -816,6 +819,7 @@ class QCOutputs:
         versions = set()
         output_files = list()
         fastqs = set()
+        fastqs_for_screen = dict()
         screen_names = set()
         tags = set()
         # Look for legacy screen files
@@ -846,9 +850,14 @@ class QCOutputs:
                              (('i' if fq.is_index_read else 'r'),
                               (fq.read_number
                                if fq.read_number is not None else '1')))
+                    # Store general information
                     fastqs.add(fastq_name)
                     screen_names.add(screen_name)
                     versions.add(Fastqscreen(screen).version)
+                    # Store Fastq against screen name
+                    if screen_name not in fastqs_for_screen:
+                        fastqs_for_screen[screen_name] = set()
+                    fastqs_for_screen[screen_name].add(fastq_name)
             # Store the legacy screen files
             output_files.extend(legacy_screens)
         if screens:
@@ -864,9 +873,14 @@ class QCOutputs:
                          (('i' if fq.is_index_read else 'r'),
                           (fq.read_number
                            if fq.read_number is not None else '1')))
+                # Store general information
                 fastqs.add(fastq_name)
                 screen_names.add(screen_name)
                 versions.add(Fastqscreen(screen).version)
+                # Store Fastq against screen name
+                if screen_name not in fastqs_for_screen:
+                    fastqs_for_screen[screen_name] = set()
+                fastqs_for_screen[screen_name].add(fastq_name)
             # Store the screen files
             output_files.extend(screens)
         # Return collected information
@@ -879,6 +893,8 @@ class QCOutputs:
             software=software,
             screen_names=sorted(list(screen_names)),
             fastqs=sorted(list(fastqs)),
+            fastqs_for_screen={ s: sorted(list(fastqs_for_screen[s]))
+                                for s in fastqs_for_screen },
             output_files=output_files,
             tags=sorted(list(tags))
         )
