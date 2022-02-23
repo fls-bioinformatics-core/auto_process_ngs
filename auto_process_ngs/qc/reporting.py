@@ -575,7 +575,7 @@ class QCOutputs:
     - stats: AttrtibuteDictionary with useful stats from
       across the project
     - config_files: list of QC configuration files found
-      in the QC directory
+      in the QC directory (see below for valid values)
 
     The following are valid values for the 'outputs'
     property:
@@ -592,8 +592,17 @@ class QCOutputs:
     - 'cellranger-arc_count'
     - 'multiqc'
 
+    The following are valid values for the 'config_files'
+    property:
+
+    - fastq_strand.conf
+    - 10x_multi_config.csv
+    - libraries.<SAMPLE>.csv
+
     Arguments:
       qc_dir (str): path to directory to examine
+      fastq_attrs (BaseFastqAttrs): (optional) class for
+        extracting data from Fastq names
     """
     def __init__(self,qc_dir,fastq_attrs=None):
         # Directory to examine
@@ -1470,10 +1479,6 @@ class FastqSet:
     r1: R1 Fastq in the pair
     r2: R2 Fastq (will be None if no R2)
     fastqs: list of Fastq files
-
-    Provides the following methods:
-
-    verify: checks the QC outputs for the set
     """
     def __init__(self,fqr1,fqr2=None):
         """
