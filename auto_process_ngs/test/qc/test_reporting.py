@@ -431,7 +431,8 @@ class TestQCOutputs(unittest.TestCase):
             if include_fastq_screen:
                 for screen in screens:
                     MockQCOutputs.fastq_screen_v0_9_2(
-                        fq,qc_dir,screen)
+                        fq,qc_dir,screen,
+                        legacy=legacy_screens)
             # Strandedness
             if include_strandedness:
                 MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
