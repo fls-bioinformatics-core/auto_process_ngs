@@ -1285,6 +1285,11 @@ class QCOutputs:
         - fastqs: list of associated Fastq names
         - multiplexed_samples: list of associated multiplexed
           sample names
+        - pipelines: list of tuples defining 10x pipelines
+          in the form (name,version,reference)
+        - samples_by_pipeline: dictionary with lists of
+          multiplexed sample names associated with each 10x
+          pipeline tuple
         - output_files: list of associated output files
         - tags: list of associated output classes
 
@@ -1295,6 +1300,7 @@ class QCOutputs:
         output_files = list()
         multiplexed_samples = set()
         cellranger_references = set()
+        samples_by_pipeline = dict()
         tags = set()
         # Look for cellranger multi outputs
         cellranger_multi_dir = os.path.join(qc_dir,
@@ -1339,6 +1345,14 @@ class QCOutputs:
                         versions.add(ver)
                     for smpl in cellranger_multi_samples[ver][ref]:
                         multiplexed_samples.add(smpl)
+            # Store sample lists associated with pipeline,
+            # version and reference dataset
+            for version in cellranger_multi_samples:
+                for reference in cellranger_multi_samples[version]:
+                    pipeline_key = (cellranger_name,version,reference)
+                    samples_by_pipeline[pipeline_key] = \
+                        [s for s in
+                         cellranger_multi_samples[version][reference]]
             # Store cellranger versions
             if cellranger_name and versions:
                 if cellranger_name not in software:
@@ -1355,6 +1369,8 @@ class QCOutputs:
             references=sorted(list(cellranger_references)),
             fastqs=[],
             multiplexed_samples=sorted(list(multiplexed_samples)),
+            pipelines=sorted([p for p in samples_by_pipeline]),
+            samples_by_pipeline=samples_by_pipeline,
             output_files=output_files,
             tags=sorted(list(tags))
         )
