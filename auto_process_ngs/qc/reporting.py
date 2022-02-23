@@ -1147,6 +1147,11 @@ class QCOutputs:
         - references: list of associated reference datasets
         - fastqs: list of associated Fastq names
         - samples: list of associated sample names
+        - pipelines: list of tuples defining 10x pipelines
+          in the form (name,version,reference)
+        - samples_by_pipeline: dictionary with lists of
+          sample names associated with each 10x pipeline
+          tuple
         - output_files: list of associated output files
         - tags: list of associated output classes
 
@@ -1157,14 +1162,15 @@ class QCOutputs:
         output_files = list()
         cellranger_samples = []
         cellranger_references = set()
+        samples_by_pipeline = dict()
         tags = set()
         # Look for cellranger_count outputs
         cellranger_count_dir = os.path.join(qc_dir,
                                             "cellranger_count")
         print("Checking for cellranger* count outputs under %s" %
               cellranger_count_dir)
+        cellranger_versioned_samples = {}
         if os.path.isdir(cellranger_count_dir):
-            cellranger_versioned_samples = {}
             cellranger_name = None
             versions = set()
             # Old-style (unversioned)
@@ -1244,6 +1250,15 @@ class QCOutputs:
             # Store cellranger versions
             for cellranger_name in cellranger_versioned_samples:
                 software[cellranger_name] = sorted(list(cellranger_versioned_samples[cellranger_name].keys()))
+        # Store sample lists associated with pipeline,
+        # version and reference dataset
+        for name in cellranger_versioned_samples:
+            for version in cellranger_versioned_samples[name]:
+                for reference in cellranger_versioned_samples[name][version]:
+                    pipeline_key = (name,version,reference)
+                    samples_by_pipeline[pipeline_key] = \
+                        [s for s in
+                         cellranger_versioned_samples[name][version][reference]]
         # Return collected information
         return AttributeDictionary(
             name='cellranger_count',
@@ -1251,6 +1266,8 @@ class QCOutputs:
             references=sorted(list(cellranger_references)),
             fastqs=[],
             samples=cellranger_samples,
+            pipelines=sorted([p for p in samples_by_pipeline]),
+            samples_by_pipeline=samples_by_pipeline,
             output_files=output_files,
             tags=sorted(list(tags))
         )
