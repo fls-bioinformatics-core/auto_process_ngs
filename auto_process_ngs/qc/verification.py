@@ -27,7 +27,7 @@ import logging
 from bcftbx.utils import AttributeDictionary
 from ..analysis import AnalysisFastq
 from .protocols import fetch_protocol_definition
-from .reporting import QCOutputs
+from .outputs import QCOutputs
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 
 # Module specific logger
