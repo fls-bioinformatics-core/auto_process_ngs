@@ -58,6 +58,7 @@ from .plots import uduplicationplot
 from .plots import uadapterplot
 from .plots import encode_png
 from .seqlens import SeqLens
+from .verification import verify_project
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
@@ -236,9 +237,9 @@ class QCReporter:
           Boolean: Returns True if all expected QC products
             are present, False if not.
         """
-        return verify(self._project,
-                      qc_dir=qc_dir,
-                      qc_protocol=qc_protocol)
+        return verify_project(self._project,
+                              qc_dir=qc_dir,
+                              qc_protocol=qc_protocol)
 
     def report(self,title=None,filename=None,qc_dir=None,
                report_attrs=None,summary_fields=None,
@@ -2992,78 +2993,6 @@ class QCReportFastq:
 #######################################################################
 # Functions
 #######################################################################
-
-def verify(project,qc_dir=None,qc_protocol=None):
-    """
-    Check the QC outputs are correct for a project
-
-    Arguments:
-      project (AnalysisProject): project to verify QC for
-      qc_dir (str): path to the QC output dir; relative
-        path will be treated as a subdirectory of the
-        project being checked.
-      qc_protocol (str): QC protocol to verify against
-        (optional)
-
-     Returns:
-       Boolean: Returns True if all expected QC products
-         are present, False if not.
-    """
-    logger.debug("verify: qc_dir (initial): %s" % qc_dir)
-    if qc_dir is None:
-        qc_dir = project.qc_dir
-    else:
-        if not os.path.isabs(qc_dir):
-            qc_dir = os.path.join(project.dirn,
-                                  qc_dir)
-    logger.debug("verify: qc_dir (final)  : %s" % qc_dir)
-    for dirn in (project.dirn,qc_dir):
-        fastq_strand_conf = os.path.join(dirn,"fastq_strand.conf")
-        if os.path.exists(fastq_strand_conf):
-            break
-        fastq_strand_conf = None
-    logger.debug("verify: fastq_strand conf file : %s" %
-                 fastq_strand_conf)
-    cellranger_version = None
-    cellranger_refdata = None
-    fastq_screens = None
-    qc_info_file = os.path.join(qc_dir,"qc.info")
-    if os.path.exists(qc_info_file):
-        qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
-        try:
-            cellranger_refdata = qc_info['cellranger_refdata']
-        except KeyError:
-            pass
-        try:
-            cellranger_version = qc_info['cellranger_version']
-        except KeyError:
-            pass
-        try:
-            fastq_screens = qc_info['fastq_screens']
-            if fastq_screens:
-                fastq_screens = fastq_screens.split(',')
-            elif 'fastq_screens' not in qc_info.keys_in_file():
-                fastq_screens = FASTQ_SCREENS
-        except KeyError:
-            pass
-    logger.debug("verify: cellranger reference data : %s" %
-                 cellranger_refdata)
-    logger.debug("verify: fastq screens : %s" % fastq_screens)
-    cellranger_multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
-    if not os.path.exists(cellranger_multi_config):
-        cellranger_multi_config = None
-    verified = True
-    for f in expected_outputs(project,qc_dir,
-                              fastq_screens=fastq_screens,
-                              fastq_strand_conf=fastq_strand_conf,
-                              cellranger_version=cellranger_version,
-                              cellranger_refdata=cellranger_refdata,
-                              cellranger_multi_config=cellranger_multi_config,
-                              qc_protocol=qc_protocol):
-        if not os.path.exists(f):
-            logging.debug("Missing: %s" % f)
-            verified = False
-    return verified
 
 def report(projects,title=None,filename=None,qc_dir=None,
            report_attrs=None,summary_fields=None,
