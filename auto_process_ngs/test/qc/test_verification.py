@@ -6,12 +6,16 @@ import unittest
 import os
 import tempfile
 import shutil
+from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.verification import QCVerifier
 from auto_process_ngs.qc.verification import parse_qc_module_spec
 from auto_process_ngs.qc.verification import filter_fastqs
 from auto_process_ngs.qc.verification import filter_10x_pipelines
+from auto_process_ngs.qc.verification import verify_project
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -1409,3 +1413,121 @@ class TestFilter10xPipelines(unittest.TestCase):
             filter_10x_pipelines(
                 ("cellranger","*","refdata-gex-mm10-2020"),
                 pipelines),[])
+
+class TestVerifyProject(unittest.TestCase):
+
+    def setUp(self):
+        # Temporary working dir (if needed)
+        self.wd = None
+
+    def tearDown(self):
+        # Remove temporary working dir
+        if not REMOVE_TEST_OUTPUTS:
+            return
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
+    def _make_working_dir(self):
+        # Create a temporary working directory
+        if self.wd is None:
+            self.wd = tempfile.mkdtemp(suffix='.test_VerifyProject')
+
+    def _make_analysis_project(self,protocol=None,paired_end=True,
+                               fastq_dir=None,qc_dir="qc",
+                               fastq_names=None,
+                               include_multiqc=True,
+                               legacy_screens=False):
+        # Create a mock Analysis Project directory
+        self._make_working_dir()
+        # Generate names for fastq files to add
+        if paired_end:
+            reads = (1,2)
+        else:
+            reads = (1,)
+        sample_names = ('PJB1','PJB2')
+        if fastq_names is None:
+            fastq_names = []
+            for i,sname in enumerate(sample_names,start=1):
+                for read in reads:
+                    fq = "%s_S%d_R%d_001.fastq.gz" % (sname,i,read)
+                    fastq_names.append(fq)
+        self.analysis_dir = MockAnalysisProject('PJB',fastq_names)
+        # Create the mock directory
+        self.analysis_dir.create(top_dir=self.wd)
+        # Populate with fake QC products
+        project_dir = os.path.join(self.wd,self.analysis_dir.name)
+        UpdateAnalysisProject(AnalysisProject(project_dir)).\
+            add_qc_outputs(protocol=protocol,
+                           qc_dir=qc_dir,
+                           include_report=False,
+                           include_zip_file=False,
+                           include_multiqc=include_multiqc,
+                           legacy_screens=legacy_screens)
+        return project_dir
+
+    def test_verify_project_single_end(self):
+        """
+        verify_project: single-end data
+        """
+        analysis_dir = self._make_analysis_project(protocol="standardSE")
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end(self):
+        """
+        verify_project: paired-end data
+        """
+        analysis_dir = self._make_analysis_project(protocol="standardPE")
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_with_non_default_fastq_dir(self):
+        """
+        verify_project: paired-end data with non-default fastq dir
+        """
+        analysis_dir = self._make_analysis_project(protocol="standardPE",
+                                                   fastq_dir=\
+                                                   "fastqs.non_default")
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_with_no_fastq_dir(self):
+        """
+        verify_project: paired-end data with no fastq dir
+        """
+        analysis_dir = self._make_analysis_project(protocol="standardPE",
+                                                   fastq_dir=".")
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_with_non_default_qc_dir(self):
+        """
+        verify_project: paired-end data with non-default QC dir
+        """
+        analysis_dir = self._make_analysis_project(protocol="standardPE",
+                                                   qc_dir="qc.non_default")
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project,qc_dir="qc.non_default"))
+
+    def test_verify_project_paired_end_with_non_canonical_fastq_names(self):
+        """
+        verify_project: paired-end data with non-canonical fastq names
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol="standardPE",
+            fastq_names=
+            ("PJB1_S1_R1_001_paired.fastq.gz",
+             "PJB1_S1_R2_001_paired.fastq.gz",
+             "PJB2_S2_R1_001_paired.fastq.gz",
+             "PJB2_S2_R2_001_paired.fastq.gz",))
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_with_no_fastq_dir(self):
+        """
+        verify_project: paired-end data with legacy screen names
+        """
+        analysis_dir = self._make_analysis_project(protocol="standardPE",
+                                                   legacy_screens=True)
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))

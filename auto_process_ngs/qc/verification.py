@@ -16,6 +16,7 @@ Provides the following functions:
 - parse_qc_module_spec: process QC module specification string
 - filter_fastqs: filter list of Fastqs based on read IDs
 - filter_10x_pipelines: filter list of 10xGenomics pipeline tuples
+- verify_project: check the QC outputs for a project
 """
 
 #######################################################################
@@ -26,6 +27,7 @@ import os
 import logging
 from bcftbx.utils import AttributeDictionary
 from ..analysis import AnalysisFastq
+from ..metadata import AnalysisProjectQCDirInfo
 from .protocols import fetch_protocol_definition
 from .outputs import QCOutputs
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
@@ -513,3 +515,62 @@ def filter_10x_pipelines(p,pipelines):
         # Passed all filters
         matching_pipelines.append(pipeline)
     return matching_pipelines
+
+def verify_project(project,qc_dir=None,qc_protocol=None):
+    """
+    Check the QC outputs are correct for a project
+
+    Arguments:
+      project (AnalysisProject): project to verify QC for
+      qc_dir (str): path to the QC output dir; relative
+        path will be treated as a subdirectory of the
+        project being checked.
+      qc_protocol (str): QC protocol to verify against
+        (optional)
+
+     Returns:
+       Boolean: Returns True if all expected QC products
+         are present, False if not.
+    """
+    logger.debug("verify: qc_dir (initial): %s" % qc_dir)
+    if qc_dir is None:
+        qc_dir = project.qc_dir
+    else:
+        if not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(project.dirn,
+                                  qc_dir)
+    logger.debug("verify: qc_dir (final)  : %s" % qc_dir)
+    cellranger_version = None
+    cellranger_refdata = None
+    fastq_screens = None
+    qc_info_file = os.path.join(qc_dir,"qc.info")
+    if os.path.exists(qc_info_file):
+        qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+        if not qc_protocol:
+            qc_protocol = qc_info['protocol']
+        try:
+            cellranger_refdata = qc_info['cellranger_refdata']
+        except KeyError:
+            pass
+        try:
+            cellranger_version = qc_info['cellranger_version']
+        except KeyError:
+            pass
+        try:
+            fastq_screens = qc_info['fastq_screens']
+            if fastq_screens:
+                fastq_screens = fastq_screens.split(',')
+            elif 'fastq_screens' not in qc_info.keys_in_file():
+                fastq_screens = FASTQ_SCREENS
+        except KeyError:
+            pass
+    logger.debug("verify: cellranger reference data : %s" %
+                 cellranger_refdata)
+    logger.debug("verify: fastq screens : %s" % fastq_screens)
+    verifier = QCVerifier(qc_dir,
+                          fastq_attrs=project.fastq_attrs)
+    return verifier.verify(project.fastqs,
+                           qc_protocol,
+                           fastq_screens=fastq_screens,
+                           cellranger_version=cellranger_version,
+                           cellranger_refdata=cellranger_refdata)
