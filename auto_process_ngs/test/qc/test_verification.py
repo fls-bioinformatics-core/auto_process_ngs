@@ -160,6 +160,463 @@ PJB_CML2,CMO302,CML2
         qc_info.save(os.path.join(qc_dir,"qc.info"))
         return qc_dir
 
+    def test_qcverifier_verify_qc_module_fastqc(self):
+        """
+        QCVerifier: verify QC module 'fastqc'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   include_fastqc=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module('fastqc',
+                                                     fastqs=fastq_names,
+                                                     qc_reads=('r1','r2')))
+        # Some outputs missing
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:-1],
+                                   include_fastqc=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('fastqc',
+                                                      fastqs=fastq_names,
+                                                      qc_reads=('r1','r2')))
+        # Empty QC directory
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_fastqc=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('fastqc',
+                                                      fastqs=fastq_names,
+                                                      qc_reads=('r1','r2')))
+
+    def test_qcverifier_verify_qc_module_fastq_screen(self):
+        """
+        QCVerifier: verify QC module 'fastq_screen'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   include_fastq_screen=True,
+                                   screens=('model_organisms',
+                                            'other_organisms',
+                                            'rRNA',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module('fastq_screen',
+                                                     fastqs=fastq_names,
+                                                     fastq_screens=(
+                                                         'model_organisms',
+                                                         'other_organisms',
+                                                         'rRNA',),
+                                                     data_reads=('r1','r2')))
+        # Some outputs missing
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:-1],
+                                   include_fastq_screen=True,
+                                   screens=('model_organisms',
+                                            'other_organisms',
+                                            'rRNA',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('fastq_screen',
+                                                      fastqs=fastq_names,
+                                                      fastq_screens=(
+                                                          'model_organisms',
+                                                          'other_organisms',
+                                                          'rRNA',),
+                                                      data_reads=('r1','r2')))
+        # Some screens missing
+        qc_dir = self._make_qc_dir('qc.missing_screens',
+                                   fastq_names=fastq_names,
+                                   include_fastq_screen=True,
+                                   screens=('rRNA',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('fastq_screen',
+                                                      fastqs=fastq_names,
+                                                      fastq_screens=(
+                                                          'model_organisms',
+                                                          'other_organisms',
+                                                          'rRNA',),
+                                                      data_reads=('r1','r2')))
+        # Empty QC directory
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_fastq_screen=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('fastq_screen',
+                                                      fastqs=fastq_names,
+                                                      fastq_screens=(
+                                                          'model_organisms',
+                                                          'other_organisms',
+                                                          'rRNA',),
+                                                      data_reads=('r1','r2')))
+
+    def test_qcverifier_verify_qc_module_strandedness(self):
+        """
+        QCVerifier: verify QC module 'strandedness'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   include_strandedness=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module('strandedness',
+                                                     fastqs=fastq_names,
+                                                     data_reads=('r1','r2')))
+        # Some outputs missing
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:2],
+                                   include_strandedness=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('strandedness',
+                                                      fastqs=fastq_names,
+                                                      data_reads=('r1','r2')))
+        # Empty QC directory
+        # NB this will verify as True because the fastq_strand.conf
+        # file is missing (so no outputs are expected)
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_strandedness=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module('strandedness',
+                                                     fastqs=fastq_names,
+                                                     data_reads=('r1','r2')))
+
+    def test_qcverifier_verify_qc_module_sequence_lengths(self):
+        """
+        QCVerifier: verify QC module 'sequence_lengths'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   include_seqlens=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module('sequence_lengths',
+                                                     fastqs=fastq_names,
+                                                     qc_reads=('r1','r2')))
+        # Some outputs missing
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:-1],
+                                   include_seqlens=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('sequence_lengths',
+                                                      fastqs=fastq_names,
+                                                      qc_reads=('r1','r2')))
+        # Empty QC directory
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_seqlens=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('sequence_lengths',
+                                                      fastqs=fastq_names,
+                                                      qc_reads=('r1','r2')))
+
+    def test_qcverifier_verify_qc_module_multiqc(self):
+        """
+        QCVerifier: verify QC module 'multiqc'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # QC dir with MultiQC
+        qc_dir = self._make_qc_dir('qc.multiqc',
+                                   fastq_names=fastq_names,
+                                   include_multiqc=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module('multiqc'))
+        # QC dir without MultiQC
+        qc_dir = self._make_qc_dir('qc.no_multiqc',
+                                   fastq_names=fastq_names,
+                                   include_multiqc=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('multiqc'))
+
+    def test_qcverifier_verify_qc_module_cellranger_count(self):
+        """
+        QCVerifier: verify QC module 'cellranger_count'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # QC dir with cellranger count outputs
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ))
+        qc_verifier = QCVerifier(qc_dir)
+        # Implicitly match any version and reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_count',
+            samples=('PJB1','PJB2')))
+        # Explicitly match version with any reference
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger_count',
+                                                     samples=('PJB1','PJB2'),
+                                                     cellranger_version='6.1.2',
+                                                     cellranger_refdata='*'))
+        # Explicitly match reference with any version
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger_count',
+                                                     samples=('PJB1','PJB2'),
+                                                     cellranger_version='*',
+                                                     cellranger_refdata=\
+                                                     'refdata-cellranger-2020-A'))
+        # Fail if version not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='5.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-2020-A'))
+        # Fail if reference not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='6.1.2',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-2.0.0'))
+        # Missing outputs for one sample
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=('PJB1',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='6.1.2',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-2020-A'))
+        # Empty QC dir
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('cellranger_count',
+                                                      samples=('PJB1','PJB2')))
+
+    def test_qcverifier_verify_qc_module_cellranger_atac_count(self):
+        """
+        QCVerifier: verify QC module 'cellranger-atac_count'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # QC dir with cellranger count outputs
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-atac',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ))
+        qc_verifier = QCVerifier(qc_dir)
+        # Implicitly match any version and reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            samples=('PJB1','PJB2')))
+        # Explicitly match version with any reference
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger-atac_count',
+                                                     samples=('PJB1','PJB2'),
+                                                     cellranger_version='2.0.0',
+                                                     cellranger_refdata='*'))
+        # Explicitly match reference with any version
+        self.assertTrue(
+            qc_verifier.verify_qc_module('cellranger-atac_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='*',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-atac-2020-A'))
+        # Fail if version not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger-atac_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='1.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-atac-2020-A'))
+        # Fail if reference not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger-atac_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='2.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-atac-2.0.0'))
+        # Missing outputs for one sample
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-atac',),
+                                   cellranger_samples=('PJB1',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger-atac_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='2.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-atac-2020-A'))
+        # Empty QC dir
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module('cellranger-atac_count',
+                                                      samples=('PJB1','PJB2')))
+
+    def test_qcverifier_verify_qc_module_cellranger_arc_count(self):
+        """
+        QCVerifier: verify QC module 'cellranger-arc_count'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # QC dir with cellranger count outputs
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-arc',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ))
+        qc_verifier = QCVerifier(qc_dir)
+        # Implicitly match any version and reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-arc_count',
+            samples=('PJB1','PJB2')))
+        # Explicitly match version with any reference
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger-arc_count',
+                                                     samples=('PJB1','PJB2'),
+                                                     cellranger_version='2.0.0',
+                                                     cellranger_refdata='*'))
+        # Explicitly match reference with any version
+        self.assertTrue(
+            qc_verifier.verify_qc_module('cellranger-arc_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='*',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-arc-2020-A'))
+        # Fail if version not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger-arc_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='1.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-arc-2020-A'))
+        # Fail if reference not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger-arc_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='2.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-arc-2.0.0'))
+        # Missing outputs for one sample
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-arc',),
+                                   cellranger_samples=('PJB1',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger-arc_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='2.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-arc-2020-A'))
+        # Empty QC dir
+        # NB this will verify as True because the multiome CSV config
+        # files are missing (so no outputs are expected)
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger-arc_count',
+                                                     samples=('PJB1','PJB2')))
+
+    def test_qcverifier_verify_qc_module_cellranger_multi(self):
+        """
+        QCVerifier: verify QC module 'cellranger_multi'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # QC dir with cellranger multi outputs
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_multi_samples=(
+                                       'PJB_CML1',
+                                       'PJB_CML2',
+                                   ))
+        qc_verifier = QCVerifier(qc_dir)
+        # Implicitly match any version and reference
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi'))
+        # Explicitly match version with any reference
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi',
+                                                     cellranger_version='6.1.2',
+                                                     cellranger_refdata='*'))
+        # Explicitly match reference with any version
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi',
+                                                     cellranger_version='*',
+                                                     cellranger_refdata=\
+                                                     'refdata-cellranger-2020-A'))
+        # Fail if version not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger_multi',
+                                         cellranger_version='5.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-2020-A'))
+        # Fail if reference not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger_multi',
+                                         cellranger_version='6.1.2',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-2.0.0'))
+        # Missing outputs for one sample
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_multi_samples=('PJB_CML1',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger_multi',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_version='6.1.2',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-2020-A'))
+        # Empty QC dir
+        # NB this will verify as True because the 10x multi CSV config
+        # file is missing (so no outputs are expected)
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_multi=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi'))
+
     def test_qcverifier_verify_single_end(self):
         """
 	QCVerifier: verify single-end data (standardSE)
