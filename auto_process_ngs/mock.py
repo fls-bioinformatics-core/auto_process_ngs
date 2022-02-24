@@ -744,8 +744,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
         # MultiQC report
         if include_multiqc:
             MockQCOutputs.multiqc(self._project.dirn,
-                                  multiqc_html="multiqc%s_report.html"
-                                  % fastq_set_name)
+                                  multiqc_html="multi%s_report.html"
+                                  % os.path.basename(self._project.qc_dir))
         # Make mock ZIP archive
         if include_zip_file:
             analysis_name = os.path.basename(self._parent_dir())
