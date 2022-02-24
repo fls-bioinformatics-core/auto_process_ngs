@@ -82,7 +82,6 @@ class QCVerifier(QCOutputs):
             False otherwise.
         """
         # Look up protocol definition
-        print("QC protocol: %s" % qc_protocol)
         reads,qc_modules = fetch_protocol_definition(qc_protocol)
 
         # Sample names
@@ -90,7 +89,6 @@ class QCVerifier(QCOutputs):
         for fq in fastqs:
             samples.add(self.fastq_attrs(fq).sample_name)
         samples = sorted(list(samples))
-        print("Samples: %s" % samples)
 
         # Default parameters for verification
         default_params = dict(
@@ -124,6 +122,9 @@ class QCVerifier(QCOutputs):
                                                         **params)
 
         # Report status of checks
+        print("-"*27)
+        print("QC dir  : %s" % self.qc_dir)
+        print("Protocol: %s" % qc_protocol)
         print("-"*27)
         for name in verified:
             print("%21s: %s" % (name,('PASS' if verified[name]
@@ -167,8 +168,6 @@ class QCVerifier(QCOutputs):
           Exception: if the specified QC module name is not
             recognised.
         """
-        print("%s: checking QC outputs" % name)
-
         # Perform checks based on QC module
         if name == "fastqc":
             if not fastqs:
