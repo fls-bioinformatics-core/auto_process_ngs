@@ -118,8 +118,8 @@ class QCVerifier(QCOutputs):
                 params[p] = module_params[p]
 
             # Verify outputs for this QC module
-            verified[qc_module] = self.check_outputs(qc_module,
-                                                     **params)
+            verified[qc_module] = self.verify_qc_module(qc_module,
+                                                        **params)
 
         # Report status of checks
         print("-"*27)
@@ -134,13 +134,13 @@ class QCVerifier(QCOutputs):
         # Return verification status
         return status
 
-    def check_outputs(self,name,fastqs=None,samples=None,
-                      data_reads=None,qc_reads=None,
-                      fastq_screens=None,
-                      cellranger_version=None,
-                      cellranger_refdata=None):
+    def verify_qc_module(self,name,fastqs=None,samples=None,
+                         data_reads=None,qc_reads=None,
+                         fastq_screens=None,
+                         cellranger_version=None,
+                         cellranger_refdata=None):
         """
-        Check outputs for specific QC module
+        Verify QC outputs for specific QC module
 
         Arguments:
           name (str): QC module name
