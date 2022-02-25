@@ -23,8 +23,7 @@ class TestFetchProtocolDefinition(unittest.TestCase):
         self.assertEqual(qc_modules,['fastqc',
                                      'fastq_screen',
                                      'sequence_lengths',
-                                     'strandedness',
-                                     'multiqc'])
+                                     'strandedness'])
 
     def test_fetch_protocol_definition_unknown_protocol(self):
         """
