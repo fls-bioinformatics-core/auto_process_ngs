@@ -1191,9 +1191,9 @@ PJB_CML2,CMO302,CML2
                                    include_cellranger_count=True,
                                    include_cellranger_multi=True,
                                    cellranger_pipelines=('cellranger',),
+                                   # NB only GEX samples
                                    cellranger_samples=(
                                        'PJB1_GEX',
-                                       'PJB2_MC',
                                    ),
                                    cellranger_multi_samples=(
                                        'PJB_CML1',
@@ -1220,12 +1220,8 @@ PJB_CML2,CMO302,CML2
                      'PJB2_MC_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
                                    fastq_names=fastq_names,
-                                   include_cellranger_count=True,
-                                   cellranger_pipelines=('cellranger',),
-                                   cellranger_samples=(
-                                       'PJB1_GEX',
-                                       'PJB2_MC',
-                                   ))
+                                   include_cellranger_count=False,
+                                   include_cellranger_multi=False)
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
                                            qc_protocol="10x_CellPlex",

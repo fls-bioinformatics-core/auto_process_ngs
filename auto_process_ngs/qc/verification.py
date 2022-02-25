@@ -63,7 +63,8 @@ class QCVerifier(QCOutputs):
         QCOutputs.__init__(self,qc_dir,fastq_attrs=fastq_attrs)
 
     def verify(self,fastqs,qc_protocol,fastq_screens=None,
-               cellranger_version=None,cellranger_refdata=None):
+               cellranger_version=None,cellranger_refdata=None,
+               cellranger_use_multi_config=None):
         """
         Verify QC outputs for Fastqs against specified protocol
 
@@ -76,6 +77,10 @@ class QCVerifier(QCOutputs):
             package to check for
           cellranger_refdata (str): specific 10x reference
             dataset to check for
+          cellranger_use_multi_config (bool): if True then
+            cellranger count verification will attempt to
+            use data (GEX samples and reference dataset) from
+            the '10x_multi_config.csv' file
 
         Returns:
           Boolean: True if all expected outputs are present,
@@ -98,7 +103,8 @@ class QCVerifier(QCOutputs):
             qc_reads=reads.qc,
             fastq_screens=fastq_screens,
             cellranger_version=cellranger_version,
-            cellranger_refdata=cellranger_refdata
+            cellranger_refdata=cellranger_refdata,
+            cellranger_use_multi_config=cellranger_use_multi_config
         )
 
         # Perform verification
@@ -152,7 +158,8 @@ class QCVerifier(QCOutputs):
                          data_reads=None,qc_reads=None,
                          fastq_screens=None,
                          cellranger_version=None,
-                         cellranger_refdata=None):
+                         cellranger_refdata=None,
+                         cellranger_use_multi_config=None):
         """
         Verify QC outputs for specific QC module
 
@@ -170,6 +177,10 @@ class QCVerifier(QCOutputs):
             package to check for
           cellranger_refdata (str): specific 10x reference
             dataset to check for
+          cellranger_use_multi_config (bool): if True then
+            cellranger count verification will attempt to
+            use data (GEX samples and reference dataset) from
+            the '10x_multi_config.csv' file
 
         Returns:
           Boolean: True if all outputs are present, False
@@ -256,7 +267,17 @@ class QCVerifier(QCOutputs):
             return ("multiqc" in self.outputs)
 
         elif name == "cellranger_count":
-            print(self.data("cellranger_count"))
+            if cellranger_use_multi_config:
+                # Take parameters from 10x_multi_config.csv
+                if "10x_multi_config.csv" not in self.config_files:
+                    # No multi config file so no outputs expected
+                    return True
+                # Get GEX sample names and reference dataset from
+                # multi config file
+                cf = CellrangerMultiConfigCsv(
+                    os.path.join(self.qc_dir,"10x_multi_config.csv"))
+                samples = cf.gex_libraries
+                cellranger_refdata = cf.reference_data_path
             if not samples:
                 # No samples so cellranger outputs not expected
                 return True
