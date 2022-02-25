@@ -178,7 +178,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
-            'cellranger_count',
+            'cellranger_count(cellranger_use_multi_config=True)',
             'cellranger_multi'
         ]
     },
