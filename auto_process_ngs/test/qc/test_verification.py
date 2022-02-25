@@ -1242,6 +1242,46 @@ class TestParseQCModuleSpec(unittest.TestCase):
             ('cellranger_count',{ 'cellranger_version': '6.1.2',
                                   'cellranger_refdata': '*' }))
 
+    def test_parse_qc_module_spec_quoted_string(self):
+        """
+        parse_qc_module_spec: handle quoted string values
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(s=hello)"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='hello')"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s=\"hello\")"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='\"hello\"')"),
+            ('module',{ 's': '"hello"' }))
+
+    def test_parse_qc_module_spec_boolean(self):
+        """
+        parse_qc_module_spec: handle boolean values
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(b=True)"),
+            ('module',{ 'b': True }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=true)"),
+            ('module',{ 'b': True }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b='true')"),
+            ('module',{ 'b': 'true' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=False)"),
+            ('module',{ 'b': False }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=false)"),
+            ('module',{ 'b': False }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b='false')"),
+            ('module',{ 'b': 'false' }))
+
 class TestFilterFastqs(unittest.TestCase):
 
     def test_filter_fastqs(self):

@@ -395,6 +395,14 @@ def parse_qc_module_spec(module_spec):
     >>> parse_qc_module_spec('NAME(K1=V1;K2=V2)')
     ('NAME', { 'K1':'V1', 'K2':'V2' })
 
+    By default values are returned as strings (with
+    surrounding single or double quotes removed);
+    however basic type conversion is also applied to
+    certain values:
+
+    - True/true and False/false are returned as the
+      appropriate boolean value
+
     Arguments:
       module_spec (str): QC module specification
 
@@ -413,6 +421,16 @@ def parse_qc_module_spec(module_spec):
     try:
         for item in items[1].rstrip(')').split(';'):
             key,value = item.split('=')
+            if value[0] in ('\'','"'):
+                # Quoted string
+                if value[-1] == value[-1]:
+                    value = value[1:-1]
+            elif value in ('True','true'):
+                # Boolean true
+                value = True
+            elif value in ('False','false'):
+                # Boolean false
+                value = False
             params[key] = value
     except IndexError:
         pass
