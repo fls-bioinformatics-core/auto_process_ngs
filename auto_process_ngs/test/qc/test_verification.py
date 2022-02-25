@@ -49,7 +49,7 @@ class TestQCVerifier(unittest.TestCase):
                      include_fastq_screen=True,
                      include_strandedness=True,
                      include_seqlens=True,
-                     include_multiqc=True,
+                     include_multiqc=False,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
                      legacy_screens=False,
@@ -707,23 +707,6 @@ PJB_CML2,CMO302,CML2
                                                            'other_organisms',
                                                            'rRNA')))
 
-    def test_qcverifier_verify_single_end_no_multiqc(self):
-        """
-	QCVerifier: verify single-end data (standardSE, no MultiQC)
-        """
-        ##self.remove_test_outputs = False
-        fastq_names=('PJB1_S1_R1_001.fastq.gz',
-                     'PJB2_S2_R1_001.fastq.gz',)
-        qc_dir = self._make_qc_dir('qc',
-                                   fastq_names=fastq_names,
-                                   include_multiqc=False)
-        qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardSE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
-
     def test_qcverifier_verify_single_end_legacy_screen_naming(self):
         """
 	QCVerifier: verify single-end data (standardSE, legacy screen naming)
@@ -834,25 +817,6 @@ PJB_CML2,CMO302,CML2
                                            fastq_screens=('model_organisms',
                                                           'other_organisms',
                                                           'rRNA')))
-
-    def test_qcverifier_verify_paired_end_no_multiqc(self):
-        """
-	QCVerifier: verify paired-end data (standardPE, no MultiQC)
-        """
-        ##self.remove_test_outputs = False
-        fastq_names=('PJB1_S1_R1_001.fastq.gz',
-                     'PJB1_S1_R2_001.fastq.gz',
-                     'PJB2_S2_R1_001.fastq.gz',
-                     'PJB2_S2_R2_001.fastq.gz',)
-        qc_dir = self._make_qc_dir('qc',
-                                   fastq_names=fastq_names,
-                                   include_multiqc=False)
-        qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardPE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
 
     def test_qcverifier_verify_paired_end_legacy_screen_naming(self):
         """

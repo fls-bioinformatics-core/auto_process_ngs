@@ -63,11 +63,12 @@ QC_PROTOCOLS = {
             "data": ('r1',),
             "qc": ('r1',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness'
+        ]
     },
 
     "standardPE": {
@@ -75,11 +76,12 @@ QC_PROTOCOLS = {
             "data": ('r1','r2',),
             "qc": ('r1','r2',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness'
+        ]
     },
 
     "singlecell": {
@@ -87,11 +89,12 @@ QC_PROTOCOLS = {
         "data": ('r2',),
             "qc": ('r1','r2',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness'
+        ]
     },
 
     "10x_scRNAseq": {
@@ -99,12 +102,13 @@ QC_PROTOCOLS = {
             "data": ('r2',),
             "qc": ('r1','r2',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc',
-                       'cellranger_count']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'cellranger_count'
+        ]
     },
 
     "10x_snRNAseq": {
@@ -112,12 +116,13 @@ QC_PROTOCOLS = {
             "data": ('r2',),
             "qc": ('r1','r2',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc',
-                       'cellranger_count']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'cellranger_count'
+        ]
     },
 
     "10x_scATAC": {
@@ -125,12 +130,13 @@ QC_PROTOCOLS = {
             "data": ('r1','r3',),
             "qc": ('r1','r3',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc',
-                       'cellranger-atac_count']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'cellranger-atac_count'
+        ]
     },
 
     "10x_Multiome_GEX": {
@@ -138,14 +144,14 @@ QC_PROTOCOLS = {
             "data": ('r2',),
             "qc": ('r1','r2',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc',
-                       'cellranger_count(cellranger_version=*;'
-                       'cellranger_refdata=*)',
-                       'cellranger-arc_count']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'cellranger_count(cellranger_version=*;cellranger_refdata=*)',
+            'cellranger-arc_count'
+        ]
     },
 
     "10x_Multiome_ATAC": {
@@ -153,27 +159,28 @@ QC_PROTOCOLS = {
             "data": ('r1','r3',),
             "qc": ('r1','r3',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc',
-                       'cellranger-arc_count',
-                       'cellranger-atac_count(cellranger_version=*;'
-                       'cellranger_refdata=*)']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'cellranger-arc_count',
+            'cellranger-atac_count(cellranger_version=*;cellranger_refdata=*)'
+        ]
     },
     "10x_CellPlex": {
         "reads": {
             "data": ('r2',),
             "qc": ('r1','r2',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc',
-                       'cellranger_count',
-                       'cellranger_multi']
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'cellranger_count',
+            'cellranger_multi'
+        ]
     },
 
     "10x_Visium": {
@@ -181,12 +188,13 @@ QC_PROTOCOLS = {
             "data": ('r1','r2',),
             "qc": ('r1','r2',)
         },
-        "qc_modules": ['fastqc',
-                       'fastq_screen',
-                       'sequence_lengths',
-                       'strandedness',
-                       'multiqc']
-    }
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness'
+        ]
+    },
 }
 
 #######################################################################
