@@ -1224,38 +1224,6 @@ PJB_CML2,CMO302,CML2
                                            cellranger_refdata=\
                                            "/data/refdata-cellranger-2020-A"))
 
-    def test_qcverifier_verify_10x_cellranger_multi(self):
-        """
-        QCVerifier: verify 10xGenomics CellPlex data (10x_CellPlex)
-        """
-        ##self.remove_test_outputs = False
-        fastq_names=('PJB1_GEX_S1_R1_001.fastq.gz',
-                     'PJB1_GEX_R2_001.fastq.gz',
-                     'PJB2_MC_R1_001.fastq.gz',
-                     'PJB2_MC_R2_001.fastq.gz',)
-        qc_dir = self._make_qc_dir('qc',
-                                   fastq_names=fastq_names,
-                                   include_cellranger_count=True,
-                                   include_cellranger_multi=True,
-                                   cellranger_pipelines=('cellranger',),
-                                   cellranger_samples=(
-                                       'PJB1_GEX',
-                                       'PJB2_MC',
-                                   ),
-                                   cellranger_multi_samples=(
-                                       'PJB_CML1',
-                                       'PJB_CML2',
-                                   ))
-        qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_CellPlex",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="6.1.2",
-                                           cellranger_refdata=\
-                                           "/data/refdata-cellranger-2020-A"))
-
 class TestParseQCModuleSpec(unittest.TestCase):
 
     def test_parse_qc_module_spec(self):
