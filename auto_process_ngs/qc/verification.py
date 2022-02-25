@@ -103,11 +103,15 @@ class QCVerifier(QCOutputs):
 
         # Perform verification
         verified = dict()
+        params_for_module = dict()
 
         for qc_module in qc_modules:
 
             # Handle QC module specification
             qc_module,module_params = parse_qc_module_spec(qc_module)
+
+            # Store parameters for reporting
+            params_for_module[qc_module] = dict(**module_params)
 
             # Initialise up parameters for this module
             params = AttributeDictionary(**default_params)
@@ -121,14 +125,21 @@ class QCVerifier(QCOutputs):
             verified[qc_module] = self.verify_qc_module(qc_module,
                                                         **params)
 
-        # Report status of checks
-        print("-"*27)
+        # Report parameters and status of checks
+        print("-"*(10+len(self.qc_dir)))
         print("QC dir  : %s" % self.qc_dir)
         print("Protocol: %s" % qc_protocol)
+        print("-"*(10+len(self.qc_dir)))
+        print("Parameters:")
+        for p in default_params:
+            print("%21s: %s" % (p,default_params[p]))
         print("-"*27)
         for name in verified:
-            print("%21s: %s" % (name,('PASS' if verified[name]
-                                      else 'FAIL')))
+            print("%21s: %s%s" % (name,
+                                  ('PASS' if verified[name]
+                                   else 'FAIL'),
+                                  (' %s' % params_for_module[name]
+                                   if params_for_module[name] else '')))
         status = all([verified[m] for m in verified])
         print("-"*27)
         print("%21s: %s" % ("QC STATUS",('PASS' if status else 'FAIL')))
