@@ -247,33 +247,29 @@ class QCVerifier(QCOutputs):
         elif name == "cellranger_count":
             print(self.data("cellranger_count"))
             if not samples:
-                # No sample so cellranger outputs not expected
+                # No samples so cellranger outputs not expected
+                return True
+            if cellranger_refdata is None:
+                # No reference data so cellranger outputs not expected
                 return True
             if "cellranger_count" not in self.outputs:
                 # No cellranger outputs present
                 return False
             # Check expected samples against actual samples
             # associated with specified version and dataset
-            pipelines = filter_10x_pipelines(
-                ('cellranger',cellranger_version,cellranger_refdata),
-                self.data('cellranger_count').pipelines)
-            print("Matching cellranger pipelines: %s" % pipelines)
-            for pipeline in pipelines:
-                verified_pipeline = True
-                for sample in samples:
-                    if sample not in self.data("cellranger_count").\
-                       samples_by_pipeline[pipeline]:
-                        # At least one sample missing outputs from
-                        # this pipeline, so move on to the next
-                        verified_pipeline = False
-                        break
-                if verified_pipeline:
-                    return True
-            return False
+            return self.verify_10x_pipeline('cellranger_count',
+                                            ('cellranger',
+                                             cellranger_version,
+                                             cellranger_refdata),
+                                            samples)
 
         elif name == "cellranger-atac_count":
             if not samples:
-                # No sample so cellranger-atac outputs not
+                # No samples so cellranger-atac outputs not
+                # expected
+                return True
+            if cellranger_refdata is None:
+                # No reference data so cellranger-atac outputs not
                 # expected
                 return True
             if "cellranger-atac_count" not in self.outputs:
@@ -281,21 +277,11 @@ class QCVerifier(QCOutputs):
                 return False
             # Check expected samples against actual samples
             # associated with specified version and dataset
-            pipelines = filter_10x_pipelines(
-                ('cellranger-atac',cellranger_version,cellranger_refdata),
-                self.data('cellranger_count').pipelines)
-            for pipeline in pipelines:
-                verified_pipeline = True
-                for sample in samples:
-                    if sample not in self.data("cellranger_count").\
-                       samples_by_pipeline[pipeline]:
-                        # At least one sample missing outputs from
-                        # this pipeline, so move on to the next
-                        verified_pipeline = False
-                        break
-                if verified_pipeline:
-                    return True
-            return False
+            return self.verify_10x_pipeline('cellranger_count',
+                                            ('cellranger-atac',
+                                             cellranger_version,
+                                             cellranger_refdata),
+                                            samples)
 
         elif name == "cellranger-arc_count":
             # Look for cellranger-arc config files and
@@ -314,21 +300,11 @@ class QCVerifier(QCOutputs):
                 return False
             # Check expected samples against actual samples
             # associated with specified version and dataset
-            pipelines = filter_10x_pipelines(
-                ('cellranger-arc',cellranger_version,cellranger_refdata),
-                self.data('cellranger_count').pipelines)
-            for pipeline in pipelines:
-                verified_pipeline = True
-                for sample in samples:
-                    if sample not in self.data("cellranger_count").\
-                       samples_by_pipeline[pipeline]:
-                        # At least one sample missing outputs from
-                        # this pipeline, so move on to the next
-                        verified_pipeline = False
-                        break
-                if verified_pipeline:
-                    return True
-            return False
+            return self.verify_10x_pipeline('cellranger_count',
+                                            ('cellranger-arc',
+                                             cellranger_version,
+                                             cellranger_refdata),
+                                            samples)
 
         elif name == "cellranger_multi":
             if "10x_multi_config.csv" not in self.config_files:
@@ -339,31 +315,54 @@ class QCVerifier(QCOutputs):
             # Get expected multiplexed sample names
             # from config file
             cf = os.path.join(self.qc_dir,"10x_multi_config.csv")
-            expected_samples = CellrangerMultiConfigCsv(cf).\
-                               sample_names
-            if not expected_samples:
+            multiplexed_samples = CellrangerMultiConfigCsv(cf).\
+                                  sample_names
+            if not multiplexed_samples:
                 # No samples to check outputs for
                 return True
-            # Check against actual samples
+            # Check against actual multiplexed samples
             # associated with specified version and dataset
-            pipelines = filter_10x_pipelines(
-                ('cellranger',cellranger_version,cellranger_refdata),
-                self.data('cellranger_multi').pipelines)
-            for pipeline in pipelines:
-                verified_pipeline = True
-                for sample in expected_samples:
-                    if sample not in self.data("cellranger_multi").\
-                       samples_by_pipeline[pipeline]:
-                        # At least one sample missing outputs from
-                        # this pipeline, so move on to the next
-                        verified_pipeline = False
-                        break
-                if verified_pipeline:
-                    return True
-            return False
+            return self.verify_10x_pipeline('cellranger_multi',
+                                            ('cellranger',
+                                             cellranger_version,
+                                             cellranger_refdata),
+                                            multiplexed_samples)
 
         else:
             raise Exception("unknown QC module: '%s'" % name)
+
+    def verify_10x_pipeline(self,name,pipeline,samples):
+        """
+        Internal: check for and verify outputs for 10x package
+
+        Arguments:
+          name (str): name the QC data is stored under
+          pipeline (tuple): tuple specifying pipeline(s) to
+            verify
+          samples (list): list of sample names to verify
+
+        Returns:
+          Boolean: True if at least one set of valid outputs
+            exist for the specified pipeline and sample list,
+            False otherwise.
+        """
+        pipelines = filter_10x_pipelines(pipeline,
+                                         self.data(name).pipelines)
+        for pipeline in pipelines:
+            verified_pipeline = True
+            for sample in samples:
+                if sample not in self.data(name).\
+                   samples_by_pipeline[pipeline]:
+                    # At least one sample missing outputs from
+                    # this pipeline, so move on to the next
+                    verified_pipeline = False
+                    break
+            if verified_pipeline:
+                # At least one matching pipeline has
+                # verified
+                return True
+        # No matching outputs from cellranger count
+        return False
 
     def filter_fastqs(self,reads,fastqs):
         """

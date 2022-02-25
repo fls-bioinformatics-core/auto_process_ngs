@@ -415,8 +415,14 @@ PJB_CML2,CMO302,CML2
                                    fastq_names=fastq_names,
                                    include_cellranger_count=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('cellranger_count',
-                                                      samples=('PJB1','PJB2')))
+        # Okay if no reference data specified
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger_count',
+                                                     samples=('PJB1','PJB2')))
+        # Fail if reference data is specified
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_refdata='*'))
 
     def test_qcverifier_verify_qc_module_cellranger_atac_count(self):
         """
@@ -484,8 +490,14 @@ PJB_CML2,CMO302,CML2
                                    fastq_names=fastq_names,
                                    include_cellranger_count=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('cellranger-atac_count',
-                                                      samples=('PJB1','PJB2')))
+        # Okay if no reference data specified
+        self.assertTrue(qc_verifier.verify_qc_module('cellranger-atac_count',
+                                                     samples=('PJB1','PJB2')))
+        # Fail if reference data is specified
+        self.assertFalse(
+            qc_verifier.verify_qc_module('cellranger-atac_count',
+                                         samples=('PJB1','PJB2'),
+                                         cellranger_refdata='*'))
 
     def test_qcverifier_verify_qc_module_cellranger_arc_count(self):
         """
