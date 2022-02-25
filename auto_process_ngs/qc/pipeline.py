@@ -260,6 +260,7 @@ class QCPipeline(Pipeline):
                       requires=(setup_qc_dirs,),
                       runner=self.runners['fastqc_runner'],
                       log_dir=log_dir)
+        report_requires.append(get_seq_lengths)
 
         # Check outputs for FastqScreen
         check_fastq_screen = CheckFastqScreenOutputs(
