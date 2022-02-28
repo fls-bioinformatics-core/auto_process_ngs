@@ -150,7 +150,8 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
-            'cellranger_count(cellranger_version=*;cellranger_refdata=*)',
+            'cellranger_count(cellranger_version=*;'
+                             'cellranger_refdata=*)',
             'cellranger-arc_count'
         ]
     },
@@ -166,9 +167,11 @@ QC_PROTOCOLS = {
             'sequence_lengths',
             'strandedness',
             'cellranger-arc_count',
-            'cellranger-atac_count(cellranger_version=*;cellranger_refdata=*)'
+            'cellranger-atac_count(cellranger_version=*;'
+                                  'cellranger_refdata=*)'
         ]
     },
+
     "10x_CellPlex": {
         "reads": {
             "data": ('r2',),
