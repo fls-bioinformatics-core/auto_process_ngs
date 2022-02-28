@@ -356,7 +356,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_scRNAseq(self):
-        """run_qc: 10x scRNA-seq with strandedness and single library analysis
+        """run_qc: 10x scRNA-seq with single library analysis
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -447,7 +447,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_snRNAseq_310(self):
-        """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 3.1.0)
+        """run_qc: 10x snRNA-seq with single library analysis (cellranger 3.1.0)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -541,7 +541,7 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_snRNAseq_501(self):
-        """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 5.0.1)
+        """run_qc: 10x snRNA-seq with single library analysis (cellranger 5.0.1)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -635,7 +635,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_snRNAseq_600(self):
-        """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 6.0.0)
+        """run_qc: 10x snRNA-seq with single library analysis (cellranger 6.0.0)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -729,7 +729,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_scATACseq(self):
-        """run_qc: 10x scATAC-seq with strandedness and single library analysis
+        """run_qc: 10x scATAC-seq with single library analysis
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -821,7 +821,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_visium(self):
-        """run_qc: 10x Visium spatial RNA-seq with strandedness
+        """run_qc: 10x Visium spatial RNA-seq
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -904,7 +904,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_multiome_atac(self):
-        """run_qc: 10x Multiome ATAC with strandedness
+        """run_qc: 10x Multiome ATAC
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -990,7 +990,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10-atac
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_multiome_gex(self):
-        """run_qc: 10x Multiome GEX with strandedness
+        """run_qc: 10x Multiome GEX
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
