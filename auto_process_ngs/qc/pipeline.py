@@ -224,17 +224,9 @@ class QCPipeline(Pipeline):
                                  if fastq_dir is not None
                                  else '')
 
-        # Keep a list of tasks that need to complete
-        # before updating the QC metadata
-        update_qc_metadata_requires = []
-
         # Build a dictionary of QC metadata items to
         # update
         qc_metadata = dict(organism=organism)
-
-        # Keep a list of tasks that need to complete
-        # before running report task
-        verify_requires = []
 
         # Set up QC dirs
         setup_qc_dirs = SetupQCDirs(
@@ -246,8 +238,41 @@ class QCPipeline(Pipeline):
         )
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
-        update_qc_metadata_requires.append(setup_qc_dirs)
         qc_metadata['protocol'] = qc_protocol
+
+        # Update QC metadata
+        update_qc_metadata = UpdateQCMetadata(
+            "%s: update QC metadata" % project_name,
+            project,
+            qc_dir,
+            **qc_metadata)
+        self.add_task(update_qc_metadata,
+                      requires=(setup_qc_dirs,))
+
+        # Verify QC
+        verify_qc = VerifyQC(
+            "%s: verifying QC outputs" % project_name,
+            project,
+            qc_dir)
+        self.add_task(verify_qc,
+                      requires=(update_qc_metadata,),
+                      runner=self.runners['verify_runner'],
+                      log_dir=log_dir)
+
+        # Make QC report
+        report_qc = ReportQC(
+            "%s: make QC report" % project_name,
+            project,
+            qc_dir,
+            report_html=report_html,
+            multiqc=multiqc,
+            force=True
+        )
+        self.add_task(report_qc,
+                      requires=(verify_qc,),
+                      runner=self.runners['report_runner'],
+                      envmodules=self.envmodules['report_qc'],
+                      log_dir=log_dir)
 
         # Get Fastq sequence length statistics
         get_seq_lengths = GetSeqLengthStats(
@@ -261,7 +286,7 @@ class QCPipeline(Pipeline):
                       requires=(setup_qc_dirs,),
                       runner=self.runners['fastqc_runner'],
                       log_dir=log_dir)
-        verify_requires.append(get_seq_lengths)
+        verify_qc.requires(get_seq_lengths)
 
         # Check outputs for FastqScreen
         check_fastq_screen = CheckFastqScreenOutputs(
@@ -298,7 +323,7 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
         qc_metadata['fastq_screens'] = self.params.fastq_screens
         qc_metadata['legacy_screens'] = self.params.legacy_screens
-        verify_requires.append(run_fastq_screen)
+        verify_qc.requires(run_fastq_screen)
 
         # Check outputs for FastQC
         check_fastqc = CheckFastQCOutputs(
@@ -326,7 +351,7 @@ class QCPipeline(Pipeline):
                       runner=self.runners['fastqc_runner'],
                       envmodules=self.envmodules['fastqc'],
                       log_dir=log_dir)
-        verify_requires.append(run_fastqc)
+        verify_qc.requires(run_fastqc)
 
         # Set up fastq_strand.conf file
         setup_fastq_strand_conf = SetupFastqStrandConf(
@@ -372,7 +397,7 @@ class QCPipeline(Pipeline):
                       runner=self.runners['star_runner'],
                       envmodules=self.envmodules['fastq_strand'],
                       log_dir=log_dir)
-        verify_requires.append(run_fastq_strand)
+        verify_qc.requires(run_fastq_strand)
 
         if qc_protocol in ("10x_scRNAseq",
                            "10x_snRNAseq",
@@ -397,7 +422,7 @@ class QCPipeline(Pipeline):
                     run_cellranger_count.output.cellranger_version
             qc_metadata['cellranger_refdata'] = \
                     run_cellranger_count.output.cellranger_refdata
-            update_qc_metadata_requires.append(run_cellranger_count)
+            update_qc_metadata.requires(run_cellranger_count)
 
             # Set cell count
             set_cellranger_cell_count = SetCellCountFromCellrangerCount(
@@ -407,8 +432,9 @@ class QCPipeline(Pipeline):
                 qc_dir
             )
             self.add_task(set_cellranger_cell_count,
-                          requires=(run_cellranger_count,),)
-            verify_requires.append(set_cellranger_cell_count)
+                          requires=(run_cellranger_count,
+                                    update_qc_metadata),)
+            verify_qc.requires(set_cellranger_cell_count)
 
             # Extra protocols for multiome
             if qc_protocol == "10x_Multiome_ATAC":
@@ -427,7 +453,7 @@ class QCPipeline(Pipeline):
                     self.params.cellranger_reference_dataset,
                     log_dir=log_dir,
                     required_tasks=(setup_qc_dirs,))
-                verify_requires.append(run_cellranger_count)
+                verify_qc.requires(run_cellranger_count)
 
             elif qc_protocol == "10x_Multiome_GEX":
                 # See https://kb.10xgenomics.com/hc/en-us/articles/360059656912
@@ -445,7 +471,7 @@ class QCPipeline(Pipeline):
                     self.params.cellranger_reference_dataset,
                     log_dir=log_dir,
                     required_tasks=(setup_qc_dirs,))
-                verify_requires.append(run_cellranger_count)
+                verify_qc.requires(run_cellranger_count)
 
         elif qc_protocol in ("10x_CellPlex",):
 
@@ -468,9 +494,9 @@ class QCPipeline(Pipeline):
                           requires=(required_cellranger,),
                           envmodules=self.envmodules['cellranger'])
             check_cellranger_multi_requires.append(get_cellranger)
-            update_qc_metadata_requires.append(get_cellranger)
             qc_metadata['cellranger_version'] = \
                     get_cellranger.output.package_version
+            update_qc_metadata.requires(get_cellranger)
 
             # Locate config.csv file for 'cellranger multi'
             get_cellranger_multi_config = GetCellrangerMultiConfig(
@@ -486,7 +512,7 @@ class QCPipeline(Pipeline):
                 get_cellranger_multi_config)
             qc_metadata['cellranger_refdata'] = \
                     get_cellranger_multi_config.output.reference_data_path
-            update_qc_metadata_requires.append(get_cellranger_multi_config)
+            update_qc_metadata.requires(get_cellranger_multi_config)
 
             # Parent directory for cellranger multi outputs
             # Set to project directory unless the 'cellranger_out_dir'
@@ -534,7 +560,7 @@ class QCPipeline(Pipeline):
             )
             self.add_task(set_cellranger_cell_count,
                           requires=(run_cellranger_multi,),)
-            verify_requires.append(set_cellranger_cell_count)
+            verify_qc.requires(set_cellranger_cell_count)
 
             # Extra protocol for cellplex data
             # (NB only run on the GEX "samples")
@@ -552,42 +578,7 @@ class QCPipeline(Pipeline):
                 reference_dataset=\
                 get_cellranger_multi_config.output.reference_data_path,
                 required_tasks=(setup_qc_dirs,))
-            verify_requires.append(run_cellranger_count)
-
-        # Update QC metadata
-        update_qc_metadata = UpdateQCMetadata(
-            "%s: update QC metadata" % project_name,
-            project,
-            qc_dir,
-            **qc_metadata)
-        self.add_task(update_qc_metadata,
-                      requires=update_qc_metadata_requires)
-        verify_requires.append(update_qc_metadata)
-
-        # Verify QC
-        verify_qc = VerifyQC(
-            "%s: verifying QC outputs" % project_name,
-            project,
-            qc_dir)
-        self.add_task(verify_qc,
-                      requires=verify_requires,
-                      runner=self.runners['verify_runner'],
-                      log_dir=log_dir)
-
-        # Make QC report
-        report_qc = ReportQC(
-            "%s: make QC report" % project_name,
-            project,
-            qc_dir,
-            report_html=report_html,
-            multiqc=multiqc,
-            force=True
-        )
-        self.add_task(report_qc,
-                      requires=(verify_qc,),
-                      runner=self.runners['report_runner'],
-                      envmodules=self.envmodules['report_qc'],
-                      log_dir=log_dir)
+            verify_qc.requires(run_cellranger_count)
 
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_protocol,
