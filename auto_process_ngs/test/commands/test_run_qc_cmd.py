@@ -21,6 +21,9 @@ from auto_process_ngs.commands.run_qc_cmd import run_qc
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
+# Polling interval for pipeline
+POLL_INTERVAL = 0.1
+
 class TestAutoProcessRunQc(unittest.TestCase):
     """
     Tests for AutoProcess.run_qc
@@ -84,8 +87,8 @@ class TestAutoProcessRunQc(unittest.TestCase):
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
-""")
+poll_interval = {poll_interval}
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -143,14 +146,14 @@ poll_interval = 0.5
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -221,14 +224,14 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -300,14 +303,14 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -384,7 +387,7 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -393,7 +396,7 @@ cellranger_reference = /data/cellranger/transcriptomes/hg38
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -477,7 +480,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -486,7 +489,7 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/hg38_pre_mrna
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -571,7 +574,7 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -580,7 +583,7 @@ cellranger_reference = /data/cellranger/transcriptomes/hg38
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -665,7 +668,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -674,7 +677,7 @@ cellranger_reference = /data/cellranger/transcriptomes/hg38
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -758,7 +761,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -767,7 +770,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/hg38
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_atac_reference = /data/cellranger/atac_references/mm10
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -848,14 +851,14 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -928,14 +931,14 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -1008,14 +1011,14 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
