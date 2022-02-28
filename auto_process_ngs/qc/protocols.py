@@ -10,8 +10,8 @@ and modules for QC of analysis projects.
 
 QC protocols are defined with the ``QC_PROTOCOLS`` dictionary, where
 each key is a protocol name and the corresponding values are
-dictionaries which specify the reads used for sequence data ("data reads")
-and for QC ("QC reads"), along with a list of QC modules that comprise
+dictionaries which specify the reads used for sequence data and for
+index information, along with a list of QC modules that comprise
 the protocol.
 
 For example:
@@ -19,7 +19,7 @@ For example:
 ::
 
     "ExampleProtocol": {
-        "reads": { "data": ('r1','r2'), "qc": ('r2') },
+        "reads": { "seq_data": ('r1','r3'), "index": ('r2') },
         "qc_modules": ['fastqc','fastq_screen','sequence_lengths']
     }
 
@@ -61,8 +61,8 @@ QC_PROTOCOLS = {
 
     "standardSE": {
         "reads": {
-            "data": ('r1',),
-            "qc": ('r1',)
+            "seq_data": ('r1',),
+            "index": ()
         },
         "qc_modules": [
             'fastqc',
@@ -74,8 +74,8 @@ QC_PROTOCOLS = {
 
     "standardPE": {
         "reads": {
-            "data": ('r1','r2',),
-            "qc": ('r1','r2',)
+            "seq_data": ('r1','r2',),
+            "index": ()
         },
         "qc_modules": [
             'fastqc',
@@ -87,8 +87,8 @@ QC_PROTOCOLS = {
 
     "singlecell": {
         "reads": {
-        "data": ('r2',),
-            "qc": ('r1','r2',)
+            "seq_data": ('r2',),
+            "index": ('r1',)
         },
         "qc_modules": [
             'fastqc',
@@ -100,8 +100,8 @@ QC_PROTOCOLS = {
 
     "10x_scRNAseq": {
         "reads": {
-            "data": ('r2',),
-            "qc": ('r1','r2',)
+            "seq_data": ('r2',),
+            "index": ('r1',)
         },
         "qc_modules": [
             'fastqc',
@@ -114,8 +114,8 @@ QC_PROTOCOLS = {
 
     "10x_snRNAseq": {
         "reads": {
-            "data": ('r2',),
-            "qc": ('r1','r2',)
+            "seq_data": ('r2',),
+            "index": ('r1',)
         },
         "qc_modules": [
             'fastqc',
@@ -128,8 +128,8 @@ QC_PROTOCOLS = {
 
     "10x_scATAC": {
         "reads": {
-            "data": ('r1','r3',),
-            "qc": ('r1','r3',)
+            "seq_data": ('r1','r3',),
+            "index": ()
         },
         "qc_modules": [
             'fastqc',
@@ -142,8 +142,8 @@ QC_PROTOCOLS = {
 
     "10x_Multiome_GEX": {
         "reads": {
-            "data": ('r2',),
-            "qc": ('r1','r2',)
+            "seq_data": ('r2',),
+            "index": ('r1',)
         },
         "qc_modules": [
             'fastqc',
@@ -158,8 +158,8 @@ QC_PROTOCOLS = {
 
     "10x_Multiome_ATAC": {
         "reads": {
-            "data": ('r1','r3',),
-            "qc": ('r1','r3',)
+            "seq_data": ('r1','r3',),
+            "index": ()
         },
         "qc_modules": [
             'fastqc',
@@ -174,8 +174,8 @@ QC_PROTOCOLS = {
 
     "10x_CellPlex": {
         "reads": {
-            "data": ('r2',),
-            "qc": ('r1','r2',)
+            "seq_data": ('r2',),
+            "index": ('r1',)
         },
         "qc_modules": [
             'fastqc',
@@ -189,8 +189,8 @@ QC_PROTOCOLS = {
 
     "10x_Visium": {
         "reads": {
-            "data": ('r2',),
-            "qc": ('r1','r2',)
+            "seq_data": ('r2',),
+            "index": ('r1',)
         },
         "qc_modules": [
             'fastqc',
@@ -202,8 +202,8 @@ QC_PROTOCOLS = {
 
     "ICELL8_scATAC": {
         "reads": {
-            "data": ('r1','r2',),
-            "qc": ('r1','r2',)
+            "seq_data": ('r1','r2',),
+            "index": ()
         },
         "qc_modules": [
             'fastqc',
@@ -283,8 +283,9 @@ def fetch_protocol_definition(name):
     Returns:
       Tuple: definition as a tuple of the form
         (reads,qc_modules) where 'reads' is an
-        AttributeDictionary with elements 'data'
-        and 'qc' (listing data and QC reads
+        AttributeDictionary with elements 'seq_data',
+        'index', and 'qc' (listing sequence data,
+        index reads, and all reads for QC,
         respectively) and 'qc_modules' is a list
         of QC module definitions.
     """
@@ -293,8 +294,9 @@ def fetch_protocol_definition(name):
     protocol_defn = QC_PROTOCOLS[name]
     reads = AttributeDictionary()
     try:
-        reads['data'] = list(protocol_defn['reads']['data'])
-        reads['qc'] = list(protocol_defn['reads']['qc'])
+        reads['seq_data'] = list(protocol_defn['reads']['seq_data'])
+        reads['index'] = list(protocol_defn['reads']['index'])
+        reads['qc'] = sorted(reads.seq_data + reads.index)
         qc_modules = [m for m in protocol_defn['qc_modules']]
     except KeyError as ex:
         raise Exception("%s: exception loading QC protocol "

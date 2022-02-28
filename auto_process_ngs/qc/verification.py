@@ -99,7 +99,7 @@ class QCVerifier(QCOutputs):
         default_params = dict(
             fastqs=fastqs,
             samples=samples,
-            data_reads=reads.data,
+            data_reads=reads.seq_data,
             qc_reads=reads.qc,
             fastq_screens=fastq_screens,
             cellranger_version=cellranger_version,

@@ -400,7 +400,8 @@ class TestFetchProtocolDefinition(unittest.TestCase):
         fetch_protocol_definition: check definition is returned
         """
         reads,qc_modules = fetch_protocol_definition("standardPE")
-        self.assertEqual(reads.data,['r1','r2'])
+        self.assertEqual(reads.seq_data,['r1','r2'])
+        self.assertEqual(reads.index,[])
         self.assertEqual(reads.qc,['r1','r2'])
         self.assertEqual(qc_modules,['fastqc',
                                      'fastq_screen',
