@@ -18,9 +18,9 @@ from auto_process_ngs.analysis import locate_project_info_file
 from auto_process_ngs.command import Command
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.constants import PROTOCOLS
-from auto_process_ngs.qc.verification import verify_project
+from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.reporting import report
-from auto_process_ngs.qc.utils import determine_qc_protocol
+from auto_process_ngs.qc.verification import verify_project
 from auto_process_ngs import get_version
 
 __version__ = get_version()

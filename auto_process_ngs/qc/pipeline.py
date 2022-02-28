@@ -75,7 +75,7 @@ from .outputs import check_fastq_strand_outputs
 from .outputs import check_cellranger_count_outputs
 from .outputs import check_cellranger_atac_count_outputs
 from .outputs import check_cellranger_arc_count_outputs
-from .utils import determine_qc_protocol
+from .protocols import determine_qc_protocol
 from .utils import set_cell_count_for_project
 from .verification import verify_project
 from .fastq_strand import build_fastq_strand_conf
