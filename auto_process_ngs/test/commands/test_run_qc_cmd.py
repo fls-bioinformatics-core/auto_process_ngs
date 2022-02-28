@@ -911,6 +911,8 @@ star_index = /data/genomeIndexes/mm10/STAR
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -935,9 +937,13 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+cellranger_arc_reference = /data/cellranger/arc_references/hg38-arc
+cellranger_atac_reference = /data/cellranger/atac_references/hg38-atac
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
+cellranger_atac_reference = /data/cellranger/atac_references/mm10-atac
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -991,6 +997,8 @@ star_index = /data/genomeIndexes/mm10/STAR
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -1015,9 +1023,13 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+cellranger_reference = /data/cellranger/gex_references/hg38-gex
+cellranger_arc_reference = /data/cellranger/atac_references/hg38-arc
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+cellranger_reference = /data/cellranger/gex_references/mm10-gex
+cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
