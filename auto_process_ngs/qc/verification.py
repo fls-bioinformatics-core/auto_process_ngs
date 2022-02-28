@@ -28,6 +28,7 @@ import logging
 from bcftbx.utils import AttributeDictionary
 from ..analysis import AnalysisFastq
 from ..metadata import AnalysisProjectQCDirInfo
+from .constants import FASTQ_SCREENS
 from .protocols import fetch_protocol_definition
 from .outputs import QCOutputs
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
