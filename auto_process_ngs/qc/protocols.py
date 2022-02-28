@@ -185,7 +185,7 @@ QC_PROTOCOLS = {
 
     "10x_Visium": {
         "reads": {
-            "data": ('r1','r2',),
+            "data": ('r2',),
             "qc": ('r1','r2',)
         },
         "qc_modules": [
