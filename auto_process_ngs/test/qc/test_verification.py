@@ -125,7 +125,8 @@ class TestQCVerifier(unittest.TestCase):
                                                        sample)
                         with open(multiome_config,'wt') as fp:
                             fp.write("Placeholder\n")
-                qc_info['cellranger_version'] = version
+                if not legacy_cellranger_outs:
+                    qc_info['cellranger_version'] = version
                 qc_info['cellranger_refdata'] = refdata
         # Cellranger multi
         if include_cellranger_multi:
