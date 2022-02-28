@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.constants.py: constants for QC pipeline
-#     Copyright (C) University of Manchester 2019,2021 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
 #
 
 """
@@ -15,17 +15,8 @@ Provides the following constants for the QC pipeline:
 ######################################################################
 
 # QC protocols
-PROTOCOLS = ('standardPE',
-             'standardSE',
-             'singlecell',
-             '10x_scRNAseq',
-             '10x_snRNAseq',
-             '10x_scATAC',
-             '10x_Visium',
-             '10x_Multiome_GEX',
-             '10x_Multiome_ATAC',
-             '10x_CellPlex',
-             'ICELL8_scATAC',)
+from .protocols import QC_PROTOCOLS
+PROTOCOLS = tuple(QC_PROTOCOLS.keys())
 
 # Screen names
 FASTQ_SCREENS = ('model_organisms',
