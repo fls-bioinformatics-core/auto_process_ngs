@@ -42,11 +42,19 @@ class TestQCReporter(unittest.TestCase):
     def _make_analysis_project(self,protocol=None,paired_end=True,
                                fastq_dir=None,qc_dir="qc",
                                fastq_names=None,
+                               screens=('model_organisms',
+                                        'other_organisms',
+                                        'rRNA',),
+                               include_fastqc=True,
+                               include_fastq_screen=True,
+                               include_strandedness=True,
                                include_seqlens=True,
                                include_multiqc=True,
                                include_cellranger_count=False,
                                include_cellranger_multi=False,
                                cellranger_pipelines=('cellranger',),
+                               cellranger_samples=None,
+                               cellranger_multi_samples=None,
                                legacy_screens=False,
                                legacy_cellranger_outs=False):
         # Create a mock Analysis Project directory
@@ -71,34 +79,79 @@ class TestQCReporter(unittest.TestCase):
         self.analysis_dir.create(top_dir=self.wd)
         # Populate with fake QC products
         qc_dir = os.path.join(self.wd,self.analysis_dir.name,qc_dir)
-        qc_logs = os.path.join(qc_dir,'logs')
+        self._make_qc_dir(qc_dir,
+                          fastq_names=fastq_names,
+                          protocol=protocol,
+                          screens=screens,
+                          cellranger_pipelines=cellranger_pipelines,
+                          cellranger_samples=cellranger_samples,
+                          cellranger_multi_samples=cellranger_multi_samples,
+                          include_fastqc=include_fastqc,
+                          include_fastq_screen=include_fastq_screen,
+                          include_strandedness=include_strandedness,
+                          include_seqlens=include_seqlens,
+                          include_multiqc=include_multiqc,
+                          include_cellranger_count=include_cellranger_count,
+                          include_cellranger_multi=include_cellranger_multi,
+                          legacy_screens=legacy_screens,
+                          legacy_cellranger_outs=legacy_cellranger_outs)
+        return os.path.join(self.wd,self.analysis_dir.name)
+
+    def _make_qc_dir(self,qc_dir,fastq_names,
+                     protocol=None,
+                     screens=('model_organisms','other_organisms','rRNA',),
+                     cellranger_pipelines=('cellranger',),
+                     cellranger_samples=None,
+                     cellranger_multi_samples=None,
+                     include_fastqc=True,
+                     include_fastq_screen=True,
+                     include_strandedness=True,
+                     include_seqlens=True,
+                     include_multiqc=False,
+                     include_cellranger_count=False,
+                     include_cellranger_multi=False,
+                     legacy_screens=False,
+                     legacy_cellranger_outs=False):
+        # Create working directory and qc dir
+        self._make_working_dir()
+        qc_dir = os.path.join(self.wd,qc_dir)
+        print("QC dir: %s" % qc_dir)
         os.mkdir(qc_dir)
-        os.mkdir(qc_logs)
         # QC metadata
         qc_info = AnalysisProjectQCDirInfo()
         qc_info['protocol'] = protocol
-        qc_info['fastq_screens'] = ','.join(screens)
         # Populate with fake QC products
         for fq in fastq_names:
             # FastQC
-            MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
+            if include_fastqc:
+                MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
             # Fastq_screen
-            for screen in screens:
-                MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,screen,
-                                                  legacy=legacy_screens)
+            if include_fastq_screen:
+                for screen in screens:
+                    MockQCOutputs.fastq_screen_v0_9_2(
+                        fq,qc_dir,screen,legacy=legacy_screens)
+                qc_info['fastq_screens'] = ','.join(screens)
+            # Strandedness
+            if include_strandedness:
+                MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
             # Sequence lengths
             if include_seqlens:
                 MockQCOutputs.seqlens(fq,qc_dir)
+        # Strandedness conf file
+        if include_strandedness:
+            with open(os.path.join(qc_dir,
+                                   "fastq_strand.conf"),'wt') as fp:
+                fp.write("Placeholder\n")
         # MultiQC
         if include_multiqc:
             out_file = "multi%s_report.html" % os.path.basename(qc_dir)
-            MockQCOutputs.multiqc(os.path.join(self.wd,
-                                               self.analysis_dir.name),
+            MockQCOutputs.multiqc(self.wd,
                                   multiqc_html=out_file,
                                   version="1.8")
         # Cellranger count
         if include_cellranger_count:
             for cellranger in cellranger_pipelines:
+                # Set defaults
                 if cellranger == "cellranger":
                     version = "6.1.2"
                     refdata = "/data/refdata-cellranger-2020-A"
@@ -108,28 +161,35 @@ class TestQCReporter(unittest.TestCase):
                 elif cellranger == "cellranger-arc":
                     version = "2.0.0"
                     refdata = "/data/refdata-cellranger-arc-2020-A"
-                project_dir = os.path.join(self.wd,
-                                           self.analysis_dir.name)
+                # Set top-level output dir
                 if not legacy_cellranger_outs:
                     count_dir = os.path.join("cellranger_count",
                                              version,
                                              os.path.basename(refdata))
                 else:
                     count_dir = "cellranger_count"
-                UpdateAnalysisProject(AnalysisProject(project_dir)).\
-                    add_cellranger_count_outputs(
-                        reference_data_path=refdata,
-                        qc_dir=qc_dir,
+                # Make pipeline outputs
+                for sample in cellranger_samples:
+                    MockQCOutputs.cellranger_count(
+                        sample,
+                        qc_dir,
                         cellranger=cellranger,
+                        version=version,
+                        reference_data_path=refdata,
                         prefix=count_dir)
+                    if cellranger == "cellranger-arc":
+                        multiome_config = os.path.join(qc_dir,
+                                                       "libraries.%s.csv" %
+                                                       sample)
+                        with open(multiome_config,'wt') as fp:
+                            fp.write("Placeholder\n")
                 if not legacy_cellranger_outs:
                     qc_info['cellranger_version'] = version
                 qc_info['cellranger_refdata'] = refdata
         # Cellranger multi
         if include_cellranger_multi:
-            project_dir = os.path.join(self.wd,self.analysis_dir.name)
-            # Add the cellranger multi config.csv file
-            multi_config = os.path.join(project_dir,"10x_multi_config.csv")
+            # Make cellranger multi config.csv file
+            multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
             with open(multi_config,'wt') as fp:
                 fastq_dir = os.path.join(self.wd,
                                          "PJB",
@@ -145,19 +205,23 @@ PJB2_MC,%s,any,PJB2,Multiplexing Capture,
 [samples]
 sample_id,cmo_ids,description
 PJB_CML1,CMO301,CML1
-PBB_CML2,CMO302,CML2
+PJB_CML2,CMO302,CML2
 """ % (fastq_dir,fastq_dir))
-            UpdateAnalysisProject(AnalysisProject(project_dir)).\
-                add_cellranger_multi_outputs(
-                    config_csv=multi_config,
-                    qc_dir=qc_dir,
-                    prefix=os.path.join("cellranger_multi",
-                                        "6.1.2",
-                                        "refdata-cellranger-2020-A"))
-            qc_info['cellranger_version'] = "6.1.2"
+            # Cellranger version
+            version = "6.1.2"
+            # Set top-level output dir
+            multi_dir = os.path.join("cellranger_multi",
+                                     version,
+                                     "refdata-cellranger-2020-A")
+            # Make outputs
+            MockQCOutputs.cellranger_multi(cellranger_multi_samples,
+                                           qc_dir,
+                                           config_csv=multi_config,
+                                           prefix=multi_dir)
+            qc_info['cellranger_version'] = version
         # Write out metadata file
         qc_info.save(os.path.join(qc_dir,"qc.info"))
-        return os.path.join(self.wd,self.analysis_dir.name)
+        return qc_dir
 
     def test_qcreporter_single_end(self):
         """
@@ -203,7 +267,9 @@ PBB_CML2,CMO302,CML2
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_scRNAseq',
-            include_cellranger_count=True)
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',),
+            cellranger_samples=('PJB1','PJB2',))
         project = AnalysisProject(analysis_dir)
         reporter = QCReporter(project)
         self.assertTrue(reporter.verify())
@@ -217,7 +283,8 @@ PBB_CML2,CMO302,CML2
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_CellPlex',
-            include_cellranger_multi=True)
+            include_cellranger_multi=True,
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
         project = AnalysisProject(analysis_dir)
         reporter = QCReporter(project)
         self.assertFalse(reporter.verify())
@@ -231,8 +298,12 @@ PBB_CML2,CMO302,CML2
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_CellPlex',
+            include_cellranger_multi=True,
             include_cellranger_count=True,
-            include_cellranger_multi=True)
+            cellranger_pipelines=('cellranger',),
+            # NB only GEX samples
+            cellranger_samples=('PJB1_GEX',),
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
         project = AnalysisProject(analysis_dir)
         reporter = QCReporter(project)
         self.assertTrue(reporter.verify())
@@ -246,8 +317,9 @@ PBB_CML2,CMO302,CML2
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_Multiome_GEX',
+            include_cellranger_count=True,
             cellranger_pipelines=('cellranger-arc',),
-            include_cellranger_count=True)
+            cellranger_samples=('PJB1','PJB2',))
         project = AnalysisProject(analysis_dir)
         reporter = QCReporter(project)
         self.assertFalse(reporter.verify())
@@ -261,9 +333,10 @@ PBB_CML2,CMO302,CML2
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_Multiome_GEX',
+            include_cellranger_count=True,
             cellranger_pipelines=('cellranger',
                                   'cellranger-arc',),
-            include_cellranger_count=True)
+            cellranger_samples=('PJB1','PJB2',))
         project = AnalysisProject(analysis_dir)
         reporter = QCReporter(project)
         self.assertTrue(reporter.verify())
@@ -279,6 +352,8 @@ PBB_CML2,CMO302,CML2
             protocol='10x_scRNAseq',
             paired_end=True,
             include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',),
+            cellranger_samples=('PJB1','PJB2',),
             legacy_cellranger_outs=True)
         project = AnalysisProject(analysis_dir)
         reporter = QCReporter(project)
