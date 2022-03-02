@@ -133,6 +133,8 @@ class QCVerifier(QCOutputs):
                                                         **params)
 
         # Report parameters and status of checks
+        parameter_template_str = "{parameter:21s}: {value}"
+        qc_module_template_str = "{name:21s}: {status:4s}{params}"
         print("-"*(10+len(self.qc_dir)))
         print("QC dir  : %s" % self.qc_dir)
         print("Protocol: %s" % qc_protocol)
@@ -143,36 +145,47 @@ class QCVerifier(QCOutputs):
                 fqs = ['.../%s' % os.path.basename(fq)
                        for fq in default_params[p]]
                 if not fqs:
-                    print("%21s: %s" % (p,''))
+                    print(parameter_template_str.format(parameter=p,
+                                                        value=''))
                 else:
-                    print("%21s: %s" % (p,fqs[0]))
+                    print(parameter_template_str.format(parameter=p,
+                                                        value=fqs[0]))
                     for fq in fqs[1:]:
-                        print("%21s: %s" % ('',fq))
+                        print(parameter_template_str.format(parameter='',
+                                                            value=fq))
             elif p == 'samples':
                 smpls = default_params[p]
                 if not smpls:
-                    print("%21s: %s" % (p,''))
+                    print(parameter_template_str.format(parameter=p,
+                                                        value=''))
                 else:
-                    print("%21s: %s" % (p,smpls[0]))
+                    print(parameter_template_str.format(parameter=p,
+                                                        value=smpls[0]))
                     for smpl in smpls[1:]:
-                        print("%21s: %s" % ('',smpl))
+                        print(parameter_template_str.format(parameter='',
+                                                            value=smpl))
             elif p == 'cellranger_refdata':
                 refdata = default_params[p]
-                print("%21s: %s" % (p,
-                                    ('.../%s' % os.path.basename(refdata)
-                                     if refdata else refdata)))
+                print(parameter_template_str.format(
+                    parameter=p,
+                    value=('.../%s' % os.path.basename(refdata)
+                           if refdata else refdata)))
             else:
-                print("%21s: %s" % (p,default_params[p]))
+                print(parameter_template_str.format(parameter=p,
+                                                    value=default_params[p]))
         print("-"*27)
         for name in verified:
-            print("%21s: %s%s" % (name,
-                                  ('PASS' if verified[name]
-                                   else 'FAIL'),
-                                  (' %s' % params_for_module[name]
-                                   if params_for_module[name] else '')))
+            print(qc_module_template_str.format(
+                name=name,
+                status=('PASS' if verified[name] else 'FAIL'),
+                params=(params_for_module[name]
+                        if params_for_module[name] else '')))
         status = all([verified[m] for m in verified])
         print("-"*27)
-        print("%21s: %s" % ("QC STATUS",('PASS' if status else 'FAIL')))
+        print(qc_module_template_str.format(
+            name="QC STATUS",
+            status=('PASS' if status else 'FAIL'),
+            params=''))
         print("-"*27)
 
         # Return verification status
