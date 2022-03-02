@@ -139,7 +139,30 @@ class QCVerifier(QCOutputs):
         print("-"*(10+len(self.qc_dir)))
         print("Parameters:")
         for p in default_params:
-            print("%21s: %s" % (p,default_params[p]))
+            if p == 'fastqs':
+                fqs = ['.../%s' % os.path.basename(fq)
+                       for fq in default_params[p]]
+                if not fqs:
+                    print("%21s: %s" % (p,''))
+                else:
+                    print("%21s: %s" % (p,fqs[0]))
+                    for fq in fqs[1:]:
+                        print("%21s: %s" % ('',fq))
+            elif p == 'samples':
+                smpls = default_params[p]
+                if not smpls:
+                    print("%21s: %s" % (p,''))
+                else:
+                    print("%21s: %s" % (p,smpls[0]))
+                    for smpl in smpls[1:]:
+                        print("%21s: %s" % ('',smpl))
+            elif p == 'cellranger_refdata':
+                refdata = default_params[p]
+                print("%21s: %s" % (p,
+                                    ('.../%s' % os.path.basename(refdata)
+                                     if refdata else refdata)))
+            else:
+                print("%21s: %s" % (p,default_params[p]))
         print("-"*27)
         for name in verified:
             print("%21s: %s%s" % (name,
