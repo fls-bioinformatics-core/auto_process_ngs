@@ -100,7 +100,7 @@ class QCVerifier(QCOutputs):
         default_params = dict(
             fastqs=fastqs,
             samples=samples,
-            data_reads=reads.seq_data,
+            seq_data_reads=reads.seq_data,
             qc_reads=reads.qc,
             fastq_screens=fastq_screens,
             cellranger_version=cellranger_version,
@@ -156,7 +156,7 @@ class QCVerifier(QCOutputs):
         return status
 
     def verify_qc_module(self,name,fastqs=None,samples=None,
-                         data_reads=None,qc_reads=None,
+                         seq_data_reads=None,qc_reads=None,
                          fastq_screens=None,
                          cellranger_version=None,
                          cellranger_refdata=None,
@@ -168,7 +168,7 @@ class QCVerifier(QCOutputs):
           name (str): QC module name
           fastqs (list): list of Fastqs
           samples (list): list of sample names
-          data_reads (list): list of reads containing
+          seq_data_reads (list): list of reads containing
             sequence data
           qc_reads (list): list of reads to perform general
             QC on
@@ -214,7 +214,7 @@ class QCVerifier(QCOutputs):
                 return True
             try:
                 # Filter Fastq names
-                fastqs = self.filter_fastqs(data_reads,fastqs)
+                fastqs = self.filter_fastqs(seq_data_reads,fastqs)
                 # Check outputs exist for each screen
                 for screen in fastq_screens:
                     if screen not in self.data('fastq_screen').\
@@ -257,7 +257,7 @@ class QCVerifier(QCOutputs):
                 # No strandedness outputs present
                 return False
             # Filter Fastq names
-            fastqs = self.filter_fastqs(data_reads[:1],fastqs)
+            fastqs = self.filter_fastqs(seq_data_reads[:1],fastqs)
             # Check that outputs exist for every Fastq
             for fq in fastqs:
                 if fq not in self.data('fastq_strand').fastqs:

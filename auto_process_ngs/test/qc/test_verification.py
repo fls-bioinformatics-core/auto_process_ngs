@@ -220,7 +220,8 @@ PJB_CML2,CMO302,CML2
                                                          'model_organisms',
                                                          'other_organisms',
                                                          'rRNA',),
-                                                     data_reads=('r1','r2')))
+                                                     seq_data_reads=(
+                                                         'r1','r2')))
         # Some outputs missing
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:-1],
@@ -235,7 +236,8 @@ PJB_CML2,CMO302,CML2
                                                           'model_organisms',
                                                           'other_organisms',
                                                           'rRNA',),
-                                                      data_reads=('r1','r2')))
+                                                      seq_data_reads=(
+                                                          'r1','r2')))
         # Some screens missing
         qc_dir = self._make_qc_dir('qc.missing_screens',
                                    fastq_names=fastq_names,
@@ -248,7 +250,8 @@ PJB_CML2,CMO302,CML2
                                                           'model_organisms',
                                                           'other_organisms',
                                                           'rRNA',),
-                                                      data_reads=('r1','r2')))
+                                                      seq_data_reads=(
+                                                          'r1','r2')))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
@@ -260,7 +263,8 @@ PJB_CML2,CMO302,CML2
                                                           'model_organisms',
                                                           'other_organisms',
                                                           'rRNA',),
-                                                      data_reads=('r1','r2')))
+                                                      seq_data_reads=(
+                                                          'r1','r2')))
 
     def test_qcverifier_verify_qc_module_strandedness(self):
         """
@@ -277,7 +281,8 @@ PJB_CML2,CMO302,CML2
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module('strandedness',
                                                      fastqs=fastq_names,
-                                                     data_reads=('r1','r2')))
+                                                     seq_data_reads=(
+                                                         'r1','r2')))
         # Some outputs missing
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:2],
@@ -285,7 +290,8 @@ PJB_CML2,CMO302,CML2
         qc_verifier = QCVerifier(qc_dir)
         self.assertFalse(qc_verifier.verify_qc_module('strandedness',
                                                       fastqs=fastq_names,
-                                                      data_reads=('r1','r2')))
+                                                      seq_data_reads=(
+                                                          'r1','r2')))
         # Empty QC directory
         # NB this will verify as True because the fastq_strand.conf
         # file is missing (so no outputs are expected)
@@ -295,7 +301,8 @@ PJB_CML2,CMO302,CML2
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module('strandedness',
                                                      fastqs=fastq_names,
-                                                     data_reads=('r1','r2')))
+                                                     seq_data_reads=(
+                                                         'r1','r2')))
 
     def test_qcverifier_verify_qc_module_sequence_lengths(self):
         """
