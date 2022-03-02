@@ -252,7 +252,7 @@ class QCPipeline(Pipeline):
 
         # Verify QC
         verify_qc = VerifyQC(
-            "%s: verifying QC outputs" % project_name,
+            "%s: verify QC outputs" % project_name,
             project,
             qc_dir)
         self.add_task(verify_qc,
