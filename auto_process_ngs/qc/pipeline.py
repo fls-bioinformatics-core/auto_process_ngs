@@ -224,10 +224,6 @@ class QCPipeline(Pipeline):
                                  if fastq_dir is not None
                                  else '')
 
-        # Build a dictionary of QC metadata items to
-        # update
-        qc_metadata = dict(organism=organism)
-
         # Set up QC dirs
         setup_qc_dirs = SetupQCDirs(
             "%s: set up QC directories" % project_name,
@@ -238,14 +234,19 @@ class QCPipeline(Pipeline):
         )
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
-        qc_metadata['protocol'] = qc_protocol
+
+        # Build a dictionary of QC metadata items to
+        # update
+        qc_metadata = dict(protocol=qc_protocol,
+                           organism=organism,
+                           fastq_dir=project.fastq_dir)
 
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
             "%s: update QC metadata" % project_name,
             project,
             qc_dir,
-            **qc_metadata)
+            qc_metadata)
         self.add_task(update_qc_metadata,
                       requires=(setup_qc_dirs,))
 
@@ -968,9 +969,7 @@ class UpdateQCMetadata(PipelineTask):
     """
     Update the metadata stored for this QC run
     """
-    def init(self,project,qc_dir,protocol=None,organism=None,
-             cellranger_version=None,cellranger_refdata=None,
-             fastq_screens=None,legacy_screens=False):
+    def init(self,project,qc_dir,metadata):
         """
         Initialise the UpdateQCMetadata task
 
@@ -981,32 +980,35 @@ class UpdateQCMetadata(PipelineTask):
             to subdirectory 'qc' of project directory)
           log_dir (str): directory for log files (defaults
             to 'logs' subdirectory of the QC directory
-          protocol (str): QC protocol being used
-          organism (str): organism(s) associated with the
-            run
-          cellranger_version (str): version of cellranger
-            software used
-          cellranger_refdata (str): path to reference datasets
-            used by cellranger count
-          fastq_screens (str): comma separated list of
-            panel names used with FastqScreen
-          legacy_screens (bool): if True then suppress listing
-            screen names
+          metadata (dict): mapping of metadata items to
+            values
         """
         pass
     def setup(self):
+        # Resolve the supplied metadata values
+        metadata = {}
+        for item in self.args.metadata:
+            try:
+                value = self.args.metadata[item].value
+            except AttributeError:
+                value = self.args.metadata[item]
+            metadata[item] = value
+        # Deal with FastqScreen metadata
+        fastq_screens = (metadata['fastq_screens']
+                         if 'fastq_screens' in metadata else None)
+        legacy_screens = (metadata['legacy_screens']
+                         if 'legacy_screens' in metadata else None)
+        if fastq_screens and not legacy_screens:
+            # Collapse list into a string
+            metadata['fastq_screens'] = ','.join([s for s
+                                                  in fastq_screens])
+        else:
+            metadata['fastq_screens'] = None
         # Store the QC metadata
         qc_info = self.args.project.qc_info(self.args.qc_dir)
-        qc_info['protocol'] = self.args.protocol
-        qc_info['fastq_dir'] = self.args.project.fastq_dir
-        qc_info['organism'] = self.args.organism
-        qc_info['cellranger_version'] = self.args.cellranger_version
-        qc_info['cellranger_refdata'] = self.args.cellranger_refdata
-        if self.args.fastq_screens and not self.args.legacy_screens:
-            qc_info['fastq_screens'] = ','.join(
-                [s for s in self.args.fastq_screens])
-        else:
-            qc_info['fastq_screens'] = None
+        for item in metadata:
+            print("-- %s: %s" % (item,metadata[item]))
+            qc_info[item] = metadata[item]
         qc_info.save()
 
 class GetSeqLengthStats(PipelineFunctionTask):
