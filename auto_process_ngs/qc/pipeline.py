@@ -246,7 +246,8 @@ class QCPipeline(Pipeline):
             "%s: update QC metadata" % project_name,
             project,
             qc_dir,
-            qc_metadata)
+            qc_metadata,
+            legacy_screens=self.params.legacy_screens)
         self.add_task(update_qc_metadata,
                       requires=(setup_qc_dirs,))
 
@@ -969,7 +970,7 @@ class UpdateQCMetadata(PipelineTask):
     """
     Update the metadata stored for this QC run
     """
-    def init(self,project,qc_dir,metadata):
+    def init(self,project,qc_dir,metadata,legacy_screens=False):
         """
         Initialise the UpdateQCMetadata task
 
@@ -978,10 +979,11 @@ class UpdateQCMetadata(PipelineTask):
             QC for
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
-          log_dir (str): directory for log files (defaults
-            to 'logs' subdirectory of the QC directory
           metadata (dict): mapping of metadata items to
             values
+          legacy_screens (bool): if True then 'legacy'
+            naming convention was used for FastqScreen
+            outputs
         """
         pass
     def setup(self):
@@ -996,9 +998,7 @@ class UpdateQCMetadata(PipelineTask):
         # Deal with FastqScreen metadata
         fastq_screens = (metadata['fastq_screens']
                          if 'fastq_screens' in metadata else None)
-        legacy_screens = (metadata['legacy_screens']
-                         if 'legacy_screens' in metadata else None)
-        if fastq_screens and not legacy_screens:
+        if fastq_screens and not self.args.legacy_screens:
             # Collapse list into a string
             metadata['fastq_screens'] = ','.join([s for s
                                                   in fastq_screens])
