@@ -4,6 +4,25 @@
 #     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 
+"""
+Utilities for reporting QC pipeline outputs.
+
+Provides the following classes:
+
+- QCReporter: top-level class to verify and report QC for a project
+- QCProject: gather information about the QC associated with a project
+- FastqSet: describes sets of Fastq file
+- QCReport: create QC report document for one or more projects
+- QCReportSample: reports the QC for a sample
+- QCReportFastqGroup: reports the QC for a group of Fastqs
+- QCReportFastq: interface to QC outputs for a single Fastq
+
+Provides the following functions:
+
+- report: report the QC for a project
+- sanitize_name: replace 'unsafe' characters in HTML link targets
+"""
+
 #######################################################################
 # Imports
 #######################################################################
