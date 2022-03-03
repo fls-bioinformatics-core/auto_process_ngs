@@ -408,9 +408,10 @@ class QCProject:
         # Reads
         self.reads = qc_outputs.reads
         # Samples
-        self.samples = sorted(qc_outputs.samples +
-                              [s.name for s in self.project.samples],
-                              key=lambda s: split_sample_name(s))
+        self.samples = sorted(list(
+            set(qc_outputs.samples +
+                [s.name for s in self.project.samples])),
+                key=lambda s: split_sample_name(s))
         # Fastq screens
         self.fastq_screens = qc_outputs.fastq_screens
         # Single library analyses reference data
