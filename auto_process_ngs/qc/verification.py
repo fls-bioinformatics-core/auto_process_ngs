@@ -178,7 +178,7 @@ class QCVerifier(QCOutputs):
             print(qc_module_template_str.format(
                 name=name,
                 status=('PASS' if verified[name] else 'FAIL'),
-                params=(params_for_module[name]
+                params=(" %s" % params_for_module[name]
                         if params_for_module[name] else '')))
         status = all([verified[m] for m in verified])
         print("-"*27)
