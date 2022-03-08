@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 #########################################################################
 
@@ -213,16 +213,6 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             # Don't need sample sheet if Fastqs already exist
             original_sample_sheet = None
             custom_sample_sheet = None
-    # Library Prep Kit/Assay data
-    assay = None
-    if original_sample_sheet is not None:
-        for item in ('Assay','Library Prep Kit'):
-            try:
-                assay = SampleSheet(original_sample_sheet).header[item]
-                break
-            except KeyError:
-                logger.warning("No element '%s' found in sample sheet"
-                               % item)
     # Bases mask
     print("Bases mask set to 'auto' (will be determined at run time)")
     bases_mask = "auto"
@@ -306,7 +296,6 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.metadata['instrument_run_number'] = run_number
     ap.metadata['instrument_flow_cell_id'] = flow_cell
     ap.metadata['sequencer_model'] = model
-    ap.metadata['assay'] = assay
     ap.metadata['source'] = data_source
     # Make a 'projects.info' metadata file
     if not ap.params.project_metadata:
