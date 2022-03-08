@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2022 Peter Briggs
 #
 #########################################################################
 #
@@ -290,7 +290,7 @@ class AutoProcess:
         if self.has_parameter_file:
             # Migrate relevant values across
             print("Migrating metadata values from parameter file")
-            for param in ('platform','run_number','source','assay'):
+            for param in ('platform','run_number','source',):
                 if param not in self.params:
                     continue
                 if self.metadata[param] is None:
