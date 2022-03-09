@@ -34,9 +34,15 @@ from auto_process_ngs.pipeliner import FunctionParam
 from auto_process_ngs.pipeliner import PipelineError
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.Pipeline import Job
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
+
+# Check if Job instance has 'err' attribute
+JOB_HAS_ERR = hasattr(
+    Job(SimpleJobRunner(),'dummy','.','script',[]),
+    'err')
 
 # Helpers
 
@@ -2641,6 +2647,47 @@ class TestPipelineTask(unittest.TestCase):
             self.assertEqual(stdout[5+i*8],"Hello!")
             self.assertTrue(stdout[6+i*8].startswith("#### END "))
             self.assertEqual(stdout[7+i*8],"#### EXIT_CODE 0")
+
+    def test_pipelinetask_stderr(self):
+        """
+        PipelineTask: check stderr recovered from task
+        """
+        # Define a task with a command
+        # Echoes text multiple times via shell command
+        class MultipleEchoToStderr(PipelineTask):
+            def init(self,s,n=1):
+                pass
+            def setup(self):
+                for i in range(self.args.n):
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text","echo",self.args.s,">&2"))
+        # Make a task instance
+        task = MultipleEchoToStderr("Echo string 3 times","Hello!",3)
+        # Check initial state
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertFalse(task.output)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 asynchronous=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertFalse(task.output)
+        # Check stderr
+        # Should look like:
+        # Hello!
+        # ...x three times
+        print(task.stderr)
+        stderr = task.stderr.split("\n")
+        if JOB_HAS_ERR:
+            self.assertEqual(len(stderr),4) # 4 = 3 + trailing newline
+            for i in range(3):
+                self.assertEqual(stderr[i],"Hello!")
+        else:
+            self.assertEqual(stderr,[""])
 
     def test_pipelinetask_invoke_fail(self):
         """

@@ -666,15 +666,17 @@ threads might look like:
    it may also be worth considering using the ``max_slots``
    parameter when running the pipeline.
 
-Dealing with stdout from tasks
-------------------------------
+Dealing with stdout and stderr from tasks
+-----------------------------------------
 
-The stdout from tasks which run external commands can be
-accessed via the ``stdout`` property of the task instance once
-it has completed.
+The stdout and stderr from tasks which run external commands
+can be accessed via the ``stdout`` and ``stderr`` properties
+respectively of the task instance once it has completed.
 
 Where multiple jobs were run by the task, the stdout from all
-jobs are concatenated and returned via this property.
+jobs are concatenated and returned via this property (if
+stderr was not redirected to stdout then this will also be
+concatenated across all jobs).
 
 The stdout for each job is topped and tailed with a standard
 set of comment lines output from the wrapper scripts, of the
@@ -692,6 +694,11 @@ form::
 
 When parsing the stdout it is recommended to check for these lines
 using e.g. ``line.startswith("#### ")``.
+
+.. note::
+
+   Currently the stderr for each job is not enclosed by
+   standard comment lines.
 
 Handling failed tasks in pipelines
 ----------------------------------
@@ -2465,6 +2472,7 @@ class PipelineTask:
                                      uuid.uuid4())
         self._completed = False
         self._stdout_files = []
+        self._stderr_files = []
         self._exit_code = 0
         # Working directory
         self._working_dir = None
@@ -2578,9 +2586,25 @@ class PipelineTask:
         """
         stdout = []
         for f in self._stdout_files:
-            with open(f,'r') as fp:
-                stdout.append(fp.read())
+            if f is not None:
+                with open(f,'r') as fp:
+                    stdout.append(fp.read())
         return ''.join(stdout)
+
+    @property
+    def stderr(self):
+        """
+        Get the standard error from the task
+
+        Returns:
+          String: standard error from the task.
+        """
+        stderr = []
+        for f in self._stderr_files:
+            if f is not None:
+                with open(f,'r') as fp:
+                    stderr.append(fp.read())
+        return ''.join(stderr)
 
     @property
     def runner_nslots(self):
@@ -2769,17 +2793,36 @@ class PipelineTask:
           jobs (list): list of SchedulerJob instances
           sched (SimpleScheduler): scheduler instance
         """
-        for job in jobs:
-            try:
-                if job.exit_code != 0:
-                    self._exit_code += 1
-                self._stdout_files.append(job.log)
-            except AttributeError:
-                # Assume it's a group
-                for j in job.jobs:
-                    if j.exit_code != 0:
+        try:
+            for job in jobs:
+                try:
+                    if job.exit_code != 0:
                         self._exit_code += 1
-                    self._stdout_files.append(j.log)
+                    self._stdout_files.append(job.log)
+                    try:
+                        # Older versions of Job object
+                        # don't have 'err' property?
+                        self._stderr_files.append(job.err)
+                    except AttributeError:
+                        self._stderr_files.append(None)
+                except AttributeError:
+                    # Assume it's a group
+                    for j in job.jobs:
+                        if j.exit_code != 0:
+                            self._exit_code += 1
+                        self._stdout_files.append(j.log)
+                        try:
+                            # Older versions of Job object
+                            # don't have 'err' property?
+                            self._stderr_files.append(j.err)
+                        except AttributeError:
+                            self._stderr_files.append(None)
+        except Exception as ex:
+            # General
+            self.report("Unhandled exception when invoking "
+                        "'task_finished': %s" % ex)
+            self.report("Task will be marked as failed")
+            self._exit_code = 1
         self.finish_task()
 
     def finish_task(self):
