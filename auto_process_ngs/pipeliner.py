@@ -2356,10 +2356,7 @@ class Pipeline:
                     for task in failed:
                         self.report("Task failed: '%s' (%s)" %
                                     (task.name(),task.id()))
-                        if verbose and task.stdout:
-                            self.report("Task stdout:\n%s" %
-                                        '\n>> '.join(
-                                            task.stdout.split('\n')))
+                        task.report_failure()
                         dependent_tasks = self.get_dependent_tasks(
                             task.id())
                         pending = []
@@ -2737,7 +2734,21 @@ class PipelineTask:
         if lock:
             self._lock_manager.release(lock)
 
-    def report_diagnostics(self,s):
+    def report_failure(self,reportf=None):
+        """
+        Internal: report information on task failure
+
+        Arguments:
+          reportf (func): function to use for reporting
+            (defaults to the object's 'report' method)
+        """
+        if reportf is None:
+            reportf = self.report
+        self.report_diagnostics("Task failed: exit code %s" %
+                                self._exit_code,
+                                reportf=reportf)
+
+    def report_diagnostics(self,s,reportf=None):
         """
         Internal: report additional diagnostic information
 
@@ -2748,38 +2759,54 @@ class PipelineTask:
         Arguments:
           s (str): string describing the reason for the
             diagnostics being reported
+          reportf (func): function to use for reporting
+            (defaults to the object's 'report' method)
         """
+        if reportf is None:
+            reportf = self.report
         # Report diagnostic information
-        self.report("**** TASK DIAGNOSTICS ****\n")
-        self.report("Reason: '%s'\n" % s)
-        self.report("Working directory %s" % self._working_dir)
-        self.report("CWD %s" % os.getcwd())
-        self.report("\nCWD contents:")
-        contents = sorted(os.listdir(os.getcwd()))
+        reportf("**** TASK DIAGNOSTICS ****\n")
+        # General information
+        reportf("Task name: %s" % self.name())
+        reportf("Task id  : %s" % self.id())
+        reportf("Reason   : '%s'" % s)
+        # Working directory
+        reportf("Working directory %s" % self._working_dir)
+        contents = sorted(os.listdir(self._working_dir))
         if contents:
+            reportf("Contents:")
             for item in contents:
-                self.report("-- %s%s" % (item,
-                                         os.sep if os.path.isdir(
-                                             os.path.join(os.getcwd(),item))
-                                         else ''))
+                reportf("-- %s%s" % (item,
+                                     os.sep if os.path.isdir(
+                                         os.path.join(os.getcwd(),item))
+                                     else ''))
         else:
-            self.report("Empty")
-        self.report("\nSCRIPTS:")
+            reportf("Working dir is empty")
+        # Scripts
+        reportf("\nSCRIPTS:")
         if self._scripts:
             for script_file in self._scripts:
                 with open(script_file,'rt') as fp:
-                    self.report("%s:" % script_file)
+                    reportf("%s:" % script_file)
                     for line in fp:
-                        self.report("> %s" % line.rstrip('\n'))
+                        reportf("SCRIPT> %s" % line.rstrip('\n'))
         else:
-            self.report("No scripts generated for this task")
-        self.report("\nSTDOUT:")
+            reportf("No scripts generated for this task")
+        # Stdout
+        reportf("\nSTDOUT:")
         if self.stdout:
             for line in self.stdout.split('\n'):
-                self.report("> %s" % line)
+                reportf("STDOUT> %s" % line)
         else:
-            self.report("No stdout from task scripts")
-        self.report("\n**** END OF DIAGNOSTICS ****")
+            reportf("No stdout from task scripts")
+        # Stderr
+        reportf("\nSTDERR:")
+        if self.stderr:
+            for line in self.stderr.split('\n'):
+                reportf("STDERR> %s" % line)
+        else:
+            reportf("No stderr from task scripts")
+        reportf("\n**** END OF DIAGNOSTICS ****")
 
     def task_completed(self,name,jobs,sched):
         """
