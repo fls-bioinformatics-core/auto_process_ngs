@@ -32,7 +32,7 @@ from auto_process_ngs.pipeliner import PathJoinParam
 from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
 from auto_process_ngs.pipeliner import PipelineError
-from auto_process_ngs.pipeliner import report_log
+from auto_process_ngs.pipeliner import report_text
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.Pipeline import Job
@@ -3819,11 +3819,11 @@ class TestDispatcher(unittest.TestCase):
         result = d.get_result()
         self.assertEqual(result,"Hello World!")
 
-class TestReportLog(unittest.TestCase):
+class TestReportText(unittest.TestCase):
 
-    def test_report_log(self):
+    def test_report_text(self):
         """
-        report_log: check writing to output
+        report_text: check writing to output
         """
         input_text = """Example logfile
 with some example
@@ -3833,13 +3833,13 @@ and blank lines
 """
         output = io.StringIO()
         write_output = lambda s: output.write("%s\n" % s)
-        report_log(input_text,
-                   reportf=write_output)
+        report_text(input_text,
+                    reportf=write_output)
         self.assertEqual(output.getvalue(),input_text)
 
-    def test_report_log_with_prefix(self):
+    def test_report_text_with_prefix(self):
         """
-        report_log: check writing to output with prefix
+        report_text: check writing to output with prefix
         """
         input_text = """Example logfile
 with some example
@@ -3855,14 +3855,14 @@ PREFIX> and blank lines
 """
         output = io.StringIO()
         write_output = lambda s: output.write("%s\n" % s)
-        report_log(input_text,
-                   prefix="PREFIX> ",
-                   reportf=write_output)
+        report_text(input_text,
+                    prefix="PREFIX> ",
+                    reportf=write_output)
         self.assertEqual(output.getvalue(),output_text)
 
-    def test_report_log_head(self):
+    def test_report_text_head(self):
         """
-        report_log: check writing head to output
+        report_text: check writing head to output
         """
         input_text = """Example logfile
 with some example
@@ -3877,14 +3877,14 @@ contents
 """
         output = io.StringIO()
         write_output = lambda s: output.write("%s\n" % s)
-        report_log(input_text,
-                   head=3,
-                   reportf=write_output)
+        report_text(input_text,
+                    head=3,
+                    reportf=write_output)
         self.assertEqual(output.getvalue(),output_text)
 
-    def test_report_log_tail(self):
+    def test_report_text_tail(self):
         """
-        report_log: check writing tail to output
+        report_text: check writing tail to output
         """
         input_text = """Example logfile
 with some example
@@ -3899,14 +3899,14 @@ and blank lines
 """
         output = io.StringIO()
         write_output = lambda s: output.write("%s\n" % s)
-        report_log(input_text,
-                   tail=3,
-                   reportf=write_output)
+        report_text(input_text,
+                    tail=3,
+                    reportf=write_output)
         self.assertEqual(output.getvalue(),output_text)
 
-    def test_report_log_head_and_tail(self):
+    def test_report_text_head_and_tail(self):
         """
-        report_log: check writing head and tail to output
+        report_text: check writing head and tail to output
         """
         input_text = """Example logfile
 with some example
@@ -3922,14 +3922,15 @@ and blank lines
 """
         output = io.StringIO()
         write_output = lambda s: output.write("%s\n" % s)
-        report_log(input_text,
-                   head=2,tail=2,
-                   reportf=write_output)
+        report_text(input_text,
+                    head=2,
+                    tail=2,
+                    reportf=write_output)
         self.assertEqual(output.getvalue(),output_text)
 
-    def test_report_log_head_and_tail_overlap(self):
+    def test_report_text_head_and_tail_overlap(self):
         """
-        report_log: check writing overlapping head and tail to output
+        report_text: check writing overlapping head and tail to output
         """
         input_text = """Example logfile
 with some example
@@ -3939,9 +3940,10 @@ and blank lines
 """
         output = io.StringIO()
         write_output = lambda s: output.write("%s\n" % s)
-        report_log(input_text,
-                   head=3,tail=3,
-                   reportf=write_output)
+        report_text(input_text,
+                    head=3,
+                    tail=3,
+                    reportf=write_output)
         self.assertEqual(output.getvalue(),input_text)
 
 class TestResolveParameter(unittest.TestCase):

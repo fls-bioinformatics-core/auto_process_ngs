@@ -2791,24 +2791,25 @@ class PipelineTask:
                 for script_file in self._scripts:
                     with open(script_file,'rt') as fp:
                         reportf("%s:" % script_file)
-                        for line in fp:
-                            reportf("SCRIPT> %s" % line.rstrip('\n'))
+                        report_text(fp.read(),
+                                    prefix="SCRIPT> ",
+                                    reportf=reportf)
             else:
                 reportf("No scripts generated for this task")
             # Stdout
             reportf("\nSTDOUT:")
             if self.stdout:
-                report_log(self.stdout,
-                           prefix="STDOUT> ",
-                           reportf=reportf)
+                report_text(self.stdout,
+                            prefix="STDOUT> ",
+                            reportf=reportf)
             else:
                 reportf("No stdout from task scripts")
             # Stderr
             reportf("\nSTDERR:")
             if self.stderr:
-                report_log(self.stderr,
-                           prefix="STDERR> ",
-                           reportf=reportf)
+                report_text(self.stderr,
+                            prefix="STDERR> ",
+                            reportf=reportf)
             else:
                 reportf("No stderr from task scripts")
         else:
@@ -2818,21 +2819,21 @@ class PipelineTask:
             stdout = self.stdout
             if stdout:
                 reportf("\nStandard ouput:")
-                report_log(stdout,
-                           head=head,
-                           tail=tail,
-                           prefix="STDOUT> ",
-                           reportf=reportf)
+                report_text(stdout,
+                            head=head,
+                            tail=tail,
+                            prefix="STDOUT> ",
+                            reportf=reportf)
             else:
                 reportf("\nNo stdout from task scripts")
             stderr = self.stderr
             if stderr:
                 reportf("\nStandard error:")
-                report_log(stderr,
-                           head=head,
-                           tail=tail,
-                           prefix="STDERR> ",
-                           reportf=reportf)
+                report_text(stderr,
+                            head=head,
+                            tail=tail,
+                            prefix="STDERR> ",
+                            reportf=reportf)
             else:
                 reportf("\nNo stderr from task scripts")
         reportf("\n**** END OF DIAGNOSTICS ****")
@@ -4233,8 +4234,8 @@ def sanitize_name(s):
             name.append(c)
     return ''.join(name)
 
-def report_log(s,head=None,tail=None,prefix=None,
-               reportf=None):
+def report_text(s,head=None,tail=None,prefix=None,
+                reportf=None):
     """
     Output text with optional topping and tailing
 
@@ -4284,17 +4285,17 @@ def report_log(s,head=None,tail=None,prefix=None,
     else:
         # Report head and/or tail only
         if head:
-            report_log('\n'.join(lines[:head]),
-                       prefix=prefix,
-                       reportf=reportf)
+            report_text('\n'.join(lines[:head]),
+                        prefix=prefix,
+                        reportf=reportf)
         reportf("%s...skipped %d line%s..." % (prefix,
                                                skipped_lines,
                                                's' if skipped_lines != 1
                                                else ''))
         if tail:
-            report_log('\n'.join(lines[-tail:]),
-                       prefix=prefix,
-                       reportf=reportf)
+            report_text('\n'.join(lines[-tail:]),
+                        prefix=prefix,
+                        reportf=reportf)
 
 def collect_files(dirn,pattern):
     """
