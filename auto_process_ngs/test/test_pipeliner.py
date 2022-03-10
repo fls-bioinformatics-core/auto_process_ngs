@@ -32,6 +32,7 @@ from auto_process_ngs.pipeliner import PathJoinParam
 from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
 from auto_process_ngs.pipeliner import PipelineError
+from auto_process_ngs.pipeliner import report_log
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.Pipeline import Job
@@ -3817,6 +3818,131 @@ class TestDispatcher(unittest.TestCase):
         self.assertEqual(exit_code,0)
         result = d.get_result()
         self.assertEqual(result,"Hello World!")
+
+class TestReportLog(unittest.TestCase):
+
+    def test_report_log(self):
+        """
+        report_log: check writing to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_log(input_text,
+                   reportf=write_output)
+        self.assertEqual(output.getvalue(),input_text)
+
+    def test_report_log_with_prefix(self):
+        """
+        report_log: check writing to output with prefix
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output_text = """PREFIX> Example logfile
+PREFIX> with some example
+PREFIX> contents
+PREFIX> 
+PREFIX> and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_log(input_text,
+                   prefix="PREFIX> ",
+                   reportf=write_output)
+        self.assertEqual(output.getvalue(),output_text)
+
+    def test_report_log_head(self):
+        """
+        report_log: check writing head to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output_text = """Example logfile
+with some example
+contents
+...skipped 2 lines...
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_log(input_text,
+                   head=3,
+                   reportf=write_output)
+        self.assertEqual(output.getvalue(),output_text)
+
+    def test_report_log_tail(self):
+        """
+        report_log: check writing tail to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output_text = """...skipped 2 lines...
+contents
+
+and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_log(input_text,
+                   tail=3,
+                   reportf=write_output)
+        self.assertEqual(output.getvalue(),output_text)
+
+    def test_report_log_head_and_tail(self):
+        """
+        report_log: check writing head and tail to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output_text = """Example logfile
+with some example
+...skipped 1 line...
+
+and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_log(input_text,
+                   head=2,tail=2,
+                   reportf=write_output)
+        self.assertEqual(output.getvalue(),output_text)
+
+    def test_report_log_head_and_tail_overlap(self):
+        """
+        report_log: check writing overlapping head and tail to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_log(input_text,
+                   head=3,tail=3,
+                   reportf=write_output)
+        self.assertEqual(output.getvalue(),input_text)
 
 class TestResolveParameter(unittest.TestCase):
 

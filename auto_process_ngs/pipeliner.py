@@ -2356,7 +2356,7 @@ class Pipeline:
                     for task in failed:
                         self.report("Task failed: '%s' (%s)" %
                                     (task.name(),task.id()))
-                        task.report_failure()
+                        task.report_failure(verbose=verbose)
                         dependent_tasks = self.get_dependent_tasks(
                             task.id())
                         pending = []
@@ -2734,7 +2734,7 @@ class PipelineTask:
         if lock:
             self._lock_manager.release(lock)
 
-    def report_failure(self,reportf=None):
+    def report_failure(self,reportf=None,verbose=False):
         """
         Internal: report information on task failure
 
@@ -2746,9 +2746,10 @@ class PipelineTask:
             reportf = self.report
         self.report_diagnostics("Task failed: exit code %s" %
                                 self._exit_code,
-                                reportf=reportf)
+                                reportf=reportf,
+                                verbose=verbose)
 
-    def report_diagnostics(self,s,reportf=None):
+    def report_diagnostics(self,s,reportf=None,verbose=True):
         """
         Internal: report additional diagnostic information
 
@@ -2770,42 +2771,70 @@ class PipelineTask:
         reportf("Task name: %s" % self.name())
         reportf("Task id  : %s" % self.id())
         reportf("Reason   : '%s'" % s)
-        # Working directory
-        reportf("Working directory %s" % self._working_dir)
-        contents = sorted(os.listdir(self._working_dir))
-        if contents:
-            reportf("Contents:")
-            for item in contents:
-                reportf("-- %s%s" % (item,
-                                     os.sep if os.path.isdir(
-                                         os.path.join(os.getcwd(),item))
-                                     else ''))
+        # Verbose output
+        if verbose:
+            # Working directory
+            reportf("\nWorking directory %s" % self._working_dir)
+            contents = sorted(os.listdir(self._working_dir))
+            if contents:
+                reportf("Contents:")
+                for item in contents:
+                    reportf("-- %s%s" % (item,
+                                         os.sep if os.path.isdir(
+                                             os.path.join(os.getcwd(),item))
+                                         else ''))
+            else:
+                reportf("Working dir is empty")
+            # Scripts
+            reportf("\nSCRIPTS:")
+            if self._scripts:
+                for script_file in self._scripts:
+                    with open(script_file,'rt') as fp:
+                        reportf("%s:" % script_file)
+                        for line in fp:
+                            reportf("SCRIPT> %s" % line.rstrip('\n'))
+            else:
+                reportf("No scripts generated for this task")
+            # Stdout
+            reportf("\nSTDOUT:")
+            if self.stdout:
+                report_log(self.stdout,
+                           prefix="STDOUT> ",
+                           reportf=reportf)
+            else:
+                reportf("No stdout from task scripts")
+            # Stderr
+            reportf("\nSTDERR:")
+            if self.stderr:
+                report_log(self.stderr,
+                           prefix="STDERR> ",
+                           reportf=reportf)
+            else:
+                reportf("No stderr from task scripts")
         else:
-            reportf("Working dir is empty")
-        # Scripts
-        reportf("\nSCRIPTS:")
-        if self._scripts:
-            for script_file in self._scripts:
-                with open(script_file,'rt') as fp:
-                    reportf("%s:" % script_file)
-                    for line in fp:
-                        reportf("SCRIPT> %s" % line.rstrip('\n'))
-        else:
-            reportf("No scripts generated for this task")
-        # Stdout
-        reportf("\nSTDOUT:")
-        if self.stdout:
-            for line in self.stdout.split('\n'):
-                reportf("STDOUT> %s" % line)
-        else:
-            reportf("No stdout from task scripts")
-        # Stderr
-        reportf("\nSTDERR:")
-        if self.stderr:
-            for line in self.stderr.split('\n'):
-                reportf("STDERR> %s" % line)
-        else:
-            reportf("No stderr from task scripts")
+            # Only report summary of stdout and stderr
+            head = 20
+            tail = 20
+            stdout = self.stdout
+            if stdout:
+                reportf("\nStandard ouput:")
+                report_log(stdout,
+                           head=head,
+                           tail=tail,
+                           prefix="STDOUT> ",
+                           reportf=reportf)
+            else:
+                reportf("\nNo stdout from task scripts")
+            stderr = self.stderr
+            if stderr:
+                reportf("\nStandard error:")
+                report_log(stderr,
+                           head=head,
+                           tail=tail,
+                           prefix="STDERR> ",
+                           reportf=reportf)
+            else:
+                reportf("\nNo stderr from task scripts")
         reportf("\n**** END OF DIAGNOSTICS ****")
 
     def task_completed(self,name,jobs,sched):
@@ -4203,6 +4232,69 @@ def sanitize_name(s):
         else:
             name.append(c)
     return ''.join(name)
+
+def report_log(s,head=None,tail=None,prefix=None,
+               reportf=None):
+    """
+    Output text with optional topping and tailing
+
+    Outputs the supplied string of text line-by-line via
+    the specified reporting function (defaults to the
+    built-in 'print' function) with options to limit the
+    number of leading and/or trailing lines.
+
+    Where lines are omitted, an additional line is
+    output reporting the number of lines that were
+    skipped.
+
+    Arguments:
+      s (str): text to report
+      head (int): number of leading lines to report
+      tail (int): number of trailing lines to report
+      prefix (str): optional string to prefix to
+        each reported line
+      reportf (func): function to call to report
+        each line of text (defaults to 'print')
+    """
+    # Set the reporting function
+    if reportf is None:
+        reportf = print
+    # Initialise the prefix
+    if prefix is None:
+        prefix = ""
+    # Split into lines
+    if s.endswith('\n'):
+        s = s[:-1]
+    lines = s.split('\n')
+    # Deal with topping and tailing
+    if head or tail:
+        total_lines = 0
+        if head:
+            total_lines += head
+        if tail:
+            total_lines += tail
+        skipped_lines = max(len(lines) - total_lines,0)
+    else:
+        skipped_lines = 0
+    # Report the log
+    if skipped_lines == 0:
+        # Report everything
+        for line in lines:
+            reportf("%s%s" % (prefix,line))
+    else:
+        # Report head and/or tail only
+        if head:
+            report_log('\n'.join(lines[:head]),
+                       prefix=prefix,
+                       reportf=reportf)
+        reportf("%s...skipped %d line%s..." % (prefix,
+                                               skipped_lines,
+                                               's' if skipped_lines != 1
+                                               else ''))
+        if tail:
+            report_log('\n'.join(lines[-tail:]),
+                       prefix=prefix,
+                       reportf=reportf)
 
 def collect_files(dirn,pattern):
     """
