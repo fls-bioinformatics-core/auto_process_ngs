@@ -2007,7 +2007,12 @@ class RunCellrangerCount(PipelineTask):
                 # Additional options for cellranger-atac 2+
                 if cellranger_major_version >= 2:
                     # Enable chemistry to be specified
-                    cmd.add_args("--chemistry",self.args.chemistry)
+                    if self.args.chemistry == "auto":
+                        # 'auto' not recognised by cellranger-atac 2.0.0
+                        print("Dropping \"--chemistry='auto'\" from "
+                              "cellranger-atac 2+ command line")
+                    else:
+                        cmd.add_args("--chemistry",self.args.chemistry)
             elif cellranger_package == "cellranger-arc":
                 # Cellranger-ARC (multiome GEX + ATAC data)
                 cmd.add_args("--reference",
