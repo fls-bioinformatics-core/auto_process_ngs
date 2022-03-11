@@ -2087,7 +2087,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
             if version[0] >= 2:
-                count.add_argument("--chemistry",action="store")
+                count.add_argument("--chemistry",choices=['ATAC-v1',
+                                                          'ARC-v1'])
         elif self._package_name == "cellranger-arc":
             count.add_argument("--reference",action="store")
             count.add_argument("--libraries",action="store")
