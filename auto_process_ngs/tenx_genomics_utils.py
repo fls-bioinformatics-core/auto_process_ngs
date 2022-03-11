@@ -824,7 +824,7 @@ def has_10x_indices(sample_sheet):
 
     For Visium data the indices are assumed to be of the form:
 
-    SI-TT-[A-H][1-12]
+    SI-(TT|TS)-[A-H][1-12]
 
     e.g. 'SI-TT-B1'
 
@@ -836,7 +836,7 @@ def has_10x_indices(sample_sheet):
       Boolean: True if the sample sheet contains at least
         one 10xGenomics-style index, False if not.
     """
-    index_pattern = re.compile(r"SI-(GA|NA|TT)-[A-H](1[0-2]|[1-9])$")
+    index_pattern = re.compile(r"SI-(GA|NA|TT|TS)-[A-H](1[0-2]|[1-9])$")
     s = SampleSheet(sample_sheet)
     for line in s:
         try:
