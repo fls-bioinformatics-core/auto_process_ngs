@@ -33,7 +33,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         settings_ini = os.path.join(self.wd,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = 0.01
 """)
         self.settings = Settings(settings_ini)
         # Create a temp 'bin' dir
