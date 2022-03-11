@@ -21,6 +21,9 @@ from auto_process_ngs.commands.run_qc_cmd import run_qc
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
+# Polling interval for pipeline
+POLL_INTERVAL = 0.1
+
 class TestAutoProcessRunQc(unittest.TestCase):
     """
     Tests for AutoProcess.run_qc
@@ -84,8 +87,8 @@ class TestAutoProcessRunQc(unittest.TestCase):
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
-""")
+poll_interval = {poll_interval}
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -143,14 +146,14 @@ poll_interval = 0.5
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -221,14 +224,14 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -300,14 +303,14 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -353,7 +356,7 @@ star_index = /data/genomeIndexes/mm10/STAR
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_scRNAseq(self):
-        """run_qc: 10x scRNA-seq with strandedness and single library analysis
+        """run_qc: 10x scRNA-seq with single library analysis
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -384,7 +387,7 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -393,7 +396,7 @@ cellranger_reference = /data/cellranger/transcriptomes/hg38
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -444,7 +447,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_snRNAseq_310(self):
-        """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 3.1.0)
+        """run_qc: 10x snRNA-seq with single library analysis (cellranger 3.1.0)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -477,7 +480,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -486,7 +489,7 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/hg38_pre_mrna
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -538,7 +541,7 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_snRNAseq_501(self):
-        """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 5.0.1)
+        """run_qc: 10x snRNA-seq with single library analysis (cellranger 5.0.1)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -571,7 +574,7 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -580,7 +583,7 @@ cellranger_reference = /data/cellranger/transcriptomes/hg38
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -632,7 +635,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_snRNAseq_600(self):
-        """run_qc: 10x snRNA-seq with strandedness and single library analysis (cellranger 6.0.0)
+        """run_qc: 10x snRNA-seq with single library analysis (cellranger 6.0.0)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -665,7 +668,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -674,7 +677,7 @@ cellranger_reference = /data/cellranger/transcriptomes/hg38
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -726,7 +729,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_scATACseq(self):
-        """run_qc: 10x scATAC-seq with strandedness and single library analysis
+        """run_qc: 10x scATAC-seq with single library analysis
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -758,7 +761,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
@@ -767,7 +770,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/hg38
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
 cellranger_atac_reference = /data/cellranger/atac_references/mm10
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -818,7 +821,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_visium(self):
-        """run_qc: 10x Visium spatial RNA-seq with strandedness
+        """run_qc: 10x Visium spatial RNA-seq
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -848,14 +851,14 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -901,13 +904,15 @@ star_index = /data/genomeIndexes/mm10/STAR
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_multiome_atac(self):
-        """run_qc: 10x Multiome ATAC with strandedness
+        """run_qc: 10x Multiome ATAC
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -928,14 +933,18 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+cellranger_arc_reference = /data/cellranger/arc_references/hg38-arc
+cellranger_atac_reference = /data/cellranger/atac_references/hg38-atac
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
+cellranger_atac_reference = /data/cellranger/atac_references/mm10-atac
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -981,13 +990,15 @@ star_index = /data/genomeIndexes/mm10/STAR
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_multiome_gex(self):
-        """run_qc: 10x Multiome GEX with strandedness
+        """run_qc: 10x Multiome GEX
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -1008,14 +1019,18 @@ star_index = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 1.0
+poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+cellranger_reference = /data/cellranger/gex_references/hg38-gex
+cellranger_arc_reference = /data/cellranger/atac_references/hg38-arc
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-""")
+cellranger_reference = /data/cellranger/gex_references/mm10-gex
+cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
+""".format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))

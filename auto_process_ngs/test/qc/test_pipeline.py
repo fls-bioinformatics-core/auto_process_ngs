@@ -7,6 +7,7 @@ import tempfile
 import shutil
 import os
 from bcftbx.JobRunner import SimpleJobRunner
+from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockFastqStrandPy
@@ -19,6 +20,9 @@ from auto_process_ngs.qc.pipeline import QCPipeline
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
+
+# Polling interval for pipeline
+POLL_INTERVAL = 0.1
 
 class TestQCPipeline(unittest.TestCase):
     """
@@ -83,11 +87,22 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -116,11 +131,21 @@ class TestQCPipeline(unittest.TestCase):
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -154,11 +179,22 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -193,11 +229,22 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,1)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
                         "Missing 'qc'")
         for f in ("qc_report.html",
@@ -227,11 +274,22 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=False)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip"):
@@ -264,11 +322,22 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,1)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
                         "Missing 'qc'")
         for f in ("qc_report.html",
@@ -298,11 +367,21 @@ class TestQCPipeline(unittest.TestCase):
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            legacy_screens=True,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -338,11 +417,22 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,1)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
                         "Missing 'qc'")
         for f in ("qc_report.html",
@@ -372,11 +462,22 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,1)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip"):
@@ -410,11 +511,22 @@ class TestQCPipeline(unittest.TestCase):
                           fastq_dir="fastqs.cells",
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs.cells"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -443,11 +555,22 @@ class TestQCPipeline(unittest.TestCase):
                           qc_dir="qc.non_default",
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc.non_default","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                      "PJB","qc")),
                          "'qc' exists, but shouldn't")
@@ -481,11 +604,22 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardSE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -521,11 +655,33 @@ class TestQCPipeline(unittest.TestCase):
                                               os.path.join(self.wd,p)),
                               multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"AB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"AB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"CD","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"CD","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for p in ("AB","CD"):
             for f in ("qc",
                       "qc_report.html",
@@ -557,11 +713,22 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -591,12 +758,23 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            batch_size=3,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -628,12 +806,23 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            batch_size=3,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,1)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
                         "Missing 'qc'")
         for f in ("qc_report.html",
@@ -667,11 +856,22 @@ class TestQCPipeline(unittest.TestCase):
                           multiqc=True,
                           log_dir=log_dir)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         self.assertTrue(os.path.isdir(os.path.join(self.wd,
                                                    "PJB",
                                                    "qc")),
@@ -719,11 +919,23 @@ class TestQCPipeline(unittest.TestCase):
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"3.1.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-GRCh38-1.2.0")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -779,11 +991,23 @@ class TestQCPipeline(unittest.TestCase):
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"5.0.1")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-gex-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -839,11 +1063,23 @@ class TestQCPipeline(unittest.TestCase):
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"6.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-gex-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -904,11 +1140,23 @@ class TestQCPipeline(unittest.TestCase):
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_exe=os.path.join(cellranger_bin,
                                                        "cellranger"),
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"5.0.1")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-gex-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -964,11 +1212,23 @@ class TestQCPipeline(unittest.TestCase):
                            { 'human': '/data/hg38/star_index' },
                            cellranger_premrna_references=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0_premrna' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_snRNAseq")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"3.1.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-GRCh38-1.2.0_premrna")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -1025,11 +1285,23 @@ class TestQCPipeline(unittest.TestCase):
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_snRNAseq")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"5.0.1")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-gex-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -1086,11 +1358,23 @@ class TestQCPipeline(unittest.TestCase):
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_snRNAseq")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"6.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-gex-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -1148,11 +1432,23 @@ class TestQCPipeline(unittest.TestCase):
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-1.2.0' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_scATAC")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"1.2.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-atac-GRCh38-1.2.0")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -1210,11 +1506,23 @@ class TestQCPipeline(unittest.TestCase):
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_scATAC")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"2.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -1238,8 +1546,8 @@ class TestQCPipeline(unittest.TestCase):
                             "Missing %s" % f)
 
     #@unittest.skip("Skipped")
-    def test_qcpipeline_multiome_atac(self):
-        """QCPipeline: single cell multiome ATAC QC run
+    def test_qcpipeline_multiome_atac_no_linked_gex(self):
+        """QCPipeline: single cell multiome ATAC QC run (no linked GEX)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -1277,11 +1585,23 @@ class TestQCPipeline(unittest.TestCase):
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB_ATAC","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_Multiome_ATAC")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB_ATAC","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"2.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-arc-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB_ATAC.zip",
@@ -1305,8 +1625,8 @@ class TestQCPipeline(unittest.TestCase):
                             "Missing %s" % f)
 
     #@unittest.skip("Skipped")
-    def test_qcpipeline_multiome_gex(self):
-        """QCPipeline: single cell multiome GEX QC run
+    def test_qcpipeline_multiome_gex_no_linked_atac(self):
+        """QCPipeline: single cell multiome GEX QC run (no linked ATAC)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -1342,11 +1662,23 @@ class TestQCPipeline(unittest.TestCase):
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB_GEX","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_Multiome_GEX")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB_GEX","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"2.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-arc-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB_GEX.zip",
@@ -1437,11 +1769,23 @@ class TestQCPipeline(unittest.TestCase):
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB_ATAC","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_Multiome_ATAC")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB_ATAC","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"1.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-arc-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB_ATAC.zip",
@@ -1545,11 +1889,23 @@ class TestQCPipeline(unittest.TestCase):
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB_ATAC","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_Multiome_ATAC")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB_ATAC","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"2.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-arc-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB_ATAC.zip",
@@ -1652,11 +2008,23 @@ class TestQCPipeline(unittest.TestCase):
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB_GEX","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_Multiome_GEX")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB_GEX","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"1.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-arc-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB_GEX.zip",
@@ -1759,11 +2127,23 @@ class TestQCPipeline(unittest.TestCase):
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-arc-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB_GEX","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_Multiome_GEX")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB_GEX","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"2.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-arc-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB_GEX.zip",
@@ -1851,11 +2231,23 @@ PBB,CMO302,PBB
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-gex-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_CellPlex")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"6.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-gex-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -1881,6 +2273,60 @@ PBB,CMO302,PBB
                   "cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/_cmdline",
                   "cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
                   "cellranger_count/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_GEX/outs/metrics_summary.csv",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+
+    def test_qcpipeline_with_10x_visium_data(self):
+        """QCPipeline: single cell spatial RNA-seq QC run (10x_Visium)
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Visium',
+                                           'Library type': 'Spatial RNA-seq' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_transcriptomes=
+                           { 'human': '/data/refdata-gex-GRCh38-2020-A' },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_Visium")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -1919,11 +2365,23 @@ PBB,CMO302,PBB
                            { 'human': '/data/hg38/star_index' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.organism,"human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"5.0.1")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-gex-GRCh38-2020-A")
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -1976,11 +2434,22 @@ PBB,CMO302,PBB
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",
@@ -2017,11 +2486,22 @@ PBB,CMO302,PBB
                           qc_protocol="standardPE",
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           poll_interval=0.5,
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        # Check output and reports
         self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
         for f in ("qc",
                   "qc_report.html",
                   "qc_report.PJB.zip",

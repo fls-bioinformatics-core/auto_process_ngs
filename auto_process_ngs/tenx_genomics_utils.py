@@ -14,7 +14,9 @@ platforms:
 - GexSummary
 - AtacSummary
 - MultiomeSummary
+- MultiplexSummary
 - MultiomeLibraries
+- CellrangerMultiConfigCsv
 - flow_cell_id
 - has_10x_indices
 - has_chromium_sc_indices
@@ -629,14 +631,15 @@ class CellrangerMultiConfigCsv:
 
     Provides the following properties:
 
-    - sample_names: list of sample names
+    - sample_names: list of multiplexed sample names
     - reference_data_path: path to the reference dataset
     - gex_libraries: list of Fastq IDs associated
       with GEX data
 
     Provides the following methods:
 
-    - sample: returns information on a specific sample
+    - sample: returns information on a specific multiplexed
+      sample
     - gex_library: returns information on a specific GEX
       library
     - fastq_dirs: returns mapping of library names to the
@@ -722,7 +725,7 @@ class CellrangerMultiConfigCsv:
     @property
     def sample_names(self):
         """
-        Return the sample names from config.csv
+        Return the multiplexed sample names from config.csv
 
         Samples are listed in the '[samples]' section.
         """
@@ -753,7 +756,7 @@ class CellrangerMultiConfigCsv:
 
     def sample(self,sample_name):
         """
-        Return dictionary of values associated with sample
+        Return dictionary of values associated with multiplexed sample
 
         Keys include 'cmo' (list of CMO ids) and 'description'
         (description text) associated with the sample in the

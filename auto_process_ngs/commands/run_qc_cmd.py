@@ -14,7 +14,7 @@ import logging
 from ..command import Command
 from ..qc.pipeline import QCPipeline
 from ..qc.fastq_strand import build_fastq_strand_conf
-from ..qc.utils import determine_qc_protocol
+from ..qc.protocols import determine_qc_protocol
 from ..utils import get_organism_list
 
 # Module specific logger

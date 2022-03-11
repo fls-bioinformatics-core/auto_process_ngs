@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes and functions for QC
-#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 """
 Provides utility classes and functions for analysis project QC.
 
 Provides the following functions:
 
-- determine_qc_protocol: get QC protocol for a project
 - verify_qc: verify the QC run for a project
 - report_qc: generate report for the QC run for a project
+- set_cell_count_for_project: sets total number of cells for a project
 """
 
 #######################################################################
@@ -36,61 +36,6 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # Functions
 #######################################################################
-
-def determine_qc_protocol(project):
-    """
-    Determine the QC protocol for a project
-
-    Arguments:
-      project (AnalysisProject): project instance
-
-    Return:
-      String: QC protocol for the project
-    """
-    # Standard protocols
-    if project.info.paired_end:
-        protocol = "standardPE"
-    else:
-        protocol = "standardSE"
-    # Single cell protocols
-    if project.info.single_cell_platform is not None:
-        # Default
-        protocol = "singlecell"
-        single_cell_platform = project.info.single_cell_platform
-        library_type = project.info.library_type
-        if single_cell_platform.startswith('10xGenomics Chromium 3\''):
-            if library_type == "scRNA-seq":
-                # 10xGenomics scATAC-seq
-                protocol = "10x_scRNAseq"
-            elif library_type == "snRNA-seq":
-                # 10xGenomics snRNA-seq
-                protocol = "10x_snRNAseq"
-            elif library_type in ("CellPlex",
-                                  "CellPlex scRNA-seq",
-                                  "CellPlex snRNA-seq"):
-                # 10xGenomics CellPlex (cell multiplexing)
-                protocol = "10x_CellPlex"
-        elif library_type in ("scATAC-seq",
-                              "snATAC-seq",):
-            if single_cell_platform == "10xGenomics Single Cell ATAC":
-                # 10xGenomics scATAC-seq
-                protocol = "10x_scATAC"
-            elif single_cell_platform == "ICELL8":
-                # ICELL8 scATAC-seq
-                protocol = "ICELL8_scATAC"
-    # Spatial RNA-seq
-    if project.info.single_cell_platform == "10xGenomics Visium":
-        # 10xGenomics Visium spatial transcriptomics
-        protocol = "10x_Visium"
-    # Multiome ATAC+GEX
-    if project.info.single_cell_platform == "10xGenomics Single Cell Multiome":
-        if library_type == "ATAC":
-            # 10xGenomics single cell Multiome ATAC
-            protocol = "10x_Multiome_ATAC"
-        elif library_type == "GEX":
-            # 10xGenomics single cell Multiome gene expression
-            protocol = "10x_Multiome_GEX"
-    return protocol
 
 def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
               runner=None,log_dir=None):

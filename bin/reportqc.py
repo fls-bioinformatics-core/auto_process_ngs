@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reportqc.py: generate report file for Illumina NGS qc runs
-#     Copyright (C) University of Manchester 2015-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2022 Peter Briggs
 #
 
 #######################################################################
@@ -18,10 +18,9 @@ from auto_process_ngs.analysis import locate_project_info_file
 from auto_process_ngs.command import Command
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.constants import PROTOCOLS
-from auto_process_ngs.qc.outputs import expected_outputs
-from auto_process_ngs.qc.reporting import verify
+from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.reporting import report
-from auto_process_ngs.qc.utils import determine_qc_protocol
+from auto_process_ngs.qc.verification import verify_project
 from auto_process_ngs import get_version
 
 __version__ = get_version()
@@ -226,7 +225,7 @@ def main():
             verified = False
         else:
             try:
-                verified = verify(p,qc_dir,protocol)
+                verified = verify_project(p,qc_dir,protocol)
             except Exception as ex:
                 logging.critical("Error: %s" % ex)
                 verified = False

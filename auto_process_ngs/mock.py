@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2022 Peter Briggs
 #
 ########################################################################
 
@@ -697,6 +697,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
         # Generate base QC outputs (one set per fastq)
         for fq in self._project.fastqs:
             print("Adding outputs for %s" % fq)
+            if include_seqlens:
+                MockQCOutputs.seqlens(fq,self._project.qc_dir)
             MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
             if protocol in ('singlecell',
                             '10x_scRNAseq',
@@ -711,8 +713,6 @@ class UpdateAnalysisProject(DirectoryUpdater):
                                                   self._project.qc_dir,
                                                   screen,
                                                   legacy=legacy_screens)
-            if include_seqlens:
-                MockQCOutputs.seqlens(fq,self._project.qc_dir)
         # Handle fastq_strand, if requested
         if include_fastq_strand:
             fastq_strand_conf = os.path.join(self._project.dirn,
@@ -743,8 +743,9 @@ class UpdateAnalysisProject(DirectoryUpdater):
             self.add_file("%s.html" % qc_name)
         # MultiQC report
         if include_multiqc:
-            multiqc_name = "multiqc%s_report" % fastq_set_name
-            self.add_file("%s.html" % multiqc_name)
+            MockQCOutputs.multiqc(self._project.dirn,
+                                  multiqc_html="multi%s_report.html"
+                                  % os.path.basename(self._project.qc_dir))
         # Make mock ZIP archive
         if include_zip_file:
             analysis_name = os.path.basename(self._parent_dir())
@@ -837,42 +838,23 @@ class UpdateAnalysisProject(DirectoryUpdater):
             print("- QC dir: %s" % self._project.qc_dir)
             if not os.path.exists(self._project.qc_dir):
                 self.add_subdir(self._project.qc_dir)
-            self.add_subdir(os.path.join(self._project.qc_dir,prefix))
-        if cellranger == 'cellranger':
-            cmdline = "cellranger --transcriptome %s" \
-                      % reference_data_path
-            metrics_data = mock10xdata.METRICS_SUMMARY
-            cellranger_output_files = ("web_summary.html",
-                                       "metrics_summary.csv")
-        elif cellranger == 'cellranger-atac':
-            cmdline = "cellranger-atac --reference %s" \
-                      % reference_data_path
-            metrics_data = mock10xdata.ATAC_SUMMARY_2_0_0
-            cellranger_output_files = ("web_summary.html",
-                                       "summary.csv")
-        elif cellranger == 'cellranger-arc':
-            cmdline = "cellranger-arc --reference %s" \
-                      % reference_data_path
-            metrics_data = mock10xdata.MULTIOME_SUMMARY_2_0_0
-            cellranger_output_files = ("web_summary.html",
-                                       "summary.csv")
         for sample in self._project.samples:
             if legacy:
-                sample_dir = os.path.join(self._project.dirn,
-                                          "cellranger_count",
-                                          sample.name)
+                MockQCOutputs.cellranger_count(
+                    sample.name,
+                    self._project.dirn,
+                    cellranger=cellranger,
+                    reference_data_path=
+                    reference_data_path,
+                    prefix="cellranger_count")
             else:
-                sample_dir = os.path.join(self._project.qc_dir,
-                                          prefix,
-                                          sample.name)
-            self.add_subdir(sample_dir)
-            self.add_subdir(os.path.join(sample_dir,"outs"))
-            for f in cellranger_output_files:
-                self.add_file(os.path.join(sample_dir,"outs",f),
-                              content=metrics_data)
-            for f in ("_cmdline",):
-                self.add_file(os.path.join(sample_dir,f),
-                              content=cmdline)
+                MockQCOutputs.cellranger_count(
+                    sample.name,
+                    self._project.qc_dir,
+                    cellranger=cellranger,
+                    reference_data_path=
+                    reference_data_path,
+                    prefix=prefix)
         # Build ZIP archive
         if legacy:
             analysis_dir = os.path.basename(self._parent_dir())
@@ -930,46 +912,16 @@ class UpdateAnalysisProject(DirectoryUpdater):
         print("- QC dir: %s" % self._project.qc_dir)
         if not os.path.exists(self._project.qc_dir):
             self.add_subdir(self._project.qc_dir)
-        self.add_subdir(os.path.join(self._project.qc_dir,prefix))
         # Read in multiplexing config
         if config_csv:
             config = CellrangerMultiConfigCsv(config_csv)
             sample_names = [s for s in config.sample_names]
             reference_data_path = config.reference_data_path
-            cmdline = "cellranger --csv %s" % config_csv
-        else:
-            cmdline = "cellranger"
-        # Per sample outputs
-        per_sample_output_files = ("web_summary.html",
-                                   "metrics_summary.csv")
-        for sample in sample_names:
-            sample_dir = os.path.join(self._project.qc_dir,
-                                      prefix,
-                                      "outs",
-                                      "per_sample_outs",
-                                      sample)
-            self.add_subdir(sample_dir)
-            for f in per_sample_output_files:
-                self.add_file(os.path.join(sample_dir,f),
-                              content=mock10xdata.CELLPLEX_METRICS_SUMMARY)
-        # Multiplexing analysis outputs
-        multiplexing_output_files = ("assignment_confidence_table.csv",
-                                     "cells_per_tag.json",
-                                     "tag_calls_per_cell.csv",
-                                     "tag_calls_summary.csv")
-        multiplexing_dir = os.path.join(self._project.qc_dir,
-                                        prefix,
-                                        "outs",
-                                        "multi",
-                                        "multiplexing_analysis")
-        self.add_subdir(multiplexing_dir)
-        for f in multiplexing_output_files:
-            self.add_file(os.path.join(multiplexing_dir,f))
-        # Top-level outputs
-        for f in ("_cmdline",):
-            self.add_file(os.path.join(self._project.qc_dir,
-                                       prefix,f),
-                          content=cmdline)
+        # Add outputs
+        MockQCOutputs.cellranger_multi(sample_names,
+                                       self._project.qc_dir,
+                                       config_csv=config_csv,
+                                       prefix=prefix)
         # Update cellranger reference data in qc.info
         qc_info = self._project.qc_info(self._project.qc_dir)
         qc_info['cellranger_refdata'] = reference_data_path
@@ -2616,7 +2568,8 @@ class MockMultiQC:
     """
 
     @staticmethod
-    def create(path,no_outputs=False,exit_code=0):
+    def create(path,version=None,no_outputs=False,
+               exit_code=0):
         """
         Create a "mock" multiqc executable
 
@@ -2625,6 +2578,7 @@ class MockMultiQC:
             to create. The final executable must
             not exist, however the directory it
             will be created in must.
+          version (str): explicit version string
           no_outputs (bool): if True then don't
             create any of the expected outputs
           exit_code (int): exit code that the
@@ -2639,19 +2593,26 @@ class MockMultiQC:
             fp.write("""#!/usr/bin/env python
 import sys
 from auto_process_ngs.mock import MockMultiQC
-sys.exit(MockMultiQC(no_outputs=%s,
+sys.exit(MockMultiQC(version=%s,
+                     no_outputs=%s,
                      exit_code=%s).main(sys.argv[1:]))
-            """ % (no_outputs,exit_code))
+            """ % (("\"%s\"" % version if version else None),
+                   no_outputs,
+                   exit_code))
             os.chmod(path,0o775)
         with open(path,'r') as fp:
             print("multiqc:")
             print("%s" % fp.read())
         return path
 
-    def __init__(self,no_outputs=False,exit_code=0):
+    def __init__(self,version=None,no_outputs=False,exit_code=0):
         """
         Internal: configure the mock multiqc
         """
+        if version:
+            self._version = version
+        else:
+            self._version = "1.5"
         self._no_outputs = no_outputs
         self._exit_code = exit_code
 
@@ -2664,7 +2625,7 @@ sys.exit(MockMultiQC(no_outputs=%s,
             return self._exit_code
         # Handle version request
         if args[0] == "--version":
-            print("multiqc, version 1.5")
+            print("multiqc, version %s" % self._version)
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
@@ -2680,10 +2641,10 @@ sys.exit(MockMultiQC(no_outputs=%s,
 
 Error: Invalid value for "analysis_dir": Path "%s" does not exist.
 
-This is MultiQC v1.5
+This is MultiQC v%s
 
 For more help, run 'multiqc --help' or visit http://multiqc.info
-""" % d)
+""" % (d,self._version))
                 return 2
         # Outputs
         if args.filename is None:
@@ -2693,8 +2654,8 @@ For more help, run 'multiqc --help' or visit http://multiqc.info
             out_file = args.filename
             out_dir = "%s_data" % os.path.splitext(out_file)[0]
         if not self._no_outputs:
-            with open(out_file,'w') as fp:
-                fp.write("MultiQC HTML report")
+            MockQCOutputs.multiqc(d,multiqc_html=out_file,
+                                  version=self._version)
             os.mkdir(out_dir)
         # Exit
         return self._exit_code

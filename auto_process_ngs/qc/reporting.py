@@ -4,6 +4,25 @@
 #     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 
+"""
+Utilities for reporting QC pipeline outputs.
+
+Provides the following classes:
+
+- QCReporter: top-level class to verify and report QC for a project
+- QCProject: gather information about the QC associated with a project
+- FastqSet: describes sets of Fastq file
+- QCReport: create QC report document for one or more projects
+- QCReportSample: reports the QC for a sample
+- QCReportFastqGroup: reports the QC for a group of Fastqs
+- QCReportFastq: interface to QC outputs for a single Fastq
+
+Provides the following functions:
+
+- report: report the QC for a project
+- sanitize_name: replace 'unsafe' characters in HTML link targets
+"""
+
 #######################################################################
 # Imports
 #######################################################################
@@ -47,7 +66,7 @@ from .cellranger import CellrangerMulti
 from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
-from .outputs import expected_outputs
+from .outputs import QCOutputs
 from .plots import useqlenplot
 from .plots import ureadcountplot
 from .plots import uscreenplot
@@ -58,6 +77,7 @@ from .plots import uduplicationplot
 from .plots import uadapterplot
 from .plots import encode_png
 from .seqlens import SeqLens
+from .verification import verify_project
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
@@ -70,128 +90,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 from .constants import FASTQ_SCREENS
-
-QC_REPORT_CSS_STYLES = """/* General styles */
-html { font-family: sans-serif; }
-p { font-size: 85%;
-    color: #808080; }
-/* Headers */
-h1, h2, h3, h4 { font-family: DejaVu Serif, serif; }
-h1 { background-color: #42AEC2;
-     color: white;\n
-     padding: 5px 10px; }
-h2 { background-color: #8CC63F;
-     color: white;
-     display: inline-block;
-     padding: 5px 15px;
-     margin: 0;
-     border-top-left-radius: 20px;
-     border-bottom-right-radius: 20px; }
-h3, h4 { background-color: grey;
-         color: white;
-         display: block;
-         padding: 5px 15px;
-         margin: 0;
-         border-top-left-radius: 20px;
-         border-bottom-right-radius: 20px; }
-.single_library_summary h3, .single_library_summary h4 {
-     background-color: white;
-     color: #808080; }
-/* Summary section */
-div.summary { margin: 10 10;
-              border: solid 2px #8CC63F;
-              padding: 0;
-              border-top-left-radius: 25px; }
-.info { padding: 5px 15px;
-        float: left;
-        font-size: 100%; }
-.info h3 { margin: 5px; }
-.info p { color: black; }
-/* Samples and Fastqs */
-.sample { margin: 10 10;
-          border: solid 2px #8CC63F;
-          padding: 0;
-          background-color: #ffe;
-          border-top-left-radius: 25px;
-          border-bottom-right-radius: 25px; }
-.fastqs { border: 1px solid grey;
-          padding: 5px;
-          margin: 5px 20px; }
-.fastq { border: 2px solid lightgray;
-         padding: 5px;
-         margin: 5px;
-         float: left; }
-.strandedness { border: 2px solid lightgray;
-                padding: 5px;
-                margin: 5px;float: left; }
-/* Metadata table */
-table.metadata {
-          margin: 10 10;
-          border: solid 1px grey;
-          background-color: white;
-          font-size: 90%; }
-table.metadata tr td:first-child {
-          background-color: grey;
-          color: white;
-          padding: 2px 5px;
-          font-weight: bold;
-          vertical-align: top; }
-/* Summary table */
-table.summary { border: solid 1px grey;
-                background-color: white;
-                margin: 10 10;
-                font-size: 80%; }
-table.summary th { background-color: grey;
-                   color: white;
-                   padding: 2px 5px; }
-table.summary td { text-align: center;
-                   padding: 2px 5px;
-                   border-bottom: solid 1px lightgray; }
-table.summary td.single_library_analyses { text-align: left; }
-table.summary tr td:first-child { text-align: right; }
-table.summary tr td:first-child {
-          background-color: grey;
-          color: white;
-          font-weight: bold; }
-table.summary tr td:first-child a {
-          color: white;
-          font-weight: bold; }
-/* Warnings section */
-.warnings { padding: 2px;
-            border: solid 3px red;
-            color: red;
-            background-color: #F5BCA9;
-            font-weight: bold;
-            margin: 10px; }
-.warnings p   { color: red;
-                font-size: 120%; }
-.warnings img { vertical-align: middle; }
-/* Display control elements */
-.clear { clear: both; }
-.hide  { display: none; }
-/* FastQC summary table */
-table.fastqc_summary span.PASS { font-weight: bold;
-                                 color: green; }
-table.fastqc_summary span.WARN { font-weight: bold;
-                                 color: orange; }
-table.fastqc_summary span.FAIL { font-weight: bold;
-                                 color: red; }
-/* Program versions */
-table.programs th { text-align: left;
-                    background-color: grey;
-                    color: white;
-                    padding: 2px 5px; }
-table.programs td { padding: 2px 5px;
-                    border-bottom: solid 1px lightgray; }
-/* Rules for printing */
-@media print
-{
-a { color: black; text-decoration: none; }
-.sample { page-break-before: always; }
-table th { border-bottom: solid 1px lightgray; }
-.no_print { display: none; }
-}
-"""
+from .constants import QC_REPORT_CSS_STYLES
 
 #######################################################################
 # Classes
@@ -236,9 +135,9 @@ class QCReporter:
           Boolean: Returns True if all expected QC products
             are present, False if not.
         """
-        return verify(self._project,
-                      qc_dir=qc_dir,
-                      qc_protocol=qc_protocol)
+        return verify_project(self._project,
+                              qc_dir=qc_dir,
+                              qc_protocol=qc_protocol)
 
     def report(self,title=None,filename=None,qc_dir=None,
                report_attrs=None,summary_fields=None,
@@ -336,18 +235,8 @@ class QCProject:
       length across all READ Fastqs (where READ is 'r1',
       'r2' etc)
 
-    The following are valid values for the 'outputs'
-    property:
-
-    - 'fastqc_[r1...]'
-    - 'screens_[r1...]'
-    - 'strandedness'
-    - 'sequence_lengths'
-    - 'icell8_stats'
-    - 'icell8_report'
-    - 'cellranger_count'
-    - 'cellranger_multi'
-    - 'multiqc'
+    Valid values of the 'outputs' property are taken from
+    the QCOutputs class.
 
     General properties about the project:
 
@@ -530,386 +419,32 @@ class QCProject:
         """
         Internal: determine which QC outputs are present
         """
-        outputs = set()
-        output_files = []
-        multiplexed_samples = set()
-        software = {}
-        max_seqs = None
-        min_seq_length = {}
-        max_seq_length = {}
-        print("Scanning contents of %s" % self.qc_dir)
-        files = [os.path.join(self.qc_dir,f)
-                 for f in os.listdir(self.qc_dir)]
-        print("\t- %d objects found" % len(files))
-        logger.debug("files: %s" % files)
-        # Look for legacy screen files
-        legacy_screens = list(filter(lambda f:
-                                     f.endswith("_screen.txt") or
-                                     f.endswith("_screen.png"),
-                                     files))
-        logger.debug("Screens (legacy): %s" % legacy_screens)
-        # Look for new-style screen files
-        screens = list(filter(lambda f:
-                              "_screen_" in os.path.basename(f) and
-                              (f.endswith(".txt") or
-                               f.endswith(".png")),
-                               files))
-        logger.debug("Screens: %s" % screens)
-        print("\t- %d fastq_screen files" % (len(legacy_screens) +
-                                             len(screens)))
-        fastq_names = set()
-        fastq_screens = set()
-        if legacy_screens:
-            versions = set()
-            for screen_name in FASTQ_SCREENS:
-                # Explicitly check for legacy screens
-                for screen in list(filter(lambda s:
-                                          s.endswith("_%s_screen.txt" %
-                                                     screen_name),
-                                          legacy_screens)):
-                    fq = self.fastq_attrs(screen[:-len("_screen.txt")])
-                    fastq_name = str(fq)[:-len("_%s" % screen_name)]
-                    outputs.add("screens_%s%s" %
-                                (('i' if fq.is_index_read else 'r'),
-                                 (fq.read_number
-                                  if fq.read_number is not None else '1')))
-                    fastq_names.add(fastq_name)
-                    fastq_screens.add(screen_name)
-                    versions.add(Fastqscreen(screen).version)
-            if versions:
-                software['fastq_screen'] = sorted(list(versions))
-            # Store the legacy screen files
-            output_files.extend(legacy_screens)
-        if screens:
-            versions = set()
-            # Pull out the Fastq names from the .txt files
-            for screen in list(filter(lambda s: s.endswith(".txt"),
-                                      screens)):
-                # Assume that names are 'FASTQ_screen_SCREENNAME.txt'
-                fastq_name,screen_name = os.path.basename(screen)\
-                                         [:-len(".txt")].\
-                                         split("_screen_")
-                fq = self.fastq_attrs(fastq_name)
-                outputs.add("screens_%s%s" %
-                            (('i' if fq.is_index_read else 'r'),
-                             (fq.read_number
-                              if fq.read_number is not None else '1')))
-                fastq_names.add(fastq_name)
-                fastq_screens.add(screen_name)
-                versions.add(Fastqscreen(screen).version)
-            if versions:
-                software['fastq_screen'] = sorted(list(versions))
-            # Store the screen files
-            output_files.extend(screens)
-        # Look for fastqc outputs
-        fastqcs = list(filter(lambda f:
-                              f.endswith("_fastqc") and
-                              os.path.exists("%s.html" % f) and
-                              os.path.exists(os.path.join(f,"summary.txt")) and
-                              os.path.exists(os.path.join(f,"fastqc_data.txt")),
-                              files))
-        logger.debug("Fastqc: %s" % fastqcs)
-        print("\t- %d fastqc files" % len(fastqcs))
-        if fastqcs:
-            versions = set()
-            # Pull out the Fastq names from the Fastqc files
-            for fastqc in fastqcs:
-                f = os.path.basename(fastqc)[:-len("_fastqc")]
-                fastq_names.add(f)
-                fq = self.fastq_attrs(f)
-                outputs.add("fastqc_%s%s" %
-                            (('i' if fq.is_index_read else 'r'),
-                             (fq.read_number
-                              if fq.read_number is not None else '1')))
-                versions.add(Fastqc(fastqc).version)
-            if versions:
-                software['fastqc'] = sorted(list(versions))
-            # Store the fastqc files needed for reporting
-            output_files.extend(["%s.html" % f for f in fastqcs])
-            output_files.extend([os.path.join(f,"summary.txt")
-                                 for f in fastqcs])
-            output_files.extend([os.path.join(f,"fastqc_data.txt")
-                                 for f in fastqcs])
-            # Fastqc plot images
-            for png in ("per_base_quality",):
-                output_files.extend([os.path.join(f,
-                                                  "Images",
-                                                  "%s.png" % png)
-                                     for f in fastqcs])
-        # Look for fastq_strand outputs
-        fastq_strand = list(filter(lambda f:
-                                   f.endswith("_fastq_strand.txt"),
-                                   files))
-        logger.debug("fastq_strand: %s" % fastq_strand)
-        print("\t- %d fastq_strand files" % len(fastq_strand))
-        if fastq_strand:
-            outputs.add("strandedness")
-            versions = set()
-            for f in fastq_strand:
-                fq = self.fastq_attrs(os.path.splitext(f)[0])
-                fastq_names.add(
-                    os.path.basename(
-                        os.path.splitext(f)[0])[:-len("_fastq_strand")])
-                versions.add(Fastqstrand(f).version)
-            if versions:
-                software['fastq_strand'] = sorted(list(versions))
-            # Store the fastq_strand files
-            output_files.extend(fastq_strand)
-        # Look for sequence length outputs
-        seq_lens = list(filter(lambda f:
-                               f.endswith("_seqlens.json"),
-                               files))
-        logger.debug("seq_lens: %s" % seq_lens)
-        if seq_lens:
-            outputs.add("sequence_lengths")
-            for f in seq_lens:
-                fq = self.fastq_attrs(os.path.splitext(f)[0])
-                read = '%s%s' % ('i' if fq.is_index_read else 'r',
-                                 fq.read_number)
-                fastq_names.add(
-                    os.path.basename(
-                        os.path.splitext(f)[0])[:-len("_seqlens")])
-                seqlens_data = SeqLens(f)
-                try:
-                    # Try to extract the sequence lengths
-                    max_seqs = max(max_seqs,seqlens_data.nreads)
-                except Exception:
-                    if not max_seqs:
-                        max_seqs = seqlens_data.nreads
-                if not read in min_seq_length:
-                    min_seq_length[read] = seqlens_data.min_length
-                else:
-                    min_seq_length[read] = min(min_seq_length[read],
-                                               seqlens_data.min_length)
-                if not read in max_seq_length:
-                    max_seq_length[read] = seqlens_data.max_length
-                else:
-                    max_seq_length[read] = max(max_seq_length[read],
-                                               seqlens_data.max_length)
-            # Store the sequence length files
-            output_files.extend(seq_lens)
-        # Look for ICELL8 outputs
-        icell8_top_dir = os.path.dirname(self.qc_dir)
-        print("Checking for ICELL8 reports in %s/stats" %
-              icell8_top_dir)
-        icell8_stats_xlsx = os.path.join(icell8_top_dir,
-                                         "stats",
-                                         "icell8_stats.xlsx")
-        if os.path.exists(icell8_stats_xlsx):
-            outputs.add("icell8_stats")
-            output_files.append(icell8_stats_xlsx)
-        icell8_report_html = os.path.join(icell8_top_dir,
-                                          "icell8_processing.html")
-        if os.path.exists(icell8_report_html):
-            outputs.add("icell8_report")
-            output_files.append(icell8_report_html)
-        # Look for cellranger_count outputs
-        cellranger_count_dir = os.path.join(self.qc_dir,
-                                            "cellranger_count")
-        cellranger_samples = []
-        cellranger_references = set()
-        if os.path.isdir(cellranger_count_dir):
-            cellranger_versioned_samples = {}
-            cellranger_name = None
-            versions = set()
-            # Old-style (unversioned)
-            for d in filter(
-                    lambda f:
-                    os.path.isdir(os.path.join(cellranger_count_dir,f)),
-                    os.listdir(cellranger_count_dir)):
-                sample_dir = os.path.join(cellranger_count_dir,d)
-                try:
-                    cellranger = CellrangerCount(sample_dir)
-                    output_files.append(cellranger.web_summary)
-                    output_files.append(cellranger.metrics_csv)
-                    output_files.append(cellranger.cmdline_file)
-                    cellranger_samples.append(d)
-                    cellranger_name = cellranger.pipeline_name
-                    cellranger_references.add(cellranger.reference_data)
-                    # Store as version '?'
-                    ref = os.path.basename(cellranger.reference_data)
-                    if cellranger_name not in cellranger_versioned_samples:
-                        cellranger_versioned_samples[cellranger_name] = {}
-                    if '?' not in cellranger_versioned_samples[cellranger_name]:
-                        cellranger_versioned_samples[cellranger_name]['?'] = {}
-                    if ref not in \
-                       cellranger_versioned_samples[cellranger_name]['?']:
-                        cellranger_versioned_samples[cellranger_name]['?'][ref] = []
-                    cellranger_versioned_samples[cellranger_name]['?'][ref].append(d)
-                    versions.add('?')
-                except OSError:
-                    pass
-            if cellranger_samples:
-                outputs.add("%s_count" % cellranger_name)
-            # New-style (versioned)
-            cellranger_name = None
-            for ver in filter(
-                    lambda f:
-                    os.path.isdir(os.path.join(cellranger_count_dir,f)),
-                    os.listdir(cellranger_count_dir)):
-                # Check putative version numbers
-                for ref in filter(
-                        lambda f:
-                        os.path.isdir(os.path.join(cellranger_count_dir,ver,f)),
-                        os.listdir(os.path.join(cellranger_count_dir,ver))):
-                    # Check putative reference dataset names
-                    samples = []
-                    for smpl in filter(
-                            lambda f:
-                            os.path.isdir(os.path.join(cellranger_count_dir,
-                                                       ver,ref,f)),
-                            os.listdir(os.path.join(cellranger_count_dir,
-                                                    ver,ref))):
-                        sample_dir = os.path.join(cellranger_count_dir,
-                                                  ver,ref,smpl)
-                        cellranger_name = None
-                        try:
-                            cellranger = CellrangerCount(sample_dir)
-                            output_files.append(cellranger.web_summary)
-                            output_files.append(cellranger.metrics_csv)
-                            output_files.append(cellranger.cmdline_file)
-                            samples.append(smpl)
-                            cellranger_name = cellranger.pipeline_name
-                            cellranger_references.add(
-                                cellranger.reference_data)
-                        except OSError:
-                            pass
-                    # Add outputs, samples and version
-                    if samples:
-                        outputs.add("%s_count" % cellranger_name)
-                        if cellranger_name not in cellranger_versioned_samples:
-                            cellranger_versioned_samples[cellranger_name] = {}
-                        if ver not in cellranger_versioned_samples[cellranger_name]:
-                            cellranger_versioned_samples[cellranger_name][ver] = {}
-                        cellranger_versioned_samples[cellranger_name][ver][ref] = samples
-                        versions.add(ver)
-                        for smpl in cellranger_versioned_samples[cellranger_name][ver][ref]:
-                            if smpl not in cellranger_samples:
-                                cellranger_samples.append(smpl)
-            # Store cellranger versions
-            for cellranger_name in cellranger_versioned_samples:
-                software[cellranger_name] = sorted(list(cellranger_versioned_samples[cellranger_name].keys()))
-        # Look for cellranger multi outputs
-        cellranger_multi_dir = os.path.join(self.qc_dir,
-                                            "cellranger_multi")
-        if os.path.isdir(cellranger_multi_dir):
-            cellranger_name = None
-            versions = set()
-            cellranger_multi_samples = {}
-            for ver in filter(
-                    lambda f:
-                    os.path.isdir(os.path.join(cellranger_multi_dir,f)),
-                    os.listdir(cellranger_multi_dir)):
-                cellranger_multi_samples[ver] = {}
-                for ref in filter(
-                        lambda f:
-                        os.path.isdir(os.path.join(cellranger_multi_dir,ver,f)),
-                        os.listdir(os.path.join(cellranger_multi_dir,ver))):
-                    # Check putative reference dataset names
-                    cellranger_multi_samples[ver][ref] = []
-                    cellranger_multi = CellrangerMulti(
-                        os.path.join(
-                            cellranger_multi_dir,
-                            ver,
-                            ref))
-                    for smpl in cellranger_multi.sample_names:
-                        cellranger_multi_samples[ver][ref].append(smpl)
-                        try:
-                            output_files.append(cellranger_multi.web_summary(smpl))
-                            output_files.append(cellranger_multi.metrics_csv(smpl))
-                            cellranger_name = cellranger_multi.pipeline_name
-                            cellranger_references.add(
-                                cellranger_multi.reference_data)
-                        except OSError:
-                            pass
-                    # Add outputs, samples and version
-                    if cellranger_multi_samples[ver][ref]:
-                        outputs.add("cellranger_multi")
-                        versions.add(ver)
-                    for smpl in cellranger_multi_samples[ver][ref]:
-                        multiplexed_samples.add(smpl)
-            # Store cellranger versions
-            if cellranger_name and versions:
-                if cellranger_name not in software:
-                    software[cellranger_name] = list(versions)
-                else:
-                    for v in list(versions):
-                        if v not in software[cellranger_name]:
-                            software[cellranger_name].append(v)
-                software[cellranger_name] = sorted(software[cellranger_name])
-        # Look for MultiQC report
-        multiqc_dir = os.path.dirname(self.qc_dir)
-        print("Checking for MultiQC report in %s" % multiqc_dir)
-        multiqc_report = os.path.join(multiqc_dir,
-                                      "multi%s_report.html"
-                                      % os.path.basename(self.qc_dir))
-        if os.path.isfile(multiqc_report):
-            outputs.add("multiqc")
-            output_files.append(multiqc_report)
-        # Fastqs sorted by sample name
-        self.fastqs = sorted(list(fastq_names),
-                             key=lambda fq: split_sample_name(
-                                 self.fastq_attrs(fq).sample_name))
-        # Determine reads
-        reads = set()
-        for fastq in self.fastqs:
-            fq = self.fastq_attrs(fastq)
-            if fq.is_index_read:
-                reads.add("i%s" % (fq.read_number
-                                   if fq.read_number is not None else '1'))
-            else:
-                reads.add("r%s" % (fq.read_number
-                                   if fq.read_number is not None else '1'))
-        self.reads = sorted(list(reads))
+        # Outsource to external class
+        qc_outputs = QCOutputs(self.qc_dir,
+                               fastq_attrs=self.fastq_attrs)
+        # Fastqs
+        self.fastqs = qc_outputs.fastqs
+        # Reads
+        self.reads = qc_outputs.reads
         # Samples
-        samples = set([self.fastq_attrs(fq).sample_name
-                       for fq in self.fastqs] +
-                      [s.name for s in self.project.samples])
-        for s in cellranger_samples:
-            samples.add(s)
-        self.samples = sorted(list(samples),
-                              key=lambda s: split_sample_name(s))
+        self.samples = sorted(list(
+            set(qc_outputs.samples +
+                [s.name for s in self.project.samples])),
+                key=lambda s: split_sample_name(s))
         # Fastq screens
-        self.fastq_screens = sorted(list(fastq_screens))
+        self.fastq_screens = qc_outputs.fastq_screens
         # Single library analyses reference data
-        self.cellranger_references = sorted(list(cellranger_references))
+        self.cellranger_references = qc_outputs.cellranger_references
         # Multiplexed samples
-        self.multiplexed_samples = sorted(list(multiplexed_samples))
+        self.multiplexed_samples = qc_outputs.multiplexed_samples
         # QC outputs
-        self.outputs = sorted(list(outputs))
+        self.outputs = qc_outputs.outputs
         # Software versions
-        self.software = software
+        self.software = qc_outputs.software
         # Output files
-        self.output_files = sorted(output_files)
-        # Maximum number of sequences
-        self.stats['max_seqs'] = max_seqs
-        # Maximum and minimum sequence lengths for each read
-        for read in self.reads:
-            try:
-                self.stats['min_sequence_length_read'][read] = \
-                    min_seq_length[read]
-            except KeyError:
-                # No data for this read
-                self.stats['min_sequence_length_read'][read] = None
-            try:
-                self.stats['max_sequence_length_read'][read] = \
-                    max_seq_length[read]
-            except KeyError:
-                # No data for this read
-                self.stats['max_sequence_length_read'][read] = None
-        # Maximum and minimum sequence lengths for all reads
-        try:
-            self.stats['min_sequence_length'] = min(
-                [min_seq_length[r] for r in min_seq_length])
-        except ValueError:
-            # No data for any read
-            self.stats['min_sequence_length'] = None
-        try:
-            self.stats['max_sequence_length'] = max(
-                [max_seq_length[r] for r in max_seq_length])
-        except ValueError:
-            # No data for any read
-            self.stats['max_sequence_length'] = None
+        self.output_files = qc_outputs.output_files
+        # Sequence length stats
+        self.stats = AttributeDictionary(**qc_outputs.stats)
 
 class FastqSet:
     """
@@ -922,10 +457,6 @@ class FastqSet:
     r1: R1 Fastq in the pair
     r2: R2 Fastq (will be None if no R2)
     fastqs: list of Fastq files
-
-    Provides the following methods:
-
-    verify: checks the QC outputs for the set
     """
     def __init__(self,fqr1,fqr2=None):
         """
@@ -3361,78 +2892,6 @@ class QCReportFastq:
 #######################################################################
 # Functions
 #######################################################################
-
-def verify(project,qc_dir=None,qc_protocol=None):
-    """
-    Check the QC outputs are correct for a project
-
-    Arguments:
-      project (AnalysisProject): project to verify QC for
-      qc_dir (str): path to the QC output dir; relative
-        path will be treated as a subdirectory of the
-        project being checked.
-      qc_protocol (str): QC protocol to verify against
-        (optional)
-
-     Returns:
-       Boolean: Returns True if all expected QC products
-         are present, False if not.
-    """
-    logger.debug("verify: qc_dir (initial): %s" % qc_dir)
-    if qc_dir is None:
-        qc_dir = project.qc_dir
-    else:
-        if not os.path.isabs(qc_dir):
-            qc_dir = os.path.join(project.dirn,
-                                  qc_dir)
-    logger.debug("verify: qc_dir (final)  : %s" % qc_dir)
-    for dirn in (project.dirn,qc_dir):
-        fastq_strand_conf = os.path.join(dirn,"fastq_strand.conf")
-        if os.path.exists(fastq_strand_conf):
-            break
-        fastq_strand_conf = None
-    logger.debug("verify: fastq_strand conf file : %s" %
-                 fastq_strand_conf)
-    cellranger_version = None
-    cellranger_refdata = None
-    fastq_screens = None
-    qc_info_file = os.path.join(qc_dir,"qc.info")
-    if os.path.exists(qc_info_file):
-        qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
-        try:
-            cellranger_refdata = qc_info['cellranger_refdata']
-        except KeyError:
-            pass
-        try:
-            cellranger_version = qc_info['cellranger_version']
-        except KeyError:
-            pass
-        try:
-            fastq_screens = qc_info['fastq_screens']
-            if fastq_screens:
-                fastq_screens = fastq_screens.split(',')
-            elif 'fastq_screens' not in qc_info.keys_in_file():
-                fastq_screens = FASTQ_SCREENS
-        except KeyError:
-            pass
-    logger.debug("verify: cellranger reference data : %s" %
-                 cellranger_refdata)
-    logger.debug("verify: fastq screens : %s" % fastq_screens)
-    cellranger_multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
-    if not os.path.exists(cellranger_multi_config):
-        cellranger_multi_config = None
-    verified = True
-    for f in expected_outputs(project,qc_dir,
-                              fastq_screens=fastq_screens,
-                              fastq_strand_conf=fastq_strand_conf,
-                              cellranger_version=cellranger_version,
-                              cellranger_refdata=cellranger_refdata,
-                              cellranger_multi_config=cellranger_multi_config,
-                              qc_protocol=qc_protocol):
-        if not os.path.exists(f):
-            logging.debug("Missing: %s" % f)
-            verified = False
-    return verified
 
 def report(projects,title=None,filename=None,qc_dir=None,
            report_attrs=None,summary_fields=None,

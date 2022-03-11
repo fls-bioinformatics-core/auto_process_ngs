@@ -8,7 +8,9 @@ import shutil
 import os
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
+from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import fastq_screen_output
 from auto_process_ngs.qc.outputs import fastqc_output
 from auto_process_ngs.qc.outputs import fastq_strand_output
@@ -22,10 +24,1361 @@ from auto_process_ngs.qc.outputs import check_fastq_strand_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_count_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_atac_count_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_arc_count_outputs
-from auto_process_ngs.qc.outputs import expected_outputs
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
+
+class TestQCOutputs(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir (if needed)
+        self.wd = None
+    def tearDown(self):
+        # Remove temporary working dir
+        if not REMOVE_TEST_OUTPUTS:
+            return
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def _make_working_dir(self):
+        # Create a temporary working directory
+        if self.wd is None:
+            self.wd = tempfile.mkdtemp(suffix='.test_QCOutputs')
+    def _make_qc_dir(self,qc_dir,fastq_names,
+                     screens=('model_organisms','other_organisms','rRNA',),
+                     cellranger_pipelines=('cellranger',),
+                     cellranger_samples=None,
+                     cellranger_multi_samples=None,
+                     include_fastqc=True,
+                     include_fastq_screen=True,
+                     include_strandedness=True,
+                     include_seqlens=True,
+                     include_multiqc=True,
+                     include_cellranger_count=False,
+                     include_cellranger_multi=False,
+                     legacy_screens=False,
+                     legacy_cellranger_outs=False):
+        # Create working directory and qc dir
+        self._make_working_dir()
+        qc_dir = os.path.join(self.wd,qc_dir)
+        os.mkdir(qc_dir)
+        # Populate with fake QC products
+        for fq in fastq_names:
+            # FastQC
+            if include_fastqc:
+                MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
+            # Fastq_screen
+            if include_fastq_screen:
+                for screen in screens:
+                    MockQCOutputs.fastq_screen_v0_9_2(
+                        fq,qc_dir,screen,
+                        legacy=legacy_screens)
+            # Strandedness
+            if include_strandedness:
+                MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
+            # Sequence lengths
+            if include_seqlens:
+                MockQCOutputs.seqlens(fq,qc_dir)
+        # Strandedness conf file
+        if include_strandedness:
+            with open(os.path.join(qc_dir,
+                                   "fastq_strand.conf"),'wt') as fp:
+                fp.write("Placeholder\n")
+        # MultiQC
+        if include_multiqc:
+            out_file = "multi%s_report.html" % os.path.basename(qc_dir)
+            MockQCOutputs.multiqc(self.wd,
+                                  multiqc_html=out_file,
+                                  version="1.8")
+        # Cellranger count
+        if include_cellranger_count:
+            for cellranger in cellranger_pipelines:
+                # Set defaults
+                if cellranger == "cellranger":
+                    version = "6.1.2"
+                    refdata = "/data/refdata-cellranger-2020-A"
+                elif cellranger == "cellranger-atac":
+                    version = "2.0.0"
+                    refdata = "/data/refdata-cellranger-atac-2020-A"
+                elif cellranger == "cellranger-arc":
+                    version = "2.0.0"
+                    refdata = "/data/refdata-cellranger-arc-2020-A"
+                # Set top-level output dir
+                if not legacy_cellranger_outs:
+                    count_dir = os.path.join("cellranger_count",
+                                             version,
+                                             os.path.basename(refdata))
+                else:
+                    count_dir = "cellranger_count"
+                # Make pipeline outputs
+                for sample in cellranger_samples:
+                    MockQCOutputs.cellranger_count(
+                        sample,
+                        qc_dir,
+                        cellranger=cellranger,
+                        version=version,
+                        reference_data_path=refdata,
+                        prefix=count_dir)
+                    if cellranger == "cellranger-arc":
+                        multiome_config = os.path.join(qc_dir,
+                                                       "libraries.%s.csv" %
+                                                       sample)
+                        with open(multiome_config,'wt') as fp:
+                            fp.write("Placeholder\n")
+        # Cellranger multi
+        if include_cellranger_multi:
+            # Make cellranger multi config.csv file
+            multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
+            with open(multi_config,'wt') as fp:
+                fastq_dir = os.path.join(self.wd,
+                                         "PJB",
+                                         "fastqs")
+                fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,%s,any,PJB1,gene expression,
+PJB2_MC,%s,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PJB_CML1,CMO301,CML1
+PJB_CML2,CMO302,CML2
+""" % (fastq_dir,fastq_dir))
+            # Set top-level output dir
+            multi_dir = os.path.join("cellranger_multi",
+                                     "6.1.2",
+                                     "refdata-cellranger-2020-A")
+            # Make outputs
+            MockQCOutputs.cellranger_multi(cellranger_multi_samples,
+                                           qc_dir,
+                                           config_csv=multi_config,
+                                           prefix=multi_dir)
+        return qc_dir
+
+    def test_qcoutputs_single_end(self):
+        """
+	QCOutputs: single-end data
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB2_S2_R1_001',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'multiqc',
+                          'screens_r1',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_single_end_no_fastqc(self):
+        """
+	QCOutputs: single-end data (no FastQC)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB2_S2_R1_001',
+                                   ),
+                                   include_fastqc=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['multiqc',
+                          'screens_r1',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_single_end_no_screens(self):
+        """
+	QCOutputs: single-end data (no screens)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB2_S2_R1_001',
+                                   ),
+                                   include_fastq_screen=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'multiqc',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,[])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_single_end_no_seqlens(self):
+        """
+	QCOutputs: single-end data (no sequence lengths)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB2_S2_R1_001',
+                                   ),
+                                   include_seqlens=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'multiqc',
+                          'screens_r1',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,None)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,None)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,None)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         [])
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_single_end_no_standedness(self):
+        """
+	QCOutputs: single-end data (no strandedness)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB2_S2_R1_001',
+                                   ),
+                                   include_strandedness=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'multiqc',
+                          'screens_r1',
+                          'sequence_lengths'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,[])
+
+    def test_qcoutputs_single_end_no_multiqc(self):
+        """
+	QCOutputs: single-end data (no MultiQC)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB2_S2_R1_001',
+                                   ),
+                                   include_multiqc=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'screens_r1',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_single_end_legacy_screen_naming(self):
+        """
+	QCOutputs: single-end data (legacy screen naming)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB2_S2_R1_001',
+                                   ),
+                                   legacy_screens=True)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'multiqc',
+                          'screens_r1',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end(self):
+        """
+	QCOutputs: paired-end data
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end_no_fastqc(self):
+        """
+	QCOutputs: paired-end data (no FastQC)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_fastqc=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end_no_screens(self):
+        """
+	QCOutputs: paired-end data (no screens)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_fastq_screen=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,[])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end_no_seqlens(self):
+        """
+	QCOutputs: paired-end data (no sequence lengths)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_seqlens=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,None)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,None)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,None)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),[])
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end_no_strandedness(self):
+        """
+	QCOutputs: paired-end data (no strandedness)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_strandedness=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,[])
+
+    def test_qcoutputs_paired_end_no_multiqc(self):
+        """
+	QCOutputs: paired-end data (no MultiQC)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_multiqc=False)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end_legacy_screen_naming(self):
+        """
+	QCOutputs: paired-end data (legacy screen naming)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   legacy_screens=True)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_count(self):
+        """
+        QCOutputs: 10xGenomics data with cellranger 'count'
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_count',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '6.1.2' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_count_legacy(self):
+        """
+        QCOutputs: 10xGenomics data with cellranger 'count' (legacy format)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   legacy_cellranger_outs=True)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_count',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '?' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_atac_count(self):
+        """
+        QCOutputs: 10xGenomics data with cellranger-atac 'count'
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R3_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R3_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-atac',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger-atac_count',
+                          'fastqc_r1',
+                          'fastqc_r3',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r3',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R3_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R3_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-atac-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r3'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger-atac': [ '2.0.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r3'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r3'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r3'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_10x_multiome_gex(self):
+        """
+        QCOutputs: 10xGenomics multiome data (GEX component)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger',
+                                                         'cellranger-arc',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger-arc_count',
+                          'cellranger_count',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A',
+                          '/data/refdata-cellranger-arc-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '6.1.2' ],
+                           'cellranger-arc': [ '2.0.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf',
+                          'libraries.PJB1.csv',
+                          'libraries.PJB2.csv'])
+
+    def test_qcoutputs_10x_multiome_atac(self):
+        """
+        QCOutputs: 10xGenomics multiome data (ATAC component)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R3_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R3_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-arc',
+                                                         'cellranger-atac',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger-arc_count',
+                          'cellranger-atac_count',
+                          'fastqc_r1',
+                          'fastqc_r3',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r3',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R3_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R3_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-arc-2020-A',
+                          '/data/refdata-cellranger-atac-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r3'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger-arc': [ '2.0.0' ],
+                           'cellranger-atac': [ '2.0.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r3'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r3'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r3'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf',
+                          'libraries.PJB1.csv',
+                          'libraries.PJB2.csv'])
+
+    def test_qcoutputs_10x_cellranger_multi(self):
+        """
+        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi'
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_GEX_S1_R1_001',
+                                       'PJB1_GEX_S1_R2_001',
+                                       'PJB2_MC_S2_R1_001',
+                                       'PJB2_MC_S2_R2_001',
+                                   ),
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_GEX',
+                                       'PJB2_MC',
+                                   ),
+                                   cellranger_multi_samples=(
+                                       'PJB_CML1',
+                                       'PJB_CML2',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_multi',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_GEX_S1_R1_001',
+                          'PJB1_GEX_S1_R2_001',
+                          'PJB2_MC_S2_R1_001',
+                          'PJB2_MC_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_GEX','PJB2_MC'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,
+                         ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '6.1.2' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_multi_and_count(self):
+        """
+        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' and 'count'
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_GEX_S1_R1_001',
+                                       'PJB1_GEX_S1_R2_001',
+                                       'PJB2_MC_S2_R1_001',
+                                       'PJB2_MC_S2_R2_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_GEX',
+                                       'PJB2_MC',
+                                   ),
+                                   cellranger_multi_samples=(
+                                       'PJB_CML1',
+                                       'PJB_CML2',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_count',
+                          'cellranger_multi',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_GEX_S1_R1_001',
+                          'PJB1_GEX_S1_R2_001',
+                          'PJB2_MC_S2_R1_001',
+                          'PJB2_MC_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_GEX','PJB2_MC'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,
+                         ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '6.1.2' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
+
+    def test_qcoutputs_with_non_standard_qc_dir(self):
+        """
+        QCOutputs: non-standard QC directory
+        """
+        qc_dir = self._make_qc_dir('my_qc_outs',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_with_non_canonical_fastq_names(self):
+        """
+        QCOutputs: non-canonical fastq names
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001_paired',
+                                       'PJB1_S1_R2_001_paired',
+                                       'PJB2_S2_R1_001_paired',
+                                       'PJB2_S2_R2_001_paired',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001_paired',
+                          'PJB1_S1_R2_001_paired',
+                          'PJB2_S2_R1_001_paired',
+                          'PJB2_S2_R2_001_paired'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
 class TestFastqScreenOutputFunction(unittest.TestCase):
     def test_fastq_screen_output(self):
@@ -1264,1103 +2617,3 @@ class TestCheckCellrangerArcCountOutputs(unittest.TestCase):
         self.assertEqual(
             check_cellranger_arc_count_outputs(project,
                                            prefix=cellranger_count_prefix),[])
-
-class TestExpectedOutputs(unittest.TestCase):
-    """
-    Tests for the 'expected_outputs' function
-    """
-    def setUp(self):
-        # Create a temp working dir
-        self.wd = tempfile.mkdtemp(suffix='TestExpectedOutputs')
-
-    def tearDown(self):
-        # Remove the temporary test directory
-        if REMOVE_TEST_OUTPUTS:
-            shutil.rmtree(self.wd)
-
-    def test_expected_outputs_standardPE(self):
-        """
-        expected_outputs: standard paired-end, no strandedness
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Reference outputs
-        reference_outputs = ("PJB1_S1_R1_001_fastqc",
-                             "PJB1_S1_R1_001_fastqc.html",
-                             "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R1_001_screen_model_organisms.png",
-                             "PJB1_S1_R1_001_screen_model_organisms.txt",
-                             "PJB1_S1_R1_001_screen_other_organisms.png",
-                             "PJB1_S1_R1_001_screen_other_organisms.txt",
-                             "PJB1_S1_R1_001_screen_rRNA.png",
-                             "PJB1_S1_R1_001_screen_rRNA.txt",
-                             "PJB1_S1_R2_001_fastqc",
-                             "PJB1_S1_R2_001_fastqc.html",
-                             "PJB1_S1_R2_001_fastqc.zip",
-                             "PJB1_S1_R2_001_screen_model_organisms.png",
-                             "PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "PJB1_S1_R2_001_screen_other_organisms.png",
-                             "PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "PJB1_S1_R2_001_screen_rRNA.png",
-                             "PJB1_S1_R2_001_screen_rRNA.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    qc_protocol="standardPE",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
-                                                             p.name,
-                                                             "qc"))
-            self.assertTrue(os.path.basename(e) in reference_outputs)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
-
-    def test_expected_outputs_standardPE_no_screens(self):
-        """
-        expected_outputs: standard paired-end, no screens
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Reference outputs
-        reference_outputs = ("PJB1_S1_R1_001_fastqc",
-                             "PJB1_S1_R1_001_fastqc.html",
-                             "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R2_001_fastqc",
-                             "PJB1_S1_R2_001_fastqc.html",
-                             "PJB1_S1_R2_001_fastqc.zip",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    qc_protocol="standardPE")
-        for e in expected:
-            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
-                                                             p.name,
-                                                             "qc"))
-            self.assertTrue(os.path.basename(e) in reference_outputs)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
-
-    def test_expected_outputs_standardPE_with_strand(self):
-        """
-        expected_outputs: standard paired-end with strandedness
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        # Reference outputs
-        reference_outputs = ("PJB1_S1_R1_001_fastqc",
-                             "PJB1_S1_R1_001_fastqc.html",
-                             "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R1_001_screen_model_organisms.png",
-                             "PJB1_S1_R1_001_screen_model_organisms.txt",
-                             "PJB1_S1_R1_001_screen_other_organisms.png",
-                             "PJB1_S1_R1_001_screen_other_organisms.txt",
-                             "PJB1_S1_R1_001_screen_rRNA.png",
-                             "PJB1_S1_R1_001_screen_rRNA.txt",
-                             "PJB1_S1_R2_001_fastqc",
-                             "PJB1_S1_R2_001_fastqc.html",
-                             "PJB1_S1_R2_001_fastqc.zip",
-                             "PJB1_S1_R2_001_screen_model_organisms.png",
-                             "PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "PJB1_S1_R2_001_screen_other_organisms.png",
-                             "PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "PJB1_S1_R2_001_screen_rRNA.png",
-                             "PJB1_S1_R2_001_screen_rRNA.txt",
-                             "PJB1_S1_R1_001_fastq_strand.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="standardPE",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
-                                                             p.name,
-                                                             "qc"))
-            self.assertTrue(os.path.basename(e) in reference_outputs)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
-
-    def test_expected_outputs_standardPE_legacy_screens(self):
-        """
-        expected_outputs: standard paired-end (no strandedness, legacy screens)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Reference outputs
-        reference_outputs = ("PJB1_S1_R1_001_fastqc",
-                             "PJB1_S1_R1_001_fastqc.html",
-                             "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R1_001_model_organisms_screen.png",
-                             "PJB1_S1_R1_001_model_organisms_screen.txt",
-                             "PJB1_S1_R1_001_other_organisms_screen.png",
-                             "PJB1_S1_R1_001_other_organisms_screen.txt",
-                             "PJB1_S1_R1_001_rRNA_screen.png",
-                             "PJB1_S1_R1_001_rRNA_screen.txt",
-                             "PJB1_S1_R2_001_fastqc",
-                             "PJB1_S1_R2_001_fastqc.html",
-                             "PJB1_S1_R2_001_fastqc.zip",
-                             "PJB1_S1_R2_001_model_organisms_screen.png",
-                             "PJB1_S1_R2_001_model_organisms_screen.txt",
-                             "PJB1_S1_R2_001_other_organisms_screen.png",
-                             "PJB1_S1_R2_001_other_organisms_screen.txt",
-                             "PJB1_S1_R2_001_rRNA_screen.png",
-                             "PJB1_S1_R2_001_rRNA_screen.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    qc_protocol="standardPE",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'),
-                                    legacy_screens=True)
-        for e in expected:
-            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
-                                                             p.name,
-                                                             "qc"))
-            self.assertTrue(os.path.basename(e) in reference_outputs)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
-
-    def test_expected_outputs_standardSE(self):
-        """
-        expected_outputs: standard single-end, no strandedness
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Reference outputs
-        reference_outputs = ("PJB1_S1_R1_001_fastqc",
-                             "PJB1_S1_R1_001_fastqc.html",
-                             "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R1_001_screen_model_organisms.png",
-                             "PJB1_S1_R1_001_screen_model_organisms.txt",
-                             "PJB1_S1_R1_001_screen_other_organisms.png",
-                             "PJB1_S1_R1_001_screen_other_organisms.txt",
-                             "PJB1_S1_R1_001_screen_rRNA.png",
-                             "PJB1_S1_R1_001_screen_rRNA.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    qc_protocol="standardSE",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
-                                                             p.name,
-                                                             "qc"))
-            self.assertTrue(os.path.basename(e) in reference_outputs)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
-
-    def test_expected_outputs_standardSE_with_strand(self):
-        """
-        expected_outputs: standard single-end with strandedness
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        # Reference outputs
-        reference_outputs = ("PJB1_S1_R1_001_fastqc",
-                             "PJB1_S1_R1_001_fastqc.html",
-                             "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R1_001_screen_model_organisms.png",
-                             "PJB1_S1_R1_001_screen_model_organisms.txt",
-                             "PJB1_S1_R1_001_screen_other_organisms.png",
-                             "PJB1_S1_R1_001_screen_other_organisms.txt",
-                             "PJB1_S1_R1_001_screen_rRNA.png",
-                             "PJB1_S1_R1_001_screen_rRNA.txt",
-                             "PJB1_S1_R1_001_fastq_strand.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="standardSE",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
-                                                             p.name,
-                                                             "qc"))
-            self.assertTrue(os.path.basename(e) in reference_outputs)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
-
-    def test_expected_outputs_singlecell(self):
-        """
-        expected_outputs: single-cell, no strandedness
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Reference outputs
-        reference_outputs = ("PJB1_S1_R1_001_fastqc",
-                             "PJB1_S1_R1_001_fastqc.html",
-                             "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R2_001_fastqc",
-                             "PJB1_S1_R2_001_fastqc.html",
-                             "PJB1_S1_R2_001_fastqc.zip",
-                             "PJB1_S1_R2_001_screen_model_organisms.png",
-                             "PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "PJB1_S1_R2_001_screen_other_organisms.png",
-                             "PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "PJB1_S1_R2_001_screen_rRNA.png",
-                             "PJB1_S1_R2_001_screen_rRNA.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    qc_protocol="singlecell",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
-                                                             p.name,
-                                                             "qc"))
-            self.assertTrue(os.path.basename(e) in reference_outputs)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
-
-    def test_expected_outputs_singlecell_with_strand(self):
-        """
-        expected_outputs: single-cell with strandedness
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        # Reference outputs
-        reference_outputs = ("PJB1_S1_R1_001_fastqc",
-                             "PJB1_S1_R1_001_fastqc.html",
-                             "PJB1_S1_R1_001_fastqc.zip",
-                             "PJB1_S1_R2_001_fastqc",
-                             "PJB1_S1_R2_001_fastqc.html",
-                             "PJB1_S1_R2_001_fastqc.zip",
-                             "PJB1_S1_R2_001_screen_model_organisms.png",
-                             "PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "PJB1_S1_R2_001_screen_other_organisms.png",
-                             "PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "PJB1_S1_R2_001_screen_rRNA.png",
-                             "PJB1_S1_R2_001_screen_rRNA.txt",
-                             "PJB1_S1_R2_001_fastq_strand.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="singlecell",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            self.assertEqual(os.path.dirname(e),os.path.join(self.wd,
-                                                             p.name,
-                                                             "qc"))
-            self.assertTrue(os.path.basename(e) in reference_outputs)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
-
-    def test_expected_outputs_10x_scRNA_seq_with_cellranger(self):
-        """
-        expected_outputs: 10xGenomics scRNA-seq with cellranger
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           "10xGenomics Chromium 3'v3" })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastqc",
-                             "qc/PJB1_S1_R2_001_fastqc.html",
-                             "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
-                             "qc/PJB1_S1_R2_001_fastq_strand.txt",
-                             "qc/cellranger_count/PJB1/outs/metrics_summary.csv",
-                             "qc/cellranger_count/PJB1/outs/web_summary.html",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_refdata=
-                                    "/data/refdata-cellranger-GRCh38-1.2.0",
-                                    qc_protocol="10x_scRNAseq",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_scRNA_seq_with_cellranger_and_versioning(self):
-        """
-        expected_outputs: 10xGenomics scRNA-seq with cellranger (including versioning)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           "10xGenomics Chromium 3'v3" })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastqc",
-                             "qc/PJB1_S1_R2_001_fastqc.html",
-                             "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
-                             "qc/PJB1_S1_R2_001_fastq_strand.txt",
-                             "qc/cellranger_count/5.0.1/refdata-gex-GRCh38-2020-A/PJB1/outs/metrics_summary.csv",
-                             "qc/cellranger_count/5.0.1/refdata-gex-GRCh38-2020-A/PJB1/outs/web_summary.html",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_version="5.0.1",
-                                    cellranger_refdata=
-                                    "/data/refdata-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_scRNAseq",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_scATAC_with_cellranger_atac(self):
-        """
-        expected_outputs: 10xGenomics scATAC-seq with cellranger-atac
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB1_S1_R3_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           "10xGenomics Single Cell ATAC" })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R1_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R1_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R1_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R1_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R1_001_screen_rRNA.txt",
-                             "qc/PJB1_S1_R1_001_fastq_strand.txt",
-                             "qc/PJB1_S1_R3_001_fastqc",
-                             "qc/PJB1_S1_R3_001_fastqc.html",
-                             "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_fastqc",
-                             "qc/PJB1_S1_R3_001_fastqc.html",
-                             "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R3_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R3_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R3_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R3_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R3_001_screen_rRNA.txt",
-                             "qc/cellranger_count/PJB1/outs/summary.csv",
-                             "qc/cellranger_count/PJB1/outs/web_summary.html",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_refdata=
-                                    "/data/refdata-cellranger-atac-GRCh38-1.2.0",
-                                    qc_protocol="10x_scATAC",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_scATAC_with_cellranger_atac_with_versioning(self):
-        """
-        expected_outputs: 10xGenomics scATAC-seq with cellranger-atac (including versioning)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB1_S1_R3_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           "10xGenomics Single Cell ATAC" })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R1_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R1_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R1_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R1_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R1_001_screen_rRNA.txt",
-                             "qc/PJB1_S1_R1_001_fastq_strand.txt",
-                             "qc/PJB1_S1_R3_001_fastqc",
-                             "qc/PJB1_S1_R3_001_fastqc.html",
-                             "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_fastqc",
-                             "qc/PJB1_S1_R3_001_fastqc.html",
-                             "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R3_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R3_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R3_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R3_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R3_001_screen_rRNA.txt",
-                             "qc/cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB1/outs/summary.csv",
-                             "qc/cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0/PJB1/outs/web_summary.html",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_version="1.2.0",
-                                    cellranger_refdata=
-                                    "/data/refdata-cellranger-atac-GRCh38-1.2.0",
-                                    qc_protocol="10x_scATAC",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_scRNA_seq_with_no_cellranger_reference(self):
-        """
-        expected_outputs: 10xGenomics scRNA-seq with no cellranger reference data
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           "10xGenomics Chromium 3'v3" })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastqc",
-                             "qc/PJB1_S1_R2_001_fastqc.html",
-                             "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
-                             "qc/PJB1_S1_R2_001_fastq_strand.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_refdata=None,
-                                    qc_protocol="10x_scRNAseq",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_visium(self):
-        """
-        expected_outputs: 10xGenomics Visium
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           "10xGenomics Visium" })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastqc",
-                             "qc/PJB1_S1_R2_001_fastqc.html",
-                             "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
-                             "qc/PJB1_S1_R2_001_fastq_strand.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_refdata=None,
-                                    qc_protocol="10x_Visium",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_multiome_atac(self):
-        """
-        expected_outputs: 10xGenomics Multiome ATAC
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB1_S1_R3_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           '10xGenomics Single Cell Multiome',
-                                           'Library type': 'ATAC' })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R1_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R1_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R1_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R1_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R1_001_screen_rRNA.txt",
-                             "qc/PJB1_S1_R1_001_fastq_strand.txt",
-                             "qc/PJB1_S1_R3_001_fastqc",
-                             "qc/PJB1_S1_R3_001_fastqc.html",
-                             "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_fastqc",
-                             "qc/PJB1_S1_R3_001_fastqc.html",
-                             "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R3_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R3_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R3_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R3_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R3_001_screen_rRNA.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_refdata=None,
-                                    qc_protocol="10x_Multiome_ATAC",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_multiome_gex(self):
-        """
-        expected_outputs: 10xGenomics Multiome GEX
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           '10xGenomics Single Cell Multiome',
-                                           'Library type': 'GEX' })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastqc",
-                             "qc/PJB1_S1_R2_001_fastqc.html",
-                             "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastqc",
-                             "qc/PJB1_S1_R2_001_fastqc.html",
-                             "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastq_strand.txt",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_refdata=None,
-                                    qc_protocol="10x_Multiome_GEX",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_multiome_atac_with_libraries_csv(self):
-        """
-        expected_outputs: 10xGenomics Multiome ATAC with single library analysis
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB1_S1_R3_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           '10xGenomics Single Cell Multiome',
-                                           'Library type': 'ATAC' })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        # Make mock libraries.csv files
-        os.mkdir(os.path.join(self.wd,
-                              p.name,
-                              "qc"))
-        mock_libraries_csv = os.path.join(self.wd,
-                                          p.name,
-                                          "qc",
-                                          "libraries.PJB1.csv")
-        with open(mock_libraries_csv,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R1_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R1_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R1_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R1_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R1_001_screen_rRNA.txt",
-                             "qc/PJB1_S1_R1_001_fastq_strand.txt",
-                             "qc/PJB1_S1_R3_001_fastqc",
-                             "qc/PJB1_S1_R3_001_fastqc.html",
-                             "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_fastqc",
-                             "qc/PJB1_S1_R3_001_fastqc.html",
-                             "qc/PJB1_S1_R3_001_fastqc.zip",
-                             "qc/PJB1_S1_R3_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R3_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R3_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R3_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R3_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R3_001_screen_rRNA.txt",
-                             "qc/cellranger_count/PJB1/outs/summary.csv",
-                             "qc/cellranger_count/PJB1/outs/web_summary.html",)
-        expected = expected_outputs(AnalysisProject(os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_refdata=
-                                    "/data/refdata-cellranger-arc-GRCh38-2020-A",
-                                    qc_protocol="10x_Multiome_ATAC",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_multiome_gex_with_libraries_csv(self):
-        """
-        expected_outputs: 10xGenomics Multiome GEX with single library analysis
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           '10xGenomics Single Cell Multiome',
-                                           'Library type': 'GEX' })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        # Make mock libraries.csv files
-        os.mkdir(os.path.join(self.wd,
-                              p.name,
-                              "qc"))
-        mock_libraries_csv = os.path.join(self.wd,
-                                          p.name,
-                                          "qc",
-                                          "libraries.PJB1.csv")
-        with open(mock_libraries_csv,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R1_001_fastqc",
-                             "qc/PJB1_S1_R1_001_fastqc.html",
-                             "qc/PJB1_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastqc",
-                             "qc/PJB1_S1_R2_001_fastqc.html",
-                             "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastqc",
-                             "qc/PJB1_S1_R2_001_fastqc.html",
-                             "qc/PJB1_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_S1_R2_001_fastq_strand.txt",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_model_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.png",
-                             "qc/PJB1_S1_R2_001_screen_other_organisms.txt",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.png",
-                             "qc/PJB1_S1_R2_001_screen_rRNA.txt",
-                             "qc/cellranger_count/PJB1/outs/summary.csv",
-                             "qc/cellranger_count/PJB1/outs/web_summary.html",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_refdata=
-                                    "/data/refdata-cellranger-arc-GRCh38-2020-A",
-                                    qc_protocol="10x_Multiome_GEX",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_cellplex_multiplexing(self):
-        """
-        expected_outputs: 10xGenomics CellPlex multiplexing with cellranger
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
-                                       "PJB1_GEX_S1_R2_001.fastq.gz",
-                                       "PJB2_MC_S2_R1_001.fastq.gz",
-                                       "PJB2_MC_S2_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           "10xGenomics Chromium 3'v3" })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        # Make mock cellranger multi config.csv file
-        mock_config_csv = os.path.join(self.wd,
-                               "PJB",
-                               "10x_multi_config.csv")
-        with open(mock_config_csv,'wt') as fp:
-            fastq_dir = os.path.join(self.wd,
-                                     "PJB",
-                                     "fastqs")
-            fp.write("""[gene-expression]
-reference,/data/refdata-cellranger-gex-GRCh38-2020-A
-
-[libraries]
-fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB1_GEX,%s,any,PJB1,gene expression,
-PJB2_MC,%s,any,PJB2,Multiplexing Capture,
-
-[samples]
-sample_id,cmo_ids,description
-PBA,CMO301,PBA
-PBB,CMO302,PBB
-""" % (fastq_dir,fastq_dir))
-        reference_outputs = ("qc/PJB1_GEX_S1_R1_001_fastqc",
-                             "qc/PJB1_GEX_S1_R1_001_fastqc.html",
-                             "qc/PJB1_GEX_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_GEX_S1_R2_001_fastqc",
-                             "qc/PJB1_GEX_S1_R2_001_fastqc.html",
-                             "qc/PJB1_GEX_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_GEX_S1_R2_001_screen_model_organisms.png",
-                             "qc/PJB1_GEX_S1_R2_001_screen_model_organisms.txt",
-                             "qc/PJB1_GEX_S1_R2_001_screen_other_organisms.png",
-                             "qc/PJB1_GEX_S1_R2_001_screen_other_organisms.txt",
-                             "qc/PJB1_GEX_S1_R2_001_screen_rRNA.png",
-                             "qc/PJB1_GEX_S1_R2_001_screen_rRNA.txt",
-                             "qc/PJB1_GEX_S1_R2_001_fastq_strand.txt",
-                             "qc/PJB2_MC_S2_R1_001_fastqc",
-                             "qc/PJB2_MC_S2_R1_001_fastqc.html",
-                             "qc/PJB2_MC_S2_R1_001_fastqc.zip",
-                             "qc/PJB2_MC_S2_R2_001_fastqc",
-                             "qc/PJB2_MC_S2_R2_001_fastqc.html",
-                             "qc/PJB2_MC_S2_R2_001_fastqc.zip",
-                             "qc/PJB2_MC_S2_R2_001_screen_model_organisms.png",
-                             "qc/PJB2_MC_S2_R2_001_screen_model_organisms.txt",
-                             "qc/PJB2_MC_S2_R2_001_screen_other_organisms.png",
-                             "qc/PJB2_MC_S2_R2_001_screen_other_organisms.txt",
-                             "qc/PJB2_MC_S2_R2_001_screen_rRNA.png",
-                             "qc/PJB2_MC_S2_R2_001_screen_rRNA.txt",
-                             "qc/PJB2_MC_S2_R2_001_fastq_strand.txt",
-                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/metrics_summary.csv",
-                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBA/web_summary.html",
-                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/metrics_summary.csv",
-                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PBB/web_summary.html",
-                             "qc/cellranger_multi/6.0.0/refdata-cellranger-gex-GRCh38-2020-A/outs/multi/multiplexing_analysis/tag_calls_summary.csv",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_multi_config=mock_config_csv,
-                                    cellranger_version="6.0.0",
-                                    cellranger_refdata=
-                                    "/data/refdata-cellranger-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_CellPlex",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
-
-    def test_expected_outputs_10x_cellplex_multiplexing_no_config_csv(self):
-        """
-        expected_outputs: 10xGenomics CellPlex multiplexing with cellranger (no config.csv file)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
-                                       "PJB1_GEX_S1_R2_001.fastq.gz",
-                                       "PJB2_MC_S2_R1_001.fastq.gz",
-                                       "PJB2_MC_S2_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human',
-                                           'Single cell platform':
-                                           "10xGenomics Chromium 3'v3" })
-        p.create(top_dir=self.wd)
-        # Make mock fastq_strand
-        mock_fastq_strand_conf = os.path.join(self.wd,
-                                              p.name,
-                                              "fastq_strand.conf")
-        with open(mock_fastq_strand_conf,'w') as fp:
-            fp.write("")
-        reference_outputs = ("qc/PJB1_GEX_S1_R1_001_fastqc",
-                             "qc/PJB1_GEX_S1_R1_001_fastqc.html",
-                             "qc/PJB1_GEX_S1_R1_001_fastqc.zip",
-                             "qc/PJB1_GEX_S1_R2_001_fastqc",
-                             "qc/PJB1_GEX_S1_R2_001_fastqc.html",
-                             "qc/PJB1_GEX_S1_R2_001_fastqc.zip",
-                             "qc/PJB1_GEX_S1_R2_001_screen_model_organisms.png",
-                             "qc/PJB1_GEX_S1_R2_001_screen_model_organisms.txt",
-                             "qc/PJB1_GEX_S1_R2_001_screen_other_organisms.png",
-                             "qc/PJB1_GEX_S1_R2_001_screen_other_organisms.txt",
-                             "qc/PJB1_GEX_S1_R2_001_screen_rRNA.png",
-                             "qc/PJB1_GEX_S1_R2_001_screen_rRNA.txt",
-                             "qc/PJB1_GEX_S1_R2_001_fastq_strand.txt",
-                             "qc/PJB2_MC_S2_R1_001_fastqc",
-                             "qc/PJB2_MC_S2_R1_001_fastqc.html",
-                             "qc/PJB2_MC_S2_R1_001_fastqc.zip",
-                             "qc/PJB2_MC_S2_R2_001_fastqc",
-                             "qc/PJB2_MC_S2_R2_001_fastqc.html",
-                             "qc/PJB2_MC_S2_R2_001_fastqc.zip",
-                             "qc/PJB2_MC_S2_R2_001_screen_model_organisms.png",
-                             "qc/PJB2_MC_S2_R2_001_screen_model_organisms.txt",
-                             "qc/PJB2_MC_S2_R2_001_screen_other_organisms.png",
-                             "qc/PJB2_MC_S2_R2_001_screen_other_organisms.txt",
-                             "qc/PJB2_MC_S2_R2_001_screen_rRNA.png",
-                             "qc/PJB2_MC_S2_R2_001_screen_rRNA.txt",
-                             "qc/PJB2_MC_S2_R2_001_fastq_strand.txt",)
-        expected = expected_outputs(AnalysisProject(p.name,
-                                                    os.path.join(self.wd,
-                                                                 p.name)),
-                                    "qc",
-                                    fastq_strand_conf=mock_fastq_strand_conf,
-                                    cellranger_multi_config=None,
-                                    cellranger_version="6.0.0",
-                                    cellranger_refdata=
-                                    "/data/refdata-cellranger-gex-GRCh38-2020-A",
-                                    qc_protocol="10x_CellPlex",
-                                    fastq_screens=('model_organisms',
-                                                   'other_organisms',
-                                                   'rRNA'))
-        for e in expected:
-            print(e)
-            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
-                                  for r in reference_outputs],
-                            "%s not found in reference" % e)
-        for r in reference_outputs:
-            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
-                            "%s not found in expected" % r)
