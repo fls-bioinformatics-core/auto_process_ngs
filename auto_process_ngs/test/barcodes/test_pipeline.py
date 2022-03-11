@@ -16,6 +16,9 @@ from auto_process_ngs.barcodes.pipeline import AnalyseBarcodes
 # Set to False to preserve test outputs
 REMOVE_TEST_OUTPUTS = True
 
+# Polling interval for pipeline
+POLL_INTERVAL = 0.1
+
 class TestAnalyseBarcodes(unittest.TestCase):
     """
     Tests for the AnalyseBarcodes pipeline class
@@ -80,7 +83,7 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
                                          "bcl2fastq"))
         exit_code = p.run(os.path.join(self.wd,"barcode_analysis"),
                           working_dir=self.wd,
-                          poll_interval=0.5)
+                          poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(exit_code,0)
         self.assertTrue(os.path.isdir(os.path.join(self.wd,
@@ -161,7 +164,7 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
         exit_code = p.run(os.path.join(self.wd,"barcode_analysis"),
                           sample_sheet=sample_sheet,
                           working_dir=self.wd,
-                          poll_interval=0.5)
+                          poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(exit_code,0)
         self.assertTrue(os.path.isdir(os.path.join(self.wd,
@@ -243,7 +246,7 @@ AB1,AB1,,,,,,,AB,
         exit_code = p.run(os.path.join(self.wd,"barcode_analysis"),
                           sample_sheet=sample_sheet,
                           working_dir=self.wd,
-                          poll_interval=0.5)
+                          poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(exit_code,0)
         self.assertTrue(os.path.isdir(os.path.join(self.wd,
@@ -326,7 +329,7 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
                               "200428_M00879_0087_000000000-AGEW9",
                               "bcl2fastq"),
                           working_dir=self.wd,
-                          poll_interval=0.5)
+                          poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(exit_code,0)
         self.assertTrue(os.path.isdir(os.path.join(self.wd,
@@ -417,7 +420,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                               "200428_M00879_0087_000000000-AGEW9",
                               "bcl2fastq"),
                           working_dir=self.wd,
-                          poll_interval=0.5)
+                          poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(exit_code,0)
         self.assertTrue(os.path.isdir(os.path.join(self.wd,
@@ -508,7 +511,7 @@ CDE4,CDE4,,,D501,SI-GA-D2,CDE,
                               "200428_M00879_0087_000000000-AGEW9",
                               "bcl2fastq"),
                           working_dir=self.wd,
-                          poll_interval=0.5)
+                          poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(exit_code,0)
         self.assertTrue(os.path.isdir(os.path.join(self.wd,
@@ -621,4 +624,4 @@ CDE4,CDE4,,,,,,,CDE,
                           os.path.join(self.wd,"barcode_analysis"),
                           sample_sheet=sample_sheet,
                           working_dir=self.wd,
-                          poll_interval=0.5)
+                          poll_interval=POLL_INTERVAL)

@@ -22,6 +22,9 @@ from auto_process_ngs.stats import FastqStatistics
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
+# Polling interval for pipeline
+POLL_INTERVAL = 0.1
+
 class TestMakeFastqs(unittest.TestCase):
     """
     Tests for MakeFastqs pipeline
@@ -112,7 +115,7 @@ class TestMakeFastqs(unittest.TestCase):
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -184,7 +187,7 @@ class TestMakeFastqs(unittest.TestCase):
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -257,7 +260,7 @@ class TestMakeFastqs(unittest.TestCase):
         p = MakeFastqs(run_dir,sample_sheet,
                        bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -343,7 +346,7 @@ class TestMakeFastqs(unittest.TestCase):
         status = p.run(analysis_dir,
                        out_dir="fastqs_out",
                        barcode_analysis_dir="barcodes",
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -433,7 +436,7 @@ class TestMakeFastqs(unittest.TestCase):
                        per_lane_stats=os.path.basename(per_lane_stats),
                        per_lane_sample_stats=\
                        os.path.basename(per_lane_sample_stats),
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -501,7 +504,7 @@ class TestMakeFastqs(unittest.TestCase):
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
                        name="test",
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -577,7 +580,7 @@ class TestMakeFastqs(unittest.TestCase):
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
                        create_fastq_for_index_read=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -651,7 +654,7 @@ class TestMakeFastqs(unittest.TestCase):
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
                        find_adapters_with_sliding_window=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -723,7 +726,7 @@ class TestMakeFastqs(unittest.TestCase):
         p = MakeFastqs(run_dir,sample_sheet,
                        fastq_statistics=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -791,7 +794,7 @@ class TestMakeFastqs(unittest.TestCase):
         p = MakeFastqs(run_dir,sample_sheet,
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -869,7 +872,7 @@ class TestMakeFastqs(unittest.TestCase):
                        adapter_sequence="ACGTACGTACGT",
                        adapter_sequence_read2="TGCATGCATGCA")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -946,7 +949,7 @@ class TestMakeFastqs(unittest.TestCase):
                        adapter_sequence="ACGTACGTACGT",
                        adapter_sequence_read2="TGCATGCATGCA")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1038,7 +1041,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                        bcl_converter="bcl-convert",
                        adapter_sequence="ACGTACGTACGT")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1130,7 +1133,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                        bcl_converter="bcl-convert",
                        adapter_sequence="ACGTACGTACGT")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1214,7 +1217,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,
                        minimum_trimmed_read_length=26)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1289,7 +1292,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                        bcl_converter="bcl-convert",
                        minimum_trimmed_read_length=26)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1373,7 +1376,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,
                        mask_short_adapter_reads=10)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1448,7 +1451,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                        bcl_converter="bcl-convert",
                        mask_short_adapter_reads=10)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1535,7 +1538,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,
                        trim_adapters=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
                        ##default_runner=SimpleJobRunner(join_logs=True),
                        ##verbose=True)
         self.assertEqual(status,0)
@@ -1615,7 +1618,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                        bcl_converter="bcl-convert",
                        trim_adapters=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1697,7 +1700,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
                        bases_mask="y101,I8,I8,y101")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1772,7 +1775,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                        bcl_converter="bcl-convert",
                        bases_mask="y76,I6n2,I6n2,y76")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1855,7 +1858,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,
                        bcl_converter="bcl2fastq>=2.17")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -1928,7 +1931,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,
                        bcl_converter="bcl-convert>=3.7")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -2011,7 +2014,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,
                        bcl_converter="bcl2fastq=>2.20")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -2078,7 +2081,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,
                        bcl_converter="bcl-convert=>3.8")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -2143,7 +2146,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -2216,7 +2219,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard")
         status = p.run(analysis_dir,
                        no_lane_splitting=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -2288,7 +2291,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
                        lanes=[1,2,])
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -2379,7 +2382,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
                        bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -2527,7 +2530,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
                        no_lane_splitting=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -2654,7 +2657,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(1,2,)),
                            subset(lanes=(3,4,5,6,7,8,))))
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -2804,7 +2807,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(3,4,5,6,7,8,))))
         status = p.run(analysis_dir,
                        no_lane_splitting=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -2909,7 +2912,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
                        no_lane_splitting=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -3014,7 +3017,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         status = p.run(analysis_dir,
                        ##default_runner=SimpleJobRunner(join_logs=True),
                        ##verbose=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -3110,7 +3113,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         status = p.run(analysis_dir,
                        ##default_runner=SimpleJobRunner(join_logs=True),
                        ##verbose=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -3193,7 +3196,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(1,2,)),
                            subset(lanes=(3,4,5,6,7,8,))))
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
         self.assertEqual(p.output.primary_data_dir,
@@ -3310,7 +3313,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(3,4,5,6,7,8,))),
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -3433,7 +3436,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(3,4,5,6,7,8,))),
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -3552,7 +3555,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(3,4,5,6,7,8,))),
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -3672,7 +3675,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(3,4,5,6,7,8,))),
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -3785,7 +3788,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(7,8,),
                                   protocol='mirna')))
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
         self.assertEqual(p.output.primary_data_dir,
@@ -3920,7 +3923,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(8,),protocol="10x_atac")),
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -4066,7 +4069,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(8,),protocol="10x_atac")),
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
@@ -4179,7 +4182,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="standard")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
         self.assertEqual(p.output.primary_data_dir,
@@ -4256,7 +4259,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         status = p.run(analysis_dir,
                        out_dir="fastqs_out",
                        barcode_analysis_dir="barcodes",
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
         self.assertEqual(p.output.primary_data_dir,
@@ -4351,7 +4354,7 @@ AB1,AB1,,,,,AB,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -4426,7 +4429,7 @@ AB1,AB1,,,,,AB,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="icell8")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -4526,7 +4529,7 @@ AB1,AB1,,,,,AB,
         status = p.run(analysis_dir,
                        #default_runner=SimpleJobRunner(join_logs=True),
                        #verbose=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -4621,7 +4624,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
         p = MakeFastqs(run_dir,sample_sheet,protocol="icell8_atac",
                        icell8_well_list=well_list)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -4748,7 +4751,7 @@ Unassigned-Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
         status = p.run(analysis_dir,
                        #default_runner=SimpleJobRunner(join_logs=True),
                        #verbose=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -4837,7 +4840,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_chromium_sc")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -4931,7 +4934,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_chromium_sc")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5025,7 +5028,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_chromium_sc")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"illumina")
@@ -5140,7 +5143,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         status = p.run(analysis_dir,
                        #default_runner=SimpleJobRunner(join_logs=True),
                        #verbose=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5234,7 +5237,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_atac")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5329,7 +5332,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_atac")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5444,7 +5447,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_atac")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5538,7 +5541,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_multiome")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5633,7 +5636,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_multiome")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5728,7 +5731,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_multiome")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5822,7 +5825,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_multiome")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -5915,7 +5918,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_visium")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -6009,7 +6012,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_visium")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -6088,7 +6091,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="mirna")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -6166,7 +6169,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         p = MakeFastqs(run_dir,sample_sheet,protocol="mirna",
                        bcl_converter="bcl-convert")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
@@ -6271,7 +6274,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -6345,7 +6348,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
                        create_empty_fastqs=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -6413,7 +6416,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -6479,7 +6482,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet)
-        status = p.run(analysis_dir,poll_interval=0.5)
+        status = p.run(analysis_dir,poll_interval=POLL_INTERVAL)
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -6548,7 +6551,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"illumina")
@@ -6620,7 +6623,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,platform="miseq")
         status = p.run(analysis_dir,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
@@ -6985,7 +6988,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
                        force_copy_of_primary_data=True,
-                       poll_interval=0.5)
+                       poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
         # Check outputs
         for subdir in (os.path.join("primary_data",

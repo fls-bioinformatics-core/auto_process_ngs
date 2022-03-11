@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes.pipeline.py: pipelines for analysing barcodes
-#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
 #
 
 """
@@ -351,6 +351,7 @@ class AnalyseBarcodes(Pipeline):
                                   'sample_sheet': sample_sheet,
                                   'force': force,
                               },
+                              poll_interval=poll_interval,
                               max_jobs=max_jobs,
                               default_runner=runner,
                               finalize_outputs=True,
