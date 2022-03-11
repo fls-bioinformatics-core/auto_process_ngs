@@ -666,15 +666,17 @@ threads might look like:
    it may also be worth considering using the ``max_slots``
    parameter when running the pipeline.
 
-Dealing with stdout from tasks
-------------------------------
+Dealing with stdout and stderr from tasks
+-----------------------------------------
 
-The stdout from tasks which run external commands can be
-accessed via the ``stdout`` property of the task instance once
-it has completed.
+The stdout and stderr from tasks which run external commands
+can be accessed via the ``stdout`` and ``stderr`` properties
+respectively of the task instance once it has completed.
 
 Where multiple jobs were run by the task, the stdout from all
-jobs are concatenated and returned via this property.
+jobs are concatenated and returned via this property (if
+stderr was not redirected to stdout then this will also be
+concatenated across all jobs).
 
 The stdout for each job is topped and tailed with a standard
 set of comment lines output from the wrapper scripts, of the
@@ -692,6 +694,11 @@ form::
 
 When parsing the stdout it is recommended to check for these lines
 using e.g. ``line.startswith("#### ")``.
+
+.. note::
+
+   Currently the stderr for each job is not enclosed by
+   standard comment lines.
 
 Handling failed tasks in pipelines
 ----------------------------------
@@ -2349,10 +2356,7 @@ class Pipeline:
                     for task in failed:
                         self.report("Task failed: '%s' (%s)" %
                                     (task.name(),task.id()))
-                        if verbose and task.stdout:
-                            self.report("Task stdout:\n%s" %
-                                        '\n>> '.join(
-                                            task.stdout.split('\n')))
+                        task.report_failure(verbose=verbose)
                         dependent_tasks = self.get_dependent_tasks(
                             task.id())
                         pending = []
@@ -2465,6 +2469,7 @@ class PipelineTask:
                                      uuid.uuid4())
         self._completed = False
         self._stdout_files = []
+        self._stderr_files = []
         self._exit_code = 0
         # Working directory
         self._working_dir = None
@@ -2578,9 +2583,25 @@ class PipelineTask:
         """
         stdout = []
         for f in self._stdout_files:
-            with open(f,'r') as fp:
-                stdout.append(fp.read())
+            if f is not None:
+                with open(f,'r') as fp:
+                    stdout.append(fp.read())
         return ''.join(stdout)
+
+    @property
+    def stderr(self):
+        """
+        Get the standard error from the task
+
+        Returns:
+          String: standard error from the task.
+        """
+        stderr = []
+        for f in self._stderr_files:
+            if f is not None:
+                with open(f,'r') as fp:
+                    stderr.append(fp.read())
+        return ''.join(stderr)
 
     @property
     def runner_nslots(self):
@@ -2713,7 +2734,22 @@ class PipelineTask:
         if lock:
             self._lock_manager.release(lock)
 
-    def report_diagnostics(self,s):
+    def report_failure(self,reportf=None,verbose=False):
+        """
+        Internal: report information on task failure
+
+        Arguments:
+          reportf (func): function to use for reporting
+            (defaults to the object's 'report' method)
+        """
+        if reportf is None:
+            reportf = self.report
+        self.report_diagnostics("Task failed: exit code %s" %
+                                self._exit_code,
+                                reportf=reportf,
+                                verbose=verbose)
+
+    def report_diagnostics(self,s,reportf=None,verbose=True):
         """
         Internal: report additional diagnostic information
 
@@ -2724,38 +2760,83 @@ class PipelineTask:
         Arguments:
           s (str): string describing the reason for the
             diagnostics being reported
+          reportf (func): function to use for reporting
+            (defaults to the object's 'report' method)
         """
+        if reportf is None:
+            reportf = self.report
         # Report diagnostic information
-        self.report("**** TASK DIAGNOSTICS ****\n")
-        self.report("Reason: '%s'\n" % s)
-        self.report("Working directory %s" % self._working_dir)
-        self.report("CWD %s" % os.getcwd())
-        self.report("\nCWD contents:")
-        contents = sorted(os.listdir(os.getcwd()))
-        if contents:
-            for item in contents:
-                self.report("-- %s%s" % (item,
+        reportf("**** TASK DIAGNOSTICS ****\n")
+        # General information
+        reportf("Task name: %s" % self.name())
+        reportf("Task id  : %s" % self.id())
+        reportf("Reason   : '%s'" % s)
+        # Verbose output
+        if verbose:
+            # Working directory
+            reportf("\nWorking directory %s" % self._working_dir)
+            contents = sorted(os.listdir(self._working_dir))
+            if contents:
+                reportf("Contents:")
+                for item in contents:
+                    reportf("-- %s%s" % (item,
                                          os.sep if os.path.isdir(
                                              os.path.join(os.getcwd(),item))
                                          else ''))
+            else:
+                reportf("Working dir is empty")
+            # Scripts
+            reportf("\nSCRIPTS:")
+            if self._scripts:
+                for script_file in self._scripts:
+                    with open(script_file,'rt') as fp:
+                        reportf("%s:" % script_file)
+                        report_text(fp.read(),
+                                    prefix="SCRIPT> ",
+                                    reportf=reportf)
+            else:
+                reportf("No scripts generated for this task")
+            # Stdout
+            reportf("\nSTDOUT:")
+            if self.stdout:
+                report_text(self.stdout,
+                            prefix="STDOUT> ",
+                            reportf=reportf)
+            else:
+                reportf("No stdout from task scripts")
+            # Stderr
+            reportf("\nSTDERR:")
+            if self.stderr:
+                report_text(self.stderr,
+                            prefix="STDERR> ",
+                            reportf=reportf)
+            else:
+                reportf("No stderr from task scripts")
         else:
-            self.report("Empty")
-        self.report("\nSCRIPTS:")
-        if self._scripts:
-            for script_file in self._scripts:
-                with open(script_file,'rt') as fp:
-                    self.report("%s:" % script_file)
-                    for line in fp:
-                        self.report("> %s" % line.rstrip('\n'))
-        else:
-            self.report("No scripts generated for this task")
-        self.report("\nSTDOUT:")
-        if self.stdout:
-            for line in self.stdout.split('\n'):
-                self.report("> %s" % line)
-        else:
-            self.report("No stdout from task scripts")
-        self.report("\n**** END OF DIAGNOSTICS ****")
+            # Only report summary of stdout and stderr
+            head = 20
+            tail = 20
+            stdout = self.stdout
+            if stdout:
+                reportf("\nStandard ouput:")
+                report_text(stdout,
+                            head=head,
+                            tail=tail,
+                            prefix="STDOUT> ",
+                            reportf=reportf)
+            else:
+                reportf("\nNo stdout from task scripts")
+            stderr = self.stderr
+            if stderr:
+                reportf("\nStandard error:")
+                report_text(stderr,
+                            head=head,
+                            tail=tail,
+                            prefix="STDERR> ",
+                            reportf=reportf)
+            else:
+                reportf("\nNo stderr from task scripts")
+        reportf("\n**** END OF DIAGNOSTICS ****")
 
     def task_completed(self,name,jobs,sched):
         """
@@ -2769,17 +2850,36 @@ class PipelineTask:
           jobs (list): list of SchedulerJob instances
           sched (SimpleScheduler): scheduler instance
         """
-        for job in jobs:
-            try:
-                if job.exit_code != 0:
-                    self._exit_code += 1
-                self._stdout_files.append(job.log)
-            except AttributeError:
-                # Assume it's a group
-                for j in job.jobs:
-                    if j.exit_code != 0:
+        try:
+            for job in jobs:
+                try:
+                    if job.exit_code != 0:
                         self._exit_code += 1
-                    self._stdout_files.append(j.log)
+                    self._stdout_files.append(job.log)
+                    try:
+                        # Older versions of Job object
+                        # don't have 'err' property?
+                        self._stderr_files.append(job.err)
+                    except AttributeError:
+                        self._stderr_files.append(None)
+                except AttributeError:
+                    # Assume it's a group
+                    for j in job.jobs:
+                        if j.exit_code != 0:
+                            self._exit_code += 1
+                        self._stdout_files.append(j.log)
+                        try:
+                            # Older versions of Job object
+                            # don't have 'err' property?
+                            self._stderr_files.append(j.err)
+                        except AttributeError:
+                            self._stderr_files.append(None)
+        except Exception as ex:
+            # General
+            self.report("Unhandled exception when invoking "
+                        "'task_finished': %s" % ex)
+            self.report("Task will be marked as failed")
+            self._exit_code = 1
         self.finish_task()
 
     def finish_task(self):
@@ -4133,6 +4233,69 @@ def sanitize_name(s):
         else:
             name.append(c)
     return ''.join(name)
+
+def report_text(s,head=None,tail=None,prefix=None,
+                reportf=None):
+    """
+    Output text with optional topping and tailing
+
+    Outputs the supplied string of text line-by-line via
+    the specified reporting function (defaults to the
+    built-in 'print' function) with options to limit the
+    number of leading and/or trailing lines.
+
+    Where lines are omitted, an additional line is
+    output reporting the number of lines that were
+    skipped.
+
+    Arguments:
+      s (str): text to report
+      head (int): number of leading lines to report
+      tail (int): number of trailing lines to report
+      prefix (str): optional string to prefix to
+        each reported line
+      reportf (func): function to call to report
+        each line of text (defaults to 'print')
+    """
+    # Set the reporting function
+    if reportf is None:
+        reportf = print
+    # Initialise the prefix
+    if prefix is None:
+        prefix = ""
+    # Split into lines
+    if s.endswith('\n'):
+        s = s[:-1]
+    lines = s.split('\n')
+    # Deal with topping and tailing
+    if head or tail:
+        total_lines = 0
+        if head:
+            total_lines += head
+        if tail:
+            total_lines += tail
+        skipped_lines = max(len(lines) - total_lines,0)
+    else:
+        skipped_lines = 0
+    # Report the log
+    if skipped_lines == 0:
+        # Report everything
+        for line in lines:
+            reportf("%s%s" % (prefix,line))
+    else:
+        # Report head and/or tail only
+        if head:
+            report_text('\n'.join(lines[:head]),
+                        prefix=prefix,
+                        reportf=reportf)
+        reportf("%s...skipped %d line%s..." % (prefix,
+                                               skipped_lines,
+                                               's' if skipped_lines != 1
+                                               else ''))
+        if tail:
+            report_text('\n'.join(lines[-tail:]),
+                        prefix=prefix,
+                        reportf=reportf)
 
 def collect_files(dirn,pattern):
     """

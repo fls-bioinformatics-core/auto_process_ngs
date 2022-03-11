@@ -32,11 +32,18 @@ from auto_process_ngs.pipeliner import PathJoinParam
 from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
 from auto_process_ngs.pipeliner import PipelineError
+from auto_process_ngs.pipeliner import report_text
 from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.Pipeline import Job
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
+
+# Check if Job instance has 'err' attribute
+JOB_HAS_ERR = hasattr(
+    Job(SimpleJobRunner(),'dummy','.','script',[]),
+    'err')
 
 # Helpers
 
@@ -2642,6 +2649,47 @@ class TestPipelineTask(unittest.TestCase):
             self.assertTrue(stdout[6+i*8].startswith("#### END "))
             self.assertEqual(stdout[7+i*8],"#### EXIT_CODE 0")
 
+    def test_pipelinetask_stderr(self):
+        """
+        PipelineTask: check stderr recovered from task
+        """
+        # Define a task with a command
+        # Echoes text multiple times via shell command
+        class MultipleEchoToStderr(PipelineTask):
+            def init(self,s,n=1):
+                pass
+            def setup(self):
+                for i in range(self.args.n):
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text","echo",self.args.s,">&2"))
+        # Make a task instance
+        task = MultipleEchoToStderr("Echo string 3 times","Hello!",3)
+        # Check initial state
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertFalse(task.output)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 asynchronous=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertFalse(task.output)
+        # Check stderr
+        # Should look like:
+        # Hello!
+        # ...x three times
+        print(task.stderr)
+        stderr = task.stderr.split("\n")
+        if JOB_HAS_ERR:
+            self.assertEqual(len(stderr),4) # 4 = 3 + trailing newline
+            for i in range(3):
+                self.assertEqual(stderr[i],"Hello!")
+        else:
+            self.assertEqual(stderr,[""])
+
     def test_pipelinetask_invoke_fail(self):
         """
         PipelineTask: check task invoking 'fail' method
@@ -3770,6 +3818,133 @@ class TestDispatcher(unittest.TestCase):
         self.assertEqual(exit_code,0)
         result = d.get_result()
         self.assertEqual(result,"Hello World!")
+
+class TestReportText(unittest.TestCase):
+
+    def test_report_text(self):
+        """
+        report_text: check writing to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_text(input_text,
+                    reportf=write_output)
+        self.assertEqual(output.getvalue(),input_text)
+
+    def test_report_text_with_prefix(self):
+        """
+        report_text: check writing to output with prefix
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output_text = """PREFIX> Example logfile
+PREFIX> with some example
+PREFIX> contents
+PREFIX> 
+PREFIX> and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_text(input_text,
+                    prefix="PREFIX> ",
+                    reportf=write_output)
+        self.assertEqual(output.getvalue(),output_text)
+
+    def test_report_text_head(self):
+        """
+        report_text: check writing head to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output_text = """Example logfile
+with some example
+contents
+...skipped 2 lines...
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_text(input_text,
+                    head=3,
+                    reportf=write_output)
+        self.assertEqual(output.getvalue(),output_text)
+
+    def test_report_text_tail(self):
+        """
+        report_text: check writing tail to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output_text = """...skipped 2 lines...
+contents
+
+and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_text(input_text,
+                    tail=3,
+                    reportf=write_output)
+        self.assertEqual(output.getvalue(),output_text)
+
+    def test_report_text_head_and_tail(self):
+        """
+        report_text: check writing head and tail to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output_text = """Example logfile
+with some example
+...skipped 1 line...
+
+and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_text(input_text,
+                    head=2,
+                    tail=2,
+                    reportf=write_output)
+        self.assertEqual(output.getvalue(),output_text)
+
+    def test_report_text_head_and_tail_overlap(self):
+        """
+        report_text: check writing overlapping head and tail to output
+        """
+        input_text = """Example logfile
+with some example
+contents
+
+and blank lines
+"""
+        output = io.StringIO()
+        write_output = lambda s: output.write("%s\n" % s)
+        report_text(input_text,
+                    head=3,
+                    tail=3,
+                    reportf=write_output)
+        self.assertEqual(output.getvalue(),input_text)
 
 class TestResolveParameter(unittest.TestCase):
 
