@@ -52,8 +52,7 @@ class TestReportInfo(unittest.TestCase):
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
             metadata={ "source": "testing",
-                       "run_number": 87,
-                       "assay": "Nextera" },
+                       "run_number": 87, },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "RNA-seq",
@@ -134,8 +133,7 @@ Summary of data in 'bcl2fastq' dir:
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
             metadata={ "source": "testing",
-                       "run_number": 87,
-                       "assay": "Nextera" },
+                       "run_number": 87, },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
@@ -219,8 +217,7 @@ Summary of data in 'bcl2fastq' dir:
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
             metadata={ "source": "testing",
-                       "run_number": 87,
-                       "assay": "Nextera" },
+                       "run_number": 87, },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
@@ -274,7 +271,6 @@ class TestReportConcise(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
@@ -304,8 +300,7 @@ class TestReportConcise(unittest.TestCase):
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
             metadata={ "source": "testing",
-                       "run_number": 87,
-                       "assay": "Nextera" },
+                       "run_number": 87, },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
@@ -334,8 +329,7 @@ class TestReportConcise(unittest.TestCase):
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
             metadata={ "source": "testing",
-                       "run_number": 87,
-                       "assay": "Nextera" },
+                       "run_number": 87, },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
@@ -377,7 +371,6 @@ class TestReportSummary(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
@@ -406,7 +399,6 @@ Sequencer: MiSeq
 Directory: %s
 Endedness: Paired end
 Bcl2fastq: Unknown
-Assay    : Nextera
 
 2 projects:
 - 'AB':  Alison Bell           Human RNA-seq  2 samples (PI Audrey Bower)           
@@ -432,7 +424,6 @@ Additional notes/comments:
                        "('/usr/bin/bcl2fastq', 'bcl2fastq', '2.17.1.14')",
                        "cellranger_software":
                        "('/usr/bin/cellranger', 'cellranger', '3.0.1')",
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
@@ -462,7 +453,6 @@ Directory : %s
 Endedness : Paired end
 Bcl2fastq : bcl2fastq 2.17.1.14
 Cellranger: cellranger 3.0.1
-Assay     : Nextera
 
 2 projects:
 - 'AB':  Alison Bell           Human scRNA-seq (ICELL8) 2 samples/1311 cells (PI Audrey Bower)           
@@ -490,7 +480,6 @@ Additional notes/comments:
                        "('/usr/bin/bcl2fastq', 'bcl2fastq', '2.17.1.14')",
                        "cellranger_software":
                        "('/usr/bin/cellranger', 'cellranger', '3.0.1')",
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
@@ -507,7 +496,6 @@ Directory : %s
 Endedness : Paired end
 Bcl2fastq : bcl2fastq 2.17.1.14
 Cellranger: cellranger 3.0.1
-Assay     : Nextera
 
 No projects found; 'bcl2fastq' directory contains the following data:
 
@@ -553,7 +541,6 @@ class TestReportProjects(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
@@ -588,7 +575,6 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
@@ -624,7 +610,6 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
@@ -661,7 +646,6 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
@@ -706,7 +690,6 @@ class TestReport(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" ,
                        "sequencer_model": "MiSeq"},
             project_metadata={
                 "AB": { "User": "Alison Bell",
@@ -772,7 +755,6 @@ class TestFetchValueFunction(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera",
                        "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",

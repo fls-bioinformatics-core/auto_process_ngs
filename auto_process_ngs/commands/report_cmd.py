@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     report_cmd.py: implement auto process 'report' command
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 #########################################################################
 
@@ -243,7 +243,6 @@ def report_summary(ap):
     - Run reference id
     - Sequencer model
     - Processing software
-    - Assay (i.e. sequencing kit)
 
     For each project:
 
@@ -309,12 +308,6 @@ def report_summary(ap):
     for pkg in ('cellranger','cellranger-atac'):
         if pkg in processing_software:
             report_items.append(pkg.title())
-    # Assay/kit information
-    if ap.metadata.assay is not None:
-        assay = ap.metadata.assay
-        report_items.append('Assay')
-    else:
-        assay = ''
     # Generate report text
     report = []
     # Report header
@@ -360,8 +353,6 @@ def report_summary(ap):
                                    processing_software['cellranger-atac'][2])
             else:
                 value = 'Unknown'
-        elif item == 'Assay':
-            value = assay
         else:
             raise Exception("Unknown reporting item '%s'" % item)
         # Append a line reporting the value

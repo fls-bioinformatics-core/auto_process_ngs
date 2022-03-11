@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 ########################################################################
 #
@@ -252,7 +252,7 @@ class AnalysisDir:
                                    % (parameter_file,ex))
             if params:
                 # Attempt to acquire values from parameters
-                for param in ('platform','run_number','source','assay'):
+                for param in ('platform','run_number','source',):
                     if param not in params:
                         logger.debug("-- %s: missing" % param)
                         continue

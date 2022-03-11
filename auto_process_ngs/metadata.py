@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     metadata: classes for storing metadata on analysis objects
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
 #
 ########################################################################
 #
@@ -339,7 +339,6 @@ class AnalysisDirMetadata(MetadataDict):
     run_number: run number assigned by local facility
     source: source of the data (e.g. local facility)
     platform: sequencing platform e.g. 'miseq'
-    assay: the 'assay' from the IEM SampleSheet e.g. 'Nextera XT'
     processing_software: dictionary of software packages used in
       in the processing
     bcl2fastq_software: info on the Bcl conversion software used
@@ -369,7 +368,6 @@ class AnalysisDirMetadata(MetadataDict):
                                   'run_number': 'run_number',
                                   'source': 'source',
                                   'platform':'platform',
-                                  'assay': 'assay',
                                   'processing_software': 'processing_software',
                                   'bcl2fastq_software': 'bcl2fastq_software',
                                   'cellranger_software': 'cellranger_software',

@@ -73,7 +73,6 @@ For example:
     Directory: /runs/2015/miseq/150729_M00789_0088_000000000-ABCD1_analysis
     Endedness: Paired end
     Bcl2fastq: bcl2fastq 2.17.1.14
-    Assay    : TruSeq HT
 
     1 project:
     - 'AB': Abby Brown Mouse RNA-seq 4 samples (PI Carl Dover)
