@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8.utils.py: utility functions for handling ICELL8 data
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 
 """
@@ -34,7 +34,7 @@ Functions:
 import os
 import time
 import logging
-from collections import Iterator
+from collections.abc import Iterator
 from multiprocessing import Pool
 from builtins import range
 from bcftbx.FASTQFile import FastqIterator
