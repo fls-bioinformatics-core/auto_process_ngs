@@ -18,7 +18,7 @@ UMI_LENGTH = 14
 # Other constants
 ######################################################################
 
-SAMPLENAME_ILLEGAL_CHARS = "?()[]/\=+<>:;\"',*^|& \t"
+SAMPLENAME_ILLEGAL_CHARS = "?()[]/\\=+<>:;\"',*^|& \t"
 
 MAXIMUM_BATCH_SIZE = 100000000
 DEFAULT_BATCH_SIZE = 5000000
