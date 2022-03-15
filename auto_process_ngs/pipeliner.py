@@ -1112,7 +1112,7 @@ import cloudpickle
 import atexit
 import textwrap
 import math
-from collections import Iterator
+from collections.abc import Iterator
 from io import StringIO
 from functools import reduce
 from bcftbx.utils import mkdir
