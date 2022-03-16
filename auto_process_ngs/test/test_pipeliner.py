@@ -977,7 +977,7 @@ prepend-path PATH %s
                                 "fastqc@0.11.3")
         os.makedirs(env_path)
         with open(os.path.join(env_path,"fastqc"),'wt') as fp:
-            fp.write("#!/bin/bash\necho $1\exit 0\n")
+            fp.write("#!/bin/bash\necho $1\nexit 0\n")
         os.chmod(os.path.join(env_path,"fastqc"),0o755)
         # Build the pipeline
         ppl = Pipeline()

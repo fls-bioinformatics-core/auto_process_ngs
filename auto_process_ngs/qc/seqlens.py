@@ -39,8 +39,8 @@ class SeqLens:
                 with open(self._json_file,'rt') as fp:
                     self._data = json.load(fp)
             except Exception as ex:
-                logger.warn("Failed to load data from '%s': %s"
-                            % (self._json_file,ex))
+                logger.warning("Failed to load data from '%s': %s"
+                               % (self._json_file,ex))
         elif data:
             self._data = { k:data[k] for k in data }
         elif fastq:

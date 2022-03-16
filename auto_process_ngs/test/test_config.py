@@ -35,7 +35,7 @@ class TestConfig(unittest.TestCase):
     def setUp(self):
         fp = StringIO(config)
         self.config = Config()
-        self.config.readfp(fp)
+        self.config.read_file(fp)
 
     def test_get(self):
         """Check Config.get fetches correct value

@@ -2893,7 +2893,7 @@ for pkg in $PACKAGES ; do
    name=$(echo $pkg | cut -f1 -d=)
    cat >${PREFIX}/${name} <<EOF
 #!/bin/bash
-echo \$1
+echo \\$1
 exit %s
 EOF
    chmod +x ${PREFIX}/${name}

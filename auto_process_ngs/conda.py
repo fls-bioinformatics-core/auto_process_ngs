@@ -173,7 +173,7 @@ class CondaWrapper:
                 fp.write(url.read())
         except URLError as ex:
             raise Exception("Failed to download miniconda installer from "
-                            "'%s': %s" (self._miniconda['url']))
+                            "'%s': %s" % (self._miniconda['url'],ex))
         # Run the installer in silent mode
         install_cmd = Command('bash',
                               miniconda_installer,
