@@ -2583,7 +2583,7 @@ class PipelineTask:
         """
         stdout = []
         for f in self._stdout_files:
-            if f is not None:
+            if f is not None and os.path.exists(f):
                 with open(f,'r') as fp:
                     stdout.append(fp.read())
         return ''.join(stdout)
@@ -2598,7 +2598,7 @@ class PipelineTask:
         """
         stderr = []
         for f in self._stderr_files:
-            if f is not None:
+            if f is not None and os.path.exists(f):
                 with open(f,'r') as fp:
                     stderr.append(fp.read())
         return ''.join(stderr)
