@@ -2596,9 +2596,11 @@ class PipelineTask:
         stdout = []
         for f in self._stdout_files:
             if f is not None and os.path.exists(f):
+                if len(self._stdout_files) > 1:
+                    stdout.append("#### STDOUT <<%s>>\n" % f)
                 with open(f,'r') as fp:
                     stdout.append(fp.read())
-        return ''.join(stdout)
+        return ''.join(stdout).replace(r'\x1B','ESC')
 
     @property
     def stderr(self):
@@ -2611,9 +2613,11 @@ class PipelineTask:
         stderr = []
         for f in self._stderr_files:
             if f is not None and os.path.exists(f):
+                if len(self._stderr_files) > 1:
+                    stderr.append("#### STDERR <<%s>>\n" % f)
                 with open(f,'r') as fp:
                     stderr.append(fp.read())
-        return ''.join(stderr)
+        return ''.join(stderr).replace(r'\x1B','ESC')
 
     @property
     def runner_nslots(self):
