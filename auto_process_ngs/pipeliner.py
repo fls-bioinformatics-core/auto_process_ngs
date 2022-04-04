@@ -3568,12 +3568,14 @@ class PipelineCommand:
         if scripts_dir is None:
             scripts_dir = os.getcwd()
         script_file = os.path.join(scripts_dir,"%s.%s.sh" % (self.name(),
-                                                             uuid.uuid4()))
+                                                             script_uuid))
+        # Preamble
         prologue = ["echo \"#### COMMAND %s\"" % self._name]
         if batch_number is not None:
             prologue.append("echo \"#### BATCH %s\"" % batch_number)
         prologue.extend(["echo \"#### HOSTNAME $HOSTNAME\"",
                          "echo \"#### USER $USER\"",
+                         "echo \"#### UUID %s\"" % script_uuid,
                          "echo \"#### START $(date)\""])
         # Disable Python's user site-packages directory
         prologue.extend(
@@ -3597,35 +3599,49 @@ class PipelineCommand:
                 modulepath = os.environ['MODULEPATH']
                 if modulepath:
                     prologue.append("export MODULEPATH=%s" % modulepath)
+                prologue.append("echo \"#### MODULEPATH $MODULEPATH\"")
             except KeyError:
                 pass
             for module in envmodules:
                 if module is not None:
+                    module_load_cmd = "module load %s" % module
                     module_script = \
-                        ["module load %s" % module,
+                        ["# Loading environment module %s" % module,
+                         "echo %s" % module_load_cmd,
+                         module_load_cmd,
                          "if [ $? -ne 0 ] ; then",
                          "  echo Failed to load environment module >&2",
                          "  exit 1",
                          "fi"]
                     prologue.extend(module_script)
+            prologue.append("module list >__modules.%s 2>&1" % script_uuid)
+        # Conda environment
         if conda_env:
             conda_activate_cmd = \
                 str(CondaWrapper(conda).activate_env_cmd(conda_env))
             conda_script = \
-                        ["echo %s" % conda_activate_cmd,
+                        ["# Activating conda environment %s" % conda_env,
+                         "echo %s" % conda_activate_cmd,
                          conda_activate_cmd,
                          "if [ $? -ne 0 ] ; then",
                          "  echo Failed to activate conda environment >&2",
                          "  exit 1",
-                         "fi"]
+                         "fi",
+                         "%s list >__conda_packages.%s 2>&1" % (conda,
+                                                                script_uuid)]
             prologue.extend(conda_script)
+        # Move to working dir
         if working_dir:
             prologue.append("cd %s" % working_dir)
         prologue.append("echo \"#### CWD $(pwd)\"")
+        # Report environment
+        prologue.append("printenv >__env.%s" % script_uuid)
+        # Handle script exit
         epilogue = ["exit_code=$?",
                     "echo \"#### END $(date)\"",
                     "echo \"#### EXIT_CODE $exit_code\"",
                     "exit $exit_code"]
+        # Build the wrapper
         self.cmd().make_wrapper_script(filen=script_file,
                                        shell=shell,
                                        prologue='\n'.join(prologue),
