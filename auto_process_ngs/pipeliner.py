@@ -916,6 +916,18 @@ environments that are activated when the tasks run (otherwise they
 are ignored) (see the section "Enabling conda to create task environments
 automatically" for details).
 
+.. note::
+
+   By default the ``PYTHONNOUSERSITE`` environment variable is
+   set in the execution environment, and any directories matching
+   the path ``${HOME}/.local/lib/python*`` are removed from the
+   ``PYTHONPATH``.
+
+   Together this means that Python programs that are run within
+   that environment will ignore any packages installed in
+   the user ``site-packages`` directory (which can otherwise
+   cause issues with ``conda`` dependency resolution).
+
 Defining outputs from a pipeline
 --------------------------------
 
@@ -3559,6 +3571,22 @@ class PipelineCommand:
         prologue.extend(["echo \"#### HOSTNAME $HOSTNAME\"",
                          "echo \"#### USER $USER\"",
                          "echo \"#### START $(date)\""])
+        # Disable Python's user site-packages directory
+        prologue.extend(
+            ["# Disable Python user site-packages directory",
+             "export PYTHONNOUSERSITE=1",
+             "_pythonpath=$PYTHONPATH",
+             "export PYTHONPATH=",
+             "for _p in $(echo $_pythonpath | tr ':' ' ') ; do",
+             "  if [ -z \"$(echo $_p | grep ^${HOME}/.local/lib/python)\" ] ; then",
+             "    if [ -z \"$PYTHONPATH\" ] ; then",
+             "      PYTHONPATH=$_p",
+             "    else",
+             "      PYTHONPATH=$PYTHONPATH:$_p",
+             "    fi",
+             "  fi",
+             "done"])
+        # Environment modules
         if envmodules:
             shell += " --login"
             try:
