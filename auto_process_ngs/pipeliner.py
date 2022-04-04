@@ -3543,7 +3543,8 @@ class PipelineCommand:
 
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash",
                             envmodules=None,conda=None,conda_env=None,
-                            working_dir=None,batch_number=None):
+                            working_dir=None,batch_number=None,
+                            script_uuid=None):
         """
         Generate a uniquely-named wrapper script to run the command
 
@@ -3560,10 +3561,15 @@ class PipelineCommand:
           batch_number (int): for batched commands, the number
             of the batch that this script corresponds to
             (optional)
+          uuid (str): optional ID string; if not supplied then
+            a UUID string will be generated
 
         Returns:
           String: name of the wrapper script.
         """
+        # UUID
+        if script_uuid is None:
+            script_uuid = uuid.uuid4()
         # Wrap in a script
         if scripts_dir is None:
             scripts_dir = os.getcwd()
