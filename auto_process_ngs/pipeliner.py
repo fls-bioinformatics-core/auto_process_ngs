@@ -3605,9 +3605,9 @@ class PipelineCommand:
                 modulepath = os.environ['MODULEPATH']
                 if modulepath:
                     prologue.append("export MODULEPATH=%s" % modulepath)
-                prologue.append("echo \"#### MODULEPATH $MODULEPATH\"")
             except KeyError:
                 pass
+            prologue.append("echo \"#### MODULEPATH $MODULEPATH\"")
             for module in envmodules:
                 if module is not None:
                     module_load_cmd = "module load %s" % module
