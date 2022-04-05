@@ -2992,6 +2992,7 @@ def report(projects,title=None,filename=None,qc_dir=None,
                     zip_file.add(f)
                 else:
                     raise Exception("Unable to add missing file '%s'" % f)
+            zip_file.close()
             # Rename temporary ZIP to final location
             os.rename(tmp_zip,zip_name)
         except Exception as ex:
