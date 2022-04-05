@@ -304,3 +304,4 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     # Set flags to allow parameters etc to be saved back
     ap._save_params = True
     ap._save_metadata = True
+    ap.save_data()
