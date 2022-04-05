@@ -485,6 +485,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         ap.make_project_metadata_file()
     else:
         ap.update_project_metadata_file()
+    ap.save_data()
 
     # Finish
     return status
