@@ -1,5 +1,5 @@
 #     mockqcdata.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2022 Peter Briggs
 #
 ########################################################################
 
@@ -1028,6 +1028,26 @@ SEQ_LENS_JSON = """{
         "76": 52434
     }
 }
+"""
+
+PICARD_COLLECT_INSERT_SIZE_METRICS = """"## htsjdk.samtools.metrics.StringHeader
+# CollectInsertSizeMetrics --Histogram_FILE Sample.insert_size_histogram.pdf --INPUT Sample.bam --OUTPUT Sample.insert_size_metrics.txt --DEVIATIONS 10.0 --MINIMUM_PCT 0.05 --METRIC_ACCUMULATION_LEVEL ALL_READS --INCLUDE_DUPLICATES false --ASSUME_SORTED true --STOP_AFTER 0 --VERBOSITY INFO --QUIET false --VALIDATION_STRINGENCY STRICT --COMPRESSION_LEVEL 5 --MAX_RECORDS_IN_RAM 500000 --CREATE_INDEX false --CREATE_MD5_FILE false --GA4GH_CLIENT_SECRETS client_secrets.json --help false --version false --showHidden false --USE_JDK_DEFLATER false --USE_JDK_INFLATER false
+## htsjdk.samtools.metrics.StringHeader
+# Started on: Mon Oct 04 12:53:24 BST 2021
+
+## METRICS CLASS	picard.analysis.InsertSizeMetrics
+MEDIAN_INSERT_SIZE	MODE_INSERT_SIZE	MEDIAN_ABSOLUTE_DEVIATION	MIN_INSERT_SIZE	MAX_INSERT_SIZE	MEAN_INSERT_SIZE	STANDARD_DEVIATION	READ_PAIRS	PAIR_ORIENTATION	WIDTH_OF_10_PERCENT	WIDTH_OF_20_PERCENT	WIDTH_OF_30_PERCENT	WIDTH_OF_40_PERCENT	WIDTH_OF_50_PERCENT	WIDTH_OF_60_PERCENT	WIDTH_OF_70_PERCENT	WIDTH_OF_80_PERCENT	WIDTH_OF_90_PERCENT	WIDTH_OF_95_PERCENT	WIDTH_OF_99_PERCENT	SAMPLE	LIBRARY	READ_GROUP
+139	103	37	28	753074	153.754829	69.675347	175847	FR	15	31	47	61	75	93	115	157	323	975	31983			
+
+## HISTOGRAM	java.lang.Integer
+insert_size	All_Reads.fr_count
+28	1
+29	1
+30	1
+31	1
+32	1
+33	2
+34	3
 """
 
 # Base64 encoded generic example PNG
