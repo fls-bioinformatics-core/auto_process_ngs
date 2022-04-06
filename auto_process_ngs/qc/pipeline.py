@@ -2987,6 +2987,8 @@ class RunRSeQCInferExperiment(PipelineTask):
                                  bam_file=bam_file,
                                  basename=os.path.basename(bam_file)[:-4]))
     def finish(self):
+        if not self.args.reference_gene_model:
+            return
         outputs = dict()
         for bam_file in self.args.bam_files:
             infer_expt_log = os.path.join(self._working_dir,
@@ -3120,14 +3122,18 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
             '.insert_size_histogram.pdf'
         )
     def setup(self):
+        # Filter list of BAM files down to those which have
+        # associated properties, and which are paired-end
+        if self.args.bam_properties:
+            self.bam_files = list(
+                filter(lambda f: f in self.args.bam_properties and
+                       self.args.bam_properties[f]['paired_end'],
+                       self.args.bam_files))
+        else:
+            self.bam_files = list()
         # Set up commands to run CleanSam and
         # CollectInsertSizeMetrics for each BAM file
-        for bam in self.args.bam_files:
-            # Check if BAM file is paired
-            paired_end = self.args.bam_properties[bam]['paired_end']
-            if not paired_end:
-                # Skip this BAM
-                continue
+        for bam in self.bam_files:
             # Check if outputs already exist
             outputs_exist = True
             for ext in self.insert_size_metrics_outputs:
@@ -3155,13 +3161,15 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                                     basename=os.path.basename(bam)[:-4],
                                     nslots=self.runner_nslots))
     def finish(self):
+        # Check if there were any files processed
+        if not self.bam_files:
+            return
         # Copy outputs to final location
         if not os.path.exists(self.args.out_dir):
             print("Creating output dir '%s'" % self.args.out_dir)
             os.makedirs(self.args.out_dir)
-        for bam in self.args.bam_files:
-            for ext in (".insert_size_metrics.txt",
-                        ".insert_size_histogram.pdf",):
+        for bam in self.bam_files:
+            for ext in self.insert_size_metrics_outputs:
                 f = "%s%s" % (os.path.basename(bam)[:-4],ext)
                 if os.path.exists(os.path.join(self.args.out_dir,f)):
                     # Output file exists
@@ -3212,8 +3220,17 @@ class RunQualimapRnaseq(PipelineTask):
         else:
             print("Feature file is not set, cannot run Qualimap rnaseq")
             return
+        # Filter list of BAM files down to those which have
+        # associated properties, and which are paired-end
+        if self.args.bam_properties:
+            self.bam_files = list(
+                filter(lambda f: f in self.args.bam_properties and
+                       self.args.bam_properties[f]['paired_end'],
+                       self.args.bam_files))
+        else:
+            self.bam_files = list()
         # Set up Qualimap rnaseq for each BAM file
-        for bam in self.args.bam_files:
+        for bam in self.bam_files:
             # Output directory for individual BAM file
             bam_name = os.path.basename(bam)[:-4]
             out_dir = os.path.join(self.args.out_dir,bam_name)
@@ -3260,7 +3277,9 @@ class RunQualimapRnaseq(PipelineTask):
                              out_dir=bam_name,
                              java_mem_size=self.java_mem_size))
     def finish(self):
-        for bam in self.args.bam_files:
+        if not self.args.feature_file:
+            return
+        for bam in self.bam_files:
             bam_name = os.path.basename(bam)[:-4]
             out_dir = os.path.join(self.args.out_dir,bam_name)
             if os.path.exists(out_dir):
