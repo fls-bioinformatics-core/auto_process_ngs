@@ -14,6 +14,7 @@ from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import fastq_screen_output
 from auto_process_ngs.qc.outputs import fastqc_output
 from auto_process_ngs.qc.outputs import fastq_strand_output
+from auto_process_ngs.qc.outputs import rseqc_genebody_coverage_output
 from auto_process_ngs.qc.outputs import cellranger_count_output
 from auto_process_ngs.qc.outputs import cellranger_atac_count_output
 from auto_process_ngs.qc.outputs import cellranger_arc_count_output
@@ -1350,6 +1351,24 @@ class TestFastqStrandOutputFunction(unittest.TestCase):
         self.assertEqual(fastq_strand_output(
             '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
                          'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
+
+class TestRseqcGeneBodyCoverageOutputFunction(unittest.TestCase):
+    def test_rseqc_genebody_coverage_output(self):
+        """rseqc_genebody_coverage_output: no prefix
+        """
+        self.assertEqual(rseqc_genebody_coverage_output('rseqc'),
+                         ('rseqc.geneBodyCoverage.curves.png',
+                          'rseqc.geneBodyCoverage.r',
+                          'rseqc.geneBodyCoverage.txt'))
+    def test_rseqc_genebody_coverage_output_with_prefix(self):
+        """rseqc_genebody_coverage_output: with prefix
+        """
+        self.assertEqual(rseqc_genebody_coverage_output(
+            'rseqc',
+            prefix="rseqc/human"),
+                         ('rseqc/human/rseqc.geneBodyCoverage.curves.png',
+                          'rseqc/human/rseqc.geneBodyCoverage.r',
+                          'rseqc/human/rseqc.geneBodyCoverage.txt'))
 
 class TestCellrangerCountOutputFunction(unittest.TestCase):
     def setUp(self):

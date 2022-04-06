@@ -15,6 +15,8 @@ Provides the following functions:
 - fastq_screen_output: get names for fastq_screen outputs
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
+- rseqc_genebody_coverage_output: get names for RSeQC geneBody_coverage.py
+  output
 - cellranger_count_output: get names for cellranger count output
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - cellranger_arc_count_output: get names for cellranger-arc count output
@@ -1055,6 +1057,35 @@ def fastq_strand_output(fastq):
     """
     return "%s_fastq_strand.txt" % strip_ngs_extensions(
         os.path.basename(fastq))
+
+def rseqc_genebody_coverage_output(name,prefix=None):
+    """
+    Generate names of RSeQC geneBody_coverage.py output
+
+    Given a basename, the output from geneBody_coverage.py
+    will look like:
+
+    - {PREFIX}/{NAME}.geneBodyCoverage.curves.png
+    - {PREFIX}/{NAME}.geneBodyCoverage.r
+    - {PREFIX}/{NAME}.geneBodyCoverage.txt
+
+    Arguments:
+      name (str): basename for output files
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: geneBody_coverage.py output (without leading paths)
+
+    """
+    outputs = []
+    for ext in ('.geneBodyCoverage.curves.png',
+                '.geneBodyCoverage.r',
+                '.geneBodyCoverage.txt'):
+        outputs.append("%s%s" % (name,ext))
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
 
 def cellranger_count_output(project,sample_name=None,
                             prefix="cellranger_count"):
