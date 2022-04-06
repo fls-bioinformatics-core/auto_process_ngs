@@ -80,6 +80,7 @@ from ..tenx_genomics_utils import add_cellranger_args
 from ..utils import get_organism_list
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
+from .outputs import rseqc_genebody_coverage_output
 from .outputs import check_fastq_screen_outputs
 from .outputs import check_fastqc_outputs
 from .outputs import check_fastq_strand_outputs
@@ -3017,12 +3018,6 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
     Given a collection of BAM files, runs the RSeQC
     'genebody_coverage.py' utility
     (http://rseqc.sourceforge.net/#genebody-coverage-py).
-
-    Produces the following set of files:
-
-    - <NAME>.geneBodyCoverage.curves.png
-    - <NAME>.geneBodyCoverage.r
-    - <NAME>.geneBodyCoverage.txt
     """
     def init(self,bam_files,reference_gene_model,out_dir,name="rseqc"):
         """
@@ -3041,18 +3036,11 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
         # Conda dependencies
         self.conda("rseqc=4.0.0",
                    "r-base=4")
-        # Output file extensions
-        self.genebody_coverage_outputs = ('geneBodyCoverage.curves.png',
-                                          'geneBodyCoverage.r',
-                                          'geneBodyCoverage.txt')
-        # Internal variables
-        self._basename = None
     def setup(self):
         # Check if outputs already exist
         outputs_exist = True
-        for output in self.genebody_coverage_outputs:
-            f = os.path.join(self.args.out_dir,
-                             "%s.%s" % (self.args.name,output))
+        for f in rseqc_genebody_coverage_output(self.args.name,
+                                                self.args.out_dir):
             outputs_exist = (outputs_exist and os.path.exists(f))
         if outputs_exist:
             print("All outputs exist already, nothing to do")
@@ -3083,15 +3071,11 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
         # Copy outputs to final location
         if not os.path.exists(self.args.out_dir):
             os.makedirs(self.args.out_dir,exist_ok=True)
-        for output in self.genebody_coverage_outputs:
-            f = "%s.%s" % (self.args.name,output)
-            if os.path.exists(os.path.join(self.args.out_dir,f)):
-                # Output file exists
-                continue
-            else:
+        for f in rseqc_genebody_coverage_output(self.args.name,
+                                                self.args.out_dir):
+            if not os.path.exists(f):
                 # Copy new version to ouput location
-                if os.path.exists(f):
-                    shutil.copy(f,self.args.out_dir)
+                shutil.copy(os.path.basename(f),self.args.out_dir)
 
 class RunPicardCollectInsertSizeMetrics(PipelineTask):
     """
