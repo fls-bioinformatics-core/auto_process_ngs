@@ -38,6 +38,11 @@ the external software required for parts of the pipeline:
 - MockFastqScreen
 - MockFastQC
 - MockFastqStrandPy
+- MockStar
+- MockSamtools
+- MockPicard
+- MockRSeQC
+- MockQualimap
 - MockMultiQC
 - MockConda
 
@@ -79,7 +84,9 @@ from .tenx_genomics_utils import flow_cell_id
 from .utils import ZipArchive
 from .mockqc import MockQCOutputs
 from .mockqc import make_mock_qc_dir
+from .qc.outputs import rseqc_genebody_coverage_output
 from . import mock10xdata
+from . import mockqcdata
 
 #######################################################################
 # Classes for making mock directories
@@ -2840,6 +2847,571 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
                     genome = line.split('\t')[0]
                     fp.write("%s	13.13	93.21\n" % genome)
         # Exit
+        return self._exit_code
+
+class MockStar:
+    """
+    Create mock STAR executable
+
+    This class can be used to create a mock STAR
+    executable, which in turn can be used in place of
+    the actual STAR executable for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockSTAR.create("/tmpbin/star")
+
+    The resulting executable will generate mock outputs
+    when run on a directory (ignoring its contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - mock unmapped output can be produced via the
+      `unmapped_output` argument
+    - the outputs can be suppressed by setting the
+      `no_output` argument to `True`
+    """
+
+    @staticmethod
+    def create(path,version=None,unmapped_output=False,
+               no_outputs=False,exit_code=0):
+        """
+        Create a "mock" star executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          version (str): explicit version string
+          unmapped_output (bool): if True then
+            produce mock "unmapped" output
+          no_outputs (bool): if True then don't
+            create any of the expected outputs
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockStar
+sys.exit(MockStar(path=sys.argv[0],
+                  version=%s,
+                  unmapped_output=%s,
+                  no_outputs=%s,
+                  exit_code=%s).main(sys.argv[1:]))
+""" % (("\"%s\"" % version if version else None),
+       unmapped_output,
+       no_outputs,
+       exit_code))
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("STAR:")
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,path,version=None,unmapped_output=False,
+                 no_outputs=False,exit_code=0):
+        """
+        Internal: configure the mock STAR
+        """
+        self._path = path
+        if version:
+            self._version = version
+        else:
+            self._version = "2.4.2a"
+        self._unmapped_output = unmapped_output
+        self._no_outputs = no_outputs
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock STAR functionality
+        """
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument('--runMode',action="store")
+        p.add_argument('--genomeLoad',action="store")
+        p.add_argument('--genomeDir',action="store")
+        p.add_argument('--readFilesIn',action="store",nargs='+')
+        p.add_argument('--quantMode',action="store")
+        p.add_argument('--outSAMtype',action="store",nargs=2)
+        p.add_argument('--outSAMstrandField',action="store")
+        p.add_argument('--outFileNamePrefix',action="store",dest='prefix')
+        p.add_argument('--runThreadN',action="store")
+        args = p.parse_args(args)
+        if self._no_outputs:
+            # Exit without outputs
+            return self._exit_code
+        with open("%sAligned.out.bam" % args.prefix,'wt') as fp:
+            fp.write("Placeholder")
+        with open("%sReadsPerGene.out.tab" % args.prefix,'wt') as fp:
+            if not self._unmapped_output:
+                fp.write("""N_unmapped	2026581	2026581	2026581
+N_multimapping	4020538	4020538	4020538
+N_noFeature	8533504	24725707	8782932
+N_ambiguous	618069	13658	192220
+ENSMUSG00000102592.1	0	0	0
+ENSMUSG00000088333.2	0	0	0
+ENSMUSG00000103265.1	4	0	4
+ENSMUSG00000103922.1	23	23	0
+ENSMUSG00000033845.13	437	0	437
+ENSMUSG00000102275.1	19	0	19
+ENSMUSG00000025903.14	669	2	667
+ENSMUSG00000104217.1	0	0	0
+ENSMUSG00000033813.15	805	0	805
+ENSMUSG00000062588.4	11	11	0
+ENSMUSG00000103280.1	9	9	0
+ENSMUSG00000002459.17	3	3	0
+ENSMUSG00000064363.1	74259	393	73866
+ENSMUSG00000064364.1	0	0	0
+ENSMUSG00000064365.1	0	0	0
+ENSMUSG00000064366.1	0	0	0
+ENSMUSG00000064367.1	148640	7892	152477
+ENSMUSG00000064368.1	44003	42532	13212
+ENSMUSG00000064369.1	6	275	6
+ENSMUSG00000064370.1	122199	199	123042
+""")
+            else:
+                fp.write("""N_unmapped	1	1	1
+N_multimapping	0	0	0
+N_noFeature	0	0	0
+N_ambiguous	0	0	0
+ENSG00000223972.5	0	0	0
+ENSG00000227232.5	0	0	0
+ENSG00000278267.1	0	0	0
+ENSG00000243485.3	0	0	0
+ENSG00000274890.1	0	0	0
+ENSG00000237613.2	0	0	0
+ENSG00000268020.3	0	0	0
+ENSG00000240361.1	0	0	0
+ENSG00000186092.4	0	0	0
+ENSG00000238009.6	0	0	0
+""")
+        # Exit
+        print("%s: return exit code: %s" % (self._path,
+                                            self._exit_code))
+        return self._exit_code
+
+class MockSamtools:
+    """
+    Create mock samtools installation
+
+    This class can be used to create a mock samtools
+    executable, which in turn can be used in place of
+    the actual samtools package, for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockSamtools.create("/tmpbin/samtools")
+
+    The resulting executable will generate mock outputs
+    according to the supplied command line.
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,exit_code=0):
+        """
+        Create a "mock" samtools executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockSamtools
+sys.exit(MockSamtools(path=sys.argv[0],
+                      exit_code=%s).main(sys.argv[1:]))
+""" % exit_code)
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("%s:" % os.path.basename(path))
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,path,exit_code=0):
+        """
+        Internal: configure the mock samtools package
+        """
+        self._path = path
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock samtools functionality
+        """
+        # Build top-level parser
+        p = argparse.ArgumentParser()
+        sp = p.add_subparsers(dest='command')
+
+        # 'sort' subparser
+        sort_sp = sp.add_parser('sort')
+        sort_sp.add_argument('-o',dest='sorted_bam_file',action='store')
+        sort_sp.add_argument('bam_file')
+
+        # 'index' subparser
+        index_sp = sp.add_parser('index')
+        index_sp.add_argument('bam_file')
+        index_sp.add_argument('index_file')
+
+        # Process command line
+        args = p.parse_args()
+
+        # Handle commands
+        if args.command == "sort":
+            # Sort command
+            if not os.path.isfile(args.bam_file):
+                print("%s: input BAM file not found or not a file" %
+                      args.bam_file)
+                return 1
+            with open(args.sorted_bam_file,'wt') as fp:
+                fp.write("Placeholder")
+        elif args.command == "index":
+            # Index command
+            if not os.path.isfile(args.bam_file):
+                print("%s: input BAM file not found or not a file" %
+                      args.bam_file)
+                return 1
+            index_file = "%s.bai" % args.bam_file
+            with open(index_file,'wt') as fp:
+                fp.write("Placeholder")
+        else:
+            print("%s: not implemented" % args.command)
+        print("%s: return exit code: %s" % (self._path,
+                                            self._exit_code))
+        return self._exit_code
+
+class MockPicard:
+    """
+    Create mock Picard tools
+
+    This class can be used to create a mock Picard tools
+    executable, which in turn can be used in place of
+    an actual executable for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockPicard.create("/tmpbin/picard")
+
+    The resulting executable will generate mock outputs
+    when run on a directory (ignoring its contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,exit_code=0):
+        """
+        Create a "mock" Picard executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockPicard
+sys.exit(MockPicard(path=sys.argv[0],
+                    exit_code=%s).main(sys.argv[1:]))
+""" % exit_code)
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("%s:" % os.path.basename(path))
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,path,exit_code=0):
+        """
+        Internal: configure the mock Picard tools component
+        """
+        self._path = path
+        self._component = os.path.basename(self._path)
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock Picard tools functionality
+        """
+        # Build top-level parser
+        p = argparse.ArgumentParser()
+        sp = p.add_subparsers(dest='command')
+        # CleanSam subparser
+        cleansam = sp.add_parser("CleanSam")
+        cleansam.add_argument('-I',action='store',dest='bam_in')
+        cleansam.add_argument('-O',action='store',dest='bam_out')
+        cleansam.add_argument('-XX:ActiveProcessorCount',action='store')
+        # CollectInsertSizeMetrics subparser
+        insertsize = sp.add_parser("CollectInsertSizeMetrics")
+        insertsize.add_argument('-I',action='store',dest='bam_in')
+        insertsize.add_argument('-O',action='store',dest='metrics_out')
+        insertsize.add_argument('-H',action='store',dest='histogram_out')
+        insertsize.add_argument('-XX:ActiveProcessorCount',action='store')
+        # Process command line
+        args = p.parse_args(args)
+        print("%s: return exit code: %s" % (self._path,
+                                            self._exit_code))
+        # Handle individual commands
+        if args.command == "CleanSam":
+            # CleanSam
+            if os.path.exists(args.bam_in):
+                shutil.copy(args.bam_in,
+                            args.bam_out)
+        if args.command == "CollectInsertSizeMetrics":
+            # CollectInsertSizeMetrics
+            if os.path.exists(args.bam_in):
+                with open(args.metrics_out,'wt') as fp:
+                    fp.write(mockqcdata.PICARD_COLLECT_INSERT_SIZE_METRICS)
+                with open(args.histogram_out,'wt') as fp:
+                    fp.write("histogram\n")
+        # Finish
+        return self._exit_code
+
+class MockRSeQC:
+    """
+    Create mock RSeQC components
+
+    This class can be used to create a mock RSeQC
+    component (e.g. ``infer_experiment.py``), which in
+    turn can be used in place of an actual executable
+    for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockRSeQC.create("/tmpbin/infer_experiment.py")
+
+    The resulting executable will generate mock outputs
+    when run on a directory (ignoring its contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,exit_code=0):
+        """
+        Create a "mock" RSeQC component executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockRSeQC
+sys.exit(MockRSeQC(path=sys.argv[0],
+                   exit_code=%s).main(sys.argv[1:]))
+""" % exit_code)
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("RSeQC (%s):" % os.path.basename(path))
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,path,exit_code=0):
+        """
+        Internal: configure the mock RSeQC component
+        """
+        self._path = path
+        self._component = os.path.basename(self._path)
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock RSeQC functionality
+        """
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        if self._component == "infer_experiment.py":
+            # infer_experiment.py
+            p.add_argument('-r',dest='reference_gene_model',action='store')
+            p.add_argument('-i',dest='bam_file',action='store')
+        elif self._component == "geneBody_coverage.py":
+            # geneBody_coverage.py
+            p.add_argument('-r',dest='reference_gene_model',action='store')
+            p.add_argument('-i',dest='bam_files',action='store')
+            p.add_argument('-f',dest='format',action='store')
+            p.add_argument('-o',dest='output_name',action='store')
+        else:
+            print("%s: not implemented" % args.command)
+        # Process command line
+        args = p.parse_args(args)
+        if self._component == "infer_experiment.py":
+            # infer_experiment.py
+            self._infer_experiment(args)
+        elif self._component == "geneBody_coverage.py":
+            # geneBody_coverage.py
+            self._genebody_coverage(args)
+        print("%s: return exit code: %s" % (self._path,
+                                            self._exit_code))
+        return self._exit_code
+
+    def _infer_experiment(self,args):
+        """
+        Internal: provide functionality for mock infer_experiment.py
+        """
+        print("""This is PairEnd Data
+Fraction of reads failed to determine: 0.0172
+Fraction of reads explained by "1++,1--,2+-,2-+": 0.4903
+Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
+""")
+
+    def _genebody_coverage(self,args):
+        """
+        Internal: provide functionality for mock geneBody_coverage.py
+        """
+        for f in rseqc_genebody_coverage_output(args.output_name):
+            with open(f,'wt') as fp:
+                fp.write("Placeholder: RSeQC geneBody_coverage.py")
+
+class MockQualimap:
+    """
+    Create mock Qualimap
+
+    This class can be used to create a mock Qualimap
+    executable, which in turn can be used in place of
+    an actual executable for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockQualimap.create("/tmpbin/qualimap")
+
+    The resulting executable will generate mock outputs
+    when run on a directory (ignoring its contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,exit_code=0):
+        """
+        Create a "mock" Qualimap executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockQualimap
+sys.exit(MockQualimap(path=sys.argv[0],
+                      exit_code=%s).main(sys.argv[1:]))
+""" % exit_code)
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("%s:" % os.path.basename(path))
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,path,exit_code=0):
+        """
+        Internal: configure the mock Qualimap executable
+        """
+        self._path = path
+        self._component = os.path.basename(self._path)
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock Qualimap functionality
+        """
+        # Build top-level parser
+        p = argparse.ArgumentParser()
+        sp = p.add_subparsers(dest='command')
+        # cleanSam subparser
+        rnaseq = sp.add_parser("rnaseq")
+        rnaseq.add_argument('-bam',action='store',dest='bam_file')
+        rnaseq.add_argument('-gtf',action='store',dest='feature_file')
+        rnaseq.add_argument('-p',action='store',dest='sequencing_protocol')
+        rnaseq.add_argument('-pe',action='store_true',dest='paired_end')
+        rnaseq.add_argument('-outdir',action='store',dest='outdir')
+        rnaseq.add_argument('-outformat',action='store',dest='format')
+        rnaseq.add_argument('--java-mem-size',action='store')
+        # Process command line
+        args = p.parse_args(args)
+        print("%s: return exit code: %s" % (self._path,
+                                            self._exit_code))
+        # Handle individual commands
+        if args.command == "rnaseq":
+            ##################
+            # rnaseq command
+            ##################
+            os.makedirs(args.outdir)
+            for f in ('qualimapReport.html',
+                      'rnaseq_qc_results.txt'):
+                with open(os.path.join(args.outdir,f),'wt') as fp:
+                    fp.write("qualimap rnaseq: placeholder\n")
+        # Finish
         return self._exit_code
 
 class MockConda:
