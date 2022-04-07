@@ -80,6 +80,7 @@ from ..tenx_genomics_utils import add_cellranger_args
 from ..utils import get_organism_list
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
+from .outputs import picard_collect_insert_size_metrics_output
 from .outputs import rseqc_genebody_coverage_output
 from .outputs import check_fastq_screen_outputs
 from .outputs import check_fastqc_outputs
@@ -3091,12 +3092,6 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
 
     Note that this task should only be run on BAM files
     with paired-end data.
-
-    For each BAM (<BASENAME>.bam) the task generates a pair
-    of files:
-
-    - <BASENAME>.insert_size_metrics.txt
-    - <BASENAME>.insert_size_histogram.pdf
     """
     def init(self,bam_files,out_dir,bam_properties):
         """
@@ -3116,11 +3111,6 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
         # Conda dependencies
         self.conda("picard",
                    "readline=6.2")
-        # Output file extensions
-        self.insert_size_metrics_outputs = (
-            '.insert_size_metrics.txt',
-            '.insert_size_histogram.pdf'
-        )
     def setup(self):
         # Filter list of BAM files down to those which have
         # associated properties, and which are paired-end
@@ -3136,9 +3126,9 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
         for bam in self.bam_files:
             # Check if outputs already exist
             outputs_exist = True
-            for ext in self.insert_size_metrics_outputs:
-                f = os.path.join(self.args.out_dir,
-                                 "%s%s" % (os.path.basename(bam)[:-4],ext))
+            for f in picard_collect_insert_size_metrics_output(
+                    bam,
+                    self.args.out_dir):
                 outputs_exist = (outputs_exist and os.path.exists(f))
             if outputs_exist:
                 # Skip this BAM
@@ -3169,17 +3159,12 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
             print("Creating output dir '%s'" % self.args.out_dir)
             os.makedirs(self.args.out_dir)
         for bam in self.bam_files:
-            for ext in self.insert_size_metrics_outputs:
-                f = "%s%s" % (os.path.basename(bam)[:-4],ext)
-                if os.path.exists(os.path.join(self.args.out_dir,f)):
-                    # Output file exists
-                    continue
-                else:
+            for f in picard_collect_insert_size_metrics_output(
+                    bam,
+                    self.args.out_dir):
+                if not os.path.exists(f):
                     # Copy new version to ouput location
-                    if os.path.exists(f):
-                        shutil.copy(f,self.args.out_dir)
-                    else:
-                        raise Exception("Missing file: %s" % f)
+                    shutil.copy(os.path.basename(f),self.args.out_dir)
 
 class RunQualimapRnaseq(PipelineTask):
     """
