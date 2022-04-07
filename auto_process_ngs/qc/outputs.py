@@ -15,6 +15,8 @@ Provides the following functions:
 - fastq_screen_output: get names for fastq_screen outputs
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
+- picard_collect_insert_size_metrics_output: get names for Picard
+  CollectInsertSizeMetrics output
 - rseqc_genebody_coverage_output: get names for RSeQC geneBody_coverage.py
   output
 - cellranger_count_output: get names for cellranger count output
@@ -1113,6 +1115,39 @@ def fastq_strand_output(fastq):
     """
     return "%s_fastq_strand.txt" % strip_ngs_extensions(
         os.path.basename(fastq))
+
+def picard_collect_insert_size_metrics_output(filen,prefix=None):
+    """
+    Generate names of Picard CollectInsertSizeMetrics output
+
+    Given a Fastq or BAM file name, the output from Picard's
+    CollectInsertSizeMetrics function will look like:
+
+    - {PREFIX}/{FASTQ}.insert_size_metrics.txt
+    - {PREFIX}/{FASTQ}.insert_size_histogram.pdf
+
+    Arguments:
+      filen (str): name of Fastq or BAM file
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: CollectInsertSizeMetrics output (without leading
+        paths)
+
+    """
+    outputs = []
+    basename = os.path.basename(filen)
+    while basename.split('.')[-1] in ('bam',
+                                      'fastq',
+                                      'gz'):
+        basename = '.'.join(basename.split('.')[:-1])
+    for ext in ('.insert_size_metrics.txt',
+                '.insert_size_histogram.pdf'):
+        outputs.append("%s%s" % (basename,ext))
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
 
 def rseqc_genebody_coverage_output(name,prefix=None):
     """
