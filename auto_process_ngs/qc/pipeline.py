@@ -620,7 +620,7 @@ class QCPipeline(Pipeline):
                                       organism,
                                       log_dir,
                                       pre_tasks=(setup_qc_dirs,),
-                                      post_tasks=(report_qc,))
+                                      post_tasks=(verify_qc,))
 
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_protocol,chemistry,
