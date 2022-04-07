@@ -19,6 +19,7 @@ Provides the following functions:
   CollectInsertSizeMetrics output
 - rseqc_genebody_coverage_output: get names for RSeQC geneBody_coverage.py
   output
+- qualimap_rnaseq_output: get names for Qualimap 'rnaseq' output
 - cellranger_count_output: get names for cellranger count output
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - cellranger_arc_count_output: get names for cellranger-arc count output
@@ -1233,6 +1234,30 @@ def rseqc_genebody_coverage_output(name,prefix=None):
                 '.geneBodyCoverage.r',
                 '.geneBodyCoverage.txt'):
         outputs.append("%s%s" % (name,ext))
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
+
+def qualimap_rnaseq_output(prefix=None):
+    """
+    Generate names of Qualimap 'rnaseq' output
+
+    The output from Qualimap 'rnaseq' are always::
+
+    - {PREFIX}/qualimapReport.html
+    - {PREFIX}/rnaseq_qc_results.txt
+    - {PREFIX}/...
+
+    Arguments:
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: Qualimap 'rnaseq' output (without leading paths)
+
+    """
+    outputs = ['qualimapReport.html',
+               'rnaseq_qc_results.txt']
     if prefix is not None:
         outputs = [os.path.join(prefix,f) for f in outputs]
     return tuple(outputs)
