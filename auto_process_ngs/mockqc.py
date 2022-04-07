@@ -175,6 +175,25 @@ class MockQCOutputs:
             fp.write(mockqcdata.SEQ_LENS_JSON % { 'fastq': fastq })
 
     @classmethod
+    def rseqc_genebody_coverage(self,name,organism,qc_dir):
+        """
+        Create mock outputs from RSeQC geneBody_coverage.py
+        """
+        out_dir = os.path.join(qc_dir,
+                               "rseqc_genebody_coverage",
+                               organism)
+        os.makedirs(out_dir)
+        for ext in ('.geneBodyCoverage.curves.png',
+                    '.geneBodyCoverage.r',
+                    '.geneBodyCoverage.txt'):
+            f = os.path.join(out_dir,"%s%s" % (name,ext))
+            with open(f,'wt') as fp:
+                if f.endswith('.txt'):
+                    fp.write(mockqcdata.RSEQC_GENEBODY_COVERAGE_TXT)
+                else:
+                    fp.write("Placeholder\n")
+
+    @classmethod
     def multiqc(self,dirn,multiqc_html=None,version="1.8"):
         """
         Create mock output from MultiQC

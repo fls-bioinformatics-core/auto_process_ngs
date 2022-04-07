@@ -1030,6 +1030,11 @@ SEQ_LENS_JSON = """{
 }
 """
 
+RSEQC_GENEBODY_COVERAGE_TXT = """Percentile	1	2	3	4	5	6	7	8	9	10
+SMP1_S1_R1_001	3264.0	6663.0	10749.0	15281.0	19831.0	23679.0	26241.0	28684.0	31556.0	34055.0
+SMP2_S2_R1_001	3071.0	7003.0	11984.0	17241.0	22453.0	26756.0	30356.0	33396.0	36437.0	39849.0
+"""
+
 PICARD_COLLECT_INSERT_SIZE_METRICS = """"## htsjdk.samtools.metrics.StringHeader
 # CollectInsertSizeMetrics --Histogram_FILE Sample.insert_size_histogram.pdf --INPUT Sample.bam --OUTPUT Sample.insert_size_metrics.txt --DEVIATIONS 10.0 --MINIMUM_PCT 0.05 --METRIC_ACCUMULATION_LEVEL ALL_READS --INCLUDE_DUPLICATES false --ASSUME_SORTED true --STOP_AFTER 0 --VERBOSITY INFO --QUIET false --VALIDATION_STRINGENCY STRICT --COMPRESSION_LEVEL 5 --MAX_RECORDS_IN_RAM 500000 --CREATE_INDEX false --CREATE_MD5_FILE false --GA4GH_CLIENT_SECRETS client_secrets.json --help false --version false --showHidden false --USE_JDK_DEFLATER false --USE_JDK_INFLATER false
 ## htsjdk.samtools.metrics.StringHeader
