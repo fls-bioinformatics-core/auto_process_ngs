@@ -337,6 +337,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      include_fastq_screen=True,
                      include_strandedness=True,
                      include_seqlens=True,
+                     include_rseqc_genebody_coverage=False,
                      include_multiqc=False,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
@@ -364,6 +365,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
       include_strandedness (bool): include outputs from
         strandedness
       include_seqlens (bool): include sequence length metrics
+      include_rseqc_genebody_coverage (bool): include RSeQC
+        geneBody_coverage.py outputs
       include_multiqc (bool): include MultiQC outputs
       include_celllranger_count (bool): include 'cellranger
         count' outputs
@@ -407,6 +410,13 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         with open(os.path.join(qc_dir,
                                "fastq_strand.conf"),'wt') as fp:
             fp.write("Placeholder\n")
+                fp.write("Placeholder\n")
+    # RSeQC gene body coverage
+    if include_rseqc_genebody_coverage:
+        for organism in organisms:
+            MockQCOutputs.rseqc_genebody_coverage(project_name,
+                                                  organism,
+                                                  qc_dir)
     # MultiQC
     if include_multiqc:
         out_file = "multi%s_report.html" % os.path.basename(qc_dir)

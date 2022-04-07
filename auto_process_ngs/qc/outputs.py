@@ -202,6 +202,7 @@ class QCOutputs:
                 self._collect_fastqc(files),
                 self._collect_fastq_strand(files),
                 self._collect_seq_lengths(files),
+                self._collect_rseqc_genebody_coverage(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(self.qc_dir),
                 self._collect_cellranger_multi(self.qc_dir),
@@ -611,6 +612,61 @@ class QCOutputs:
             max_seq_length=max_seq_length,
             reads=sorted(list(reads)),
             fastqs=sorted(list(fastqs)),
+            output_files=output_files,
+            tags=sorted(list(tags))
+        )
+
+    def _collect_rseqc_genebody_coverage(self,qc_dir):
+        """
+        Collect information on RSeQC geneBody_coverage.py outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'rseqc_genebody_coverage'
+        - software: dictionary of software and versions
+        - organisms: list of organisms with associated
+          outputs
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        software = {}
+        output_files = list()
+        tags = set()
+        # Look for RSeQC geneBody_coverage.py outputs
+        organisms = set()
+        genebody_cov_dir = os.path.join(qc_dir,
+                                        "rseqc_genebody_coverage")
+        if os.path.isdir(genebody_cov_dir):
+            # Look for subdirs with organism names
+            for d in filter(
+                    lambda dd:
+                    os.path.isdir(os.path.join(genebody_cov_dir,dd)),
+                    os.listdir(genebody_cov_dir)):
+                # Check for outputs
+                for f in filter(
+                        lambda ff:
+                        ff.endswith(".geneBodyCoverage.txt"),
+                        os.listdir(os.path.join(genebody_cov_dir,d))):
+                    name = f[:-len(".geneBodyCoverage.txt")]
+                    outputs = rseqc_genebody_coverage_output(
+                        name,
+                        prefix=os.path.join(genebody_cov_dir,d))
+                    if all([os.path.exists(f) for f in outputs]):
+                        # All outputs present
+                        organisms.add(d)
+                        output_files.extend(outputs)
+        if organisms:
+            tags.add("rseqc_genebody_coverage")
+            software['rseqc:genebody_coverage'] = [None]
+        # Return collected information
+        return AttributeDictionary(
+            name='rseqc_genebody_count',
+            software=software,
+            organisms=sorted(list(organisms)),
             output_files=output_files,
             tags=sorted(list(tags))
         )

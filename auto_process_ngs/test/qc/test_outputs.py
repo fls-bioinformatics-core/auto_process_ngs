@@ -40,6 +40,8 @@ class TestQCOutputs(unittest.TestCase):
         if self.wd is not None and os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
     def _make_qc_dir(self,qc_dir,fastq_names,
+                     project_name='PJB',
+                     organisms=('human',),
                      screens=('model_organisms','other_organisms','rRNA',),
                      cellranger_pipelines=('cellranger',),
                      cellranger_samples=None,
@@ -48,6 +50,7 @@ class TestQCOutputs(unittest.TestCase):
                      include_fastq_screen=True,
                      include_strandedness=True,
                      include_seqlens=True,
+                     include_rseqc_genebody_coverage=False,
                      include_multiqc=True,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
@@ -67,6 +70,7 @@ class TestQCOutputs(unittest.TestCase):
             include_fastq_screen=include_fastq_screen,
             include_strandedness=include_strandedness,
             include_seqlens=include_seqlens,
+            include_rseqc_genebody_coverage=include_rseqc_genebody_coverage,
             include_multiqc=include_multiqc,
             include_cellranger_count=include_cellranger_count,
             include_cellranger_multi=include_cellranger_multi,
@@ -469,6 +473,62 @@ class TestQCOutputs(unittest.TestCase):
                          { 'fastq_screen': [ '0.9.2' ],
                            'fastq_strand': [ '0.0.4' ],
                            'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end_rseqc_genebody_coverage(self):
+        """
+	QCOutputs: paired-end data with RSeQC gene body coverage
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_rseqc_genebody_coverage=True)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'rseqc_genebody_coverage',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                           'rseqc:genebody_coverage': [ '?' ],
                          })
         self.assertEqual(qc_outputs.stats.max_seqs,37285443)
         self.assertEqual(qc_outputs.stats.min_sequence_length,65)
