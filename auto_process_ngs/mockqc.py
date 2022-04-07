@@ -361,6 +361,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      include_strandedness=True,
                      include_seqlens=True,
                      include_rseqc_genebody_coverage=False,
+                     include_picard_insert_size_metrics=False,
                      include_multiqc=False,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
@@ -390,6 +391,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
       include_seqlens (bool): include sequence length metrics
       include_rseqc_genebody_coverage (bool): include RSeQC
         geneBody_coverage.py outputs
+      include_picard_insert_size_metrics (bool): include Picard
+        CollectInsertSizeMetrics outputs
       include_multiqc (bool): include MultiQC outputs
       include_celllranger_count (bool): include 'cellranger
         count' outputs
@@ -425,6 +428,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         # Strandedness
         if include_strandedness:
             MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
+        # Picard insert size metrics
+        if include_picard_insert_size_metrics:
+            for organism in organisms:
+                MockQCOutputs.picard_collect_insert_size_metrics(
+                    fq,organism,qc_dir)
         # Sequence lengths
         if include_seqlens:
             MockQCOutputs.seqlens(fq,qc_dir)

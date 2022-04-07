@@ -204,6 +204,7 @@ class QCOutputs:
                 self._collect_fastqc(files),
                 self._collect_fastq_strand(files),
                 self._collect_seq_lengths(files),
+                self._collect_picard_insert_size_metrics(self.qc_dir),
                 self._collect_rseqc_genebody_coverage(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(self.qc_dir),
@@ -614,6 +615,64 @@ class QCOutputs:
             max_seq_length=max_seq_length,
             reads=sorted(list(reads)),
             fastqs=sorted(list(fastqs)),
+            output_files=output_files,
+            tags=sorted(list(tags))
+        )
+
+    def _collect_picard_insert_size_metrics(self,qc_dir):
+        """
+        Collect information on Picard CollectInsertSizeMetrics outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'picard_collect_insert_size_metrics'
+        - software: dictionary of software and versions
+        - organisms: list of organisms with associated
+          outputs
+        - bam_files: list of associated BAM file names
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        software = {}
+        bam_files = set()
+        output_files = list()
+        tags = set()
+        # Look for Picard CollectInsertSizeMetrics outputs
+        organisms = set()
+        picard_dir = os.path.join(qc_dir,"picard")
+        if os.path.isdir(picard_dir):
+            # Look for subdirs with organism names
+            for d in filter(
+                    lambda dd:
+                    os.path.isdir(os.path.join(picard_dir,dd)),
+                    os.listdir(picard_dir)):
+                # Check for outputs
+                for f in filter(
+                        lambda ff:
+                        ff.endswith(".insert_size_metrics.txt"),
+                        os.listdir(os.path.join(picard_dir,d))):
+                    name = f[:-len(".insert_size_metrics.txt")]
+                    outputs = picard_collect_insert_size_metrics_output(
+                        name,
+                        prefix=os.path.join(picard_dir,d))
+                    if all([os.path.exists(f) for f in outputs]):
+                        # All outputs present
+                        organisms.add(d)
+                        bam_files.add(name)
+                        output_files.extend(outputs)
+        if organisms:
+            tags.add("picard_insert_size_metrics")
+            software['picard'] = [None]
+        # Return collected information
+        return AttributeDictionary(
+            name='picard_collect_insert_size_metrics',
+            software=software,
+            bam_files=sorted(list(bam_files)),
+            organisms=sorted(list(organisms)),
             output_files=output_files,
             tags=sorted(list(tags))
         )
