@@ -3139,11 +3139,11 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                          """
                          picard CleanSam \\
                              -I {bam} \\
-                             -O {basename}.bam \\
+                             -O {basename}_clean.bam \\
                              -XX:ActiveProcessorCount={nslots} \\
                          && \\
                          picard CollectInsertSizeMetrics \\
-                             -I {basename}.bam \\
+                             -I {basename}_clean.bam \\
                              -O {basename}.insert_size_metrics.txt \\
                              -H {basename}.insert_size_histogram.pdf \\
                              -XX:ActiveProcessorCount={nslots}
