@@ -175,6 +175,29 @@ class MockQCOutputs:
             fp.write(mockqcdata.SEQ_LENS_JSON % { 'fastq': fastq })
 
     @classmethod
+    def picard_collect_insert_size_metrics(self,fq,organism,qc_dir):
+        """
+        Create mock outputs from Picard CollectInsertSizeMetrics
+        """
+        # Basename for insert size metrics outputs
+        basename = os.path.basename(fq)
+        while basename.split('.')[-1] in ('fastq','gz'):
+            basename = '.'.join(base_name.split('.')[:-1])
+        out_dir = os.path.join(qc_dir,
+                               "picard",
+                               organism)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        for ext in ('.insert_size_metrics.txt',
+                    '.insert_size_histogram.pdf'):
+            f = os.path.join(out_dir,"%s%s" % (basename,ext))
+            with open(f,'wt') as fp:
+                if f.endswith('.txt'):
+                    fp.write(mockqcdata.PICARD_COLLECT_INSERT_SIZE_METRICS)
+                else:
+                    fp.write("Placeholder\n")
+
+    @classmethod
     def rseqc_genebody_coverage(self,name,organism,qc_dir):
         """
         Create mock outputs from RSeQC geneBody_coverage.py
