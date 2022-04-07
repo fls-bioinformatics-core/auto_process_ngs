@@ -207,6 +207,7 @@ class QCOutputs:
                 self._collect_seq_lengths(files),
                 self._collect_picard_insert_size_metrics(self.qc_dir),
                 self._collect_rseqc_genebody_coverage(self.qc_dir),
+                self._collect_qualimap_rnaseq(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(self.qc_dir),
                 self._collect_cellranger_multi(self.qc_dir),
@@ -728,6 +729,69 @@ class QCOutputs:
         return AttributeDictionary(
             name='rseqc_genebody_count',
             software=software,
+            organisms=sorted(list(organisms)),
+            output_files=output_files,
+            tags=sorted(list(tags))
+        )
+
+    def _collect_qualimap_rnaseq(self,qc_dir):
+        """
+        Collect information on Qualimap 'rnaseq' outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'qualimap_rnaseq'
+        - software: dictionary of software and versions
+        - organisms: list of organisms with associated
+          outputs
+        - bam_files: list of associated BAM file names
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        software = {}
+        bam_files = set()
+        output_files = list()
+        tags = set()
+        # Look for Qualimap 'rnaseq' outputs
+        organisms = set()
+        qualimap_dir = os.path.join(qc_dir,"qualimap-rnaseq")
+        if os.path.isdir(qualimap_dir):
+            # Look for subdirs with organism names
+            for d in filter(
+                    lambda dd:
+                    os.path.isdir(os.path.join(qualimap_dir,dd)),
+                    os.listdir(qualimap_dir)):
+                # Look for subdirs with BAM file names
+                organism_dir = os.path.join(qualimap_dir,d)
+                for bam in filter(
+                        lambda dd:
+                        os.path.isdir(os.path.join(organism_dir,dd)),
+                        os.listdir(organism_dir)):
+                    # Check for Qualimap rnaseq outputs
+                    for f in filter(
+                            lambda ff:
+                            ff == "qualimapReport.html",
+                            os.listdir(os.path.join(organism_dir,bam))):
+                        outputs = [os.path.join(organism_dir,bam,ff)
+                                   for ff in ('qualimapReport.html',
+                                              'rnaseq_qc_results.txt')]
+                        if all([os.path.exists(ff) for ff in outputs]):
+                            # All outputs present
+                            organisms.add(d)
+                            bam_files.add(bam)
+                            output_files.extend(outputs)
+        if organisms:
+            tags.add("qualimap_rnaseq")
+            software['qualimap'] = [None]
+        # Return collected information
+        return AttributeDictionary(
+            name='qualimap_rnaseq',
+            software=software,
+            bam_files=sorted(list(bam_files)),
             organisms=sorted(list(organisms)),
             output_files=output_files,
             tags=sorted(list(tags))

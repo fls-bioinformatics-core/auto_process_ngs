@@ -387,6 +387,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      include_seqlens=True,
                      include_rseqc_genebody_coverage=False,
                      include_picard_insert_size_metrics=False,
+                     include_qualimap_rnaseq=False,
                      include_multiqc=False,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
@@ -418,6 +419,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         geneBody_coverage.py outputs
       include_picard_insert_size_metrics (bool): include Picard
         CollectInsertSizeMetrics outputs
+      include_qualimap_rnaseq (bool): include Qualimap 'rnaseq'
+        outputs
       include_multiqc (bool): include MultiQC outputs
       include_celllranger_count (bool): include 'cellranger
         count' outputs
@@ -463,6 +466,10 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             for organism in organisms:
                 MockQCOutputs.picard_collect_insert_size_metrics(
                     fq,organism,qc_dir)
+        # Qualimap rnaseq
+        if include_qualimap_rnaseq:
+            for organism in organisms:
+                MockQCOutputs.qualimap_rnaseq(fq,organism,qc_dir)
     # Strandedness conf file
     if include_strandedness:
         with open(os.path.join(qc_dir,
