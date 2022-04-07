@@ -182,7 +182,7 @@ class MockQCOutputs:
         # Basename for insert size metrics outputs
         basename = os.path.basename(fq)
         while basename.split('.')[-1] in ('fastq','gz'):
-            basename = '.'.join(base_name.split('.')[:-1])
+            basename = '.'.join(basename.split('.')[:-1])
         out_dir = os.path.join(qc_dir,
                                "picard",
                                organism)
