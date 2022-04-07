@@ -82,6 +82,7 @@ from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
 from .outputs import picard_collect_insert_size_metrics_output
 from .outputs import rseqc_genebody_coverage_output
+from .outputs import qualimap_rnaseq_output
 from .outputs import check_fastq_screen_outputs
 from .outputs import check_fastqc_outputs
 from .outputs import check_fastq_strand_outputs
@@ -3193,11 +3194,6 @@ class RunQualimapRnaseq(PipelineTask):
         """
         self.conda("qualimap=2.2")
         self.java_mem_size = '8G'
-        # Outputs
-        self.qualimap_rnaseq_outputs = (
-            'qualimapReport.html',
-            'rnaseq_qc_results.txt'
-        )
     def setup(self):
         # Check for feature file
         if self.args.feature_file:
@@ -3221,8 +3217,7 @@ class RunQualimapRnaseq(PipelineTask):
             out_dir = os.path.join(self.args.out_dir,bam_name)
             # Check for existing outputs
             outputs_exist = True
-            for output_file in self.qualimap_rnaseq_outputs:
-                f = os.path.join(out_dir,output_file)
+            for f in qualimap_rnaseq_output(out_dir):
                 outputs_exist = (outputs_exist and os.path.exists(f))
             if outputs_exist:
                 # Skip running Qualimap for this BAM
