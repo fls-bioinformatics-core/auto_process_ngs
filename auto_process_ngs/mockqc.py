@@ -33,6 +33,7 @@ import base64
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
 from .analysis import AnalysisProjectQCDirInfo
+from .fastq_utils import group_fastqs_by_name
 from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from . import mockqcdata
 from . import mock10xdata
@@ -425,6 +426,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                 MockQCOutputs.fastq_screen_v0_9_2(
                     fq,qc_dir,screen,legacy=legacy_screens)
             qc_info['fastq_screens'] = ','.join(screens)
+        # Sequence lengths
+        if include_seqlens:
+            MockQCOutputs.seqlens(fq,qc_dir)
+    for fq_group in group_fastqs_by_name(fastq_names):
+        fq = fq_group[0]
         # Strandedness
         if include_strandedness:
             MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
@@ -433,9 +439,6 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             for organism in organisms:
                 MockQCOutputs.picard_collect_insert_size_metrics(
                     fq,organism,qc_dir)
-        # Sequence lengths
-        if include_seqlens:
-            MockQCOutputs.seqlens(fq,qc_dir)
     # Strandedness conf file
     if include_strandedness:
         with open(os.path.join(qc_dir,
