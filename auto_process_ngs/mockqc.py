@@ -218,6 +218,30 @@ class MockQCOutputs:
                     fp.write("Placeholder\n")
 
     @classmethod
+    def qualimap_rnaseq(self,fq,organism,qc_dir):
+        """
+        Create mock outputs from Qualimap 'rnaseq' function
+        """
+        # Basename for insert size metrics outputs
+        basename = os.path.basename(fq)
+        while basename.split('.')[-1] in ('fastq','gz'):
+            basename = '.'.join(basename.split('.')[:-1])
+        out_dir = os.path.join(qc_dir,
+                               "qualimap-rnaseq",
+                               organism,
+                               basename)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        for f in ('qualimapReport.html',
+                  'rnaseq_qc_results.txt'):
+            ff = os.path.join(out_dir,f)
+            with open(ff,'wt') as fp:
+                if f == 'rnaseq_qc_results.txt':
+                    fp.write(mockqcdata.QUALIMAP_RNASEQ_RESULTS)
+                else:
+                    fp.write("Placeholder\n")
+
+    @classmethod
     def multiqc(self,dirn,multiqc_html=None,version="1.8"):
         """
         Create mock output from MultiQC

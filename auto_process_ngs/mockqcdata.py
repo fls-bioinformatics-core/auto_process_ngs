@@ -1055,5 +1055,62 @@ insert_size	All_Reads.fr_count
 34	3
 """
 
+QUALIMAP_RNASEQ_RESULTS = """RNA-Seq QC report
+-----------------------------------
+
+>>>>>>> Input
+
+    bam file = /path/to/SMP1_S1_R1_001.bam
+    gff file = /path/to/annotation.gtf
+    counting algorithm = uniquely-mapped-reads
+    protocol = strand-specific-reverse
+
+
+>>>>>>> Reads alignment
+
+    reads aligned (left/right) = 175,847 / 175,847
+    read pairs aligned  = 175,847
+    total alignments = 728,678
+    secondary alignments = 376,984
+    non-unique alignments = 357,582
+    aligned to genes  = 63,784
+    ambiguous alignments = 160,764
+    no feature assigned = 19,130
+    not aligned = 0
+
+
+>>>>>>> Reads genomic origin
+
+    exonic =  63,784 (76.93%)
+    intronic = 4,778 (5.76%)
+    intergenic = 14,352 (17.31%)
+    overlapping exon = 6,523 (7.87%)
+    rRNA = 0 (0%)
+
+
+>>>>>>> Transcript coverage profile
+
+    5' bias = 0.73
+    3' bias = 0.41
+    5'-3' bias = 1.52
+
+
+>>>>>>> Junction analysis
+
+    reads at junctions = 28,238
+
+    AGAT : 3.22%
+    AGGT : 3.18%
+    ATCT : 2.79%
+    ACCT : 2.79%
+    AGCT : 2.66%
+    GCCT : 2.02%
+    AGGA : 1.94%
+    TTCT : 1.82%
+    AGAA : 1.78%
+    TCCT : 1.66%
+    TGCT : 1.34%
+"""
+
 # Base64 encoded generic example PNG
 BASE64_PNG_DATA = "iVBORw0KGgoAAAANSUhEUgAAAEwAAAAqCAIAAACWWCo7AAABFElEQVR4nO2asW3DMBBFvwwv4YZ1BjDgwn1qNlqDN8vnGirEOjO4j2sVUp0JmIJQQwOOAyOxfbwH4YMQVOjdB0EV6khCPSRzzuM8ak2Sm0cP+T8wSTXUexLQd20r50i63k3DJBJyRlqS3/mSMcYQQlrSNEyud+XOQ4r5Fcej1JIiAQIA45y6zgMewJpBZF1LeTz8/Uteg7xpyrUkGUuTgHv+JkV+nvLpJNsgAhEPAPBAfKlvg1ua3O8zql36DMf3nckLNmTMGfNnKgng8IWXzkuaOCdNUgv1EaKA/t3t3vxyTiWHj6mJJk1SCyaphVXyrDmbalI1JqkFk9SCSWrBJLVgklowSS2YpBZMUgtNSHYt/Kz0Dck+c8rgvriAAAAAAElFTkSuQmCC"
