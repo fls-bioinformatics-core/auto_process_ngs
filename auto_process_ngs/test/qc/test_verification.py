@@ -1420,11 +1420,26 @@ class TestVerifyProject(unittest.TestCase):
         if self.wd is None:
             self.wd = tempfile.mkdtemp(suffix='.test_VerifyProject')
 
-    def _make_analysis_project(self,protocol=None,paired_end=True,
+    def _make_analysis_project(self,name="PJB",
+                               protocol=None,paired_end=True,
                                fastq_dir=None,qc_dir="qc",
                                fastq_names=None,
+                               sample_names=None,
+                               screens=('model_organisms',
+                                        'other_organisms',
+                                        'rRNA',),
+                               include_fastqc=True,
+                               include_fastq_screen=True,
+                               include_strandedness=True,
+                               include_seqlens=True,
                                include_multiqc=True,
-                               legacy_screens=False):
+                               include_cellranger_count=False,
+                               include_cellranger_multi=False,
+                               cellranger_pipelines=('cellranger',),
+                               cellranger_samples=None,
+                               cellranger_multi_samples=None,
+                               legacy_screens=False,
+                               legacy_cellranger_outs=False):
         # Create a mock Analysis Project directory
         self._make_working_dir()
         # Generate names for fastq files to add
@@ -1432,26 +1447,164 @@ class TestVerifyProject(unittest.TestCase):
             reads = (1,2)
         else:
             reads = (1,)
-        sample_names = ('PJB1','PJB2')
+        if not sample_names:
+            sample_names = ('PJB1','PJB2')
         if fastq_names is None:
             fastq_names = []
             for i,sname in enumerate(sample_names,start=1):
                 for read in reads:
                     fq = "%s_S%d_R%d_001.fastq.gz" % (sname,i,read)
                     fastq_names.append(fq)
-        self.analysis_dir = MockAnalysisProject('PJB',fastq_names)
+        self.analysis_dir = MockAnalysisProject(name,fastq_names)
+        screens = ('model_organisms',
+                   'other_organisms',
+                   'rRNA')
         # Create the mock directory
         self.analysis_dir.create(top_dir=self.wd)
         # Populate with fake QC products
-        project_dir = os.path.join(self.wd,self.analysis_dir.name)
-        UpdateAnalysisProject(AnalysisProject(project_dir)).\
-            add_qc_outputs(protocol=protocol,
-                           qc_dir=qc_dir,
-                           include_report=False,
-                           include_zip_file=False,
-                           include_multiqc=include_multiqc,
-                           legacy_screens=legacy_screens)
-        return project_dir
+        qc_dir = os.path.join(self.wd,self.analysis_dir.name,qc_dir)
+        self._make_qc_dir(qc_dir,
+                          fastq_names=fastq_names,
+                          protocol=protocol,
+                          screens=screens,
+                          cellranger_pipelines=cellranger_pipelines,
+                          cellranger_samples=cellranger_samples,
+                          cellranger_multi_samples=cellranger_multi_samples,
+                          include_fastqc=include_fastqc,
+                          include_fastq_screen=include_fastq_screen,
+                          include_strandedness=include_strandedness,
+                          include_seqlens=include_seqlens,
+                          include_multiqc=include_multiqc,
+                          include_cellranger_count=include_cellranger_count,
+                          include_cellranger_multi=include_cellranger_multi,
+                          legacy_screens=legacy_screens,
+                          legacy_cellranger_outs=legacy_cellranger_outs)
+        return os.path.join(self.wd,self.analysis_dir.name)
+
+    def _make_qc_dir(self,qc_dir,fastq_names,
+                     protocol=None,
+                     screens=('model_organisms','other_organisms','rRNA',),
+                     cellranger_pipelines=('cellranger',),
+                     cellranger_samples=None,
+                     cellranger_multi_samples=None,
+                     include_fastqc=True,
+                     include_fastq_screen=True,
+                     include_strandedness=True,
+                     include_seqlens=True,
+                     include_multiqc=False,
+                     include_cellranger_count=False,
+                     include_cellranger_multi=False,
+                     legacy_screens=False,
+                     legacy_cellranger_outs=False):
+        # Create working directory and qc dir
+        self._make_working_dir()
+        print("QC dir: %s" % qc_dir)
+        os.mkdir(qc_dir)
+        # QC metadata
+        qc_info = AnalysisProjectQCDirInfo()
+        qc_info['protocol'] = protocol
+        # Populate with fake QC products
+        for fq in fastq_names:
+            # FastQC
+            if include_fastqc:
+                MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
+            # Fastq_screen
+            if include_fastq_screen:
+                for screen in screens:
+                    MockQCOutputs.fastq_screen_v0_9_2(
+                        fq,qc_dir,screen,legacy=legacy_screens)
+                qc_info['fastq_screens'] = ','.join(screens)
+            # Strandedness
+            if include_strandedness:
+                MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
+            # Sequence lengths
+            if include_seqlens:
+                MockQCOutputs.seqlens(fq,qc_dir)
+        # Strandedness conf file
+        if include_strandedness:
+            with open(os.path.join(qc_dir,
+                                   "fastq_strand.conf"),'wt') as fp:
+                fp.write("Placeholder\n")
+        # MultiQC
+        if include_multiqc:
+            out_file = "multi%s_report.html" % os.path.basename(qc_dir)
+            MockQCOutputs.multiqc(os.path.dirname(qc_dir),
+                                  multiqc_html=out_file,
+                                  version="1.8")
+        # Cellranger count
+        if include_cellranger_count:
+            for cellranger in cellranger_pipelines:
+                # Set defaults
+                if cellranger == "cellranger":
+                    version = "6.1.2"
+                    refdata = "/data/refdata-cellranger-2020-A"
+                elif cellranger == "cellranger-atac":
+                    version = "2.0.0"
+                    refdata = "/data/refdata-cellranger-atac-2020-A"
+                elif cellranger == "cellranger-arc":
+                    version = "2.0.0"
+                    refdata = "/data/refdata-cellranger-arc-2020-A"
+                # Set top-level output dir
+                if not legacy_cellranger_outs:
+                    count_dir = os.path.join("cellranger_count",
+                                             version,
+                                             os.path.basename(refdata))
+                else:
+                    count_dir = "cellranger_count"
+                # Make pipeline outputs
+                for sample in cellranger_samples:
+                    MockQCOutputs.cellranger_count(
+                        sample,
+                        qc_dir,
+                        cellranger=cellranger,
+                        version=version,
+                        reference_data_path=refdata,
+                        prefix=count_dir)
+                    if cellranger == "cellranger-arc":
+                        multiome_config = os.path.join(qc_dir,
+                                                       "libraries.%s.csv" %
+                                                       sample)
+                        with open(multiome_config,'wt') as fp:
+                            fp.write("Placeholder\n")
+                if not legacy_cellranger_outs:
+                    qc_info['cellranger_version'] = version
+                qc_info['cellranger_refdata'] = refdata
+        # Cellranger multi
+        if include_cellranger_multi:
+            # Make cellranger multi config.csv file
+            multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
+            with open(multi_config,'wt') as fp:
+                fastq_dir = os.path.join(self.wd,
+                                         "PJB",
+                                         "fastqs")
+                fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,%s,any,PJB1,gene expression,
+PJB2_MC,%s,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PJB_CML1,CMO301,CML1
+PJB_CML2,CMO302,CML2
+""" % (fastq_dir,fastq_dir))
+            # Cellranger version
+            version = "6.1.2"
+            # Set top-level output dir
+            multi_dir = os.path.join("cellranger_multi",
+                                     version,
+                                     "refdata-cellranger-2020-A")
+            # Make outputs
+            MockQCOutputs.cellranger_multi(cellranger_multi_samples,
+                                           qc_dir,
+                                           config_csv=multi_config,
+                                           prefix=multi_dir)
+            qc_info['cellranger_version'] = version
+        # Write out metadata file
+        qc_info.save(os.path.join(qc_dir,"qc.info"))
+        return qc_dir
 
     def test_verify_project_single_end(self):
         """
@@ -1466,6 +1619,92 @@ class TestVerifyProject(unittest.TestCase):
         verify_project: paired-end data
         """
         analysis_dir = self._make_analysis_project(protocol="standardPE")
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_no_seq_lens(self):
+        """
+        verify_project: paired-end data: no sequence lengths
+        """
+        analysis_dir = self._make_analysis_project(protocol='standardPE',
+                                                   include_seqlens=False)
+        project = AnalysisProject(analysis_dir)
+        self.assertFalse(verify_project(project))
+
+    def test_verify_project_paired_end_cellranger_count(self):
+        """
+        verify_project: paired-end data with cellranger 'count'
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_scRNAseq',
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',),
+            cellranger_samples=('PJB1','PJB2',))
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_cellranger_multi(self):
+        """
+        verify_project: paired-end data with cellranger 'multi'
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            include_cellranger_multi=True,
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
+        project = AnalysisProject(analysis_dir)
+        self.assertFalse(verify_project(project))
+
+    def test_verify_project_paired_end_cellranger_count_and_multi(self):
+        """
+        verify_project: paired-end data with cellranger 'count' and 'multi'
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            include_cellranger_multi=True,
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',),
+            # NB only GEX samples
+            cellranger_samples=('PJB1_GEX',),
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_cellranger_count_multiome(self):
+        """
+        verify_project: paired-end data with cellranger 'count' (multiome)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_Multiome_GEX',
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger-arc',),
+            cellranger_samples=('PJB1','PJB2',))
+        project = AnalysisProject(analysis_dir)
+        self.assertFalse(verify_project(project))
+
+    def test_verify_project_paired_end_cellranger_count_multiome_and_scrnaseq(self):
+        """
+        verify_project: paired-end data with cellranger 'count' (multiome+scRNAseq)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_Multiome_GEX',
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',
+                                  'cellranger-arc',),
+            cellranger_samples=('PJB1','PJB2',))
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_legacy_cellranger_count(self):
+        """
+        verify_project: paired-end data with cellranger 'count' (legacy)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_scRNAseq',
+            paired_end=True,
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',),
+            cellranger_samples=('PJB1','PJB2',),
+            legacy_cellranger_outs=True)
         project = AnalysisProject(analysis_dir)
         self.assertTrue(verify_project(project))
 
