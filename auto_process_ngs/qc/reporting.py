@@ -9,7 +9,6 @@ Utilities for reporting QC pipeline outputs.
 
 Provides the following classes:
 
-- QCReporter: top-level class to verify and report QC for a project
 - QCProject: gather information about the QC associated with a project
 - FastqSet: describes sets of Fastq file
 - QCReport: create QC report document for one or more projects
@@ -95,85 +94,6 @@ from .constants import QC_REPORT_CSS_STYLES
 #######################################################################
 # Classes
 #######################################################################
-
-class QCReporter:
-    """
-    Class describing QC results for an AnalysisProject
-
-    Provides the follow properties:
-
-    name: project name
-    paired_end: True if project is paired-end
-    samples: list of sample names
-
-    Provides the following methods:
-
-    verify: checks the QC outputs for the project
-    report: generate a HTML report for the project
-    """
-    def __init__(self,project):
-        """
-        Initialise a new QCReporter instance
-
-        Arguments:
-           project (AnalysisProject): project to report QC for
-        """
-        self._project = project
-
-    def verify(self,qc_dir=None,qc_protocol=None):
-        """
-        Check the QC outputs are correct for the project
-
-        Arguments:
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project being checked.
-          qc_protocol (str): QC protocol to verify against
-            (optional)
-
-        Returns:
-          Boolean: Returns True if all expected QC products
-            are present, False if not.
-        """
-        return verify_project(self._project,
-                              qc_dir=qc_dir,
-                              qc_protocol=qc_protocol)
-
-    def report(self,title=None,filename=None,qc_dir=None,
-               report_attrs=None,summary_fields=None,
-               relative_links=False,make_zip=False):
-        """
-        Report the QC for the project
-
-        Arguments:
-          title (str): optional, specify title for the report
-            (defaults to '<PROJECT_NAME>: QC report')
-          filename (str): optional, specify path and name for
-            the output report file (defaults to
-            '<PROJECT_NAME>.qc_report.html')
-          qc_dir (str): path to the QC output dir
-          report_attrs (list): optional, list of elements to
-            report for each Fastq pair
-          summary_fields (list): optional, list of fields to
-            report for each sample in the summary table
-          relative_links (boolean): optional, if set to True
-            then use relative paths for links in the report
-            (default is to use absolute paths)
-          make_zip (boolean): if True then also create a ZIP
-            archive of the QC report and outputs (default is
-            not to create the ZIP archive)
-
-        Returns:
-          String: filename of the output HTML report.
-        """
-        return report((self._project,),
-                      title=title,
-                      filename=filename,
-                      qc_dir=qc_dir,
-                      report_attrs=report_attrs,
-                      summary_fields=summary_fields,
-                      relative_links=relative_links,
-                      make_zip=make_zip)
 
 class QCProject:
     """
