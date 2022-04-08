@@ -10,7 +10,6 @@ Utilities for reporting QC pipeline outputs.
 Provides the following classes:
 
 - QCProject: gather information about the QC associated with a project
-- FastqSet: describes sets of Fastq file
 - QCReport: create QC report document for one or more projects
 - QCReportSample: reports the QC for a sample
 - QCReportFastqGroup: reports the QC for a group of Fastqs
@@ -364,54 +363,6 @@ class QCProject:
         self.output_files = qc_outputs.output_files
         # Sequence length stats
         self.stats = AttributeDictionary(**qc_outputs.stats)
-
-class FastqSet:
-    """
-    Class describing a set of Fastq files
-
-    A set can be a single or a pair of fastq files.
-
-    Provides the following properties:
-
-    r1: R1 Fastq in the pair
-    r2: R2 Fastq (will be None if no R2)
-    fastqs: list of Fastq files
-    """
-    def __init__(self,fqr1,fqr2=None):
-        """
-        Initialise a new QCFastqSet instance
-
-        Arguments:
-           fqr1 (str): path to R1 Fastq file
-           fqr2 (str): path to R2 Fastq file, or
-             None if the 'set' is a single Fastq
-        """
-        self._fastqs = list((fqr1,fqr2))
-
-    def __getitem__(self,key):
-        return self.fastqs[key]
-
-    @property
-    def r1(self):
-        """
-        Return R1 Fastq file from pair
-        """
-        return self._fastqs[0]
-
-    @property
-    def r2(self):
-        """
-        Return R2 Fastq file from pair
-        """
-        return self._fastqs[1]
-
-    @property
-    def fastqs(self):
-        """
-        Return list of Fastq files in the set
-        """
-        return list(filter(lambda fq: fq is not None,
-                           self._fastqs))
 
 class QCReport(Document):
     """
