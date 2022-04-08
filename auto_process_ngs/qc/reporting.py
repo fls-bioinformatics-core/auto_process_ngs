@@ -76,7 +76,6 @@ from .plots import uduplicationplot
 from .plots import uadapterplot
 from .plots import encode_png
 from .seqlens import SeqLens
-from .verification import verify_project
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
