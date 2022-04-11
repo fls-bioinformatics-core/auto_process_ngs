@@ -7,19 +7,62 @@
 """
 Utilities for reporting QC pipeline outputs.
 
-Provides the following classes:
+Provides the following core class:
 
 - QCReport: create QC report document for one or more projects
+
+In addition there are a number of supporting classes:
+
 - QCProject: gather information about the QC associated with a project
 - SampleQCReporter: reports the QC for a sample
 - FastqGroupQCReporter: reports the QC for a group of Fastqs
 - FastqQCReporter: interface to QC outputs for a single Fastq
 
-Provides the following functions:
+There are also a number of utility functions:
 
 - report: report the QC for a project
 - pretty_print_reads: print number of reads with commas at each thousand
 - sanitize_name: replace 'unsafe' characters in HTML link targets
+
+Overview
+--------
+
+The ``SampleQCReporter``, ``FastqGroupQCReporter`` and
+``FastqQCReporter`` classes are used by the top-level ``QCProject``
+class to report QC outputs at the level of samples (for example,
+single library analyses), groups of Fastqs (for example, strandedness),
+and individual Fastqs (for example, FastQC or screen data).
+
+Adding support for new metadata
+-------------------------------
+
+Support for new metadata items should be implemented within the
+``_init_metadata_table`` method of ``QCReport``. Descriptions of
+new items should also be added to the ``METADATA_FIELD_DESCRIPTIONS``
+module constant.
+
+Adding support for new QC outputs
+---------------------------------
+
+When adding reporting of new QC outputs it is recommended first to
+ensure that they are detected by the ``QCOutputs`` class (in the
+``outputs`` module); then the relevant reporter class should be
+extended depending on the level that the QC outputs are associated
+with (i.e. project, sample, Fastq group or individual Fastq).
+
+Typically this is done by adding support for new summary table fields,
+which can implemented within the ``get_value`` or ``get_10x_value``
+methods in ``SampleQCreporter`` (for sample-level QC) or the ``get_value``
+method of ``FastqGroupQCReporter`` (for Fastq-group level QC). (This
+may require additional internal functionality to be implemented
+within the relevant class.)
+
+Descriptions for new fields also need to be added to the
+``SUMMARY_FIELD_DESCRIPTIONS`` module constant. Additionally: if the
+QC outputs are produced using new software packages then these should
+be added to the ``SOFTWARE_PACKAGE_NAMES`` module constant; as long
+as these are reported by ``QCOutputs`` then they will also be listed
+automatically within the QC report.
 """
 
 #######################################################################
