@@ -9,8 +9,8 @@ Utilities for reporting QC pipeline outputs.
 
 Provides the following classes:
 
-- QCProject: gather information about the QC associated with a project
 - QCReport: create QC report document for one or more projects
+- QCProject: gather information about the QC associated with a project
 - SampleQCReporter: reports the QC for a sample
 - FastqGroupQCReporter: reports the QC for a group of Fastqs
 - FastqQCReporter: interface to QC outputs for a single Fastq
@@ -93,277 +93,6 @@ from .constants import QC_REPORT_CSS_STYLES
 #######################################################################
 # Classes
 #######################################################################
-
-class QCProject:
-    """
-    Gather information about the QC associated with a project
-
-    Collects data about the QC for an AnalysisProject and
-    makes it available via the following properties:
-
-    - project: the AnalysisProject instance
-    - qc_dir: the directory to examine for QC outputs
-    - run_metadata: AnalysisDirMetadata instance with
-      metadata from the parent run (if present)
-    - processing_software: dictionary with information on
-      software used to process the initial data
-
-    Properties that shortcut to properties of the parent
-    AnalysisProject:
-
-    - name: project name
-    - dirn: path to associated directory
-    - comments: comments associated with the project
-    - info: shortcut to the project's AnalysisProjectMetadata
-      instance
-    - qc_info: shortcut to the QC directory's
-      AnalysisProjectQCDirInfo instance
-    - fastq_attrs: class to use for extracting data from
-      Fastq file names
-
-    Properties based on artefacts detected in the QC
-    directory:
-
-    - fastqs: sorted list of Fastq names
-    - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
-    - samples: sorted list of sample names extracted
-      from Fastqs
-    - multiplexed_samples: sorted list of sample names
-      for multiplexed samples (e.g. 10x CellPlex)
-    - outputs: list of QC output categories detected (see
-      below for valid values)
-    - output_files: list of absolute paths to QC output
-      files
-    - software: dictionary with information on the
-      QC software packages
-    - stats: AttrtibuteDictionary with useful stats from
-      across the project
-
-    The 'stats' property has the following attributes:
-
-    - max_seqs: maximum number of sequences across all
-      Fastq files
-    - min_sequence_length: minimum sequence length across
-      all Fastq files
-    - max_sequence_length: maximum sequence length across
-      all Fastq files
-    - max_sequence_length_read[READ]: maximum sequence
-      length across all READ Fastqs (where READ is 'r1',
-      'r2' etc)
-    - min_sequence_length_read[READ]: minimum sequence
-      length across all READ Fastqs (where READ is 'r1',
-      'r2' etc)
-
-    Valid values of the 'outputs' property are taken from
-    the QCOutputs class.
-
-    General properties about the project:
-
-    - is_single_cell: True if the project has single cell
-        data (10xGenomics, ICELL8 etc)
-
-    Arguments:
-      project (AnalysisProject): project to report QC for
-      qc_dir (str): path to the QC output dir; relative
-        path will be treated as a subdirectory of the
-        project
-    """
-    def __init__(self,project,qc_dir=None):
-        """
-        Create a new QCProject instance
-        """
-        logger.debug("QCProject: project         : %s" % project.name)
-        logger.debug("QCProject: project dir     : %s" % project.dirn)
-        logger.debug("QCProject: qc_dir (initial): %s" % qc_dir)
-        # Store project
-        self.project = project
-        # Sort out target QC dir
-        if qc_dir is None:
-            qc_dir = self.project.qc_dir
-        else:
-            if not os.path.isabs(qc_dir):
-                qc_dir = os.path.join(self.project.dirn,
-                                      qc_dir)
-        self.qc_dir = qc_dir
-        logger.debug("QCProject: qc_dir (final): %s" % self.qc_dir)
-        # How to handle Fastq names
-        self.fastq_attrs = self.project.fastq_attrs
-        # Additional metrics
-        self.stats = AttributeDictionary(
-            max_seqs=None,
-            min_sequence_length=None,
-            max_sequence_length=None,
-            min_sequence_length_read={},
-            max_sequence_length_read={},
-        )
-        # Detect outputs
-        self._detect_outputs()
-        # Expose metadata from parent run
-        self.run_metadata = AnalysisDirMetadata()
-        run_metadata_file = os.path.join(
-            os.path.dirname(os.path.abspath(self.project.dirn)),
-            "metadata.info")
-        if os.path.exists(run_metadata_file):
-            print("Loading run metadata from %s" % run_metadata_file)
-            self.run_metadata.load(run_metadata_file)
-        else:
-            logger.warning("Run metadata file '%s' not found"
-                           % run_metadata_file)
-        # Collect processing software metadata
-        try:
-            self.processing_software = ast.literal_eval(
-                self.run_metadata.processing_software)
-        except ValueError:
-            self.processing_software = dict()
-        if not self.processing_software:
-            # Fallback to legacy metadata items
-            try:
-                self.processing_software['bcl2fastq'] = ast.literal_eval(
-                    self.run_metadata.bcl2fastq_software)
-            except ValueError:
-                pass
-            try:
-                self.processing_software['cellranger'] = ast.literal_eval(
-                    self.run_metadata.cellranger_software)
-            except ValueError:
-                pass
-        # Expose project metadata
-        self.info = self.project.info
-        # Expose QC info
-        self.qc_info = self.project.qc_info(self.qc_dir)
-
-    @property
-    def id(self):
-        """
-        Identifier for the project
-
-        This is a string of the form:
-
-        <RUN_ID>:<PROJECT_NAME>
-
-        e.g. ``MINISEQ_201120#22:PJB``
-
-        If the run id can't be determined then the name
-        of the parent directory is used instead.
-        """
-        run_id = self.run_id
-        if not run_id:
-            run_id = os.path.basename(os.path.dirname(self.dirn))
-        return "%s:%s" % (run_id,self.name)
-
-    @property
-    def name(self):
-        """
-        Name of project
-        """
-        return self.project.name
-
-    @property
-    def dirn(self):
-        """
-        Path to project directory
-        """
-        return self.project.dirn
-
-    @property
-    def comments(self):
-        """
-        Comments associated with the project
-        """
-        return self.project.info.comments
-
-    @property
-    def run_id(self):
-        """
-        Identifier for parent run
-
-        This is the standard identifier constructed
-        from the platform, datestamp and facility
-        run number (e.g. ``MINISEQ_201120#22``).
-
-        If an identifier can't be constructed then
-        ``None`` is returned.
-        """
-        try:
-            return run_reference_id(self.info['run'],
-                                    platform=self.info['platform'],
-                                    facility_run_number=
-                                    self.run_metadata['run_number'])
-        except (AttributeError,TypeError) as ex:
-            logger.warning("Run reference ID can't be "
-                           "determined: %s (ignored)" % ex)
-            return None
-
-    @property
-    def is_single_cell(self):
-        """
-        Check whether project has single cell data
-        """
-        return (self.info['single_cell_platform'] is not None)
-
-    def software_info(self,pkg,exclude_processing=False):
-        """
-        Get information on software package
-
-        Arguments:
-          pkg (str): name of software package to get
-            information about
-          exclude_processing (bool): if True then don't
-            fall back to processing software information
-            if package is not found (default: False, do
-            fall back to checking processing software)
-
-        Returns:
-          String: software version information, or
-            None if no information is stored.
-        """
-        # Acquire the value
-        try:
-            if self.software[pkg]:
-                return ', '.join(self.software[pkg])
-        except KeyError:
-            if exclude_processing:
-                # Don't check processing software
-                return None
-            try:
-                return self.processing_software[pkg][2]
-            except KeyError:
-                # Not processing software
-                return None
-            except TypeError:
-                # Not valid data
-                return None
-
-    def _detect_outputs(self):
-        """
-        Internal: determine which QC outputs are present
-        """
-        # Outsource to external class
-        qc_outputs = QCOutputs(self.qc_dir,
-                               fastq_attrs=self.fastq_attrs)
-        # Fastqs
-        self.fastqs = qc_outputs.fastqs
-        # Reads
-        self.reads = qc_outputs.reads
-        # Samples
-        self.samples = sorted(list(
-            set(qc_outputs.samples +
-                [s.name for s in self.project.samples])),
-                key=lambda s: split_sample_name(s))
-        # Fastq screens
-        self.fastq_screens = qc_outputs.fastq_screens
-        # Single library analyses reference data
-        self.cellranger_references = qc_outputs.cellranger_references
-        # Multiplexed samples
-        self.multiplexed_samples = qc_outputs.multiplexed_samples
-        # QC outputs
-        self.outputs = qc_outputs.outputs
-        # Software versions
-        self.software = qc_outputs.software
-        # Output files
-        self.output_files = qc_outputs.output_files
-        # Sequence length stats
-        self.stats = AttributeDictionary(**qc_outputs.stats)
 
 class QCReport(Document):
     """
@@ -1386,6 +1115,277 @@ class QCReport(Document):
         if self.status:
             # Turn off display of warnings section
             self.warnings.add_css_classes("hide")
+
+class QCProject:
+    """
+    Gather information about the QC associated with a project
+
+    Collects data about the QC for an AnalysisProject and
+    makes it available via the following properties:
+
+    - project: the AnalysisProject instance
+    - qc_dir: the directory to examine for QC outputs
+    - run_metadata: AnalysisDirMetadata instance with
+      metadata from the parent run (if present)
+    - processing_software: dictionary with information on
+      software used to process the initial data
+
+    Properties that shortcut to properties of the parent
+    AnalysisProject:
+
+    - name: project name
+    - dirn: path to associated directory
+    - comments: comments associated with the project
+    - info: shortcut to the project's AnalysisProjectMetadata
+      instance
+    - qc_info: shortcut to the QC directory's
+      AnalysisProjectQCDirInfo instance
+    - fastq_attrs: class to use for extracting data from
+      Fastq file names
+
+    Properties based on artefacts detected in the QC
+    directory:
+
+    - fastqs: sorted list of Fastq names
+    - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
+    - samples: sorted list of sample names extracted
+      from Fastqs
+    - multiplexed_samples: sorted list of sample names
+      for multiplexed samples (e.g. 10x CellPlex)
+    - outputs: list of QC output categories detected (see
+      below for valid values)
+    - output_files: list of absolute paths to QC output
+      files
+    - software: dictionary with information on the
+      QC software packages
+    - stats: AttrtibuteDictionary with useful stats from
+      across the project
+
+    The 'stats' property has the following attributes:
+
+    - max_seqs: maximum number of sequences across all
+      Fastq files
+    - min_sequence_length: minimum sequence length across
+      all Fastq files
+    - max_sequence_length: maximum sequence length across
+      all Fastq files
+    - max_sequence_length_read[READ]: maximum sequence
+      length across all READ Fastqs (where READ is 'r1',
+      'r2' etc)
+    - min_sequence_length_read[READ]: minimum sequence
+      length across all READ Fastqs (where READ is 'r1',
+      'r2' etc)
+
+    Valid values of the 'outputs' property are taken from
+    the QCOutputs class.
+
+    General properties about the project:
+
+    - is_single_cell: True if the project has single cell
+        data (10xGenomics, ICELL8 etc)
+
+    Arguments:
+      project (AnalysisProject): project to report QC for
+      qc_dir (str): path to the QC output dir; relative
+        path will be treated as a subdirectory of the
+        project
+    """
+    def __init__(self,project,qc_dir=None):
+        """
+        Create a new QCProject instance
+        """
+        logger.debug("QCProject: project         : %s" % project.name)
+        logger.debug("QCProject: project dir     : %s" % project.dirn)
+        logger.debug("QCProject: qc_dir (initial): %s" % qc_dir)
+        # Store project
+        self.project = project
+        # Sort out target QC dir
+        if qc_dir is None:
+            qc_dir = self.project.qc_dir
+        else:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(self.project.dirn,
+                                      qc_dir)
+        self.qc_dir = qc_dir
+        logger.debug("QCProject: qc_dir (final): %s" % self.qc_dir)
+        # How to handle Fastq names
+        self.fastq_attrs = self.project.fastq_attrs
+        # Additional metrics
+        self.stats = AttributeDictionary(
+            max_seqs=None,
+            min_sequence_length=None,
+            max_sequence_length=None,
+            min_sequence_length_read={},
+            max_sequence_length_read={},
+        )
+        # Detect outputs
+        self._detect_outputs()
+        # Expose metadata from parent run
+        self.run_metadata = AnalysisDirMetadata()
+        run_metadata_file = os.path.join(
+            os.path.dirname(os.path.abspath(self.project.dirn)),
+            "metadata.info")
+        if os.path.exists(run_metadata_file):
+            print("Loading run metadata from %s" % run_metadata_file)
+            self.run_metadata.load(run_metadata_file)
+        else:
+            logger.warning("Run metadata file '%s' not found"
+                           % run_metadata_file)
+        # Collect processing software metadata
+        try:
+            self.processing_software = ast.literal_eval(
+                self.run_metadata.processing_software)
+        except ValueError:
+            self.processing_software = dict()
+        if not self.processing_software:
+            # Fallback to legacy metadata items
+            try:
+                self.processing_software['bcl2fastq'] = ast.literal_eval(
+                    self.run_metadata.bcl2fastq_software)
+            except ValueError:
+                pass
+            try:
+                self.processing_software['cellranger'] = ast.literal_eval(
+                    self.run_metadata.cellranger_software)
+            except ValueError:
+                pass
+        # Expose project metadata
+        self.info = self.project.info
+        # Expose QC info
+        self.qc_info = self.project.qc_info(self.qc_dir)
+
+    @property
+    def id(self):
+        """
+        Identifier for the project
+
+        This is a string of the form:
+
+        <RUN_ID>:<PROJECT_NAME>
+
+        e.g. ``MINISEQ_201120#22:PJB``
+
+        If the run id can't be determined then the name
+        of the parent directory is used instead.
+        """
+        run_id = self.run_id
+        if not run_id:
+            run_id = os.path.basename(os.path.dirname(self.dirn))
+        return "%s:%s" % (run_id,self.name)
+
+    @property
+    def name(self):
+        """
+        Name of project
+        """
+        return self.project.name
+
+    @property
+    def dirn(self):
+        """
+        Path to project directory
+        """
+        return self.project.dirn
+
+    @property
+    def comments(self):
+        """
+        Comments associated with the project
+        """
+        return self.project.info.comments
+
+    @property
+    def run_id(self):
+        """
+        Identifier for parent run
+
+        This is the standard identifier constructed
+        from the platform, datestamp and facility
+        run number (e.g. ``MINISEQ_201120#22``).
+
+        If an identifier can't be constructed then
+        ``None`` is returned.
+        """
+        try:
+            return run_reference_id(self.info['run'],
+                                    platform=self.info['platform'],
+                                    facility_run_number=
+                                    self.run_metadata['run_number'])
+        except (AttributeError,TypeError) as ex:
+            logger.warning("Run reference ID can't be "
+                           "determined: %s (ignored)" % ex)
+            return None
+
+    @property
+    def is_single_cell(self):
+        """
+        Check whether project has single cell data
+        """
+        return (self.info['single_cell_platform'] is not None)
+
+    def software_info(self,pkg,exclude_processing=False):
+        """
+        Get information on software package
+
+        Arguments:
+          pkg (str): name of software package to get
+            information about
+          exclude_processing (bool): if True then don't
+            fall back to processing software information
+            if package is not found (default: False, do
+            fall back to checking processing software)
+
+        Returns:
+          String: software version information, or
+            None if no information is stored.
+        """
+        # Acquire the value
+        try:
+            if self.software[pkg]:
+                return ', '.join(self.software[pkg])
+        except KeyError:
+            if exclude_processing:
+                # Don't check processing software
+                return None
+            try:
+                return self.processing_software[pkg][2]
+            except KeyError:
+                # Not processing software
+                return None
+            except TypeError:
+                # Not valid data
+                return None
+
+    def _detect_outputs(self):
+        """
+        Internal: determine which QC outputs are present
+        """
+        # Outsource to external class
+        qc_outputs = QCOutputs(self.qc_dir,
+                               fastq_attrs=self.fastq_attrs)
+        # Fastqs
+        self.fastqs = qc_outputs.fastqs
+        # Reads
+        self.reads = qc_outputs.reads
+        # Samples
+        self.samples = sorted(list(
+            set(qc_outputs.samples +
+                [s.name for s in self.project.samples])),
+                key=lambda s: split_sample_name(s))
+        # Fastq screens
+        self.fastq_screens = qc_outputs.fastq_screens
+        # Single library analyses reference data
+        self.cellranger_references = qc_outputs.cellranger_references
+        # Multiplexed samples
+        self.multiplexed_samples = qc_outputs.multiplexed_samples
+        # QC outputs
+        self.outputs = qc_outputs.outputs
+        # Software versions
+        self.software = qc_outputs.software
+        # Output files
+        self.output_files = qc_outputs.output_files
+        # Sequence length stats
+        self.stats = AttributeDictionary(**qc_outputs.stats)
 
 class SampleQCReporter:
     """
