@@ -1257,12 +1257,7 @@ class QCReport(Document):
             sample_name = "sample_%s" % sample
             sample_title = "Sample: %s" % sample
         # Determine location of QC artefacts
-        if self.data_dir:
-            qc_dir = os.path.join(self.data_dir,
-                                  sanitize_name(project.id),
-                                  os.path.basename(project.qc_dir))
-        else:
-            qc_dir = project.qc_dir
+        qc_dir = self.fetch_qc_dir(project)
         # Create a new section
         sample_report = self.add_section(
             sample_title,
@@ -1323,12 +1318,7 @@ class QCReport(Document):
             analysis in the summary table
         """
         # Determine location of QC artefacts
-        if self.data_dir:
-            qc_dir = os.path.join(self.data_dir,
-                                  sanitize_name(project.id),
-                                  os.path.basename(project.qc_dir))
-        else:
-            qc_dir = project.qc_dir
+        qc_dir = self.fetch_qc_dir(project)
         # Get a reporter for the sample
         reporter = SampleQCReporter(project,
                                     sample,
@@ -1364,12 +1354,7 @@ class QCReport(Document):
             analysis in the summary table
         """
         # Determine location of QC artefacts
-        if self.data_dir:
-            qc_dir = os.path.join(self.data_dir,
-                                  sanitize_name(project.id),
-                                  os.path.basename(project.qc_dir))
-        else:
-            qc_dir = project.qc_dir
+        qc_dir = self.fetch_qc_dir(project)
         # Get a reporter for the sample
         reporter = SampleQCReporter(project,
                                     sample,
@@ -1383,6 +1368,24 @@ class QCReport(Document):
             # Update flag to indicate problems with the
             # report
             self.status = False
+
+    def fetch_qc_dir(self,project):
+        """
+        Return path to QC dir for reporting
+
+        If a 'data directory' has been defined for this
+        report then QC artefacts will have been copied
+        to a project-specific subdirectory of that
+        directory; otherwise QC artefacts will be in the
+        QC directory of the original project.
+        """
+        # Determine location of QC artefacts
+        if self.data_dir:
+            return os.path.join(self.data_dir,
+                                sanitize_name(project.id),
+                                os.path.basename(project.qc_dir))
+        else:
+            return project.qc_dir
 
     def report_status(self):
         """
