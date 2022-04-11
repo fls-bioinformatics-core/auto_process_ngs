@@ -90,6 +90,119 @@ logger = logging.getLogger(__name__)
 from .constants import FASTQ_SCREENS
 from .constants import QC_REPORT_CSS_STYLES
 
+# Metadata field descriptions
+METADATA_FIELD_DESCRIPTIONS = {
+    'project_id': 'Project ID',
+    'run_id': 'Run ID',
+    'run': 'Run name',
+    'user': 'User',
+    'PI': 'PI',
+    'library_type': 'Library type',
+    'sequencer_model': 'Sequencer model',
+    'single_cell_platform': 'Single cell preparation platform',
+    'number_of_cells': 'Number of cells',
+    'organism': 'Organism',
+    'protocol': 'QC protocol',
+    'cellranger_reference': 'Cellranger reference datasets',
+    'multiqc': 'MultiQC report',
+    'icell8_stats': 'ICELL8 statistics',
+    'icell8_report': 'ICELL8 processing report',
+}
+
+# Software package names
+SOFTWARE_PACKAGE_NAMES = {
+    'bcl2fastq': 'Bcl2fastq',
+    'bcl-convert': 'BCL Convert',
+    'cellranger': 'Cellranger',
+    'cellranger-atac': 'Cellranger ATAC',
+    'cellranger-arc': 'Cellranger ARC',
+    'spaceranger': 'Spaceranger',
+    'fastqc': 'FastQC',
+    'fastq_screen': 'FastqScreen',
+    'fastq_strand': 'FastqStrand',
+}
+
+# Field descriptions for summary tables
+# Dictionary with keys matching field labels, and values
+# consisting of tuples with short and long descriptions
+SUMMARY_FIELD_DESCRIPTIONS = {
+    'sample': ('Sample','Sample name'),
+    'fastq' : ('Fastq','Fastq file'),
+    'fastqs': ('Fastqs','Fastq files in each sample'),
+    'reads': ('#reads','Number of reads/read pairs'),
+    'read_lengths': ('Lengths',
+                     'Mean sequence length and range'),
+    'read_counts': ('Counts',
+                    'Relative number of total reads, and proportions '
+                    'of masked and padded reads in each Fastq'),
+    'sequence_duplication': ('Dup%',
+                             'Fraction of reads with duplicated '
+                             'sequences in each Fastq'),
+    'adapter_content': ('Adapters',
+                        'Fraction of data containing adapter sequences '
+                        'in each Fastq'),
+    'read_lengths_dist_r1': ('Dist[R1]',
+                             'Distributions of R1 sequence lengths'),
+    'fastqc_r1': ('FastQC[R1]',
+                  'Summary of FastQC metrics for R1'),
+    'boxplot_r1': ('Quality[R1]',
+                   'Per base sequence quality for R1'),
+    'screens_r1': ('Screens[R1]',
+                   'Outputs from FastqScreen running R1 against multiple '
+                   'panels'),
+    'read_lengths_dist_r2': ('Dist[R2]',
+                             'Distributions of R2 sequence lengths'),
+    'fastqc_r2': ('FastQC[R2]',
+                  'Summary of FastQC metrics for R2'),
+    'boxplot_r2': ('Quality[R2]',
+                   'Per base sequence quality for R2'),
+    'screens_r2': ('Screens[R2]',
+                   'Outputs from FastqScreen running R2 against multiple '
+                   'panels'),
+    'fastqc_r3': ('FastQC[R3]',
+                  'Summary of FastQC metrics for R3'),
+    'read_lengths_dist_r3': ('Dist[R3]',
+                             'Distributions of R3 sequence lengths'),
+    'boxplot_r3': ('Quality[R3]',
+                   'Per base sequence quality for R3'),
+    'screens_r3': ('Screens[R3]',
+                   'Outputs from FastqScreen running R3 against multiple '
+                   'panels'),
+    'strandedness': ('Strand',
+                     'Proportions of reads mapping to forward and reverse '
+                     'strands'),
+    'cellranger_count': ('Single library analyses',
+                         'Web summary from Cellranger* single library '
+                         'analysis for this sample'),
+    '10x_cells': ('#cells','Number of cells'),
+    '10x_reads_per_cell': ('#reads/cell','Average reads per cell'),
+    '10x_genes_per_cell': ('#genes/cell','Median genes per cell'),
+    '10x_frac_reads_in_cell': ('%reads in cells',
+                               'Fraction of reads in cells'),
+    '10x_fragments_per_cell': ('#fragments/cell',
+                               'Median fragments per cell'),
+    '10x_fragments_overlapping_targets': ('%fragments overlapping targets',
+                                          'Fraction of fragments '
+                                          'overlapping targets'),
+    '10x_fragments_overlapping_peaks': ('%fragments overlapping peaks',
+                                        'Fraction of fragments overlapping '
+                                        'peaks'),
+    '10x_tss_enrichment_score': ('TSS enrichment score',
+                                 'TSS enrichment score'),
+    '10x_atac_fragments_per_cell': ('#ATAC fragments/cell',
+                                    'ATAC Median high-quality fragments '
+                                    'per cell'),
+    '10x_gex_genes_per_cell': ('#GEX genes/cell','GEX Median genes per cell'),
+    '10x_genes_detected': ('#genes','Total genes detected'),
+    '10x_umis_per_cell': ('#UMIs/cell','Median UMI counts per cell'),
+    '10x_pipeline': ('Pipeline','Name of the 10x Genomics pipeline used'),
+    '10x_reference': ('Reference dataset',
+                      'Reference dataset used for the analysis'),
+    '10x_web_summary': ('HTML report','Link to the web_summary.html report'),
+    'linked_sample': ('Linked sample',
+                      'Corresponding sample for single cell multiome analysis')
+}
+
 #######################################################################
 # Classes
 #######################################################################
@@ -149,122 +262,11 @@ class QCReport(Document):
         project
     """
     # Field descriptions for summary table
-    field_descriptions = {
-        'sample': ('Sample','Sample name'),
-        'fastq' : ('Fastq','Fastq file'),
-        'fastqs': ('Fastqs','Fastq files in each sample'),
-        'reads': ('#reads','Number of reads/read pairs'),
-        'read_lengths': ('Lengths',
-                         'Mean sequence length and range'),
-        'read_counts': ('Counts',
-                        'Relative number of total reads, and proportions '
-                        'of masked and padded reads in each Fastq'),
-        'sequence_duplication': ('Dup%',
-                                 'Fraction of reads with duplicated '
-                                 'sequences in each Fastq'),
-        'adapter_content': ('Adapters',
-                            'Fraction of data containing adapter '
-                            'sequences in each Fastq'),
-        'read_lengths_dist_r1': ('Dist[R1]',
-                                 'Distributions of R1 sequence '
-                                 'lengths'),
-        'fastqc_r1': ('FastQC[R1]',
-                      'Summary of FastQC metrics for R1'),
-        'boxplot_r1': ('Quality[R1]',
-                       'Per base sequence quality for R1'),
-        'screens_r1': ('Screens[R1]',
-                       'Outputs from FastqScreen running R1 against '
-                       'multiple panels'),
-        'read_lengths_dist_r2': ('Dist[R2]',
-                                 'Distributions of R2 sequence '
-                                 'lengths'),
-        'fastqc_r2': ('FastQC[R2]',
-                      'Summary of FastQC metrics for R2'),
-        'boxplot_r2': ('Quality[R2]',
-                       'Per base sequence quality for R2'),
-        'screens_r2': ('Screens[R2]',
-                       'Outputs from FastqScreen running R2 against '
-                       'multiple panels'),
-        'fastqc_r3': ('FastQC[R3]',
-                      'Summary of FastQC metrics for R3'),
-        'read_lengths_dist_r3': ('Dist[R3]',
-                                 'Distributions of R3 sequence '
-                                 'lengths'),
-        'boxplot_r3': ('Quality[R3]',
-                       'Per base sequence quality for R1'),
-        'screens_r3': ('Screens[R3]',
-                       'Outputs from FastqScreen running R3 against '
-                       'multiple panels'),
-        'strandedness': ('Strand',
-                         'Proportions of reads mapping to forward and '
-                         'reverse strands'),
-        'cellranger_count': ('Single library analyses',
-                             'Web summary from Cellranger* single '
-                             'library analysis for this sample'),
-        '10x_cells': ('#cells','Number of cells'),
-        '10x_reads_per_cell': ('#reads/cell','Average reads per cell'),
-        '10x_genes_per_cell': ('#genes/cell','Median genes per cell'),
-        '10x_frac_reads_in_cell': ('%reads in cells',
-                                   'Fraction of reads in cells'),
-        '10x_fragments_per_cell': ('#fragments/cell',
-                                   'Median fragments per cell'),
-        '10x_fragments_overlapping_targets': ('%fragments overlapping targets',
-                                              'Fraction of fragments '
-                                              'overlapping targets'),
-        '10x_fragments_overlapping_peaks': ('%fragments overlapping peaks',
-                                            'Fraction of fragments '
-                                            'overlapping peaks'),
-        '10x_tss_enrichment_score': ('TSS enrichment score',
-                                     'TSS enrichment score'),
-        '10x_atac_fragments_per_cell': ('#ATAC fragments/cell',
-                                        'ATAC Median high-quality fragments '
-                                        'per cell'),
-        '10x_gex_genes_per_cell': ('#GEX genes/cell',
-                                   'GEX Median genes per cell'),
-        '10x_genes_detected': ('#genes',
-                               'Total genes detected'),
-        '10x_umis_per_cell': ('#UMIs/cell',
-                              'Median UMI counts per cell'),
-        '10x_pipeline': ('Pipeline',
-                         'Name of the 10x Genomics pipeline used'),
-        '10x_reference': ('Reference dataset',
-                          'Reference dataset used for the analysis'),
-        '10x_web_summary': ('HTML report',
-                            'Link to the web_summary.html report'),
-        'linked_sample': ('Linked sample',
-                          'Corresponding sample for single cell multiome '
-                          'analysis')
-    }
+    field_descriptions = SUMMARY_FIELD_DESCRIPTIONS
     # Titles for metadata items
-    metadata_titles = {
-        'project_id': 'Project ID',
-        'run_id': 'Run ID',
-        'run': 'Run name',
-        'user': 'User',
-        'PI': 'PI',
-        'library_type': 'Library type',
-        'sequencer_model': 'Sequencer model',
-        'single_cell_platform': 'Single cell preparation platform',
-        'number_of_cells': 'Number of cells',
-        'organism': 'Organism',
-        'protocol': 'QC protocol',
-        'cellranger_reference': 'Cellranger reference datasets',
-        'multiqc': 'MultiQC report',
-        'icell8_stats': 'ICELL8 statistics',
-        'icell8_report': 'ICELL8 processing report',
-    }
+    metadata_titles = METADATA_FIELD_DESCRIPTIONS
     # Software packages and names
-    software_names = {
-        'bcl2fastq': 'Bcl2fastq',
-        'bcl-convert': 'BCL Convert',
-        'cellranger': 'Cellranger',
-        'cellranger-atac': 'Cellranger ATAC',
-        'cellranger-arc': 'Cellranger ARC',
-        'spaceranger': 'Spaceranger',
-        'fastqc': 'FastQC',
-        'fastq_screen': 'FastqScreen',
-        'fastq_strand': 'FastqStrand',
-    }
+    software_names = SOFTWARE_PACKAGE_NAMES
     software_packages = sorted(list(software_names.keys()))
 
     def __init__(self,projects,title=None,qc_dir=None,report_attrs=None,
@@ -487,9 +489,11 @@ class QCReport(Document):
                             # Add version specific fields to summary table
                             v = v.split('.')
                             if v[0] == '2':
-                                extra_fields = ['10x_fragments_overlapping_peaks']
+                                extra_fields = \
+                                    ['10x_fragments_overlapping_peaks']
                             else:
-                                extra_fields = ['10x_fragments_overlapping_targets']
+                                extra_fields = \
+                                    ['10x_fragments_overlapping_targets']
                             for f in extra_fields:
                                 if f not in single_library_fields:
                                     single_library_fields.append(f)
