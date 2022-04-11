@@ -49,6 +49,7 @@ is maintained for backwards compatibility:
 There are supporting standalone functions for mocking outputs:
 
 - make_mock_bcl2fastq2_output: create mock output from `bcl2fastq`
+- make_mock_analysis_project: create a mock analysis project directory
 """
 
 #######################################################################
@@ -77,6 +78,7 @@ from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from .tenx_genomics_utils import flow_cell_id
 from .utils import ZipArchive
 from .mockqc import MockQCOutputs
+from .mockqc import make_mock_qc_dir
 from . import mock10xdata
 
 #######################################################################
@@ -436,6 +438,7 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
         # Add ScriptCode directory
         if scriptcode:
             os.mkdir(os.path.join(project_dir,'ScriptCode'))
+        return project_dir
 
 #######################################################################
 # Classes for updating directories with mock artefacts
@@ -3071,3 +3074,107 @@ GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
                 fp.write(read)
+
+def make_mock_analysis_project(name="PJB",top_dir=None,
+                               protocol=None,paired_end=True,
+                               qc_dir="qc",
+                               fastq_dir='fastqs',
+                               fastq_names=None,
+                               sample_names=None,
+                               screens=('model_organisms',
+                                        'other_organisms',
+                                        'rRNA',),
+                               include_fastqc=True,
+                               include_fastq_screen=True,
+                               include_strandedness=True,
+                               include_seqlens=True,
+                               include_multiqc=True,
+                               include_cellranger_count=False,
+                               include_cellranger_multi=False,
+                               cellranger_pipelines=('cellranger',),
+                               cellranger_samples=None,
+                               cellranger_multi_samples=None,
+                               legacy_screens=False,
+                               legacy_cellranger_outs=False):
+    """
+    Create a mock Analysis Project directory with QC artefacts
+
+    Arguments:
+      name (str): name for the mock project
+      top_dir (str): path to the directory to create the
+        mock project directory under
+      protocol (str): QC protocol to emulate
+      paired_end (bool): whether the mock project should
+        be paired-end (the default)
+      fastq_dir (str): optional, set a non-standard
+        directory for the Fastq files
+      fastq_names (list): optional, explicit list of Fastq
+        names
+      sample_names (list): optional, explicit list of sample
+        names
+      screens (list): optional, list of non-standard
+        FastqScreen panel names
+      include_fastqc (bool): include outputs from Fastqc
+      include_fastq_screen (bool): include outputs from
+        FastqScreen
+      include_strandedness (bool): include outputs from
+        strandedness
+      include_seqlens (bool): include sequence length metrics
+      include_multiqc (bool): include MultiQC outputs
+      include_celllranger_count (bool): include 'cellranger
+        count' outputs
+      include_cellranger_multi (bool): include 'cellranger
+        multi' outputs
+      cellranger_pipelines (list): list of 10xGenomics pipelines
+        to make mock outputs for (e.g. 'cellranger',
+        'cellranger-atac' etc)
+      cellranger_samples (list): list of sample names to
+        produce 'cellranger count' outputs for
+      cellranger_multi_samples (list): list of sample names to
+        produce 'cellranger multi' outputs for
+      legacy_screens (bool): if True then use legacy naming
+        convention for FastqScreen outputs
+      legacy_cellranger_outs (bool): if True then use legacy
+        naming convention for 10xGenomics pipeline outputs
+
+    Returns:
+      String: path to the mock analysis project that was created.
+    """
+    # Read numbers
+    if paired_end:
+        reads = (1,2)
+    else:
+        reads = (1,)
+    if not sample_names:
+        sample_names = ('PJB1','PJB2')
+    # Generate names for fastq files to add
+    if fastq_names is None:
+        fastq_names = []
+        for i,sname in enumerate(sample_names,start=1):
+            for read in reads:
+                fq = "%s_S%d_R%d_001.fastq.gz" % (sname,i,read)
+                fastq_names.append(fq)
+    # Set up the analysis project
+    analysis_project = MockAnalysisProject(name,
+                                           fastq_names,
+                                           fastq_dir=fastq_dir)
+    project_dir = analysis_project.create(top_dir=top_dir)
+    # Populate with fake QC products
+    make_mock_qc_dir(os.path.join(project_dir,qc_dir),
+                     fastq_names=fastq_names,
+                     fastq_dir=os.path.join(project_dir,fastq_dir),
+                     protocol=protocol,
+                     screens=screens,
+                     cellranger_pipelines=cellranger_pipelines,
+                     cellranger_samples=cellranger_samples,
+                     cellranger_multi_samples=cellranger_multi_samples,
+                     include_fastqc=include_fastqc,
+                     include_fastq_screen=include_fastq_screen,
+                     include_strandedness=include_strandedness,
+                     include_seqlens=include_seqlens,
+                     include_multiqc=include_multiqc,
+                     include_cellranger_count=include_cellranger_count,
+                     include_cellranger_multi=include_cellranger_multi,
+                     legacy_screens=legacy_screens,
+                     legacy_cellranger_outs=legacy_cellranger_outs)
+    return project_dir
