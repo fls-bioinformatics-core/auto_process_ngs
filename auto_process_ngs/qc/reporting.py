@@ -11,9 +11,9 @@ Provides the following classes:
 
 - QCProject: gather information about the QC associated with a project
 - QCReport: create QC report document for one or more projects
-- QCReportSample: reports the QC for a sample
-- QCReportFastqGroup: reports the QC for a group of Fastqs
-- QCReportFastq: interface to QC outputs for a single Fastq
+- SampleQCReporter: reports the QC for a sample
+- FastqGroupQCReporter: reports the QC for a group of Fastqs
+- FastqQCReporter: interface to QC outputs for a single Fastq
 
 Provides the following functions:
 
@@ -1268,10 +1268,10 @@ class QCReport(Document):
             sample_title,
             name=sample_name,
             css_classes=('sample',))
-        reporter = QCReportSample(project,
-                                  sample,
-                                  qc_dir=qc_dir,
-                                  fastq_attrs=project.fastq_attrs)
+        reporter = SampleQCReporter(project,
+                                    sample,
+                                    qc_dir=qc_dir,
+                                    fastq_attrs=project.fastq_attrs)
         reads = reporter.reads
         n_fastq_groups = len(reporter.fastq_groups)
         if len(reads) == 1:
@@ -1330,10 +1330,10 @@ class QCReport(Document):
         else:
             qc_dir = project.qc_dir
         # Get a reporter for the sample
-        reporter = QCReportSample(project,
-                                  sample,
-                                  qc_dir=qc_dir,
-                                  fastq_attrs=project.fastq_attrs)
+        reporter = SampleQCReporter(project,
+                                    sample,
+                                    qc_dir=qc_dir,
+                                    fastq_attrs=project.fastq_attrs)
         # Update the single library analysis table
         status = reporter.update_single_library_table(
             package,
@@ -1371,9 +1371,9 @@ class QCReport(Document):
         else:
             qc_dir = project.qc_dir
         # Get a reporter for the sample
-        reporter = QCReportSample(project,
-                                  sample,
-                                  qc_dir=qc_dir)
+        reporter = SampleQCReporter(project,
+                                    sample,
+                                    qc_dir=qc_dir)
         # Update the single library analysis table
         status = reporter.update_multiplexing_analysis_table(
             multiplexing_analysis_table,
@@ -1392,7 +1392,7 @@ class QCReport(Document):
             # Turn off display of warnings section
             self.warnings.add_css_classes("hide")
 
-class QCReportSample:
+class SampleQCReporter:
     """
     Utility class for reporting the QC for a sample
 
@@ -1401,7 +1401,7 @@ class QCReportSample:
     sample: name of the sample
     fastqs: list of the Fastqs associated with the sample
     reads: list of read ids e.g. ['r1','r2']
-    fastq_groups: list of QCReportFastq instances from
+    fastq_groups: list of FastqGroupQCReporter instances from
       grouped Fastqs associated with the sample
     cellranger_count: list of CellrangerCount instances
       associated with the sample
@@ -1428,7 +1428,7 @@ class QCReportSample:
     def __init__(self,project,sample,qc_dir=None,
                  fastq_attrs=AnalysisFastq):
         """
-        Create a new QCReportSample
+        Create a new SampleQCReporter
 
         Arguments:
           project (QCProject): project to report
@@ -1455,7 +1455,7 @@ class QCReportSample:
                    project.fastq_attrs(fq).sample_name == sample,
                    project.fastqs)))
         for fqs in group_fastqs_by_name(self.fastqs,fastq_attrs):
-            self.fastq_groups.append(QCReportFastqGroup(
+            self.fastq_groups.append(FastqGroupQCReporter(
                 fqs,
                 qc_dir=qc_dir,
                 project=project,
@@ -1520,7 +1520,7 @@ class QCReportSample:
 
         The following 'attributes' that can be reported for
         each Fastq are those available for the 'report' method
-        of the 'QCReportFastqGroup' class.
+        of the 'FastqGroupQCReporter' class.
 
         By default all attributes are reported.
 
@@ -1887,7 +1887,7 @@ class QCReportSample:
                            "table" % field)
         return value
 
-class QCReportFastqGroup:
+class FastqGroupQCReporter:
     """
     Utility class for reporting the QC for a Fastq group
 
@@ -1895,7 +1895,7 @@ class QCReportFastqGroup:
 
     reads: list of read ids e.g. ['r1','r2']
     fastqs: dictionary mapping read ids to Fastq paths
-    reporters: dictionary mapping read ids to QCReportFastq
+    reporters: dictionary mapping read ids to FastqQCReporter
       instances
     paired_end: whether FastqGroup is paired end
     fastq_strand_txt: location of associated Fastq_strand
@@ -1913,7 +1913,7 @@ class QCReportFastqGroup:
     def __init__(self,fastqs,qc_dir,project,project_id=None,
                  fastq_attrs=AnalysisFastq):
         """
-        Create a new QCReportFastqGroup
+        Create a new FastqGroupQCReporter
 
         Arguments:
           fastqs (list): list of paths to Fastqs in the
@@ -1944,11 +1944,11 @@ class QCReportFastqGroup:
                              fq.read_number
                              if fq.read_number is not None else 1)
             self.fastqs[read] = fastq
-            self.reporters[read] = QCReportFastq(fastq,
-                                                 self.qc_dir,
-                                                 self.project_id,
-                                                 fastq_attrs=
-                                                 self.fastq_attrs)
+            self.reporters[read] = FastqQCReporter(fastq,
+                                                   self.qc_dir,
+                                                   self.project_id,
+                                                   fastq_attrs=
+                                                   self.fastq_attrs)
             self.reads.add(read)
         self.reads = sorted(list(self.reads))
 
@@ -2190,7 +2190,7 @@ class QCReportFastqGroup:
             idx = summary_table.add_row()
         # Populate with data
         for field in fields:
-            if field in QCReportSample.sample_summary_fields:
+            if field in SampleQCReporter.sample_summary_fields:
                 # Ignore sample-level fields
                 continue
             try:
@@ -2386,7 +2386,7 @@ class QCReportFastqGroup:
                            "table" % field)
         return value
 
-class QCReportFastq:
+class FastqQCReporter:
     """
     Provides interface to QC outputs for Fastq file
 
@@ -2423,7 +2423,7 @@ class QCReportFastq:
     def __init__(self,fastq,qc_dir,project_id=None,
                  fastq_attrs=AnalysisFastq):
         """
-        Create a new QCReportFastq instance
+        Create a new FastqQCReporter instance
 
         Arguments:
           fastq (str): path to Fastq file
@@ -2433,7 +2433,7 @@ class QCReportFastq:
             data from Fastq names
         """
         # Source data
-        logging.debug("******** QCREPORTFASTQ ************")
+        logging.debug("******** FASTQQCREPORTER ************")
         self.name = os.path.basename(fastq)
         self.path = os.path.abspath(fastq)
         self.project_id = project_id
