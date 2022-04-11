@@ -507,15 +507,6 @@ class QCReport(Document):
         'icell8_report': 'ICELL8 processing report',
     }
     # Software packages and names
-    software_packages = ['bcl2fastq',
-                         'bcl-convert',
-                         'cellranger',
-                         'cellranger-atac',
-                         'cellranger-arc',
-                         'spaceranger',
-                         'fastqc',
-                         'fastq_screen',
-                         'fastq_strand',]
     software_names = {
         'bcl2fastq': 'Bcl2fastq',
         'bcl-convert': 'BCL Convert',
@@ -527,6 +518,8 @@ class QCReport(Document):
         'fastq_screen': 'FastqScreen',
         'fastq_strand': 'FastqStrand',
     }
+    software_packages = sorted(list(software_names.keys()))
+
     def __init__(self,projects,title=None,qc_dir=None,report_attrs=None,
                  summary_fields=None,relpath=None,data_dir=None):
         """
