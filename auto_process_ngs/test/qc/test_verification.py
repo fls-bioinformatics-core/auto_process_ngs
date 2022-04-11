@@ -1371,44 +1371,6 @@ class TestVerifyProject(unittest.TestCase):
             cellranger_multi_samples=cellranger_multi_samples,
             legacy_screens=legacy_screens,
             legacy_cellranger_outs=legacy_cellranger_outs)
-        # Generate names for fastq files to add
-        if paired_end:
-            reads = (1,2)
-        else:
-            reads = (1,)
-        if not sample_names:
-            sample_names = ('PJB1','PJB2')
-        if fastq_names is None:
-            fastq_names = []
-            for i,sname in enumerate(sample_names,start=1):
-                for read in reads:
-                    fq = "%s_S%d_R%d_001.fastq.gz" % (sname,i,read)
-                    fastq_names.append(fq)
-        self.analysis_dir = MockAnalysisProject(name,fastq_names)
-        screens = ('model_organisms',
-                   'other_organisms',
-                   'rRNA')
-        # Create the mock directory
-        self.analysis_dir.create(top_dir=self.wd)
-        # Populate with fake QC products
-        qc_dir = os.path.join(self.wd,self.analysis_dir.name,qc_dir)
-        self._make_qc_dir(qc_dir,
-                          fastq_names=fastq_names,
-                          protocol=protocol,
-                          screens=screens,
-                          cellranger_pipelines=cellranger_pipelines,
-                          cellranger_samples=cellranger_samples,
-                          cellranger_multi_samples=cellranger_multi_samples,
-                          include_fastqc=include_fastqc,
-                          include_fastq_screen=include_fastq_screen,
-                          include_strandedness=include_strandedness,
-                          include_seqlens=include_seqlens,
-                          include_multiqc=include_multiqc,
-                          include_cellranger_count=include_cellranger_count,
-                          include_cellranger_multi=include_cellranger_multi,
-                          legacy_screens=legacy_screens,
-                          legacy_cellranger_outs=legacy_cellranger_outs)
-        return os.path.join(self.wd,self.analysis_dir.name)
 
     def _make_qc_dir(self,qc_dir,fastq_names,
                      protocol=None,
