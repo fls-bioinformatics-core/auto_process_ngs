@@ -18,6 +18,7 @@ Provides the following classes:
 Provides the following functions:
 
 - report: report the QC for a project
+- pretty_print_reads: print number of reads with commas at each thousand
 - sanitize_name: replace 'unsafe' characters in HTML link targets
 """
 
