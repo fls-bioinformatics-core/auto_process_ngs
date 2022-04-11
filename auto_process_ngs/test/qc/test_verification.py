@@ -7,9 +7,8 @@ import os
 import tempfile
 import shutil
 from auto_process_ngs.analysis import AnalysisProject
-from auto_process_ngs.mock import MockAnalysisProject
-from auto_process_ngs.mock import UpdateAnalysisProject
-from auto_process_ngs.mockqc import MockQCOutputs
+from auto_process_ngs.mock import make_mock_analysis_project
+from auto_process_ngs.mockqc import make_mock_qc_dir
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.verification import QCVerifier
 from auto_process_ngs.qc.verification import parse_qc_module_spec
@@ -54,6 +53,24 @@ class TestQCVerifier(unittest.TestCase):
                      include_cellranger_multi=False,
                      legacy_screens=False,
                      legacy_cellranger_outs=False):
+        # Create working directory and qc dir
+        self._make_working_dir()
+        return make_mock_qc_dir(
+            os.path.join(self.wd,qc_dir),
+            fastq_names,
+            screens=screens,
+            cellranger_pipelines=cellranger_pipelines,
+            cellranger_samples=cellranger_samples,
+            cellranger_multi_samples=cellranger_multi_samples,
+            include_fastqc=include_fastqc,
+            include_fastq_screen=include_fastq_screen,
+            include_strandedness=include_strandedness,
+            include_seqlens=include_seqlens,
+            include_multiqc=include_multiqc,
+            include_cellranger_count=include_cellranger_count,
+            include_cellranger_multi=include_cellranger_multi,
+            legacy_screens=legacy_screens,
+            legacy_cellranger_outs=legacy_cellranger_outs)
         # Create working directory and qc dir
         self._make_working_dir()
         qc_dir = os.path.join(self.wd,qc_dir)
@@ -1422,7 +1439,7 @@ class TestVerifyProject(unittest.TestCase):
 
     def _make_analysis_project(self,name="PJB",
                                protocol=None,paired_end=True,
-                               fastq_dir=None,qc_dir="qc",
+                               fastq_dir="fastqs",qc_dir="qc",
                                fastq_names=None,
                                sample_names=None,
                                screens=('model_organisms',
@@ -1442,6 +1459,28 @@ class TestVerifyProject(unittest.TestCase):
                                legacy_cellranger_outs=False):
         # Create a mock Analysis Project directory
         self._make_working_dir()
+        return make_mock_analysis_project(
+            name=name,
+            top_dir=self.wd,
+            protocol=protocol,
+            paired_end=paired_end,
+            fastq_dir=fastq_dir,
+            qc_dir=qc_dir,
+            fastq_names=fastq_names,
+            sample_names=sample_names,
+            screens=screens,
+            include_fastqc=include_fastqc,
+            include_fastq_screen=include_fastq_screen,
+            include_strandedness=include_strandedness,
+            include_seqlens=include_seqlens,
+            include_multiqc=include_multiqc,
+            include_cellranger_count=include_cellranger_count,
+            include_cellranger_multi=include_cellranger_multi,
+            cellranger_pipelines=cellranger_pipelines,
+            cellranger_samples=cellranger_samples,
+            cellranger_multi_samples=cellranger_multi_samples,
+            legacy_screens=legacy_screens,
+            legacy_cellranger_outs=legacy_cellranger_outs)
         # Generate names for fastq files to add
         if paired_end:
             reads = (1,2)

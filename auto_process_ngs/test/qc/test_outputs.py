@@ -8,7 +8,7 @@ import shutil
 import os
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
-from auto_process_ngs.mockqc import MockQCOutputs
+from auto_process_ngs.mockqc import make_mock_qc_dir
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import fastq_screen_output
@@ -38,10 +38,6 @@ class TestQCOutputs(unittest.TestCase):
             return
         if self.wd is not None and os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
-    def _make_working_dir(self):
-        # Create a temporary working directory
-        if self.wd is None:
-            self.wd = tempfile.mkdtemp(suffix='.test_QCOutputs')
     def _make_qc_dir(self,qc_dir,fastq_names,
                      screens=('model_organisms','other_organisms','rRNA',),
                      cellranger_pipelines=('cellranger',),
@@ -57,103 +53,24 @@ class TestQCOutputs(unittest.TestCase):
                      legacy_screens=False,
                      legacy_cellranger_outs=False):
         # Create working directory and qc dir
-        self._make_working_dir()
-        qc_dir = os.path.join(self.wd,qc_dir)
-        os.mkdir(qc_dir)
-        # Populate with fake QC products
-        for fq in fastq_names:
-            # FastQC
-            if include_fastqc:
-                MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
-            # Fastq_screen
-            if include_fastq_screen:
-                for screen in screens:
-                    MockQCOutputs.fastq_screen_v0_9_2(
-                        fq,qc_dir,screen,
-                        legacy=legacy_screens)
-            # Strandedness
-            if include_strandedness:
-                MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
-            # Sequence lengths
-            if include_seqlens:
-                MockQCOutputs.seqlens(fq,qc_dir)
-        # Strandedness conf file
-        if include_strandedness:
-            with open(os.path.join(qc_dir,
-                                   "fastq_strand.conf"),'wt') as fp:
-                fp.write("Placeholder\n")
-        # MultiQC
-        if include_multiqc:
-            out_file = "multi%s_report.html" % os.path.basename(qc_dir)
-            MockQCOutputs.multiqc(self.wd,
-                                  multiqc_html=out_file,
-                                  version="1.8")
-        # Cellranger count
-        if include_cellranger_count:
-            for cellranger in cellranger_pipelines:
-                # Set defaults
-                if cellranger == "cellranger":
-                    version = "6.1.2"
-                    refdata = "/data/refdata-cellranger-2020-A"
-                elif cellranger == "cellranger-atac":
-                    version = "2.0.0"
-                    refdata = "/data/refdata-cellranger-atac-2020-A"
-                elif cellranger == "cellranger-arc":
-                    version = "2.0.0"
-                    refdata = "/data/refdata-cellranger-arc-2020-A"
-                # Set top-level output dir
-                if not legacy_cellranger_outs:
-                    count_dir = os.path.join("cellranger_count",
-                                             version,
-                                             os.path.basename(refdata))
-                else:
-                    count_dir = "cellranger_count"
-                # Make pipeline outputs
-                for sample in cellranger_samples:
-                    MockQCOutputs.cellranger_count(
-                        sample,
-                        qc_dir,
-                        cellranger=cellranger,
-                        version=version,
-                        reference_data_path=refdata,
-                        prefix=count_dir)
-                    if cellranger == "cellranger-arc":
-                        multiome_config = os.path.join(qc_dir,
-                                                       "libraries.%s.csv" %
-                                                       sample)
-                        with open(multiome_config,'wt') as fp:
-                            fp.write("Placeholder\n")
-        # Cellranger multi
-        if include_cellranger_multi:
-            # Make cellranger multi config.csv file
-            multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
-            with open(multi_config,'wt') as fp:
-                fastq_dir = os.path.join(self.wd,
-                                         "PJB",
-                                         "fastqs")
-                fp.write("""[gene-expression]
-reference,/data/refdata-cellranger-2020-A
-
-[libraries]
-fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB1_GEX,%s,any,PJB1,gene expression,
-PJB2_MC,%s,any,PJB2,Multiplexing Capture,
-
-[samples]
-sample_id,cmo_ids,description
-PJB_CML1,CMO301,CML1
-PJB_CML2,CMO302,CML2
-""" % (fastq_dir,fastq_dir))
-            # Set top-level output dir
-            multi_dir = os.path.join("cellranger_multi",
-                                     "6.1.2",
-                                     "refdata-cellranger-2020-A")
-            # Make outputs
-            MockQCOutputs.cellranger_multi(cellranger_multi_samples,
-                                           qc_dir,
-                                           config_csv=multi_config,
-                                           prefix=multi_dir)
-        return qc_dir
+        if self.wd is None:
+            self.wd = tempfile.mkdtemp(suffix='.test_QCOutputs')
+        return make_mock_qc_dir(
+            os.path.join(self.wd,qc_dir),
+            fastq_names,
+            screens=screens,
+            cellranger_pipelines=cellranger_pipelines,
+            cellranger_samples=cellranger_samples,
+            cellranger_multi_samples=cellranger_multi_samples,
+            include_fastqc=include_fastqc,
+            include_fastq_screen=include_fastq_screen,
+            include_strandedness=include_strandedness,
+            include_seqlens=include_seqlens,
+            include_multiqc=include_multiqc,
+            include_cellranger_count=include_cellranger_count,
+            include_cellranger_multi=include_cellranger_multi,
+            legacy_screens=legacy_screens,
+            legacy_cellranger_outs=legacy_cellranger_outs)
 
     def test_qcoutputs_single_end(self):
         """
