@@ -7,20 +7,62 @@
 """
 Utilities for reporting QC pipeline outputs.
 
-Provides the following classes:
+Provides the following core class:
 
-- QCReporter: top-level class to verify and report QC for a project
-- QCProject: gather information about the QC associated with a project
-- FastqSet: describes sets of Fastq file
 - QCReport: create QC report document for one or more projects
-- QCReportSample: reports the QC for a sample
-- QCReportFastqGroup: reports the QC for a group of Fastqs
-- QCReportFastq: interface to QC outputs for a single Fastq
 
-Provides the following functions:
+In addition there are a number of supporting classes:
+
+- QCProject: gather information about the QC associated with a project
+- SampleQCReporter: reports the QC for a sample
+- FastqGroupQCReporter: reports the QC for a group of Fastqs
+- FastqQCReporter: interface to QC outputs for a single Fastq
+
+There are also a number of utility functions:
 
 - report: report the QC for a project
+- pretty_print_reads: print number of reads with commas at each thousand
 - sanitize_name: replace 'unsafe' characters in HTML link targets
+
+Overview
+--------
+
+The ``SampleQCReporter``, ``FastqGroupQCReporter`` and
+``FastqQCReporter`` classes are used by the top-level ``QCProject``
+class to report QC outputs at the level of samples (for example,
+single library analyses), groups of Fastqs (for example, strandedness),
+and individual Fastqs (for example, FastQC or screen data).
+
+Adding support for new metadata
+-------------------------------
+
+Support for new metadata items should be implemented within the
+``_init_metadata_table`` method of ``QCReport``. Descriptions of
+new items should also be added to the ``METADATA_FIELD_DESCRIPTIONS``
+module constant.
+
+Adding support for new QC outputs
+---------------------------------
+
+When adding reporting of new QC outputs it is recommended first to
+ensure that they are detected by the ``QCOutputs`` class (in the
+``outputs`` module); then the relevant reporter class should be
+extended depending on the level that the QC outputs are associated
+with (i.e. project, sample, Fastq group or individual Fastq).
+
+Typically this is done by adding support for new summary table fields,
+which can implemented within the ``get_value`` or ``get_10x_value``
+methods in ``SampleQCreporter`` (for sample-level QC) or the ``get_value``
+method of ``FastqGroupQCReporter`` (for Fastq-group level QC). (This
+may require additional internal functionality to be implemented
+within the relevant class.)
+
+Descriptions for new fields also need to be added to the
+``SUMMARY_FIELD_DESCRIPTIONS`` module constant. Additionally: if the
+QC outputs are produced using new software packages then these should
+be added to the ``SOFTWARE_PACKAGE_NAMES`` module constant; as long
+as these are reported by ``QCOutputs`` then they will also be listed
+automatically within the QC report.
 """
 
 #######################################################################
@@ -77,7 +119,6 @@ from .plots import uduplicationplot
 from .plots import uadapterplot
 from .plots import encode_png
 from .seqlens import SeqLens
-from .verification import verify_project
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
@@ -92,407 +133,122 @@ logger = logging.getLogger(__name__)
 from .constants import FASTQ_SCREENS
 from .constants import QC_REPORT_CSS_STYLES
 
+# Metadata field descriptions
+METADATA_FIELD_DESCRIPTIONS = {
+    'project_id': 'Project ID',
+    'run_id': 'Run ID',
+    'run': 'Run name',
+    'user': 'User',
+    'PI': 'PI',
+    'library_type': 'Library type',
+    'sequencer_model': 'Sequencer model',
+    'single_cell_platform': 'Single cell preparation platform',
+    'number_of_cells': 'Number of cells',
+    'organism': 'Organism',
+    'protocol': 'QC protocol',
+    'cellranger_reference': 'Cellranger reference datasets',
+    'multiqc': 'MultiQC report',
+    'icell8_stats': 'ICELL8 statistics',
+    'icell8_report': 'ICELL8 processing report',
+}
+
+# Software package names
+SOFTWARE_PACKAGE_NAMES = {
+    'bcl2fastq': 'Bcl2fastq',
+    'bcl-convert': 'BCL Convert',
+    'cellranger': 'Cellranger',
+    'cellranger-atac': 'Cellranger ATAC',
+    'cellranger-arc': 'Cellranger ARC',
+    'spaceranger': 'Spaceranger',
+    'fastqc': 'FastQC',
+    'fastq_screen': 'FastqScreen',
+    'fastq_strand': 'FastqStrand',
+}
+
+# Field descriptions for summary tables
+# Dictionary with keys matching field labels, and values
+# consisting of tuples with short and long descriptions
+SUMMARY_FIELD_DESCRIPTIONS = {
+    'sample': ('Sample','Sample name'),
+    'fastq' : ('Fastq','Fastq file'),
+    'fastqs': ('Fastqs','Fastq files in each sample'),
+    'reads': ('#reads','Number of reads/read pairs'),
+    'read_lengths': ('Lengths',
+                     'Mean sequence length and range'),
+    'read_counts': ('Counts',
+                    'Relative number of total reads, and proportions '
+                    'of masked and padded reads in each Fastq'),
+    'sequence_duplication': ('Dup%',
+                             'Fraction of reads with duplicated '
+                             'sequences in each Fastq'),
+    'adapter_content': ('Adapters',
+                        'Fraction of data containing adapter sequences '
+                        'in each Fastq'),
+    'read_lengths_dist_r1': ('Dist[R1]',
+                             'Distributions of R1 sequence lengths'),
+    'fastqc_r1': ('FastQC[R1]',
+                  'Summary of FastQC metrics for R1'),
+    'boxplot_r1': ('Quality[R1]',
+                   'Per base sequence quality for R1'),
+    'screens_r1': ('Screens[R1]',
+                   'Outputs from FastqScreen running R1 against multiple '
+                   'panels'),
+    'read_lengths_dist_r2': ('Dist[R2]',
+                             'Distributions of R2 sequence lengths'),
+    'fastqc_r2': ('FastQC[R2]',
+                  'Summary of FastQC metrics for R2'),
+    'boxplot_r2': ('Quality[R2]',
+                   'Per base sequence quality for R2'),
+    'screens_r2': ('Screens[R2]',
+                   'Outputs from FastqScreen running R2 against multiple '
+                   'panels'),
+    'fastqc_r3': ('FastQC[R3]',
+                  'Summary of FastQC metrics for R3'),
+    'read_lengths_dist_r3': ('Dist[R3]',
+                             'Distributions of R3 sequence lengths'),
+    'boxplot_r3': ('Quality[R3]',
+                   'Per base sequence quality for R3'),
+    'screens_r3': ('Screens[R3]',
+                   'Outputs from FastqScreen running R3 against multiple '
+                   'panels'),
+    'strandedness': ('Strand',
+                     'Proportions of reads mapping to forward and reverse '
+                     'strands'),
+    'cellranger_count': ('Single library analyses',
+                         'Web summary from Cellranger* single library '
+                         'analysis for this sample'),
+    '10x_cells': ('#cells','Number of cells'),
+    '10x_reads_per_cell': ('#reads/cell','Average reads per cell'),
+    '10x_genes_per_cell': ('#genes/cell','Median genes per cell'),
+    '10x_frac_reads_in_cell': ('%reads in cells',
+                               'Fraction of reads in cells'),
+    '10x_fragments_per_cell': ('#fragments/cell',
+                               'Median fragments per cell'),
+    '10x_fragments_overlapping_targets': ('%fragments overlapping targets',
+                                          'Fraction of fragments '
+                                          'overlapping targets'),
+    '10x_fragments_overlapping_peaks': ('%fragments overlapping peaks',
+                                        'Fraction of fragments overlapping '
+                                        'peaks'),
+    '10x_tss_enrichment_score': ('TSS enrichment score',
+                                 'TSS enrichment score'),
+    '10x_atac_fragments_per_cell': ('#ATAC fragments/cell',
+                                    'ATAC Median high-quality fragments '
+                                    'per cell'),
+    '10x_gex_genes_per_cell': ('#GEX genes/cell','GEX Median genes per cell'),
+    '10x_genes_detected': ('#genes','Total genes detected'),
+    '10x_umis_per_cell': ('#UMIs/cell','Median UMI counts per cell'),
+    '10x_pipeline': ('Pipeline','Name of the 10x Genomics pipeline used'),
+    '10x_reference': ('Reference dataset',
+                      'Reference dataset used for the analysis'),
+    '10x_web_summary': ('HTML report','Link to the web_summary.html report'),
+    'linked_sample': ('Linked sample',
+                      'Corresponding sample for single cell multiome analysis')
+}
+
 #######################################################################
 # Classes
 #######################################################################
-
-class QCReporter:
-    """
-    Class describing QC results for an AnalysisProject
-
-    Provides the follow properties:
-
-    name: project name
-    paired_end: True if project is paired-end
-    samples: list of sample names
-
-    Provides the following methods:
-
-    verify: checks the QC outputs for the project
-    report: generate a HTML report for the project
-    """
-    def __init__(self,project):
-        """
-        Initialise a new QCReporter instance
-
-        Arguments:
-           project (AnalysisProject): project to report QC for
-        """
-        self._project = project
-
-    def verify(self,qc_dir=None,qc_protocol=None):
-        """
-        Check the QC outputs are correct for the project
-
-        Arguments:
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project being checked.
-          qc_protocol (str): QC protocol to verify against
-            (optional)
-
-        Returns:
-          Boolean: Returns True if all expected QC products
-            are present, False if not.
-        """
-        return verify_project(self._project,
-                              qc_dir=qc_dir,
-                              qc_protocol=qc_protocol)
-
-    def report(self,title=None,filename=None,qc_dir=None,
-               report_attrs=None,summary_fields=None,
-               relative_links=False,make_zip=False):
-        """
-        Report the QC for the project
-
-        Arguments:
-          title (str): optional, specify title for the report
-            (defaults to '<PROJECT_NAME>: QC report')
-          filename (str): optional, specify path and name for
-            the output report file (defaults to
-            '<PROJECT_NAME>.qc_report.html')
-          qc_dir (str): path to the QC output dir
-          report_attrs (list): optional, list of elements to
-            report for each Fastq pair
-          summary_fields (list): optional, list of fields to
-            report for each sample in the summary table
-          relative_links (boolean): optional, if set to True
-            then use relative paths for links in the report
-            (default is to use absolute paths)
-          make_zip (boolean): if True then also create a ZIP
-            archive of the QC report and outputs (default is
-            not to create the ZIP archive)
-
-        Returns:
-          String: filename of the output HTML report.
-        """
-        return report((self._project,),
-                      title=title,
-                      filename=filename,
-                      qc_dir=qc_dir,
-                      report_attrs=report_attrs,
-                      summary_fields=summary_fields,
-                      relative_links=relative_links,
-                      make_zip=make_zip)
-
-class QCProject:
-    """
-    Gather information about the QC associated with a project
-
-    Collects data about the QC for an AnalysisProject and
-    makes it available via the following properties:
-
-    - project: the AnalysisProject instance
-    - qc_dir: the directory to examine for QC outputs
-    - run_metadata: AnalysisDirMetadata instance with
-      metadata from the parent run (if present)
-    - processing_software: dictionary with information on
-      software used to process the initial data
-
-    Properties that shortcut to properties of the parent
-    AnalysisProject:
-
-    - name: project name
-    - dirn: path to associated directory
-    - comments: comments associated with the project
-    - info: shortcut to the project's AnalysisProjectMetadata
-      instance
-    - qc_info: shortcut to the QC directory's
-      AnalysisProjectQCDirInfo instance
-    - fastq_attrs: class to use for extracting data from
-      Fastq file names
-
-    Properties based on artefacts detected in the QC
-    directory:
-
-    - fastqs: sorted list of Fastq names
-    - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
-    - samples: sorted list of sample names extracted
-      from Fastqs
-    - multiplexed_samples: sorted list of sample names
-      for multiplexed samples (e.g. 10x CellPlex)
-    - outputs: list of QC output categories detected (see
-      below for valid values)
-    - output_files: list of absolute paths to QC output
-      files
-    - software: dictionary with information on the
-      QC software packages
-    - stats: AttrtibuteDictionary with useful stats from
-      across the project
-
-    The 'stats' property has the following attributes:
-
-    - max_seqs: maximum number of sequences across all
-      Fastq files
-    - min_sequence_length: minimum sequence length across
-      all Fastq files
-    - max_sequence_length: maximum sequence length across
-      all Fastq files
-    - max_sequence_length_read[READ]: maximum sequence
-      length across all READ Fastqs (where READ is 'r1',
-      'r2' etc)
-    - min_sequence_length_read[READ]: minimum sequence
-      length across all READ Fastqs (where READ is 'r1',
-      'r2' etc)
-
-    Valid values of the 'outputs' property are taken from
-    the QCOutputs class.
-
-    General properties about the project:
-
-    - is_single_cell: True if the project has single cell
-        data (10xGenomics, ICELL8 etc)
-    """
-    def __init__(self,project,qc_dir=None):
-        """
-        Create a new QCProject instance
-
-        Arguments:
-          project (AnalysisProject): project to report QC for
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project
-        """
-        logger.debug("QCProject: project         : %s" % project.name)
-        logger.debug("QCProject: project dir     : %s" % project.dirn)
-        logger.debug("QCProject: qc_dir (initial): %s" % qc_dir)
-        # Store project
-        self.project = project
-        # Sort out target QC dir
-        if qc_dir is None:
-            qc_dir = self.project.qc_dir
-        else:
-            if not os.path.isabs(qc_dir):
-                qc_dir = os.path.join(self.project.dirn,
-                                      qc_dir)
-        self.qc_dir = qc_dir
-        logger.debug("QCProject: qc_dir (final): %s" % self.qc_dir)
-        # How to handle Fastq names
-        self.fastq_attrs = self.project.fastq_attrs
-        # Additional metrics
-        self.stats = AttributeDictionary(
-            max_seqs=None,
-            min_sequence_length=None,
-            max_sequence_length=None,
-            min_sequence_length_read={},
-            max_sequence_length_read={},
-        )
-        # Detect outputs
-        self._detect_outputs()
-        # Expose metadata from parent run
-        self.run_metadata = AnalysisDirMetadata()
-        run_metadata_file = os.path.join(
-            os.path.dirname(os.path.abspath(self.project.dirn)),
-            "metadata.info")
-        if os.path.exists(run_metadata_file):
-            print("Loading run metadata from %s" % run_metadata_file)
-            self.run_metadata.load(run_metadata_file)
-        else:
-            logger.warning("Run metadata file '%s' not found"
-                           % run_metadata_file)
-        # Collect processing software metadata
-        try:
-            self.processing_software = ast.literal_eval(
-                self.run_metadata.processing_software)
-        except ValueError:
-            self.processing_software = dict()
-        if not self.processing_software:
-            # Fallback to legacy metadata items
-            try:
-                self.processing_software['bcl2fastq'] = ast.literal_eval(
-                    self.run_metadata.bcl2fastq_software)
-            except ValueError:
-                pass
-            try:
-                self.processing_software['cellranger'] = ast.literal_eval(
-                    self.run_metadata.cellranger_software)
-            except ValueError:
-                pass
-        # Expose project metadata
-        self.info = self.project.info
-        # Expose QC info
-        self.qc_info = self.project.qc_info(self.qc_dir)
-
-    @property
-    def id(self):
-        """
-        Identifier for the project
-
-        This is a string of the form:
-
-        <RUN_ID>:<PROJECT_NAME>
-
-        e.g. ``MINISEQ_201120#22:PJB``
-
-        If the run id can't be determined then the name
-        of the parent directory is used instead.
-        """
-        run_id = self.run_id
-        if not run_id:
-            run_id = os.path.basename(os.path.dirname(self.dirn))
-        return "%s:%s" % (run_id,self.name)
-
-    @property
-    def name(self):
-        """
-        Name of project
-        """
-        return self.project.name
-
-    @property
-    def dirn(self):
-        """
-        Path to project directory
-        """
-        return self.project.dirn
-
-    @property
-    def comments(self):
-        """
-        Comments associated with the project
-        """
-        return self.project.info.comments
-
-    @property
-    def run_id(self):
-        """
-        Identifier for parent run
-
-        This is the standard identifier constructed
-        from the platform, datestamp and facility
-        run number (e.g. ``MINISEQ_201120#22``).
-
-        If an identifier can't be constructed then
-        ``None`` is returned.
-        """
-        try:
-            return run_reference_id(self.info['run'],
-                                    platform=self.info['platform'],
-                                    facility_run_number=
-                                    self.run_metadata['run_number'])
-        except (AttributeError,TypeError) as ex:
-            logger.warning("Run reference ID can't be "
-                           "determined: %s (ignored)" % ex)
-            return None
-
-    @property
-    def is_single_cell(self):
-        """
-        Check whether project has single cell data
-        """
-        return (self.info['single_cell_platform'] is not None)
-
-    def software_info(self,pkg,exclude_processing=False):
-        """
-        Get information on software package
-
-        Arguments:
-          pkg (str): name of software package to get
-            information about
-          exclude_processing (bool): if True then don't
-            fall back to processing software information
-            if package is not found (default: False, do
-            fall back to checking processing software)
-
-        Returns:
-          String: software version information, or
-            None if no information is stored.
-        """
-        # Acquire the value
-        try:
-            if self.software[pkg]:
-                return ', '.join(self.software[pkg])
-        except KeyError:
-            if exclude_processing:
-                # Don't check processing software
-                return None
-            try:
-                return self.processing_software[pkg][2]
-            except KeyError:
-                # Not processing software
-                return None
-            except TypeError:
-                # Not valid data
-                return None
-
-    def _detect_outputs(self):
-        """
-        Internal: determine which QC outputs are present
-        """
-        # Outsource to external class
-        qc_outputs = QCOutputs(self.qc_dir,
-                               fastq_attrs=self.fastq_attrs)
-        # Fastqs
-        self.fastqs = qc_outputs.fastqs
-        # Reads
-        self.reads = qc_outputs.reads
-        # Samples
-        self.samples = sorted(list(
-            set(qc_outputs.samples +
-                [s.name for s in self.project.samples])),
-                key=lambda s: split_sample_name(s))
-        # Fastq screens
-        self.fastq_screens = qc_outputs.fastq_screens
-        # Single library analyses reference data
-        self.cellranger_references = qc_outputs.cellranger_references
-        # Multiplexed samples
-        self.multiplexed_samples = qc_outputs.multiplexed_samples
-        # QC outputs
-        self.outputs = qc_outputs.outputs
-        # Software versions
-        self.software = qc_outputs.software
-        # Output files
-        self.output_files = qc_outputs.output_files
-        # Sequence length stats
-        self.stats = AttributeDictionary(**qc_outputs.stats)
-
-class FastqSet:
-    """
-    Class describing a set of Fastq files
-
-    A set can be a single or a pair of fastq files.
-
-    Provides the following properties:
-
-    r1: R1 Fastq in the pair
-    r2: R2 Fastq (will be None if no R2)
-    fastqs: list of Fastq files
-    """
-    def __init__(self,fqr1,fqr2=None):
-        """
-        Initialise a new QCFastqSet instance
-
-        Arguments:
-           fqr1 (str): path to R1 Fastq file
-           fqr2 (str): path to R2 Fastq file, or
-             None if the 'set' is a single Fastq
-        """
-        self._fastqs = list((fqr1,fqr2))
-
-    def __getitem__(self,key):
-        return self.fastqs[key]
-
-    @property
-    def r1(self):
-        """
-        Return R1 Fastq file from pair
-        """
-        return self._fastqs[0]
-
-    @property
-    def r2(self):
-        """
-        Return R2 Fastq file from pair
-        """
-        return self._fastqs[1]
-
-    @property
-    def fastqs(self):
-        """
-        Return list of Fastq files in the set
-        """
-        return list(filter(lambda fq: fq is not None,
-                           self._fastqs))
 
 class QCReport(Document):
     """
@@ -529,156 +285,37 @@ class QCReport(Document):
     - fastqc: FastQC report
     - fastq_screen: FastQCScreen report
     - program_versions: program versions
+
+    Arguments:
+      projects (AnalysisProject): list of projects to report
+        QC for
+      title (str): title for the report (defaults to
+        "QC report: <PROJECT_NAME>")
+      qc_dir (str): path to the QC output dir; relative path
+        will be treated as a subdirectory of the project
+      report_attrs (list): list of elements to report for
+        each Fastq pair
+      summary_fields (list): list of fields to report for each
+        sample in the summary table
+      relpath (str): if set then make link paths relative to
+        'relpath'
+      data_dir (str): if set then copy external data files to
+        this directory and make link paths to these copies;
+        relative path will be treated as a subdirectory of the
+        project
     """
     # Field descriptions for summary table
-    field_descriptions = {
-        'sample': ('Sample','Sample name'),
-        'fastq' : ('Fastq','Fastq file'),
-        'fastqs': ('Fastqs','Fastq files in each sample'),
-        'reads': ('#reads','Number of reads/read pairs'),
-        'read_lengths': ('Lengths',
-                         'Mean sequence length and range'),
-        'read_counts': ('Counts',
-                        'Relative number of total reads, and proportions '
-                        'of masked and padded reads in each Fastq'),
-        'sequence_duplication': ('Dup%',
-                                 'Fraction of reads with duplicated '
-                                 'sequences in each Fastq'),
-        'adapter_content': ('Adapters',
-                            'Fraction of data containing adapter '
-                            'sequences in each Fastq'),
-        'read_lengths_dist_r1': ('Dist[R1]',
-                                 'Distributions of R1 sequence '
-                                 'lengths'),
-        'fastqc_r1': ('FastQC[R1]',
-                      'Summary of FastQC metrics for R1'),
-        'boxplot_r1': ('Quality[R1]',
-                       'Per base sequence quality for R1'),
-        'screens_r1': ('Screens[R1]',
-                       'Outputs from FastqScreen running R1 against '
-                       'multiple panels'),
-        'read_lengths_dist_r2': ('Dist[R2]',
-                                 'Distributions of R2 sequence '
-                                 'lengths'),
-        'fastqc_r2': ('FastQC[R2]',
-                      'Summary of FastQC metrics for R2'),
-        'boxplot_r2': ('Quality[R2]',
-                       'Per base sequence quality for R2'),
-        'screens_r2': ('Screens[R2]',
-                       'Outputs from FastqScreen running R2 against '
-                       'multiple panels'),
-        'fastqc_r3': ('FastQC[R3]',
-                      'Summary of FastQC metrics for R3'),
-        'read_lengths_dist_r3': ('Dist[R3]',
-                                 'Distributions of R3 sequence '
-                                 'lengths'),
-        'boxplot_r3': ('Quality[R3]',
-                       'Per base sequence quality for R1'),
-        'screens_r3': ('Screens[R3]',
-                       'Outputs from FastqScreen running R3 against '
-                       'multiple panels'),
-        'strandedness': ('Strand',
-                         'Proportions of reads mapping to forward and '
-                         'reverse strands'),
-        'cellranger_count': ('Single library analyses',
-                             'Web summary from Cellranger* single '
-                             'library analysis for this sample'),
-        '10x_cells': ('#cells','Number of cells'),
-        '10x_reads_per_cell': ('#reads/cell','Average reads per cell'),
-        '10x_genes_per_cell': ('#genes/cell','Median genes per cell'),
-        '10x_frac_reads_in_cell': ('%reads in cells',
-                                   'Fraction of reads in cells'),
-        '10x_fragments_per_cell': ('#fragments/cell',
-                                   'Median fragments per cell'),
-        '10x_fragments_overlapping_targets': ('%fragments overlapping targets',
-                                              'Fraction of fragments '
-                                              'overlapping targets'),
-        '10x_fragments_overlapping_peaks': ('%fragments overlapping peaks',
-                                            'Fraction of fragments '
-                                            'overlapping peaks'),
-        '10x_tss_enrichment_score': ('TSS enrichment score',
-                                     'TSS enrichment score'),
-        '10x_atac_fragments_per_cell': ('#ATAC fragments/cell',
-                                        'ATAC Median high-quality fragments '
-                                        'per cell'),
-        '10x_gex_genes_per_cell': ('#GEX genes/cell',
-                                   'GEX Median genes per cell'),
-        '10x_genes_detected': ('#genes',
-                               'Total genes detected'),
-        '10x_umis_per_cell': ('#UMIs/cell',
-                              'Median UMI counts per cell'),
-        '10x_pipeline': ('Pipeline',
-                         'Name of the 10x Genomics pipeline used'),
-        '10x_reference': ('Reference dataset',
-                          'Reference dataset used for the analysis'),
-        '10x_web_summary': ('HTML report',
-                            'Link to the web_summary.html report'),
-        'linked_sample': ('Linked sample',
-                          'Corresponding sample for single cell multiome '
-                          'analysis')
-    }
+    field_descriptions = SUMMARY_FIELD_DESCRIPTIONS
     # Titles for metadata items
-    metadata_titles = {
-        'project_id': 'Project ID',
-        'run_id': 'Run ID',
-        'run': 'Run name',
-        'user': 'User',
-        'PI': 'PI',
-        'library_type': 'Library type',
-        'sequencer_model': 'Sequencer model',
-        'single_cell_platform': 'Single cell preparation platform',
-        'number_of_cells': 'Number of cells',
-        'organism': 'Organism',
-        'protocol': 'QC protocol',
-        'cellranger_reference': 'Cellranger reference datasets',
-        'multiqc': 'MultiQC report',
-        'icell8_stats': 'ICELL8 statistics',
-        'icell8_report': 'ICELL8 processing report',
-    }
+    metadata_titles = METADATA_FIELD_DESCRIPTIONS
     # Software packages and names
-    software_packages = ['bcl2fastq',
-                         'bcl-convert',
-                         'cellranger',
-                         'cellranger-atac',
-                         'cellranger-arc',
-                         'spaceranger',
-                         'fastqc',
-                         'fastq_screen',
-                         'fastq_strand',]
-    software_names = {
-        'bcl2fastq': 'Bcl2fastq',
-        'bcl-convert': 'BCL Convert',
-        'cellranger': 'Cellranger',
-        'cellranger-atac': 'Cellranger ATAC',
-        'cellranger-arc': 'Cellranger ARC',
-        'spaceranger': 'Spaceranger',
-        'fastqc': 'FastQC',
-        'fastq_screen': 'FastqScreen',
-        'fastq_strand': 'FastqStrand',
-    }
+    software_names = SOFTWARE_PACKAGE_NAMES
+    software_packages = sorted(list(software_names.keys()))
+
     def __init__(self,projects,title=None,qc_dir=None,report_attrs=None,
                  summary_fields=None,relpath=None,data_dir=None):
         """
         Create a new QCReport instance
-
-        Arguments:
-          projects (AnalysisProject): list of projects to
-             report QC for
-          title (str): title for the report (defaults to
-            "QC report: <PROJECT_NAME>")
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project
-          report_attrs (list): list of elements to report for
-            each Fastq pair
-          summary_fields (list): list of fields to report for
-            each sample in the summary table
-          relpath (str): if set then make link paths
-            relative to 'relpath'
-          data_dir (str): if set then copy external data
-            files to this directory and make link paths
-            to these copies; relative path will be treated
-            as a subdirectory of the project
         """
         # Convert projects to QCProjects
         projects = [QCProject(p,qc_dir=qc_dir) for p in projects]
@@ -895,9 +532,11 @@ class QCReport(Document):
                             # Add version specific fields to summary table
                             v = v.split('.')
                             if v[0] == '2':
-                                extra_fields = ['10x_fragments_overlapping_peaks']
+                                extra_fields = \
+                                    ['10x_fragments_overlapping_peaks']
                             else:
-                                extra_fields = ['10x_fragments_overlapping_targets']
+                                extra_fields = \
+                                    ['10x_fragments_overlapping_targets']
                             for f in extra_fields:
                                 if f not in single_library_fields:
                                     single_library_fields.append(f)
@@ -1386,21 +1025,16 @@ class QCReport(Document):
             sample_name = "sample_%s" % sample
             sample_title = "Sample: %s" % sample
         # Determine location of QC artefacts
-        if self.data_dir:
-            qc_dir = os.path.join(self.data_dir,
-                                  sanitize_name(project.id),
-                                  os.path.basename(project.qc_dir))
-        else:
-            qc_dir = project.qc_dir
+        qc_dir = self.fetch_qc_dir(project)
         # Create a new section
         sample_report = self.add_section(
             sample_title,
             name=sample_name,
             css_classes=('sample',))
-        reporter = QCReportSample(project,
-                                  sample,
-                                  qc_dir=qc_dir,
-                                  fastq_attrs=project.fastq_attrs)
+        reporter = SampleQCReporter(project,
+                                    sample,
+                                    qc_dir=qc_dir,
+                                    fastq_attrs=project.fastq_attrs)
         reads = reporter.reads
         n_fastq_groups = len(reporter.fastq_groups)
         if len(reads) == 1:
@@ -1452,17 +1086,12 @@ class QCReport(Document):
             analysis in the summary table
         """
         # Determine location of QC artefacts
-        if self.data_dir:
-            qc_dir = os.path.join(self.data_dir,
-                                  sanitize_name(project.id),
-                                  os.path.basename(project.qc_dir))
-        else:
-            qc_dir = project.qc_dir
+        qc_dir = self.fetch_qc_dir(project)
         # Get a reporter for the sample
-        reporter = QCReportSample(project,
-                                  sample,
-                                  qc_dir=qc_dir,
-                                  fastq_attrs=project.fastq_attrs)
+        reporter = SampleQCReporter(project,
+                                    sample,
+                                    qc_dir=qc_dir,
+                                    fastq_attrs=project.fastq_attrs)
         # Update the single library analysis table
         status = reporter.update_single_library_table(
             package,
@@ -1493,16 +1122,11 @@ class QCReport(Document):
             analysis in the summary table
         """
         # Determine location of QC artefacts
-        if self.data_dir:
-            qc_dir = os.path.join(self.data_dir,
-                                  sanitize_name(project.id),
-                                  os.path.basename(project.qc_dir))
-        else:
-            qc_dir = project.qc_dir
+        qc_dir = self.fetch_qc_dir(project)
         # Get a reporter for the sample
-        reporter = QCReportSample(project,
-                                  sample,
-                                  qc_dir=qc_dir)
+        reporter = SampleQCReporter(project,
+                                    sample,
+                                    qc_dir=qc_dir)
         # Update the single library analysis table
         status = reporter.update_multiplexing_analysis_table(
             multiplexing_analysis_table,
@@ -1513,6 +1137,24 @@ class QCReport(Document):
             # report
             self.status = False
 
+    def fetch_qc_dir(self,project):
+        """
+        Return path to QC dir for reporting
+
+        If a 'data directory' has been defined for this
+        report then QC artefacts will have been copied
+        to a project-specific subdirectory of that
+        directory; otherwise QC artefacts will be in the
+        QC directory of the original project.
+        """
+        # Determine location of QC artefacts
+        if self.data_dir:
+            return os.path.join(self.data_dir,
+                                sanitize_name(project.id),
+                                os.path.basename(project.qc_dir))
+        else:
+            return project.qc_dir
+
     def report_status(self):
         """
         Set the visibility of the "warnings" section
@@ -1521,7 +1163,278 @@ class QCReport(Document):
             # Turn off display of warnings section
             self.warnings.add_css_classes("hide")
 
-class QCReportSample:
+class QCProject:
+    """
+    Gather information about the QC associated with a project
+
+    Collects data about the QC for an AnalysisProject and
+    makes it available via the following properties:
+
+    - project: the AnalysisProject instance
+    - qc_dir: the directory to examine for QC outputs
+    - run_metadata: AnalysisDirMetadata instance with
+      metadata from the parent run (if present)
+    - processing_software: dictionary with information on
+      software used to process the initial data
+
+    Properties that shortcut to properties of the parent
+    AnalysisProject:
+
+    - name: project name
+    - dirn: path to associated directory
+    - comments: comments associated with the project
+    - info: shortcut to the project's AnalysisProjectMetadata
+      instance
+    - qc_info: shortcut to the QC directory's
+      AnalysisProjectQCDirInfo instance
+    - fastq_attrs: class to use for extracting data from
+      Fastq file names
+
+    Properties based on artefacts detected in the QC
+    directory:
+
+    - fastqs: sorted list of Fastq names
+    - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
+    - samples: sorted list of sample names extracted
+      from Fastqs
+    - multiplexed_samples: sorted list of sample names
+      for multiplexed samples (e.g. 10x CellPlex)
+    - outputs: list of QC output categories detected (see
+      below for valid values)
+    - output_files: list of absolute paths to QC output
+      files
+    - software: dictionary with information on the
+      QC software packages
+    - stats: AttrtibuteDictionary with useful stats from
+      across the project
+
+    The 'stats' property has the following attributes:
+
+    - max_seqs: maximum number of sequences across all
+      Fastq files
+    - min_sequence_length: minimum sequence length across
+      all Fastq files
+    - max_sequence_length: maximum sequence length across
+      all Fastq files
+    - max_sequence_length_read[READ]: maximum sequence
+      length across all READ Fastqs (where READ is 'r1',
+      'r2' etc)
+    - min_sequence_length_read[READ]: minimum sequence
+      length across all READ Fastqs (where READ is 'r1',
+      'r2' etc)
+
+    Valid values of the 'outputs' property are taken from
+    the QCOutputs class.
+
+    General properties about the project:
+
+    - is_single_cell: True if the project has single cell
+        data (10xGenomics, ICELL8 etc)
+
+    Arguments:
+      project (AnalysisProject): project to report QC for
+      qc_dir (str): path to the QC output dir; relative
+        path will be treated as a subdirectory of the
+        project
+    """
+    def __init__(self,project,qc_dir=None):
+        """
+        Create a new QCProject instance
+        """
+        logger.debug("QCProject: project         : %s" % project.name)
+        logger.debug("QCProject: project dir     : %s" % project.dirn)
+        logger.debug("QCProject: qc_dir (initial): %s" % qc_dir)
+        # Store project
+        self.project = project
+        # Sort out target QC dir
+        if qc_dir is None:
+            qc_dir = self.project.qc_dir
+        else:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(self.project.dirn,
+                                      qc_dir)
+        self.qc_dir = qc_dir
+        logger.debug("QCProject: qc_dir (final): %s" % self.qc_dir)
+        # How to handle Fastq names
+        self.fastq_attrs = self.project.fastq_attrs
+        # Additional metrics
+        self.stats = AttributeDictionary(
+            max_seqs=None,
+            min_sequence_length=None,
+            max_sequence_length=None,
+            min_sequence_length_read={},
+            max_sequence_length_read={},
+        )
+        # Detect outputs
+        self._detect_outputs()
+        # Expose metadata from parent run
+        self.run_metadata = AnalysisDirMetadata()
+        run_metadata_file = os.path.join(
+            os.path.dirname(os.path.abspath(self.project.dirn)),
+            "metadata.info")
+        if os.path.exists(run_metadata_file):
+            print("Loading run metadata from %s" % run_metadata_file)
+            self.run_metadata.load(run_metadata_file)
+        else:
+            logger.warning("Run metadata file '%s' not found"
+                           % run_metadata_file)
+        # Collect processing software metadata
+        try:
+            self.processing_software = ast.literal_eval(
+                self.run_metadata.processing_software)
+        except ValueError:
+            self.processing_software = dict()
+        if not self.processing_software:
+            # Fallback to legacy metadata items
+            try:
+                self.processing_software['bcl2fastq'] = ast.literal_eval(
+                    self.run_metadata.bcl2fastq_software)
+            except ValueError:
+                pass
+            try:
+                self.processing_software['cellranger'] = ast.literal_eval(
+                    self.run_metadata.cellranger_software)
+            except ValueError:
+                pass
+        # Expose project metadata
+        self.info = self.project.info
+        # Expose QC info
+        self.qc_info = self.project.qc_info(self.qc_dir)
+
+    @property
+    def id(self):
+        """
+        Identifier for the project
+
+        This is a string of the form:
+
+        <RUN_ID>:<PROJECT_NAME>
+
+        e.g. ``MINISEQ_201120#22:PJB``
+
+        If the run id can't be determined then the name
+        of the parent directory is used instead.
+        """
+        run_id = self.run_id
+        if not run_id:
+            run_id = os.path.basename(os.path.dirname(self.dirn))
+        return "%s:%s" % (run_id,self.name)
+
+    @property
+    def name(self):
+        """
+        Name of project
+        """
+        return self.project.name
+
+    @property
+    def dirn(self):
+        """
+        Path to project directory
+        """
+        return self.project.dirn
+
+    @property
+    def comments(self):
+        """
+        Comments associated with the project
+        """
+        return self.project.info.comments
+
+    @property
+    def run_id(self):
+        """
+        Identifier for parent run
+
+        This is the standard identifier constructed
+        from the platform, datestamp and facility
+        run number (e.g. ``MINISEQ_201120#22``).
+
+        If an identifier can't be constructed then
+        ``None`` is returned.
+        """
+        try:
+            return run_reference_id(self.info['run'],
+                                    platform=self.info['platform'],
+                                    facility_run_number=
+                                    self.run_metadata['run_number'])
+        except (AttributeError,TypeError) as ex:
+            logger.warning("Run reference ID can't be "
+                           "determined: %s (ignored)" % ex)
+            return None
+
+    @property
+    def is_single_cell(self):
+        """
+        Check whether project has single cell data
+        """
+        return (self.info['single_cell_platform'] is not None)
+
+    def software_info(self,pkg,exclude_processing=False):
+        """
+        Get information on software package
+
+        Arguments:
+          pkg (str): name of software package to get
+            information about
+          exclude_processing (bool): if True then don't
+            fall back to processing software information
+            if package is not found (default: False, do
+            fall back to checking processing software)
+
+        Returns:
+          String: software version information, or
+            None if no information is stored.
+        """
+        # Acquire the value
+        try:
+            if self.software[pkg]:
+                return ', '.join(self.software[pkg])
+        except KeyError:
+            if exclude_processing:
+                # Don't check processing software
+                return None
+            try:
+                return self.processing_software[pkg][2]
+            except KeyError:
+                # Not processing software
+                return None
+            except TypeError:
+                # Not valid data
+                return None
+
+    def _detect_outputs(self):
+        """
+        Internal: determine which QC outputs are present
+        """
+        # Outsource to external class
+        qc_outputs = QCOutputs(self.qc_dir,
+                               fastq_attrs=self.fastq_attrs)
+        # Fastqs
+        self.fastqs = qc_outputs.fastqs
+        # Reads
+        self.reads = qc_outputs.reads
+        # Samples
+        self.samples = sorted(list(
+            set(qc_outputs.samples +
+                [s.name for s in self.project.samples])),
+                key=lambda s: split_sample_name(s))
+        # Fastq screens
+        self.fastq_screens = qc_outputs.fastq_screens
+        # Single library analyses reference data
+        self.cellranger_references = qc_outputs.cellranger_references
+        # Multiplexed samples
+        self.multiplexed_samples = qc_outputs.multiplexed_samples
+        # QC outputs
+        self.outputs = qc_outputs.outputs
+        # Software versions
+        self.software = qc_outputs.software
+        # Output files
+        self.output_files = qc_outputs.output_files
+        # Sequence length stats
+        self.stats = AttributeDictionary(**qc_outputs.stats)
+
+class SampleQCReporter:
     """
     Utility class for reporting the QC for a sample
 
@@ -1530,7 +1443,7 @@ class QCReportSample:
     sample: name of the sample
     fastqs: list of the Fastqs associated with the sample
     reads: list of read ids e.g. ['r1','r2']
-    fastq_groups: list of QCReportFastq instances from
+    fastq_groups: list of FastqGroupQCReporter instances from
       grouped Fastqs associated with the sample
     cellranger_count: list of CellrangerCount instances
       associated with the sample
@@ -1557,7 +1470,7 @@ class QCReportSample:
     def __init__(self,project,sample,qc_dir=None,
                  fastq_attrs=AnalysisFastq):
         """
-        Create a new QCReportSample
+        Create a new SampleQCReporter
 
         Arguments:
           project (QCProject): project to report
@@ -1584,7 +1497,7 @@ class QCReportSample:
                    project.fastq_attrs(fq).sample_name == sample,
                    project.fastqs)))
         for fqs in group_fastqs_by_name(self.fastqs,fastq_attrs):
-            self.fastq_groups.append(QCReportFastqGroup(
+            self.fastq_groups.append(FastqGroupQCReporter(
                 fqs,
                 qc_dir=qc_dir,
                 project=project,
@@ -1649,7 +1562,7 @@ class QCReportSample:
 
         The following 'attributes' that can be reported for
         each Fastq are those available for the 'report' method
-        of the 'QCReportFastqGroup' class.
+        of the 'FastqGroupQCReporter' class.
 
         By default all attributes are reported.
 
@@ -2016,44 +1929,43 @@ class QCReportSample:
                            "table" % field)
         return value
 
-class QCReportFastqGroup:
+class FastqGroupQCReporter:
     """
     Utility class for reporting the QC for a Fastq group
 
     Provides the following properties:
 
-    reads: list of read ids e.g. ['r1','r2']
-    fastqs: dictionary mapping read ids to Fastq paths
-    reporters: dictionary mapping read ids to QCReportFastq
+    - reads: list of read ids e.g. ['r1','r2']
+    - fastqs: dictionary mapping read ids to Fastq paths
+    - reporters: dictionary mapping read ids to FastqQCReporter
       instances
-    paired_end: whether FastqGroup is paired end
-    fastq_strand_txt: location of associated Fastq_strand
+    - paired_end: whether FastqGroup is paired end
+    - fastq_strand_txt: location of associated Fastq_strand
       output
 
     Provides the following methods:
 
-    strandedness: fetch strandedness data for this group
-    ustrandplot: return mini-strand stats summary plot
-    report_strandedness: write report for strandedness
-    report: write report for the group
-    update_summary_table: add line to summary table for
+    - strandedness: fetch strandedness data for this group
+    - ustrandplot: return mini-strand stats summary plot
+    - report_strandedness: write report for strandedness
+    - report: write report for the group
+    - update_summary_table: add line to summary table for
       the group
+
+    Arguments:
+      fastqs (list): list of paths to Fastqs in the group
+      qc_dir (str): path to the QC output dir; relative
+        path will be treated as a subdirectory of the
+        project
+      project (QCProject): parent project
+      project_id (str): identifier for the project
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        data from Fastq names
     """
     def __init__(self,fastqs,qc_dir,project,project_id=None,
                  fastq_attrs=AnalysisFastq):
         """
-        Create a new QCReportFastqGroup
-
-        Arguments:
-          fastqs (list): list of paths to Fastqs in the
-            group
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project
-          project (QCProject): parent project
-          project_id (str): identifier for the project
-          fastq_attrs (BaseFastqAttrs): class for extracting
-            data from Fastq names
+        Create a new FastqGroupQCReporter
         """
         self.qc_dir = qc_dir
         self.project = project
@@ -2073,11 +1985,11 @@ class QCReportFastqGroup:
                              fq.read_number
                              if fq.read_number is not None else 1)
             self.fastqs[read] = fastq
-            self.reporters[read] = QCReportFastq(fastq,
-                                                 self.qc_dir,
-                                                 self.project_id,
-                                                 fastq_attrs=
-                                                 self.fastq_attrs)
+            self.reporters[read] = FastqQCReporter(fastq,
+                                                   self.qc_dir,
+                                                   self.project_id,
+                                                   fastq_attrs=
+                                                   self.fastq_attrs)
             self.reads.add(read)
         self.reads = sorted(list(self.reads))
 
@@ -2319,7 +2231,7 @@ class QCReportFastqGroup:
             idx = summary_table.add_row()
         # Populate with data
         for field in fields:
-            if field in QCReportSample.sample_summary_fields:
+            if field in SampleQCReporter.sample_summary_fields:
                 # Ignore sample-level fields
                 continue
             try:
@@ -2515,54 +2427,54 @@ class QCReportFastqGroup:
                            "table" % field)
         return value
 
-class QCReportFastq:
+class FastqQCReporter:
     """
     Provides interface to QC outputs for Fastq file
 
     Provides the following attributes:
 
-    name: basename of the Fastq
-    path: path to the Fastq
-    safe_name: name suitable for use in HTML links etc
-    sample_name: sample name derived from the Fastq basename
-    sequence_lengths: SeqLens instance
-    fastqc: Fastqc instance
-    fastq_screen.names: list of FastQScreen names
-    fastq_screen.SCREEN.description: description of SCREEN
-    fastq_screen.SCREEN.png: associated PNG file for SCREEN
-    fastq_screen.SCREEN.txt: associated TXT file for SCREEN
-    fastq_screen.SCREEN.version: associated version for SCREEN
-    program_versions.NAME: version of package NAME
-    adapters: list of adapters from Fastqc
-    adapters_summary: dictionary summarising adapter content
+    - name: basename of the Fastq
+    - path: path to the Fastq
+    - safe_name: name suitable for use in HTML links etc
+    - sample_name: sample name derived from the Fastq basename
+    - sequence_lengths: SeqLens instance
+    - fastqc: Fastqc instance
+    - fastq_screen.names: list of FastQScreen names
+    - fastq_screen.SCREEN.description: description of SCREEN
+    - fastq_screen.SCREEN.png: associated PNG file for SCREEN
+    - fastq_screen.SCREEN.txt: associated TXT file for SCREEN
+    - fastq_screen.SCREEN.version: associated version for SCREEN
+    - program_versions.NAME: version of package NAME
+    - adapters: list of adapters from Fastqc
+    - adapters_summary: dictionary summarising adapter content
 
     Provides the following methods:
 
-    report_fastqc
-    report_fastq_screens
-    report_program_versions
-    useqlenplot
-    ureadcountplot
-    uboxplot
-    ufastqcplot
-    useqduplicationplot
-    uadapterplot
-    uscreenplot
+    - report_fastqc
+    - report_fastq_screens
+    - report_program_versions
+    - useqlenplot
+    - ureadcountplot
+    - uboxplot
+    - ufastqcplot
+    - useqduplicationplot
+    - uadapterplot
+    - uscreenplot
+
+    Arguments:
+      fastq (str): path to Fastq file
+      qc_dir (str): path to QC directory
+      project_id (str): identifier for the parent project
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        data from Fastq names
     """
     def __init__(self,fastq,qc_dir,project_id=None,
                  fastq_attrs=AnalysisFastq):
         """
-        Create a new QCReportFastq instance
-
-        Arguments:
-          fastq (str): path to Fastq file
-          qc_dir (str): path to QC directory
-          project_id (str): identifier for the parent project
-          fastq_attrs (BaseFastqAttrs): class for extracting
-            data from Fastq names
+        Create a new FastqQCReporter instance
         """
         # Source data
-        logging.debug("******** QCREPORTFASTQ ************")
+        logging.debug("******** FASTQQCREPORTER ************")
         self.name = os.path.basename(fastq)
         self.path = os.path.abspath(fastq)
         self.project_id = project_id
