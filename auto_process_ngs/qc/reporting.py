@@ -161,16 +161,16 @@ class QCProject:
 
     - is_single_cell: True if the project has single cell
         data (10xGenomics, ICELL8 etc)
+
+    Arguments:
+      project (AnalysisProject): project to report QC for
+      qc_dir (str): path to the QC output dir; relative
+        path will be treated as a subdirectory of the
+        project
     """
     def __init__(self,project,qc_dir=None):
         """
         Create a new QCProject instance
-
-        Arguments:
-          project (AnalysisProject): project to report QC for
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project
         """
         logger.debug("QCProject: project         : %s" % project.name)
         logger.debug("QCProject: project dir     : %s" % project.dirn)
@@ -400,6 +400,24 @@ class QCReport(Document):
     - fastqc: FastQC report
     - fastq_screen: FastQCScreen report
     - program_versions: program versions
+
+    Arguments:
+      projects (AnalysisProject): list of projects to report
+        QC for
+      title (str): title for the report (defaults to
+        "QC report: <PROJECT_NAME>")
+      qc_dir (str): path to the QC output dir; relative path
+        will be treated as a subdirectory of the project
+      report_attrs (list): list of elements to report for
+        each Fastq pair
+      summary_fields (list): list of fields to report for each
+        sample in the summary table
+      relpath (str): if set then make link paths relative to
+        'relpath'
+      data_dir (str): if set then copy external data files to
+        this directory and make link paths to these copies;
+        relative path will be treated as a subdirectory of the
+        project
     """
     # Field descriptions for summary table
     field_descriptions = {
@@ -524,25 +542,6 @@ class QCReport(Document):
                  summary_fields=None,relpath=None,data_dir=None):
         """
         Create a new QCReport instance
-
-        Arguments:
-          projects (AnalysisProject): list of projects to
-             report QC for
-          title (str): title for the report (defaults to
-            "QC report: <PROJECT_NAME>")
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project
-          report_attrs (list): list of elements to report for
-            each Fastq pair
-          summary_fields (list): list of fields to report for
-            each sample in the summary table
-          relpath (str): if set then make link paths
-            relative to 'relpath'
-          data_dir (str): if set then copy external data
-            files to this directory and make link paths
-            to these copies; relative path will be treated
-            as a subdirectory of the project
         """
         # Convert projects to QCProjects
         projects = [QCProject(p,qc_dir=qc_dir) for p in projects]
@@ -1889,38 +1888,37 @@ class FastqGroupQCReporter:
 
     Provides the following properties:
 
-    reads: list of read ids e.g. ['r1','r2']
-    fastqs: dictionary mapping read ids to Fastq paths
-    reporters: dictionary mapping read ids to FastqQCReporter
+    - reads: list of read ids e.g. ['r1','r2']
+    - fastqs: dictionary mapping read ids to Fastq paths
+    - reporters: dictionary mapping read ids to FastqQCReporter
       instances
-    paired_end: whether FastqGroup is paired end
-    fastq_strand_txt: location of associated Fastq_strand
+    - paired_end: whether FastqGroup is paired end
+    - fastq_strand_txt: location of associated Fastq_strand
       output
 
     Provides the following methods:
 
-    strandedness: fetch strandedness data for this group
-    ustrandplot: return mini-strand stats summary plot
-    report_strandedness: write report for strandedness
-    report: write report for the group
-    update_summary_table: add line to summary table for
+    - strandedness: fetch strandedness data for this group
+    - ustrandplot: return mini-strand stats summary plot
+    - report_strandedness: write report for strandedness
+    - report: write report for the group
+    - update_summary_table: add line to summary table for
       the group
+
+    Arguments:
+      fastqs (list): list of paths to Fastqs in the group
+      qc_dir (str): path to the QC output dir; relative
+        path will be treated as a subdirectory of the
+        project
+      project (QCProject): parent project
+      project_id (str): identifier for the project
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        data from Fastq names
     """
     def __init__(self,fastqs,qc_dir,project,project_id=None,
                  fastq_attrs=AnalysisFastq):
         """
         Create a new FastqGroupQCReporter
-
-        Arguments:
-          fastqs (list): list of paths to Fastqs in the
-            group
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project
-          project (QCProject): parent project
-          project_id (str): identifier for the project
-          fastq_attrs (BaseFastqAttrs): class for extracting
-            data from Fastq names
         """
         self.qc_dir = qc_dir
         self.project = project
@@ -2388,45 +2386,45 @@ class FastqQCReporter:
 
     Provides the following attributes:
 
-    name: basename of the Fastq
-    path: path to the Fastq
-    safe_name: name suitable for use in HTML links etc
-    sample_name: sample name derived from the Fastq basename
-    sequence_lengths: SeqLens instance
-    fastqc: Fastqc instance
-    fastq_screen.names: list of FastQScreen names
-    fastq_screen.SCREEN.description: description of SCREEN
-    fastq_screen.SCREEN.png: associated PNG file for SCREEN
-    fastq_screen.SCREEN.txt: associated TXT file for SCREEN
-    fastq_screen.SCREEN.version: associated version for SCREEN
-    program_versions.NAME: version of package NAME
-    adapters: list of adapters from Fastqc
-    adapters_summary: dictionary summarising adapter content
+    - name: basename of the Fastq
+    - path: path to the Fastq
+    - safe_name: name suitable for use in HTML links etc
+    - sample_name: sample name derived from the Fastq basename
+    - sequence_lengths: SeqLens instance
+    - fastqc: Fastqc instance
+    - fastq_screen.names: list of FastQScreen names
+    - fastq_screen.SCREEN.description: description of SCREEN
+    - fastq_screen.SCREEN.png: associated PNG file for SCREEN
+    - fastq_screen.SCREEN.txt: associated TXT file for SCREEN
+    - fastq_screen.SCREEN.version: associated version for SCREEN
+    - program_versions.NAME: version of package NAME
+    - adapters: list of adapters from Fastqc
+    - adapters_summary: dictionary summarising adapter content
 
     Provides the following methods:
 
-    report_fastqc
-    report_fastq_screens
-    report_program_versions
-    useqlenplot
-    ureadcountplot
-    uboxplot
-    ufastqcplot
-    useqduplicationplot
-    uadapterplot
-    uscreenplot
+    - report_fastqc
+    - report_fastq_screens
+    - report_program_versions
+    - useqlenplot
+    - ureadcountplot
+    - uboxplot
+    - ufastqcplot
+    - useqduplicationplot
+    - uadapterplot
+    - uscreenplot
+
+    Arguments:
+      fastq (str): path to Fastq file
+      qc_dir (str): path to QC directory
+      project_id (str): identifier for the parent project
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        data from Fastq names
     """
     def __init__(self,fastq,qc_dir,project_id=None,
                  fastq_attrs=AnalysisFastq):
         """
         Create a new FastqQCReporter instance
-
-        Arguments:
-          fastq (str): path to Fastq file
-          qc_dir (str): path to QC directory
-          project_id (str): identifier for the parent project
-          fastq_attrs (BaseFastqAttrs): class for extracting
-            data from Fastq names
         """
         # Source data
         logging.debug("******** FASTQQCREPORTER ************")
