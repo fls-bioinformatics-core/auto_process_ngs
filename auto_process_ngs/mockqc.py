@@ -375,9 +375,11 @@ class MockQCOutputs:
 
 def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      protocol=None,
+                     project_name=None,
                      screens=('model_organisms',
                               'other_organisms',
                               'rRNA',),
+                     organisms=('human',),
                      cellranger_pipelines=('cellranger',),
                      cellranger_samples=None,
                      cellranger_multi_samples=None,
@@ -402,8 +404,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
       fastq_dir (str): optional, set a non-standard
         directory for the Fastq files
       protocol (str): QC protocol to emulate
+      project_name (str): optional, specify the project name
       screens (list): optional, list of non-standard
         FastqScreen panel names
+      organisms (list): optional, list of organism names for
+        extended QC metrics
       cellranger_pipelines (list): list of 10xGenomics pipelines
         to make mock outputs for (e.g. 'cellranger',
         'cellranger-atac' etc)
@@ -439,6 +444,9 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
     # Make an empty QC dir
     if not os.path.exists(qc_dir):
         os.mkdir(qc_dir)
+    # Project name
+    if project_name is None:
+        project_name = os.path.basename(os.path.dirname(qc_dir))
     # QC metadata
     qc_info = AnalysisProjectQCDirInfo()
     qc_info['protocol'] = protocol
@@ -457,7 +465,14 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         if include_seqlens:
             MockQCOutputs.seqlens(fq,qc_dir)
     for fq_group in group_fastqs_by_name(fastq_names):
-        fq = fq_group[0]
+        if protocol in ('10x_scRNAseq',
+                        '10x_snRNAseq',
+                        '10x_Multiome_GEX',
+                        '10x_CellPlex',
+                        '10x_Visium',):
+            fq = fq_group[1]
+        else:
+            fq = fq_group[0]
         # Strandedness
         if include_strandedness:
             MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
@@ -475,7 +490,6 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         with open(os.path.join(qc_dir,
                                "fastq_strand.conf"),'wt') as fp:
             fp.write("Placeholder\n")
-                fp.write("Placeholder\n")
     # RSeQC gene body coverage
     if include_rseqc_genebody_coverage:
         for organism in organisms:
