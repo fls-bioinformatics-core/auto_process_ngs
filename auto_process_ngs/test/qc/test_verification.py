@@ -1122,7 +1122,7 @@ class TestQCVerifier(unittest.TestCase):
         QCVerifier: verify 10xGenomics CellPlex data (10x_CellPlex)
         """
         ##self.remove_test_outputs = False
-        fastq_names=('PJB1_GEX_S1_R1_001.fastq.gz',
+        fastq_names=('PJB1_GEX_R1_001.fastq.gz',
                      'PJB1_GEX_R2_001.fastq.gz',
                      'PJB2_MC_R1_001.fastq.gz',
                      'PJB2_MC_R2_001.fastq.gz',)
@@ -1155,7 +1155,7 @@ class TestQCVerifier(unittest.TestCase):
         QCVerifier: verify 10xGenomics CellPlex data (10x_CellPlex, no multi config file)
         """
         ##self.remove_test_outputs = False
-        fastq_names=('PJB1_GEX_S1_R1_001.fastq.gz',
+        fastq_names=('PJB1_GEX_R1_001.fastq.gz',
                      'PJB1_GEX_R2_001.fastq.gz',
                      'PJB2_MC_R1_001.fastq.gz',
                      'PJB2_MC_R2_001.fastq.gz',)
