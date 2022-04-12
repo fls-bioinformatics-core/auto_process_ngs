@@ -58,6 +58,7 @@ class TestQCVerifier(unittest.TestCase):
         return make_mock_qc_dir(
             os.path.join(self.wd,qc_dir),
             fastq_names,
+            protocol=protocol,
             screens=screens,
             cellranger_pipelines=cellranger_pipelines,
             cellranger_samples=cellranger_samples,
@@ -556,6 +557,7 @@ class TestQCVerifier(unittest.TestCase):
         fastq_names=('PJB1_S1_R1_001.fastq.gz',
                      'PJB2_S2_R1_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardSE",
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
@@ -572,6 +574,7 @@ class TestQCVerifier(unittest.TestCase):
         fastq_names=('PJB1_S1_R1_001.fastq.gz',
                      'PJB2_S2_R1_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardSE",
                                    fastq_names=fastq_names,
                                    include_fastqc=False)
         qc_verifier = QCVerifier(qc_dir)
@@ -589,6 +592,7 @@ class TestQCVerifier(unittest.TestCase):
         fastq_names=('PJB1_S1_R1_001.fastq.gz',
                      'PJB2_S2_R1_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardSE",
                                    fastq_names=fastq_names,
                                    include_fastq_screen=False)
         qc_verifier = QCVerifier(qc_dir)
@@ -606,6 +610,7 @@ class TestQCVerifier(unittest.TestCase):
         fastq_names=('PJB1_S1_R1_001.fastq.gz',
                      'PJB2_S2_R1_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardSE",
                                    fastq_names=fastq_names,
                                    include_seqlens=False)
         qc_verifier = QCVerifier(qc_dir)
@@ -623,6 +628,7 @@ class TestQCVerifier(unittest.TestCase):
         fastq_names=('PJB1_S1_R1_001.fastq.gz',
                      'PJB2_S2_R1_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardSE",
                                    fastq_names=fastq_names,
                                    include_strandedness=False)
         with open(os.path.join(qc_dir,"fastq_strand.conf"),'wt') as fp:
@@ -642,6 +648,7 @@ class TestQCVerifier(unittest.TestCase):
         fastq_names=('PJB1_S1_R1_001.fastq.gz',
                      'PJB2_S2_R1_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardSE",
                                    fastq_names=fastq_names,
                                    legacy_screens=True)
         qc_verifier = QCVerifier(qc_dir)
@@ -661,6 +668,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardPE",
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
@@ -679,6 +687,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardPE",
                                    fastq_names=fastq_names,
                                    include_fastqc=False)
         qc_verifier = QCVerifier(qc_dir)
@@ -698,6 +707,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardPE",
                                    fastq_names=fastq_names,
                                    include_fastq_screen=False)
         qc_verifier = QCVerifier(qc_dir)
@@ -717,6 +727,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardPE",
                                    fastq_names=fastq_names,
                                    include_seqlens=False)
         qc_verifier = QCVerifier(qc_dir)
@@ -736,6 +747,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardPE",
                                    fastq_names=fastq_names,
                                    include_strandedness=False)
         qc_verifier = QCVerifier(qc_dir)
@@ -755,6 +767,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardPE",
                                    fastq_names=fastq_names,
                                    legacy_screens=True)
         qc_verifier = QCVerifier(qc_dir)
@@ -774,6 +787,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001_paired.fastq.gz',
                      'PJB2_S2_R2_001_paired.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardPE",
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
@@ -792,6 +806,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_scRNAseq",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=('cellranger',),
@@ -819,6 +834,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_scRNAseq",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=('cellranger',),
@@ -846,6 +862,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_scRNAseq",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=('cellranger',),
@@ -873,6 +890,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R3_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_scATAC",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=(
@@ -902,6 +920,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_GEX",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=(
@@ -932,6 +951,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_GEX",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=(
@@ -961,6 +981,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_GEX",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=(
@@ -993,6 +1014,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R3_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_ATAC",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=(
@@ -1023,6 +1045,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R3_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_ATAC",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=(
@@ -1052,6 +1075,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R3_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_ATAC",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    cellranger_pipelines=(
@@ -1084,6 +1108,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_S2_R1_001.fastq.gz',
                      'PJB2_S2_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Visium",
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
@@ -1102,6 +1127,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_MC_R1_001.fastq.gz',
                      'PJB2_MC_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=True,
                                    include_cellranger_multi=True,
@@ -1134,6 +1160,7 @@ class TestQCVerifier(unittest.TestCase):
                      'PJB2_MC_R1_001.fastq.gz',
                      'PJB2_MC_R2_001.fastq.gz',)
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
                                    fastq_names=fastq_names,
                                    include_cellranger_count=False,
                                    include_cellranger_multi=False)
