@@ -1100,7 +1100,7 @@ class TestQCVerifier(unittest.TestCase):
 
     def test_qcverifier_verify_10x_visium(self):
         """
-        QCVerifier: verify 10xGenomics Visium data (10x_scRNAseq)
+        QCVerifier: verify 10xGenomics Visium data (10x_Visium)
         """
         ##self.remove_test_outputs = False
         fastq_names=('PJB1_S1_R1_001.fastq.gz',
