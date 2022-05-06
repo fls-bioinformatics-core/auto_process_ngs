@@ -169,3 +169,22 @@ class QualimapRnaseq(object):
                     data[int(float(x))] = float(y)
             self._raw_coverage_profile_along_genes_total = data
         return self._raw_coverage_profile_along_genes_total
+
+    def link_to_output(self,name,full_path=True,relpath=None):
+        """
+        Return link to the result of a specified Qualimap output
+
+        Arguments:
+          name (str): name of the module (e.g. 'Reads Genomic Origin')
+          full_path (boolean): optional, if True then return the
+            full path; otherwise return just the anchor
+          relpath (str): optional, if supplied then specifies the
+            path that full paths will be made relative to (implies
+            full_path is True)
+        """
+        link = "#%s" % str(name).replace(' ','%20')
+        if full_path:
+            link = self.html_report + link
+            if relpath:
+                link = os.path.relpath(link,relpath)
+        return link

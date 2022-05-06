@@ -55,3 +55,6 @@ class TestQualimapRnaseq(unittest.TestCase):
                          (6523,7.87))
         self.assertEqual(rnaseq_results.reads_genomic_origin['rRNA'],
                          (0,0.0))
+        self.assertEqual(rnaseq_results.link_to_output("Reads Genomic Origin"),
+                         os.path.join(self.dirn,
+                                      "qualimapReport.html#Reads%20Genomic%20Origin"))
