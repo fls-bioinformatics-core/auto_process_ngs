@@ -30,7 +30,7 @@ class TestQualimapRnaseq(unittest.TestCase):
         """
         rnaseq_results = QualimapRnaseq(self.dirn)
         self.assertEqual(rnaseq_results.html_report,
-                         os.path.join(self.dirn,"qualimapReport.html")
+                         os.path.join(self.dirn,"qualimapReport.html"))
         self.assertEqual(rnaseq_results.results_txt,
                          self.rnaseq_qc_results_txt)
         self.assertEqual(rnaseq_results.input['bam file'],
