@@ -77,6 +77,8 @@ class QCOutputs:
     - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
     - samples: sorted list of sample names extracted
       from Fastqs
+    - bams: sorted list of BAM file names
+    - organisms: sorted list of organism names
     - fastq_screens: sorted list of screen names
     - cellranger_references: sorted list of reference
       datasets used with 10x pipelines
@@ -131,7 +133,9 @@ class QCOutputs:
         # Properties
         self.fastqs = set()
         self.samples = []
+        self.bams = set()
         self.reads = []
+        self.organisms = set()
         self.stats = AttributeDictionary(
             max_seqs=None,
             min_sequence_length_read={},
@@ -155,12 +159,18 @@ class QCOutputs:
         print("Fastqs:")
         for fq in self.fastqs:
             print("- %s" % fq)
+        print("BAMs:")
+        for b in self.bams:
+            print("- %s" % b)
         print("Samples:")
         for s in self.samples:
             print("- %s" % s)
         print("Reads:")
         for r in self.reads:
             print("- %s" % r)
+        print("Organisms:")
+        for o in self.organisms:
+            print("- %s" % o)
         print("Software:")
         for sw in self.software:
             print("- %s: %s" % (sw,','.join(self.software[sw])))
@@ -253,9 +263,13 @@ class QCOutputs:
         self.cellranger_references = sorted(self.cellranger_references)
         # Fastqs
         self.fastqs = sorted(list(self.fastqs))
+        # BAMs
+        self.bams = sorted(list(self.bams))
         # Samples
         samples = set([self.fastq_attrs(fq).sample_name
                        for fq in self.fastqs])
+        for bam in self.bams:
+            samples.add(self.fastq_attrs(bam).sample_name)
         for s in cellranger_count.samples:
             samples.add(s)
         self.samples = sorted(list(samples),
@@ -271,6 +285,8 @@ class QCOutputs:
                 reads.add("r%s" % (fq.read_number
                                    if fq.read_number is not None else '1'))
         self.reads = sorted(list(reads))
+        # Organisms
+        self.organisms = sorted(list(self.organisms))
         # Sort outputs
         self.outputs = sorted(self.outputs)
         # Sort output files
@@ -314,6 +330,18 @@ class QCOutputs:
         try:
             for fq in data.fastqs:
                 self.fastqs.add(fq)
+        except AttributeError:
+            pass
+        # BAMs
+        try:
+            for bam in data.bam_files:
+                self.bams.add(bam)
+        except AttributeError:
+            pass
+        # Organisms
+        try:
+            for organism in data.organisms:
+                self.organisms.add(organism)
         except AttributeError:
             pass
         # Software versions
