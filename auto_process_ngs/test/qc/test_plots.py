@@ -8,6 +8,7 @@ import os
 import base64
 import tempfile
 
+from auto_process_ngs.qc.plots import Plot
 from auto_process_ngs.qc.plots import encode_png
 from auto_process_ngs.qc.plots import uscreenplot
 from auto_process_ngs.qc.plots import uboxplot
@@ -17,6 +18,340 @@ from auto_process_ngs.qc.plots import ustrandplot
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
+
+class TestPlot(unittest.TestCase):
+    """
+    Tests for the Plot class
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestPlot')
+        # Define colours
+        self.rgb_blue = (0,0,255)
+        self.rgb_green = (0,128,0)
+        self.rgb_grey = (145,145,145)
+        self.rgb_red = (255,0,0)
+        self.rgb_yellow = (255,255,0)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_plot_make_empty_plot(self):
+        """
+        Plot: make empty plot
+        """
+        outfile = os.path.join(self.wd,"empty_plot.png")
+        empty_plot_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAF0lEQVR4nGP8//8/A7mAiWydo5pHjGYAM38DEWQYrPYAAAAASUVORK5CYII="
+        p = Plot(20,10)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        self.assertEqual(encode_png(outfile),
+                         empty_plot_base64_data)
+
+    def test_plot_make_empty_plot_with_bbox(self):
+        """
+        Plot: make empty plot with bounding box
+        """
+        outfile = os.path.join(self.wd,"empty_plot_bbox.png")
+        empty_plot_bbox_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAL0lEQVR4nO3NsREAMAzCQCXnedkFJvYOFKmi/k/HNm0DSCpkkltvgY9f4gGSdHgBjBwGgSEOxLEAAAAASUVORK5CYII="
+        p = Plot(20,10)
+        p.bbox(self.rgb_grey)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        self.assertEqual(encode_png(outfile),
+                         empty_plot_bbox_base64_data)
+
+    def test_plot_make_empty_plot_with_striping(self):
+        """
+        Plot: make empty plot with striping
+        """
+        outfile = os.path.join(self.wd,"empty_plot_striping.png")
+        empty_plot_striping_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAHElEQVR4nGP8z8DA8J+BgZEckomBAjCqeWRoBgAMCgsSRyKjXwAAAABJRU5ErkJggg=="
+        p = Plot(20,10)
+        p.stripe(self.rgb_red,self.rgb_yellow)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        self.assertEqual(encode_png(outfile),
+                         empty_plot_striping_base64_data)
+
+    def test_plot_hline(self):
+        """
+        Plot: plot horizontal line
+        """
+        outfile = os.path.join(self.wd,"hline.png")
+        hline_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAIklEQVR4nGP8//8/A7mAiWydA6qZkXwfMzCwMIy8AKNIMwD61gYPdVB52wAAAABJRU5ErkJggg=="
+        p = Plot(20,10)
+        p.hline(5,self.rgb_red)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        self.assertEqual(encode_png(outfile),
+                         hline_base64_data)
+
+    def test_plot_vline(self):
+        """
+        Plot: plot vertical line
+        """
+        outfile = os.path.join(self.wd,"vline.png")
+        vline_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAHklEQVR4nGP8//8/Ax7AyMiAWwETPp2EwKjmkaEZALDBBRHE0mGAAAAAAElFTkSuQmCC"
+        p = Plot(20,10)
+        p.vline(10,self.rgb_red)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        self.assertEqual(encode_png(outfile),
+                         vline_base64_data)
+
+    def test_block(self):
+        """
+        Plot: draw solid block
+        """
+        outfile = os.path.join(self.wd,"block.png")
+        block_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAK0lEQVR4nGP8//8/A7mAiWydDAwMLFCakZE0ff//U2rzSNQMC22yYpsimwF5/AcTuAyJrwAAAABJRU5ErkJggg=="
+        p = Plot(20,10)
+        p.block((2,2),(18,8),self.rgb_red)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        self.assertEqual(encode_png(outfile),block_base64_data)
+
+    def test_block_with_striping(self):
+        """
+        Plot: draw block with striping
+        """
+        outfile = os.path.join(self.wd,"block_with_striping.png")
+        block_with_striping_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAALUlEQVR4nGP8//8/A7mAiWydDAwMLFCakZHhPwMDIwOxJMN/Sm0eiZoZByyeAY20Dw9p9T90AAAAAElFTkSuQmCC"
+        p = Plot(20,10)
+        p.block((2,2),(18,8),self.rgb_red,self.rgb_yellow)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        print(encode_png(outfile))
+        self.assertEqual(encode_png(outfile),
+                         block_with_striping_base64_data)
+
+    def test_plot(self):
+        """
+        Plot: plot dataset
+        """
+        outfile = os.path.join(self.wd,"plot.png")
+        data = { 0: 23,
+                 1: 33,
+                 2: 30,
+                 3: 53,
+                 4: 42,
+                 5: 48,
+                 6: 52,
+                 7: 60,
+                 8: 74,
+                 9: 67,
+                 10: 64,
+                 11: 87,
+                 12: 88,
+                 13: 73,
+                 14: 99,
+                 15: 113,
+                 16: 145,
+                 17: 152,
+                 18: 170,
+                 19: 212,
+        }
+        plot_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAATElEQVR4nJ3RQQrAIBAEweng/788HjYERSPJ9FWLFRfbyoIrlJLsFIOkljHZ/zFo+KMPz4Z72izfJ9ftqsAiZ7yCsd1G8fH4XAvMUwfKhhgZZ/aOfQAAAABJRU5ErkJggg=="
+        p = Plot(20,10)
+        p.plot(data,self.rgb_red)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        print(encode_png(outfile))
+        self.assertEqual(encode_png(outfile),plot_base64_data)
+
+    def test_plot_with_fill(self):
+        """
+        Plot: plot dataset (fill under curve)
+        """
+        outfile = os.path.join(self.wd,"plot.png")
+        data = { 0: 23,
+                 1: 33,
+                 2: 30,
+                 3: 53,
+                 4: 42,
+                 5: 48,
+                 6: 52,
+                 7: 60,
+                 8: 74,
+                 9: 67,
+                 10: 64,
+                 11: 87,
+                 12: 88,
+                 13: 73,
+                 14: 99,
+                 15: 113,
+                 16: 145,
+                 17: 152,
+                 18: 170,
+                 19: 212,
+        }
+        plot_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAANUlEQVR4nGP8//8/A27AhEeOgZERrzQ+3YyMhAzHKc3ICKFZcElgSKNKIEljk4BqwRcoDAwAzDQEIYRsFcgAAAAASUVORK5CYII="
+        p = Plot(10,10)
+        p.plot(data,self.rgb_red,fill=True)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        print(encode_png(outfile))
+        self.assertEqual(encode_png(outfile),plot_base64_data)
+
+    def test_plot_range(self):
+        """
+        Plot: plot range defined by pair of datasets
+        """
+        outfile = os.path.join(self.wd,"plot_range.png")
+        data1 = {
+            0: 23,
+            1: 33,
+            2: 30,
+            3: 53,
+            4: 42,
+            5: 48,
+            6: 52,
+            7: 60,
+            8: 74,
+            9: 67
+        }
+        data2 = {
+            0: 64,
+            1: 87,
+            2: 88,
+            3: 73,
+            4: 99,
+            5: 113,
+            6: 145,
+            7: 152,
+            8: 170,
+            9: 212
+        }
+        plot_range_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAQElEQVR4nI2PQQqAQBDDkmX//+V6EEfUWdkeEwqtSWijwOjdlYVWgGS8kZYDZlsqMG965rnUFFI+L1we+1u+qQ+PZRMTiub8GAAAAABJRU5ErkJggg=="
+        p = Plot(10,10)
+        p.plot_range(data1,data2,self.rgb_red)
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        print(encode_png(outfile))
+        self.assertEqual(encode_png(outfile),
+                         plot_range_base64_data)
+
+    def test_stackedbar(self):
+        """
+        Plot: make stacked bar
+        """
+        outfile = os.path.join(self.wd,"stacked_bar.png")
+        data = [ 30.0, 20.0, 15.0, 10.0, 100.0 ]
+        stacked_bar_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAO0lEQVR4nGP8//8/A7mAiWydDAwMLFCakZGBgYHhPwMDAwNjIwNDw/+JEyfh0ZaXl0epzSNRM+OAxTMAXhYMDwbgrT8AAAAASUVORK5CYII="
+        p = Plot(20,10)
+        p.bar(data,
+              (2,2),(18,8),
+              (self.rgb_red,
+               self.rgb_yellow,
+               self.rgb_green,
+               self.rgb_blue,
+               self.rgb_grey))
+        p.save(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        print(encode_png(outfile))
+        self.assertEqual(encode_png(outfile),
+                         stacked_bar_base64_data)
+
+    def test_plot_rebin_data(self):
+        """
+        Plot: rebin data along x-axis
+        """
+        data = { 0: 23,
+                 1: 33,
+                 2: 30,
+                 3: 53,
+                 4: 42,
+                 5: 48,
+                 6: 52,
+                 7: 60,
+                 8: 74,
+                 9: 67,
+                 10: 64,
+                 11: 87,
+                 12: 88,
+                 13: 73,
+                 14: 99,
+                 15: 113,
+                 16: 145,
+                 17: 152,
+                 18: 170,
+                 19: 212,
+        }
+        p = Plot(10,10)
+        rebinned_data = p.rebin_data(data)
+        self.assertEqual(rebinned_data.mean,
+                         {
+                             0: 28.0,
+                             1: 41.5,
+                             2: 45.0,
+                             3: 56.0,
+                             4: 70.5,
+                             5: 75.5,
+                             6: 80.5,
+                             7: 106.0,
+                             8: 148.5,
+                             9: 191.0
+                         })
+        self.assertEqual(rebinned_data.min,
+                         {
+                             0: 23,
+                             1: 30,
+                             2: 42,
+                             3: 52,
+                             4: 67,
+                             5: 64,
+                             6: 73,
+                             7: 99,
+                             8: 145,
+                             9: 170
+                         })
+        self.assertEqual(rebinned_data.max,
+                         {
+                             0: 33,
+                             1: 53,
+                             2: 48,
+                             3: 60,
+                             4: 74,
+                             5: 87,
+                             6: 88,
+                             7: 113,
+                             8: 152,
+                             9: 212
+                         })
+
+    def test_plot_normalise_data(self):
+        """
+        Plot: normalise data along y-axis
+        """
+        data = {
+            0: 25,
+            1: 35,
+            2: 30,
+            3: 55,
+            4: 40,
+            5: 50,
+            6: 50,
+            7: 60,
+            8: 75,
+            9: 60
+        }
+        p = Plot(10,10)
+        self.assertEqual(p.normalise_data(data),
+                         {
+                             0: 3.0,
+                             1: 4.2,
+                             2: 3.6,
+                             3: 6.6,
+                             4: 4.8,
+                             5: 6.0,
+                             6: 6.0,
+                             7: 7.2,
+                             8: 9.0,
+                             9: 7.2
+                         })
 
 class TestEncodePng(unittest.TestCase):
     """

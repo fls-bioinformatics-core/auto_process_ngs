@@ -5,10 +5,13 @@ import os
 import shutil
 import tempfile
 import logging
+import collections
 from math import ceil
+from math import floor
 from PIL import Image
 from builtins import range
 from bcftbx.htmlpagewriter import PNGBase64Encoder
+from bcftbx.utils import AttributeDictionary
 from .fastqc import FastqcData
 from .fastqc import FastqcSummary
 from .fastq_screen import Fastqscreen
@@ -22,30 +25,436 @@ from .constants import SEQUENCE_DEDUP_CUTOFFS
 logger = logging.getLogger(__name__)
 
 # Colours taken from http://www.rapidtables.com/web/color/RGB_Color.htm
-RGB_COLORS = {
-    'black': (0,0,0),
-    'blue': (0,0,255),
-    'cornflowerblue': (100,149,237),
-    'cyan': (0,255,255),
-    'darkyellow1': (204,204,0),
-    'gainsboro': (220,220,220), # Very light grey!
-    'green': (0,128,0),
-    'grey': (145,145,145),
-    'lightgrey': (211,211,211),
-    'lightblue': (173,216,230),
-    'maroon': (128,0,0),
-    'navyblue': (0,0,153),
-    'orange': (255,165,0),
-    'red': (255,0,0),
-    'yellow': (255,255,0),
-    'white': (255,255,255),
-}
+RGB_COLORS = AttributeDictionary(
+    black=(0,0,0),
+    blue=(0,0,255),
+    cornflowerblue=(100,149,237),
+    cyan=(0,255,255),
+    darkyellow1=(204,204,0),
+    gainsboro=(220,220,220), # Very light grey!
+    green=(0,128,0),
+    grey=(145,145,145),
+    lightgrey=(211,211,211),
+    lightblue=(173,216,230),
+    maroon=(128,0,0),
+    navyblue=(0,0,153),
+    orange=(255,165,0),
+    red=(255,0,0),
+    yellow=(255,255,0),
+    white=(255,255,255),
+)
 
 HEX_COLORS = {
     'green': '#008000',
     'orange': '#FFA500',
     'red': '#FF0000',
 }
+
+class Plot:
+    """
+    Utility class for creating pixel-based microplots
+
+    Provides methods for building up plots out of smaller
+    elements (lines, blocks, single points and sets of
+    points). It also provides methods for adding
+    bounding boxes and background striping.
+
+    Usage:
+
+    >>> p = Plot(25,25)
+    >>> p.bbox(RGB.grey)
+    >>> p.plot({ x:x for x in range(25)},RGB.red)
+    >>> p.save("example.png")
+    >>> p.encoded_png()
+    'data:shjdhbcchb...'
+
+    Arguments:
+      width (int): width of the plot canvas (pixels)
+      height (int): height of the plot canvas (pixels)
+      bgcolor (str): background color (default: 'white')
+    """
+    def __init__(self,width,height,bgcolor='white'):
+        self._width = int(width)
+        self._height = int(height)
+        self._bgcolor = bgcolor
+        self._pixels = dict()
+        for x in range(self._width):
+            self._pixels[x] = dict()
+
+    def set_pixel(self,x,y,color):
+        """
+        Set the color of a single pixel
+
+        Arguments:
+          x (int): x-position of pixel
+          y (int): y-position of pixel
+          color (tuple): tuple specifying an RGB color
+        """
+        x = self._int(x)
+        y = self._int(y)
+        try:
+            if (0 <= y < self._height):
+                self._pixels[x][y] = color
+            else:
+                raise KeyError
+        except KeyError:
+            print("%s,%s: out-of-bounds" % (x,y))
+
+    def hline(self,y,color):
+        """
+        Draw a horizontal line
+
+        Argument:
+          y (int): y-axis position of line
+          color (tuple): tuple specifying an RGB color
+        """
+        for x in range(self._width):
+            self.set_pixel(x,y,color)
+
+    def vline(self,x,color,llen=None):
+        """
+        Draw a vertical line
+
+        Argument:
+          y (int): y-axis position of line
+          color (tuple): tuple specifying an RGB color
+          llen (int): length of the line (defaults to
+            plot canvas height)
+        """
+        if llen is None:
+            llen = self._height
+        llen = self._int(llen)
+        for y in range(llen):
+            self.set_pixel(x,y,color)
+
+    def block(self,xy1,xy2,color,color2=None):
+        """
+        Draw a rectangular block
+
+        The block is defined by corners xy1 and xy2.
+
+        Arguments:
+          xy1 (tuple): pair of (x,y) positions defining
+            first corner of the block
+          xy2 (tuple): pair of (x,y) positions defining
+            second corner of the block
+          color (tuple): tuple specifying an RGB color
+            to fill the block with
+        """
+        x1 = self._int(min((xy1[0],xy2[0])))
+        x2 = self._int(max((xy1[0],xy2[0])))
+        y1 = self._int(min((xy1[1],xy2[1])))
+        y2 = self._int(max((xy1[1],xy2[1])))
+        for x in range(x1,x2):
+            if color2 is not None and x%2 != 0:
+                color_ = color2
+            else:
+                color_ = color
+            for y in range(y1,y2):
+                self.set_pixel(x,y,color_)
+
+    def stripe(self,color1,color2):
+        """
+        Fill the plot with vertical stripes
+
+        Arguments:
+          color1 (tuple): tuple specifying first RGB color
+          color2 (tuple): tuple specifying second RGB color
+        """
+        for x in range(self._width):
+            if x%2 == 0:
+                self.vline(x,color1)
+            else:
+                self.vline(x,color2)
+
+    def bbox(self,color):
+        """
+        Draw a single-pixel bounding box
+
+        Arguments:
+          color (tuple): tuple specifying the border RGB
+            color
+        """
+        self.hline(0,color)
+        self.hline(self._height-1,color)
+        self.vline(0,color)
+        self.vline(self._width-1,color)
+
+    def plot(self,data,color,fill=False,interpolation="mean"):
+        """
+        Plot arbitrary data along the x-axis
+
+        If data limits exceed the canvas size then the data
+        will be scaled in both x and y directions to fit into
+        the plot canvas, with the 'interpolation' argument
+        specifying the method to use for handling data from
+        multiple points which are combined into a single bin:
+
+        - 'mean' (the default) assigns the mean value of
+          all the points that are put into the same bin
+          (resulting in a single point plotted for each bin)
+        - 'minmax' plots a vertical line for each bin based
+          on the minimum and maximum values assigned to the
+          bin
+
+        (NB the 'minmax' interpolation can smooth out
+        discontinuities in the plotted data that can appear
+        when using the 'mean' method with datasets which are
+        much wider than the plot width.)
+
+        Setting the 'fill' argument to True when using the
+        'mean' interpolation method fills the area under
+        each plotted point; it is ignored when using 'minmax'.
+
+        Arguments:
+          data (mapping): set of x-axis positions mapping
+            to corresponding y-axis positions
+          color (tuple): tuple specifying an RGB color
+          fill (bool): if True then also fill the
+            points under each point (default: no fill)
+          interpolation (str): interpolation mode to use
+            when plotting rebinned data (can be one of
+            'mean' or 'minmax')
+        """
+        # Check there is data
+        if not data:
+            logger.warning("Plot.plot(): empty dataset?")
+            return
+        # Rebin the data along the x-axis
+        data_ = self.rebin_data(data)
+        if interpolation == "mean":
+            # Normalise the data along the y-axis
+            data_ = self.normalise_data(data_.mean)
+            # Plot data converted to integer values
+            for x in data_:
+                y = self._int(data_[x])
+                if not fill:
+                    # Plot single point
+                    self.set_pixel(x,y,color)
+                else:
+                    # Fill area under plotted point
+                    for yy in range(0,y):
+                        self.set_pixel(x,yy,color)
+        elif interpolation == "minmax":
+            # Normalise the data along the y-axis
+            maxval = max([data_.min[x] for x in data_.min]+
+                         [data_.max[x] for x in data_.max])
+            data1 = self.normalise_data(data_.min,maxval=maxval)
+            data2 = self.normalise_data(data_.max,maxval=maxval)
+            # Plot data ranges
+            for x in data1:
+                y1 = self._int(min(data1[x],data2[x]))
+                y2 = self._int(max(data1[x],data2[x]))
+                for y in range(y1,y2+1):
+                    self.set_pixel(x,y,color)
+        else:
+             raise Exception("%s: unrecognised interpolation mode"
+                             % mode)
+
+    def plot_range(self,data1,data2,color):
+        """
+        Plot two sets of data and fill the region inbetween
+
+        If data limits exceed the canvas size then the data
+        will be scaled in both x and y directions to fit into
+        the plot canvas.
+
+        Arguments:
+          data1 (mapping): set of x-axis positions mapping
+            to corresponding y-axis positions for first
+            dataset
+          data2 (mapping): set of x-axis positions mapping
+            to corresponding y-axis positions for second
+            dataset
+          color (tuple): tuple specifying an RGB color
+        """
+        # Plot two sets of data and fill the region
+        # inbetween
+        if not data1 or not data2:
+            logger.warning("Plot.plot_range(): empty dataset(s)?")
+            return
+        # Rebin the data along the x-axis
+        data1_ = self.rebin_data(data1).mean
+        data2_ = self.rebin_data(data2).mean
+        # Normalise the data along the y-axis
+        data1_ = self.normalise_data(data1_)
+        data2_ = self.normalise_data(data2_)
+        # Fill region contained within two datasets
+        for x in data1_:
+            if x not in data2_:
+                continue
+            y1 = self._int(min(data1_[x],data2_[x]))
+            y2 = self._int(max(data1_[x],data2_[x]))
+            for y in range(y1,y2+1):
+                self.set_pixel(x,y,color)
+
+    def bar(self,data,xy1,xy2,colors):
+        """
+        Draw a horizontal stacked barplot
+
+        The bar is defined by corners xy1 and xy2 (cf the
+        'block' method).
+
+        Arguments:
+          data (sequence): list of values corresponding
+            to the size of each section in the 'stack'
+          xy1 (tuple): pair of (x,y) positions defining
+            first corner of the bar
+          xy2 (tuple): pair of (x,y) positions defining
+            second corner of the bar
+          colors (sequence) list of RGB colour tuples,
+            to assign to each section in the 'stack';
+            if the number of sections exceeds the number
+            of colours then colours are reused in order
+            from the beginning
+        """
+        # Extract limits of the bar
+        x1 = xy1[0]
+        y1 = xy1[1]
+        x2 = xy2[0]
+        y2 = xy2[1]
+        # Bar length (pixels)
+        bar_length = x2 - x1
+        # Convert data to set of cumulative sums
+        cumul = 0
+        data_ = list()
+        for d in data:
+            cumul += d
+            data_.append(cumul)
+        # Convert sums to set of integer block lengths
+        # and reverse order (so longest blocks are drawn
+        # first, and subsequent blocks are overlaid)
+        data_ = list(reversed([ int(float(d)/cumul*bar_length)
+                                for d in data_ ]))
+        # Number of data points
+        ndata = len(data_)
+        # Number of colours
+        ncolors = len(colors)
+        colors_ = list(reversed(colors))
+        # Draw blocks on top of each other (longest first)
+        for i,d in enumerate(data_):
+            ii = (ndata - i - 1) % ncolors
+            self.block((x1,y1),
+                       (x1+d,y2),
+                       colors[ii])
+
+    def rebin_data(self,data):
+        """
+        Scales an arbitrary dataset along x-axis
+
+        Scales the supplied dataset so that the x-axis
+        data fits into the plot size, by treating the
+        plot x-values as 'bins' and combining data points
+        from the dataset that fall into the same bin.
+
+        Arguments:
+          data (mapping): set of x-axis positions mapping
+            to corresponding y-axis positions
+
+        Returns:
+          NamedTuple: named tuple with three datasets
+            referenced by the keys 'mean' (mean values),
+            'min' (minimum values) and 'max' (maximum
+            values) for each position.
+        """
+        # Get max x-value in the data
+        xvals = list(data.keys())
+        maxval = max(xvals)
+        # Rebin data along x-axis
+        data_ = dict()
+        mean_data = dict()
+        min_data = dict()
+        max_data = dict()
+        if maxval > self._width:
+            for x in xvals:
+                xx = self._int(float(x)/float(maxval)*(self._width-1))
+                if xx not in data_:
+                    data_[xx] = list()
+                data_[xx].append(data[x])
+            for x in data_:
+                # Average data values in each bin
+                mean_data[x] = sum(data_[x])/len(data_[x])
+                # Min/max data values in each bin
+                min_data[x] = min(data_[x])
+                max_data[x] = max(data_[x])
+        else:
+            mean_data = { x:data[x] for x in data }
+            min_data = { x:data[x] for x in data }
+            max_data = { x:data[x] for x in data }
+        # Return using a named tuple
+        rebinneddata = collections.namedtuple("rebinneddata",
+                                              "mean min max")
+        return rebinneddata(mean=mean_data,
+                            min=min_data,
+                            max=max_data)
+
+    def normalise_data(self,data,maxval=None):
+        """
+        Scales an arbitrary dataset along y-axis
+
+        Arguments:
+          data (mapping): set of x-axis positions mapping
+            to corresponding y-axis positions
+
+        Returns:
+          Mapping: copy of the dataset with normalised
+            y-values
+        """
+        # Get max y-value in the data
+        if maxval is None:
+            maxval = max([data[x] for x in data])
+        # Normalise data along y-axis
+        if maxval > self._height:
+            data_ = { x:float(data[x])/float(maxval)*(self._height-1)
+                      for x in data }
+        else:
+            data_ = { x:data[x] for x in data }
+        return data_
+
+    def _int(self,i):
+        """
+        Internal: convert value to the nearest integer
+        """
+        # Convert to nearest integer
+        ii = floor(float(i))
+        if (float(i) - float(ii)) < 0.5:
+            return int(ii)
+        else:
+            return int(ii) + 1
+
+    def _img(self):
+        """
+        Internal: return a Pillow 'Image' instance for the plot
+        """
+        img = Image.new('RGB',(self._width,self._height),
+                        self._bgcolor)
+        pixels = img.load()
+        for x in range(self._width):
+            for y in range(self._height):
+                try:
+                    pixels[x,self._height-y-1] = self._pixels[x][y]
+                except KeyError:
+                    pass
+        return img
+
+    def save(self,f,ext=".png"):
+        """
+        Save a copy of the plot to file
+
+        Arguments:
+          f (str): path to output file
+          ext (str): optional, specify the plot extension
+            (defaults to '.png')
+        """
+        return make_plot(self._img(),
+                         outfile=f,
+                         ext=ext)
+
+    def encoded_png(self):
+        """
+        Return plot PNG as base64 encoded string
+        """
+        return make_plot(self._img(),inline=True)
 
 def encode_png(png_file):
     """
