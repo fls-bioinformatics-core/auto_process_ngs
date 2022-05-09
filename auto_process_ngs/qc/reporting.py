@@ -1423,6 +1423,8 @@ class QCProject:
                                fastq_attrs=self.fastq_attrs)
         # Fastqs
         self.fastqs = qc_outputs.fastqs
+        # BAMs
+        self.bams = qc_outputs.bams
         # Reads
         self.reads = qc_outputs.reads
         # Samples
@@ -1430,6 +1432,8 @@ class QCProject:
             set(qc_outputs.samples +
                 [s.name for s in self.project.samples])),
                 key=lambda s: split_sample_name(s))
+        # Organisms
+        self.organisms = qc_outputs.organisms
         # Fastq screens
         self.fastq_screens = qc_outputs.fastq_screens
         # Single library analyses reference data
