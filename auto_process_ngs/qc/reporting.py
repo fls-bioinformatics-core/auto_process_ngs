@@ -1957,6 +1957,7 @@ class FastqGroupQCReporter:
     - reporters: dictionary mapping read ids to FastqQCReporter
       instances
     - paired_end: whether FastqGroup is paired end
+    - bam: associated BAM file name
     - fastq_strand_txt: location of associated Fastq_strand
       output
 
@@ -2009,6 +2010,11 @@ class FastqGroupQCReporter:
                                                    self.fastq_attrs)
             self.reads.add(read)
         self.reads = sorted(list(self.reads))
+        # Locate matching BAM file
+        self.bam = None
+        for fastq in fastqs:
+            if fastq in self.project.bams:
+                self.bam = fastq
 
     @property
     def paired_end(self):
