@@ -500,6 +500,13 @@ class QCReport(Document):
             else:
                 project_summary = self.summary
             # Create a new summary table
+            project_summary.add(
+                "%d sample%s | %d fastq%s" % (
+                    len(project.samples),
+                    ('s' if len(project.samples) != 1 else ''),
+                    len(project.fastqs),
+                    ('s' if len(project.fastqs) != 1 else ''))
+            )
             summary_table = self.add_summary_table(project,
                                                    summary_fields_,
                                                    section=project_summary)
@@ -812,14 +819,6 @@ class QCReport(Document):
         if "cellranger_count" in fields:
             summary_tbl.add_css_classes('single_library_analyses',
                                         column='cellranger_count')
-        # Append to the summary section
-        section.add(
-            "%d sample%s | %d fastq%s" % (
-                len(project.samples),
-                ('s' if len(project.samples) != 1 else ''),
-                len(project.fastqs),
-                ('s' if len(project.fastqs) != 1 else ''))
-        )
         section.add(summary_tbl)
         return summary_tbl
 
