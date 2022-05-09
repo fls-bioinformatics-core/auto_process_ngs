@@ -71,6 +71,7 @@ automatically within the QC report.
 
 import sys
 import os
+import re
 import logging
 import time
 import ast
@@ -787,13 +788,24 @@ class QCReport(Document):
 
         Associated CSS classes are 'summary' and 'fastq_summary'
         """
-        # Generate headers for table
-        tbl_headers = {
-            f: "<space title=\"%s\">%s</span>" %
-            ('\n'.join(textwrap.wrap(self.field_descriptions[f][1],width=20)),
-             self.field_descriptions[f][0])
-            for f in self.field_descriptions.keys()
-        }
+        # Generate column headers for table
+        tbl_headers = {}
+        for field in fields:
+            # Look for matching field
+            th = None
+            for f in self.field_descriptions.keys():
+                if re.match('^%s$' % f,field):
+                    # Construct the header
+                    th = "<span title=\"%s\">%s</span>" % \
+                                       ('\n'.join(textwrap.wrap(
+                                           self.field_descriptions[f][1],
+                                           width=20)),
+                                       self.field_descriptions[f][0])
+                    break
+            if th is None:
+                # Generic header for unrecognised field
+                th = "<span title=\"%s\">%s</span>" % (field,field)
+            tbl_headers[field] = th
         # Create the table
         summary_tbl = Table(fields,**tbl_headers)
         summary_tbl.add_css_classes('summary','fastq_summary')
