@@ -1208,8 +1208,10 @@ class QCProject:
     - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
     - samples: sorted list of sample names extracted
       from Fastqs
+    - bams: sorted list of BAM file names
     - multiplexed_samples: sorted list of sample names
       for multiplexed samples (e.g. 10x CellPlex)
+    - organisms: sorted list of organism names
     - outputs: list of QC output categories detected (see
       below for valid values)
     - output_files: list of absolute paths to QC output
