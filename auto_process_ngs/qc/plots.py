@@ -249,7 +249,7 @@ class Plot:
                     self.set_pixel(x,y,color)
         else:
              raise Exception("%s: unrecognised interpolation mode"
-                             % mode)
+                             % interpolation)
 
     def plot_range(self,data1,data2,color):
         """
