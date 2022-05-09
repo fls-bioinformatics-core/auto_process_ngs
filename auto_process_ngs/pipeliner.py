@@ -916,6 +916,18 @@ environments that are activated when the tasks run (otherwise they
 are ignored) (see the section "Enabling conda to create task environments
 automatically" for details).
 
+.. note::
+
+   By default the ``PYTHONNOUSERSITE`` environment variable is
+   set in the execution environment, and any directories matching
+   the path ``${HOME}/.local/lib/python*`` are removed from the
+   ``PYTHONPATH``.
+
+   Together this means that Python programs that are run within
+   that environment will ignore any packages installed in
+   the user ``site-packages`` directory (which can otherwise
+   cause issues with ``conda`` dependency resolution).
+
 Defining outputs from a pipeline
 --------------------------------
 
@@ -2584,9 +2596,11 @@ class PipelineTask:
         stdout = []
         for f in self._stdout_files:
             if f is not None and os.path.exists(f):
+                if len(self._stdout_files) > 1:
+                    stdout.append("#### STDOUT <<%s>>\n" % f)
                 with open(f,'r') as fp:
                     stdout.append(fp.read())
-        return ''.join(stdout)
+        return ''.join(stdout).replace(r'\x1B','ESC')
 
     @property
     def stderr(self):
@@ -2599,9 +2613,11 @@ class PipelineTask:
         stderr = []
         for f in self._stderr_files:
             if f is not None and os.path.exists(f):
+                if len(self._stderr_files) > 1:
+                    stderr.append("#### STDERR <<%s>>\n" % f)
                 with open(f,'r') as fp:
                     stderr.append(fp.read())
-        return ''.join(stderr)
+        return ''.join(stderr).replace(r'\x1B','ESC')
 
     @property
     def runner_nslots(self):
@@ -3527,7 +3543,8 @@ class PipelineCommand:
 
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash",
                             envmodules=None,conda=None,conda_env=None,
-                            working_dir=None,batch_number=None):
+                            working_dir=None,batch_number=None,
+                            script_uuid=None):
         """
         Generate a uniquely-named wrapper script to run the command
 
@@ -3544,21 +3561,44 @@ class PipelineCommand:
           batch_number (int): for batched commands, the number
             of the batch that this script corresponds to
             (optional)
+          uuid (str): optional ID string; if not supplied then
+            a UUID string will be generated
 
         Returns:
           String: name of the wrapper script.
         """
+        # UUID
+        if script_uuid is None:
+            script_uuid = uuid.uuid4()
         # Wrap in a script
         if scripts_dir is None:
             scripts_dir = os.getcwd()
         script_file = os.path.join(scripts_dir,"%s.%s.sh" % (self.name(),
-                                                             uuid.uuid4()))
+                                                             script_uuid))
+        # Preamble
         prologue = ["echo \"#### COMMAND %s\"" % self._name]
         if batch_number is not None:
             prologue.append("echo \"#### BATCH %s\"" % batch_number)
         prologue.extend(["echo \"#### HOSTNAME $HOSTNAME\"",
                          "echo \"#### USER $USER\"",
+                         "echo \"#### UUID %s\"" % script_uuid,
                          "echo \"#### START $(date)\""])
+        # Disable Python's user site-packages directory
+        prologue.extend(
+            ["# Disable Python user site-packages directory",
+             "export PYTHONNOUSERSITE=1",
+             "_pythonpath=$PYTHONPATH",
+             "export PYTHONPATH=",
+             "for _p in $(echo $_pythonpath | tr ':' ' ') ; do",
+             "  if [ -z \"$(echo $_p | grep ^${HOME}/.local/lib/python)\" ] ; then",
+             "    if [ -z \"$PYTHONPATH\" ] ; then",
+             "      PYTHONPATH=$_p",
+             "    else",
+             "      PYTHONPATH=$PYTHONPATH:$_p",
+             "    fi",
+             "  fi",
+             "done"])
+        # Environment modules
         if envmodules:
             shell += " --login"
             try:
@@ -3567,33 +3607,47 @@ class PipelineCommand:
                     prologue.append("export MODULEPATH=%s" % modulepath)
             except KeyError:
                 pass
+            prologue.append("echo \"#### MODULEPATH $MODULEPATH\"")
             for module in envmodules:
                 if module is not None:
+                    module_load_cmd = "module load %s" % module
                     module_script = \
-                        ["module load %s" % module,
+                        ["# Loading environment module %s" % module,
+                         "echo %s" % module_load_cmd,
+                         module_load_cmd,
                          "if [ $? -ne 0 ] ; then",
                          "  echo Failed to load environment module >&2",
                          "  exit 1",
                          "fi"]
                     prologue.extend(module_script)
+            prologue.append("module list >__modules.%s 2>&1" % script_uuid)
+        # Conda environment
         if conda_env:
             conda_activate_cmd = \
                 str(CondaWrapper(conda).activate_env_cmd(conda_env))
             conda_script = \
-                        ["echo %s" % conda_activate_cmd,
+                        ["# Activating conda environment %s" % conda_env,
+                         "echo %s" % conda_activate_cmd,
                          conda_activate_cmd,
                          "if [ $? -ne 0 ] ; then",
                          "  echo Failed to activate conda environment >&2",
                          "  exit 1",
-                         "fi"]
+                         "fi",
+                         "%s list >__conda_packages.%s 2>&1" % (conda,
+                                                                script_uuid)]
             prologue.extend(conda_script)
+        # Move to working dir
         if working_dir:
             prologue.append("cd %s" % working_dir)
         prologue.append("echo \"#### CWD $(pwd)\"")
+        # Report environment
+        prologue.append("printenv >__env.%s" % script_uuid)
+        # Handle script exit
         epilogue = ["exit_code=$?",
                     "echo \"#### END $(date)\"",
                     "echo \"#### EXIT_CODE $exit_code\"",
                     "exit $exit_code"]
+        # Build the wrapper
         self.cmd().make_wrapper_script(filen=script_file,
                                        shell=shell,
                                        prologue='\n'.join(prologue),
