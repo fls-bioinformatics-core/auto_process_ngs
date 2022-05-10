@@ -165,10 +165,14 @@ SOFTWARE_PACKAGE_NAMES = {
     'cellranger': 'Cellranger',
     'cellranger-atac': 'Cellranger ATAC',
     'cellranger-arc': 'Cellranger ARC',
-    'spaceranger': 'Spaceranger',
     'fastqc': 'FastQC',
     'fastq_screen': 'FastqScreen',
     'fastq_strand': 'FastqStrand',
+    'multiqc': 'MultiQC',
+    'picard': 'Picard Tools',
+    'qualimap': 'Qualimap',
+    'rseqc:genebody_coverage': 'RSeQC geneBody_coverage.py',
+    'spaceranger': 'Spaceranger',
 }
 
 # Field descriptions for summary tables
