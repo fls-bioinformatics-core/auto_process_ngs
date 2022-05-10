@@ -151,7 +151,7 @@ class QualimapRnaseq(object):
     @property
     def raw_coverage_profile_along_genes_total(self):
         """
-        Provides access to values in the 'raw_data_qualimapReport/coverage_profile_along_genes_\(total\).txt' file
+        Provides access to values in the 'raw_data_qualimapReport/coverage_profile_along_genes_(total).txt' file
         """
         if self._raw_coverage_profile_along_genes_total is None:
             f = os.path.join(self._qualimap_dir,
