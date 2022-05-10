@@ -1649,7 +1649,7 @@ class SampleQCReporter:
                 qc_dir = os.path.join(project.dirn)
         else:
             qc_dir = project.qc_dir
-        # Group Fastqs associated with this project
+        # Group Fastqs associated with this sample
         self.fastqs = sorted(list(
             filter(lambda fq:
                    project.fastq_attrs(fq).sample_name == sample,
