@@ -631,6 +631,15 @@ class QCReport(Document):
                         sample,
                         multiplex_analysis_table,
                         multiplex_analysis_fields)
+            # Report extended QC metrics
+            include_extended_metrics = \
+                ('rseqc_genebody_coverage' in project.outputs) or \
+                ('picard_insert_size_metrics' in project.outputs) or \
+                ('qualimap_rnaseq' in project.outputs)
+            if include_extended_metrics:
+                self.report_extended_qc_metrics(
+                    project,
+                    section=project_summary)
         # Report the status
         self.report_status()
 
@@ -1169,6 +1178,116 @@ class QCReport(Document):
             # Update flag to indicate problems with the
             # report
             self.status = False
+
+    def report_extended_qc_metrics(self,project,section):
+        """
+        Report the extended QC metrics
+
+        Creates a new subsection in the report document and
+        adds content for reporting on:
+
+        - RSeQC gene body coverage
+        - Picard insert size metrics
+        - Qualimap RNA-seq metrics
+
+        Arguments:
+          project (QCProject): project to report
+          section (Section): document section to add
+            the report to
+        """
+        # Create top-level container for extended metrics
+        extended_metrics = section.add_subsection(
+            "Extended QC metrics (experimental)",
+            name='extended_qc_metrics')
+        # Make a subsection for each organism
+        for organism in project.organisms:
+            extended_metrics_subsection = extended_metrics.add_subsection(
+                "%s" % str(organism).title(),
+                name='extended_qc_metrics_%s' % organism,
+                css_classes=('info',))
+            # Project-wide metrics
+            # - RSeQC gene body coverage
+            if 'rseqc_genebody_coverage' in project.outputs:
+                rseqc_genebody_coverage = self.report_rseqc_genebody_coverage(
+                    project,
+                    organism,
+                    extended_metrics_subsection)
+            # Sample/Fastq group-level metrics
+            # - Picard insert sizes
+            # - Qualimap RNA-seq metrics
+            fields = []
+            if 'picard_insert_size_metrics' in project.outputs:
+                fields.extend(['insert_size_metrics_%s' % organism,
+                               'insert_size_histogram_%s' % organism])
+            if 'qualimap_rnaseq' in project.outputs:
+                fields.extend(['coverage_profile_along_genes_%s' % organism,
+                               'reads_genomic_origin_%s' % organism,
+                               'qualimap_rnaseq_report_%s' % organism])
+            if fields:
+                # Create a new summary table
+                fields.insert(0,'sample')
+                fields.insert(1,'bam_file')
+                extended_metrics_table = self.add_summary_table(
+                    project,
+                    fields,
+                    section=extended_metrics_subsection)
+                # Add metrics for each sample
+                for sample in project.samples:
+                    reporter = SampleQCReporter(project,
+                                                sample,
+                                                qc_dir=project.qc_dir,
+                                                fastq_attrs=project.fastq_attrs)
+                    reporter.update_summary_table(extended_metrics_table,
+                                                  fields=fields,
+                                                  relpath=self.relpath)
+        # Add an empty section to clear HTML floats
+        clear = section.add_subsection(css_classes=("clear",))
+
+    def report_rseqc_genebody_coverage(self,project,organism,section):
+        """
+        Add report of RSeQC gene body coverage to a document section
+
+        Arguments:
+          project (QCProject): parent project
+          organism (str): name of organism to report coverage for
+          section (Section): section to add the report to
+        """
+        # Determine location of QC artefacts
+        qc_dir = self.fetch_qc_dir(project)
+        # Top-level gene body coverage output dir
+        genebody_coverage_dir = os.path.join(qc_dir,
+                                             "rseqc_genebody_coverage",
+                                             organism)
+        if not os.path.exists(genebody_coverage_dir):
+            # No outputs for specifed organism
+            return None
+        # Create a container for the outputs
+        coverage = section.add_subsection(
+            "Gene Body Coverage",
+            name='rseqc_genebody_coverage_%s' %
+            organism)
+        # Acquire plot PNG
+        png = os.path.join(genebody_coverage_dir,
+                           "%s.geneBodyCoverage.curves.png"
+                           % project.name)
+        if not os.path.exists(png):
+            # Missing PNG
+            coverage.add(WarningIcon(),"No RSeQC gene body coverage plot")
+        else:
+            # Embed image in report
+            if self.relpath:
+                # Convert to relative path
+                png = os.path.relpath(png,self.relpath)
+            coverage.add("Gene body coverage from RSeQC for %s mapped "
+                         "to %s" % (project.name,organism),
+                         Img(png,
+                             href=png,
+                             title="Gene body coverage from RSeQC "
+                             "(mapped to %s); click for PNG" %
+                             organism,
+                             name="gene_body_coverage_%s" % organism))
+        # Return the subsection
+        return coverage
 
     def fetch_qc_dir(self,project):
         """
