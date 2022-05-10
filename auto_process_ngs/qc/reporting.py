@@ -98,6 +98,7 @@ from ..docwriter import Target
 from ..docwriter import List
 from ..docwriter import Para
 from ..docwriter import WarningIcon
+from ..docwriter import DocumentIcon
 from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
@@ -110,6 +111,9 @@ from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
 from .outputs import QCOutputs
+from .picard import CollectInsertSizeMetrics
+from .plots import RGB_COLORS
+from .plots import Plot
 from .plots import useqlenplot
 from .plots import ureadcountplot
 from .plots import uscreenplot
@@ -119,6 +123,7 @@ from .plots import ustrandplot
 from .plots import uduplicationplot
 from .plots import uadapterplot
 from .plots import encode_png
+from .qualimap import QualimapRnaseq
 from .seqlens import SeqLens
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
@@ -1963,6 +1968,14 @@ class FastqGroupQCReporter:
 
     Provides the following methods:
 
+    - insert_size_metrics: fetch insert size metrics
+    - uinsertsizeplot: return mini-plot of insert size
+      histogram
+    - qualimap_rnaseq: fetch Qualimap 'rnaseq' metrics
+    - ucoverageprofileplot: return mini-plot of gene
+      coverage profile
+    - ugenomicoriginplot: return mini-plot of genomic origin
+      of reads data
     - strandedness: fetch strandedness data for this group
     - ustrandplot: return mini-strand stats summary plot
     - report_strandedness: write report for strandedness
@@ -2037,6 +2050,90 @@ class FastqGroupQCReporter:
                 if os.path.isfile(fastq_strand_txt):
                     return fastq_strand_txt
         return None
+
+    def insert_size_metrics(self,organism):
+        """
+        Return Picard insert size metrics for specified organism
+        """
+        if self.bam:
+            insert_size_metrics_txt = os.path.join(
+                self.qc_dir,
+                "picard",
+                organism,
+                "%s.insert_size_metrics.txt" % self.bam)
+            if os.path.isfile(insert_size_metrics_txt):
+                return CollectInsertSizeMetrics(insert_size_metrics_txt)
+        return None
+
+    def uinsertsizeplot(self,organism):
+        """
+        Return a mini-plot with the Picard insert size histogram
+        """
+        insert_size_metrics = self.insert_size_metrics(organism)
+        data = insert_size_metrics.histogram
+        p = Plot(50,40)
+        p.stripe(RGB_COLORS.lightgrey,RGB_COLORS.white)
+        p.plot(data,RGB_COLORS.red,fill=True)
+        return p.encoded_png()
+
+    def qualimap_rnaseq(self,organism):
+        """
+        Return Qualimap 'rnaseq' outputs instance for specified organism
+        """
+        if self.bam:
+            qualimap_rnaseq_dir = os.path.join(
+                self.qc_dir,
+                "qualimap-rnaseq",
+                organism,
+                self.bam)
+            if os.path.isdir(qualimap_rnaseq_dir):
+                return QualimapRnaseq(qualimap_rnaseq_dir)
+        return None
+
+    def ucoverageprofileplot(self,organism):
+        """
+        Return a mini-plot of the gene coverage profile
+        """
+        data = self.qualimap_rnaseq(organism).\
+               raw_coverage_profile_along_genes_total
+        p = Plot(50,40)
+        p.stripe(RGB_COLORS.gainsboro,RGB_COLORS.white)
+        p.plot(data,RGB_COLORS.red,interpolation="minmax")
+        return p.encoded_png()
+
+    def ugenomicoriginplot(self,organism,width=100,height=40):
+        """
+        Return a mini-barplot with the genomic origin of reads data
+        """
+        # Internal constants
+        names = ['exonic',
+                 'intronic',
+                 'intergenic',
+                 'overlapping exon',
+                 'rRNA']
+        colors = {
+            'exonic': RGB_COLORS.maroon,
+            'intronic': RGB_COLORS.green,
+            'intergenic': RGB_COLORS.navyblue,
+            'overlapping exon': RGB_COLORS.orange,
+            'rRNA': RGB_COLORS.grey
+        }
+        # Fetch data
+        data = self.qualimap_rnaseq(organism).reads_genomic_origin
+        bar_length = width - 4
+        bar_height = height - 10
+        # Determine limits of the bar
+        x1 = (width - bar_length)/2
+        y1 = (height - bar_height)/2
+        x2 = (width - bar_length)/2 + bar_length
+        y2 = (height - bar_height)/2 + bar_height
+        # Create plot
+        p = Plot(width,height)
+        p.bar([data[name][1] for name in names],
+              (x1,y1),
+              (x2,y2),
+              [colors[name] for name in names])
+        return p.encoded_png()
 
     def strandedness(self):
         """
@@ -2295,6 +2392,7 @@ class FastqGroupQCReporter:
 
         - fastqs (if paired-end)
         - fastq (if single-end)
+        - bam_file
         - reads
         - read_lengths
         - read_counts
@@ -2313,6 +2411,11 @@ class FastqGroupQCReporter:
         - screens_r2
         - screens_r3
         - strandedness
+        - insert_size_metrics_<organism>
+        - insert_size_histogram_<organism>
+        - reads_genomic_origin_<organism>
+        - coverage_profile_along_genes_<organism>
+        - qualimap_rnaseq_report_<organism>
 
         Arguments:
           field (str): name of the field to report; if the
@@ -2326,6 +2429,8 @@ class FastqGroupQCReporter:
                 value.append(Link(self.reporters[read].name,
                                   "#%s" % self.reporters[read].safe_name))
             value = "<br />".join([str(x) for x in value])
+        elif field == "bam_file":
+            value = self.bam
         elif field == "reads":
             if self.reporters[self.reads[0]].sequence_lengths:
                 value = pretty_print_reads(
@@ -2445,6 +2550,68 @@ class FastqGroupQCReporter:
                         href="#strandedness_%s" %
                         self.reporters[self.reads[0]].safe_name,
                         title=self.strandedness())
+        elif field.startswith("insert_size_metrics_"):
+            organism = field[len("insert_size_metrics_"):]
+            insert_size_metrics = self.insert_size_metrics(organism)
+            if insert_size_metrics:
+                insert_size = \
+                    "%.2f (%.3f)" % \
+                    (insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
+                     insert_size_metrics.metrics['STANDARD_DEVIATION'])
+                insert_size_file = insert_size_metrics.metrics_file
+                if relpath:
+                    insert_size_file =  os.path.relpath(insert_size_file,
+                                                        relpath)
+                value = Link(insert_size,insert_size_file)
+        elif field.startswith("insert_size_histogram_"):
+            organism = field[len("insert_size_histogram_"):]
+            histogram_pdf = os.path.join(
+                os.path.dirname(
+                    self.insert_size_metrics(organism).metrics_file),
+                "%s.insert_size_histogram.pdf" % self.bam)
+            if relpath:
+                histogram_pdf = os.path.relpath(histogram_pdf,
+                                                relpath)
+            value = Img(self.uinsertsizeplot(organism),
+                        title="%s: insert size histogram (click for PDF)"
+                        % self.bam,
+                        href=histogram_pdf)
+        elif field.startswith("qualimap_rnaseq_report_"):
+            organism = field[len("qualimap_rnaseq_report_"):]
+            qualimap_outputs = self.qualimap_rnaseq(organism)
+            if qualimap_outputs:
+                qualimap_report = qualimap_outputs.html_report
+                if relpath:
+                    qualimap_report =  os.path.relpath(qualimap_report,
+                                                       relpath)
+                value = Link(DocumentIcon(title="%s: Qualimap rnaseq report"
+                                          % self.bam,
+                                          size=40),
+                             target=qualimap_report)
+        elif field.startswith("reads_genomic_origin_"):
+            organism = field[len("reads_genomic_origin_"):]
+            title = ["Genomic origin of reads:"]
+            genomic_origin = \
+                self.qualimap_rnaseq(organism).reads_genomic_origin
+            for name in genomic_origin:
+                title.append("- %s: %s (%s%%)" % (name,
+                                                  genomic_origin[name][0],
+                                                  genomic_origin[name][1]))
+            link = self.qualimap_rnaseq(organism).\
+                   link_to_output("Reads Genomic Origin",
+                                  relpath=relpath)
+            value = Img(self.ugenomicoriginplot(organism),
+                        title='\n'.join(title),
+                        href=link)
+        elif field.startswith("coverage_profile_along_genes_"):
+            organism = field[len("coverage_profile_along_genes_"):]
+            link = self.qualimap_rnaseq(organism).\
+                   link_to_output("Coverage Profile Along Genes (Total)",
+                                  relpath=relpath)
+            value = Img(self.ucoverageprofileplot(organism),
+                        title="%s: Qualimap gene coverage profile\n"
+                        "(click for PDF)" % self.bam,
+                        href=link)
         else:
             raise KeyError("'%s': unrecognised field for summary "
                            "table" % field)
