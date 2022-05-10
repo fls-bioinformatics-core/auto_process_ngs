@@ -3406,11 +3406,18 @@ sys.exit(MockQualimap(path=sys.argv[0],
             ##################
             # rnaseq command
             ##################
+            sample_outputs = {
+                'rnaseq_qc_results.txt': mockqcdata.QUALIMAP_RNASEQ_RESULTS
+            }
             os.makedirs(args.outdir)
             for f in ('qualimapReport.html',
                       'rnaseq_qc_results.txt'):
                 with open(os.path.join(args.outdir,f),'wt') as fp:
-                    fp.write("qualimap rnaseq: placeholder\n")
+                    try:
+                        txt = sample_outputs[f]
+                    except KeyError:
+                        txt = "qualimap rnaseq: placeholder\n"
+                    fp.write(txt)
         # Finish
         return self._exit_code
 
