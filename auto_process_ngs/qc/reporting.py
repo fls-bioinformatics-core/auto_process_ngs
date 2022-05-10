@@ -178,6 +178,7 @@ SUMMARY_FIELD_DESCRIPTIONS = {
     'sample': ('Sample','Sample name'),
     'fastq' : ('Fastq','Fastq file'),
     'fastqs': ('Fastqs','Fastq files in each sample'),
+    'bam_file': ('BAM','BAM file'),
     'reads': ('#reads','Number of reads/read pairs'),
     'read_lengths': ('Lengths',
                      'Mean sequence length and range'),
@@ -220,6 +221,18 @@ SUMMARY_FIELD_DESCRIPTIONS = {
     'strandedness': ('Strand',
                      'Proportions of reads mapping to forward and reverse '
                      'strands'),
+    'insert_size_metrics_.*': ('Insert size',
+                               'Picard insert size (mean/SD)'),
+    'insert_size_histogram_.*': ('Insert size histogram',
+                                 'Picard insert size histogram'),
+    'coverage_profile_along_genes_.*': ('Gene coverage',
+                                        'Qualimap rna-seq gene coverage '
+                                        'profile'),
+    'reads_genomic_origin_.*': ('Genomic origin',
+                                'Qualimap rna-seq genomic origin of '
+                                'reads'),
+    'qualimap_rnaseq_report_.*': ('Qualimap report',
+                                  'Qualimap rna-seq HTML report'),
     'cellranger_count': ('Single library analyses',
                          'Web summary from Cellranger* single library '
                          'analysis for this sample'),
