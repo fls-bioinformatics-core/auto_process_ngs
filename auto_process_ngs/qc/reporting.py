@@ -2757,13 +2757,19 @@ class FastqGroupQCReporter:
         elif field.startswith("strandedness_"):
             organism = field[len("strandedness_"):]
             infer_experiment = self.infer_experiment(organism)
+            infer_experiment_log = infer_experiment.log_file
+            if relpath:
+                infer_experiment_log = os.path.relpath(
+                    infer_experiment_log,
+                    relpath)
             if infer_experiment:
                 value = Img(self.ustrandednessplot(organism),
                             title="%s: F%.2f%% | R%.2f%% (U%.2f%%)"
                             % (self.bam,
                                infer_experiment.forward*100.0,
                                infer_experiment.reverse*100.0,
-                               infer_experiment.unstranded*100.0))
+                               infer_experiment.unstranded*100.0),
+                            href=infer_experiment_log)
         elif field.startswith("insert_size_metrics_"):
             organism = field[len("insert_size_metrics_"):]
             insert_size_metrics = self.insert_size_metrics(organism)
@@ -2774,7 +2780,7 @@ class FastqGroupQCReporter:
                      insert_size_metrics.metrics['STANDARD_DEVIATION'])
                 insert_size_file = insert_size_metrics.metrics_file
                 if relpath:
-                    insert_size_file =  os.path.relpath(insert_size_file,
+                    insert_size_file = os.path.relpath(insert_size_file,
                                                         relpath)
                 value = Link(insert_size,insert_size_file)
         elif field.startswith("insert_size_histogram_"):
