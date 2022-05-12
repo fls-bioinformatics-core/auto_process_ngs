@@ -3201,17 +3201,15 @@ class RunQualimapRnaseq(PipelineTask):
         else:
             print("Feature file is not set, cannot run Qualimap rnaseq")
             return
-        # Filter list of BAM files down to those which have
-        # associated properties, and which are paired-end
+        # Check for BAM file properties
         if self.args.bam_properties:
-            self.bam_files = list(
-                filter(lambda f: f in self.args.bam_properties and
-                       self.args.bam_properties[f]['paired_end'],
-                       self.args.bam_files))
+            self.bam_files = self.args.bam_files
         else:
-            self.bam_files = list()
+            print("No properties for BAM files, cannot run Qualimap "
+                  "rnaseq")
+            return
         # Set up Qualimap rnaseq for each BAM file
-        for bam in self.bam_files:
+        for bam in self.args.bam_files:
             # Output directory for individual BAM file
             bam_name = os.path.basename(bam)[:-4]
             out_dir = os.path.join(self.args.out_dir,bam_name)
@@ -3259,7 +3257,9 @@ class RunQualimapRnaseq(PipelineTask):
     def finish(self):
         if not self.args.feature_file:
             return
-        for bam in self.bam_files:
+        if not self.args.bam_properties:
+            return
+        for bam in self.args.bam_files:
             bam_name = os.path.basename(bam)[:-4]
             out_dir = os.path.join(self.args.out_dir,bam_name)
             if os.path.exists(out_dir):
