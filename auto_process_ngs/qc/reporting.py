@@ -2217,7 +2217,7 @@ class FastqGroupQCReporter:
                 return InferExperiment(infer_experiment_log)
         return None
 
-    def ustrandednessplot(self,organism,width=50,height=30):
+    def ustrandednessplot(self,organism,width=50,height=24):
         """
         Return a mini-plot for RSeQC strandness data
         """
