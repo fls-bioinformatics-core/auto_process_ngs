@@ -217,6 +217,7 @@ class QCOutputs:
                 self._collect_seq_lengths(files),
                 self._collect_picard_insert_size_metrics(self.qc_dir),
                 self._collect_rseqc_genebody_coverage(self.qc_dir),
+                self._collect_rseqc_infer_experiment(self.qc_dir),
                 self._collect_qualimap_rnaseq(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(self.qc_dir),
@@ -757,6 +758,62 @@ class QCOutputs:
         return AttributeDictionary(
             name='rseqc_genebody_count',
             software=software,
+            organisms=sorted(list(organisms)),
+            output_files=output_files,
+            tags=sorted(list(tags))
+        )
+
+    def _collect_rseqc_infer_experiment(self,qc_dir):
+        """
+        Collect information on RSeQC infer_experiment.py outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'rseqc_infer_experiment'
+        - software: dictionary of software and versions
+        - organisms: list of organisms with associated
+          outputs
+        - bam_files: list of associated BAM file names
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        software = {}
+        bam_files = set()
+        output_files = list()
+        tags = set()
+        # Look for RSeQC infer_experiment.py outputs
+        organisms = set()
+        infer_experiment_dir = os.path.join(qc_dir,
+                                            "rseqc_infer_experiment")
+        if os.path.isdir(infer_experiment_dir):
+            # Look for subdirs with organism names
+            for d in filter(
+                    lambda dd:
+                    os.path.isdir(os.path.join(infer_experiment_dir,dd)),
+                    os.listdir(infer_experiment_dir)):
+                # Check for outputs
+                for f in filter(
+                        lambda ff:
+                        ff.endswith(".infer_experiment.log"),
+                        os.listdir(os.path.join(infer_experiment_dir,d))):
+                    print("- %s" % f)
+                    name = f[:-len(".infer_experiment.log")]
+                    organisms.add(d)
+                    bam_files.add(name)
+                    output_files.append(os.path.join(infer_experiment_dir,
+                                                     d,f))
+        if organisms:
+            tags.add("rseqc_infer_experiment")
+            software['rseqc:infer_experiment'] = [None]
+        # Return collected information
+        return AttributeDictionary(
+            name='rseqc_infer_experiment',
+            software=software,
+            bam_files=sorted(list(bam_files)),
             organisms=sorted(list(organisms)),
             output_files=output_files,
             tags=sorted(list(tags))

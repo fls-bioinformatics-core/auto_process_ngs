@@ -52,6 +52,7 @@ class TestQCOutputs(unittest.TestCase):
                      include_fastq_screen=True,
                      include_strandedness=True,
                      include_seqlens=True,
+                     include_rseqc_infer_experiment=False,
                      include_rseqc_genebody_coverage=False,
                      include_picard_insert_size_metrics=False,
                      include_qualimap_rnaseq=False,
@@ -74,6 +75,7 @@ class TestQCOutputs(unittest.TestCase):
             include_fastq_screen=include_fastq_screen,
             include_strandedness=include_strandedness,
             include_seqlens=include_seqlens,
+            include_rseqc_infer_experiment=include_rseqc_infer_experiment,
             include_rseqc_genebody_coverage=include_rseqc_genebody_coverage,
             include_picard_insert_size_metrics=\
             include_picard_insert_size_metrics,
@@ -498,6 +500,65 @@ class TestQCOutputs(unittest.TestCase):
                          { 'fastq_screen': [ '0.9.2' ],
                            'fastq_strand': [ '0.0.4' ],
                            'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end_rseqc_infer_experiment(self):
+        """
+	QCOutputs: paired-end data with RSeQC infer_experiment.py output
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_rseqc_infer_experiment=True)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'rseqc_infer_experiment',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.bams,['PJB1_S1_R1_001',
+                                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.organisms,['human'])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                           'rseqc:infer_experiment': [ '?' ],
                          })
         self.assertEqual(qc_outputs.stats.max_seqs,37285443)
         self.assertEqual(qc_outputs.stats.min_sequence_length,65)
