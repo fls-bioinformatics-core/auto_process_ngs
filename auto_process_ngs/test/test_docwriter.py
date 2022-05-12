@@ -716,12 +716,12 @@ class TestDocumentIcon(unittest.TestCase):
     def test_documenticon(self):
         d = DocumentIcon()
         self.assertEqual(d.html(),
-                         "<img src='data:image/png;base64,%s' height='50' width='50' />" % DOCUMENT_ICON_BASE64)
+                         "<img src='data:image/png;base64,%s' height='35' width='35' />" % DOCUMENT_ICON_BASE64)
 
     def test_documenticon_with_title(self):
         d = DocumentIcon(title="This is a document")
         self.assertEqual(d.html(),
-                         "<img src='data:image/png;base64,%s' height='50' width='50' title='This is a document' />" % DOCUMENT_ICON_BASE64)
+                         "<img src='data:image/png;base64,%s' height='35' width='35' title='This is a document' />" % DOCUMENT_ICON_BASE64)
 
     def test_documenticon_change_size(self):
         d = DocumentIcon(size=25)

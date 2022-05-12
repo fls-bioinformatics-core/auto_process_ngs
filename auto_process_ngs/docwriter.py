@@ -64,7 +64,7 @@ VALID_CSS_ID_CHARS = "-_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 
 WARNING_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAkFBMVEX/oAD/////pQD/ogD/rC//587/nwD/3Kr/7Mz/pwD//PX/nQD/9+n/szX/+O3///3/4rr/1Zr/4rf/v2P/xnX/89//5r//tUH/79j/+fL/rSf/sC7/w23/0I//2qb/vFf/yXz/zYT/t07/uVr/yYb/rAf/s0P/5cT/1pj/3q//t0j/zJH/vlz/yHj/157/qhjbULfEAAAAAXRSTlMAQObYZgAAAAFiS0dEAIgFHUgAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfjBgsMGw801p5CAAAAcklEQVRIx+3VMQ6AMAxD0fIvwv1vicSABIpI7BYGqOe8oVIatzZzDUfU+aIiiAzuEagGVAOqOQ0sexJDRladkDwkInQTKoT3CTXCJF8kyScu7dgzJFxlRv9K51w4xDh9gek8yuPKwqkkp/iserVK/FfZAOKECZLQoDSVAAAAAElFTkSuQmCC'
 
-DOCUMENT_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAIAAACRXR/mAAAAl0lEQVR4nO3X0QmEMBAAUSNXTqpIY3KNpYr0E/9FouPhuci8X8UM6yKYeu9TPPPTAfvMIswizCLMIj7o7tba5ZNyzudvDjotswi2Wxu11sHVUsrlJ79xWr/MY+yN03K3CHeLcLeI+3YrjX9f0zfddHBfRucGfYlmEWYRZhFmEQdf+Q1/X0Myi2Ar/zdBp2UWYRZhFmEWsQL7FSC1spkMiQAAAABJRU5ErkJggg=='
+DOCUMENT_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAACMAAAAjCAIAAACRuyQOAAAAeUlEQVR4nO2WwQnAMAhFtXQcp8hipYs5hfvYQ48RW5CKpL6jgf/zURJRVSGFLccGAHazKiIRUSKai3mZ2imCPREzzOycjjEeFeplenNrn3qZuk8W9TJ1nyzw/nPxxKCQgx4Ka77l7dRO6zuhuZf3DvtfJ3siviAv0wV+rCCXYocntQAAAABJRU5ErkJggg=='
 
 #######################################################################
 # Classes
@@ -1050,9 +1050,9 @@ class DocumentIcon(Img):
       title (str): optional, content to mark with
         the icon
       size (int): optional height/width specifier for
-        the icon (defaults to 50)
+        the icon (defaults to 35)
     """
-    def __init__(self,title=None,size=50):
+    def __init__(self,title=None,size=35):
         """
         Create new WarningIcon instance
         """
@@ -1061,7 +1061,6 @@ class DocumentIcon(Img):
                      title=title,
                      height=size,
                      width=size)
-
 
 #######################################################################
 # Functions
