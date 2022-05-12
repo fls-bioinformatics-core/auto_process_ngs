@@ -124,6 +124,7 @@ from .plots import uduplicationplot
 from .plots import uadapterplot
 from .plots import encode_png
 from .qualimap import QualimapRnaseq
+from .rseqc import InferExperiment
 from .seqlens import SeqLens
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
@@ -225,6 +226,12 @@ SUMMARY_FIELD_DESCRIPTIONS = {
     'strandedness': ('Strand',
                      'Proportions of reads mapping to forward and reverse '
                      'strands'),
+    'strandedness_.*': ('Strand',
+                        'Fraction of reads mapping to forward and reverse '
+                        'strands (from RSeQC infer_experiment.py)'),
+    'endedness_.*' : ('Endedness',
+                      'Whether data is Paired- or single-ended (from RSeQC '
+                      'infer_experiment.py'),
     'insert_size_metrics_.*': ('Insert size',
                                'Picard insert size (mean/SD)'),
     'insert_size_histogram_.*': ('Insert size histogram',
@@ -634,6 +641,7 @@ class QCReport(Document):
             # Report extended QC metrics
             include_extended_metrics = \
                 ('rseqc_genebody_coverage' in project.outputs) or \
+                ('rseqc_infer_experiment' in project.outputs) or \
                 ('picard_insert_size_metrics' in project.outputs) or \
                 ('qualimap_rnaseq' in project.outputs)
             if include_extended_metrics:
@@ -1216,6 +1224,9 @@ class QCReport(Document):
             # - Picard insert sizes
             # - Qualimap RNA-seq metrics
             fields = []
+            if 'rseqc_infer_experiment' in project.outputs:
+                fields.extend(['endedness_%s' % organism,
+                               'strandedness_%s' % organism])
             if 'picard_insert_size_metrics' in project.outputs:
                 fields.extend(['insert_size_metrics_%s' % organism,
                                'insert_size_histogram_%s' % organism])
@@ -2104,6 +2115,10 @@ class FastqGroupQCReporter:
 
     Provides the following methods:
 
+    - infer_experiment: fetch data from RSeQC
+      'infer_experiment.py'
+    - ustrandednessplot: return mini-plot of strandedness
+      data from RSeQC 'infer_experiment.py'
     - insert_size_metrics: fetch insert size metrics
     - uinsertsizeplot: return mini-plot of insert size
       histogram
@@ -2186,6 +2201,51 @@ class FastqGroupQCReporter:
                 if os.path.isfile(fastq_strand_txt):
                     return fastq_strand_txt
         return None
+
+    def infer_experiment(self,organism):
+        """
+        Return RSeQC infer_experiment.py data for organism
+        """
+        if self.bam:
+            infer_experiment_log = os.path.join(
+                self.qc_dir,
+                "rseqc_infer_experiment",
+                organism,
+                "%s.infer_experiment.log" % self.bam)
+            if os.path.isfile(infer_experiment_log):
+                return InferExperiment(infer_experiment_log)
+        return None
+
+    def ustrandednessplot(self,organism,width=50,height=30):
+        """
+        Return a mini-plot for RSeQC strandness data
+        """
+        # Fetch data
+        infer_experiment = self.infer_experiment(organism)
+        fwd_data = [ self.infer_experiment(organism).forward,
+                     1.0 - self.infer_experiment(organism).forward ]
+        rvs_data = [ self.infer_experiment(organism).reverse,
+                     1.0 - self.infer_experiment(organism).reverse ]
+        # Create plot with two horizontal bars
+        p = Plot(width,height)
+        bar_length = width - 4
+        bar_height = height/2 - 4
+        # Start and end on x-axis (same for both)
+        x1 = (width - bar_length)/2
+        x2 = (width + bar_length)/2
+        # Plot the 'reverse' bar
+        y1 = (height/4 - bar_height/2)
+        y2 = (height/4 + bar_height/2)
+        p.bar(rvs_data,
+              (x1,y1),(x2,y2),
+              (RGB_COLORS.black,RGB_COLORS.lightgrey))
+        # Plot the 'forward' bar
+        y1 = y1 + height/2
+        y2 = y2 + height/2
+        p.bar(fwd_data,
+              (x1,y1),(x2,y2),
+              (RGB_COLORS.black,RGB_COLORS.lightgrey))
+        return p.encoded_png()
 
     def insert_size_metrics(self,organism):
         """
@@ -2686,6 +2746,21 @@ class FastqGroupQCReporter:
                         href="#strandedness_%s" %
                         self.reporters[self.reads[0]].safe_name,
                         title=self.strandedness())
+        elif field.startswith("endedness_"):
+            organism = field[len("endedness_"):]
+            infer_experiment = self.infer_experiment(organism)
+            if infer_experiment:
+                value = ("PE" if infer_experiment.paired_end else "SE")
+        elif field.startswith("strandedness_"):
+            organism = field[len("strandedness_"):]
+            infer_experiment = self.infer_experiment(organism)
+            if infer_experiment:
+                value = Img(self.ustrandednessplot(organism),
+                            title="%s: F%.2f%% | R%.2f%% (U%.2f%%)"
+                            % (self.bam,
+                               infer_experiment.forward*100.0,
+                               infer_experiment.reverse*100.0,
+                               infer_experiment.unstranded*100.0))
         elif field.startswith("insert_size_metrics_"):
             organism = field[len("insert_size_metrics_"):]
             insert_size_metrics = self.insert_size_metrics(organism)
