@@ -35,6 +35,7 @@ Fraction of reads explained by "1++,1--,2+-,2-+": 0.4903
 Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
 """)
         infer_expt = InferExperiment(log)
+        self.assertEqual(infer_expt.log_file,log)
         self.assertTrue(infer_expt.paired_end)
         self.assertEqual(infer_expt.forward,0.4903)
         self.assertEqual(infer_expt.reverse,0.4925)
@@ -51,6 +52,7 @@ Fraction of reads explained by "++,--": 0.9669
 Fraction of reads explained by "+-,-+": 0.0161
 """)
         infer_expt = InferExperiment(log)
+        self.assertEqual(infer_expt.log_file,log)
         self.assertFalse(infer_expt.paired_end)
         self.assertEqual(infer_expt.forward,0.9669)
         self.assertEqual(infer_expt.reverse,0.0161)

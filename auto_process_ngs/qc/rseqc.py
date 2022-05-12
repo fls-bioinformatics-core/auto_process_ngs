@@ -22,6 +22,7 @@ class InferExperiment(object):
 
     The following properties are available:
 
+    - log_file (str): path to the source log file
     - paired_end (bool): True if data are paired, False
       if data are single end
     - forward (float): fraction of 'forward' aligned reads
@@ -62,6 +63,13 @@ class InferExperiment(object):
                     self._reverse = float(line.split()[-1])
                 else:
                     pass
+
+    @property
+    def log_file(self):
+        """
+        Path to source log file
+        """
+        return self._infer_experiment_log
 
     @property
     def paired_end(self):
