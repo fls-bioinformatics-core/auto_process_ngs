@@ -199,6 +199,29 @@ class MockQCOutputs:
                     fp.write("Placeholder\n")
 
     @classmethod
+    def rseqc_infer_experiment(self,fq,organism,qc_dir):
+        """
+        Create mock outputs from RSeQC infer_experiment.py
+        """
+        # Basename for mock infer_experiment.py log file
+        basename = os.path.basename(fq)
+        while basename.split('.')[-1] in ('fastq','gz'):
+            basename = '.'.join(basename.split('.')[:-1])
+        out_dir = os.path.join(qc_dir,
+                               "rseqc_infer_experiment",
+                               organism)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        f = os.path.join(out_dir,
+                         "%s.infer_experiment.log" % basename)
+        with open(f,'wt') as fp:
+            fp.write("""This is PairEnd Data
+Fraction of reads failed to determine: 0.0172
+Fraction of reads explained by "1++,1--,2+-,2-+": 0.4903
+Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
+""")
+
+    @classmethod
     def rseqc_genebody_coverage(self,name,organism,qc_dir):
         """
         Create mock outputs from RSeQC geneBody_coverage.py
@@ -387,6 +410,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      include_fastq_screen=True,
                      include_strandedness=True,
                      include_seqlens=True,
+                     include_rseqc_infer_experiment=False,
                      include_rseqc_genebody_coverage=False,
                      include_picard_insert_size_metrics=False,
                      include_qualimap_rnaseq=False,
@@ -420,6 +444,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
       include_strandedness (bool): include outputs from
         strandedness
       include_seqlens (bool): include sequence length metrics
+      include_rseqc_infer_experiment (bool): include RSeQC
+        infer_experiment.py outputs
       include_rseqc_genebody_coverage (bool): include RSeQC
         geneBody_coverage.py outputs
       include_picard_insert_size_metrics (bool): include Picard
@@ -476,6 +502,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         # Strandedness
         if include_strandedness:
             MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
+        # RSeQC infer_experiment.py
+        if include_rseqc_infer_experiment:
+            for organism in organisms:
+                MockQCOutputs.rseqc_infer_experiment(
+                    fq,organism,qc_dir)
         # Picard insert size metrics
         if include_picard_insert_size_metrics:
             for organism in organisms:
