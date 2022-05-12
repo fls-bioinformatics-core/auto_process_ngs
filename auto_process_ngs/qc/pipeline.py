@@ -3120,8 +3120,12 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                 filter(lambda f: f in self.args.bam_properties and
                        self.args.bam_properties[f]['paired_end'],
                        self.args.bam_files))
+            if not self.bam_files:
+                print("No paired-end BAM files found")
         else:
             self.bam_files = list()
+            print("No properties for BAM files, cannot run "
+                  "CollectInsertSizeMetrics")
         # Set up commands to run CleanSam and
         # CollectInsertSizeMetrics for each BAM file
         for bam in self.bam_files:
