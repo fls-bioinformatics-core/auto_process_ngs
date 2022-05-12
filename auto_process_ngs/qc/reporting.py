@@ -2800,7 +2800,7 @@ class FastqGroupQCReporter:
                                                        relpath)
                 value = Link(DocumentIcon(title="%s: Qualimap rnaseq report"
                                           % self.bam,
-                                          size=40),
+                                          size=30),
                              target=qualimap_report)
         elif field.startswith("reads_genomic_origin_"):
             organism = field[len("reads_genomic_origin_"):]
