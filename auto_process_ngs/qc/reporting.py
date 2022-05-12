@@ -173,6 +173,7 @@ SOFTWARE_PACKAGE_NAMES = {
     'picard': 'Picard Tools',
     'qualimap': 'Qualimap',
     'rseqc:genebody_coverage': 'RSeQC geneBody_coverage.py',
+    'rseqc:infer_experiment': 'RSeQC infer_experiment.py',
     'spaceranger': 'Spaceranger',
 }
 
