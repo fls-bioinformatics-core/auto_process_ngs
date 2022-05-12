@@ -232,8 +232,8 @@ SUMMARY_FIELD_DESCRIPTIONS = {
     'endedness_.*' : ('Endedness',
                       'Whether data is Paired- or single-ended (from RSeQC '
                       'infer_experiment.py'),
-    'insert_size_metrics_.*': ('Insert size',
-                               'Picard insert size (mean/SD)'),
+    'insert_size_metrics_.*': ('Insert size (bp)',
+                               'Picard insert size: mean (SD)'),
     'insert_size_histogram_.*': ('Insert size histogram',
                                  'Picard insert size histogram'),
     'coverage_profile_along_genes_.*': ('Gene coverage',
@@ -2607,6 +2607,8 @@ class FastqGroupQCReporter:
         - screens_r2
         - screens_r3
         - strandedness
+        - endedness_<organism>
+        - strandedness_<organism>
         - insert_size_metrics_<organism>
         - insert_size_histogram_<organism>
         - reads_genomic_origin_<organism>
@@ -2766,7 +2768,7 @@ class FastqGroupQCReporter:
             insert_size_metrics = self.insert_size_metrics(organism)
             if insert_size_metrics:
                 insert_size = \
-                    "%.2f (%.3f)" % \
+                    "%.2f bp (%.3f)" % \
                     (insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
                      insert_size_metrics.metrics['STANDARD_DEVIATION'])
                 insert_size_file = insert_size_metrics.metrics_file
@@ -2820,8 +2822,8 @@ class FastqGroupQCReporter:
                    link_to_output("Coverage Profile Along Genes (Total)",
                                   relpath=relpath)
             value = Img(self.ucoverageprofileplot(organism),
-                        title="%s: Qualimap gene coverage profile\n"
-                        "(click for PDF)" % self.bam,
+                        title="%s: Qualimap gene coverage profile" %
+                        self.bam,
                         href=link)
         else:
             raise KeyError("'%s': unrecognised field for summary "
