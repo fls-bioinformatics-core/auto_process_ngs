@@ -2042,7 +2042,10 @@ class SampleQCReporter:
             if relpath:
                 web_summary = os.path.relpath(web_summary,
                                               relpath)
-            value = Link(self.sample,web_summary)
+            value = Link(DocumentIcon(title="%s: web_summary.html"
+                                      % self.sample,
+                                      size=20),
+                         target=web_summary)
         else:
             raise KeyError("'%s': unrecognised field for single "
                            "library analysis table" % field)
