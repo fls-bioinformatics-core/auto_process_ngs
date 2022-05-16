@@ -2320,6 +2320,9 @@ class FastqGroupQCReporter:
         }
         # Fetch data
         data = self.qualimap_rnaseq(organism).reads_genomic_origin
+        # Filter list of names to just those in the data
+        names = [n for n in names if n in data]
+        # Set up barplot
         bar_length = width - 4
         bar_height = height - 10
         # Determine limits of the bar
