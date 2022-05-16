@@ -3269,16 +3269,21 @@ class RunQualimapRnaseq(PipelineTask):
         if not self.args.bam_properties:
             return
         for bam in self.args.bam_files:
+            # Check outputs for each BAM
             bam_name = os.path.basename(bam)[:-4]
             out_dir = os.path.join(self.args.out_dir,bam_name)
-            if os.path.exists(out_dir):
+            outputs_exist = True
+            for f in qualimap_rnaseq_output(out_dir):
+                outputs_exist = (outputs_exist and os.path.exists(f))
+            if outputs_exist:
                 print("outputs already exist for %s" % bam_name)
                 continue
             os.makedirs(self.args.out_dir,exist_ok=True)
             print("copying outputs for %s" % bam_name)
-            shutil.copytree(bam_name,
-                            os.path.join(self.args.out_dir,
-                                         bam_name))
+            if os.path.exists(out_dir):
+                # Remove existing (incomplete) outputs
+                shutil.rmtree(out_dir)
+            shutil.copytree(bam_name,out_dir)
 
 class VerifyQC(PipelineFunctionTask):
     """
