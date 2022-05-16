@@ -3110,8 +3110,8 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
             what the strand-specificity is)R
         """
         # Conda dependencies
-        self.conda("picard",
-                   "readline=6.2")
+        self.conda("picard=2.27.1",
+                   "r-base=4")
     def setup(self):
         # Filter list of BAM files down to those which have
         # associated properties, and which are paired-end
