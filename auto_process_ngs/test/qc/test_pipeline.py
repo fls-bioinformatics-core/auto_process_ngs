@@ -3033,6 +3033,72 @@ PBB,CMO302,PBB
                                                         "human",
                                                         "%s.bam" % f)))
 
+    def test_qcpipeline_extended_qc_metrics_single_end(self):
+        """QCPipeline: standard QC run with extended metrics (single-end data)
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          include_extended_metrics=True,
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardSE")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        for f in ("PJB1_S1_R1_001",
+                  "PJB2_S2_R1_001"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",
+                                                        "qc",
+                                                        "bam_files",
+                                                        "human",
+                                                        "%s.bam" % f)))
+
     def test_qcpipeline_extended_qc_metrics_no_star_index(self):
         """QCPipeline: standard QC run with extended metrics (no STAR index)
         """
