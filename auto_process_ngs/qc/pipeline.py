@@ -155,6 +155,7 @@ class QCPipeline(Pipeline):
         self.add_runner('fastq_screen_runner')
         self.add_runner('fastqc_runner')
         self.add_runner('star_runner')
+        self.add_runner('qualimap_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
@@ -910,6 +911,7 @@ class QCPipeline(Pipeline):
             os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
             bam_properties=rseqc_infer_experiment.output.experiments)
         self.add_task(qualimap_rnaseq,
+                      runner=self.runners['qualimap_runner'],
                       log_dir=log_dir)
         for task in post_tasks:
             qualimap_rnaseq.required_by(task)
@@ -3244,6 +3246,7 @@ class RunQualimapRnaseq(PipelineTask):
             self.add_cmd("Run qualimap rnaseq on %s" %
                          os.path.basename(bam),
                          """
+                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={nthreads} -Xmx{java_mem_size}"
                          qualimap rnaseq \\
                              -bam {bam} \\
                              -gtf {feature_file} \\
@@ -3258,6 +3261,7 @@ class RunQualimapRnaseq(PipelineTask):
                              sequencing_protocol=seq_protocol,
                              paired=('-pe' if paired_end else ''),
                              out_dir=bam_name,
+                             nthreads=self.runner_nslots,
                              java_mem_size=self.java_mem_size))
     def finish(self):
         if not self.args.feature_file:
