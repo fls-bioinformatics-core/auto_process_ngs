@@ -869,6 +869,14 @@ class QCOutputs:
                             organisms.add(d)
                             bam_files.add(bam)
                             output_files.extend(outputs)
+                            # Add additional outputs (CSS, images etc)
+                            for subdir in ('css',
+                                           'images_qualimapReport'):
+                                dd = os.path.join(organism_dir,bam,subdir)
+                                if os.path.exists(dd):
+                                    extra_files = [os.path.join(dd,ff)
+                                                   for ff in os.listdir(dd)]
+                                    output_files.extend(extra_files)
         if organisms:
             tags.add("qualimap_rnaseq")
             software['qualimap'] = [None]
