@@ -86,6 +86,7 @@ Single cell platform                  Library types
 ``10xGenomics Chromium 3'v2``         ``scRNA-seq``, ``snRNA-seq``
 ``10xGenomics Single Cell ATAC``      ``scATAC-seq``, ``snATAC-seq``
 ``10xGenomics Single Cell Multiome``  ``ATAC``, ``GEX``
+``Parse Evercode``                    ``scRNA-seq``
 ``ICELL8``                            ``scRNA-seq``
 ``ICELL8 ATAC``                       ``scATAC-seq``
 ===================================== ==============================
