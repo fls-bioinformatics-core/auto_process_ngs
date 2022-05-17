@@ -709,6 +709,9 @@ class UpdateAnalysisProject(DirectoryUpdater):
                             '10x_Multiome_GEX',) and \
                 self._project.fastq_attrs(fq).read_number == 1:
                 continue
+            elif protocol in ('ParseEvercode',) and \
+                 self._project.fastq_attrs(fq).read_number == 2:
+                continue
             for screen in ("model_organisms",
                            "other_organisms",
                            "rRNA"):
