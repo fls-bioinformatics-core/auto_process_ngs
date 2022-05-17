@@ -1806,6 +1806,75 @@ class TestCheckFastqScreenOutputs(unittest.TestCase):
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R2_001.fastq.gz")])
 
+    def test_check_fastq_screen_outputs_parseevercode_all_missing(self):
+        """
+        check_fastq_screen_outputs: all screen outputs missing (ParseEvercode)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        # NB no screens expected for R1 (only R2)
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="ParseEvercode"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
+
+    def test_check_fastq_screen_outputs_parseevercode_all_present(self):
+        """
+        check_fastq_screen_outputs: all screen outputs present (ParseEvercode)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="ParseEvercode",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="ParseEvercode"),
+                         [])
+
+    def test_check_fastq_screen_outputs_parseevercode_some_missing(self):
+        """
+        check_fastq_screen_outputs: some screen outputs missing (ParseEvercode)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="ParseEvercode",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Remove a screen output
+        os.remove(os.path.join(
+            project.qc_dir,
+            "PJB1_S1_R1_001_screen_model_organisms.txt"))
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    qc_protocol="ParseEvercode"),
+                         [os.path.join(project.fastq_dir,
+                                       "PJB1_S1_R1_001.fastq.gz")])
+
 class TestCheckFastQCOutputs(unittest.TestCase):
     """
     Tests for the 'check_fastqc_outputs' function
@@ -2142,6 +2211,50 @@ class TestCheckFastqStrandOutputs(unittest.TestCase):
                                                     "qc",
                                                     fastq_strand_conf,
                                                     qc_protocol="singlecell"),
+                         [])
+
+    def test_check_fastq_strand_outputs_parseevercode_missing(self):
+        """
+        check_fastq_strand_outputs: fastq_strand.py output missing (ParseEvercode)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Make fastq_strand.conf
+        fastq_strand_conf = os.path.join(project.dirn,"fastq_strand.conf")
+        with open(fastq_strand_conf,'w') as fp:
+            fp.write("")
+        # Check the outputs
+        self.assertEqual(check_fastq_strand_outputs(project,
+                                                    "qc",
+                                                    fastq_strand_conf,
+                                                    qc_protocol="ParseEvercode"),
+                         [(os.path.join(project.fastq_dir,
+                                        "PJB1_S1_R1_001.fastq.gz"),),])
+
+    def test_check_fastq_strand_outputs_parseevercode_present(self):
+        """
+        check_fastq_strand_outputs: fastq_strand.py output present (ParseEvercode)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="ParseEvercode",
+            include_fastq_strand=True,
+            include_multiqc=False)
+        fastq_strand_conf = os.path.join(project.dirn,"fastq_strand.conf")
+        # Check the outputs
+        self.assertEqual(check_fastq_strand_outputs(project,
+                                                    "qc",
+                                                    fastq_strand_conf,
+                                                    qc_protocol="ParseEvercode"),
                          [])
 
 class TestCheckCellrangerCountOutputs(unittest.TestCase):
