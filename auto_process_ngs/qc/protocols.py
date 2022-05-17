@@ -200,6 +200,19 @@ QC_PROTOCOLS = {
         ]
     },
 
+    "ParseEvercode": {
+        "reads": {
+            "seq_data": ('r1',),
+            "index": ('r2',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness'
+        ]
+    },
+
     "ICELL8_scATAC": {
         "reads": {
             "seq_data": ('r1','r2',),
@@ -251,6 +264,10 @@ def determine_qc_protocol(project):
                                   "CellPlex snRNA-seq"):
                 # 10xGenomics CellPlex (cell multiplexing)
                 protocol = "10x_CellPlex"
+        elif single_cell_platform == 'Parse Evercode':
+            if library_type == "scRNA-seq":
+                # Parse Evercode snRNAseq
+                protocol = "ParseEvercode"
         elif library_type in ("scATAC-seq",
                               "snATAC-seq",):
             if single_cell_platform == "10xGenomics Single Cell ATAC":
