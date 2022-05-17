@@ -1182,6 +1182,9 @@ class RunFastqScreen(PipelineTask):
                                          '10x_CellPlex',) \
                 and self.args.fastq_attrs(fastq).read_number == 1:
                 continue
+            elif self.args.qc_protocol in ('ParseEvercode',) \
+                 and self.args.fastq_attrs(fastq).read_number == 2:
+                continue
             # Base name for Fastq file
             fastq_basename = os.path.basename(fastq)
             while fastq_basename.split('.')[-1] in ('fastq','gz'):
