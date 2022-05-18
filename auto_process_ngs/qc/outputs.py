@@ -1277,6 +1277,10 @@ def check_fastq_screen_outputs(project,qc_dir,screen,qc_protocol=None,
             if project.fastq_attrs(fastq).read_number == 1:
                 # No screens for R1 for single cell
                 continue
+        elif qc_protocol in ('ParseEvercode',):
+            if project.fastq_attrs(fastq).read_number == 2:
+                # No screens for R2 for Parse Evercode scRNA-seq
+                continue
         for output in [os.path.join(qc_dir,f)
                        for f in fastq_screen_output(fastq,screen,
                                                     legacy=legacy)]:
@@ -1379,8 +1383,11 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
                              '10x_Visium',
                              '10x_Multiome_GEX',
                              '10x_CellPlex',):
-            # Strand stats output based on R2
+            # Strand stats output based on R2 only
             fq_pair = (fq_group[1],)
+        elif qc_protocol in ('ParseEvercode',):
+            # Strand stats output based on R1 only
+            fq_pair = (fq_group[0],)
         else:
             # All other protocols use R1 (single-end)
             # or R1/R2 (paired-end)

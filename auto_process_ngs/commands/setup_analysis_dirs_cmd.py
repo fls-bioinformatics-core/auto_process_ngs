@@ -107,7 +107,8 @@ def setup_analysis_dirs(ap,
         sc_platform = line['SC_Platform']
         if sc_platform and sc_platform != '.':
             if not sc_platform in tenx_genomics_utils.PLATFORMS and \
-               not sc_platform in icell8.PLATFORMS:
+               not sc_platform in icell8.PLATFORMS and \
+               not sc_platform in ('Parse Evercode',):
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")

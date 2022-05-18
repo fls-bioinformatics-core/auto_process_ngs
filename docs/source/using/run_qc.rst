@@ -37,6 +37,7 @@ QC protocol           Used for
 ``10x_Multiome_ATAC`` 10xGenomics Visium multiome ATAC-seq data
 ``10x_Multiome_GEX``  10xGenomics Visium multiome gene expression data
 ``10x_CellPlex``      10xGenomics CellPlex cell multiplexing data
+``ParseEvercode``     Parse Evercode single cell RNA-seq
 ``singlecell``        ICELL8 single cell RNA-seq
 ``ICELL8_scATAC``     ICELL8 single cell ATAC-seq
 ===================== ==========================
