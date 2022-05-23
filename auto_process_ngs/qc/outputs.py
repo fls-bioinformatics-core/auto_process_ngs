@@ -47,6 +47,7 @@ from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
+from .protocols import get_read_numbers
 from .seqlens import SeqLens
 
 # Module specific logger
@@ -1262,25 +1263,10 @@ def check_fastq_screen_outputs(project,qc_dir,screen,qc_protocol=None,
     fastqs = set()
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
-        if qc_protocol in ('10x_scATAC',
-                           '10x_Multiome_ATAC',):
-            if project.fastq_attrs(fastq).read_number == 2:
-                # Ignore the R2 reads for 10x single-cell ATAC
-                continue
-        # Fastq_screen
-        if qc_protocol in ('singlecell',
-                           '10x_scRNAseq',
-                           '10x_snRNAseq',
-                           '10x_Visium',
-                           '10x_Multiome_GEX',
-                           '10x_CellPlex',):
-            if project.fastq_attrs(fastq).read_number == 1:
-                # No screens for R1 for single cell
-                continue
-        elif qc_protocol in ('ParseEvercode',):
-            if project.fastq_attrs(fastq).read_number == 2:
-                # No screens for R2 for Parse Evercode scRNA-seq
-                continue
+        read_numbers = get_read_numbers(qc_protocol).seq_data
+        if project.fastq_attrs(fastq).read_number not in read_numbers:
+            # Ignore non-data reads
+            continue
         for output in [os.path.join(qc_dir,f)
                        for f in fastq_screen_output(fastq,screen,
                                                     legacy=legacy)]:
@@ -1314,12 +1300,11 @@ def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
     fastqs = set()
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
-        if qc_protocol in ('10x_scATAC',
-                           '10x_Multiome_ATAC',):
-            if project.fastq_attrs(fastq).read_number == 2:
-                # Ignore the R2 reads for 10x single-cell ATAC
-                continue
-        # FastQC
+        read_numbers = get_read_numbers(qc_protocol).qc
+        if project.fastq_attrs(fastq).read_number not in read_numbers:
+            # Ignore non-QC reads
+            continue
+        # FastQC outputs
         for output in [os.path.join(qc_dir,f)
                        for f in fastqc_output(fastq)]:
             if not os.path.exists(output):
@@ -1367,34 +1352,15 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
     if not os.path.exists(fastq_strand_conf):
         # No conf file, nothing to check
         return list()
+    read_numbers = get_read_numbers(qc_protocol).seq_data
     fastq_pairs = set()
     for fq_group in group_fastqs_by_name(
             remove_index_fastqs(project.fastqs,
                                 project.fastq_attrs),
             fastq_attrs=project.fastq_attrs):
+        # Assemble Fastq pairs based on read numbers
+        fq_pair = tuple([fq_group[r-1] for r in read_numbers])
         # Strand stats output
-        if qc_protocol in ('10x_scATAC',
-                           '10x_Multiome_ATAC',):
-            # Strand stats output based on R1/R3 pair
-            fq_pair = (fq_group[0],fq_group[2])
-        elif qc_protocol in ('singlecell',
-                             '10x_scRNAseq',
-                             '10x_snRNAseq',
-                             '10x_Visium',
-                             '10x_Multiome_GEX',
-                             '10x_CellPlex',):
-            # Strand stats output based on R2 only
-            fq_pair = (fq_group[1],)
-        elif qc_protocol in ('ParseEvercode',):
-            # Strand stats output based on R1 only
-            fq_pair = (fq_group[0],)
-        else:
-            # All other protocols use R1 (single-end)
-            # or R1/R2 (paired-end)
-            if len(fq_group) > 1:
-                fq_pair = (fq_group[0],fq_group[1])
-            else:
-                fq_pair = (fq_group[0],)
         output = os.path.join(qc_dir,
                               fastq_strand_output(fq_pair[0]))
         if not os.path.exists(output):

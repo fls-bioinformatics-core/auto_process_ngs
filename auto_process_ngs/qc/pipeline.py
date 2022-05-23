@@ -76,6 +76,7 @@ from .outputs import check_cellranger_count_outputs
 from .outputs import check_cellranger_atac_count_outputs
 from .outputs import check_cellranger_arc_count_outputs
 from .protocols import determine_qc_protocol
+from .protocols import get_read_numbers
 from .utils import set_cell_count_for_project
 from .verification import verify_project
 from .fastq_strand import build_fastq_strand_conf
@@ -1037,12 +1038,10 @@ class GetSeqLengthStats(PipelineFunctionTask):
             self.args.project.fastqs,
             fastq_attrs=self.args.fastq_attrs)
         # Get sequence length data for Fastqs
+        read_numbers = get_read_numbers(self.args.qc_protocol).qc
         for fastq in self._fastqs:
-            # Ignore the R2 reads for 10x single-cell ATAC
-            if self.args.qc_protocol in ('10x_scATAC',
-                                         '10x_Multiome_ATAC',):
-                if self.args.fastq_attrs(fastq).read_number == 2:
-                    continue
+            if self.args.fastq_attrs(fastq).read_number not in read_numbers:
+                continue
             outfile = os.path.join(self.args.qc_dir,
                                    "%s_seqlens.json" %
                                    self.args.fastq_attrs(fastq))
@@ -1172,18 +1171,9 @@ class RunFastqScreen(PipelineTask):
         if self.args.legacy:
             print("Using legacy FastqScreen output names")
         # Set up the FastqScreen runs for each Fastq
+        read_numbers = get_read_numbers(self.args.qc_protocol).seq_data
         for fastq in self.args.fastqs:
-            # No screens for R1 reads for single cell
-            if self.args.qc_protocol in ('singlecell',
-                                         '10x_scRNAseq',
-                                         '10x_snRNAseq',
-                                         '10x_Visium',
-                                         '10x_Multiome_GEX',
-                                         '10x_CellPlex',) \
-                and self.args.fastq_attrs(fastq).read_number == 1:
-                continue
-            elif self.args.qc_protocol in ('ParseEvercode',) \
-                 and self.args.fastq_attrs(fastq).read_number == 2:
+            if self.args.fastq_attrs(fastq).read_number not in read_numbers:
                 continue
             # Base name for Fastq file
             fastq_basename = os.path.basename(fastq)
