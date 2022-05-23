@@ -450,7 +450,7 @@ def bases_mask_is_valid(bases_mask):
     """
     try:
         for read in bases_mask.upper().split(','):
-            if not re.match(r'^([IY][0-9]+|[IY]*)(N[0-9]+|N*)$',read):
+            if not re.match(r'^([IYN][0-9]+|[IYN]*)+$',read):
                 return False
         return True
     except AttributeError:

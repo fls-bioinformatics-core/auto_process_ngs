@@ -951,6 +951,7 @@ class TestBasesMaskIsValid(unittest.TestCase):
         self.assertTrue(bases_mask_is_valid('y250,I6n2,I6n2,y250'))
         self.assertTrue(bases_mask_is_valid('y25n76,I8,I8,y101'))
         self.assertTrue(bases_mask_is_valid('y250,I16'))
+        self.assertTrue(bases_mask_is_valid('n5y245,I8,I8,n5y245'))
         self.assertTrue(bases_mask_is_valid('yyyyyyyyy,IIIIII'))
         self.assertTrue(bases_mask_is_valid('yyyyyyyyy,IIIInn'))
         self.assertFalse(bases_mask_is_valid(123))
