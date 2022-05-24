@@ -2317,12 +2317,14 @@ class FastqGroupQCReporter:
                  'intergenic',
                  'overlapping exon',
                  'rRNA']
+        # Colours taken from 'IBM' palette
+        # See e.g. https://davidmathlogic.com/colorblind/
         colors = {
-            'exonic': RGB_COLORS.maroon,
-            'intronic': RGB_COLORS.green,
-            'intergenic': RGB_COLORS.navyblue,
-            'overlapping exon': RGB_COLORS.orange,
-            'rRNA': RGB_COLORS.grey
+            'exonic': (100,143,255),
+            'intronic': (120,94,240),
+            'intergenic': (220,38,127),
+            'overlapping exon': (254,97,0),
+            'rRNA': (255,176,0)
         }
         # Fetch data
         data = self.qualimap_rnaseq(organism).reads_genomic_origin
