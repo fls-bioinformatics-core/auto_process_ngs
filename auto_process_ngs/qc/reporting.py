@@ -233,8 +233,11 @@ SUMMARY_FIELD_DESCRIPTIONS = {
     'endedness_.*' : ('Endedness',
                       'Whether data is Paired- or single-ended (from RSeQC '
                       'infer_experiment.py'),
-    'insert_size_metrics_.*': ('Insert size (bp)',
-                               'Picard insert size: mean (SD)'),
+    'mean_insert_size_.*': ('Mean insert size',
+                            'Picard insert size: mean (SD)'),
+    'median_insert_size_.*': ('Median insert size',
+                              'Picard insert size: median (absolute '
+                              'deviation)'),
     'insert_size_histogram_.*': ('Insert size histogram',
                                  'Picard insert size histogram'),
     'coverage_profile_along_genes_.*': ('Gene coverage',
@@ -1229,7 +1232,8 @@ class QCReport(Document):
                 fields.extend(['endedness_%s' % organism,
                                'strandedness_%s' % organism])
             if 'picard_insert_size_metrics' in project.outputs:
-                fields.extend(['insert_size_metrics_%s' % organism,
+                fields.extend(['mean_insert_size_%s' % organism,
+                               'median_insert_size_%s' % organism,
                                'insert_size_histogram_%s' % organism])
             if 'qualimap_rnaseq' in project.outputs:
                 fields.extend(['coverage_profile_along_genes_%s' % organism,
@@ -2616,7 +2620,8 @@ class FastqGroupQCReporter:
         - strandedness
         - endedness_<organism>
         - strandedness_<organism>
-        - insert_size_metrics_<organism>
+        - mean_insert_size_<organism>
+        - median_insert_size_<organism>
         - insert_size_histogram_<organism>
         - reads_genomic_origin_<organism>
         - coverage_profile_along_genes_<organism>
@@ -2776,14 +2781,32 @@ class FastqGroupQCReporter:
                                infer_experiment.reverse*100.0,
                                infer_experiment.unstranded*100.0),
                             href=infer_experiment_log)
-        elif field.startswith("insert_size_metrics_"):
-            organism = field[len("insert_size_metrics_"):]
+        elif field.startswith("mean_insert_size_"):
+            organism = field[len("mean_insert_size_"):]
             insert_size_metrics = self.insert_size_metrics(organism)
             if insert_size_metrics:
                 insert_size = \
-                    "%.2f bp (%.3f)" % \
-                    (insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
-                     insert_size_metrics.metrics['STANDARD_DEVIATION'])
+                "<span title='%s: mean insert size'>" \
+                "%.2f bp (%.3f)" \
+                "</span>" % (self.bam,
+                             insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
+                             insert_size_metrics.metrics['STANDARD_DEVIATION'])
+                insert_size_file = insert_size_metrics.metrics_file
+                if relpath:
+                    insert_size_file = os.path.relpath(insert_size_file,
+                                                        relpath)
+                value = Link(insert_size,insert_size_file)
+        elif field.startswith("median_insert_size_"):
+            organism = field[len("median_insert_size_"):]
+            insert_size_metrics = self.insert_size_metrics(organism)
+            if insert_size_metrics:
+                insert_size = \
+                "<span title='%s: median insert size'>" \
+                "%.2f bp (%.3f)" \
+                "</span>" % (
+                    self.bam,
+                    insert_size_metrics.metrics['MEDIAN_INSERT_SIZE'],
+                    insert_size_metrics.metrics['MEDIAN_ABSOLUTE_DEVIATION'])
                 insert_size_file = insert_size_metrics.metrics_file
                 if relpath:
                     insert_size_file = os.path.relpath(insert_size_file,
