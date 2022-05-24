@@ -804,24 +804,7 @@ class QCPipeline(Pipeline):
         """
         # Read numbers with sequence data (based on protocol)
         # Used to set which Fastqs should be mapped
-        if qc_protocol == "standardPE":
-            use_reads = (1,2)
-        elif qc_protocol == "standardSE":
-            use_reads = (1,)
-        elif qc_protocol in ("singlecell",
-                             "10x_scRNAseq",
-                             "10x_snRNAseq",
-                             "10x_Visium",
-                             "10x_Multiome_GEX",
-                             "10x_CellPlex",):
-            use_reads = (2,)
-        elif qc_protocol in ("10x_scATAC",
-                             "10x_snATAC",
-                             "10x_Multiome_ATAC",):
-            use_reads = (1,3)
-        else:
-            raise Exception("%s: unrecognised protocol for "
-                            "extended QC metrics" % qc_protocol)
+        read_numbers = get_read_numbers(qc_protocol).seq_data
 
         # Sanitise organism name
         organism_name = str(organism).\
@@ -830,7 +813,7 @@ class QCPipeline(Pipeline):
                         replace(' ','_')
 
         # Indicate if data are paired
-        paired = (len(use_reads) > 1)
+        paired = (len(read_numbers) > 1)
 
         # Set up tasks for BAM file generation
         get_star_index = GetReferenceDataset(
@@ -846,7 +829,7 @@ class QCPipeline(Pipeline):
             os.path.join(qc_dir,'bam_files',organism_name),
             self.params.fastq_subset,
             self.params.nthreads,
-            reads=use_reads,
+            reads=read_numbers,
             verbose=self.params.VERBOSE)
         self.add_task(get_bam_files,
                       requires=pre_tasks,
