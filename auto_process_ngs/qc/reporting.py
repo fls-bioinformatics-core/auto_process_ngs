@@ -2775,7 +2775,7 @@ class FastqGroupQCReporter:
                     relpath)
             if infer_experiment:
                 value = Img(self.ustrandednessplot(organism),
-                            title="%s: F%.2f%% | R%.2f%% (U%.2f%%)"
+                            title="%s: Fwd %.2f%% | Rev %.2f%% (Unstr %.2f%%)"
                             % (self.bam,
                                infer_experiment.forward*100.0,
                                infer_experiment.reverse*100.0,
