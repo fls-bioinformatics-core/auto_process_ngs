@@ -3024,8 +3024,8 @@ PBB,CMO302,PBB
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
-        for f in ("PJB1_S1_R1_001",
-                  "PJB2_S2_R1_001"):
+        for f in ("PJB1_S1_001",
+                  "PJB2_S2_001"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",
                                                         "qc",
@@ -3090,8 +3090,8 @@ PBB,CMO302,PBB
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
-        for f in ("PJB1_S1_R1_001",
-                  "PJB2_S2_R1_001"):
+        for f in ("PJB1_S1_001",
+                  "PJB2_S2_001"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",
                                                         "qc",
@@ -3149,8 +3149,8 @@ PBB,CMO302,PBB
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
-        for f in ("PJB1_S1_R1_001",
-                  "PJB2_S2_R1_001"):
+        for f in ("PJB1_S1_001",
+                  "PJB2_S2_001"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                          "PJB",
                                                          "qc",
@@ -3215,8 +3215,8 @@ PBB,CMO302,PBB
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
-        for f in ("PJB1_S1_R1_001",
-                  "PJB2_S2_R1_001"):
+        for f in ("PJB1_S1_001",
+                  "PJB2_S2_001"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",
                                                         "qc",

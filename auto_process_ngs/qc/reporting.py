@@ -126,6 +126,7 @@ from .plots import encode_png
 from .qualimap import QualimapRnaseq
 from .rseqc import InferExperiment
 from .seqlens import SeqLens
+from .utils import get_bam_basename
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
@@ -2185,8 +2186,9 @@ class FastqGroupQCReporter:
         # Locate matching BAM file
         self.bam = None
         for fastq in fastqs:
-            if fastq in self.project.bams:
-                self.bam = fastq
+            bam = get_bam_basename(fastq,self.fastq_attrs)
+            if bam in self.project.bams:
+                self.bam = "%s" % bam
 
     @property
     def paired_end(self):

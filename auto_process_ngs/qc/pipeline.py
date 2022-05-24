@@ -92,6 +92,7 @@ from .outputs import check_cellranger_arc_count_outputs
 from .protocols import determine_qc_protocol
 from .protocols import get_read_numbers
 from .rseqc import InferExperiment
+from .utils import get_bam_basename
 from .utils import set_cell_count_for_project
 from .verification import verify_project
 from .fastq_strand import build_fastq_strand_conf
@@ -2781,11 +2782,10 @@ class GetBAMFiles(PipelineFunctionTask):
         for fq_pair in fq_pairs:
             if self.args.verbose:
                 print("-- Fastq pair: %s" % fq_pair)
-            bam_file = os.path.basename(fq_pair[0])
-            while bam_file.split('.')[-1] in ('fastq','gz'):
-                bam_file = '.'.join(bam_file.split('.')[:-1])
             bam_file = os.path.join(self.args.out_dir,
-                                    "%s.bam" % bam_file)
+                                    "%s.bam" % get_bam_basename(
+                                        fq_pair[0],
+                                        self.args.fastq_attrs))
             if self.args.verbose:
                 print("   BAM file: %s" % bam_file)
             # Add to the list of expected outputs

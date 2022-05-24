@@ -10,6 +10,7 @@ Provides the following functions:
 
 - verify_qc: verify the QC run for a project
 - report_qc: generate report for the QC run for a project
+- get_bam_basename: return the BAM file basename from a Fastq filename
 - set_cell_count_for_project: sets total number of cells for a project
 """
 
@@ -19,6 +20,7 @@ Provides the following functions:
 
 import os
 import logging
+from ..analysis import AnalysisFastq
 from ..analysis import AnalysisProject
 from ..command import Command
 from ..metadata import AnalysisProjectQCDirInfo
@@ -244,6 +246,30 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         raise ex
     # Return the exit code
     return report.exit_code
+
+def get_bam_basename(fastq,fastq_attrs=None):
+    """
+    Return basename for BAM file from Fastq filename
+
+    Typically this will be the Fastq basename with the
+    read ID removed, for example the Fastq filename
+    'SM1_S1_L001_R1_001.fastq.gz' will result in the
+    BAM basename of 'SM1_S1_L001_001'.
+
+    Arguments:
+      fastq (str): Fastq filename; can include leading
+        path and extensions (both will be ignored)
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        data from Fastq names (defaults to 'AnalysisFastq')
+
+    Returns:
+      String: basename for BAM file.
+    """
+    if fastq_attrs is None:
+        fastq_attrs = AnalysisFastq
+    bam_basename = fastq_attrs(fastq)
+    bam_basename.read_number = None
+    return str(bam_basename)
 
 def set_cell_count_for_project(project_dir,qc_dir=None):
     """

@@ -17,6 +17,7 @@ from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
+from auto_process_ngs.qc.utils import get_bam_basename
 from auto_process_ngs.qc.utils import set_cell_count_for_project
 
 # Set to False to keep test output dirs
@@ -196,6 +197,19 @@ class TestReportQCFunction(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Found %s (should be missing)" % f)
+
+class TestGetBamBasename(unittest.TestCase):
+    """
+    Tests for the 'get_bam_basename' function
+    """
+    def test_get_bam_basename(self):
+        """
+        get_bam_basename: check correct BAM name is returned
+        """
+        self.assertEqual(get_bam_basename("SM1_S1_L001_R1_001.fastq.gz"),
+                         "SM1_S1_L001_001")
+        self.assertEqual(get_bam_basename("SM1_S1_R1_001.fastq.gz"),
+                         "SM1_S1_001")
 
 class TestSetCellCountForProject(unittest.TestCase):
     """
