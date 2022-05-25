@@ -99,6 +99,7 @@ from ..docwriter import List
 from ..docwriter import Para
 from ..docwriter import WarningIcon
 from ..docwriter import DocumentIcon
+from ..docwriter import LinkIcon
 from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
@@ -1295,14 +1296,24 @@ class QCReport(Document):
             if self.relpath:
                 # Convert to relative path
                 png = os.path.relpath(png,self.relpath)
-            coverage.add("Gene body coverage from RSeQC for %s mapped "
-                         "to %s" % (project.name,organism),
+            coverage.add("Gene body coverage from RSeQC for '%s' mapped "
+                         "to '%s'" % (project.name,organism),
                          Img(png,
                              href=png,
                              title="Gene body coverage from RSeQC "
                              "(mapped to %s); click for PNG" %
                              organism,
                              name="gene_body_coverage_%s" % organism))
+            # Add link to MultiQC plot
+            if 'multiqc' in project.outputs:
+                multiqc_report = "multi%s_report.html" \
+                                 % os.path.basename(project.qc_dir)
+                multiqc_plot = "%s#rseqc-gene_body_coverage" % multiqc_report
+                coverage.add("%s %s" %
+                             (LinkIcon(size=20),
+                              Link("MultiQC interactive RSeQC gene body "
+                                   "coverage plot",
+                                   target=multiqc_plot)))
         # Return the subsection
         return coverage
 
