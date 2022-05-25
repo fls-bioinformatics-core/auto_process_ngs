@@ -34,6 +34,7 @@ Pipeline task classes:
 - GetBAMFiles
 - RunRSeQCGenebodyCoverage
 - RunPicardCollectInsertSizeMetrics
+- CollateInsertSizes
 - RunRSeQCInferExperiment
 - RunQualimapRnaseq
 - ReportQC
@@ -54,6 +55,7 @@ import tempfile
 import shutil
 import random
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
@@ -89,6 +91,7 @@ from .outputs import check_fastq_strand_outputs
 from .outputs import check_cellranger_count_outputs
 from .outputs import check_cellranger_atac_count_outputs
 from .outputs import check_cellranger_arc_count_outputs
+from .picard import CollectInsertSizeMetrics
 from .protocols import determine_qc_protocol
 from .protocols import get_read_numbers
 from .rseqc import InferExperiment
@@ -875,8 +878,17 @@ class QCPipeline(Pipeline):
             bam_properties=rseqc_infer_experiment.output.experiments)
         self.add_task(insert_size_metrics,
                       log_dir=log_dir)
+
+        collate_insert_sizes = CollateInsertSizes(
+            "%s: collate insert size data" % project.name,
+            get_bam_files.output.bam_files,
+            os.path.join(qc_dir,'picard',organism_name),
+            os.path.join(qc_dir,'insert_sizes.%s.tsv' % organism_name))
+        self.add_task(collate_insert_sizes,
+                      requires=(insert_size_metrics,),
+                      log_dir=log_dir)
         for task in post_tasks:
-            insert_size_metrics.required_by(task)
+            collate_insert_sizes.required_by(task)
 
         # Get reference gene model
         get_annotation_gtf = GetReferenceDataset(
@@ -3156,6 +3168,79 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                 if not os.path.exists(f):
                     # Copy new version to ouput location
                     shutil.copy(os.path.basename(f),self.args.out_dir)
+
+class CollateInsertSizes(PipelineTask):
+    """
+    Collate insert size metrics data from multiple BAMs
+
+    Gathers together the Picard insert size data from a
+    set of BAM files and puts them into a single TSV
+    file.
+    """
+    def init(self,bam_files,picard_out_dir,out_file,delimiter='\t'):
+        """
+        Initialise the CollateInsertSizes task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to get associated insert size data for
+          picard_out_dir (str): path to the directory
+            containing the Picard CollectInsertSizeMetrics
+            output files
+          out_file (str): path to the output TSV file
+          delimiter (str): specify the delimiter to use
+            in the output file
+        """
+        pass
+    def setup(self):
+        # Set up a TabFile instance for the collated data
+        tf = TabFile(column_names=("Bam file",
+                                   "Mean insert size",
+                                   "Standard deviation",
+                                   "Median insert size",
+                                   "Median absolute deviation"))
+        metrics_files = []
+        for bam in self.args.bam_files:
+            # Get metrics file associated with this BAM file
+            outputs = list(filter(lambda f:
+                                  f.endswith('.txt') and
+                                  os.path.exists(f),
+                                  picard_collect_insert_size_metrics_output(
+                                      os.path.basename(bam)[:-4],
+                                      prefix=self.args.picard_out_dir)))
+            if not outputs:
+                # No metrics located
+                print("%s: no associated Picard insert size "
+                      "metrics file found in %s" %
+                      (bam,
+                       self.args.picard_out_dir))
+                continue
+            metrics_files.append(outputs[0])
+        # Check there is data to collate
+        if not metrics_files:
+            print("no insert size metrics files recovered")
+            return
+        # Set up a TabFile instance for the collated data
+        tf = TabFile(column_names=("Bam file",
+                                   "Mean insert size",
+                                   "Standard deviation",
+                                   "Median insert size",
+                                   "Median absolute deviation"))
+        for metrics_file in metrics_files:
+            # Get mean and median insert sizes
+            insert_size_metrics = CollectInsertSizeMetrics(metrics_file)
+            tf.append(data=(
+                os.path.basename(bam),
+                insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
+                insert_size_metrics.metrics['STANDARD_DEVIATION'],
+                insert_size_metrics.metrics['MEDIAN_INSERT_SIZE'],
+                insert_size_metrics.metrics['MEDIAN_ABSOLUTE_DEVIATION']
+            ))
+        # Output to file
+        print("Writing to %s" % self.args.out_file)
+        tf.write(self.args.out_file,
+                 include_header=True,
+                 delimiter=self.args.delimiter)
 
 class RunQualimapRnaseq(PipelineTask):
     """
