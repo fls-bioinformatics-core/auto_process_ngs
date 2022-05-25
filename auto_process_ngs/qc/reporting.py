@@ -1258,6 +1258,26 @@ class QCReport(Document):
                     reporter.update_summary_table(extended_metrics_table,
                                                   fields=fields,
                                                   relpath=self.relpath)
+            # Add link to collated insert sizes
+            if 'collated_insert_sizes' in project.outputs:
+                insert_sizes_file = os.path.join(
+                    self.fetch_qc_dir(project),
+                    "insert_sizes.%s.tsv" % organism)
+                if os.path.exists(insert_sizes_file):
+                    # Create a container for the outputs
+                    insert_sizes = extended_metrics_subsection.add_subsection(
+                        "Insert sizes",
+                        name='insert_sizes_%s' %
+                        organism)
+                    if self.relpath:
+                        # Convert to relative path
+                        insert_sizes_file = os.path.relpath(
+                            insert_sizes_file,
+                            self.relpath)
+                    insert_sizes.add("%s %s" %
+                                     (LinkIcon(size=20),
+                                      Link("Collated insert sizes (TSV) ",
+                                           target=insert_sizes_file)))
         # Add an empty section to clear HTML floats
         clear = section.add_subsection(css_classes=("clear",))
 
