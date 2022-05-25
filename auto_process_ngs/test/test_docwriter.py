@@ -16,9 +16,11 @@ from auto_process_ngs.docwriter import Target
 from auto_process_ngs.docwriter import Para
 from auto_process_ngs.docwriter import WarningIcon
 from auto_process_ngs.docwriter import DocumentIcon
+from auto_process_ngs.docwriter import LinkIcon
 from auto_process_ngs.docwriter import sanitize_css_string
 from auto_process_ngs.docwriter import WARNING_ICON_BASE64
 from auto_process_ngs.docwriter import DOCUMENT_ICON_BASE64
+from auto_process_ngs.docwriter import LINK_ICON_BASE64
 
 # Unit tests
 
@@ -727,6 +729,25 @@ class TestDocumentIcon(unittest.TestCase):
         d = DocumentIcon(size=25)
         self.assertEqual(d.html(),
                          "<img src='data:image/png;base64,%s' height='25' width='25' />" % DOCUMENT_ICON_BASE64)
+
+class TestLinkIcon(unittest.TestCase):
+    """
+    Tests for the LinkIcon class
+    """
+    def test_linkicon(self):
+        lnk = LinkIcon()
+        self.assertEqual(lnk.html(),
+                         "<img src='data:image/png;base64,%s' height='32' width='32' />" % LINK_ICON_BASE64)
+
+    def test_linkicon_with_title(self):
+        lnk = LinkIcon(title="This is a link")
+        self.assertEqual(lnk.html(),
+                         "<img src='data:image/png;base64,%s' height='32' width='32' title='This is a link' />" % LINK_ICON_BASE64)
+
+    def test_linkicon_change_size(self):
+        lnk = LinkIcon(size=20)
+        self.assertEqual(lnk.html(),
+                         "<img src='data:image/png;base64,%s' height='20' width='20' />" % LINK_ICON_BASE64)
 
 class TestSanitizeCssStringFunction(unittest.TestCase):
     """
