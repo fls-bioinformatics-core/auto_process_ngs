@@ -516,6 +516,13 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         if include_qualimap_rnaseq:
             for organism in organisms:
                 MockQCOutputs.qualimap_rnaseq(fq,organism,qc_dir)
+    # Collated insert sizes
+    if include_picard_insert_size_metrics:
+        for organism in organisms:
+            with open(os.path.join(
+                    qc_dir,
+                    "insert_sizes.%s.tsv" % organisms),'wt') as fp:
+                fp.write("Placeholder\n")
     # Strandedness conf file
     if include_strandedness:
         with open(os.path.join(qc_dir,

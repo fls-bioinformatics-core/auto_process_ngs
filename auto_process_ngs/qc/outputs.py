@@ -698,6 +698,14 @@ class QCOutputs:
         if organisms:
             tags.add("picard_insert_size_metrics")
             software['picard'] = [None]
+        # Look for collated insert sizes files
+        for f in filter(
+                lambda ff:
+                ff.startswith("insert_sizes.") and ff.endswith(".tsv"),
+                os.listdir(qc_dir)):
+            tags.add("collated_insert_sizes")
+            output_files.append(os.path.join(qc_dir,f))
+            organisms.add(f[len("insert_sizes."):-len(".tsv")])
         # Return collected information
         return AttributeDictionary(
             name='picard_collect_insert_size_metrics',

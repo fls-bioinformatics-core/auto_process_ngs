@@ -645,7 +645,8 @@ class TestQCOutputs(unittest.TestCase):
                                    include_picard_insert_size_metrics=True)
         qc_outputs = QCOutputs(qc_dir)
         self.assertEqual(qc_outputs.outputs,
-                         ['fastqc_r1',
+                         ['collated_insert_sizes',
+                          'fastqc_r1',
                           'fastqc_r2',
                           'multiqc',
                           'picard_insert_size_metrics',
