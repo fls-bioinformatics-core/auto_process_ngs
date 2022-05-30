@@ -21,6 +21,7 @@ import os
 import shutil
 import logging
 import tempfile
+import atexit
 from .command import Command
 from .conda import CondaWrapper
 from .conda import CondaWrapperError
@@ -115,13 +116,27 @@ class IndexBuilder:
         # Return the exit code
         return build_indexes.exit_code
 
-    def get_working_dir(self):
+    def get_working_dir(self,remove_on_exit=True):
         """
         Create and return a temporary working directory
+
+        If 'remove_on_exit' is True then the working
+        directory will be deleted on exit.
         """
-        return tempfile.mkdtemp(prefix="__build_index.",
-                                suffix=".tmp",
-                                dir=os.getcwd())
+        working_dir = tempfile.mkdtemp(prefix="__build_index.",
+                                       suffix=".tmp",
+                                       dir=os.getcwd())
+        if remove_on_exit:
+            atexit.register(self.remove_working_dir,working_dir)
+        return working_dir
+
+    def remove_working_dir(self,working_dir):
+        """
+        Remove working directory
+        """
+        if os.path.isdir(working_dir):
+            print("Removing %s" % working_dir)
+            shutil.rmtree(working_dir)
 
     def bowtie(self,fasta,out_dir,ebwt_basename=None,
                bowtie_version=None):
