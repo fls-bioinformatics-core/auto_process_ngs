@@ -113,6 +113,20 @@ class IndexBuilder:
             logger.warning("Keyboard interrupt, terminating QC reporting")
             build_indexes.terminate()
             raise ex
+        # Report errors
+        if build_indexes.exit_code != 0:
+            logger.critical("Index generation failed")
+            print("STDOUT:")
+            with open(build_indexes.log,'rt') as fp:
+                print(fp.read())
+            try:
+                # Older versions of Job object
+                # don't have 'err' property?
+                print("STDERR:")
+                with open(build_indexes.err,'rt') as fp:
+                    print(fp.read())
+            except AttributeError:
+                logger.warning("Stderr not available")
         # Return the exit code
         return build_indexes.exit_code
 
