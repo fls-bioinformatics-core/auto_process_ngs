@@ -36,6 +36,18 @@ def main():
                    help="annotation file (for use with STAR)")
     p.add_argument('-o',dest='out_dir',action='store',
                    help="output directory for indexes")
+    # Bowtie-specific options
+    bowtie = p.add_argument_group('Bowtie-specific options')
+    bowtie.add_argument("--ebwt_base",metavar='NAME',action='store',
+                        dest="ebwt_base",default=None,
+                        help="specify basename for output .ebwt files "
+                        "(defaults to FASTA file basename)")
+    # Bowtie2-specific options
+    bowtie2 = p.add_argument_group('Bowtie-specific options')
+    bowtie2.add_argument("--bt2_base",metavar='NAME',action='store',
+                        dest="bt2_base",default=None,
+                        help="specify basename for output .bt2 files "
+                        "(defaults to FASTA file basename)")
     # Advanced options
     advanced = p.add_argument_group('Advanced options')
     advanced.add_argument('-r','--runner',metavar='RUNNER',action='store',
@@ -65,9 +77,11 @@ def main():
     # Build indexes
     if args.aligner == "bowtie":
         builder.bowtie(args.fasta,args.out_dir,
+                       ebwt_basename=args.ebwt_base,
                        bowtie_version="1.0.0")
     elif args.aligner == "bowtie2":
         builder.bowtie2(args.fasta,args.out_dir,
+                        bt2_basename=args.bt2_base,
                         bowtie2_version="2.4.1")
     elif args.aligner == "star":
         builder.star(args.fasta,args.annotation,args.out_dir,
