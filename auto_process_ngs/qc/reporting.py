@@ -555,14 +555,6 @@ class QCReport(Document):
             for sample in project.samples:
                 self.report_sample(project,sample,report_attrs_,
                                    summary_table,summary_fields_)
-            # Report additional metrics in a separate table
-            additional_metrics = self._add_toggle_section(
-                project_summary,
-                name="additional_metrics",
-                show_text="Show additional metrics",
-                hide_text="Hide additional metrics")
-            self.report_additional_metrics(project,
-                                           section=additional_metrics)
             # Report single library analyses
             if self.use_single_library_table:
                 for single_library in ('cellranger_count',
@@ -658,14 +650,36 @@ class QCReport(Document):
                         sample,
                         multiplex_analysis_table,
                         multiplex_analysis_fields)
-            # RSeQC genebody coverage
-            if 'rseqc_genebody_coverage' in project.outputs:
-                self.report_genebody_coverage(project,
-                                              section=project_summary)
-            # Insert sizes
-            if 'picard_insert_size_metrics' in project.outputs:
-                self.report_insert_size_metrics(project,
-                                                section=project_summary)
+            # Extended metrics
+            if 'rseqc_genebody_coverage' in project.outputs or \
+               'picard_insert_size_metrics' in project.outputs or \
+               'multiqc' in project.outputs:
+                extended_metrics = project_summary.add_subsection(
+                    name="extended_metrics_%s" % sanitize_name(project.id))
+                # RSeQC genebody coverage
+                if 'rseqc_genebody_coverage' in project.outputs:
+                    self.report_genebody_coverage(project,
+                                                  section=extended_metrics)
+                # Insert sizes
+                if 'picard_insert_size_metrics' in project.outputs:
+                    self.report_insert_size_metrics(project,
+                                                    section=extended_metrics)
+                # MultiQC report
+                if 'multiqc' in project.outputs:
+                    self.report_multiqc(project,
+                                        section=extended_metrics)
+                # Add an empty section to clear HTML floats
+                clear = project_summary.add_subsection(
+                    css_classes=("clear",))
+            # Report additional metrics in a separate table
+            additional_metrics = self._add_toggle_section(
+                project_summary,
+                name="additional_metrics",
+                show_text="Show additional summary metrics",
+                hide_text="Hide additional summary metrics",
+                help_text="Summary table with additional QC metrics")
+            self.report_additional_metrics(project,
+                                           section=additional_metrics)
         # Report the status
         self.report_status()
 
@@ -691,8 +705,6 @@ class QCReport(Document):
                                       item)
         if 'cellranger_count' in self.outputs:
             metadata_items.append('cellranger_reference')
-        if 'multiqc' in self.outputs:
-            metadata_items.append('multiqc')
         if 'icell8_stats' in self.outputs:
             metadata_items.append('icell8_stats')
         if 'icell8_report' in self.outputs:
@@ -1329,8 +1341,7 @@ class QCReport(Document):
                 continue
             # Create a container for the outputs
             coverage = rseqc_coverage.add_subsection(
-                name='rseqc_genebody_coverage_%s' %
-                organism)
+                name='rseqc_genebody_coverage_%s' % organism)
             # Acquire plot PNG
             png = os.path.join(coverage_dir,
                                "%s.geneBodyCoverage.curves.png"
@@ -1362,8 +1373,6 @@ class QCReport(Document):
                               Link("MultiQC interactive RSeQC gene body "
                                    "coverage plot",
                                    target=multiqc_plot)))
-        # Add an empty section to clear HTML floats
-        clear = section.add_subsection(css_classes=("clear",))
         # Return the subsection
         return coverage
 
@@ -1395,10 +1404,29 @@ class QCReport(Document):
                                       Link("Collated insert sizes for '%s' "
                                            "(TSV) " % organism,
                                            target=insert_sizes_file)))
-        # Add an empty section to clear HTML floats
-        clear = section.add_subsection(css_classes=("clear",))
         # Return the subsection
         return insert_sizes
+
+    def report_multiqc(self,project,section):
+        """
+        Add link to MultiQC report to a document section
+
+        Arguments:
+          project (QCProject): parent project
+          section (Section): section to add the report to
+        """
+        # Create new subsection
+        multiqc = section.add_subsection("MultiQC",
+                                         css_classes=("info",))
+        # Add a link to the MultiQC report
+        multiqc_report = "multi%s_report.html" \
+                         % os.path.basename(project.qc_dir)
+        multiqc.add("%s %s" %
+                    (LinkIcon(size=20),
+                     Link("MultiQC report",
+                          target=multiqc_report)))
+        # Return the subsection
+        return multiqc
 
     def fetch_qc_dir(self,project):
         """
