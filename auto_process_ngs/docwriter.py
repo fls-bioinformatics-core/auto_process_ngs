@@ -101,6 +101,7 @@ class Document:
         self._title = title
         self._sections = []
         self._css_rules = []
+        self._scripts = []
 
     @property
     def title(self):
@@ -159,6 +160,16 @@ class Document:
         """
         self._css_rules.append(css_rule)
 
+    def add_javascript(self,script):
+        """
+        Add Javascript code to the document
+
+        Arguments:
+          script (str): script block to include in
+            the final document header
+        """
+        self._scripts.append(script)
+
     def html(self):
         """
         Generate HTML version of the document contents
@@ -193,6 +204,8 @@ class Document:
         html = HTMLPageWriter(self._title)
         for css_rule in self._css_rules:
             html.addCSSRule(css_rule)
+        for script in self._scripts:
+            html.addJavaScript(script)
         html.add(self.html())
         html.write("%s" % outfile)
 

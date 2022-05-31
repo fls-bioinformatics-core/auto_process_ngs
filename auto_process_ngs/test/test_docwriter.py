@@ -111,6 +111,27 @@ class TestDocument(unittest.TestCase):
                              "<h1>Test Document</h1></body>\n"
                              "</html>\n")
 
+    def test_document_write_to_file_with_javascript(self):
+        d = Document("Test Document")
+        d.add_javascript("// Placeholder for script code")
+        outfile = os.path.join(self.dirn,"test.html")
+        self.assertFalse(os.path.exists(outfile))
+        d.write(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        with open(outfile,'r') as fp:
+            html = fp.read()
+            self.assertEqual(html,
+                             "<html>\n"
+                             "<head>\n"
+                             "<title>Test Document</title>\n"
+                             "<script language='javascript' type='text/javascript'><!--\n"
+                             "// Placeholder for script code\n"
+                             "--></script>\n"
+                             "</head>\n"
+                             "<body>\n"
+                             "<h1>Test Document</h1></body>\n"
+                             "</html>\n")
+
 class TestSection(unittest.TestCase):
     """
     Tests for the Section class
