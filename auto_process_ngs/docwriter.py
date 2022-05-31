@@ -118,7 +118,7 @@ class Document:
         return [rule for rule in self._css_rules]
 
     def add_section(self,title=None,section=None,name=None,
-                    css_classes=None):
+                    css_classes=None,style=None):
         """
         Add a section to the document
 
@@ -137,7 +137,9 @@ class Document:
             generated automatically from the title
           css_classes (list): list or iterable with
             names of CSS classes to associate with
-            the new section.
+            the new section
+          style (str): style information to put into
+            the 'style' attribute of the section
 
         Returns:
           Section: the new or supplied section as
@@ -145,7 +147,8 @@ class Document:
         """
         if section is None:
             section = Section(title=title,name=name,
-                              css_classes=css_classes)
+                              css_classes=css_classes,
+                              style=style)
         self._sections.append(section)
         return section
 
