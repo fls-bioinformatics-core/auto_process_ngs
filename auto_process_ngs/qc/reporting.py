@@ -848,7 +848,8 @@ class QCReport(Document):
 
     def _add_toggle_section(self,parent_section,name,title=None,
                             show_text="Show",hide_text="Hide",
-                            hidden_by_default=True,css_classes=None):
+                            help_text=None,hidden_by_default=True,
+                            css_classes=None):
         """
         Create a new section with a button to control visibility
 
@@ -861,6 +862,8 @@ class QCReport(Document):
             control button when the section is hidden
           hide_text (str): text to dislay on the
             control button when the section is visible
+          help_text (str): text to display when the
+            mouse is over the control button
           hidden_by_default (bool): if True then make
             the toggle section hidden initially
           css_classes (list): list of additional CSS
@@ -885,6 +888,7 @@ class QCReport(Document):
         toggle_button = ToggleButton(toggle_section,
                                      show_text=show_text,
                                      hide_text=hide_text,
+                                     help_text=help_text,
                                      hidden_by_default=
                                      hidden_by_default)
         parent_section.add(toggle_button,
@@ -3437,19 +3441,22 @@ class ToggleButton:
         when the section is in the hidden state
       hide_text (str): text to show on the button
         when the section is in the visible state
+      help_text (str): text to show when the mouse
+        is over the button
       css_classes (list): additional CSS classes to
         associate with the button
       hidden_by_default (bool): if True then the
         section will be hidden by default
     """
     def __init__(self,toggle_section,show_text="Show",hide_text="Hide",
-                 css_classes=None,hidden_by_default=True):
+                 css_classes=None,help_text=None,hidden_by_default=True):
         """
         Create a new ToggleButton instance
         """
         self._toggle_section = toggle_section
         self._show_text = show_text
         self._hide_text = hide_text
+        self._help_text = help_text
         self._css_classes = ["toggle_button"]
         if css_classes:
             for cls in css_classes:
@@ -3470,8 +3477,14 @@ class ToggleButton:
             button_text = self._show_text
         else:
             button_text = self._hide_text
+        # Help text
+        if self._help_text:
+            title = "title='%s' " % self._help_text
+        else:
+            title = ""
         # Generate HTML code for control button
         html = ["<button id=\"{toggle_button_name}\" ",
+                "{title}",
                 "class=\"{css_classes}\" ",
                 "onclick=\"toggleBlock(",
                 "'{section_name}',"
@@ -3481,6 +3494,7 @@ class ToggleButton:
                 "</button>"]
         return ''.join(html).format(
             toggle_button_name=name,
+            title=title,
             css_classes=' '.join(self._css_classes),
             section_name=self._toggle_section.name,
             show_text=self._show_text,
