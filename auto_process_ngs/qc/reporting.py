@@ -230,6 +230,16 @@ SUMMARY_FIELD_DESCRIPTIONS = {
     'strandedness': ('Strand',
                      'Proportions of reads mapping to forward and reverse '
                      'strands'),
+    'insert_size_histogram': ('Insert size',
+                              'Picard insert size histogram'),
+    'coverage_profile_along_genes': ('Coverage',
+                                     'Qualimap rna-seq gene coverage '
+                                     'profile'),
+    'reads_genomic_origin': ('Genomic origin',
+                             'Qualimap rna-seq genomic origin of reads'),
+    'strand_specificity': ('Strand',
+                           'Fraction of reads mapping to forward and reverse '
+                           'strands from RSeQC infer_experiment.py'),
     'strandedness_.*': ('Strand',
                         'Fraction of reads mapping to forward and reverse '
                         'strands (from RSeQC infer_experiment.py)'),
@@ -2706,6 +2716,10 @@ class FastqGroupQCReporter:
         - screens_r2
         - screens_r3
         - strandedness
+        - strand_specificity
+        - insert_size_histogram
+        - coverage_profile_along_genes
+        - reads_genomic_origin
         - endedness_<organism>
         - strandedness_<organism>
         - mean_insert_size_<organism>
@@ -2853,6 +2867,28 @@ class FastqGroupQCReporter:
             infer_experiment = self.infer_experiment(organism)
             if infer_experiment:
                 value = ("PE" if infer_experiment.paired_end else "SE")
+        elif field == "strand_specificity":
+            value = []
+            for organism in self.project.organisms:
+                infer_experiment = self.infer_experiment(organism)
+                if infer_experiment:
+                    infer_experiment_log = infer_experiment.log_file
+                    if relpath:
+                        infer_experiment_log = os.path.relpath(
+                            infer_experiment_log,
+                            relpath)
+                    value.append(Img(self.ustrandednessplot(organism),
+                                     title="%s: %s: Fwd %.2f%% | Rev %.2f%% "
+                                     "(Unstr %.2f%%)" %
+                                     (self.bam,
+                                      organism,
+                                      infer_experiment.forward*100.0,
+                                      infer_experiment.reverse*100.0,
+                                      infer_experiment.unstranded*100.0),
+                                     href=infer_experiment_log))
+                else:
+                    value.append(WarningIcon(size=24))
+            value = '<br />'.join([str(x) for x in value])
         elif field.startswith("strandedness_"):
             organism = field[len("strandedness_"):]
             infer_experiment = self.infer_experiment(organism)
@@ -2900,6 +2936,22 @@ class FastqGroupQCReporter:
                     insert_size_file = os.path.relpath(insert_size_file,
                                                         relpath)
                 value = Link(insert_size,insert_size_file)
+        elif field == "insert_size_histogram":
+            value = []
+            for organism in self.project.organisms:
+                histogram_pdf = os.path.join(
+                    os.path.dirname(
+                        self.insert_size_metrics(organism).metrics_file),
+                    "%s.insert_size_histogram.pdf" % self.bam)
+                if relpath:
+                    histogram_pdf = os.path.relpath(histogram_pdf,
+                                                    relpath)
+                value.append(Img(self.uinsertsizeplot(organism),
+                                 title="%s: insert size histogram for "
+                                 "%s (click for PDF)"
+                                 % (self.bam,organism),
+                                 href=histogram_pdf))
+            value = '<br />'.join([str(x) for x in value])
         elif field.startswith("insert_size_histogram_"):
             organism = field[len("insert_size_histogram_"):]
             histogram_pdf = os.path.join(
@@ -2925,6 +2977,24 @@ class FastqGroupQCReporter:
                                           % self.bam,
                                           size=30),
                              target=qualimap_report)
+        elif field == "reads_genomic_origin":
+            value = []
+            for organism in self.project.organisms:
+                title = ["Genomic origin of reads for %s:" % organism]
+                genomic_origin = \
+                    self.qualimap_rnaseq(organism).reads_genomic_origin
+                for name in genomic_origin:
+                    title.append("- %s: %s (%s%%)" %
+                                 (name,
+                                  genomic_origin[name][0],
+                                  genomic_origin[name][1]))
+                link = self.qualimap_rnaseq(organism).\
+                    link_to_output("Reads Genomic Origin",
+                                   relpath=relpath)
+                value.append(Img(self.ugenomicoriginplot(organism),
+                                 title='\n'.join(title),
+                                 href=link))
+            value = '<br />'.join([str(x) for x in value])
         elif field.startswith("reads_genomic_origin_"):
             organism = field[len("reads_genomic_origin_"):]
             title = ["Genomic origin of reads:"]
@@ -2940,6 +3010,17 @@ class FastqGroupQCReporter:
             value = Img(self.ugenomicoriginplot(organism),
                         title='\n'.join(title),
                         href=link)
+        elif field == "coverage_profile_along_genes":
+            value = []
+            for organism in self.project.organisms:
+                link = self.qualimap_rnaseq(organism).\
+                       link_to_output("Coverage Profile Along Genes (Total)",
+                                      relpath=relpath)
+                value.append(Img(self.ucoverageprofileplot(organism),
+                                 title="%s: Qualimap gene coverage profile "
+                                 "for %s" % (self.bam,organism),
+                                 href=link))
+            value = '<br />'.join([str(x) for x in value])
         elif field.startswith("coverage_profile_along_genes_"):
             organism = field[len("coverage_profile_along_genes_"):]
             link = self.qualimap_rnaseq(organism).\
