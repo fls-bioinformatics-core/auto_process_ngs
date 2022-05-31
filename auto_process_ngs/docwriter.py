@@ -101,6 +101,7 @@ class Document:
         self._title = title
         self._sections = []
         self._css_rules = []
+        self._scripts = []
 
     @property
     def title(self):
@@ -117,7 +118,7 @@ class Document:
         return [rule for rule in self._css_rules]
 
     def add_section(self,title=None,section=None,name=None,
-                    css_classes=None):
+                    css_classes=None,style=None):
         """
         Add a section to the document
 
@@ -136,7 +137,9 @@ class Document:
             generated automatically from the title
           css_classes (list): list or iterable with
             names of CSS classes to associate with
-            the new section.
+            the new section
+          style (str): style information to put into
+            the 'style' attribute of the section
 
         Returns:
           Section: the new or supplied section as
@@ -144,7 +147,8 @@ class Document:
         """
         if section is None:
             section = Section(title=title,name=name,
-                              css_classes=css_classes)
+                              css_classes=css_classes,
+                              style=style)
         self._sections.append(section)
         return section
 
@@ -158,6 +162,16 @@ class Document:
             document
         """
         self._css_rules.append(css_rule)
+
+    def add_javascript(self,script):
+        """
+        Add Javascript code to the document
+
+        Arguments:
+          script (str): script block to include in
+            the final document header
+        """
+        self._scripts.append(script)
 
     def html(self):
         """
@@ -193,6 +207,8 @@ class Document:
         html = HTMLPageWriter(self._title)
         for css_rule in self._css_rules:
             html.addCSSRule(css_rule)
+        for script in self._scripts:
+            html.addJavaScript(script)
         html.add(self.html())
         html.write("%s" % outfile)
 
@@ -243,9 +259,11 @@ class Section:
       css_classes (list): list or iterable with
         names of CSS classes to associate with
         the section
+      style (str): style information to put into
+        the 'style' attribute of the section
     """
     def __init__(self,title=None,name=None,level=2,
-                 css_classes=None):
+                 css_classes=None,style=None):
         """
         Create a new Section instance
         """
@@ -256,6 +274,7 @@ class Section:
         self._level = level
         if css_classes:
             self.add_css_classes(*css_classes)
+        self._style = style
 
     @property
     def name(self):
@@ -317,7 +336,7 @@ class Section:
             self._content.append(content)
 
     def add_subsection(self,title=None,section=None,name=None,
-                       css_classes=None):
+                       css_classes=None,style=None):
         """
         Add subsection within the section
 
@@ -335,6 +354,8 @@ class Section:
           css_classes (list): list or iterable with
             names of CSS classes to associate with
             the new section.
+          style (str): style information to put into
+            the 'style' attribute of the section
 
         Returns:
           Section: the appended section.
@@ -342,7 +363,8 @@ class Section:
         if section is None:
             subsection = Section(title=title,name=name,
                                  level=self._level+1,
-                                 css_classes=css_classes)
+                                 css_classes=css_classes,
+                                 style=style)
         else:
             subsection = section
         self.add(subsection)
@@ -358,11 +380,14 @@ class Section:
         """
         if self._title is None and \
            not self._content and \
-           not self._css_classes:
+           not self._css_classes and \
+           not self._style:
             return ""
         div = "<div"
         if self.name:
             div += " id='%s'" % self.name
+        if self._style:
+            div += " style='%s'" % self._style
         if self._css_classes:
             div += " class='%s'" % ' '.join(self._css_classes)
         div += ">"

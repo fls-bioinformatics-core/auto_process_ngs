@@ -111,6 +111,27 @@ class TestDocument(unittest.TestCase):
                              "<h1>Test Document</h1></body>\n"
                              "</html>\n")
 
+    def test_document_write_to_file_with_javascript(self):
+        d = Document("Test Document")
+        d.add_javascript("// Placeholder for script code")
+        outfile = os.path.join(self.dirn,"test.html")
+        self.assertFalse(os.path.exists(outfile))
+        d.write(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        with open(outfile,'r') as fp:
+            html = fp.read()
+            self.assertEqual(html,
+                             "<html>\n"
+                             "<head>\n"
+                             "<title>Test Document</title>\n"
+                             "<script language='javascript' type='text/javascript'><!--\n"
+                             "// Placeholder for script code\n"
+                             "--></script>\n"
+                             "</head>\n"
+                             "<body>\n"
+                             "<h1>Test Document</h1></body>\n"
+                             "</html>\n")
+
 class TestSection(unittest.TestCase):
     """
     Tests for the Section class
@@ -129,6 +150,15 @@ class TestSection(unittest.TestCase):
         self.assertEqual(s.level,2)
         self.assertEqual(s.html(),
                          "<div class='clear'>\n"
+                         "</div>")
+
+    def test_empty_section_with_style_attribute(self):
+        s = Section(style="display: block;")
+        self.assertEqual(s.title,None)
+        self.assertEqual(s.name,None)
+        self.assertEqual(s.level,2)
+        self.assertEqual(s.html(),
+                         "<div style='display: block;'>\n"
                          "</div>")
 
     def test_section_no_content(self):
@@ -189,6 +219,22 @@ class TestSection(unittest.TestCase):
                          "<div id='Section_with_subsection_and_CSS_classes'>\n"
                          "<h2>Section with subsection and CSS classes</h2>\n"
                          "<div id='Subsection' class='subsection new'>\n"
+                         "<h3>Subsection</h3>\n"
+                         "</div>\n"
+                         "</div>")
+
+    def test_section_with_subsection_and_style_attribute(self):
+        s = Section("Section with subsection and style attribute")
+        sub = s.add_subsection("Subsection",style="display: block;")
+        self.assertTrue(isinstance(sub,Section))
+        self.assertEqual(s.title,"Section with subsection and style attribute")
+        self.assertEqual(s.name,"Section_with_subsection_and_style_attribute")
+        self.assertEqual(s.level,2)
+        self.assertEqual(sub.level,3)
+        self.assertEqual(s.html(),
+                         "<div id='Section_with_subsection_and_style_attribute'>\n"
+                         "<h2>Section with subsection and style attribute</h2>\n"
+                         "<div id='Subsection' style='display: block;'>\n"
                          "<h3>Subsection</h3>\n"
                          "</div>\n"
                          "</div>")
