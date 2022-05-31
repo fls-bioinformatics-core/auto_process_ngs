@@ -491,34 +491,27 @@ class QCReport(Document):
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'strandedness',
-                                       'sequence_duplication',
-                                       'adapter_content']
+                                       'sequence_duplication']
                 else:
                     summary_fields_ = ['sample',
                                        'fastq',
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'strandedness',
-                                       'sequence_duplication',
-                                       'adapter_content',]
-                if 'strandedness' not in project.outputs:
-                    try:
-                        summary_fields_.remove('strandedness')
-                    except ValueError:
-                        pass
-                if 'sequence_lengths' in project.outputs:
-                    for read in project.reads:
-                        summary_fields_.append('read_lengths_dist_%s' % read)
-                else:
+                                       'sequence_duplication']
+                if 'strandedness' in project.outputs:
+                    summary_fields_.append('strandedness')
+                if 'picard_insert_size_metrics' in project.outputs:
+                    summary_fields_.append('insert_size_histogram')
+                if 'qualimap_rnaseq' in project.outputs:
+                    summary_fields_.extend(
+                        ['coverage_profile_along_genes',
+                         'reads_genomic_origin'])
+                if 'sequence_lengths' not in project.outputs:
                     try:
                         summary_fields_.remove('read_counts')
                     except ValueError:
                         pass
-                for read in project.reads:
-                    if ('fastqc_%s' % read) in project.outputs:
-                        summary_fields_.append('fastqc_%s' % read)
                 for read in project.reads:
                     if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('boxplot_%s' % read)
@@ -562,6 +555,14 @@ class QCReport(Document):
             for sample in project.samples:
                 self.report_sample(project,sample,report_attrs_,
                                    summary_table,summary_fields_)
+            # Report additional metrics in a separate table
+            additional_metrics = self._add_toggle_section(
+                project_summary,
+                name="additional_metrics",
+                show_text="Show additional metrics",
+                hide_text="Hide additional metrics")
+            self.report_additional_metrics(project,
+                                           section=additional_metrics)
             # Report single library analyses
             if self.use_single_library_table:
                 for single_library in ('cellranger_count',
@@ -657,16 +658,14 @@ class QCReport(Document):
                         sample,
                         multiplex_analysis_table,
                         multiplex_analysis_fields)
-            # Report extended QC metrics
-            include_extended_metrics = \
-                ('rseqc_genebody_coverage' in project.outputs) or \
-                ('rseqc_infer_experiment' in project.outputs) or \
-                ('picard_insert_size_metrics' in project.outputs) or \
-                ('qualimap_rnaseq' in project.outputs)
-            if include_extended_metrics:
-                self.report_extended_qc_metrics(
-                    project,
-                    section=project_summary)
+            # RSeQC genebody coverage
+            if 'rseqc_genebody_coverage' in project.outputs:
+                self.report_genebody_coverage(project,
+                                              section=project_summary)
+            # Insert sizes
+            if 'picard_insert_size_metrics' in project.outputs:
+                self.report_insert_size_metrics(project,
+                                                section=project_summary)
         # Report the status
         self.report_status()
 
@@ -1256,137 +1255,99 @@ class QCReport(Document):
             # report
             self.status = False
 
-    def report_extended_qc_metrics(self,project,section):
+    def report_additional_metrics(self,project,section):
         """
-        Report the extended QC metrics
+        Report additional QC metrics
 
-        Creates a new subsection in the report document and
-        adds content for reporting on:
-
-        - RSeQC gene body coverage
-        - Picard insert size metrics
-        - Qualimap RNA-seq metrics
+        Creates a summary table in the specified section
+        to report additional metrics to those in the main
+        summary section (e.g. adapters, FastQC summary,
+        read length distributions etc)
 
         Arguments:
           project (QCProject): project to report
           section (Section): document section to add
             the report to
         """
-        # Create top-level container for extended metrics
-        extended_metrics = section.add_subsection(
-            "Extended QC metrics (experimental)",
-            name='extended_qc_metrics')
-        # Make a subsection for each organism
-        for organism in project.organisms:
-            extended_metrics_subsection = extended_metrics.add_subsection(
-                "%s" % str(organism).title(),
-                name='extended_qc_metrics_%s' % organism,
-                css_classes=('info',))
-            # Project-wide metrics
-            # - RSeQC gene body coverage
-            if 'rseqc_genebody_coverage' in project.outputs:
-                rseqc_genebody_coverage = self.report_rseqc_genebody_coverage(
-                    project,
-                    organism,
-                    extended_metrics_subsection)
-            # Sample/Fastq group-level metrics
-            # - Picard insert sizes
-            # - Qualimap RNA-seq metrics
-            fields = []
-            if 'rseqc_infer_experiment' in project.outputs:
-                fields.extend(['endedness_%s' % organism,
-                               'strandedness_%s' % organism])
-            if 'picard_insert_size_metrics' in project.outputs:
-                fields.extend(['mean_insert_size_%s' % organism,
-                               'median_insert_size_%s' % organism,
-                               'insert_size_histogram_%s' % organism])
-            if 'qualimap_rnaseq' in project.outputs:
-                fields.extend(['coverage_profile_along_genes_%s' % organism,
-                               'reads_genomic_origin_%s' % organism,
-                               'qualimap_rnaseq_report_%s' % organism])
-            if fields:
-                # Create a new summary table
-                fields.insert(0,'sample')
-                fields.insert(1,'bam_file')
-                extended_metrics_table = self.add_summary_table(
-                    project,
-                    fields,
-                    section=extended_metrics_subsection)
-                # Add metrics for each sample
-                for sample in project.samples:
-                    reporter = SampleQCReporter(project,
-                                                sample,
-                                                qc_dir=project.qc_dir,
-                                                fastq_attrs=project.fastq_attrs)
-                    reporter.update_summary_table(extended_metrics_table,
-                                                  fields=fields,
-                                                  relpath=self.relpath)
-            # Add link to collated insert sizes
-            if 'collated_insert_sizes' in project.outputs:
-                insert_sizes_file = os.path.join(
-                    self.fetch_qc_dir(project),
-                    "insert_sizes.%s.tsv" % organism)
-                if os.path.exists(insert_sizes_file):
-                    # Create a container for the outputs
-                    insert_sizes = extended_metrics_subsection.add_subsection(
-                        "Insert sizes",
-                        name='insert_sizes_%s' %
-                        organism)
-                    if self.relpath:
-                        # Convert to relative path
-                        insert_sizes_file = os.path.relpath(
-                            insert_sizes_file,
-                            self.relpath)
-                    insert_sizes.add("%s %s" %
-                                     (LinkIcon(size=20),
-                                      Link("Collated insert sizes (TSV) ",
-                                           target=insert_sizes_file)))
-        # Add an empty section to clear HTML floats
-        clear = section.add_subsection(css_classes=("clear",))
+        # Set the fields for the additional metrics
+        if len(project.reads) > 1:
+            fields = ['sample',
+                      'fastqs',
+                      'adapter_content']
+        else:
+            fields = ['sample',
+                      'fastq',
+                      'adapter_content',]
+        if 'rseqc_infer_experiment' in project.outputs:
+            # Strandedness from infer_experiment.py
+            fields.append('strand_specificity')
+        if 'sequence_lengths' in project.outputs:
+            for read in project.reads:
+                fields.append('read_lengths_dist_%s' % read)
+        for read in project.reads:
+            if ('fastqc_%s' % read) in project.outputs:
+                fields.append('fastqc_%s' % read)
+        # Add a new table
+        summary_table = self.add_summary_table(
+                project,
+                fields,
+                section=section)
+        # Report the metrics for each sample
+        for sample in project.samples:
+            reporter = SampleQCReporter(project,
+                                        sample,
+                                        qc_dir=project.qc_dir,
+                                        fastq_attrs=project.fastq_attrs)
+            reporter.update_summary_table(summary_table,
+                                          fields=fields,
+                                          relpath=self.relpath)
 
-    def report_rseqc_genebody_coverage(self,project,organism,section):
+    def report_genebody_coverage(self,project,section):
         """
-        Add report of RSeQC gene body coverage to a document section
+        Add RSeQC gene body coverage reports to a document section
 
         Arguments:
           project (QCProject): parent project
-          organism (str): name of organism to report coverage for
           section (Section): section to add the report to
         """
         # Determine location of QC artefacts
         qc_dir = self.fetch_qc_dir(project)
-        # Top-level gene body coverage output dir
-        genebody_coverage_dir = os.path.join(qc_dir,
-                                             "rseqc_genebody_coverage",
-                                             organism)
-        if not os.path.exists(genebody_coverage_dir):
-            # No outputs for specifed organism
-            return None
-        # Create a container for the outputs
-        coverage = section.add_subsection(
-            "Gene Body Coverage",
-            name='rseqc_genebody_coverage_%s' %
-            organism)
-        # Acquire plot PNG
-        png = os.path.join(genebody_coverage_dir,
-                           "%s.geneBodyCoverage.curves.png"
-                           % project.name)
-        if not os.path.exists(png):
-            # Missing PNG
-            coverage.add(WarningIcon(),"No RSeQC gene body coverage plot")
-        else:
-            # Embed image in report
-            if self.relpath:
-                # Convert to relative path
-                png = os.path.relpath(png,self.relpath)
-            coverage.add("Gene body coverage from RSeQC for '%s' mapped "
-                         "to '%s'" % (project.name,organism),
-                         Img(png,
-                             href=png,
-                             title="Gene body coverage from RSeQC "
-                             "(mapped to %s); click for PNG" %
-                             organism,
-                             name="gene_body_coverage_%s" % organism))
+        # Create new subsection
+        rseqc_coverage = section.add_subsection("Gene Body Coverage",
+                                                css_classes=("info",))
+        # Make a subsection for each organism
+        for organism in project.organisms:
+            coverage_dir = os.path.join(qc_dir,
+                                        "rseqc_genebody_coverage",
+                                        organism)
+            if not os.path.exists(coverage_dir):
+                # No outputs for this organism
+                continue
+            # Create a container for the outputs
+            coverage = rseqc_coverage.add_subsection(
+                name='rseqc_genebody_coverage_%s' %
+                organism)
+            # Acquire plot PNG
+            png = os.path.join(coverage_dir,
+                               "%s.geneBodyCoverage.curves.png"
+                               % project.name)
+            if not os.path.exists(png):
+                # Missing PNG
+                coverage.add(WarningIcon(),"No RSeQC gene body coverage plot")
+            else:
+                # Embed image in report
+                if self.relpath:
+                    # Convert to relative path
+                    png = os.path.relpath(png,self.relpath)
+                    coverage.add("Gene body coverage from RSeQC for "
+                                 "'%s' mapped to '%s'" % (project.name,
+                                                          organism),
+                                 Img(png,
+                                     href=png,
+                                     title="Gene body coverage from RSeQC "
+                                     "(mapped to %s); click for PNG" %
+                                     organism,
+                                     name="gene_body_coverage_%s" % organism))
             # Add link to MultiQC plot
             if 'multiqc' in project.outputs:
                 multiqc_report = "multi%s_report.html" \
@@ -1397,8 +1358,43 @@ class QCReport(Document):
                               Link("MultiQC interactive RSeQC gene body "
                                    "coverage plot",
                                    target=multiqc_plot)))
+        # Add an empty section to clear HTML floats
+        clear = section.add_subsection(css_classes=("clear",))
         # Return the subsection
         return coverage
+
+    def report_insert_size_metrics(self,project,section):
+        """
+        Add links to insert size metrics to a document section
+
+        Arguments:
+          project (QCProject): parent project
+          section (Section): section to add the report to
+        """
+        # Get location of QC artefacts
+        qc_dir = self.fetch_qc_dir(project)
+        # Create new subsection
+        insert_sizes = section.add_subsection("Insert sizes",
+                                              css_classes=("info",))
+        # Add a link to the insert sizes TSV for each organism
+        for organism in project.organisms:
+            insert_sizes_file = os.path.join(
+                self.fetch_qc_dir(project),
+                "insert_sizes.%s.tsv" % organism)
+            if os.path.exists(insert_sizes_file):
+                if self.relpath:
+                    # Convert to relative path
+                    insert_sizes_file = os.path.relpath(insert_sizes_file,
+                                                        self.relpath)
+                    insert_sizes.add("%s %s" %
+                                     (LinkIcon(size=20),
+                                      Link("Collated insert sizes for '%s' "
+                                           "(TSV) " % organism,
+                                           target=insert_sizes_file)))
+        # Add an empty section to clear HTML floats
+        clear = section.add_subsection(css_classes=("clear",))
+        # Return the subsection
+        return insert_sizes
 
     def fetch_qc_dir(self,project):
         """
