@@ -127,6 +127,24 @@ table.summary tr td:first-child a {
 .warnings p   { color: red;
                 font-size: 120%; }
 .warnings img { vertical-align: middle; }
+/* Toggle sections */
+.toggle_button {
+  background-color: #4CAF50; /* Green */
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  font-size: 16px;
+  cursor: pointer;
+  margin: 5px 0px 0px 10px;
+}
+.toggle_section {
+  border: solid 2px #4CAF50;
+  margin: 0px 5px 10px 10px;
+  padding: 5px;
+}
 /* Display control elements */
 .clear { clear: both; }
 .hide  { display: none; }
@@ -151,5 +169,26 @@ a { color: black; text-decoration: none; }
 .sample { page-break-before: always; }
 table th { border-bottom: solid 1px lightgray; }
 .no_print { display: none; }
+}
+"""
+
+# Javascript for QC report
+
+# Function to toggle a report section
+# Based on code at
+# https://www.w3schools.com/howto/howto_js_toggle_hide_show.asp
+# https://www.w3schools.com/howto/howto_js_toggle_text.asp
+JS_TOGGLE_FUNCTION = """
+// Toggle the display style of an element
+function toggleBlock(id,button_id,show_text,hide_text) {
+  var x = document.getElementById(id);
+  var b = document.getElementById(button_id);
+  if (x.style.display === "none") {
+    x.style.display = "block";
+    b.innerHTML = hide_text;
+  } else {
+    x.style.display = "none";
+    b.innerHTML = show_text;
+  }
 }
 """

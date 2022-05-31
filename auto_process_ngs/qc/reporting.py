@@ -141,6 +141,7 @@ logger = logging.getLogger(__name__)
 
 from .constants import FASTQ_SCREENS
 from .constants import QC_REPORT_CSS_STYLES
+from .constants import JS_TOGGLE_FUNCTION
 
 # Metadata field descriptions
 METADATA_FIELD_DESCRIPTIONS = {
@@ -374,6 +375,8 @@ class QCReport(Document):
                 title = "QC report: %s" % primary_project.name
         # Initialise superclass
         Document.__init__(self,title)
+        # Flag to indicate if toggle sections are present
+        self._has_toggle_sections = False
         # Collect initial QC data across all projects
         self.output_files = []
         self.outputs = set()
@@ -833,6 +836,56 @@ class QCReport(Document):
                 output_files.append(dest)
         # Update the list of files
         self.output_files = output_files
+
+    def _add_toggle_section(self,parent_section,name,title=None,
+                            show_text="Show",hide_text="Hide",
+                            hidden_by_default=True,css_classes=None):
+        """
+        Create a new section with a button to control visibility
+
+        Arguments:
+          parent_section (Section): section to create
+            the toggle section within
+          name (str): name (ID) for the toggle section
+          title (str): optional title for the section
+          show_text (str): text to display on the
+            control button when the section is hidden
+          hide_text (str): text to dislay on the
+            control button when the section is visible
+          hidden_by_default (bool): if True then make
+            the toggle section hidden initially
+          css_classes (list): list of additional CSS
+            classes to associate with the section
+
+        Returns:
+          Section: document section controlled by the
+            toggle button.
+        """
+        # Create a new section
+        if hidden_by_default:
+            style = 'display:none;'
+        else:
+            style = None
+        toggle_section = Section(title=title,
+                                 name=name,
+                                 level=parent_section.level+1,
+                                 css_classes=css_classes,
+                                 style=style)
+        toggle_section.add_css_classes('toggle_section')
+        # Create a control button
+        toggle_button = ToggleButton(toggle_section,
+                                     show_text=show_text,
+                                     hide_text=hide_text,
+                                     hidden_by_default=
+                                     hidden_by_default)
+        parent_section.add(toggle_button,
+                           toggle_section)
+        # Add Javascript toggle function and set flag
+        if not self._has_toggle_sections:
+            self.add_javascript(JS_TOGGLE_FUNCTION)
+            self._has_toggle_sections = True
+        # Return the section
+        return toggle_section
 
     def add_summary_table(self,project,fields,section):
         """
@@ -3274,6 +3327,91 @@ class FastqQCReporter:
         for name in self.fastq_screen.names:
             screen_files.append(self.fastq_screen[name].txt)
         return uscreenplot(screen_files,screen_width=30,inline=inline)
+
+class ToggleButton:
+    """
+    Utility class for creating a 'toggle button'
+
+    A 'toggle button' is an HTML button that is linked
+    to a document section such that successive button
+    clicks toggle the section's visibility, between
+    'visible' and 'hidden' states.
+
+    The toggle functionality is provided by a JavaScript
+    function which changes the section's 'display'
+    attribute to 'block' (to make it visible) and 'none'
+    (to hide it).
+
+    The button will always have the 'toggle_button'
+    CSS class associated with it, in addition to any
+    others specified.
+
+    Example usage:
+
+    >>> d = Document()
+    >>> s = Section('Toggle section')
+    >>> b = ToggleButton(s)
+    >>> d.add(b,s)
+
+    Arguments:
+      toggle_section (Section): section to toggle the
+        visibility of
+      show_text (str): text to show on the button
+        when the section is in the hidden state
+      hide_text (str): text to show on the button
+        when the section is in the visible state
+      css_classes (list): additional CSS classes to
+        associate with the button
+      hidden_by_default (bool): if True then the
+        section will be hidden by default
+    """
+    def __init__(self,toggle_section,show_text="Show",hide_text="Hide",
+                 css_classes=None,hidden_by_default=True):
+        """
+        Create a new ToggleButton instance
+        """
+        self._toggle_section = toggle_section
+        self._show_text = show_text
+        self._hide_text = hide_text
+        self._css_classes = ["toggle_button"]
+        if css_classes:
+            for cls in css_classes:
+                self._css_classes.append(cls)
+        self._hidden_by_default = hidden_by_default
+
+    def html(self):
+        """
+        Generate HTML version of the toggle button
+
+        Returns:
+          String: HTML representation of the button.
+        """
+        # Set id for button based on section
+        name = "toggle_%s" % self._toggle_section.name
+        # Default visibility
+        if self._hidden_by_default:
+            button_text = self._show_text
+        else:
+            button_text = self._hide_text
+        # Generate HTML code for control button
+        html = ["<button id=\"{toggle_button_name}\" ",
+                "class=\"{css_classes}\" ",
+                "onclick=\"toggleBlock(",
+                "'{section_name}',"
+                "'{toggle_button_name}',"
+                "'{show_text}',"
+                "'{hide_text}')\">{button_text}",
+                "</button>"]
+        return ''.join(html).format(
+            toggle_button_name=name,
+            css_classes=' '.join(self._css_classes),
+            section_name=self._toggle_section.name,
+            show_text=self._show_text,
+            hide_text=self._hide_text,
+            button_text=button_text)
+
+    def __repr__(self):
+        return self.html()
 
 #######################################################################
 # Functions
