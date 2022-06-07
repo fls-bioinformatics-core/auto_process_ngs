@@ -61,7 +61,7 @@ h3, h4 { background-color: grey;
 /* Summary section */
 div.summary { margin: 10 10;
               border: solid 2px #8CC63F;
-              padding: 0;
+              padding: 0 10 5 0;
               border-top-left-radius: 25px; }
 .info { padding: 5px 15px;
         float: left;
