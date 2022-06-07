@@ -491,14 +491,16 @@ class QCReport(Document):
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'sequence_duplication']
+                                       'sequence_duplication',
+                                       'adapter_content']
                 else:
                     summary_fields_ = ['sample',
                                        'fastq',
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'sequence_duplication']
+                                       'sequence_duplication',
+                                       'adapter_content']
                 if 'strandedness' in project.outputs:
                     summary_fields_.append('strandedness')
                 if 'picard_insert_size_metrics' in project.outputs:
@@ -1288,12 +1290,10 @@ class QCReport(Document):
         # Set the fields for the additional metrics
         if len(project.reads) > 1:
             fields = ['sample',
-                      'fastqs',
-                      'adapter_content']
+                      'fastqs']
         else:
             fields = ['sample',
-                      'fastq',
-                      'adapter_content',]
+                      'fastq']
         if 'rseqc_infer_experiment' in project.outputs:
             # Strandedness from infer_experiment.py
             fields.append('strand_specificity')
