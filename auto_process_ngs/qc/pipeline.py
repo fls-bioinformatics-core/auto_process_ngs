@@ -842,8 +842,8 @@ class QCPipeline(Pipeline):
 
         # Get reference gene model for RSeQC
         get_reference_gene_model = GetReferenceDataset(
-            "%s: get BED reference gene model for '%s'" % (project.name,
-                                                           organism),
+            "%s: get RSeQC reference gene model for '%s'" % (project.name,
+                                                             organism),
             organism,
             self.params.annotation_bed_files)
         self.add_task(get_reference_gene_model,
@@ -890,7 +890,7 @@ class QCPipeline(Pipeline):
         for task in post_tasks:
             collate_insert_sizes.required_by(task)
 
-        # Get reference gene model
+        # Get reference gene model for Qualimap
         get_annotation_gtf = GetReferenceDataset(
             "%s: get GTF annotation for '%s'" % (project.name,
                                                  organism),
