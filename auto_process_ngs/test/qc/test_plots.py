@@ -470,7 +470,7 @@ Sequence length	35-76
         with open(self.fastqc_data_txt,'w') as fp:
             fp.write(fastqc_data)
         # Reference data
-        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAqCAIAAAAF/F3cAAAAnUlEQVR4nO3UsQ3CMBAF0H8RS0CRNVjDFKzhm+V7DYp4HOoUSc0EnyKRMMZAiyKu+Jb1zvK5sZFEUdG93IKkpGEaXpPkDs9lBiAAa9YsIc857EOe83gZVw6H09ovld3dsiQSkuHJHuwezTBMuc1kUn2y4HfVRfflNW1OpEH9uW+ze5RwvAFoZEemT3d/GW3rfG3nL4z2542wVd9eVXdP5kha/kjTTgAAAABJRU5ErkJggg=="
+        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAqCAIAAAAF/F3cAAAAnUlEQVR4nO3UsQ0CMQwF0O8TS0Bxa7BGKFgjnuVnDYpkHOor7momMMVFIheMaEHg4kfRcxSniZBEU1G13YKkmeU5PyfJHbYlAiAANXs2Q1lK2IeylOkyVQ6HU+03a7uHdUkkzAQbe7BqFEGei89ksv5kw69qiKrra3xOpMDG8+izanRvrUwmAMcb3Hw32o/z1c9PGO3P38LSfXtd3QFX10hamZN+QgAAAABJRU5ErkJggg=="
 
     def tearDown(self):
         # Remove the temporary test directory

@@ -611,66 +611,41 @@ def uboxplot(fastqc_data=None,fastq=None,
                 max_qual = int(ceil(qual))
                 logger.warning("uboxplot: setting max quality to %d" %
                                max_qual)
-    # To generate a bitmap in Python see:
-    # http://stackoverflow.com/questions/20304438/how-can-i-use-the-python-imaging-library-to-create-a-bitmap
-    #
-    # Initialise output image instance
+    # Set up data dictionaries for plotting
+    p10 = { i:fastq_stats.p10[i] for i in range(fastq_stats.nbases) }
+    p90 = { i:fastq_stats.p90[i] for i in range(fastq_stats.nbases) }
+    q25 = { i:fastq_stats.q25[i] for i in range(fastq_stats.nbases) }
+    q75 = { i:fastq_stats.q75[i] for i in range(fastq_stats.nbases) }
+    median = { i:fastq_stats.median[i] for i in range(fastq_stats.nbases) }
+    mean = { i:fastq_stats.mean[i] for i in range(fastq_stats.nbases) }
+    # Initialise plot
     height = max_qual + 1
-    img = Image.new('RGB',(fastq_stats.nbases,height),"white")
-    pixels = img.load()
+    boxplot = Plot(fastq_stats.nbases,height)
     # Create colour bands for different quality ranges
-    for i in range(0,fastq_stats.nbases,2):
-        for j in range(0,20):
-            pixels[i,max_qual-j-1] = (230,175,175)
-        for j in range(20,30):
-            pixels[i,max_qual-j-1] = (230,215,175)
-        for j in range(30,max_qual):
-            pixels[i,max_qual-j-1] = (175,230,175)
-    # Draw a box around the outside
-    box_color = RGB_COLORS['grey']
-    for i in range(fastq_stats.nbases):
-        pixels[i,0] = box_color
-        pixels[i,height-1] = box_color
-    for j in range(height):
-        pixels[0,j] = box_color
-        pixels[fastq_stats.nbases-1,j] = box_color
-    # For each base position determine stats
-    for i in range(fastq_stats.nbases):
-        #print("Position: %d" % i)
-        try:
-            for j in range(fastq_stats.p10[i],fastq_stats.p90[i]):
-                # 10th-90th percentile coloured cyan
-                pixels[i,max_qual-j] = RGB_COLORS['grey']
-        except TypeError:
-            pass
-        try:
-            for j in range(fastq_stats.q25[i],fastq_stats.q75[i]):
-                # Interquartile range coloured yellow
-                pixels[i,max_qual-j] = RGB_COLORS['darkyellow1']
-        except TypeError:
-            pass
-        # Median coloured red
-        try:
-            median = int(fastq_stats.median[i])
-            pixels[i,max_qual-median] = RGB_COLORS['red']
-        except TypeError:
-            pass
-        # Mean coloured black
-        pixels[i,max_qual-int(fastq_stats.mean[i])] = RGB_COLORS['blue']
-    # Output the plot to file
-    fp,tmp_plot = tempfile.mkstemp(".uboxplot.png")
-    img.save(tmp_plot)
-    os.fdopen(fp).close()
+    boxplot.block((0,0),
+                  (fastq_stats.nbases,20),
+                  (230,175,175),RGB_COLORS.white)
+    boxplot.block((0,20),
+                  (fastq_stats.nbases,30),
+                  (230,215,175),RGB_COLORS.white)
+    boxplot.block((0,30),
+                  (fastq_stats.nbases,max_qual),
+                  (175,230,175),RGB_COLORS.white)
+    # Add bounding box
+    boxplot.bbox(RGB_COLORS.grey)
+    # 10th-90th percentile (grey)
+    boxplot.plot_range(p10,p90,RGB_COLORS.grey)
+    # Interquartile range (yellow)
+    boxplot.plot_range(q25,q75,RGB_COLORS.darkyellow1)
+    # Plot median (red)
+    boxplot.plot(median,RGB_COLORS.red)
+    # Plot mean (blue)
+    boxplot.plot(mean,RGB_COLORS.blue)
+    # Output the plot image
     if inline:
-        encoded_plot = encode_png(tmp_plot)
-    if outfile is not None:
-        shutil.move(tmp_plot,outfile)
+        return boxplot.encoded_png()
     else:
-        os.remove(tmp_plot)
-    if inline:
-        return encoded_plot
-    else:
-        return outfile
+        return boxplot.save(outfile)
 
 def ufastqcplot(summary_file,outfile=None,inline=False):
     """
