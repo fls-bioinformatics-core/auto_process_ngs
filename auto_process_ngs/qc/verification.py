@@ -131,14 +131,18 @@ class QCVerifier(QCOutputs):
             # Verify outputs for this QC module
             verified[qc_module] = self.verify_qc_module(qc_module,
                                                         **params)
-
+        # Make templates for parameter and status
+        field_width = 21
+        for qc_module in qc_modules:
+            field_width = max(len(qc_module),field_width)
+        parameter_template_str = "{parameter:%ss}: {value}" % field_width
+        qc_module_template_str = "{name:%ss}: {status:4s}{params}" % field_width
         # Report parameters and status of checks
-        parameter_template_str = "{parameter:21s}: {value}"
-        qc_module_template_str = "{name:21s}: {status:4s}{params}"
         print("-"*(10+len(self.qc_dir)))
         print("QC dir  : %s" % self.qc_dir)
         print("Protocol: %s" % qc_protocol)
         print("-"*(10+len(self.qc_dir)))
+        # Report parameters
         print("Parameters:")
         for p in default_params:
             if p == 'fastqs':
@@ -173,20 +177,31 @@ class QCVerifier(QCOutputs):
             else:
                 print(parameter_template_str.format(parameter=p,
                                                     value=default_params[p]))
-        print("-"*27)
+        print("-"*(field_width+6))
+        # Report the status for each module
         for name in verified:
+            # Get string version of status
+            if verified[name] is None:
+                qc_module_status = '****'
+            elif verified[name]:
+                qc_module_status = 'PASS'
+            else:
+                qc_module_status = 'FAIL'
+            # Report status of module
             print(qc_module_template_str.format(
                 name=name,
-                status=('PASS' if verified[name] else 'FAIL'),
+                status=qc_module_status,
                 params=(" %s" % params_for_module[name]
                         if params_for_module[name] else '')))
-        status = all([verified[m] for m in verified])
-        print("-"*27)
+        # Status for QC as a whole
+        status = all([verified[m] for m in verified
+                      if verified[m] is not None])
+        print("-"*(field_width+6))
         print(qc_module_template_str.format(
             name="QC STATUS",
             status=('PASS' if status else 'FAIL'),
             params=''))
-        print("-"*27)
+        print("-"*(field_width+6))
 
         # Return verification status
         return status
