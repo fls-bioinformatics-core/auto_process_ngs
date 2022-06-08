@@ -764,7 +764,7 @@ class QCOutputs:
             software['rseqc:genebody_coverage'] = [None]
         # Return collected information
         return AttributeDictionary(
-            name='rseqc_genebody_count',
+            name='rseqc_genebody_coverage',
             software=software,
             organisms=sorted(list(organisms)),
             output_files=output_files,
