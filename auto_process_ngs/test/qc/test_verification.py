@@ -201,16 +201,17 @@ class TestQCVerifier(unittest.TestCase):
                                                       seq_data_reads=(
                                                           'r1','r2')))
         # Empty QC directory
-        # NB this will verify as True because the fastq_strand.conf
+        # NB this will verify as None because the fastq_strand.conf
         # file is missing (so no outputs are expected)
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_strandedness=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module('strandedness',
-                                                     fastqs=fastq_names,
-                                                     seq_data_reads=(
-                                                         'r1','r2')))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module('strandedness',
+                                                      fastqs=fastq_names,
+                                                      seq_data_reads=(
+                                                          'r1','r2')))
 
     def test_qcverifier_verify_qc_module_sequence_lengths(self):
         """

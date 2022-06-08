@@ -246,7 +246,7 @@ class QCVerifier(QCOutputs):
         if name == "fastqc":
             if not fastqs:
                 # Nothing to check
-                return True
+                return None
             try:
                 # Filter Fastq names
                 fastqs = self.filter_fastqs(qc_reads,fastqs)
@@ -262,7 +262,7 @@ class QCVerifier(QCOutputs):
         elif name == "fastq_screen":
             if not fastqs or not fastq_screens:
                 # Nothing to check
-                return True
+                return None
             try:
                 # Filter Fastq names
                 fastqs = self.filter_fastqs(seq_data_reads,fastqs)
@@ -285,7 +285,7 @@ class QCVerifier(QCOutputs):
         elif name == "sequence_lengths":
             if not fastqs:
                 # Nothing to check
-                return True
+                return None
             try:
                 # Filter Fastq names
                 fastqs = self.filter_fastqs(qc_reads,fastqs)
@@ -303,7 +303,7 @@ class QCVerifier(QCOutputs):
                "fastq_strand.conf" not in self.config_files:
                 # No Fastqs or no conf file so strandedness
                 # outputs not expected
-                return True
+                return None
             if "strandedness" not in self.outputs:
                 # No strandedness outputs present
                 return False
