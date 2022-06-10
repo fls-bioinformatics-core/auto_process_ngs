@@ -31,6 +31,7 @@ from ..metadata import AnalysisProjectQCDirInfo
 from .constants import FASTQ_SCREENS
 from .protocols import fetch_protocol_definition
 from .outputs import QCOutputs
+from .utils import get_bam_basename
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 
 # Module specific logger
@@ -63,7 +64,9 @@ class QCVerifier(QCOutputs):
     def __init__(self,qc_dir,fastq_attrs=None):
         QCOutputs.__init__(self,qc_dir,fastq_attrs=fastq_attrs)
 
-    def verify(self,fastqs,qc_protocol,fastq_screens=None,
+    def verify(self,fastqs,qc_protocol,organism=None,
+               fastq_screens=None,star_index=None,
+               annotation_bed=None,annotation_gtf=None,
                cellranger_version=None,cellranger_refdata=None,
                cellranger_use_multi_config=None):
         """
@@ -72,8 +75,12 @@ class QCVerifier(QCOutputs):
         Arguments:
           fastqs (list): list of Fastqs to verify outputs for
           qc_protocol (str): QC protocol to verify against
+          organism (str): organism associated with outputs
           fastq_screens (list): list of panel names to verify
             FastqScreen outputs against
+          star_index (str): path to STAR index
+          annotation_bed (str): path to BED annotation file
+          annotation_gtf (str): path to GTF annotation file
           cellranger_version (str): specific version of 10x
             package to check for
           cellranger_refdata (str): specific 10x reference
@@ -102,7 +109,11 @@ class QCVerifier(QCOutputs):
             samples=samples,
             seq_data_reads=reads.seq_data,
             qc_reads=reads.qc,
+            organism=organism,
             fastq_screens=fastq_screens,
+            star_index=star_index,
+            annotation_bed=annotation_bed,
+            annotation_gtf=annotation_gtf,
             cellranger_version=cellranger_version,
             cellranger_refdata=cellranger_refdata,
             cellranger_use_multi_config=cellranger_use_multi_config
@@ -208,7 +219,11 @@ class QCVerifier(QCOutputs):
 
     def verify_qc_module(self,name,fastqs=None,samples=None,
                          seq_data_reads=None,qc_reads=None,
+                         organism=None,
                          fastq_screens=None,
+                         star_index=None,
+                         annotation_bed=None,
+                         annotation_gtf=None,
                          cellranger_version=None,
                          cellranger_refdata=None,
                          cellranger_use_multi_config=None):
@@ -223,8 +238,12 @@ class QCVerifier(QCOutputs):
             sequence data
           qc_reads (list): list of reads to perform general
             QC on
+          organism (str): organism associated with outputs
           fastq_screens (list): list of panel names to verify
             FastqScreen outputs against
+          star_index (str): path to STAR index
+          annotation_bed (str): path to BED annotation file
+          annotation_gtf (str): path to GTF annotation file
           cellranger_version (str): specific version of 10x
             package to check for
           cellranger_refdata (str): specific 10x reference
@@ -312,6 +331,74 @@ class QCVerifier(QCOutputs):
             # Check that outputs exist for every Fastq
             for fq in fastqs:
                 if fq not in self.data('fastq_strand').fastqs:
+                    return False
+            return True
+
+        elif name == "rseqc_genebody_coverage":
+            if not fastqs:
+                # Nothing to check
+                return None
+            if not organism:
+                # No organism specified
+                return None
+            if not star_index or not annotation_bed:
+                # No STAR index or annotation
+                return None
+            if "rseqc_genebody_coverage" not in self.outputs:
+                # No RSeQC gene body coverage present
+                return False
+            if organism.lower() not in \
+               self.data('rseqc_genebody_coverage').organisms:
+                return False
+            return True
+
+        elif name == "picard_insert_size_metrics":
+            if not fastqs:
+                # Nothing to check
+                return None
+            if not organism:
+                # No organism specified
+                return None
+            if not star_index:
+                # No STAR index
+                return None
+            if "picard_insert_size_metrics" not in self.outputs:
+                # No insert size metrics present
+                return False
+            if organism.lower() not in \
+               self.data('picard_collect_insert_size_metrics').organisms:
+                return False
+            # Filter Fastq names and convert to BAM names
+            bams = [get_bam_basename(fq)
+                    for fq in self.filter_fastqs(seq_data_reads[:1],fastqs)]
+            # Check that outputs exist for every BAM
+            for bam in bams:
+                if bam not in self.data('picard_collect_insert_size_metrics').\
+                   bam_files:
+                    return False
+            return True
+
+        elif name == "qualimap_rnaseq":
+            if not fastqs:
+                # Nothing to check
+                return None
+            if not organism:
+                # No organism specified
+                return None
+            if not star_index or not annotation_gtf:
+                # No STAR index or annotation
+                return None
+            if "qualimap_rnaseq" not in self.outputs:
+                # No Qualimap 'rnaseq' outputs present
+                return False
+            if organism.lower() not in self.data('qualimap_rnaseq').organisms:
+                return False
+            # Filter Fastq names and convert to BAM names
+            bams = [get_bam_basename(fq)
+                    for fq in self.filter_fastqs(seq_data_reads[:1],fastqs)]
+            # Check that outputs exist for every BAM
+            for bam in bams:
+                if bam not in self.data('qualimap_rnaseq').bam_files:
                     return False
             return True
 

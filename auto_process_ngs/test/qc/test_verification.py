@@ -40,6 +40,7 @@ class TestQCVerifier(unittest.TestCase):
 
     def _make_qc_dir(self,qc_dir,fastq_names,
                      protocol=None,
+                     organisms=('human',),
                      screens=('model_organisms','other_organisms','rRNA',),
                      cellranger_pipelines=('cellranger',),
                      cellranger_samples=None,
@@ -48,6 +49,9 @@ class TestQCVerifier(unittest.TestCase):
                      include_fastq_screen=True,
                      include_strandedness=True,
                      include_seqlens=True,
+                     include_picard_insert_size_metrics=False,
+                     include_rseqc_genebody_coverage=False,
+                     include_qualimap_rnaseq=False,
                      include_multiqc=False,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
@@ -59,6 +63,7 @@ class TestQCVerifier(unittest.TestCase):
             os.path.join(self.wd,qc_dir),
             fastq_names,
             protocol=protocol,
+            organisms=organisms,
             screens=screens,
             cellranger_pipelines=cellranger_pipelines,
             cellranger_samples=cellranger_samples,
@@ -67,6 +72,11 @@ class TestQCVerifier(unittest.TestCase):
             include_fastq_screen=include_fastq_screen,
             include_strandedness=include_strandedness,
             include_seqlens=include_seqlens,
+            include_picard_insert_size_metrics=\
+            include_picard_insert_size_metrics,
+            include_rseqc_genebody_coverage=\
+            include_rseqc_genebody_coverage,
+            include_qualimap_rnaseq=include_qualimap_rnaseq,
             include_multiqc=include_multiqc,
             include_cellranger_count=include_cellranger_count,
             include_cellranger_multi=include_cellranger_multi,
@@ -245,6 +255,174 @@ class TestQCVerifier(unittest.TestCase):
         self.assertFalse(qc_verifier.verify_qc_module('sequence_lengths',
                                                       fastqs=fastq_names,
                                                       qc_reads=('r1','r2')))
+
+    def test_qcverifier_verify_qc_module_rseqc_genebody_coverage(self):
+        """
+        QCVerifier: verify QC module 'rseqc_genebody_coverage'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_rseqc_genebody_coverage=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'rseqc_genebody_coverage',
+            fastqs=fastq_names,
+            organism="Human",
+            star_index="/data/indexes/STAR",
+            annotation_bed="/data/annot/human.bed"))
+        # Returns None if organism, STAR index or annotation
+        # is not supplied
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_genebody_coverage',
+                             fastqs=fastq_names,
+                             star_index="/data/indexes/STAR",
+                             annotation_bed="/data/annot/human.bed"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_genebody_coverage',
+                             fastqs=fastq_names,
+                             organism="Human",
+                             annotation_bed="/data/annot/human.bed"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_genebody_coverage',
+                             fastqs=fastq_names,
+                             organism="Human",
+                             star_index="/data/indexes/STAR"))
+        # Empty QC directory
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_rseqc_genebody_coverage=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'rseqc_genebody_coverage',
+            fastqs=fastq_names,
+            organism="Human",
+            star_index="/data/indexes/STAR",
+            annotation_bed="/data/annot/human.bed"))
+
+    def test_qcverifier_verify_qc_module_picard_insert_size_metrics(self):
+        """
+        QCVerifier: verify QC module 'picard_insert_size_metrics'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_picard_insert_size_metrics=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'picard_insert_size_metrics',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Human",
+            star_index="/data/indexes/STAR"))
+        # Returns None if organism or STAR index is not supplied
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'picard_insert_size_metrics',
+                             fastqs=fastq_names,
+                             seq_data_reads=('r1','r2'),
+                             star_index="/data/indexes/STAR"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'picard_insert_size_metrics',
+                             fastqs=fastq_names,
+                             seq_data_reads=('r1','r2'),
+                             organism="Human"))
+        # Some outputs missing
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:-1],
+                                   organisms=('human',),
+                                   include_picard_insert_size_metrics=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'picard_insert_size_metrics',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Human",
+            star_index="/data/indexes/STAR"))
+        # Empty QC directory
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_picard_insert_size_metrics=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'picard_insert_size_metrics',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Human"))
+
+    def test_qcverifier_verify_qc_module_qualimap_rnaseq(self):
+        """
+        QCVerifier: verify QC module 'qualimap_rnaseq'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_qualimap_rnaseq=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'qualimap_rnaseq',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Human",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf"))
+        # Returns None if organism, STAR index or annotation
+        # is not supplied
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'qualimap_rnaseq',
+                             fastqs=fastq_names,
+                             seq_data_reads=('r1','r2'),
+                             star_index="/data/indexes/STAR",
+                             annotation_gtf="/data/annot/human.gtf"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'qualimap_rnaseq',
+                             fastqs=fastq_names,
+                             seq_data_reads=('r1','r2'),
+                             organism="Human",
+                             annotation_gtf="/data/annot/human.gtf"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'qualimap_rnaseq',
+                             fastqs=fastq_names,
+                             seq_data_reads=('r1','r2'),
+                             organism="Human",
+                             star_index="/data/indexes/STAR"))
+        # Empty QC directory
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_qualimap_rnaseq=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'qualimap_rnaseq',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Human",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf"))
 
     def test_qcverifier_verify_qc_module_multiqc(self):
         """
