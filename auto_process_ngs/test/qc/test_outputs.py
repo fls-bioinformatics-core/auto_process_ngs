@@ -543,8 +543,8 @@ class TestQCOutputs(unittest.TestCase):
                           'PJB2_S2_R2_001'])
         self.assertEqual(qc_outputs.samples,
                          ['PJB1','PJB2'])
-        self.assertEqual(qc_outputs.bams,['PJB1_S1_R1_001',
-                                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.bams,['PJB1_S1_001',
+                                          'PJB2_S2_001'])
         self.assertEqual(qc_outputs.organisms,['human'])
         self.assertEqual(qc_outputs.fastq_screens,
                          ['model_organisms',
@@ -661,8 +661,8 @@ class TestQCOutputs(unittest.TestCase):
                           'PJB2_S2_R2_001'])
         self.assertEqual(qc_outputs.samples,
                          ['PJB1','PJB2'])
-        self.assertEqual(qc_outputs.bams,['PJB1_S1_R1_001',
-                                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.bams,['PJB1_S1_001',
+                                          'PJB2_S2_001'])
         self.assertEqual(qc_outputs.organisms,['human'])
         self.assertEqual(qc_outputs.fastq_screens,
                          ['model_organisms',
@@ -720,8 +720,8 @@ class TestQCOutputs(unittest.TestCase):
                           'PJB2_S2_R2_001'])
         self.assertEqual(qc_outputs.samples,
                          ['PJB1','PJB2'])
-        self.assertEqual(qc_outputs.bams,['PJB1_S1_R1_001',
-                                          'PJB2_S2_R1_001'])
+        self.assertEqual(qc_outputs.bams,['PJB1_S1_001',
+                                          'PJB2_S2_001'])
         self.assertEqual(qc_outputs.organisms,['human'])
         self.assertEqual(qc_outputs.fastq_screens,
                          ['model_organisms',
