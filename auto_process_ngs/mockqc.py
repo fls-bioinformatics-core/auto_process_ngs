@@ -205,9 +205,9 @@ class MockQCOutputs:
         Create mock outputs from RSeQC infer_experiment.py
         """
         # Basename for mock infer_experiment.py log file
-        basename = os.path.basename(fq)
-        while basename.split('.')[-1] in ('fastq','gz'):
-            basename = '.'.join(basename.split('.')[:-1])
+        basename = AnalysisFastq(fq)
+        basename.read_number = None
+        basename = str(basename)
         out_dir = os.path.join(qc_dir,
                                "rseqc_infer_experiment",
                                organism)
