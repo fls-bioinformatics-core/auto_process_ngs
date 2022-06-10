@@ -32,8 +32,9 @@ import os
 import base64
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
-from .analysis import AnalysisProjectQCDirInfo
+from .analysis import AnalysisFastq
 from .fastq_utils import group_fastqs_by_name
+from .metadata import AnalysisProjectQCDirInfo
 from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from . import mockqcdata
 from . import mock10xdata
@@ -181,9 +182,9 @@ class MockQCOutputs:
         Create mock outputs from Picard CollectInsertSizeMetrics
         """
         # Basename for insert size metrics outputs
-        basename = os.path.basename(fq)
-        while basename.split('.')[-1] in ('fastq','gz'):
-            basename = '.'.join(basename.split('.')[:-1])
+        basename = AnalysisFastq(fq)
+        basename.read_number = None
+        basename = str(basename)
         out_dir = os.path.join(qc_dir,
                                "picard",
                                organism)
@@ -245,10 +246,10 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
         """
         Create mock outputs from Qualimap 'rnaseq' function
         """
-        # Basename for insert size metrics outputs
-        basename = os.path.basename(fq)
-        while basename.split('.')[-1] in ('fastq','gz'):
-            basename = '.'.join(basename.split('.')[:-1])
+        # Basename for Qualimap rnaseq outputs
+        basename = AnalysisFastq(fq)
+        basename.read_number = None
+        basename = str(basename)
         out_dir = os.path.join(qc_dir,
                                "qualimap-rnaseq",
                                organism,
@@ -476,6 +477,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
     # QC metadata
     qc_info = AnalysisProjectQCDirInfo()
     qc_info['protocol'] = protocol
+    if organisms:
+        qc_info['organism'] = ','.join(organisms)
     # Populate with fake QC products
     for fq in fastq_names:
         # FastQC
@@ -509,9 +512,10 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                     fq,organism,qc_dir)
         # Picard insert size metrics
         if include_picard_insert_size_metrics:
-            for organism in organisms:
-                MockQCOutputs.picard_collect_insert_size_metrics(
-                    fq,organism,qc_dir)
+            if len(fq_group) == 2:
+                for organism in organisms:
+                    MockQCOutputs.picard_collect_insert_size_metrics(
+                        fq,organism,qc_dir)
         # Qualimap rnaseq
         if include_qualimap_rnaseq:
             for organism in organisms:
