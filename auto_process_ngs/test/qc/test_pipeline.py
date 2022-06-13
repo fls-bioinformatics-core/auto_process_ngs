@@ -105,6 +105,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -148,6 +151,9 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -197,6 +203,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -247,6 +256,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -292,6 +304,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -340,6 +355,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -384,6 +402,9 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -435,6 +456,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -480,6 +504,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -529,6 +556,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs.cells"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -573,6 +603,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -622,6 +655,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -673,6 +709,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"AB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check QC metadata
@@ -684,6 +723,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"CD","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -731,6 +773,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -777,6 +822,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -825,6 +873,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -874,6 +925,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -937,6 +991,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"3.1.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-GRCh38-1.2.0")
@@ -1009,6 +1066,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1081,6 +1141,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1230,6 +1293,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1374,6 +1440,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"3.1.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-GRCh38-1.2.0_premrna")
@@ -1544,6 +1613,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1616,6 +1688,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1762,6 +1837,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"1.2.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-atac-GRCh38-1.2.0")
@@ -1836,6 +1914,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0")
@@ -1990,6 +2071,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2067,6 +2151,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2174,6 +2261,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"1.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2294,6 +2384,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2413,6 +2506,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"1.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2532,6 +2628,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2636,6 +2735,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
@@ -2776,6 +2878,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -2828,6 +2933,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -2885,6 +2993,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -2954,6 +3065,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3014,6 +3128,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3080,6 +3197,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3139,6 +3259,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3205,6 +3328,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3271,6 +3397,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3331,6 +3460,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports

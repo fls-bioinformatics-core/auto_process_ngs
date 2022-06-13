@@ -624,6 +624,7 @@ class QCPipeline(Pipeline):
                                       qc_dir,
                                       organism,
                                       log_dir,
+                                      qc_metadata,
                                       pre_tasks=(setup_qc_dirs,),
                                       post_tasks=(verify_qc,))
 
@@ -788,7 +789,8 @@ class QCPipeline(Pipeline):
         return run_cellranger_count
 
     def add_extended_metrics(self,project,qc_protocol,qc_dir,
-                             organism,log_dir,pre_tasks,post_tasks):
+                             organism,log_dir,qc_metadata,
+                             pre_tasks,post_tasks):
         """
         Add additional optional QC metrics for a project
 
@@ -801,6 +803,8 @@ class QCPipeline(Pipeline):
             run
           log_dir (str): directory for log files (defaults
             to 'logs' subdirectory of the QC directory
+          qc_metadata (dict): dictionary of metadata items
+            to update from extended metrics
           pre_tasks (list): list of tasks that must complete
             before the extended metrics tasks can run
           post_tasks (list): list of tasks that depend on
@@ -839,6 +843,7 @@ class QCPipeline(Pipeline):
                       requires=pre_tasks,
                       runner=self.runners['star_runner'],
                       log_dir=log_dir)
+        qc_metadata['star_index'] = get_star_index.output.reference_dataset
 
         # Get reference gene model for RSeQC
         get_reference_gene_model = GetReferenceDataset(
@@ -911,6 +916,8 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
         for task in post_tasks:
             qualimap_rnaseq.required_by(task)
+        qc_metadata['annotation_gtf'] = \
+            get_annotation_gtf.output.reference_dataset
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             annotation_bed_files=None,annotation_gtf_files=None,
