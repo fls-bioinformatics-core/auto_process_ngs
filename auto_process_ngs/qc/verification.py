@@ -729,6 +729,10 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
     logger.debug("verify: qc_dir (final)  : %s" % qc_dir)
     cellranger_version = None
     cellranger_refdata = None
+    star_index = None
+    annotation_bed=None
+    annotation_gtf=None
+    organism = None
     fastq_screens = None
     qc_info_file = os.path.join(qc_dir,"qc.info")
     if os.path.exists(qc_info_file):
@@ -736,11 +740,27 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
         if not qc_protocol:
             qc_protocol = qc_info['protocol']
         try:
+            organism = qc_info['organism']
+        except KeyError:
+            pass
+        try:
             cellranger_refdata = qc_info['cellranger_refdata']
         except KeyError:
             pass
         try:
             cellranger_version = qc_info['cellranger_version']
+        except KeyError:
+            pass
+        try:
+            star_index = qc_info['star_index']
+        except KeyError:
+            pass
+        try:
+            annotation_bed = qc_info['annotation_bed']
+        except KeyError:
+            pass
+        try:
+            annotation_gtf = qc_info['annotation_gtf']
         except KeyError:
             pass
         try:
@@ -753,11 +773,15 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
             pass
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
-    logger.debug("verify: fastq screens : %s" % fastq_screens)
+    logger.debug("verify: fastq screens : %s" % (fastq_screens,))
     verifier = QCVerifier(qc_dir,
                           fastq_attrs=project.fastq_attrs)
     return verifier.verify(project.fastqs,
                            qc_protocol,
+                           organism=organism,
                            fastq_screens=fastq_screens,
+                           star_index=star_index,
+                           annotation_bed=annotation_bed,
+                           annotation_gtf=annotation_gtf,
                            cellranger_version=cellranger_version,
                            cellranger_refdata=cellranger_refdata)
