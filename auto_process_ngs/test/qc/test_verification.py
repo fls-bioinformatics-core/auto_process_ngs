@@ -386,7 +386,8 @@ class TestQCVerifier(unittest.TestCase):
             seq_data_reads=('r1','r2'),
             organism="Human",
             star_index="/data/indexes/STAR",
-            annotation_gtf="/data/annot/human.gtf"))
+            annotation_gtf="/data/annot/human.gtf",
+            annotation_bed="/data/annot/human.bed"))
         # Returns None if organism, STAR index or annotation
         # is not supplied
         self.assertEqual(None,
@@ -395,14 +396,16 @@ class TestQCVerifier(unittest.TestCase):
                              fastqs=fastq_names,
                              seq_data_reads=('r1','r2'),
                              star_index="/data/indexes/STAR",
-                             annotation_gtf="/data/annot/human.gtf"))
+                             annotation_gtf="/data/annot/human.gtf",
+                             annotation_bed="/data/annot/human.bed"))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'qualimap_rnaseq',
                              fastqs=fastq_names,
                              seq_data_reads=('r1','r2'),
                              organism="Human",
-                             annotation_gtf="/data/annot/human.gtf"))
+                             annotation_gtf="/data/annot/human.gtf",
+                             annotation_bed="/data/annot/human.bed"))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'qualimap_rnaseq',
@@ -422,7 +425,8 @@ class TestQCVerifier(unittest.TestCase):
             seq_data_reads=('r1','r2'),
             organism="Human",
             star_index="/data/indexes/STAR",
-            annotation_gtf="/data/annot/human.gtf"))
+            annotation_gtf="/data/annot/human.gtf",
+            annotation_bed="/data/annot/human.bed"))
 
     def test_qcverifier_verify_qc_module_multiqc(self):
         """
