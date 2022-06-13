@@ -874,26 +874,28 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
         for task in post_tasks:
             rseqc_gene_body_coverage.required_by(task)
+        qc_metadata['annotation_bed'] = \
+            get_reference_gene_model.output.reference_dataset
 
         # Run Picard's CollectInsertSizeMetrics
-        insert_size_metrics = RunPicardCollectInsertSizeMetrics(
-            "%s: Picard: collect insert size metrics" % project.name,
-            get_bam_files.output.bam_files,
-            os.path.join(qc_dir,'picard',organism_name),
-            bam_properties=rseqc_infer_experiment.output.experiments)
-        self.add_task(insert_size_metrics,
-                      log_dir=log_dir)
+        if paired:
+            insert_size_metrics = RunPicardCollectInsertSizeMetrics(
+                "%s: Picard: collect insert size metrics" % project.name,
+                get_bam_files.output.bam_files,
+                os.path.join(qc_dir,'picard',organism_name))
+            self.add_task(insert_size_metrics,
+                          log_dir=log_dir)
 
-        collate_insert_sizes = CollateInsertSizes(
-            "%s: collate insert size data" % project.name,
-            get_bam_files.output.bam_files,
-            os.path.join(qc_dir,'picard',organism_name),
-            os.path.join(qc_dir,'insert_sizes.%s.tsv' % organism_name))
-        self.add_task(collate_insert_sizes,
-                      requires=(insert_size_metrics,),
-                      log_dir=log_dir)
-        for task in post_tasks:
-            collate_insert_sizes.required_by(task)
+            collate_insert_sizes = CollateInsertSizes(
+                "%s: collate insert size data" % project.name,
+                get_bam_files.output.bam_files,
+                os.path.join(qc_dir,'picard',organism_name),
+                os.path.join(qc_dir,'insert_sizes.%s.tsv' % organism_name))
+            self.add_task(collate_insert_sizes,
+                          requires=(insert_size_metrics,),
+                          log_dir=log_dir)
+            for task in post_tasks:
+                collate_insert_sizes.required_by(task)
 
         # Get reference gene model for Qualimap
         get_annotation_gtf = GetReferenceDataset(
@@ -3098,7 +3100,7 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
     Note that this task should only be run on BAM files
     with paired-end data.
     """
-    def init(self,bam_files,out_dir,bam_properties):
+    def init(self,bam_files,out_dir):
         """
         Initialise the RunPicardCollectInsertSizeMetrics
         task
@@ -3108,31 +3110,14 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
             to run CollectInsertSizeMetrics on
           out_dir (str): path to a directory where the
             output files will be written
-          bam_properties (mapping): properties for each
-            BAM file from RSeQC 'infer_experiment.py'
-            (used to determine if BAM is paired and
-            what the strand-specificity is)R
         """
         # Conda dependencies
         self.conda("picard=2.27.1",
                    "r-base=4")
     def setup(self):
-        # Filter list of BAM files down to those which have
-        # associated properties, and which are paired-end
-        if self.args.bam_properties:
-            self.bam_files = list(
-                filter(lambda f: f in self.args.bam_properties and
-                       self.args.bam_properties[f]['paired_end'],
-                       self.args.bam_files))
-            if not self.bam_files:
-                print("No paired-end BAM files found")
-        else:
-            self.bam_files = list()
-            print("No properties for BAM files, cannot run "
-                  "CollectInsertSizeMetrics")
         # Set up commands to run CleanSam and
         # CollectInsertSizeMetrics for each BAM file
-        for bam in self.bam_files:
+        for bam in self.args.bam_files:
             # Check if outputs already exist
             outputs_exist = True
             for f in picard_collect_insert_size_metrics_output(
@@ -3161,14 +3146,14 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                                     basename=os.path.basename(bam)[:-4],
                                     nslots=self.runner_nslots))
     def finish(self):
-        # Check if there were any files processed
-        if not self.bam_files:
+        # Check if any BAM files were processed
+        if not self.args.bam_files:
             return
         # Copy outputs to final location
         if not os.path.exists(self.args.out_dir):
             print("Creating output dir '%s'" % self.args.out_dir)
             os.makedirs(self.args.out_dir)
-        for bam in self.bam_files:
+        for bam in self.args.bam_files:
             for f in picard_collect_insert_size_metrics_output(
                     bam,
                     self.args.out_dir):
