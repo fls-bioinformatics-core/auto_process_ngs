@@ -512,10 +512,9 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                     fq,organism,qc_dir)
         # Picard insert size metrics
         if include_picard_insert_size_metrics:
-            if len(fq_group) == 2:
-                for organism in organisms:
-                    MockQCOutputs.picard_collect_insert_size_metrics(
-                        fq,organism,qc_dir)
+            for organism in organisms:
+                MockQCOutputs.picard_collect_insert_size_metrics(
+                    fq,organism,qc_dir)
         # Qualimap rnaseq
         if include_qualimap_rnaseq:
             for organism in organisms:
