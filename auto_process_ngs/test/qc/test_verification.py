@@ -344,7 +344,7 @@ class TestQCVerifier(unittest.TestCase):
                              organism="Human"))
         # Some outputs missing
         qc_dir = self._make_qc_dir('qc.fail',
-                                   fastq_names=fastq_names[:-1],
+                                   fastq_names=fastq_names[:-2],
                                    organisms=('human',),
                                    include_picard_insert_size_metrics=True)
         qc_verifier = QCVerifier(qc_dir)
@@ -1549,6 +1549,9 @@ class TestVerifyProject(unittest.TestCase):
                                include_fastq_screen=True,
                                include_strandedness=True,
                                include_seqlens=True,
+                               include_picard_insert_size_metrics=True,
+                               include_rseqc_genebody_coverage=True,
+                               include_qualimap_rnaseq=True,
                                include_multiqc=True,
                                include_cellranger_count=False,
                                include_cellranger_multi=False,
@@ -1573,6 +1576,11 @@ class TestVerifyProject(unittest.TestCase):
             include_fastq_screen=include_fastq_screen,
             include_strandedness=include_strandedness,
             include_seqlens=include_seqlens,
+            include_picard_insert_size_metrics=\
+            include_picard_insert_size_metrics,
+            include_rseqc_genebody_coverage=\
+            include_rseqc_genebody_coverage,
+            include_qualimap_rnaseq=include_qualimap_rnaseq,
             include_multiqc=include_multiqc,
             include_cellranger_count=include_cellranger_count,
             include_cellranger_multi=include_cellranger_multi,
