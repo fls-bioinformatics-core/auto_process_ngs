@@ -614,6 +614,20 @@ PJB_CML2,CMO302,CML2
                                        config_csv=multi_config,
                                        prefix=multi_dir)
         qc_info['cellranger_version'] = version
+    # Additional metadata items
+    star_index = "/data/star/hg38"
+    annotation_bed = "/data/annotation/hg38.bed"
+    annotation_gtf = "/data/annotation/hg38.gtf"
+    if include_picard_insert_size_metrics:
+        qc_info['star_index'] = star_index
+    if include_rseqc_genebody_coverage or \
+       include_rseqc_infer_experiment:
+        qc_info['star_index'] = star_index
+        qc_info['annotation_bed'] = annotation_bed
+    if include_qualimap_rnaseq:
+        qc_info['star_index'] = star_index
+        qc_info['annotation_bed'] = annotation_bed
+        qc_info['annotation_gtf'] = annotation_gtf
     # Write out metadata file
     qc_info.save(os.path.join(qc_dir,"qc.info"))
     return qc_dir
