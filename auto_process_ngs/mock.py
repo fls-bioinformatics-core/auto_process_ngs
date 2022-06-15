@@ -3733,6 +3733,10 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
                                include_fastq_screen=True,
                                include_strandedness=True,
                                include_seqlens=True,
+                               include_rseqc_infer_experiment=False,
+                               include_rseqc_genebody_coverage=False,
+                               include_picard_insert_size_metrics=False,
+                               include_qualimap_rnaseq=False,
                                include_multiqc=True,
                                include_cellranger_count=False,
                                include_cellranger_multi=False,
@@ -3765,6 +3769,14 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
       include_strandedness (bool): include outputs from
         strandedness
       include_seqlens (bool): include sequence length metrics
+      include_rseqc_infer_experiment (bool): include RSeQC
+        infer_experiment.py outputs
+      include_rseqc_genebody_coverage (bool): include RSeQC
+        geneBody_coverage.py outputs
+      include_picard_insert_size_metrics (bool): include
+        Picard CollectInsertSizeMetrics outputs
+      include_qualimap_rnaseq (bool): include Qualimap rnaseq
+        outputs
       include_multiqc (bool): include MultiQC outputs
       include_celllranger_count (bool): include 'cellranger
         count' outputs
@@ -3818,6 +3830,13 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
                      include_fastq_screen=include_fastq_screen,
                      include_strandedness=include_strandedness,
                      include_seqlens=include_seqlens,
+                     include_rseqc_infer_experiment=\
+                     include_rseqc_infer_experiment,
+                     include_rseqc_genebody_coverage=\
+                     include_rseqc_genebody_coverage,
+                     include_picard_insert_size_metrics=\
+                     include_picard_insert_size_metrics,
+                     include_qualimap_rnaseq=include_qualimap_rnaseq,
                      include_multiqc=include_multiqc,
                      include_cellranger_count=include_cellranger_count,
                      include_cellranger_multi=include_cellranger_multi,
