@@ -3042,6 +3042,10 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
         self.conda("rseqc=4.0.0",
                    "r-base=4")
     def setup(self):
+        # Check we have BAM files
+        if len(self.args.bam_files) < 1:
+            print("No BAM files, cannot run RSeQC genebody_coverage.py")
+            return
         # Check if outputs already exist
         outputs_exist = True
         for f in rseqc_genebody_coverage_output(self.args.name,
@@ -3071,7 +3075,8 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
                          bam_files=','.join(self.args.bam_files),
                          basename=self.args.name))
     def finish(self):
-        if not self.args.reference_gene_model:
+        if not self.args.reference_gene_model or \
+           len(self.args.bam_files) < 1:
             return
         # Copy outputs to final location
         if not os.path.exists(self.args.out_dir):
