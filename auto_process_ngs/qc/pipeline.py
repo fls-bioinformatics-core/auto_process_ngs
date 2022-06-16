@@ -3131,14 +3131,14 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
             self.add_cmd("%s: collect insert size metrics" %
                          os.path.basename(bam),
                          """
-                         mkdir tmp
+                         tmpdir=$(mktemp -d)
                          picard CleanSam \\
                              -I {bam} \\
-                             -O tmp/{basename}.bam \\
+                             -O $tmpdir/{basename}.bam \\
                              -XX:ActiveProcessorCount={nslots} \\
                          && \\
                          picard CollectInsertSizeMetrics \\
-                             -I tmp/{basename}.bam \\
+                             -I $tmpdir/{basename}.bam \\
                              -O {basename}.insert_size_metrics.txt \\
                              -H {basename}.insert_size_histogram.pdf \\
                              -XX:ActiveProcessorCount={nslots}
