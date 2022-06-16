@@ -13,8 +13,14 @@ from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockFastqStrandPy
+from auto_process_ngs.mock import MockStar
+from auto_process_ngs.mock import MockSamtools
+from auto_process_ngs.mock import MockPicard
+from auto_process_ngs.mock import MockRSeQC
+from auto_process_ngs.mock import MockQualimap
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import MockMultiQC
+from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.settings import Settings
 from auto_process_ngs.commands.run_qc_cmd import run_qc
 
@@ -73,6 +79,13 @@ class TestAutoProcessRunQc(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -80,7 +93,9 @@ class TestAutoProcessRunQc(unittest.TestCase):
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
-            metadata={ "instrument_datestamp": "170901" },
+            metadata={ "instrument_datestamp": "170901", },
+            project_metadata={ "AB": { "Organism": "human", },
+                               "CDE": { "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with polling interval
@@ -88,71 +103,16 @@ class TestAutoProcessRunQc(unittest.TestCase):
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = {poll_interval}
-""".format(poll_interval=POLL_INTERVAL))
-        # Make autoprocess instance
-        ap = AutoProcess(analysis_dir=mockdir.dirn,
-                         settings=Settings(settings_ini))
-        # Run the QC
-        status = run_qc(ap,
-                        fastq_screens=self.fastq_screens,
-                        run_multiqc=True,
-                        max_jobs=1)
-        self.assertEqual(status,0)
-        # Check output and reports
-        for p in ("AB","CDE","undetermined"):
-            for f in ("qc",
-                      "qc_report.html",
-                      "qc_report.%s.%s.zip" % (
-                          p,
-                          '170901_M00879_0087_000000000-AGEW9'),
-                      "multiqc_report.html"):
-                self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
-                                                            p,f)),
-                                "Missing %s in project '%s'" % (f,p))
-            # Check zip file has MultiQC report
-            zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s.zip" % (
-                                        p,
-                                        '170901_M00879_0087_000000000-AGEW9'))
-            with zipfile.ZipFile(zip_file) as z:
-                multiqc = os.path.join(
-                    "qc_report.%s.%s" % (
-                        p,'170901_M00879_0087_000000000-AGEW9'),
-                    "multiqc_report.html")
-                self.assertTrue(multiqc in z.namelist())
-
-    def test_run_qc_with_strandedness(self):
-        """run_qc: standard QC run with strandedness determination
-        """
-        # Make mock QC executables
-        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
-        MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Make mock analysis directory
-        mockdir = MockAnalysisDirFactory.bcl2fastq2(
-            '170901_M00879_0087_000000000-AGEW9',
-            'miseq',
-            metadata={ "instrument_datestamp": "170901" },
-            project_metadata={ "AB": { "Organism": "human", },
-                               "CDE": { "Organism": "mouse", } },
-            top_dir=self.dirn)
-        mockdir.create()
-        # Settings file with fastq_strand indexes and
-        # polling interval
-        settings_ini = os.path.join(self.dirn,"auto_process.ini")
-        with open(settings_ini,'w') as s:
-            s.write("""[general]
-poll_interval = {poll_interval}
 
 [organism:human]
-star_index = /data/genomeIndexes/hg38/STAR
+star_index = /data/hg38/star_index
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 
 [organism:mouse]
-star_index = /data/genomeIndexes/mm10/STAR
+star_index = /data/mm10/star_index
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -163,18 +123,24 @@ star_index = /data/genomeIndexes/mm10/STAR
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r1",
+                              "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "picard_insert_size_metrics",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -198,14 +164,19 @@ star_index = /data/genomeIndexes/mm10/STAR
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
 
-    def test_run_qc_single_end_with_strandedness(self):
-        """run_qc: single-end QC run with strandedness determination
+    def test_run_qc_single_end(self):
+        """run_qc: single-end QC run
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -228,9 +199,13 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -241,18 +216,21 @@ star_index = /data/genomeIndexes/mm10/STAR
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            for qc_module in ("fastqc_r1",
+                              "screens_r1",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -276,14 +254,19 @@ star_index = /data/genomeIndexes/mm10/STAR
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
 
-    def test_run_qc_single_cell_with_strandedness(self):
-        """run_qc: ICELL8 scRNA-seq run with strandedness determination
+    def test_run_qc_icell8_single_cell(self):
+        """run_qc: ICELL8 scRNA-seq run
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -307,9 +290,13 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -320,18 +307,23 @@ star_index = /data/genomeIndexes/mm10/STAR
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -363,6 +355,11 @@ star_index = /data/genomeIndexes/mm10/STAR
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
@@ -391,10 +388,14 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 cellranger_reference = /data/cellranger/transcriptomes/hg38
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 cellranger_reference = /data/cellranger/transcriptomes/mm10
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
@@ -406,23 +407,24 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
-        # Check cellranger count outputs are present
-        for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
-                                                        p,
-                                                        "cellranger_count")))
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "cellranger_count",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -454,6 +456,11 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="3.1.0",
                                  assert_include_introns=False)
@@ -484,10 +491,14 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 cellranger_premrna_reference = /data/cellranger/transcriptomes/hg38_pre_mrna
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
@@ -499,24 +510,24 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
-        # Check cellranger count outputs are present
-        for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
-                                                        p,
-                                                        "qc",
-                                                        "cellranger_count")))
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "cellranger_count",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -548,6 +559,11 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="5.0.1",
                                  assert_include_introns=True)
@@ -578,10 +594,14 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 cellranger_reference = /data/cellranger/transcriptomes/hg38
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 cellranger_reference = /data/cellranger/transcriptomes/mm10
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
@@ -593,24 +613,24 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
-        # Check cellranger count outputs are present
-        for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
-                                                        p,
-                                                        "qc",
-                                                        "cellranger_count")))
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "cellranger_count",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -642,6 +662,11 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0",
                                  assert_include_introns=True)
@@ -672,10 +697,14 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 cellranger_reference = /data/cellranger/transcriptomes/hg38
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 cellranger_reference = /data/cellranger/transcriptomes/mm10
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
@@ -687,24 +716,24 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
-        # Check cellranger count outputs are present
-        for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
-                                                        p,
-                                                        "qc",
-                                                        "cellranger_count")))
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "cellranger_count",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -736,6 +765,12 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
@@ -765,10 +800,14 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 cellranger_atac_reference = /data/cellranger/atac_references/hg38
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 cellranger_atac_reference = /data/cellranger/atac_references/mm10
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
@@ -780,23 +819,26 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
-        # Check cellranger count outputs are present
-        for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
-                                                        p,
-                                                        "cellranger_count")))
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r3",
+                              "screens_r1",
+                              "screens_r3",
+                              "sequence_lengths",
+                              "strandedness",
+                              "picard_insert_size_metrics",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "cellranger-atac_count",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -828,6 +870,11 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -855,9 +902,13 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -868,18 +919,23 @@ star_index = /data/genomeIndexes/mm10/STAR
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB","CDE"):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB","CDE"):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
@@ -911,6 +967,12 @@ star_index = /data/genomeIndexes/mm10/STAR
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -924,7 +986,7 @@ star_index = /data/genomeIndexes/mm10/STAR
             project_metadata={ "AB": { "Organism": "human",
                                        "Single cell platform":
                                        "10xGenomics Single Cell Multiome",
-                                       "Library type": "scATAC-seq", } },
+                                       "Library type": "ATAC", } },
             reads=('R1','R2','R3','I1'),
             top_dir=self.dirn)
         mockdir.create()
@@ -937,13 +999,10 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 cellranger_arc_reference = /data/cellranger/arc_references/hg38-arc
 cellranger_atac_reference = /data/cellranger/atac_references/hg38-atac
-
-[organism:mouse]
-star_index = /data/genomeIndexes/mm10/STAR
-cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
-cellranger_atac_reference = /data/cellranger/atac_references/mm10-atac
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -954,18 +1013,26 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10-atac
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB",):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB",):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r3",
+                              "screens_r1",
+                              "screens_r3",
+                              "sequence_lengths",
+                              "strandedness",
+                              "picard_insert_size_metrics",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "cellranger-atac_count",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","undetermined"):
             for f in ("qc",
@@ -997,6 +1064,12 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10-atac
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1021,13 +1094,10 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10-atac
             s.write("""[general]
 poll_interval = {poll_interval}
 
-[organism:human]
-star_index = /data/genomeIndexes/hg38/STAR
-cellranger_reference = /data/cellranger/gex_references/hg38-gex
-cellranger_arc_reference = /data/cellranger/atac_references/hg38-arc
-
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/mm10/mm10.bed
+annotation_gtf = /data/mm10/mm10.gtf
 cellranger_reference = /data/cellranger/gex_references/mm10-gex
 cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
 """.format(poll_interval=POLL_INTERVAL))
@@ -1040,18 +1110,24 @@ cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("CDE",):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("CDE",):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "cellranger_count",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("CDE","undetermined"):
             for f in ("qc",
@@ -1076,13 +1152,18 @@ cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_parse_evercode_scRNAseq(self):
-        """run_qc: Parse Evercode snRNA-seq
+        """run_qc: Parse Evercode scRNA-seq
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -1094,7 +1175,7 @@ cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
             project_metadata={ "AB": { "Organism": "human",
                                        "Single cell platform":
                                        "Parse Evercode",
-                                       "Library type": "snRNA-seq", } },
+                                       "Library type": "scRNA-seq", } },
             reads=('R1','R2'),
             top_dir=self.dirn)
         mockdir.create()
@@ -1107,9 +1188,8 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-
-[organism:mouse]
-star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = /data/hg38/hg38.bed
+annotation_gtf = /data/hg38/hg38.gtf
 """.format(poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
@@ -1120,18 +1200,23 @@ star_index = /data/genomeIndexes/mm10/STAR
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
-        # Check the fastq_strand_conf files were created
+        # Check detected outputs
         for p in ("AB",):
-            self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
-        # Check fastq_strand outputs are present
-        for p in ("AB",):
-            fastq_strand_outputs = list(
-                filter(lambda f:
-                       f.endswith("fastq_strand.txt"),
-                       os.listdir(os.path.join(
-                           mockdir.dirn,p,"qc"))))
-            self.assertTrue(len(fastq_strand_outputs) > 0)
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            print(qcoutputs.outputs)
+            for qc_module in ("fastqc_r1",
+                              "fastqc_r2",
+                              "screens_r1",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
         # Check output and reports
         for p in ("AB","undetermined"):
             for f in ("qc",

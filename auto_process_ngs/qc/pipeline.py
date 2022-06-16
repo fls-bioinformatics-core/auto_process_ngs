@@ -172,8 +172,7 @@ class QCPipeline(Pipeline):
 
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
                     qc_protocol=None,report_html=None,multiqc=False,
-                    sample_pattern=None,log_dir=None,
-                    include_extended_metrics=False):
+                    sample_pattern=None,log_dir=None):
         """
         Add a project to the QC pipeline
 
@@ -196,9 +195,6 @@ class QCPipeline(Pipeline):
           log_dir (str): directory to write log files to
             (defaults to 'logs' subdirectory of the QC
             directory)
-          include_extended_metrics (bool): if True then
-            include generation of extended QC metrics in
-            the pipeline (experimental feature)
         """
         ###################
         # Do internal setup
@@ -238,7 +234,6 @@ class QCPipeline(Pipeline):
         self.report("-- Library   : %s" % project.info.library_type)
         self.report("-- Organism  : %s" % organism)
         self.report("-- Report    : %s" % report_html)
-        self.report("-- ExtendedQC: %s" % include_extended_metrics)
 
         ####################
         # Build the pipeline
@@ -617,8 +612,8 @@ class QCPipeline(Pipeline):
                 required_tasks=(setup_qc_dirs,))
             verify_qc.requires(run_cellranger_count)
 
-        # Optional additional QC metrics
-        if include_extended_metrics and organism:
+        # Additional QC metrics
+        if organism:
             self.add_extended_metrics(project,
                                       qc_protocol,
                                       qc_dir,

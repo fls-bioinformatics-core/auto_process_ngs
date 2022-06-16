@@ -427,7 +427,10 @@ class TestFetchProtocolDefinition(unittest.TestCase):
         self.assertEqual(qc_modules,['fastqc',
                                      'fastq_screen',
                                      'sequence_lengths',
-                                     'strandedness'])
+                                     'strandedness',
+                                     'picard_insert_size_metrics',
+                                     'rseqc_genebody_coverage',
+                                     'qualimap_rnaseq'])
 
     def test_fetch_protocol_definition_unknown_protocol(self):
         """

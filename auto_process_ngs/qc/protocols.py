@@ -69,7 +69,9 @@ QC_PROTOCOLS = {
             'fastqc',
             'fastq_screen',
             'sequence_lengths',
-            'strandedness'
+            'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq'
         ]
     },
 
@@ -82,7 +84,10 @@ QC_PROTOCOLS = {
             'fastqc',
             'fastq_screen',
             'sequence_lengths',
-            'strandedness'
+            'strandedness',
+            'picard_insert_size_metrics',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq'
         ]
     },
 
@@ -95,7 +100,9 @@ QC_PROTOCOLS = {
             'fastqc',
             'fastq_screen',
             'sequence_lengths',
-            'strandedness'
+            'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq'
         ]
     },
 
@@ -109,6 +116,8 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq',
             'cellranger_count'
         ]
     },
@@ -123,6 +132,8 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq',
             'cellranger_count'
         ]
     },
@@ -137,6 +148,9 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
+            'picard_insert_size_metrics',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq',
             'cellranger-atac_count'
         ]
     },
@@ -151,6 +165,8 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq',
             'cellranger_count(cellranger_version=*;'
                              'cellranger_refdata=*)',
             'cellranger-arc_count'
@@ -167,6 +183,9 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
+            'picard_insert_size_metrics',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq',
             'cellranger-arc_count',
             'cellranger-atac_count(cellranger_version=*;'
                                   'cellranger_refdata=*)'
@@ -183,6 +202,8 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq',
             'cellranger_count(cellranger_use_multi_config=True)',
             'cellranger_multi'
         ]
@@ -197,7 +218,9 @@ QC_PROTOCOLS = {
             'fastqc',
             'fastq_screen',
             'sequence_lengths',
-            'strandedness'
+            'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq'
         ]
     },
 
@@ -210,7 +233,9 @@ QC_PROTOCOLS = {
             'fastqc',
             'fastq_screen',
             'sequence_lengths',
-            'strandedness'
+            'strandedness',
+            'strandedness',
+            'rseqc_genebody_coverage'
         ]
     },
 
