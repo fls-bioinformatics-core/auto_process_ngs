@@ -100,6 +100,7 @@ from ..docwriter import Para
 from ..docwriter import WarningIcon
 from ..docwriter import DocumentIcon
 from ..docwriter import LinkIcon
+from ..docwriter import DownloadIcon
 from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
@@ -1382,7 +1383,7 @@ class QCReport(Document):
                     insert_sizes_file = os.path.relpath(insert_sizes_file,
                                                         self.relpath)
                     insert_sizes.add("%s %s" %
-                                     (LinkIcon(size=20),
+                                     (DownloadIcon(size=20),
                                       Link("Collated insert sizes for '%s' "
                                            "(TSV) " % organism,
                                            target=insert_sizes_file)))
