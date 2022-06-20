@@ -2937,6 +2937,10 @@ sys.exit(MockStar(path=sys.argv[0],
         """
         Internal: provides mock STAR functionality
         """
+        # Handle version request
+        if "--version" in args:
+            print("STAR_%s" % self._version)
+            return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
         p.add_argument('--runMode',action="store")
@@ -3067,6 +3071,14 @@ sys.exit(MockSamtools(path=sys.argv[0],
         """
         Internal: provides mock samtools functionality
         """
+        # Handle version request
+        if "--version" in args:
+            print("""samtools 1.15.1
+Using htslib 1.15.1
+Copyright (C) 2022 Genome Research Ltd"
+
+""")
+            return self._exit_code
         # Build top-level parser
         p = argparse.ArgumentParser()
         sp = p.add_subparsers(dest='command')
@@ -3174,6 +3186,10 @@ sys.exit(MockPicard(path=sys.argv[0],
         """
         Internal: provides mock Picard tools functionality
         """
+        # Handle version request
+        if "--version" in args:
+            print("Version:2.27.1")
+            return 1
         # Build top-level parser
         p = argparse.ArgumentParser()
         sp = p.add_subparsers(dest='command')
@@ -3275,6 +3291,10 @@ sys.exit(MockRSeQC(path=sys.argv[0],
         """
         Internal: provides mock RSeQC functionality
         """
+        # Handle version request
+        if "--version" in args:
+            print("%s 4.0.0" % self._component)
+            return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
         if self._component == "infer_experiment.py":
@@ -3385,6 +3405,22 @@ sys.exit(MockQualimap(path=sys.argv[0],
         """
         Internal: provides mock Qualimap functionality
         """
+        # Handle help command (for version)
+        if "--help" in args:
+            print("""Command line run, unsetting DISPLAY variable...
+Display: 
+Java memory size is set to 1200M
+Launching application...
+
+QualiMap v.2.2.2-dev
+Built on 2016-12-11 14:41
+
+Selected tool: --version
+No proper tool name is provided.
+
+usage: qualimap <tool> [options]
+""")
+            return self._exit_code
         # Build top-level parser
         p = argparse.ArgumentParser()
         sp = p.add_subparsers(dest='command')
