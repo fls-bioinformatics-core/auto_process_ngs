@@ -174,7 +174,7 @@ SOFTWARE_PACKAGE_NAMES = {
     'fastq_strand': 'FastqStrand',
     'multiqc': 'MultiQC',
     'picard': 'Picard Tools',
-    'qualimap': 'Qualimap',
+    'qualimap': 'QualiMap',
     'rseqc:genebody_coverage': 'RSeQC geneBody_coverage.py',
     'rseqc:infer_experiment': 'RSeQC infer_experiment.py',
     'spaceranger': 'Spaceranger',
