@@ -3309,7 +3309,8 @@ class FastqQCReporter:
           inline (bool): if True then return plot in format for
             inlining in HTML document
         """
-        return uboxplot(self.fastqc.data.path,inline=inline)
+        return uboxplot(self.fastqc.data.path,max_width=100,
+                        inline=inline)
 
     def uduplicationplot(self,mode='dup',inline=True):
         """
