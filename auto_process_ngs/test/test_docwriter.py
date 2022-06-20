@@ -17,10 +17,12 @@ from auto_process_ngs.docwriter import Para
 from auto_process_ngs.docwriter import WarningIcon
 from auto_process_ngs.docwriter import DocumentIcon
 from auto_process_ngs.docwriter import LinkIcon
+from auto_process_ngs.docwriter import DownloadIcon
 from auto_process_ngs.docwriter import sanitize_css_string
 from auto_process_ngs.docwriter import WARNING_ICON_BASE64
 from auto_process_ngs.docwriter import DOCUMENT_ICON_BASE64
 from auto_process_ngs.docwriter import LINK_ICON_BASE64
+from auto_process_ngs.docwriter import DOWNLOAD_ICON_BASE64
 
 # Unit tests
 
@@ -748,6 +750,25 @@ class TestLinkIcon(unittest.TestCase):
         lnk = LinkIcon(size=20)
         self.assertEqual(lnk.html(),
                          "<img src='data:image/png;base64,%s' height='20' width='20' />" % LINK_ICON_BASE64)
+
+class TestDownloadIcon(unittest.TestCase):
+    """
+    Tests for the DownloadIcon class
+    """
+    def test_downloadicon(self):
+        dwnld = DownloadIcon()
+        self.assertEqual(dwnld.html(),
+                         "<img src='data:image/png;base64,%s' height='32' width='32' />" % DOWNLOAD_ICON_BASE64)
+
+    def test_downloadicon_with_title(self):
+        dwnld = DownloadIcon(title="Click to download the file")
+        self.assertEqual(dwnld.html(),
+                         "<img src='data:image/png;base64,%s' height='32' width='32' title='Click to download the file' />" % DOWNLOAD_ICON_BASE64)
+
+    def test_downloadicon_change_size(self):
+        dwnld = DownloadIcon(size=20)
+        self.assertEqual(dwnld.html(),
+                         "<img src='data:image/png;base64,%s' height='20' width='20' />" % DOWNLOAD_ICON_BASE64)
 
 class TestSanitizeCssStringFunction(unittest.TestCase):
     """

@@ -71,6 +71,9 @@ DOCUMENT_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAACMAAAAjCAIAAACRuyQOAAAAeUlEQVR
 # Free icon from https://www.iconfinder.com/icons/298812/link_external_icon
 LINK_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAALxJREFUSEvtlUEOgkAMRR977wS3cqnu5FTEQ5m4w3RR0uBMO84AiYldkQH+6/+0oWPn6nbW53DAnHFkGzkD98D58vzaQQlAtCNIMyCCFAFOwNOJ4gpcoki9iLwB8MSFWeQgB4jEmwA5cTl/memqcjAAUyLzGyAAKW2gCmAFlGPF9UwgCvzYZLsHuW+gOyAiAnCrdop64LFSFrDWqBe1gFTXSfd/gI3q64iiAfHuF+3BbwJauk6+e/g/eXMHb4r7KhlDs+RNAAAAAElFTkSuQmCC'
 
+# Free icon from https://www.iconfinder.com/icons/3994354/arrow_download_downloading_interface_save_icon
+DOWNLOAD_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAT9JREFUWEftlzFuAjEQRR8SxwjhOiAaCqKkQEoVqOAyVElNlERp6BDXCdcgIvrIlowF2J5FbIrdCjAz/83Y/qNtUfPTqlmfKgAD4BXYAxNgbSmmCsAWuHOi+nx/awBVHj6mYkxBTrUBaDrQdOBmHegBb3BwzRmwSlzDIbBwDvkCbC4ZVI4P/AAdl2QHjIEvJxAb0SOwBNpuQbHdqgCh5SqXh/iMEj9F4lq+CoBa+h1U5SF8lZ5DYOFv+v4QbNnJRuRsgQJHwEckcKmzv8Az8J4aULkAJRDZ4koqgJK5nupEjnjf3SrpTwRQOtfPQeSIS/RITwAWQ4khcsUFcKRnBVCi0HDmqdMeHMarAaQO+Ln1BuD/d8C6t6a4U7fAlMgaFBuRNY81bisAWaNesfzMtyYrjZMjTkuGUalA1v9rB/gDH0JPb88OcusAAAAASUVORK5CYII='
+
 #######################################################################
 # Classes
 #######################################################################
@@ -1079,10 +1082,30 @@ class LinkIcon(Img):
     """
     def __init__(self,title=None,size=32):
         """
-        Create new linkIcon instance
+        Create new LinkIcon instance
         """
         Img.__init__(self,
                      "data:image/png;base64,%s" % LINK_ICON_BASE64,
+                     title=title,
+                     height=size,
+                     width=size)
+
+class DownloadIcon(Img):
+    """
+    Create image with an inline 'download' icon
+
+    Arguments:
+      title (str): optional, content to mark with
+        the icon
+      size (int): optional height/width specifier for
+        the icon (defaults to 32)
+    """
+    def __init__(self,title=None,size=32):
+        """
+        Create new DownloadIcon instance
+        """
+        Img.__init__(self,
+                     "data:image/png;base64,%s" % DOWNLOAD_ICON_BASE64,
                      title=title,
                      height=size,
                      width=size)
