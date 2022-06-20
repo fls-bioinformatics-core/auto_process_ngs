@@ -567,7 +567,7 @@ def uscreenplot(screen_files,outfile=None,screen_width=None,
     else:
         return outfile
 
-def uboxplot(fastqc_data=None,fastq=None,
+def uboxplot(fastqc_data=None,fastq=None,max_width=None,
              outfile=None,inline=None):
     """
     Generate FASTQ per-base quality 'micro-boxplot'
@@ -578,6 +578,13 @@ def uboxplot(fastqc_data=None,fastq=None,
     Arguments:
       fastqc_data (str): path to a ``fastqc_data.txt``
         file
+      fastq (str): path to a FASTQ file (quality stats
+        will be extracted directly if ``fastqc_data``
+        is not supplied)
+      max_width (int): maximum width of plot in pixels;
+        if ``None`` then by default width will be the
+        number of bases, otherwise plots that would exceed
+        this width will be scaled to fit
       outfile (str): path to output file
       inline (boolean): if True then returns the PNG
         as base64 encoded string rather than as a file
@@ -620,7 +627,10 @@ def uboxplot(fastqc_data=None,fastq=None,
     mean = { i:fastq_stats.mean[i] for i in range(fastq_stats.nbases) }
     # Initialise plot
     height = max_qual + 1
-    boxplot = Plot(fastq_stats.nbases,height)
+    width = fastq_stats.nbases
+    if max_width:
+        width = min(width,max_width)
+    boxplot = Plot(width,height)
     # Create colour bands for different quality ranges
     boxplot.block((0,0),
                   (fastq_stats.nbases,20),
