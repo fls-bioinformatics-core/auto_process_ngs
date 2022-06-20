@@ -157,6 +157,9 @@ METADATA_FIELD_DESCRIPTIONS = {
     'number_of_cells': 'Number of cells',
     'organism': 'Organism',
     'protocol': 'QC protocol',
+    'star_index': 'STAR index',
+    'annotation_bed': 'Annotation (BED)',
+    'annotation_gtf': 'Annotation (GTF)',
     'cellranger_reference': 'Cellranger reference datasets',
     'multiqc': 'MultiQC report',
     'icell8_stats': 'ICELL8 statistics',
@@ -404,6 +407,7 @@ class QCReport(Document):
         self._init_metadata_table(projects)
         self._init_processing_software_table()
         self._init_qc_software_table()
+        self._init_reference_data_table(projects)
         # Initialise report sections
         self.preamble = self._init_preamble_section()
         self.warnings = self._init_warnings_section()
@@ -514,10 +518,15 @@ class QCReport(Document):
                     report_attrs_.append('strandedness')
             # Add data for this project to the report
             print("Adding project '%s' to the report..." % project.name)
-            self.report_metadata(project)
+            self.report_metadata(project,
+                                 self.metadata_table,
+                                 self.metadata_items)
             self.report_processing_software(project)
             self.report_qc_software(project)
             self.report_comments(project)
+            self.report_metadata(project,
+                                 self.reference_data_table,
+                                 self.reference_data_items)
             # Create a summary subsection for multi-project reporting
             if self.multi_project:
                 project_summary = self.summary.add_subsection(
@@ -682,14 +691,12 @@ class QCReport(Document):
                           'PI',
                           'library_type',
                           'organism',
-                          'protocol',]
+                          'protocol']
         if self.has_single_cell:
             for item in ('single_cell_platform',
                          'number_of_cells',):
                 metadata_items.insert(metadata_items.index('organism'),
                                       item)
-        if 'cellranger_count' in self.outputs:
-            metadata_items.append('cellranger_reference')
         if 'icell8_stats' in self.outputs:
             metadata_items.append('icell8_stats')
         if 'icell8_report' in self.outputs:
@@ -709,6 +716,35 @@ class QCReport(Document):
         # Store table and metadata items as attribute
         self.metadata_table = metadata_table
         self.metadata_items = metadata_items
+
+    def _init_reference_data_table(self,projects):
+        """
+        Internal: set up a table for reference data
+
+        Associated CSS class is 'metadata'
+        """
+        # Identify reference data items
+        reference_data_items = ['star_index',
+                                'annotation_bed',
+                                'annotation_gtf']
+        if 'cellranger_count' in self.outputs or \
+           'cellranger_multi' in self.outputs:
+            reference_data_items.append('cellranger_reference')
+        if self.multi_project:
+            reference_data_items.insert(0,'project_id')
+        # Make table with one column per project
+        columns = ['item']
+        for project in projects:
+            columns.append(project.id)
+        reference_data_table = Table(columns)
+        reference_data_table.no_header()
+        reference_data_table.add_css_classes('metadata')
+        # Add rows for metadata items
+        for item in reference_data_items:
+            reference_data_table.add_row(item=self.metadata_titles[item])
+        # Store table and metadata items as attribute
+        self.reference_data_table = reference_data_table
+        self.reference_data_items = reference_data_items
 
     def _init_processing_software_table(self):
         """
@@ -771,6 +807,10 @@ class QCReport(Document):
         qc_software_info = info.add_subsection("QC software",
                                                css_classes=("info",))
         qc_software_info.add(self.qc_software_table)
+        reference_data_info = info.add_subsection(
+            "Reference data",
+            css_classes=("info",))
+        reference_data_info.add(self.reference_data_table)
         # Add an empty section to clear HTML floats
         clear = summary.add_subsection(css_classes=("clear",))
         # Add additional subsections for comments etc
@@ -978,12 +1018,19 @@ class QCReport(Document):
         section.add(multiplexing_tbl)
         return multiplexing_tbl
 
-    def report_metadata(self,project):
+    def report_metadata(self,project,tbl,items):
         """
-        Report the project metadata
+        Report project metadata to a table
 
-        Adds entries for the project metadata to the "metadata"
-        table in the report
+        Adds entries for project metadata items to the
+        specified table
+
+        Arguments:
+          project (QCProject): project to report
+          tbl (Table): table to report the metadata
+            items to
+          items (list): list of metadata items to
+            report to the table
         """
         # Determine the root directory for QC outputs
         if self.data_dir:
@@ -995,7 +1042,7 @@ class QCReport(Document):
             project_data_dir = os.path.relpath(project_data_dir,
                                                self.relpath)
         # Add metadata items
-        for idx,item in enumerate(self.metadata_items):
+        for idx,item in enumerate(items):
             # Try to acquire the value from QC metadata
             try:
                 value = project.qc_info[item]
@@ -1048,9 +1095,9 @@ class QCReport(Document):
                         raise Exception("Unrecognised item to report: '%s'"
                                         % item)
             # Update the value in the metadata table
-            self.metadata_table.set_value(idx,
-                                          project.id,
-                                          value)
+            tbl.set_value(idx,
+                          project.id,
+                          value)
 
     def report_processing_software(self,project):
         """
