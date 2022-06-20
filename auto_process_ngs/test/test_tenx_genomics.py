@@ -764,6 +764,7 @@ class TestCellrangerMultiConfigCsv(unittest.TestCase):
         # Remove the temporary test directory
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
+
     def test_cellranger_multi_config_csv(self):
         """
         CellrangerMultiConfigCsv: check data is extracted from config.csv
@@ -794,6 +795,44 @@ PBB,CMO302,PBB
                          { 'fastqs': '/data/runs/fastqs_gex',
                            'lanes': 'any',
                            'library_id': 'PJB1',
+                           'feature_type': 'gene expression',
+                           'subsample_rate': ''
+                         })
+        self.assertEqual(config_csv.fastq_dirs,
+                         { 'PJB1_GEX': '/data/runs/fastqs_gex',
+                           'PJB2_MC': '/data/runs/fastqs_mc'
+                         })
+
+    def test_cellranger_multi_config_csv_reduced_fields(self):
+        """
+        CellrangerMultiConfigCsv: check with 'reduced' config.csv
+        """
+        with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,feature_types
+PJB1_GEX,/data/runs/fastqs_gex,gene expression
+PJB2_MC,/data/runs/fastqs_mc,Multiplexing Capture
+
+[samples]
+sample_id,cmo_ids
+PBA,CMO301
+PBB,CMO302
+""")
+        config_csv = CellrangerMultiConfigCsv(
+            os.path.join(self.wd,
+                         "10x_multi_config.csv"))
+        self.assertEqual(config_csv.sample_names,['PBA','PBB'])
+        self.assertEqual(config_csv.reference_data_path,
+                         "/data/refdata-cellranger-gex-GRCh38-2020-A")
+        self.assertEqual(config_csv.gex_libraries,
+                         ['PJB1_GEX',])
+        self.assertEqual(config_csv.gex_library('PJB1_GEX'),
+                         { 'fastqs': '/data/runs/fastqs_gex',
+                           'lanes': 'any',
+                           'library_id': None,
                            'feature_type': 'gene expression',
                            'subsample_rate': ''
                          })
