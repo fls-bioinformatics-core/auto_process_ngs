@@ -357,6 +357,45 @@ class QCOutputs:
         for tag in data.tags:
             self.outputs.add(tag)
 
+    def _read_versions_file(self,f,pkgs=None):
+        """
+        Internal: extract software info from 'versions' file
+
+        'versions' files (typically named ``__versions``)
+        should consist of one or more lines of text, with
+        each line comprising a software package name and
+        a version number, separated by a tab character.
+
+        Returns a dictionary where package names are keys,
+        and the corresponding values are lists of versions.
+
+        If an existing dictionary is supplied via the 'pkgs'
+        argument then any package information is added to this
+        dictionary; otherwise an empty dictionary is created
+        and populated.
+        """
+        if pkgs is not None:
+            software = pkgs
+        else:
+            software = dict()
+        if not os.path.exists(f):
+            return software
+        try:
+            with open(f,'rt') as fp:
+                for line in fp:
+                    try:
+                        pkg,version = line.strip().split('\t')
+                    except IndexError:
+                        continue
+                    try:
+                        software[pkg].append(version)
+                    except KeyError:
+                        software[pkg] = [version]
+        except Exception as ex:
+            logger.warning("%s: unable to extract versions: %s" %
+                           (f,ex))
+        return software
+
     def _collect_fastq_screens(self,files):
         """
         Collect information on FastqScreen outputs
@@ -699,9 +738,14 @@ class QCOutputs:
                         organisms.add(d)
                         bam_files.add(name)
                         output_files.extend(outputs)
+                # Check for software information
+                software = self._read_versions_file(
+                    os.path.join(picard_dir,d,"__versions"),
+                    software)
         if organisms:
             tags.add("picard_insert_size_metrics")
-            software['picard'] = [None]
+            if not software:
+                software['picard'] = [None]
         # Look for collated insert sizes files
         for f in filter(
                 lambda ff:
@@ -763,9 +807,15 @@ class QCOutputs:
                         # All outputs present
                         organisms.add(d)
                         output_files.extend(outputs)
+                # Check for software information
+                software = self._read_versions_file(
+                    os.path.join(genebody_cov_dir,
+                                 d,"__versions"),
+                    software)
         if organisms:
             tags.add("rseqc_genebody_coverage")
-            software['rseqc:genebody_coverage'] = [None]
+            if not software:
+                software['rseqc:genebody_coverage'] = [None]
         # Return collected information
         return AttributeDictionary(
             name='rseqc_genebody_coverage',
@@ -818,9 +868,15 @@ class QCOutputs:
                     bam_files.add(name)
                     output_files.append(os.path.join(infer_experiment_dir,
                                                      d,f))
+                # Check for software information
+                software = self._read_versions_file(
+                    os.path.join(infer_experiment_dir,
+                                 d,"__versions"),
+                    software)
         if organisms:
             tags.add("rseqc_infer_experiment")
-            software['rseqc:infer_experiment'] = [None]
+            if not software:
+                software['rseqc:infer_experiment'] = [None]
         # Return collected information
         return AttributeDictionary(
             name='rseqc_infer_experiment',
@@ -889,9 +945,14 @@ class QCOutputs:
                                     extra_files = [os.path.join(dd,ff)
                                                    for ff in os.listdir(dd)]
                                     output_files.extend(extra_files)
+                # Check for software information
+                software = self._read_versions_file(
+                    os.path.join(organism_dir,"__versions"),
+                    software)
         if organisms:
             tags.add("qualimap_rnaseq")
-            software['qualimap'] = [None]
+            if not software:
+                software['qualimap'] = [None]
         # Return collected information
         return AttributeDictionary(
             name='qualimap_rnaseq',

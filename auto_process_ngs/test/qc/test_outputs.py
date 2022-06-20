@@ -558,7 +558,7 @@ class TestQCOutputs(unittest.TestCase):
                            'fastq_screen': [ '0.9.2' ],
                            'fastq_strand': [ '0.0.4' ],
                            'multiqc': [ '1.8' ],
-                           'rseqc:infer_experiment': [ '?' ],
+                           'rseqc:infer_experiment': [ '4.0.0' ],
                          })
         self.assertEqual(qc_outputs.stats.max_seqs,37285443)
         self.assertEqual(qc_outputs.stats.min_sequence_length,65)
@@ -616,7 +616,7 @@ class TestQCOutputs(unittest.TestCase):
                            'fastq_screen': [ '0.9.2' ],
                            'fastq_strand': [ '0.0.4' ],
                            'multiqc': [ '1.8' ],
-                           'rseqc:genebody_coverage': [ '?' ],
+                           'rseqc:genebody_coverage': [ '4.0.0' ],
                          })
         self.assertEqual(qc_outputs.stats.max_seqs,37285443)
         self.assertEqual(qc_outputs.stats.min_sequence_length,65)
@@ -676,7 +676,7 @@ class TestQCOutputs(unittest.TestCase):
                            'fastq_screen': [ '0.9.2' ],
                            'fastq_strand': [ '0.0.4' ],
                            'multiqc': [ '1.8' ],
-                           'picard': [ '?' ],
+                           'picard': [ '2.27.1' ],
                          })
         self.assertEqual(qc_outputs.stats.max_seqs,37285443)
         self.assertEqual(qc_outputs.stats.min_sequence_length,65)
@@ -735,7 +735,7 @@ class TestQCOutputs(unittest.TestCase):
                            'fastq_screen': [ '0.9.2' ],
                            'fastq_strand': [ '0.0.4' ],
                            'multiqc': [ '1.8' ],
-                           'qualimap': [ '?' ],
+                           'qualimap': [ 'v.2.2.2' ],
                          })
         self.assertEqual(qc_outputs.stats.max_seqs,37285443)
         self.assertEqual(qc_outputs.stats.min_sequence_length,65)
