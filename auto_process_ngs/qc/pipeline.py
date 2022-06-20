@@ -2795,6 +2795,7 @@ class GetBAMFiles(PipelineFunctionTask):
             os.makedirs(self.args.out_dir)
         # Check each Fastq pair to see if a corresponding
         # BAM file already exists
+        get_versions = False
         for fq_pair in fq_pairs:
             if self.args.verbose:
                 print("-- Fastq pair: %s" % fq_pair)
@@ -2815,6 +2816,47 @@ class GetBAMFiles(PipelineFunctionTask):
                               bam_file,
                               size=self.args.subset_size,
                               nthreads=nthreads)
+                get_versions = True
+        # Get versions of STAR and samtools
+        if get_versions:
+            version_file = os.path.join(self.args.out_dir,
+                                        "__versions")
+            self.add_call("Get STAR and samtools versions",
+                          self.get_versions,
+                          version_file)
+    def get_versions(self,version_file):
+        # Get STAR version
+        star_cmd = Command('STAR','--version')
+        status = star_cmd.run_subprocess(log="__version_STAR")
+        if status != 0:
+            raise Exception("STAR returned non-zero exit code: %s"
+                            % status)
+        star_version = None
+        with open("__version_STAR",'rt') as fp:
+            for line in fp:
+                if line.startswith("STAR_"):
+                    # Example: STAR_2.4.2a
+                    star_version = '_'.join(line.strip().split('_')[1:])
+                    break
+        # Get samtools version
+        samtools_cmd = Command('samtools','--version')
+        status = samtools_cmd.run_subprocess(log="__version_samtools")
+        if status != 0:
+            raise Exception("samtools returned non-zero exit code: %s"
+                            % status)
+        samtools_version = None
+        with open("__version_samtools",'rt') as fp:
+            for line in fp:
+                if line.startswith("samtools"):
+                    # Example: samtools 1.15.1
+                    samtools_version = ' '.join(line.strip().split()[1:])
+                    break
+        # Write to output file
+        with open(version_file,'wt') as fp:
+            if star_version:
+                fp.write("star\t%s\n" % star_version)
+            if samtools_version:
+                fp.write("samtools\t%s\n" % samtools_version)
     def make_bam_file(self,fastqs,genomedir,bam_file,size=None,
                       nthreads=None):
         ##############################
@@ -2974,6 +3016,7 @@ class RunRSeQCInferExperiment(PipelineTask):
                   "run RSeQC infer_experiment.py")
             return
         # Set up command to run infer_experiment.py
+        get_version = False
         for bam_file in self.args.bam_files:
             if not os.path.exists(os.path.join(
                     self.args.out_dir,
@@ -2989,6 +3032,13 @@ class RunRSeQCInferExperiment(PipelineTask):
                                  self.args.reference_gene_model,
                                  bam_file=bam_file,
                                  basename=os.path.basename(bam_file)[:-4]))
+                get_version = True
+        # Get version of RSeQC
+        if get_version:
+            self.add_cmd("Get RSeQC infer_experiment.py version",
+                         """
+                         infer_experiment.py --version >__versions 2>&1
+                         """)
     def finish(self):
         if not self.args.reference_gene_model:
             return
@@ -3013,6 +3063,20 @@ class RunRSeQCInferExperiment(PipelineTask):
                 'forward': infer_expt.forward,
                 'reverse': infer_expt.reverse,
             }
+        # RSeQC version
+        if os.path.exists("__versions"):
+            rseqc_infer_experiment_version = None
+            with open("__versions",'rt') as fp:
+                for line in fp:
+                    if line.startswith("infer_experiment.py "):
+                        # Example: infer_experiment.py 4.0.0
+                        rseqc_infer_experiment_version = \
+                            ' '.join(line.strip().split(' ')[1:])
+            if rseqc_infer_experiment_version:
+                with open("__versions",'wt') as fp:
+                    fp.write("rseqc:infer_experiment\t%s\n" %
+                             rseqc_infer_experiment_version)
+            shutil.copy("__versions",self.args.out_dir)
         # Set output
         self.output.experiments.set(outputs)
 
@@ -3060,11 +3124,14 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
                   self.args.reference_gene_model)
         else:
             print("Reference gene model is not set, cannot run RSeQC "
-                  "genebody_coverage.py")
+                  "geneBody_coverage.py")
             return
         # Set up command to run genebody_coverage.py
-        self.add_cmd("Run RSeQC genebody_coverage.py",
+        self.add_cmd("Run RSeQC geneBody_coverage.py",
                      """
+                     # Get version
+                     geneBody_coverage.py --version >__versions 2>&1
+                     # Run geneBody_coverage
                      geneBody_coverage.py \\
                          -r {reference_gene_model} \\
                          -i {bam_files} \\
@@ -3086,6 +3153,20 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
             if not os.path.exists(f):
                 # Copy new version to ouput location
                 shutil.copy(os.path.basename(f),self.args.out_dir)
+        # RSeQC version version
+        if os.path.exists("__versions"):
+            rseqc_genebody_coverage_version = None
+            with open("__versions",'rt') as fp:
+                for line in fp:
+                    if line.startswith("geneBody_coverage.py "):
+                        # Example: geneBody_coverage.py 4.0.0
+                        rseqc_genebody_coverage_version = \
+                            ' '.join(line.strip().split(' ')[1:])
+            if rseqc_genebody_coverage_version:
+                with open("__versions",'wt') as fp:
+                    fp.write("rseqc:genebody_coverage\t%s\n" %
+                             rseqc_genebody_coverage_version)
+            shutil.copy("__versions",self.args.out_dir)
 
 class RunPicardCollectInsertSizeMetrics(PipelineTask):
     """
@@ -3117,6 +3198,7 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
     def setup(self):
         # Set up commands to run CleanSam and
         # CollectInsertSizeMetrics for each BAM file
+        get_version = False
         for bam in self.args.bam_files:
             # Check if outputs already exist
             outputs_exist = True
@@ -3145,6 +3227,16 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                          """.format(bam=bam,
                                     basename=os.path.basename(bam)[:-4],
                                     nslots=self.runner_nslots))
+            get_version = True
+        # Get version of Picard
+        if get_version:
+            self.add_cmd("Get Picard version",
+                         """
+                         # Get version of CollectInsertSizeMetrics
+                         picard CollectInsertSizeMetrics --version >__versions 2>&1
+                         # Force zero exit code
+                         exit 0
+                         """)
     def finish(self):
         # Check if any BAM files were processed
         if not self.args.bam_files:
@@ -3160,6 +3252,19 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                 if not os.path.exists(f):
                     # Copy new version to ouput location
                     shutil.copy(os.path.basename(f),self.args.out_dir)
+        # Picard version
+        if os.path.exists("__versions"):
+            picard_version = None
+            with open("__versions",'rt') as fp:
+                for line in fp:
+                    if line.startswith("Version:"):
+                        # Example: Version:2.27.1
+                        picard_version = ':'.join(line.strip().split(':')[1:])
+                        break
+            if picard_version:
+                with open("__versions",'wt') as fp:
+                    fp.write("picard\t%s\n" % picard_version)
+            shutil.copy("__versions",self.args.out_dir)
 
 class CollateInsertSizes(PipelineTask):
     """
@@ -3276,6 +3381,7 @@ class RunQualimapRnaseq(PipelineTask):
                   "rnaseq")
             return
         # Set up Qualimap rnaseq for each BAM file
+        get_version = False
         for bam in self.args.bam_files:
             # Output directory for individual BAM file
             bam_name = os.path.basename(bam)[:-4]
@@ -3323,6 +3429,13 @@ class RunQualimapRnaseq(PipelineTask):
                              out_dir=bam_name,
                              nthreads=self.runner_nslots,
                              java_mem_size=self.java_mem_size))
+            get_version = True
+        # Get version of Qualimap
+        if get_version:
+            self.add_cmd("Get Qualimap version",
+                         """
+                         qualimap --help >__versions 2>&1
+                         """)
     def finish(self):
         if not self.args.feature_file:
             return
@@ -3344,6 +3457,19 @@ class RunQualimapRnaseq(PipelineTask):
                 # Remove existing (incomplete) outputs
                 shutil.rmtree(out_dir)
             shutil.copytree(bam_name,out_dir)
+        # Qualimap version
+        if os.path.exists("__versions"):
+            qualimap_version = None
+            with open("__versions",'rt') as fp:
+                for line in fp:
+                    if line.startswith("QualiMap "):
+                        # Example: QualiMap v.2.2.2-dev
+                        qualimap_version = ' '.join(line.strip().split(' ')[1:])
+                        break
+            if qualimap_version:
+                with open("__versions",'wt') as fp:
+                    fp.write("qualimap\t%s\n" % qualimap_version)
+            shutil.copy("__versions",self.args.out_dir)
 
 class VerifyQC(PipelineFunctionTask):
     """
