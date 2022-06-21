@@ -683,12 +683,22 @@ class CellrangerMultiConfigCsv:
                     current_section = None
                     continue
                 if current_section == "samples":
-                    if line.startswith('sample_id,cmo_ids,description'):
+                    if line.startswith('sample_id,cmo_ids'):
                         # Header line, skip
                         continue
                     else:
                         # Extract sample name
-                        sample,cmo,desc = [x.strip() for x in line.split(',')]
+                        values = [x.strip() for x in line.split(',')]
+                        if len(values) < 2:
+                            raise ValueError("%s: bad line in 'samples' "
+                                             "section?: %s" % (self._filen,
+                                                              line))
+                        sample = values[0]
+                        cmo = values[1]
+                        if len(values) > 2:
+                            desc = values[2]
+                        else:
+                            desc = ""
                         logger.debug("Found sample '%s'" % sample)
                         self._samples[sample] = { 'cmo': cmo,
                                                   'description': desc }
@@ -700,14 +710,24 @@ class CellrangerMultiConfigCsv:
                         logger.debug("Found reference dataset '%s'" %
                                      self._reference_data_path)
                 elif current_section == "libraries":
-                    if line.startswith('fastq_id,fastqs,lanes,physical_library_id,feature_types'):
+                    if line.startswith('fastq_id,fastqs,'):
                         # Header line, skip
                         continue
                     else:
                         # Extract data
-                        name,fastqs,lanes,library_id,feature_type,\
-                            subsample_rate = \
-                                [x.strip() for x in line.split(',')]
+                        values = [x.strip() for x in line.split(',')]
+                        if len(values) == 6:
+                            name,fastqs,lanes,library_id,feature_type,\
+                                subsample_rate = values
+                        elif len(values) == 3:
+                            name,fastqs,feature_type = values
+                            lanes = "any"
+                            library_id = None
+                            subsample_rate = ""
+                        else:
+                            raise Exception("%s: bad line in 'libraries' "
+                                            "section?: %s" % (self._filen,
+                                                              line))
                         # Store Fastq dir
                         self._fastq_dirs[name] = fastqs
                         # Store GEX libraries
