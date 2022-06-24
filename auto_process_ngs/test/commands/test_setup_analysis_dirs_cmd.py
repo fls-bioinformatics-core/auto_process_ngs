@@ -321,6 +321,11 @@ AB\tAB1,AB2\tAlan Brown\tscATAC-seq\t10xGenomics Visium\tHuman\tAudrey Benson\t1
             for fq in projects[project]:
                 fastq = os.path.join(fastqs_dir,fq)
                 self.assertTrue(os.path.exists(fastq))
+        # Check that Visium project includes directory
+        # for images
+        self.assertTrue(os.path.isdir(os.path.join(mockdir.dirn,
+                                                   "AB",
+                                                   "Visium_images")))
 
     def test_setup_analysis_dirs_10x_multiome(self):
         """
