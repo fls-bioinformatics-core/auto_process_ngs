@@ -1994,9 +1994,13 @@ class RunCellrangerCount(PipelineTask):
                     # Hard-trim the input R1 sequence to 26bp
                     cmd.add_args("--r1-length=26")
                     if self.args.qc_protocol == "10x_snRNAseq":
-                    # For single nuclei RNA-seq specify the
-                    # --include-introns for cellranger 5.0+
-                        cmd.add_args("--include-introns")
+                        # For single nuclei RNA-seq specify the
+                        # --include-introns for cellranger 5.0+
+                        if cellranger_major_version == 7:
+                            cmd.add_args("--include-introns",
+                                         "true")
+                        else:
+                            cmd.add_args("--include-introns")
             elif cellranger_package == "cellranger-atac":
                 # Cellranger-ATAC
                 cmd.add_args("--fastqs",fastq_dir,
