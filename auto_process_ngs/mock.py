@@ -1868,7 +1868,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._package_name = os.path.basename(self._path)
         if version is None:
             if self._package_name == 'cellranger':
-                self._version = '6.0.0'
+                self._version = '7.0.0'
             elif self._package_name == 'cellranger-atac':
                 self._version = '2.0.0'
             elif self._package_name == 'cellranger-arc':
@@ -2085,9 +2085,16 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         if self._package_name == "cellranger":
             count.add_argument("--transcriptome",action="store")
             count.add_argument("--chemistry",action="store")
-            if version[0] >= 5:
+            if version[0] == 7:
+                # Cellranger 7: include introns on by default
+                count.add_argument("--include-introns",
+                                   choices=['true','false'],
+                                   default='true')
+            elif version[0] in (5,6):
+                # Cellranger 5,6: include introns off by default
                 count.add_argument("--include-introns",
                                    action="store_true")
+            if version[0] >= 5:
                 count.add_argument("--r1-length",action="store")
                 count.add_argument("--r2-length",action="store")
         elif self._package_name == "cellranger-atac":
@@ -2125,8 +2132,16 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         # Check --include-introns
         if self._assert_include_introns is not None:
             print("Checking --include-introns")
-            assert(("--include-introns" in cmdline.split()) ==
-                   self._assert_include_introns)
+            try:
+                include_introns = args.include_introns
+            except AttributeError:
+                # Earlier versions don't support --include_introns
+                include_introns = False
+            if include_introns == 'true':
+                include_introns = True
+            elif include_introns == 'false':
+                include_introns = False
+            assert(include_introns == self._assert_include_introns)
         # Check --chemistry
         if self._assert_chemistry:
             print("Checking chemistry: %s" % args.chemistry)
