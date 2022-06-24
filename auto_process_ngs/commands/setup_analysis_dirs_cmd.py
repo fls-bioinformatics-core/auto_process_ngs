@@ -222,6 +222,11 @@ def setup_analysis_dirs(ap,
                              "MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION\n")
             except Exception as ex:
                 logger.warning("Failed to create '%s': %s" % (f,ex))
+        # Additional subdir for Visium images
+        if single_cell_platform == "10xGenomics Visium":
+            print("-- making 'Visium_images' directory")
+            d = os.path.join(project.dirn,"Visium_images")
+            os.mkdir(d)
         # Copy in additional data files
         if single_cell_platform == "ICELL8 ATAC":
             # Copy across the ATAC report files
