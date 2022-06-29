@@ -39,6 +39,7 @@ import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
 from auto_process_ngs.qc.pipeline import QCPipeline
+from auto_process_ngs.qc.utils import report_qc
 from auto_process_ngs.tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
 
 # QC protocols
@@ -135,6 +136,10 @@ if __name__ == "__main__":
                            "QC directory already exists in <OUT_DIR> "
                            "(default: stop if output QC directory already "
                            "exists)")
+    reporting.add_argument('--force',action='store_true',
+                           help="force generation of HTML report even if "
+                           "pipeline fails (default: don't generate HTML "
+                           "report on pipeline failure")
     # Project metadata
     metadata = p.add_argument_group('Metadata')
     metadata.add_argument('--organism',metavar='ORGANISM',
@@ -764,6 +769,16 @@ if __name__ == "__main__":
                        verbose=args.verbose)
     if status:
         logger.critical("QC failed (see warnings above)")
+        if args.force:
+            logger.warning("Forcing generation of HTML report")
+            report_qc(project,
+                      qc_dir=qc_dir,
+                      qc_protocol=args.qc_protocol,
+                      report_html=out_file,
+                      zip_outputs=True,
+                      multiqc=(not args.no_multiqc),
+                      force=True,
+                      runner=runners['report_runner'])
 
     # Update the QC metadata
     announce("Updating QC metadata")
