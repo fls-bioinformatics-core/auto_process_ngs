@@ -28,6 +28,7 @@ def run_qc(ap,projects=None,fastq_screens=None,
            fastq_screen_subset=100000,nthreads=None,
            runner=None,fastq_dir=None,qc_dir=None,
            cellranger_chemistry='auto',
+           cellranger_force_cells=None,
            cellranger_transcriptomes=None,
            cellranger_premrna_references=None,
            report_html=None,run_multiqc=True,
@@ -67,7 +68,11 @@ def run_qc(ap,projects=None,fastq_screens=None,
         processed (default: 'qc')
       cellranger_chemistry (str): assay configuration for
         10xGenomics scRNA-seq data (set to 'auto' to let cellranger
-        determine this automatically (default: 'auto')
+        determine this automatically; default: 'auto')
+      cellranger_force_cells (int): override cell detection
+        algorithm and set number of cells in 'cellranger' and
+        'cellranger-atac' (set to 'None' to use built-in cell
+        detection; default: 'None')
       cellranger_transcriptomes (dict): mapping of organism names
         to cellranger transcriptome reference data
       cellranger_premrna_references (dict): mapping of organism
@@ -231,6 +236,7 @@ def run_qc(ap,projects=None,fastq_screens=None,
                        cellranger_atac_references=cellranger_atac_references,
                        cellranger_arc_references=cellranger_multiome_references,
                        cellranger_chemistry=cellranger_chemistry,
+                       cellranger_force_cells=cellranger_force_cells,
                        cellranger_jobmode=cellranger_jobmode,
                        cellranger_maxjobs=cellranger_maxjobs,
                        cellranger_mempercore=cellranger_mempercore,
