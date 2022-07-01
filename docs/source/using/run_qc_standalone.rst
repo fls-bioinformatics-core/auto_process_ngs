@@ -93,6 +93,14 @@ default ``run_qc.py`` will stop without running the pipeline;
 to override this behaviour and update an existing QC output
 directory, specify the ``-u`` or ``--update`` option.
 
+Force generation of HTML reports
+--------------------------------
+
+By default if ``run_qc.py`` encounters an error when running
+the pipeline then it will not generate or update the final HTML
+QC report; use the ``--force`` option to ensure that the HTML
+report is always created.
+
 Running 10xGenomics single library analyses
 -------------------------------------------
 
