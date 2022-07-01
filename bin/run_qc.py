@@ -199,6 +199,13 @@ if __name__ == "__main__":
                             "scRNA-seq; if set to 'auto' (the default) then "
                             "cellranger will attempt to determine this "
                             "automatically")
+    cellranger.add_argument("--10x_force_cells",action='store',
+                            metavar="N_CELLS",
+                            dest="cellranger_force_cells",
+                            help="force number of cells for 10xGenomics "
+                            "scRNA-seq and scATAC-seq, overriding automatic "
+                            "cell detection algorithms (default is to use "
+                            "built-in cell detection")
     # Conda options
     conda = p.add_argument_group("Conda dependency resolution")
     conda.add_argument('--enable-conda',choices=["yes","no"],
@@ -735,6 +742,8 @@ if __name__ == "__main__":
                        star_indexes=star_indexes,
                        cellranger_chemistry=\
                        args.cellranger_chemistry,
+                       cellranger_force_cells=\
+                       args.cellranger_force_cells,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,
