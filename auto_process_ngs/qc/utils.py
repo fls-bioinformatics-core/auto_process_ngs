@@ -164,9 +164,28 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
     if force:
         report_cmd.add_args("--force")
     report_cmd.add_args(project.dirn)
+    # Check if environment modules are defined
+    module_load_cmds = None
+    if Settings().modulefiles['report_qc']:
+        print("Attempting to acquire environment modules for reporting")
+        module_load_cmds = []
+        try:
+            modulepath = os.environ['MODULEPATH']
+            if modulepath:
+                module_load_cmds.append("export MODULEPATH=%s" % modulepath)
+        except KeyError:
+            pass
+        try:
+            envmodules = Settings().modulefiles['report_qc'].split(',')
+            for envmodule in envmodules:
+                module_load_cmds.append("module load %s" % envmodule)
+        except Exception as ex:
+            logger.warning("couldn't acquire env modules?: %s" % ex)
+        module_load_cmds = '\n'.join(module_load_cmds)
     # Check if conda environments are enabled
     conda_activate_cmd = None
     if Settings().conda.enable_conda:
+        print("Attempting to acquire conda environment for reporting")
         # Get location for conda environments
         conda_env_dir = Settings().conda.env_dir
         # Set up conda wrapper
@@ -193,8 +212,17 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         scripts_dir = project.dirn
     report_script = os.path.join(scripts_dir,
                                  "report_qc.%s.sh" % project.name)
+    prologue = []
+    if module_load_cmds:
+        prologue.append(module_load_cmds)
+    if conda_activate_cmd:
+        prologue.append(str(conda_activate_cmd))
+    if prologue:
+        prologue = '\n'.join(prologue)
+    else:
+        prologue = None
     report_cmd.make_wrapper_script(filen=report_script,
-                                   prologue=conda_activate_cmd,
+                                   prologue=prologue,
                                    quote_spaces=True)
     # Locate log dir
     if log_dir is None:
