@@ -1489,7 +1489,7 @@ class RunFastqStrand(PipelineTask):
             runner)
           qc_protocol (str): QC protocol to use
         """
-        self.conda("star=2.4.2a",
+        self.conda("star=2.7.7a",
                    "future")
     def setup(self):
         if not self.args.fastq_pairs:
