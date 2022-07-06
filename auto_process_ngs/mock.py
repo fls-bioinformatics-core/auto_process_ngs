@@ -1776,6 +1776,7 @@ class Mock10xPackageExe:
                platform=None,assert_bases_mask=None,
                assert_include_introns=None,
                assert_chemistry=None,
+               assert_force_cells=None,
                reads=None,multiome_data=None,
                version=None):
         """
@@ -1804,6 +1805,9 @@ class Mock10xPackageExe:
           assert_chemistry (str): if set then
             check that the supplied chemistry
             specification matches this value
+          assert_force_cells (int): if set then
+            check that the '--force-cells' option
+            was specified with this value
           reads (list): list of 'reads' that
             will be created
           multiome_data (str): either 'GEX' or
@@ -1825,6 +1829,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            assert_bases_mask=%s,
                            assert_include_introns=%s,
                            assert_chemistry=%s,
+                           assert_force_cells=%s,
                            reads=%s,
                            multiome_data=%s,
                            version=%s).main(sys.argv[1:]))
@@ -1839,6 +1844,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                    ("\"%s\"" % assert_chemistry
                     if assert_chemistry is not None
                     else None),
+                   assert_force_cells,
                    reads,
                    ("\"%s\"" % multiome_data
                     if multiome_data is not None
@@ -1858,6 +1864,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                  assert_bases_mask=None,
                  assert_include_introns=None,
                  assert_chemistry=None,
+                 assert_force_cells=None,
                  reads=None,
                  multiome_data=None,
                  version=None):
@@ -1882,6 +1889,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._assert_bases_mask = assert_bases_mask
         self._assert_include_introns = assert_include_introns
         self._assert_chemistry = assert_chemistry
+        self._assert_force_cells = assert_force_cells
         self._multiome_data = str(multiome_data).upper()
         if self._package_name == 'cellranger-arc':
             assert self._multiome_data is not None
@@ -2085,6 +2093,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         if self._package_name == "cellranger":
             count.add_argument("--transcriptome",action="store")
             count.add_argument("--chemistry",action="store")
+            count.add_argument("--force-cells",action="store",type=int)
             if version[0] == 7:
                 # Cellranger 7: include introns on by default
                 count.add_argument("--include-introns",
@@ -2102,6 +2111,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if version[0] >= 2:
                 count.add_argument("--chemistry",choices=['ATAC-v1',
                                                           'ARC-v1'])
+            count.add_argument("--force-cells",action="store",type=int)
         elif self._package_name == "cellranger-arc":
             count.add_argument("--reference",action="store")
             count.add_argument("--libraries",action="store")
@@ -2146,6 +2156,10 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         if self._assert_chemistry:
             print("Checking chemistry: %s" % args.chemistry)
             assert(args.chemistry == self._assert_chemistry)
+        # Check --force-cells
+        if self._assert_force_cells:
+            print("Checking --force-cells: %s" % args.force_cells)
+            assert(args.force_cells == self._assert_force_cells)
         # Handle commands
         if args.command == "mkfastq":
             ##################

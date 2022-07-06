@@ -117,6 +117,7 @@ class QCPipeline(Pipeline):
         self.add_param('cellranger_reference_dataset',type=str)
         self.add_param('cellranger_out_dir',type=str)
         self.add_param('cellranger_chemistry',type=str)
+        self.add_param('cellranger_force_cells',type=int)
         self.add_param('cellranger_transcriptomes',type=dict)
         self.add_param('cellranger_premrna_references',type=dict)
         self.add_param('cellranger_atac_references',type=dict)
@@ -416,6 +417,7 @@ class QCPipeline(Pipeline):
                 fastq_dir,
                 qc_protocol,
                 chemistry=self.params.cellranger_chemistry,
+                force_cells=self.params.cellranger_force_cells,
                 reference_dataset=self.params.cellranger_reference_dataset,
                 log_dir=log_dir,
                 required_tasks=(setup_qc_dirs,))
@@ -452,6 +454,7 @@ class QCPipeline(Pipeline):
                     fastq_dir,
                     qc_protocol="10x_scATAC",
                     chemistry="ARC-v1",
+                    force_cells=self.params.cellranger_force_cells,
                     reference_dataset=\
                     self.params.cellranger_reference_dataset,
                     log_dir=log_dir,
@@ -470,6 +473,7 @@ class QCPipeline(Pipeline):
                     fastq_dir,
                     qc_protocol="10x_snRNAseq",
                     chemistry="ARC-v1",
+                    force_cells=self.params.cellranger_force_cells,
                     reference_dataset=\
                     self.params.cellranger_reference_dataset,
                     log_dir=log_dir,
@@ -575,6 +579,7 @@ class QCPipeline(Pipeline):
                 fastq_dir,
                 qc_protocol="10x_scRNAseq",
                 chemistry=self.params.cellranger_chemistry,
+                force_cells=self.params.cellranger_force_cells,
                 log_dir=log_dir,
                 samples=get_cellranger_multi_config.output.gex_libraries,
                 fastq_dirs=get_cellranger_multi_config.output.fastq_dirs,
@@ -584,8 +589,8 @@ class QCPipeline(Pipeline):
             verify_qc.requires(run_cellranger_count)
 
     def add_cellranger_count(self,project_name,project,qc_dir,
-                             organism,fastq_dir,qc_protocol,
-                             chemistry,log_dir,samples=None,
+                             organism,fastq_dir,qc_protocol,chemistry,
+                             force_cells,log_dir,samples=None,
                              fastq_dirs=None,reference_dataset=None,
                              required_tasks=None):
         """
@@ -603,6 +608,10 @@ class QCPipeline(Pipeline):
           qc_protocol (str): QC protocol to use
           chemistry (str): chemistry to use in single
             library analysis
+          force_cells (int): if set then bypasses
+            the cell detection algorithm in 'cellranger'
+            and 'cellranger-atac' using the '--force-cells'
+            option (does nothing for 'cellranger-arc')
           log_dir (str): directory to write log files to
           samples (list): optional, list of samples to
             restrict single library analyses to (or None
@@ -715,6 +724,7 @@ class QCPipeline(Pipeline):
             cellranger_version=get_cellranger.output.package_version,
             chemistry=chemistry,
             fastq_dirs=fastq_dirs,
+            force_cells=force_cells,
             cellranger_jobmode=self.params.cellranger_jobmode,
             cellranger_maxjobs=self.params.cellranger_maxjobs,
             cellranger_mempercore=self.params.cellranger_mempercore,
@@ -736,7 +746,7 @@ class QCPipeline(Pipeline):
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             fastq_subset=None,cellranger_chemistry='auto',
-            cellranger_transcriptomes=None,
+            cellranger_force_cells=None,cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
             cellranger_atac_references=None,
             cellranger_arc_references=None,cellranger_jobmode='local',
@@ -766,6 +776,10 @@ class QCPipeline(Pipeline):
             the assay configuration (set to 'auto' to let
             cellranger determine this automatically; ignored
             if not scRNA-seq)
+          force_cells (int): explicitly specify number of
+            cells for 'cellranger' and 'cellranger-atac'
+            (set to 'None' to use the cell detection
+            algorithm; ignored for 'cellranger-arc')
           cellranger_transcriptomes (mapping): mapping of
             organism names to reference transcriptome data
             for cellranger
@@ -885,6 +899,8 @@ class QCPipeline(Pipeline):
                                   'nthreads': nthreads,
                                   'fastq_subset': fastq_subset,
                                   'cellranger_chemistry': cellranger_chemistry,
+                                  'cellranger_force_cells':
+                                  cellranger_force_cells,
                                   'cellranger_transcriptomes':
                                   cellranger_transcriptomes,
                                   'cellranger_premrna_references':
@@ -1862,10 +1878,11 @@ class RunCellrangerCount(PipelineTask):
     """
     def init(self,samples,fastq_dir,reference_data_path,out_dir,
              qc_dir=None,cellranger_exe=None,cellranger_version=None,
-             chemistry='auto',fastq_dirs=None,cellranger_jobmode='local',
-             cellranger_maxjobs=None,cellranger_mempercore=None,
-             cellranger_jobinterval=None,cellranger_localcores=None,
-             cellranger_localmem=None,qc_protocol=None):
+             chemistry='auto',fastq_dirs=None,force_cells=None,
+             cellranger_jobmode='local',cellranger_maxjobs=None,
+             cellranger_mempercore=None,cellranger_jobinterval=None,
+             cellranger_localcores=None,cellranger_localmem=None,
+             qc_protocol=None):
         """
         Initialise the RunCellrangerCount task.
 
@@ -1894,6 +1911,10 @@ class RunCellrangerCount(PipelineTask):
             sample names to Fastq directories which will
             be used to override the paths set by the
             'fastq_dirs' argument
+          force_cells (int): optional, if set then bypasses
+            the cell detection algorithm in 'cellranger'
+            and 'cellranger-atac' using the '--force-cells'
+            option (does nothing for 'cellranger-arc')
           chemistry (str): assay configuration (set to
             'auto' to let cellranger determine this
             automatically; ignored if not scRNA-seq)
@@ -1989,6 +2010,10 @@ class RunCellrangerCount(PipelineTask):
                              "--transcriptome",
                              self.args.reference_data_path,
                              "--chemistry",self.args.chemistry)
+                # Force cells
+                if self.args.force_cells:
+                    cmd.add_args("--force-cells",
+                                 self.args.force_cells)
                 # Additional options for cellranger 5.0+
                 if cellranger_major_version >= 5:
                     # Hard-trim the input R1 sequence to 26bp
@@ -2007,6 +2032,10 @@ class RunCellrangerCount(PipelineTask):
                              "--sample",sample,
                              "--reference",
                              self.args.reference_data_path)
+                # Force cells
+                if self.args.force_cells:
+                    cmd.add_args("--force-cells",
+                                 self.args.force_cells)
                 # Additional options for cellranger-atac 2+
                 if cellranger_major_version >= 2:
                     # Enable chemistry to be specified

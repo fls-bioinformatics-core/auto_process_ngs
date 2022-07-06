@@ -628,6 +628,11 @@ def add_run_qc_command(cmdparser):
                    help="assay configuration for 10xGenomics scRNA-seq; if "
                    "set to 'auto' (the default) then cellranger will attempt "
                    "to determine this automatically")
+    p.add_argument("--10x_force_cells",action='store',metavar="N_CELLS",
+                   dest="cellranger_force_cells",default=None,
+                   help="force number of cells for 10xGenomics scRNA-seq and "
+                   "scATAC-seq, overriding automatic cell detection "
+                   "algorithms (default is to use built-in cell detection")
     p.add_argument('--10x_transcriptome',action='append',
                    metavar='ORGANISM=REFERENCE',
                    dest='cellranger_transcriptomes',
@@ -1361,6 +1366,8 @@ def run_qc(args):
                        qc_dir=args.qc_dir,
                        cellranger_chemistry=
                        args.cellranger_chemistry,
+                       cellranger_force_cells=
+                       args.cellranger_force_cells,
                        cellranger_transcriptomes=
                        cellranger_transcriptomes,
                        cellranger_premrna_references=
