@@ -2754,7 +2754,7 @@ class GetBAMFiles(PipelineFunctionTask):
           bam_files: list of sorted BAM files
         """
         # Conda dependencies
-        self.conda("star=2.4.2a",
+        self.conda("star=2.7.7a",
                    "samtools")
         # Internal variables
         self._bam_files = list()
