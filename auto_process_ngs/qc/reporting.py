@@ -2474,8 +2474,8 @@ class FastqGroupQCReporter:
         colors = {
             'exonic': (100,143,255),
             'intronic': (120,94,240),
-            'intergenic': (220,38,127),
-            'overlapping exon': (254,97,0),
+            'intergenic': (254,97,0),
+            'overlapping exon': (220,38,127),
             'rRNA': (255,176,0)
         }
         # Fetch data
