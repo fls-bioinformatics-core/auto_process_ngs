@@ -2018,6 +2018,7 @@ class FetchPrimaryData(PipelineTask):
             extra_options=('--copy-links',
                            '--include=*/',
                            '--include=Data/**',
+                           '--include=Recipe/**',
                            '--include=RunInfo.xml',
                            '--include=SampleSheet.csv',
                            '--include=RTAComplete.txt',
