@@ -939,7 +939,8 @@ class QCOutputs:
                             output_files.extend(outputs)
                             # Add additional outputs (CSS, images etc)
                             for subdir in ('css',
-                                           'images_qualimapReport'):
+                                           'images_qualimapReport',
+                                           'raw_data_qualimapReport',):
                                 dd = os.path.join(organism_dir,bam,subdir)
                                 if os.path.exists(dd):
                                     extra_files = [os.path.join(dd,ff)
