@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/auto_process.py: command line interface for auto_process_ngs
-#     Copyright (C) University of Manchester 2013-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2022 Peter Briggs
 #
 #########################################################################
 #
@@ -622,6 +622,12 @@ def add_run_qc_command(cmdparser):
     p.add_argument('--fastq_dir',action='store',dest='fastq_dir',default=None,
                    help="explicitly specify subdirectory of DIR with "
                    "Fastq files to run the QC on.")
+    p.add_argument('--cellranger',action='store',
+                   metavar='CELLRANGER_EXE',
+                   dest='cellranger_exe',
+                   help="explicitly specify path to Cellranger "
+                   "executable to use for single library "
+                   "analysis (NB will be used for all projects)")
     p.add_argument("--10x_chemistry",
                    choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
                    dest="cellranger_chemistry",default="auto",
@@ -1364,6 +1370,7 @@ def run_qc(args):
                        nthreads=args.nthreads,
                        fastq_dir=args.fastq_dir,
                        qc_dir=args.qc_dir,
+                       cellranger_exe=args.cellranger_exe,
                        cellranger_chemistry=
                        args.cellranger_chemistry,
                        cellranger_force_cells=

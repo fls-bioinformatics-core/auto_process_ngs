@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 def run_qc(ap,projects=None,fastq_screens=None,
            fastq_screen_subset=100000,nthreads=None,
            runner=None,fastq_dir=None,qc_dir=None,
+           cellranger_exe=None,
            cellranger_chemistry='auto',
            cellranger_force_cells=None,
            cellranger_transcriptomes=None,
@@ -66,6 +67,9 @@ def run_qc(ap,projects=None,fastq_screens=None,
       qc_dir (str): specify a non-standard directory to write the
         QC outputs to; will be used for all projects that are
         processed (default: 'qc')
+      cellranger_exe (str): explicitly specify path to cellranger
+        executable to use for 10xGenomics projects (default:
+        determine appropriate executable automatically)
       cellranger_chemistry (str): assay configuration for
         10xGenomics scRNA-seq data (set to 'auto' to let cellranger
         determine this automatically; default: 'auto')
@@ -243,6 +247,7 @@ def run_qc(ap,projects=None,fastq_screens=None,
                        cellranger_jobinterval=cellranger_jobinterval,
                        cellranger_localcores=cellranger_localcores,
                        cellranger_localmem=cellranger_localmem,
+                       cellranger_exe=cellranger_exe,
                        log_file=log_file,
                        poll_interval=poll_interval,
                        max_jobs=max_jobs,
