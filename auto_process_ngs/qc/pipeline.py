@@ -829,7 +829,7 @@ class QCPipeline(Pipeline):
             "%s: get BAM files" % project.name,
             project.fastqs,
             get_star_index.output.reference_dataset,
-            os.path.join(qc_dir,'bam_files',organism_name),
+            os.path.join(qc_dir,'__bam_files',organism_name),
             self.params.fastq_subset,
             self.params.nthreads,
             reads=read_numbers,
