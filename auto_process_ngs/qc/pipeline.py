@@ -2820,7 +2820,7 @@ class GetBAMFiles(PipelineFunctionTask):
         # Get versions of STAR and samtools
         if get_versions:
             version_file = os.path.join(self.args.out_dir,
-                                        "__versions")
+                                        "_versions")
             self.add_call("Get STAR and samtools versions",
                           self.get_versions,
                           version_file)
@@ -3037,7 +3037,7 @@ class RunRSeQCInferExperiment(PipelineTask):
         if get_version:
             self.add_cmd("Get RSeQC infer_experiment.py version",
                          """
-                         infer_experiment.py --version >__versions 2>&1
+                         infer_experiment.py --version >_versions 2>&1
                          """)
     def finish(self):
         if not self.args.reference_gene_model:
@@ -3064,19 +3064,19 @@ class RunRSeQCInferExperiment(PipelineTask):
                 'reverse': infer_expt.reverse,
             }
         # RSeQC version
-        if os.path.exists("__versions"):
+        if os.path.exists("_versions"):
             rseqc_infer_experiment_version = None
-            with open("__versions",'rt') as fp:
+            with open("_versions",'rt') as fp:
                 for line in fp:
                     if line.startswith("infer_experiment.py "):
                         # Example: infer_experiment.py 4.0.0
                         rseqc_infer_experiment_version = \
                             ' '.join(line.strip().split(' ')[1:])
             if rseqc_infer_experiment_version:
-                with open("__versions",'wt') as fp:
+                with open("_versions",'wt') as fp:
                     fp.write("rseqc:infer_experiment\t%s\n" %
                              rseqc_infer_experiment_version)
-            shutil.copy("__versions",self.args.out_dir)
+            shutil.copy("_versions",self.args.out_dir)
         # Set output
         self.output.experiments.set(outputs)
 
@@ -3130,7 +3130,7 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
         self.add_cmd("Run RSeQC geneBody_coverage.py",
                      """
                      # Get version
-                     geneBody_coverage.py --version >__versions 2>&1
+                     geneBody_coverage.py --version >_versions 2>&1
                      # Run geneBody_coverage
                      geneBody_coverage.py \\
                          -r {reference_gene_model} \\
@@ -3154,19 +3154,19 @@ class RunRSeQCGenebodyCoverage(PipelineTask):
                 # Copy new version to ouput location
                 shutil.copy(os.path.basename(f),self.args.out_dir)
         # RSeQC version version
-        if os.path.exists("__versions"):
+        if os.path.exists("_versions"):
             rseqc_genebody_coverage_version = None
-            with open("__versions",'rt') as fp:
+            with open("_versions",'rt') as fp:
                 for line in fp:
                     if line.startswith("geneBody_coverage.py "):
                         # Example: geneBody_coverage.py 4.0.0
                         rseqc_genebody_coverage_version = \
                             ' '.join(line.strip().split(' ')[1:])
             if rseqc_genebody_coverage_version:
-                with open("__versions",'wt') as fp:
+                with open("_versions",'wt') as fp:
                     fp.write("rseqc:genebody_coverage\t%s\n" %
                              rseqc_genebody_coverage_version)
-            shutil.copy("__versions",self.args.out_dir)
+            shutil.copy("_versions",self.args.out_dir)
 
 class RunPicardCollectInsertSizeMetrics(PipelineTask):
     """
@@ -3233,7 +3233,7 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
             self.add_cmd("Get Picard version",
                          """
                          # Get version of CollectInsertSizeMetrics
-                         picard CollectInsertSizeMetrics --version >__versions 2>&1
+                         picard CollectInsertSizeMetrics --version >_versions 2>&1
                          # Force zero exit code
                          exit 0
                          """)
@@ -3253,18 +3253,18 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                     # Copy new version to ouput location
                     shutil.copy(os.path.basename(f),self.args.out_dir)
         # Picard version
-        if os.path.exists("__versions"):
+        if os.path.exists("_versions"):
             picard_version = None
-            with open("__versions",'rt') as fp:
+            with open("_versions",'rt') as fp:
                 for line in fp:
                     if line.startswith("Version:"):
                         # Example: Version:2.27.1
                         picard_version = ':'.join(line.strip().split(':')[1:])
                         break
             if picard_version:
-                with open("__versions",'wt') as fp:
+                with open("_versions",'wt') as fp:
                     fp.write("picard\t%s\n" % picard_version)
-            shutil.copy("__versions",self.args.out_dir)
+            shutil.copy("_versions",self.args.out_dir)
 
 class CollateInsertSizes(PipelineTask):
     """
@@ -3434,7 +3434,7 @@ class RunQualimapRnaseq(PipelineTask):
         if get_version:
             self.add_cmd("Get Qualimap version",
                          """
-                         qualimap --help >__versions 2>&1
+                         qualimap --help >_versions 2>&1
                          """)
     def finish(self):
         if not self.args.feature_file:
@@ -3458,18 +3458,18 @@ class RunQualimapRnaseq(PipelineTask):
                 shutil.rmtree(out_dir)
             shutil.copytree(bam_name,out_dir)
         # Qualimap version
-        if os.path.exists("__versions"):
+        if os.path.exists("_versions"):
             qualimap_version = None
-            with open("__versions",'rt') as fp:
+            with open("_versions",'rt') as fp:
                 for line in fp:
                     if line.startswith("QualiMap "):
                         # Example: QualiMap v.2.2.2-dev
                         qualimap_version = ' '.join(line.strip().split(' ')[1:])
                         break
             if qualimap_version:
-                with open("__versions",'wt') as fp:
+                with open("_versions",'wt') as fp:
                     fp.write("qualimap\t%s\n" % qualimap_version)
-            shutil.copy("__versions",self.args.out_dir)
+            shutil.copy("_versions",self.args.out_dir)
 
 class VerifyQC(PipelineFunctionTask):
     """

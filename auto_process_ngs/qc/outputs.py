@@ -361,7 +361,7 @@ class QCOutputs:
         """
         Internal: extract software info from 'versions' file
 
-        'versions' files (typically named ``__versions``)
+        'versions' files (typically named ``_versions``)
         should consist of one or more lines of text, with
         each line comprising a software package name and
         a version number, separated by a tab character.
@@ -740,7 +740,7 @@ class QCOutputs:
                         output_files.extend(outputs)
                 # Check for software information
                 software = self._read_versions_file(
-                    os.path.join(picard_dir,d,"__versions"),
+                    os.path.join(picard_dir,d,"_versions"),
                     software)
         if organisms:
             tags.add("picard_insert_size_metrics")
@@ -810,7 +810,7 @@ class QCOutputs:
                 # Check for software information
                 software = self._read_versions_file(
                     os.path.join(genebody_cov_dir,
-                                 d,"__versions"),
+                                 d,"_versions"),
                     software)
         if organisms:
             tags.add("rseqc_genebody_coverage")
@@ -871,7 +871,7 @@ class QCOutputs:
                 # Check for software information
                 software = self._read_versions_file(
                     os.path.join(infer_experiment_dir,
-                                 d,"__versions"),
+                                 d,"_versions"),
                     software)
         if organisms:
             tags.add("rseqc_infer_experiment")
@@ -948,7 +948,7 @@ class QCOutputs:
                                     output_files.extend(extra_files)
                 # Check for software information
                 software = self._read_versions_file(
-                    os.path.join(organism_dir,"__versions"),
+                    os.path.join(organism_dir,"_versions"),
                     software)
         if organisms:
             tags.add("qualimap_rnaseq")
