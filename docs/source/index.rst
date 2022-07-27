@@ -61,6 +61,8 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :caption: Control files
 
    projects.info <control_files/projects_info>
+   10x_multiome_libraries.info <control_files/10x_multiome_libraries_info>
+   10x_multi_config.csv <control_files/10x_multi_config_csv>
 
 .. _single-cell-docs:
 

@@ -74,17 +74,18 @@ QC module                 Details
                           `cellranger_atac`_ ``count``
 ``cellranger-arc_count``  Single cell multiome analysis using
                           `cellranger_arc`_ ``count`` (requires
-                          :ref:`10x_multiome_libraries.info <10x_multiome_libraries_info_file>`)
+                          :doc:`10x_multiome_libraries.info <../control_files/10x_multiome_libraries_info>`)
 ``cellranger_multi``      Cell multiplexing analysis using
                           `cellranger`_ ``multi`` (requires
-                          :ref:`10x_multi_config.csv <10x_multi_config_csv_file>`)
+                          :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`)
 ========================= ======================
 
 Appropriate reference data must be available (for example,
 ``STAR`` indexes or 10x Genomics reference datasets), and
-certain :ref:`run_qc_additional_files` may be required for
-some of the QC modules to run; typically the modules are
-skipped when appropriate reference data is not available.
+certain additional files (noted in the QC module descriptions
+above) may be required for some of the QC modules to run;
+typically the modules are skipped when appropriate reference
+data is not available.
 
 .. _fastqc:  http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
@@ -108,33 +109,3 @@ reports can be copied there for sharing using the
    The QC pipeline can be run outside of the ``auto_process``
    pipeline by using the ``run_qc.py`` utility; see the
    section on :doc:`running the QC standalone <run_qc_standalone>`.
-
-.. _run_qc_additional_files:
-
-----------------
-Additional Files
-----------------
-
-.. _10x_multiome_libraries_info_file:
-
-10xGenomics Single Cell Multiome Data
-*************************************
-
-If a ``10x_multiome_libraries.info`` file is present then the single
-library will be run for single cell multiome data via the ``count``
-command of `cellranger_arc`_ (see :ref:`10x_multiome_libraries_info`).
-
-.. _10x_multi_config_csv_file:
-
-10xGenomics CellPlex Data
-*************************
-
-For 10xGenomics CellPlex (cell multiplexing) data, multiplexing
-analyses are run using the `cellranger`_ ``multi`` command, provided
-that a ``10x_multi_config.csv`` file is also present in the project
-directory.
-
-This file should have the format outlined at `cellranger_multi`_.
-
-.. _cellranger_multi: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
-
