@@ -256,7 +256,7 @@ class TestQCPipeline(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                          "PJB",
                                                          "qc",
-                                                         "bam_files",
+                                                         "__bam_files",
                                                          "human",
                                                          "%s.bam" % f)))
 
@@ -324,7 +324,7 @@ class TestQCPipeline(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",
                                                         "qc",
-                                                        "bam_files",
+                                                        "__bam_files",
                                                         "human",
                                                         "%s.bam" % f)))
 
@@ -392,7 +392,7 @@ class TestQCPipeline(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",
                                                         "qc",
-                                                        "bam_files",
+                                                        "__bam_files",
                                                         "human",
                                                         "%s.bam" % f)))
 
