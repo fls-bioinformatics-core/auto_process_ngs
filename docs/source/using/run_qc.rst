@@ -138,19 +138,3 @@ This file should have the format outlined at `cellranger_multi`_.
 
 .. _cellranger_multi: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
 
----------------------------
-Configuring the QC pipeline
----------------------------
-
-See :ref:`software_dependencies` for details of the additional
-software required to run the QC pipeline. Environment modules can be
-used to set up the runtime environment for the pipeline (see
-:ref:`environment_modules`).
-
-Suitable :ref:`job runners <job_runners>` should be defined,
-particularly if running the pipeline on a compute cluster (see
-:ref:`running_on_compute_cluster`).
-
-Some of the pipeline stages also require appropriate reference
-data to be set up before they can run; see the :ref:`reference_data`
-configuration documentation for more details.
