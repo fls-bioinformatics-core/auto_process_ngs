@@ -525,7 +525,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             with open(os.path.join(qc_dir,
                                    "rseqc_infer_experiment",
                                    organism,
-                                   "__versions"),'wt') as fp:
+                                   "_versions"),'wt') as fp:
                 fp.write("rseqc:infer_experiment\t4.0.0\n")
     # Extra files for insert sizes
     if include_picard_insert_size_metrics:
@@ -540,7 +540,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             with open(os.path.join(qc_dir,
                                    "picard",
                                    organism,
-                                   "__versions"),'wt') as fp:
+                                   "_versions"),'wt') as fp:
                 fp.write("picard\t2.27.1\n")
     # Version file for Qualimap rnaseq
     if include_qualimap_rnaseq:
@@ -548,7 +548,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             with open(os.path.join(qc_dir,
                                    "qualimap-rnaseq",
                                    organism,
-                                   "__versions"),'wt') as fp:
+                                   "_versions"),'wt') as fp:
                 fp.write("qualimap\tv.2.2.2\n")
     # Strandedness conf file
     if include_strandedness:
@@ -564,7 +564,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             with open(os.path.join(qc_dir,
                                    "rseqc_genebody_coverage",
                                    organism,
-                                   "__versions"),'wt') as fp:
+                                   "_versions"),'wt') as fp:
                 fp.write("rseqc:genebody_coverage\t4.0.0\n")
     # MultiQC
     if include_multiqc:
