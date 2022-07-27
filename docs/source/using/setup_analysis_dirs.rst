@@ -11,9 +11,9 @@ This is done using the ``setup_analysis_dirs`` command, for example:
 
    auto_process.py setup_analyis_dirs
 
-This reads the :doc:`projects.info <projects_info>` metadata file
-(initially created by ``make_fastqs``) and creates a new subdirectory
-for each listed project.
+This reads the :doc:`projects.info <../control_files/projects_info>`
+metadata file (initially created by ``make_fastqs``) and creates a new
+subdirectory for each listed project.
 
 Before runing ``setup_analysis_dirs``, the ``projects.info`` file should
 be edited to fill in the following information for each project:
@@ -29,8 +29,9 @@ be edited to fill in the following information for each project:
 * **SC_Platform**: the single-cell platform used to prepare the samples
   (if appropriate).
 
-See :doc:`projects_info` for more information on the format of the
-``projects.info`` file and the allowed values for each field.
+See :doc:`../control_files/projects_info` for more information on the
+format of the ``projects.info`` file and the allowed values for each
+field.
 
 .. note::
 
@@ -57,54 +58,13 @@ be added to the project directory manually after running
 
 Note that for some of these files ``setup_analysis_dirs`` will
 generate partially-populated template versions, with the
-``.template`` extension. These can be edited and renamed before
-use in downstream processing stages (e.g. the QC pipeline).
+``.template`` extension:
 
-.. _10x_multiome_libraries_info:
+* :doc:`10x_multiome_libraries.info <../control_files/10x_multiome_libraries_info>`
+* :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`
 
-10xGenomics single cell multiome linked samples
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For a run with 10xGenomics single cell multiome gene expression or
-ATAC data, an additional file ``10x_multiome_libraries.info`` can
-be created which indicates where the complementary ATAC or GEX
-data are located.
-
-If this file exists then it will be used by :doc:`run_qc <run_qc>`
-to run the ``cellranger-arc`` single library analysis for each sample
-listed in the file (if it is absent then the single library analysis
-is skipped).
-
-The file should consist of one line for each sample in the project,
-with two fields separated by a tab:
-
-::
-
-   <SAMPLE>     [RUN][:PROJECT][/COMPLEMENTARY_SAMPLE]
-
-For example:
-
-::
-
-   AA_multiome_ATAC       201031_NB0123_000011_AHXXXX:AA/AA_multiome_GEX
-
-.. note::
-
-   ``RUN`` can be specified as a full path to an analysis
-   directory (e.g. ``/data/201031_NB0123_000011_AHXXXX_analysis``),
-   the name of an analysis directory (e.g.
-   ``201031_NB0123_000011_AHXXXX_analysis``), the name of a run
-   (e.g. ``201031_NB0123_000011_AHXXXX``) or a run reference ID
-   (e.g. ``NEXTSEQ_201031#11``).
-
-   If a path is not supplied then the parent directory
-   structure will be scanned to try and locate the specified
-   analysis directory.
-
-.. note::
-
-   Lines starting with a comment character (``#``) will be
-   ignored when setting up the single library analysis.
+These can be edited and renamed before use in downstream processing
+stages (e.g. the QC pipeline).
 
 .. _setup_analysis_dirs-add-identifier:
 

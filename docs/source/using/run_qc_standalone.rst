@@ -58,7 +58,7 @@ determine which metrics are run:
   ``ChIP-seq`` etc)
 * ``--single-cell-platform``: specify the name for the single
   cell platform (e.g. ``10xGenomics Chromium 3'v3``; see
-  :doc:`projects_info` for a complete list)
+  :doc:`../control_files/projects_info` for a complete list)
 
 .. note::
 
@@ -117,6 +117,15 @@ defined in the configuration:
   (or other appropriate 10xGenomics package)
 * ``--cellranger-reference``: sets the path to the reference
   dataset to use for single library analysis
+
+For single cell RNA-seq additional options are available:
+
+* ``--10x_force_cells``: explicitly specify the number of cells,
+  overriding automatic cell detection algorithms (i.e. set the
+  ``--force-cells`` option for Cellranger)
+* ``--10x_chemistry``: explicitly set the assay configuration,
+  overriding the automatic assay detection (i.e. set the
+  ``--chemistry`` option for Cellranger)
 
 .. note::
 
