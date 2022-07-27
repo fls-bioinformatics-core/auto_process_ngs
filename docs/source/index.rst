@@ -60,7 +60,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :maxdepth: 2
    :caption: Control files
 
-   projects.info <using/projects_info>
+   projects.info <control_files/projects_info>
 
 .. _single-cell-docs:
 

@@ -11,9 +11,9 @@ This is done using the ``setup_analysis_dirs`` command, for example:
 
    auto_process.py setup_analyis_dirs
 
-This reads the :doc:`projects.info <projects_info>` metadata file
-(initially created by ``make_fastqs``) and creates a new subdirectory
-for each listed project.
+This reads the :doc:`projects.info <../control_files/projects_info>`
+metadata file (initially created by ``make_fastqs``) and creates a new
+subdirectory for each listed project.
 
 Before runing ``setup_analysis_dirs``, the ``projects.info`` file should
 be edited to fill in the following information for each project:
@@ -29,8 +29,9 @@ be edited to fill in the following information for each project:
 * **SC_Platform**: the single-cell platform used to prepare the samples
   (if appropriate).
 
-See :doc:`projects_info` for more information on the format of the
-``projects.info`` file and the allowed values for each field.
+See :doc:`../control_files/projects_info` for more information on the
+format of the ``projects.info`` file and the allowed values for each
+field.
 
 .. note::
 

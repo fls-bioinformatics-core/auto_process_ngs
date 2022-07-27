@@ -58,7 +58,7 @@ determine which metrics are run:
   ``ChIP-seq`` etc)
 * ``--single-cell-platform``: specify the name for the single
   cell platform (e.g. ``10xGenomics Chromium 3'v3``; see
-  :doc:`projects_info` for a complete list)
+  :doc:`../control_files/projects_info` for a complete list)
 
 .. note::
 
