@@ -34,100 +34,80 @@ QC protocol           Used for
 ``10x_scRNAseq``      10xGenomics single cell RNA-seq
 ``10x_snRNAseq``      10xGenomics single nuclei RNA-seq
 ``10x_Visium``        10xGenomics Visium spatial RNA-seq
-``10x_Multiome_ATAC`` 10xGenomics Visium multiome ATAC-seq data
-``10x_Multiome_GEX``  10xGenomics Visium multiome gene expression data
+``10x_Multiome_ATAC`` 10xGenomics single cell multiome ATAC-seq data
+``10x_Multiome_GEX``  10xGenomics single cell multiome gene expression data
 ``10x_CellPlex``      10xGenomics CellPlex cell multiplexing data
 ``ParseEvercode``     Parse Evercode single cell RNA-seq
 ``singlecell``        ICELL8 single cell RNA-seq
 ``ICELL8_scATAC``     ICELL8 single cell ATAC-seq
 ===================== ==========================
 
-The protocol is determined automatically for each project.
+The protocol is determined automatically for each project, based
+on the metadata.
 
-The standard QC pipelines run the following external packages for
-each Fastq file in the project:
+In turn each protocol defines a set of "QC modules" that are run
+by the QC pipeline.
 
- * `fastqc`_ (for general quality metrics)
- * `fastq_screen`_ for a set of genome indexes (to confirm that
-   sequences are from the expected organisms, and check for any
-   contamination)
- * `fastq_strand`_ is run either pair-wise (for paired end data),
-   or on R1 (for single-end data), to determine the strandedness
-   of the sequence data
+----------
+QC modules
+----------
 
-For the single-cell and single-nuclei RNA-seq data from ICELL8 and
-10xGenomics Chromium platforms, for 10xGenomics Visium RNA-seq, and
-for 10xGenomics Multiome GEX data:
-data:
+The following QC modules are available within the QC pipeline:
 
- * `fastqc`_ is run for each Fastq file
- * `fastq_screen`_ and `fastq_strand`_ are run on just the R2
-   reads
+========================= ======================
+QC module                 Details
+========================= ======================
+``fastqc``                Runs `fastqc`_ for general quality metrics
+``fastq_screen``          Runs `fastq_screen`_ for a set of genome
+                          indexes, to verify sequences correspond to
+                          the expected organism (and check for
+                          contaminants)
+``sequence_lengths``      Examines distribution of sequence lengths
+                          and checks for padding and masking
+``strandedness``          Runs `fastq_strand`_ on the appropriate
+                          reads to indicate the strand-specificity of
+                          the sequence data (requires appropriate
+			  ``STAR`` indexes)
+``cellranger_count``      Single library analysis for each sample using
+                          `cellranger`_ ``count``
+``cellranger-atac_count`` Single library analysis for each sample using
+                          `cellranger_atac`_ ``count``
+``cellranger-arc_count``  Single cell multiome analysis using
+                          `cellranger_arc`_ ``count`` (requires
+                          :ref:`10x_multiome_libraries.info <10x_multiome_libraries_info_file>`)
+``cellranger_multi``      Cell multiplexing analysis using
+                          `cellranger`_ ``multi`` (requires
+                          :ref:`10x_multi_config.csv <10x_multi_config_csv_file>`)
+========================= ======================
+
+Appropriate reference data must be available (for example,
+``STAR`` indexes or 10x Genomics reference datasets), and
+certain :ref:`run_qc_additional_files` may be required for
+some of the QC modules to run; typically the modules are
+skipped when appropriate reference data is not available.
 
 .. _fastqc:  http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
 .. _fastq_strand: https://genomics-bcftbx.readthedocs.io/en/latest/reference/qc_pipeline.html#fastq-strand
-
-Additional analyses may be run for 10xGenomics single cell datasets:
-
-==================== ================== ======================================
-10xGenomics Platform Library type       Analyses
-==================== ================== ======================================
-Chromium 3'          scRNA-seq          Single library analysis for each
-                                        sample using `cellranger`_ ``count``
-Chromium 3'          snRNA-seq          See 'scRNA-seq'
-Chromium 3'          CellPlex           Multiplexing analysis using
-                                        `cellranger`_ ``multi`` (if
-                                        :ref:`10x_multi_config.csv <10x_multi_config_csv_file>`
-                                        file is present, plus single library
-                                        analysis for each GEX sample using
-                                        `cellranger`_ ``count``
-Chromium 3'          CellPlex scRNA-seq See 'CellPlex'
-Chromium 3'          CellPlex snRNA-seq See 'CellPlex'
-Single Cell ATAC     scATAC-seq         Single library analysis for each
-                                        sample using `cellranger_atac`_
-					``count``
-Single Cell Multiome GEX                Multiome analysis using
-                                        `cellranger_arc`_ ``count`` (if
-                                        :ref:`10x_multiome_libraries.info <10x_multiome_libraries_info_file>`
-                                        file is present), plus single library
-                                        analysis for each GEX sample using
-                                        `cellranger`_ ``count``
-Single Cell Multiome ATAC               Multiome analysis using
-                                        `cellranger_arc`_ ``count``  (if
-                                        :ref:`10x_multiome_libraries.info <10x_multiome_libraries_info_file>`
-                                        file is present), plus single library
-                                        analysis for each ATAC sample using
-                                        `cellranger_atac`_ ``count``
-10xGenomics Visium   Spatial RNA-seq    No additional analyses
-==================== ================== ======================================
-
-.. note::
-
-   Appropriate reference data must be defined and certain
-   :ref:`run_qc_additional_files` may be required for some
-   of these analyses to run.
-
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger_atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
 .. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
-
-`multiQC`_ is also run to summarise the QC from all the Fastqs in the
-project.
+.. _multiqc: http://multiqc.info/
 
 On successful completion of the pipeline for an HTML report is
 generated for each project; these are described in
-:doc:`QC reports <../output/qc_reports>`. If a QC server has been
-specified in the configuration then the reports can be copied
-there for sharing using the :doc:`publish_qc command <publish_qc>`.
+:doc:`QC reports <../output/qc_reports>`. By default `multiQC`_
+is also run as part of the reporting.
+
+If a QC server has been specified in the configuration then the
+reports can be copied there for sharing using the
+:doc:`publish_qc command <publish_qc>`.
 
 .. note::
 
    The QC pipeline can be run outside of the ``auto_process``
    pipeline by using the ``run_qc.py`` utility; see the
    section on :doc:`running the QC standalone <run_qc_standalone>`.
-
-.. _multiqc: http://multiqc.info/
 
 .. _run_qc_additional_files:
 
