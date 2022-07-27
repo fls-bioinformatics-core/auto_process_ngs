@@ -210,7 +210,7 @@ if __name__ == "__main__":
                             help="force number of cells for 10xGenomics "
                             "scRNA-seq and scATAC-seq, overriding automatic "
                             "cell detection algorithms (default is to use "
-                            "built-in cell detection")
+                            "built-in cell detection)")
     # Conda options
     conda = p.add_argument_group("Conda dependency resolution")
     conda.add_argument('--enable-conda',choices=["yes","no"],
