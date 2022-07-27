@@ -3398,6 +3398,18 @@ class RunQualimapRnaseq(PipelineTask):
             unstranded = self.args.bam_properties[bam]['unstranded']
             forward = self.args.bam_properties[bam]['forward']
             reverse = self.args.bam_properties[bam]['reverse']
+            # Check data are valid
+            if paired_end is None or \
+               unstranded is None or \
+               forward is None or \
+               reverse is None:
+                print("Bad properties data supplied for %s" %
+                      os.path.basename(bam))
+                for item in self.args.bam_properties[bam]:
+                    print("-- %s: %s" % (item,
+                                         self.args.bam_properties[bam][item]))
+                print("Skipping Qualimap for this BAM file")
+                continue
             # Set sequencing protocol (aka strand specificity)
             # Qualimap sequencing protocol can be
             # 'strand-specific-forward', 'strand-specific-reverse',
@@ -3437,6 +3449,7 @@ class RunQualimapRnaseq(PipelineTask):
                          qualimap --help >_versions 2>&1
                          """)
     def finish(self):
+        missing_outputs = False
         if not self.args.feature_file:
             return
         if not self.args.bam_properties:
@@ -3450,13 +3463,17 @@ class RunQualimapRnaseq(PipelineTask):
                 outputs_exist = (outputs_exist and os.path.exists(f))
             if outputs_exist:
                 print("outputs already exist for %s" % bam_name)
-                continue
-            os.makedirs(self.args.out_dir,exist_ok=True)
-            print("copying outputs for %s" % bam_name)
-            if os.path.exists(out_dir):
-                # Remove existing (incomplete) outputs
-                shutil.rmtree(out_dir)
-            shutil.copytree(bam_name,out_dir)
+            else:
+                if not os.path.exists(bam_name):
+                    print("*** %s: outputs not found ***" % bam_name)
+                    missing_outputs = True
+                else:
+                    os.makedirs(self.args.out_dir,exist_ok=True)
+                    print("copying outputs for %s" % bam_name)
+                    if os.path.exists(out_dir):
+                        # Remove existing (incomplete) outputs
+                        shutil.rmtree(out_dir)
+                    shutil.copytree(bam_name,out_dir)
         # Qualimap version
         if os.path.exists("_versions"):
             qualimap_version = None
@@ -3470,6 +3487,9 @@ class RunQualimapRnaseq(PipelineTask):
                 with open("_versions",'wt') as fp:
                     fp.write("qualimap\t%s\n" % qualimap_version)
             shutil.copy("_versions",self.args.out_dir)
+        # Raise failure if errors were encountered
+        if missing_outputs:
+            self.fail(message="Some outputs are missing")
 
 class VerifyQC(PipelineFunctionTask):
     """
