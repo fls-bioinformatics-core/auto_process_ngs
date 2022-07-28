@@ -651,6 +651,12 @@ def add_run_qc_command(cmdparser):
                    help="specify cellranger pre-mRNA reference datasets "
                    "to associate with organisms (overrides references defined "
                    "in config file)")
+    p.add_argument('--10x_extra_projects',action='store',
+                   metavar="PROJECT_DIRS",
+                   dest="cellranger_extra_projects",
+                   help="specify additional projects to include samples "
+                   "from in single library analyses, as comma-separated "
+                   "list")
     p.add_argument('--report',action='store',dest='html_file',default=None,
                    help="file name for output HTML QC report (default: "
                    "<QC_DIR>_report.html)")
@@ -1379,6 +1385,8 @@ def run_qc(args):
                        cellranger_transcriptomes,
                        cellranger_premrna_references=
                        cellranger_premrna_references,
+                       cellranger_extra_projects=
+                       args.cellranger_extra_projects,
                        report_html=args.html_file,
                        runner=runner,
                        max_jobs=args.max_jobs,
