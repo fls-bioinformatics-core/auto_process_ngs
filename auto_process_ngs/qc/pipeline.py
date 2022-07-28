@@ -118,6 +118,7 @@ class QCPipeline(Pipeline):
         self.add_param('cellranger_out_dir',type=str)
         self.add_param('cellranger_chemistry',type=str)
         self.add_param('cellranger_force_cells',type=int)
+        self.add_param('cellranger_extra_projects',type=list)
         self.add_param('cellranger_transcriptomes',type=dict)
         self.add_param('cellranger_premrna_references',type=dict)
         self.add_param('cellranger_atac_references',type=dict)
@@ -419,6 +420,7 @@ class QCPipeline(Pipeline):
                 chemistry=self.params.cellranger_chemistry,
                 force_cells=self.params.cellranger_force_cells,
                 reference_dataset=self.params.cellranger_reference_dataset,
+                extra_projects=self.params.cellranger_extra_projects,
                 log_dir=log_dir,
                 required_tasks=(setup_qc_dirs,))
 
@@ -592,7 +594,7 @@ class QCPipeline(Pipeline):
                              organism,fastq_dir,qc_protocol,chemistry,
                              force_cells,log_dir,samples=None,
                              fastq_dirs=None,reference_dataset=None,
-                             required_tasks=None):
+                             extra_projects=None,required_tasks=None):
         """
         Add tasks to pipeline to run 'cellranger* count'
 
@@ -623,6 +625,9 @@ class QCPipeline(Pipeline):
           reference_dataset (str): optional, path to
             reference dataset (otherwise will be determined
             automatically based on organism)
+          extra_projects (list): optional list of extra
+            AnalysisProjects to include Fastqs from when
+            running cellranger pipeline
           required_tasks (list): list of tasks that the
             cellranger pipeline should wait for
         """
@@ -692,6 +697,7 @@ class QCPipeline(Pipeline):
             samples=samples,
             qc_dir=qc_dir,
             qc_protocol=qc_protocol,
+            extra_projects=extra_projects,
             cellranger_version=get_cellranger.output.package_version,
             cellranger_ref_data=\
             get_cellranger_reference_data.output.reference_data_path,
@@ -753,7 +759,7 @@ class QCPipeline(Pipeline):
             cellranger_maxjobs=None,cellranger_mempercore=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,cellranger_exe=None,
-            cellranger_reference_dataset=None,
+            cellranger_extra_projects=None,cellranger_reference_dataset=None,
             cellranger_out_dir=None,working_dir=None,log_file=None,
             batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
             poll_interval=5,runners=None,default_runner=None,
@@ -812,6 +818,9 @@ class QCPipeline(Pipeline):
             the cellranger executable to use for single
             library analysis (default: cellranger executable
             is determined automatically)
+          cellranger_extra_projects (list): optional list of
+            extra AnalysisProjects to include Fastqs from
+            when running cellranger pipeline
           cellranger_reference_dataset (str): optional,
             explicitly specify the path to the reference
             dataset to use for single library analysis
@@ -919,6 +928,8 @@ class QCPipeline(Pipeline):
                                   'cellranger_reference_dataset':
                                   cellranger_reference_dataset,
                                   'cellranger_out_dir': cellranger_out_dir,
+                                  'cellranger_extra_projects':
+                                  cellranger_extra_projects,
                                   'fastq_screens': fastq_screens,
                                   'star_indexes': star_indexes,
                                   'legacy_screens': legacy_screens,
@@ -1789,8 +1800,9 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
     Check the outputs from cellranger(-atac) count
     """
     def init(self,project,fastq_dir=None,samples=None,qc_dir=None,
-             qc_protocol=None,cellranger_version=None,
-             cellranger_ref_data=None,verbose=False):
+             qc_protocol=None,extra_projects=None,
+             cellranger_version=None,cellranger_ref_data=None,
+             verbose=False):
         """
         Initialise the CheckCellrangerCountOutputs task.
 
@@ -1798,7 +1810,6 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
           project (AnalysisProject): project to run
             QC for
           fastq_dir (str): directory holding Fastq files
-            (defaults to current fastq_dir in project)
           samples (list): list of samples to restrict
             checks to (all samples in project are checked
             by default)
@@ -1806,6 +1817,9 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             for 'count' QC outputs (e.g. metrics CSV and
             summary HTML files)
           qc_protocol (str): QC protocol to use
+          extra_projects (list): optional list of extra
+            AnalysisProjects to include Fastqs from when
+            running cellranger pipeline
           cellranger_version (str): version number of
             10xGenomics package
           cellranger_ref_data (str): name or path to
@@ -1840,12 +1854,16 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
                               self.args.cellranger_version,
                               os.path.basename(self.args.cellranger_ref_data))
         # Check if the outputs exist
-        self.add_call("Check cellranger count outputs for %s"
-                      % self.args.project.name,
-                      check_outputs,
-                      self.args.project,
-                      self.args.qc_dir,
-                      prefix=prefix)
+        projects = [self.args.project]
+        if self.args.extra_projects:
+            projects.extend(self.args.extra_projects)
+        for project in projects:
+            self.add_call("Check cellranger count outputs from %s"
+                          % self.args.project.name,
+                          check_outputs,
+                          project,
+                          self.args.qc_dir,
+                          prefix=prefix)
     def finish(self):
         if not self.args.cellranger_ref_data:
             # No reference data, nothing to check
@@ -1870,7 +1888,11 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             print("No samples with missing outputs from "
                   "cellranger count")
         # Set the fastq_dir that these are found in
-        self.output.fastq_dir.set(self.args.project.fastq_dir)
+        fastq_dir = self.args.project.fastq_dir
+        if self.args.extra_projects:
+            for project in self.args.extra_projects:
+                fastq_dir += ",%s" % project.fastq_dir
+        self.output.fastq_dir.set(fastq_dir)
 
 class RunCellrangerCount(PipelineTask):
     """
