@@ -1875,7 +1875,7 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             for smpl in result:
                 if not self.args.samples or smpl in self.args.samples:
                     samples.add(smpl)
-        self.output.samples.extend(list(samples))
+        self.output.samples.extend(sorted(list(samples)))
         if self.output.samples:
             if self.args.verbose:
                 print("Samples with missing outputs from "
