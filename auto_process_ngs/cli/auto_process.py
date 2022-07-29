@@ -1385,7 +1385,7 @@ def run_qc(args):
                        cellranger_transcriptomes,
                        cellranger_premrna_references=
                        cellranger_premrna_references,
-                       cellranger_extra_projects=
+                       cellranger_extra_project_dirs=
                        args.cellranger_extra_projects,
                        report_html=args.html_file,
                        runner=runner,
