@@ -1870,10 +1870,12 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             print("No reference data to check against")
             return
         # Collect the sample names with missing outputs
+        samples = set()
         for result in self.result():
             for smpl in result:
                 if not self.args.samples or smpl in self.args.samples:
-                    self.output.samples.append(smpl)
+                    samples.add(smpl)
+        self.output.samples.extend(list(samples))
         if self.output.samples:
             if self.args.verbose:
                 print("Samples with missing outputs from "
