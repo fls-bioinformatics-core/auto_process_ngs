@@ -170,6 +170,8 @@ def run_qc(ap,projects=None,fastq_screens=None,
         cellranger_extra_projects = [AnalysisProject(d.strip())
                                      for d in
                                      cellranger_extra_project_dirs.split(',')]
+    else:
+        cellranger_extra_projects = None
     # Legacy FastqScreen naming convention
     legacy_screens = bool(ap.settings.qc.use_legacy_screen_names)
     # Set up runners
