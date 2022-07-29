@@ -11,6 +11,7 @@
 
 import os
 import logging
+from ..analysis import AnalysisProject
 from ..command import Command
 from ..qc.pipeline import QCPipeline
 from ..qc.fastq_strand import build_fastq_strand_conf
@@ -32,6 +33,7 @@ def run_qc(ap,projects=None,fastq_screens=None,
            cellranger_force_cells=None,
            cellranger_transcriptomes=None,
            cellranger_premrna_references=None,
+           cellranger_extra_project_dirs=None,
            report_html=None,run_multiqc=True,
            working_dir=None,verbose=None,
            max_jobs=None,max_cores=None,
@@ -81,6 +83,8 @@ def run_qc(ap,projects=None,fastq_screens=None,
         to cellranger transcriptome reference data
       cellranger_premrna_references (dict): mapping of organism
         names to cellranger pre-mRNA reference data
+      cellranger_extra_project_dirs (str): optional list of
+        additional project dirs to use in single library analyses
       report_html (str): specify the name for the output HTML QC
         report (default: '<QC_DIR>_report.html')
       run_multiqc (bool): if True then run MultiQC at the end of
@@ -161,6 +165,13 @@ def run_qc(ap,projects=None,fastq_screens=None,
         if cellranger_arc_reference:
             cellranger_multiome_references[organism] = \
                 cellranger_arc_reference
+    # Extra cellranger projects
+    if cellranger_extra_project_dirs:
+        cellranger_extra_projects = [AnalysisProject(d.strip())
+                                     for d in
+                                     cellranger_extra_project_dirs.split(',')]
+    else:
+        cellranger_extra_projects = None
     # Legacy FastqScreen naming convention
     legacy_screens = bool(ap.settings.qc.use_legacy_screen_names)
     # Set up runners
@@ -247,6 +258,7 @@ def run_qc(ap,projects=None,fastq_screens=None,
                        cellranger_jobinterval=cellranger_jobinterval,
                        cellranger_localcores=cellranger_localcores,
                        cellranger_localmem=cellranger_localmem,
+                       cellranger_extra_projects=cellranger_extra_projects,
                        cellranger_exe=cellranger_exe,
                        log_file=log_file,
                        poll_interval=poll_interval,

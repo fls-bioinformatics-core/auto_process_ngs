@@ -109,3 +109,20 @@ reports can be copied there for sharing using the
    The QC pipeline can be run outside of the ``auto_process``
    pipeline by using the ``run_qc.py`` utility; see the
    section on :doc:`running the QC standalone <run_qc_standalone>`.
+
+------------------
+Additional options
+------------------
+
+For 10xGenomics datasets, the following options can be used to
+override the defaults defined in the configuration:
+
+* ``--cellranger``: explicitly sets the path to the ``cellranger``
+  (or other appropriate 10xGenomics package)
+* ``--10x_force_cells``: explicitly specify the number of cells,
+  overriding automatic cell detection algorithms (i.e. set the
+  ``--force-cells`` option for CellRanger)
+* ``--10x_extra_projects``: specify additional project directories
+  to fetch Fastqs from when running single library analyses (i.e.
+  add the Fastq directory paths for each project to the
+  ``--fastqs`` option for CellRanger)
