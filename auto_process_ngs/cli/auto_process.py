@@ -598,22 +598,6 @@ def add_run_qc_command(cmdparser):
                    "where 'pname' specifies a project (or set of "
                    "projects) and 'sname' optionally specifies a sample "
                    "(or set of samples).")
-    p.add_argument('--fastq_screen_subset',action='store',dest='subset',
-                   type=int,default=fastq_screen_subset,
-                   help="specify size of subset of total reads to use for "
-                   "fastq_screen (i.e. --subset option); (default %d, set to "
-                   "0 to use all reads)" % fastq_screen_subset)
-    p.add_argument('-t','--threads',action='store',dest="nthreads",
-                   type=int,default=default_nthreads,
-                   help="number of threads to use for QC script "
-                   "(default: %s)" % ('taken from job runner'
-                                      if not default_nthreads
-                                      else default_nthreads,))
-    p.add_argument('--max-jobs',action='store',
-                   dest='max_jobs',default=max_concurrent_jobs,type=int,
-                   help="explicitly specify maximum number of concurrent QC "
-                   "jobs to run (default %s, change in settings file)"
-                   % max_concurrent_jobs)
     p.add_argument('--qc_dir',action='store',dest='qc_dir',default='qc',
                    help="explicitly specify QC output directory (nb if "
                    "supplied then the same QC_DIR will be used for each "
@@ -622,46 +606,67 @@ def add_run_qc_command(cmdparser):
     p.add_argument('--fastq_dir',action='store',dest='fastq_dir',default=None,
                    help="explicitly specify subdirectory of DIR with "
                    "Fastq files to run the QC on.")
-    p.add_argument('--cellranger',action='store',
-                   metavar='CELLRANGER_EXE',
-                   dest='cellranger_exe',
-                   help="explicitly specify path to Cellranger "
-                   "executable to use for single library "
-                   "analysis (NB will be used for all projects)")
-    p.add_argument("--10x_chemistry",
-                   choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
-                   dest="cellranger_chemistry",default="auto",
-                   help="assay configuration for 10xGenomics scRNA-seq; if "
-                   "set to 'auto' (the default) then cellranger will attempt "
-                   "to determine this automatically")
-    p.add_argument("--10x_force_cells",action='store',metavar="N_CELLS",
-                   dest="cellranger_force_cells",default=None,
-                   help="force number of cells for 10xGenomics scRNA-seq and "
-                   "scATAC-seq, overriding automatic cell detection "
-                   "algorithms (default is to use built-in cell detection")
-    p.add_argument('--10x_transcriptome',action='append',
-                   metavar='ORGANISM=REFERENCE',
-                   dest='cellranger_transcriptomes',
-                   help="specify cellranger transcriptome reference datasets "
-                   "to associate with organisms (overrides references defined "
-                   "in config file)")
-    p.add_argument('--10x_premrna_reference',action='append',
-                   metavar='ORGANISM=REFERENCE',
-                   dest='cellranger_premrna_references',
-                   help="specify cellranger pre-mRNA reference datasets "
-                   "to associate with organisms (overrides references defined "
-                   "in config file)")
-    p.add_argument('--10x_extra_projects',action='store',
-                   metavar="PROJECT_DIRS",
-                   dest="cellranger_extra_projects",
-                   help="specify additional projects to include samples "
-                   "from in single library analyses, as comma-separated "
-                   "list")
-    p.add_argument('--report',action='store',dest='html_file',default=None,
-                   help="file name for output HTML QC report (default: "
-                   "<QC_DIR>_report.html)")
-    add_runner_option(p)
-    add_modulefiles_option(p)
+    # QC pipeline options
+    qc_options = p.add_argument_group('QC options')
+    qc_options.add_argument('--fastq_screen_subset',action='store',
+                            dest='subset',type=int,
+                            default=fastq_screen_subset,
+                            help="specify size of subset of total reads to "
+                            "use for fastq_screen (i.e. --subset option); "
+                            "(default %d, set to 0 to use all reads)" %
+                            fastq_screen_subset)
+    qc_options.add_argument('-t','--threads',action='store',dest="nthreads",
+                            type=int,default=default_nthreads,
+                            help="number of threads to use for QC script "
+                            "(default: %s)" % ('taken from job runner'
+                                               if not default_nthreads
+                                               else default_nthreads,))
+    # Cellranger options
+    cellranger = p.add_argument_group('Cellranger/10xGenomics options')
+    cellranger.add_argument('--cellranger',action='store',
+                            metavar='CELLRANGER_EXE',
+                            dest='cellranger_exe',
+                            help="explicitly specify path to Cellranger "
+                            "executable to use for single library "
+                            "analysis (NB will be used for all projects)")
+    cellranger.add_argument("--10x_chemistry",
+                            choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
+                            dest="cellranger_chemistry",default="auto",
+                            help="assay configuration for 10xGenomics "
+                            "scRNA-seq; if set to 'auto' (the default) "
+                            "then cellranger will attempt to determine "
+                            "this automatically")
+    cellranger.add_argument("--10x_force_cells",action='store',
+                            metavar="N_CELLS",
+                            dest="cellranger_force_cells",default=None,
+                            help="force number of cells for 10xGenomics "
+                            "scRNA-seq and scATAC-seq, overriding automatic "
+                            "cell detection algorithms (default is to use "
+                            "built-in cell detection)")
+    cellranger.add_argument('--10x_extra_projects',action='store',
+                            metavar="PROJECT_DIRS",
+                            dest="cellranger_extra_projects",
+                            help="specify additional projects to include "
+                            "samples from in single library analyses, as "
+                            "comma-separated list")
+    cellranger.add_argument('--10x_transcriptome',action='append',
+                            metavar='ORGANISM=REFERENCE',
+                            dest='cellranger_transcriptomes',
+                            help="specify cellranger transcriptome reference "
+                            "datasets to associate with organisms (overrides "
+                            "references defined in config file)")
+    cellranger.add_argument('--10x_premrna_reference',action='append',
+                            metavar='ORGANISM=REFERENCE',
+                            dest='cellranger_premrna_references',
+                            help="specify cellranger pre-mRNA reference "
+                            "datasets to associate with organisms (overrides "
+                            "references defined in config file)")
+    # Reporting options
+    reporting = p.add_argument_group('Output and reporting')
+    reporting.add_argument('--report',action='store',dest='html_file',
+                           default=None,
+                           help="file name for output HTML QC report "
+                           "(default: <QC_DIR>_report.html)")
     # Conda options
     conda = p.add_argument_group("Conda dependency resolution")
     conda.add_argument('--enable-conda',choices=["yes","no"],
@@ -676,6 +681,12 @@ def add_run_qc_command(cmdparser):
                                           conda_env_dir))
     # Job control options
     job_control = p.add_argument_group("Job control options")
+    job_control.add_argument('-c','--maxcores',type=int,action='store',
+                             dest='max_cores',metavar='NCORES',
+                             default=max_cores,
+                             help="maximum number of cores available for "
+                             "running jobs (default: %s)"
+                             % (max_cores if max_cores else 'no limit'))
     job_control.add_argument('-j','--maxjobs',type=int,action='store',
                              dest="max_jobs",metavar='NJOBS',
                              default=max_concurrent_jobs,
@@ -683,12 +694,6 @@ def add_run_qc_command(cmdparser):
                              "concurrently (default: %s)"
                              % (max_concurrent_jobs
                                 if max_concurrent_jobs else 'no limit'))
-    job_control.add_argument('-c','--maxcores',type=int,action='store',
-                             dest='max_cores',metavar='NCORES',
-                             default=max_cores,
-                             help="maximum number of cores available for "
-                             "running jobs (default: %s)"
-                             % (max_cores if max_cores else 'no limit'))
     job_control.add_argument('-b','--maxbatches',type=int,action='store',
                              dest='max_batches',metavar='NBATCHES',
                              default=__settings.general.max_batches,
@@ -706,6 +711,8 @@ def add_run_qc_command(cmdparser):
                           dest="working_dir",default=None,
                           help="specify the working directory for the "
                           "pipeline operations")
+    add_runner_option(advanced)
+    add_modulefiles_option(advanced)
     add_debug_option(advanced)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
