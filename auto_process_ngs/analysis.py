@@ -1115,6 +1115,9 @@ class AnalysisProject:
         """
         return bcf_utils.pretty_print_names(self.samples)
 
+    def __repr__(self):
+        return "AnalysisProject(%s)" % self.name
+
 class AnalysisSample:
     """
     Class describing an analysis sample
