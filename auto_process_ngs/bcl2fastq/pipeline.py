@@ -3318,14 +3318,10 @@ class Run10xMkfastq(PipelineTask):
             mkfastq_cmd.add_args('--mask-short-adapter-reads',
                                  self.args.mask_short_adapter_reads)
         if self.pkg == "cellranger-arc":
-            if self.args.filter_single_index is not None:
-                mkfastq_cmd.add_args('--filter-single-index=%s' %
-                                     ('true' if self.args.filter_single_index
-                                      else 'false'))
-            if self.args.filter_dual_index is not None:
-                mkfastq_cmd.add_args('--filter-dual-index=%s' %
-                                     ('true' if self.args.filter_dual_index
-                                      else 'false'))
+            if self.args.filter_single_index:
+                mkfastq_cmd.add_args('--filter-single-index')
+            if self.args.filter_dual_index:
+                mkfastq_cmd.add_args('--filter-dual-index')
         add_cellranger_args(
             mkfastq_cmd,
             jobmode=self.args.jobmode,
