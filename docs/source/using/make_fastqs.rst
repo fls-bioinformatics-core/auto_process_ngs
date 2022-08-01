@@ -484,6 +484,10 @@ Option                                Description
 ``minimum_trimmed_read_length=N``     Set minimum trimmed read length
 ``mask_short_adapter_reads=N``        Set minimum read length below
                                       which sequences are masked
+``tenx_filter_single_index=yes|no``   Set ``--filter-single-index``
+                                      option for ``cellranger-arc``
+``tenx_filter_dual_index=yes|no``     Set ``--filter-dual-index``
+                                      option for ``cellranger-arc``
 ``icell8_well_list=FILE``             Well list file (``icell8`` and
                                       ``icell8_atac`` protocols only)
 ``icell8_atac_swap_i1_and_i2=yes|no`` Turn I1/I2 swapping on or off

@@ -132,6 +132,8 @@ LANE_SUBSET_ATTRS = (
     'create_fastq_for_index_read',
     'find_adapters_with_sliding_window',
     'no_lane_splitting',
+    'tenx_filter_single_index',
+    'tenx_filter_dual_index',
     'icell8_well_list',
     'icell8_atac_swap_i1_and_i2',
     'icell8_atac_reverse_complement',
@@ -468,6 +470,8 @@ class MakeFastqs(Pipeline):
                 self.params.create_fastq_for_index_read,
                 find_adapters_with_sliding_window=\
                 self.params.find_adapters_with_sliding_window,
+                tenx_filter_single_index=None,
+                tenx_filter_dual_index=None,
                 icell8_well_list=self._icell8_well_list,
                 icell8_atac_swap_i1_and_i2=\
                 self._icell8_atac_swap_i1_and_i2,
@@ -1059,6 +1063,12 @@ class MakeFastqs(Pipeline):
             find_adapters_with_sliding_window = \
                 subset['find_adapters_with_sliding_window']
 
+            ##############
+            # 10x Genomics
+            ##############
+            filter_single_index = subset['tenx_filter_single_index']
+            filter_dual_index = subset['tenx_filter_dual_index']
+
             #########
             # ICELL8
             #########
@@ -1624,6 +1634,8 @@ class MakeFastqs(Pipeline):
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
                     mask_short_adapter_reads,
+                    filter_single_index=filter_single_index,
+                    filter_dual_index=filter_dual_index,
                     jobmode=self.params.cellranger_jobmode,
                     mempercore=self.params.cellranger_mempercore,
                     maxjobs=self.params.cellranger_maxjobs,
@@ -3081,6 +3093,7 @@ class Run10xMkfastq(PipelineTask):
     def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
+             filter_single_index=None,filter_dual_index=None,
              jobmode='local',maxjobs=None,
              mempercore=None,jobinterval=None,
              localcores=None,localmem=None,
@@ -3102,6 +3115,16 @@ class Run10xMkfastq(PipelineTask):
             to cellranger via --minimum-trimmed-read-length
           mask_short_adapter_reads (int): if set then supply to
             cellranger via --mask-short-adapter-reads
+          filter_single_index (bool): for cellranger-arc, only
+            demultiplex samples identified by an i7-only sample
+            index, ignoring dual-indexed samples (which will
+            not be demultiplexed) (i.e. use --filter-single-index
+            option)
+          filter_dual_index (bool): for cellranger-arc, only
+            demultiplex samples identified by i7/i5 dual-indices
+            (e.g., SI-TT-A6), ignoring single-index samples
+            (which will not be demultiplexed) (i.e. use
+            --filter-dual-index option)
           jobmode (str): jobmode to use for
             running cellranger
           maxjobs (int): maximum number of concurrent
@@ -3294,6 +3317,15 @@ class Run10xMkfastq(PipelineTask):
         if self.args.mask_short_adapter_reads:
             mkfastq_cmd.add_args('--mask-short-adapter-reads',
                                  self.args.mask_short_adapter_reads)
+        if self.pkg == "cellranger-arc":
+            if self.args.filter_single_index is not None:
+                mkfastq_cmd.add_args('--filter-single-index=%s' %
+                                     ('true' if self.args.filter_single_index
+                                      else 'false'))
+            if self.args.filter_dual_index is not None:
+                mkfastq_cmd.add_args('--filter-dual-index=%s' %
+                                     ('true' if self.args.filter_dual_index
+                                      else 'false'))
         add_cellranger_args(
             mkfastq_cmd,
             jobmode=self.args.jobmode,
