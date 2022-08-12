@@ -12,6 +12,7 @@ with suggestions on how to address them:
  * :ref:`troubleshooting-no-adapter-trimming`
  * :ref:`troubleshooting-missing-fastqs-after-demultiplexing`
  * :ref:`troubleshooting-10x-single-index-data-in-dual-index-flowcell`
+ * :ref:`troubleshooting-10x-multiome-atac-and-gex-in-same-run`
 
 .. _troubleshooting-incomplete-run:
 
@@ -190,3 +191,45 @@ HISeq instrument alongside standard libraries in other lanes), then
 
 Use the ``--ignore-dual-index`` option to force ``cellranger`` to process
 the data in this case.
+
+.. _troubleshooting-10x-multiome-atac-and-gex-in-same-run:
+
+10xGenomics: Fastq generation for single cell multiome ATAC and GEX in same run
+*******************************************************************************
+
+If Multiome ATAC and Multiome GEX libraries are sequenced together in the
+same run then the standard ``10x_multiome`` protocol of the ``make_fastqs``
+command is unable to correctly process this without additional options.
+
+While this is not a standard configuration and is not officially supported
+by 10x Genomics, they provide information on how to handle this in a
+knowledge base article here:
+
+https://kb.10xgenomics.com/hc/en-us/articles/360049373331-Can-Multiome-ATAC-and-Multiome-GEX-libraries-be-sequenced-together-
+
+Based on this, the following procedure to handle this configuration
+within ``auto-process-ngs`` is suggested:
+
+ 1. Ensure that ATAC and GEX data are assigned to separate projects
+    in the input sample sheet
+ 2. Use the ``--lanes`` option to explicitly specify the appropriate
+    protocol, bases mask and CellRanger index filter parameters
+    separately for the lanes with the ATAC and GEX samples
+
+For example:
+
+::
+
+   auto_process.py make_fastqs \
+      --lanes=1:10x_multiome:bases_mask=Y50,I8n2,Y24,Y90:tenx_filter_single_index=yes \
+      --lanes=2:10x_multiome:bases_mask=Y28,I10,I10n14,Y90:tenx_filter_dual_index=yes
+
+The exact bases masks strings for each type of data will vary depending
+on the read information in the ``RunInfo.xml`` file for the specific
+run. As a guide:
+
+ * For ATAC data bases mask will look like ``Y*,I8n*,Y24,Y*``
+ * For GEX data bases mask will look like ``Y28n*,I10,I10n*,Y*``
+
+where ``*`` should be replaced by exact values to ensure that all bases
+in the matching read in ``RunInfo.xml`` are accounted for.
