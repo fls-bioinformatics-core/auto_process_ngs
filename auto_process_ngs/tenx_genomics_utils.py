@@ -20,6 +20,8 @@ platforms:
 - flow_cell_id
 - has_10x_indices
 - has_chromium_sc_indices
+- get_bases_mask_10x_atac
+- get_bases_mask_10x_multiome
 - cellranger_info
 - spaceranger_info
 - make_qc_summary_html
@@ -916,6 +918,101 @@ def get_bases_mask_10x_atac(runinfo_xml):
     r3_mask = bases_mask[3]
     # Reassemble and return
     return ','.join((r1_mask,i1_mask,r2_mask,r3_mask,))
+
+def get_bases_mask_10x_multiome(runinfo_xml,library):
+    """
+    Return bases mask for 10xGenomics single cell multiome
+
+    Generates an initial bases mask based on the run
+    contents, and then updates this based on the library
+    type (either 'atac' or 'gex').
+
+    For ATAC data: the template bases mask is
+    "Y*,I8n*,Y24,Y*" (keeping all of read 1, first 8 bases
+    of read 2, all 24 bases of read 3, and all of read 4).
+
+    For example: if the initial bases mask is
+    'Y50,I10,Y24,Y90' then the single cell multiome ATAC
+    bases mask will be 'Y50,I8n2,Y24,Y90'.
+
+    For GEX data: the template bases mask is
+    "Y28n*,I10,I10n*,Y*" (keeping first 28 bases of read 1,
+    all 10 bases of read 2, first 10 bases of read 3, and
+    all of read 4).
+
+    For example: if the initial bases mask is
+    'Y50,I10,Y24,Y90' then the single cell multiome GEX
+    bases mask will be 'Y28n22,I10,I10n14,Y90'.
+
+    Arguments:
+      runinfo_xml (str): path to the RunInfo.xml for
+        the sequencing run
+      library (str): library type to set bases mask for
+        (either 'atac' or 'gex')
+
+    Returns:
+      String: 10xGenomics single cell multiome bases mask
+        string for the specified library type.
+    """
+    # Normalise the library type
+    library = library.lower()
+    # Get initial bases mask from RunInfo.xml
+    bases_mask = get_bases_mask(runinfo_xml).lower().split(',')
+    # Check there are four reads defined
+    if len(bases_mask) != 4:
+        raise Exception("Bases mask '%s' should have 4 reads "
+                        "defined (has %d)" % (bases_mask,
+                                              len(bases_mask)))
+    # Update bases mask
+    if library == "atac":
+        # First read: keep all bases
+        r1_mask = "Y" + bases_mask[0][1:]
+        # Update first index to restrict to 8 bases
+        num_cycles = int(bases_mask[1][1:])
+        if num_cycles < 8:
+            raise Exception("I1 read < 8 bases")
+        i1_mask = "I8"
+        if num_cycles > 8:
+            i1_mask += "n%s" % (num_cycles-8)
+        # Update second read
+        num_cycles = int(bases_mask[2][1:])
+        if num_cycles < 24:
+            raise Exception("R2 read < 24 bases")
+        r2_mask = "Y24"
+        if num_cycles > 24:
+            r2_mask += "n%s" % (num_cycles-24)
+        # Keep last read as is
+        r3_mask = "Y" + bases_mask[3][1:]
+        # Reassemble and return
+        return ','.join((r1_mask,i1_mask,r2_mask,r3_mask,))
+    elif library == "gex":
+        # First read: keep first 28 bases
+        num_cycles = int(bases_mask[0][1:])
+        if num_cycles < 28:
+            raise Exception("R1 read < 28 bases")
+        r1_mask = "Y28"
+        if num_cycles > 28:
+            r1_mask += "n%s" % (num_cycles-28)
+        # Update first index to restrict to 10 bases
+        num_cycles = int(bases_mask[1][1:])
+        if num_cycles < 10:
+            raise Exception("I1 read < 10 bases")
+        i1_mask = "I10"
+        if num_cycles >10:
+            i1_mask += "n%s" % (num_cycles-10)
+        # Update second index to restrict to 10 bases
+        num_cycles = int(bases_mask[2][1:])
+        if num_cycles < 10:
+            raise Exception("I2 read < 10 bases")
+        i2_mask = "I10"
+        if num_cycles >10:
+            i2_mask += "n%s" % (num_cycles-10)
+        # Keep last read as is
+        r2_mask = "Y" + bases_mask[3][1:]
+        # Reassemble and return
+        return ','.join((r1_mask,i1_mask,i2_mask,r2_mask,))
+    else:
+        raise Exception("Unknown library type: '%s'" % library)
 
 def make_qc_summary_html(json_file,html_file):
     """
