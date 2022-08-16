@@ -33,7 +33,12 @@ Protocol option          Used for
 ``10x_visium``           10xGenomics Visium spatial RNA-seq
                          data
 ``10x_multiome``         10xGenomics Multiome single cell
-                         ATAC + GEX data
+                         ATAC + GEX data (determined
+                         automatically)
+``10x_multiome_atac``    10xGenomics Multiome single cell
+                         ATAC data only
+``10x_multiome_gex``     10xGenomics Multiome single cell
+                         GEX data only
 ======================== =====================================
 
 The protocols are described in the section :ref:`make_fastqs-protocols`;
@@ -60,6 +65,7 @@ subsequent sections:
 
 * :ref:`make_fastqs-adapter-trimming-and-masking`
 * :ref:`make_fastqs-mixed-protocols`
+* :ref:`make_fastqs-pooled-10x-multiome-atac-and-gex`
 
 The outputs produced on successful completion are described below
 in the section :ref:`make_fastqs-outputs`.
@@ -89,6 +95,8 @@ the sections below:
 * :ref:`make_fastqs-10x_atac-protocol`
 * :ref:`make_fastqs-10x_visium-protocol`
 * :ref:`make_fastqs-10x_multiome-protocol`
+* :ref:`make_fastqs-10x_multiome-atac-protocol`
+* :ref:`make_fastqs-10x_multiome-gex-protocol`
 
 .. _make_fastqs-standard-protocol:
 
@@ -253,7 +261,7 @@ multiome ATAC and gene expression (GEX) data by using the
 
     auto_process.py make_fastqs --protocol=10x_multiome ...
 
-which fetches the data and runs ``cellranger-atac mkfastq``.
+which fetches the data and runs ``cellranger-arc mkfastq``.
 
 This will generate the Fastqs in the specified output directory
 (e.g. ``bcl2fastq``) along with an HTML report derived from the
@@ -267,6 +275,100 @@ the adapter sequences in the sample sheet.
    ``make_fastqs`` offers various options for controlling the
    behaviour of ``cellranger-arc mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
+
+.. _make_fastqs-10x_multiome-atac-protocol:
+
+10xGenomics single cell Multiome ATAC data (``--protocol=10x_multiome_atac``)
+*****************************************************************************
+
+Fastq generation can be performed for 10xGenomics single cell
+multiome ATAC data by using the ``--protocol=10x_multiome_atac``
+option:
+
+::
+
+    auto_process.py make_fastqs --protocol=10x_multiome_atac ...
+
+which fetches the data and runs ``cellranger-arc mkfastq`` with
+the following custom options:
+
+ 1. ``--use-bases-mask`` with a bases mask string that has been
+    adjusted appropriately to match the template
+    ``Y*,I8n*,Y24,Y*``
+ 2. ``--filter-single-index`` will be explicitly specified
+
+as outlined in the 10x Genomics knowledge base article at:
+
+   https://kb.10xgenomics.com/hc/en-us/articles/360049373331-Can-Multiome-ATAC-and-Multiome-GEX-libraries-be-sequenced-together-
+
+for single cell multiome ATAC data.
+
+This will generate the Fastqs in the specified output directory
+(e.g. ``bcl2fastq``) along with an HTML report derived from the
+``cellranger-arc`` JSON QC summary file, and statistics for the
+Fastqs.
+
+By default adapter trimming is also automatically disabled by removing
+the adapter sequences in the sample sheet.
+
+.. note::
+
+   This protocol should only be used when the single cell
+   multiome data has been pooled with other types of data;
+   in these cases it should specified within using the
+   ``--lanes`` option
+   (see :ref:`make_fastqs-pooled-10x-multiome-atac-and-gex`).
+
+   When the single cell multiome data comprises the whole
+   sequencing run then the ``10x_multiome`` protocol
+   should be used instead.
+
+.. _make_fastqs-10x_multiome-gex-protocol:
+
+10xGenomics single cell Multiome GEX data (``--protocol=10x_multiome_gex``)
+***************************************************************************
+
+Fastq generation can be performed for 10xGenomics single cell
+multiome gene expression (GEX) data by using the
+``--protocol=10x_multiome_gex`` option:
+
+::
+
+    auto_process.py make_fastqs --protocol=10x_multiome_gex ...
+
+which fetches the data and runs ``cellranger-arc mkfastq`` with
+the following custom options:
+
+ 1. ``--use-bases-mask`` with a bases mask string that has been
+    adjusted appropriately to match the template
+    ``Y28n*,I10,I10n*,Y*``
+ 2. ``--filter-dual-index`` will be explicitly specified
+
+as outlined in the 10x Genomics knowledge base article at:
+
+   https://kb.10xgenomics.com/hc/en-us/articles/360049373331-Can-Multiome-ATAC-and-Multiome-GEX-libraries-be-sequenced-together-
+
+for single cell multiome gene expression data.
+
+This will generate the Fastqs in the specified output directory
+(e.g. ``bcl2fastq``) along with an HTML report derived from the
+``cellranger-arc`` JSON QC summary file, and statistics for the
+Fastqs.
+
+By default adapter trimming is also automatically disabled by removing
+the adapter sequences in the sample sheet.
+
+.. note::
+
+   This protocol should only be used when the single cell
+   multiome data has been pooled with other types of data;
+   in these cases it should specified within using the
+   ``--lanes`` option
+   (see :ref:`make_fastqs-pooled-10x-multiome-atac-and-gex`).
+
+   When the single cell multiome data comprises the whole
+   sequencing run then the ``10x_multiome`` protocol
+   should be used instead.
 
 .. _make_fastqs-10x_visium-protocol:
 
@@ -544,6 +646,43 @@ the full set of available options:
 * :ref:`commands_merge_fastq_dirs`
 * :ref:`commands_update_fastq_stats`
 * :ref:`commands_analyse_barcodes`
+
+.. _make_fastqs-pooled-10x-multiome-atac-and-gex:
+
+Processing a run with pooled 10x Genomics single cell ATAC and GEX data
+-----------------------------------------------------------------------
+
+If 10x Genomics single cell multiome ATAC and multiome GEX libraries
+are sequenced together in the same run then the standard ``10x_multiome``
+protocol of the ``make_fastqs`` command is unable to correctly process
+the data.
+
+Pooling the ATAC and GEX components of a single cell multiome experiment
+is not officially supported by 10x Genomics, and this limitation is due
+to this configuration not being supported by the ``cellranger-arc``
+pipeline. However they do provide information on how to handle this
+situation in this knowledge base article:
+
+https://kb.10xgenomics.com/hc/en-us/articles/360049373331-Can-Multiome-ATAC-and-Multiome-GEX-libraries-be-sequenced-together-
+
+and the two sub-protocols outlined in this article have been implemented
+within ``make_fastqs`` as the ``10x_multiome_atac`` and ``10_multiome_gex``
+protocols, which should be used as follows:
+
+ 1. Ensure that ATAC and GEX data are assigned to separate projects
+    in the input sample sheet
+ 2. Use the ``--lanes`` option to explicitly specify the appropriate
+    sub-protocol for the lanes with the ATAC and GEX samples
+
+For example:
+
+::
+
+   auto_process.py make_fastqs \
+      --lanes=1:10x_multiome_atac \
+      --lanes=2:10x_multiome_gex
+
+assuming that the ATAC data are in lane 1 and the GEX data in lane 2.
 
 .. _make_fastqs-processing-same-run-multiple-times:
 
