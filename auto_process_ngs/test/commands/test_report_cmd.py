@@ -505,7 +505,7 @@ ABM4,CMO304,ABM4
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
         self.assertEqual(report_concise(ap),
-                         "Paired end: 'AB': Alison Bell, Human 10xGenomics Chromium 3'v3 CellPlex (PI: Audrey Bower) (2 samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
+                         "Paired end: 'AB': Alison Bell, Human 10xGenomics Chromium 3'v3 CellPlex (PI: Audrey Bower) (4 samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
 
     def test_report_concise_no_projects(self):
         """report: report run with no projects in 'concise' mode

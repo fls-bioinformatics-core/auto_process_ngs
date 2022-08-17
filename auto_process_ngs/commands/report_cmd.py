@@ -207,8 +207,20 @@ def report_concise(ap):
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     if analysis_dir.projects:
         for p in analysis_dir.projects:
-            samples = "%d sample%s" % (len(p.samples),
-                                       's' if len(p.samples) != 1
+            if p.info.library_type == "CellPlex":
+                # Multiplexed samples
+                try:
+                    cellplex_config = CellrangerMultiConfigCsv(
+                        os.path.join(p.dirn,
+                                     "10x_multi_config.csv"))
+                    number_of_samples = len(cellplex_config.sample_names)
+                except FileNotFoundError:
+                    number_of_samples = len(p.samples)
+            else:
+                # Physical samples
+                number_of_samples = len(p.samples)
+            samples = "%d sample%s" % (number_of_samples,
+                                       's' if number_of_samples != 1
                                        else '')
             if p.info.number_of_cells is not None:
                 samples += "/%d cell%s" % (p.info.number_of_cells,
