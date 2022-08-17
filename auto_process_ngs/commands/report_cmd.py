@@ -413,8 +413,20 @@ def report_summary(ap):
             library = project_data['library_type']
             if project_data['single_cell_platform'] is not None:
                 library += " (%s)" % project_data['single_cell_platform']
-            samples = "%d sample%s" % (len(project.samples),
-                                       's' if len(project.samples) != 1 else '')
+            if project.info.library_type == "CellPlex":
+                # Multiplexed samples
+                try:
+                    cellplex_config = CellrangerMultiConfigCsv(
+                        os.path.join(project.dirn,
+                                     "10x_multi_config.csv"))
+                    number_of_samples = len(cellplex_config.sample_names)
+                except FileNotFoundError:
+                    number_of_samples = len(project.samples)
+            else:
+                # Physical samples
+                number_of_samples = len(project.samples)
+            samples = "%d sample%s" % (number_of_samples,
+                                       's' if number_of_samples != 1 else '')
             if project_data['number_of_cells'] is not None:
                 samples += "/%d cell%s" % (
                     int(project_data['number_of_cells']),

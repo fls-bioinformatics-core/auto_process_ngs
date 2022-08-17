@@ -950,7 +950,7 @@ ABM4,CMO304,ABM4
         # Make autoprocess instance and set required metadata
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate projects report
-        expected = """MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tCellPlex\t10xGenomics Chromium 3'v3\tHuman\tMISEQ\t2\t1311\tyes\tAB1-2
+        expected = """MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tCellPlex\t10xGenomics Chromium 3'v3\tHuman\tMISEQ\t4\t1311\tyes\tABM1-4
 MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
 """
         for o,e in zip(report_projects(ap).split('\n'),
