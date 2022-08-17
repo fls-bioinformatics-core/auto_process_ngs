@@ -645,6 +645,8 @@ class CellrangerMultiConfigCsv:
       library
     - fastq_dirs: returns mapping of library names to the
       associated Fastq directory paths
+    - pretty_print_samples: returns a string with a 'nice'
+      description of the multiplexed sample names
     """
     def __init__(self,filen):
         """
