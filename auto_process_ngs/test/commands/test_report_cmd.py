@@ -307,9 +307,9 @@ Summary of data in 'bcl2fastq' dir:
   SC Plat.: 10xGenomics Chromium 3'v3
   Organism: Human
   Dir     : AB
-  #samples: 2
+  #samples: 4 multiplexed (2 physical)
   #cells  : 1311
-  Samples : AB1-2
+  Samples : ABM1-4 (AB1-2)
   QC      : not verified
   Comments: None
 

@@ -21,6 +21,7 @@ from .. import analysis
 from .. import utils
 from .. import fileops
 from ..qc.utils import verify_qc
+from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -147,6 +148,24 @@ def report_info(ap):
         report.append("\nNo analysis projects found")
     for project in projects:
         info = project.info
+        cellplex_config = None
+        if project.info.library_type == "CellPlex":
+            try:
+                cellplex_config = CellrangerMultiConfigCsv(
+                    os.path.join(project.dirn,
+                                 "10x_multi_config.csv"))
+                number_of_samples = "%s multiplexed (%s physical)" % \
+                                    (len(cellplex_config.sample_names),
+                                     len(project.samples))
+                sample_names = "%s (%s)" % \
+                               (cellplex_config.pretty_print_samples(),
+                                project.prettyPrintSamples())
+            except FileNotFoundError:
+                number_of_samples = "%s (physical)" % len(project.samples)
+                sample_names = project.prettyPrintSamples()
+        else:
+            number_of_samples = len(project.samples)
+            sample_names = project.prettyPrintSamples()
         report.append("\n- %s" % project.name)
         report.append("  %s" % ('-'*len(project.name),))
         report.append("  User    : %s" % info.user)
@@ -155,9 +174,9 @@ def report_info(ap):
         report.append("  SC Plat.: %s" % info.single_cell_platform)
         report.append("  Organism: %s" % info.organism)
         report.append("  Dir     : %s" % os.path.basename(project.dirn))
-        report.append("  #samples: %s" % len(project.samples))
+        report.append("  #samples: %s" % number_of_samples)
         report.append("  #cells  : %s" % default_value(info.number_of_cells))
-        report.append("  Samples : %s" % project.prettyPrintSamples())
+        report.append("  Samples : %s" % sample_names)
         report.append("  QC      : %s" % ('ok'
                                           if verify_qc(project)
                                           else 'not verified'))
