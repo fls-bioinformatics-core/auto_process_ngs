@@ -802,6 +802,8 @@ PBB,CMO302,PBB
                          { 'PJB1_GEX': '/data/runs/fastqs_gex',
                            'PJB2_MC': '/data/runs/fastqs_mc'
                          })
+        self.assertEqual(config_csv.pretty_print_samples(),
+                         "PBA, PBB")
 
     def test_cellranger_multi_config_csv_reduced_fields(self):
         """
@@ -840,3 +842,5 @@ PBB,CMO302
                          { 'PJB1_GEX': '/data/runs/fastqs_gex',
                            'PJB2_MC': '/data/runs/fastqs_mc'
                          })
+        self.assertEqual(config_csv.pretty_print_samples(),
+                         "PBA, PBB")
