@@ -1873,7 +1873,8 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
         samples = set()
         for result in self.result():
             for smpl in result:
-                if not self.args.samples or smpl in self.args.samples:
+                if self.args.samples is None or \
+                   smpl in self.args.samples:
                     samples.add(smpl)
         self.output.samples.extend(sorted(list(samples)))
         if self.output.samples:
