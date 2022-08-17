@@ -556,6 +556,16 @@ def fetch_value(ap,project,field):
         info = project.info
     except AttributeError:
         info = None
+    # 10x CellPlex data
+    if project.info.library_type == "CellPlex":
+        try:
+            cellplex_config = CellrangerMultiConfigCsv(
+                os.path.join(project.dirn,
+                             "10x_multi_config.csv"))
+        except FileNotFoundError:
+            cellplex_config = None
+    else:
+        cellplex_config = None
     # Generate value for supplied field name
     if field == 'datestamp':
         return IlluminaData.split_run_name(ap.run_name)[0]
@@ -590,14 +600,24 @@ def fetch_value(ap,project,field):
         return ('' if not ap.metadata.sequencer_model
                 else ap.metadata.sequencer_model)
     elif field == 'no_of_samples' or field == '#samples':
-        return str(len(project.samples))
+        if cellplex_config:
+            # Number of multiplexed samples
+            return str(len(cellplex_config.sample_names))
+        else:
+            # Number of "physical" samples
+            return str(len(project.samples))
     elif field == 'no_of_cells' or field == '#cells':
         return ('' if not info.number_of_cells
                 else str(info.number_of_cells))
     elif field == 'paired_end':
         return ('yes' if ap.paired_end else 'no')
     elif field == 'sample_names' or field == 'samples':
-        return project.prettyPrintSamples()
+        if cellplex_config:
+            # Names of multiplexed samples
+            return cellplex_config.pretty_print_samples()
+        else:
+            # Names of "physical" samples
+            return project.prettyPrintSamples()
     elif field == 'null' or field == '':
         return ''
     else:

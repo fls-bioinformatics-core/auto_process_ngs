@@ -717,7 +717,7 @@ Bcl2fastq : bcl2fastq 2.17.1.14
 Cellranger: cellranger 3.0.1
 
 2 projects:
-- 'AB':  Alison Bell           Human CellPlex (10xGenomics Chromium 3'v3) 2 samples/1311 cells (PI Audrey Bower)           
+- 'AB':  Alison Bell           Human CellPlex (10xGenomics Chromium 3'v3) 4 samples/1311 cells (PI Audrey Bower)           
 - 'CDE': Charles David Edwards Mouse ChIP-seq                             2 samples            (PI Colin Delaney Eccleston)
 
 Additional notes/comments:
