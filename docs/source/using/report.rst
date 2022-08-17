@@ -118,6 +118,9 @@ Field name                Associated value
 ``organism``              Organism(s) associated with the
                           project
 ``no_of_samples``         Number of samples in the project
+                          (for 10x Genomics CellPlex data
+                          this will be the number of
+                          multiplexed samples)
 ``#samples``              Alias for ``no_of_samples``
 ``no_of_cells``           Number of cells in the project,
                           for single-cell projects
@@ -126,6 +129,9 @@ Field name                Associated value
                           ``no`` if it was single-end
 ``sample_names``          Comma-separated list of sample
                           names associated with the project
+                          (for 10x Genomics CellPlex data
+                          this will be the names of the
+                          multiplexed samples)
 ``samples``               Alias for ``sample_names``
 ``null``                  Writes an empty field
 ========================= ========================
