@@ -43,6 +43,7 @@ from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import split_run_name_full
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import find_program
+from bcftbx.utils import pretty_print_names
 from .analysis import locate_project
 from .analysis import split_sample_reference
 from .command import Command
@@ -646,6 +647,8 @@ class CellrangerMultiConfigCsv:
       library
     - fastq_dirs: returns mapping of library names to the
       associated Fastq directory paths
+    - pretty_print_samples: returns a string with a 'nice'
+      description of the multiplexed sample names
     """
     def __init__(self,filen):
         """
@@ -805,6 +808,17 @@ class CellrangerMultiConfigCsv:
           sample_name (str): name of the sample of interest
         """
         return self._gex_libraries[name]
+
+    def pretty_print_samples(self):
+        """
+        Return string describing the multiplexed sample names
+
+        Wraps a call to 'pretty_print_names' function.
+
+        Returns:
+          String: pretty description of multiplexed sample names.
+        """
+        return pretty_print_names(self.sample_names)
 
 #######################################################################
 # Functions

@@ -21,6 +21,7 @@ from .. import analysis
 from .. import utils
 from .. import fileops
 from ..qc.utils import verify_qc
+from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -147,6 +148,24 @@ def report_info(ap):
         report.append("\nNo analysis projects found")
     for project in projects:
         info = project.info
+        cellplex_config = None
+        if project.info.library_type == "CellPlex":
+            try:
+                cellplex_config = CellrangerMultiConfigCsv(
+                    os.path.join(project.dirn,
+                                 "10x_multi_config.csv"))
+                number_of_samples = "%s multiplexed (%s physical)" % \
+                                    (len(cellplex_config.sample_names),
+                                     len(project.samples))
+                sample_names = "%s (%s)" % \
+                               (cellplex_config.pretty_print_samples(),
+                                project.prettyPrintSamples())
+            except FileNotFoundError:
+                number_of_samples = "%s (physical)" % len(project.samples)
+                sample_names = project.prettyPrintSamples()
+        else:
+            number_of_samples = len(project.samples)
+            sample_names = project.prettyPrintSamples()
         report.append("\n- %s" % project.name)
         report.append("  %s" % ('-'*len(project.name),))
         report.append("  User    : %s" % info.user)
@@ -155,9 +174,9 @@ def report_info(ap):
         report.append("  SC Plat.: %s" % info.single_cell_platform)
         report.append("  Organism: %s" % info.organism)
         report.append("  Dir     : %s" % os.path.basename(project.dirn))
-        report.append("  #samples: %s" % len(project.samples))
+        report.append("  #samples: %s" % number_of_samples)
         report.append("  #cells  : %s" % default_value(info.number_of_cells))
-        report.append("  Samples : %s" % project.prettyPrintSamples())
+        report.append("  Samples : %s" % sample_names)
         report.append("  QC      : %s" % ('ok'
                                           if verify_qc(project)
                                           else 'not verified'))
@@ -188,8 +207,20 @@ def report_concise(ap):
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     if analysis_dir.projects:
         for p in analysis_dir.projects:
-            samples = "%d sample%s" % (len(p.samples),
-                                       's' if len(p.samples) != 1
+            if p.info.library_type == "CellPlex":
+                # Multiplexed samples
+                try:
+                    cellplex_config = CellrangerMultiConfigCsv(
+                        os.path.join(p.dirn,
+                                     "10x_multi_config.csv"))
+                    number_of_samples = len(cellplex_config.sample_names)
+                except FileNotFoundError:
+                    number_of_samples = len(p.samples)
+            else:
+                # Physical samples
+                number_of_samples = len(p.samples)
+            samples = "%d sample%s" % (number_of_samples,
+                                       's' if number_of_samples != 1
                                        else '')
             if p.info.number_of_cells is not None:
                 samples += "/%d cell%s" % (p.info.number_of_cells,
@@ -382,8 +413,20 @@ def report_summary(ap):
             library = project_data['library_type']
             if project_data['single_cell_platform'] is not None:
                 library += " (%s)" % project_data['single_cell_platform']
-            samples = "%d sample%s" % (len(project.samples),
-                                       's' if len(project.samples) != 1 else '')
+            if project.info.library_type == "CellPlex":
+                # Multiplexed samples
+                try:
+                    cellplex_config = CellrangerMultiConfigCsv(
+                        os.path.join(project.dirn,
+                                     "10x_multi_config.csv"))
+                    number_of_samples = len(cellplex_config.sample_names)
+                except FileNotFoundError:
+                    number_of_samples = len(project.samples)
+            else:
+                # Physical samples
+                number_of_samples = len(project.samples)
+            samples = "%d sample%s" % (number_of_samples,
+                                       's' if number_of_samples != 1 else '')
             if project_data['number_of_cells'] is not None:
                 samples += "/%d cell%s" % (
                     int(project_data['number_of_cells']),
@@ -525,6 +568,16 @@ def fetch_value(ap,project,field):
         info = project.info
     except AttributeError:
         info = None
+    # 10x CellPlex data
+    if project.info.library_type == "CellPlex":
+        try:
+            cellplex_config = CellrangerMultiConfigCsv(
+                os.path.join(project.dirn,
+                             "10x_multi_config.csv"))
+        except FileNotFoundError:
+            cellplex_config = None
+    else:
+        cellplex_config = None
     # Generate value for supplied field name
     if field == 'datestamp':
         return IlluminaData.split_run_name(ap.run_name)[0]
@@ -559,14 +612,24 @@ def fetch_value(ap,project,field):
         return ('' if not ap.metadata.sequencer_model
                 else ap.metadata.sequencer_model)
     elif field == 'no_of_samples' or field == '#samples':
-        return str(len(project.samples))
+        if cellplex_config:
+            # Number of multiplexed samples
+            return str(len(cellplex_config.sample_names))
+        else:
+            # Number of "physical" samples
+            return str(len(project.samples))
     elif field == 'no_of_cells' or field == '#cells':
         return ('' if not info.number_of_cells
                 else str(info.number_of_cells))
     elif field == 'paired_end':
         return ('yes' if ap.paired_end else 'no')
     elif field == 'sample_names' or field == 'samples':
-        return project.prettyPrintSamples()
+        if cellplex_config:
+            # Names of multiplexed samples
+            return cellplex_config.pretty_print_samples()
+        else:
+            # Names of "physical" samples
+            return project.prettyPrintSamples()
     elif field == 'null' or field == '':
         return ''
     else:
