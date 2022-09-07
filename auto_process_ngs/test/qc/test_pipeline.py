@@ -2665,6 +2665,69 @@ PBB,CMO302,PBB
                                                         "PJB",f)),
                             "Missing %s" % f)
 
+    #@unittest.skip("Skipped")
+    def test_qcpipeline_cellplex_no_10x_multi_config_file(self):
+        """QCPipeline: 10xGenomics Cellplex run without '10x_multi_config.csv' file
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 version="6.0.0")
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock 10x Cellplex analysis project
+        p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                       "PJB1_GEX_S1_R2_001.fastq.gz",
+                                       "PJB2_MC_S2_R1_001.fastq.gz",
+                                       "PJB2_MC_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Chromium 3\'v3',
+                                           'Library type': 'CellPlex' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_arc_references=
+                           { 'human':
+                             '/data/refdata-cellranger-gex-GRCh38-2020-A' },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_CellPlex")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.cellranger_version,"6.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        # Check that unexpected outputs are not present
+        for f in ("qc/cellranger_multi",
+                  "qc/cellranger_count",):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                         "PJB",f)),
+                            "Found %s (shouldn't be present)" % f)
+
     def test_qcpipeline_with_10x_visium_data(self):
         """QCPipeline: single cell spatial RNA-seq QC run (10x_Visium)
         """
