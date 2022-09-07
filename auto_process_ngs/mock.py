@@ -1777,6 +1777,8 @@ class Mock10xPackageExe:
                assert_include_introns=None,
                assert_chemistry=None,
                assert_force_cells=None,
+               assert_filter_single_index=None,
+               assert_filter_dual_index=None,
                reads=None,multiome_data=None,
                version=None):
         """
@@ -1808,6 +1810,16 @@ class Mock10xPackageExe:
           assert_force_cells (int): if set then
             check that the '--force-cells' option
             was specified with this value
+          assert_filter_single_index (bool): if
+            set to True/False then check that
+            the '--filter-single-index' option
+            was/n't supplied (ignored if set to
+            None)
+          assert_filter_dual_index (bool): if
+            set to True/False then check that
+            the '--filter-dual-index' option
+            was/n't supplied (ignored if set to
+            None)
           reads (list): list of 'reads' that
             will be created
           multiome_data (str): either 'GEX' or
@@ -1830,6 +1842,8 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            assert_include_introns=%s,
                            assert_chemistry=%s,
                            assert_force_cells=%s,
+                           assert_filter_single_index=%s,
+                           assert_filter_dual_index=%s,
                            reads=%s,
                            multiome_data=%s,
                            version=%s).main(sys.argv[1:]))
@@ -1845,6 +1859,8 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                     if assert_chemistry is not None
                     else None),
                    assert_force_cells,
+                   assert_filter_single_index,
+                   assert_filter_dual_index,
                    reads,
                    ("\"%s\"" % multiome_data
                     if multiome_data is not None
@@ -1865,6 +1881,8 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                  assert_include_introns=None,
                  assert_chemistry=None,
                  assert_force_cells=None,
+                 assert_filter_single_index=None,
+                 assert_filter_dual_index=None,
                  reads=None,
                  multiome_data=None,
                  version=None):
@@ -1890,6 +1908,8 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._assert_include_introns = assert_include_introns
         self._assert_chemistry = assert_chemistry
         self._assert_force_cells = assert_force_cells
+        self._assert_filter_single_index = assert_filter_single_index
+        self._assert_filter_dual_index = assert_filter_dual_index
         self._multiome_data = str(multiome_data).upper()
         if self._package_name == 'cellranger-arc':
             assert self._multiome_data is not None
@@ -2062,6 +2082,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         mkfastq.add_argument("--minimum-trimmed-read-length",action="store")
         mkfastq.add_argument("--mask-short-adapter-reads",action="store")
         mkfastq.add_argument("--ignore-dual-index",action="store_true")
+        mkfastq.add_argument("--filter-single-index",action="store_true")
+        mkfastq.add_argument("--filter-dual-index",action="store_true")
         mkfastq.add_argument("--jobmode",action="store")
         mkfastq.add_argument("--localcores",action="store")
         mkfastq.add_argument("--localmem",action="store")
@@ -2160,6 +2182,18 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         if self._assert_force_cells:
             print("Checking --force-cells: %s" % args.force_cells)
             assert(args.force_cells == self._assert_force_cells)
+        # Check --filter-single-index
+        if self._assert_filter_single_index is not None:
+            print("Checking --filter-single-index: %s" %
+                  args.filter_single_index)
+            assert(args.filter_single_index ==
+                   self._assert_filter_single_index)
+        # Check --filter-dual-index
+        if self._assert_filter_dual_index is not None:
+            print("Checking --filter-dual-index: %s" %
+                  args.filter_dual_index)
+            assert(args.filter_dual_index ==
+                   self._assert_filter_dual_index)
         # Handle commands
         if args.command == "mkfastq":
             ##################

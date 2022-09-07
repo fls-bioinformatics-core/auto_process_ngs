@@ -25,6 +25,7 @@ Pipeline task classes:
 - DemultiplexIcell8Atac
 - MergeFastqs
 - MergeFastqDirs
+- GetBasesMask10xMultiome
 - Run10xMkfastq
 - FastqStatistics
 - ReportProcessingQC
@@ -90,6 +91,7 @@ from ..tenx_genomics_utils import add_cellranger_args
 from ..tenx_genomics_utils import cellranger_info
 from ..tenx_genomics_utils import spaceranger_info
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
+from ..tenx_genomics_utils import get_bases_mask_10x_multiome
 from ..tenx_genomics_utils import make_qc_summary_html
 from ..utils import find_executables
 from .reporting import ProcessingQCReport
@@ -111,13 +113,17 @@ PROTOCOLS = ('standard',
              '10x_chromium_sc',
              '10x_atac',
              '10x_visium',
-             '10x_multiome',)
+             '10x_multiome',
+             '10x_multiome_atac',
+             '10x_multiome_gex')
 
 # 10xGenomics protocols
 PROTOCOLS_10X = ('10x_chromium_sc',
                  '10x_atac',
                  '10x_visium',
-                 '10x_multiome',)
+                 '10x_multiome',
+                 '10x_multiome_atac',
+                 '10x_multiome_gex')
 
 # Valid attribute names for lane subsets
 
@@ -132,6 +138,8 @@ LANE_SUBSET_ATTRS = (
     'create_fastq_for_index_read',
     'find_adapters_with_sliding_window',
     'no_lane_splitting',
+    'tenx_filter_single_index',
+    'tenx_filter_dual_index',
     'icell8_well_list',
     'icell8_atac_swap_i1_and_i2',
     'icell8_atac_reverse_complement',
@@ -468,6 +476,8 @@ class MakeFastqs(Pipeline):
                 self.params.create_fastq_for_index_read,
                 find_adapters_with_sliding_window=\
                 self.params.find_adapters_with_sliding_window,
+                tenx_filter_single_index=None,
+                tenx_filter_dual_index=None,
                 icell8_well_list=self._icell8_well_list,
                 icell8_atac_swap_i1_and_i2=\
                 self._icell8_atac_swap_i1_and_i2,
@@ -576,6 +586,20 @@ class MakeFastqs(Pipeline):
                 # 10xGenomics multiome
                 # Disable adapter trimming
                 self._update_subset(s,
+                                    trim_adapters=False)
+            elif protocol == '10x_multiome_atac':
+                # 10xGenomics multiome (ATAC)
+                # Disable adapter trimming and enable filter
+                # single index
+                self._update_subset(s,
+                                    tenx_filter_single_index=True,
+                                    trim_adapters=False)
+            elif protocol == '10x_multiome_gex':
+                # 10xGenomics multiome (GEX)
+                # Disable adapter trimming and enable filter
+                # dual index
+                self._update_subset(s,
+                                    tenx_filter_dual_index=True,
                                     trim_adapters=False)
             
         # Finally update parameters for user-defined
@@ -1058,6 +1082,12 @@ class MakeFastqs(Pipeline):
             # Use sliding window for adapter trimming
             find_adapters_with_sliding_window = \
                 subset['find_adapters_with_sliding_window']
+
+            ##############
+            # 10x Genomics
+            ##############
+            filter_single_index = subset['tenx_filter_single_index']
+            filter_dual_index = subset['tenx_filter_dual_index']
 
             #########
             # ICELL8
@@ -1591,7 +1621,9 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
 
             # 10x multiome
-            if protocol == "10x_multiome":
+            if protocol in ("10x_multiome",
+                            "10x_multiome_atac",
+                            "10x_multiome_gex"):
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_multiome is None:
                     get_bcl2fastq_for_10x_multiome = GetBcl2Fastq(
@@ -1610,6 +1642,14 @@ class MakeFastqs(Pipeline):
                     self.add_task(get_cellranger_arc,
                                   envmodules=\
                                   self.envmodules['cellranger_arc_mkfastq'])
+                # Get bases mask
+                get_bases_mask = GetBasesMask10xMultiome(
+                    "Get bases mask for 10xGenomics multiome",
+                    fetch_primary_data.output.run_dir,
+                    bases_mask,
+                    protocol=protocol
+                )
+                self.add_task(get_bases_mask)
                 # Run cellranger mkfastq
                 make_fastqs = Run10xMkfastq(
                     "Run cellranger-arc mkfastq%s" %
@@ -1619,11 +1659,13 @@ class MakeFastqs(Pipeline):
                     fastq_out_dir,
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
-                    bases_mask=bases_mask,
+                    bases_mask=get_bases_mask.output.bases_mask,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
                     mask_short_adapter_reads,
+                    filter_single_index=filter_single_index,
+                    filter_dual_index=filter_dual_index,
                     jobmode=self.params.cellranger_jobmode,
                     mempercore=self.params.cellranger_mempercore,
                     maxjobs=self.params.cellranger_maxjobs,
@@ -3074,6 +3116,49 @@ class DemultiplexIcell8Atac(PipelineTask):
             print("Moving output to final location: %s" % self.args.out_dir)
             os.rename(bcl2fastq_dir,self.args.out_dir)
 
+class GetBasesMask10xMultiome(PipelineTask):
+    """
+    Sets the bases mask string for 10x Genomics single cell multiome
+    """
+    def init(self,run_dir,bases_mask,protocol):
+        """
+        Initialise the GetBasesMask10xMultiome task
+
+        Arguments:
+          run_dir (str): path to the directory with
+            data from the sequencer run
+          bases_mask (str): input bases mask string
+            (if set then will passed directly to
+            output)
+          protocol (str): protocol being used
+
+        Outputs:
+          bases_mask (str): bases mask to use in
+            CellRanger-ARC for processing these data
+        """
+        self.add_output("bases_mask",Param(type='str'))
+    def setup(self):
+        # Check if explicit bases mask already supplied
+        if self.args.bases_mask == "auto":
+            bases_mask = None
+        else:
+            bases_mask = self.args.bases_mask
+        # Update bases mask for ATAC or GEX protocols
+        if bases_mask is None and \
+           self.args.protocol in ("10x_multiome_atac",
+                                  "10x_multiome_gex"):
+            # Load input data
+            illumina_run = IlluminaRun(self.args.run_dir)
+            # Get library type
+            library_type = self.args.protocol.split('_')[-1]
+            print("Explicitly setting bases mask for '%s'" % library_type)
+            # Get updated bases mask
+            bases_mask = get_bases_mask_10x_multiome(
+                illumina_run.runinfo_xml,
+                library=library_type)
+            print("Updated bases mask: %s" % bases_mask)
+        self.output.bases_mask.set(bases_mask)
+
 class Run10xMkfastq(PipelineTask):
     """
     Runs 10xGenomics 'mkfastq' to generate Fastqs
@@ -3081,6 +3166,7 @@ class Run10xMkfastq(PipelineTask):
     def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
+             filter_single_index=None,filter_dual_index=None,
              jobmode='local',maxjobs=None,
              mempercore=None,jobinterval=None,
              localcores=None,localmem=None,
@@ -3102,6 +3188,16 @@ class Run10xMkfastq(PipelineTask):
             to cellranger via --minimum-trimmed-read-length
           mask_short_adapter_reads (int): if set then supply to
             cellranger via --mask-short-adapter-reads
+          filter_single_index (bool): for cellranger-arc, only
+            demultiplex samples identified by an i7-only sample
+            index, ignoring dual-indexed samples (which will
+            not be demultiplexed) (i.e. use --filter-single-index
+            option)
+          filter_dual_index (bool): for cellranger-arc, only
+            demultiplex samples identified by i7/i5 dual-indices
+            (e.g., SI-TT-A6), ignoring single-index samples
+            (which will not be demultiplexed) (i.e. use
+            --filter-dual-index option)
           jobmode (str): jobmode to use for
             running cellranger
           maxjobs (int): maximum number of concurrent
@@ -3294,6 +3390,11 @@ class Run10xMkfastq(PipelineTask):
         if self.args.mask_short_adapter_reads:
             mkfastq_cmd.add_args('--mask-short-adapter-reads',
                                  self.args.mask_short_adapter_reads)
+        if self.pkg == "cellranger-arc":
+            if self.args.filter_single_index:
+                mkfastq_cmd.add_args('--filter-single-index')
+            if self.args.filter_dual_index:
+                mkfastq_cmd.add_args('--filter-dual-index')
         add_cellranger_args(
             mkfastq_cmd,
             jobmode=self.args.jobmode,
