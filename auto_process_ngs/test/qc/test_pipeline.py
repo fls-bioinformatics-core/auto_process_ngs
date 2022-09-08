@@ -1927,6 +1927,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="7.0.0",
                                  assert_include_introns=True)
@@ -1961,6 +1967,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_extra_projects=[
@@ -1979,6 +1989,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -3367,6 +3380,12 @@ PBB,CMO302,PBB
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -3389,6 +3408,10 @@ PBB,CMO302,PBB
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-gex-GRCh38-2020-A' },
@@ -3405,6 +3428,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
