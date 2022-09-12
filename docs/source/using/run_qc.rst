@@ -54,31 +54,39 @@ QC modules
 
 The following QC modules are available within the QC pipeline:
 
-========================= ======================
-QC module                 Details
-========================= ======================
-``fastqc``                Runs `fastqc`_ for general quality metrics
-``fastq_screen``          Runs `fastq_screen`_ for a set of genome
-                          indexes, to verify sequences correspond to
-                          the expected organism (and check for
-                          contaminants)
-``sequence_lengths``      Examines distribution of sequence lengths
-                          and checks for padding and masking
-``strandedness``          Runs `fastq_strand`_ on the appropriate
-                          reads to indicate the strand-specificity of
-                          the sequence data (requires appropriate
-			  ``STAR`` indexes)
-``cellranger_count``      Single library analysis for each sample using
-                          `cellranger`_ ``count``
-``cellranger-atac_count`` Single library analysis for each sample using
-                          `cellranger_atac`_ ``count``
-``cellranger-arc_count``  Single cell multiome analysis using
-                          `cellranger_arc`_ ``count`` (requires
-                          :doc:`10x_multiome_libraries.info <../control_files/10x_multiome_libraries_info>`)
-``cellranger_multi``      Cell multiplexing analysis using
-                          `cellranger`_ ``multi`` (requires
-                          :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`)
-========================= ======================
+============================== ======================
+QC module                      Details
+============================== ======================
+``fastqc``                     Runs `fastqc`_ for general quality metrics
+``fastq_screen``               Runs `fastq_screen`_ for a set of genome
+                               indexes, to verify sequences correspond to
+                               the expected organism (and check for
+                               contaminants)
+``sequence_lengths``           Examines distribution of sequence lengths
+                               and checks for padding and masking
+``strandedness``               Runs `fastq_strand`_ on the appropriate
+                               reads to indicate the strand-specificity of
+                               the sequence data (requires appropriate
+			       ``STAR`` indexes)
+``picard_insert_size_metrics`` Runs `picard`_ ``CollectInsertSizeMetrics``
+                               on paired data to determine insert sizes
+``rseqc_genebody_coverage``    Runs `rseqc`_ ``geneBody_coverage.py`` to
+                               generate gene body coverage plot for all
+			       samples
+``qualimap_rnaseq``            Runs `qualimap`_ ``rnaseq`` to generate
+                               various metrics including coverage and
+			       genomic origin of reads
+``cellranger_count``           Single library analysis for each sample using
+                               `cellranger`_ ``count``
+``cellranger-atac_count``      Single library analysis for each sample using
+                               `cellranger_atac`_ ``count``
+``cellranger-arc_count``       Single cell multiome analysis using
+                               `cellranger_arc`_ ``count`` (requires
+                               :doc:`10x_multiome_libraries.info <../control_files/10x_multiome_libraries_info>`)
+``cellranger_multi``           Cell multiplexing analysis using
+                               `cellranger`_ ``multi`` (requires
+                               :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`)
+============================== ======================
 
 Appropriate reference data must be available (for example,
 ``STAR`` indexes or 10x Genomics reference datasets), and
@@ -90,6 +98,9 @@ data is not available.
 .. _fastqc:  http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
 .. _fastq_strand: https://genomics-bcftbx.readthedocs.io/en/latest/reference/qc_pipeline.html#fastq-strand
+.. _picard: https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-
+.. _rseqc: http://rseqc.sourceforge.net/#
+.. _qualimap: http://qualimap.conesalab.org/doc_html/command_line.html#rna-seq-qc
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger_atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
 .. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
