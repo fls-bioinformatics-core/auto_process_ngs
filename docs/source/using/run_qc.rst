@@ -106,7 +106,7 @@ data is not available.
 .. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
 .. _multiqc: http://multiqc.info/
 
-On successful completion of the pipeline for an HTML report is
+On successful completion of the pipeline an HTML report is
 generated for each project; these are described in
 :doc:`QC reports <../output/qc_reports>`. By default `multiQC`_
 is also run as part of the reporting.

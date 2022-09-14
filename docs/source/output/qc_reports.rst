@@ -42,11 +42,18 @@ For example:
 .. image:: ../images/qc/qc_report_summary.png
    :align: center
 
-The summary includes the following metrics for example sample
+The summary includes the following basic information for each sample
 and Fastq:
 
-* Number of reads or read pairs
-* Mean and range of sequence lengths
+* Sample name
+* Fastq names associated with each sample
+* Number of reads or read pairs for each Fastq
+* Mean and range of sequence lengths for each Fastq
+
+Additionally the following metrics are reported (typically in the
+form of small summary plots, which are described in the appropriate
+sections below):
+
 * :ref:`qc_report_quality_boxplots`
 * :ref:`qc_report_fastqc_summary_plots`
 * :ref:`qc_report_fastq_screen_summary_plots`
