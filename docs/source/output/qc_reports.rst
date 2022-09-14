@@ -1,6 +1,10 @@
 QC Reports
 ==========
 
+********
+Overview
+********
+
 The :doc:`auto_process run_qc <../using/run_qc>` command outputs an
 HTML report for the QC for each of the projects in the analysis
 directory, which enables an assessment of the quality of the Fastq
@@ -12,21 +16,36 @@ An example of the top of a QC report index page is shown below:
 .. image:: ../images/qc/qc_report_full.png
    :align: center
 
-The report consists of:
+****************
+Report structure
+****************
+
+Each report consists of a number of different elements, with the
+key component being a top-level summary section which contains:
 
 * :ref:`qc_report_project_metadata`
 * :ref:`qc_report_qc_summary_table`
-* :ref:`qc_report_qc_outputs_per_fastq`
+* :ref:`qc_report_single_library_analyses`
+* :ref:`qc_report_dataset_wide_metrics`
+
+Below this top-level summary there are more detailed per-Fastq
+reports (see :ref:`qc_report_qc_outputs_per_fastq`).
 
 .. _qc_report_project_metadata:
 
-************************
-Project metadata summary
-************************
+*******************************
+Project and QC metadata summary
+*******************************
 
-The project metadata table summarises information associated with the
-project, including the user, PI, library type, organisms and QC
-protocol.
+This section contains a number of tables and subsections which
+summarise information associated with the project and QC:
+
+* **General information** including the user, PI, library type,
+  organism(s) and QC protocol
+* **Processing software** and versions (if available)
+* **QC software** and versions (if available)
+* **Reference data** such as STAR indexes
+* **Comments** associated with the project
 
 .. _qc_report_qc_summary_table:
 
@@ -77,16 +96,6 @@ The sample and Fastq names in the table link through to the
 full QC outputs for the sample or Fastqs in question; other items
 (e.g. the quality boxplots) link to the relevant parts of the full
 QC outputs section (see :ref:`qc_report_qc_outputs_per_fastq`).
-
-An additional summary table may appear after this one with details
-of outputs from 10xGenomics single library analyses (see
-:ref:`qc_report_single_library_analyses`).
-
-.. note::
-
-   In earlier versions of the QC reports, links to single library
-   analyses were appended directly to the main summary table, and
-   no separate sigle library analyses table was present.
 
 .. _qc_report_quality_boxplots:
 
@@ -422,8 +431,9 @@ For example:
 
 .. _qc_report_single_library_analyses:
 
+***********************
 Single library analyses
------------------------
+***********************
 
 For 10xGenomics datasets single library analyses may also have
 been performed for each sample using the ``count`` command of the
@@ -452,6 +462,19 @@ be found in the appropriate documentation for the 10xGenomics pipeline:
    The full set of outputs can be found under the ``cellranger_count``
    subdirectory of the project directory, when single library
    analysis has been performed.
+
+.. _qc_report_dataset_wide_metrics:
+
+********************************
+Dataset-wide metrics and reports
+********************************
+
+This section contains any dataset-wide metrics and additional
+reports, including:
+
+* :ref:`qc_rseqc_gene_body_coverage`
+* :ref:`qc_collated_picard_insert_sizes`
+* :ref:`qc_multiqc_report`
 
 .. _qc_rseqc_gene_body_coverage:
 
