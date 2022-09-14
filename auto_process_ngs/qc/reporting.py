@@ -124,6 +124,9 @@ from .plots import uboxplot
 from .plots import ustrandplot
 from .plots import uduplicationplot
 from .plots import uadapterplot
+from .plots import uinsertsizeplot
+from .plots import ucoverageprofileplot
+from .plots import ugenomicoriginplot
 from .plots import encode_png
 from .qualimap import QualimapRnaseq
 from .rseqc import InferExperiment
@@ -2427,12 +2430,9 @@ class FastqGroupQCReporter:
         """
         Return a mini-plot with the Picard insert size histogram
         """
-        insert_size_metrics = self.insert_size_metrics(organism)
-        data = insert_size_metrics.histogram
-        p = Plot(50,40)
-        p.stripe(RGB_COLORS.lightgrey,RGB_COLORS.white)
-        p.plot(data,RGB_COLORS.red,fill=True)
-        return p.encoded_png()
+        return uinsertsizeplot(
+            self.insert_size_metrics(organism).histogram,
+            inline=True)
 
     def qualimap_rnaseq(self,organism):
         """
@@ -2450,53 +2450,22 @@ class FastqGroupQCReporter:
 
     def ucoverageprofileplot(self,organism):
         """
-        Return a mini-plot of the gene coverage profile
+        Return a mini-plot of the Qualimap gene coverage profile
         """
-        data = self.qualimap_rnaseq(organism).\
-               raw_coverage_profile_along_genes_total
-        p = Plot(50,40)
-        p.stripe(RGB_COLORS.gainsboro,RGB_COLORS.white)
-        p.plot(data,RGB_COLORS.red,interpolation="minmax")
-        return p.encoded_png()
+        return ucoverageprofileplot(
+            self.qualimap_rnaseq(organism).\
+            raw_coverage_profile_along_genes_total,
+            inline=True)
 
     def ugenomicoriginplot(self,organism,width=100,height=40):
         """
-        Return a mini-barplot with the genomic origin of reads data
+        Return a mini-barplot of the Qualimap genomic origin of reads data
         """
-        # Internal constants
-        names = ['exonic',
-                 'intronic',
-                 'intergenic',
-                 'overlapping exon',
-                 'rRNA']
-        # Colours taken from 'IBM' palette
-        # See e.g. https://davidmathlogic.com/colorblind/
-        colors = {
-            'exonic': (100,143,255),
-            'intronic': (120,94,240),
-            'intergenic': (254,97,0),
-            'overlapping exon': (220,38,127),
-            'rRNA': (255,176,0)
-        }
-        # Fetch data
-        data = self.qualimap_rnaseq(organism).reads_genomic_origin
-        # Filter list of names to just those in the data
-        names = [n for n in names if n in data]
-        # Set up barplot
-        bar_length = width - 4
-        bar_height = height - 10
-        # Determine limits of the bar
-        x1 = (width - bar_length)/2
-        y1 = (height - bar_height)/2
-        x2 = (width - bar_length)/2 + bar_length
-        y2 = (height - bar_height)/2 + bar_height
-        # Create plot
-        p = Plot(width,height)
-        p.bar([data[name][1] for name in names],
-              (x1,y1),
-              (x2,y2),
-              [colors[name] for name in names])
-        return p.encoded_png()
+        return ugenomicoriginplot(
+            self.qualimap_rnaseq(organism).reads_genomic_origin,
+            width=width,
+            height=height,
+            inline=True)
 
     def strandedness(self):
         """

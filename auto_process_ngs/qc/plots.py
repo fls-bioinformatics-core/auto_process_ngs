@@ -1322,6 +1322,103 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
                      inline=inline,
                      ext=".uadapters.png")
 
+def uinsertsizeplot(data,outfile=None,inline=False):
+    """
+    Return a mini-plot with the Picard insert size histogram
+
+    Arguments:
+      data (dict): dictionary mapping insert sizes to
+        associated number of alignments (from Picard
+        CollectInsertSizeMetrics)
+      outfile (str): path for the output PNG
+      inline (bool): if True then returns the PNG
+        as base64 encoded string rather than as a file
+    """
+    p = Plot(50,40)
+    p.stripe(RGB_COLORS.lightgrey,RGB_COLORS.white)
+    p.plot(data,RGB_COLORS.red,fill=True)
+    # Output the plot
+    if inline:
+        return p.encoded_png()
+    else:
+        return p.save(outfile,
+                      ext=".insertsize.png")
+
+def ucoverageprofileplot(data,outfile=None,inline=False):
+    """
+    Return a mini-plot of the Qualimap gene body coverage profile
+
+    Arguments:
+      data (dict): dictionary mapping transcript positions
+        (percentile) to associated mean coverage depth (from
+        Qualimap's RNA-seq analysis)
+      outfile (str): path for the output PNG
+      inline (bool): if True then returns the PNG
+        as base64 encoded string rather than as a file
+    """
+    p = Plot(50,40)
+    p.stripe(RGB_COLORS.gainsboro,RGB_COLORS.white)
+    p.plot(data,RGB_COLORS.red,interpolation="minmax")
+    # Output the plot
+    if inline:
+        return p.encoded_png()
+    else:
+        return p.save(outfile,
+                      ext=".coverageprofile.png")
+
+def ugenomicoriginplot(data,width=100,height=40,outfile=None,
+                       inline=False):
+    """
+    Return a mini barplot of the Qualimap genomic origin of reads
+
+    Arguments:
+      data (dict): dictionary mapping genomic origin names
+        to the associated percentage of reads (from Qualimap
+        rnaseq 'Genomic Origin of Reads')
+      height (int): plot height in pixels
+      width (int): plot width in pixels
+      outfile (str): path for the output PNG
+      inline (bool): if True then returns the PNG
+        as base64 encoded string rather than as a file
+    """
+    # Internal constants
+    names = ['exonic',
+             'intronic',
+             'intergenic',
+             'overlapping exon',
+             'rRNA']
+    # Colours taken from 'IBM' palette
+    # See e.g. https://davidmathlogic.com/colorblind/
+    colors = {
+        'exonic': (100,143,255),
+        'intronic': (120,94,240),
+        'intergenic': (254,97,0),
+        'overlapping exon': (220,38,127),
+        'rRNA': (255,176,0)
+    }
+    # Filter list of names to just those in the data
+    names = [n for n in names if n in data]
+    # Set up barplot
+    bar_length = width - 4
+    bar_height = height - 10
+    # Determine limits of the bar
+    x1 = (width - bar_length)/2
+    y1 = (height - bar_height)/2
+    x2 = (width - bar_length)/2 + bar_length
+    y2 = (height - bar_height)/2 + bar_height
+    # Create plot
+    p = Plot(width,height)
+    p.bar([data[name][1] for name in names],
+          (x1,y1),
+          (x2,y2),
+          [colors[name] for name in names])
+    # Output the plot
+    if inline:
+        return p.encoded_png()
+    else:
+        return p.save(outfile,
+                      ext=".genomicorigin.png")
+
 def make_plot(img,outfile=None,inline=False,ext=".plot.png"):
     """
     Internal: output PNG plots from Image objects
