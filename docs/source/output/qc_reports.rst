@@ -55,6 +55,9 @@ and Fastq:
 * :ref:`qc_report_sequence_length_dist_plots`
 * :ref:`qc_report_sequence_duplication_plots`
 * :ref:`qc_report_adapter_summary_plots`
+* :ref:`qc_report_insert_size_dist_plots`
+* :ref:`qc_report_qualimap_rnaseq_coverage`
+* :ref:`qc_report_qualimap_rnaseq_origin_genomic_reads`
 
 One purpose of this table is to help pick up on trends and identify
 any outliers within the dataset as a whole; hence the main function
@@ -364,6 +367,51 @@ For example:
 .. |adapter_uplot_no_adptrs|  image:: ../images/auto/qc/adapter_uplot_no_adptrs.png
 .. |adapter_uplot_adptrs_sml| image:: ../images/auto/qc/adapter_uplot_adptrs_sml.png
 .. |adapter_uplot_adptrs_lrg| image:: ../images/auto/qc/adapter_uplot_adptrs_lrg.png
+
+.. _qc_report_insert_size_dist_plots:
+
+Insert size distribution plots
+------------------------------
+
+These plots are small versions of the insert size distribution
+histograms output by Picard's ``CollectInsertSizeMetrics`` utility.
+
+For example:
+
+.. image:: ../images/auto/qc/picard_insert_size_uplot.png
+   :align: center
+
+The insert size metrics are also collated across all samples into
+a single TSV file (see :ref:`qc_collated_picard_insert_sizes`).
+
+.. _qc_report_qualimap_rnaseq_coverage:
+
+Qualimap coverage plots
+-----------------------
+
+Plot summarising the mean coverage profile of all transcripts with
+non-zero coverage as produced by Qualimap's RNA-seq analysis;
+essentially these are the data from the
+*coverage_profile_along_genes_(total).txt* output file.
+
+For example:
+
+.. image:: ../images/auto/qc/qualimap_gene_body_coverage_uplot.png
+   :align: center
+
+.. _qc_report_qualimap_rnaseq_origin_genomic_reads:
+
+Qualimap origin of genomic reads plots
+--------------------------------------
+
+Bar chart summarising the genomic origin of reads data from Qualimap's
+RNA-seq analysis; specifically this indicates the fraction of the read
+alignments which fall into exonic, intronic and intergenic regions.
+
+For example:
+
+.. image:: ../images/auto/qc/qualimap_genomic_origin_reads.png
+   :align: center
 
 .. _qc_report_single_library_analyses:
 
