@@ -71,6 +71,9 @@ class QualimapRnaseq(object):
     - input (dict): access values in the 'Input' section
     - reads_genomic_origin (dict): access values in the
       'Reads Genomic Origin' section
+    - raw_coverage_profile_along_genes_total (dict): access
+      values from the 'coverage_profile_along_genes_(total).txt'
+      file
 
     """
     def __init__(self,qualimap_dir):
