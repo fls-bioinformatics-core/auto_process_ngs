@@ -51,6 +51,7 @@ from .docwriter import Document
 from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
+from .utils import parse_version
 from .bcl2fastq.utils import get_bases_mask
 from . import css_rules
 
@@ -282,7 +283,7 @@ class AtacSummary(MetricsSummary):
         Only supported for Cellranger ATAC < 2.0.0; raises
         AttributeError otherwise.
         """
-        if self.version != "2.0.0":
+        if parse_version(self.version) < parse_version("2.0.0"):
             # Only supported for pre-2.0.0
             return self.fetch('cells_detected')
         else:
@@ -296,7 +297,7 @@ class AtacSummary(MetricsSummary):
         Only supported for Cellranger ATAC < 2.0.0; raises
         AttributeError otherwise.
         """
-        if self.version != "2.0.0":
+        if parse_version(self.version) < parse_version("2.0.0"):
             # Only supported for pre-2.0.0
             return self.fetch('annotated_cells')
         else:
@@ -310,8 +311,8 @@ class AtacSummary(MetricsSummary):
         Only supported for Cellranger ATAC < 2.0.0; raises
         AttributeError otherwise.
         """
-        if self.version == "2.0.0":
-            # Only supported for 2.0.0
+        if parse_version(self.version) >= parse_version("2.0.0"):
+            # Only supported for 2.0.0 and later
             return self.fetch('Estimated number of cells')
         else:
             # Not supported
