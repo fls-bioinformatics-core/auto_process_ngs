@@ -20,22 +20,28 @@ An example of the top of a QC report index page is shown below:
 Report structure
 ****************
 
-Each report consists of a number of different elements, with the
-key component being a top-level summary section which contains:
+Each report consists of a number of different elements which are
+shown schematically below:
+
+.. image:: ../images/qc/qc_report_schematic.png
+   :align: center
+
+The key element is the top-level summary section which itself
+consists of a number of subsections:
 
 * :ref:`qc_report_project_metadata`
 * :ref:`qc_report_qc_summary_table`
 * :ref:`qc_report_single_library_analyses`
 * :ref:`qc_report_dataset_wide_metrics`
 
-Below this top-level summary there are more detailed per-Fastq
-reports (see :ref:`qc_report_qc_outputs_per_fastq`).
+Below this top-level summary there are more detailed per-sample
+and per-Fastq reports (see :ref:`qc_report_qc_outputs_per_fastq`).
 
 .. _qc_report_project_metadata:
 
-*******************************
-Project and QC metadata summary
-*******************************
+*************************************
+Metadata, reference data and comments
+*************************************
 
 This section contains a number of tables and subsections which
 summarise information associated with the project and QC:
@@ -44,7 +50,7 @@ summarise information associated with the project and QC:
   organism(s) and QC protocol
 * **Processing software** and versions (if available)
 * **QC software** and versions (if available)
-* **Reference data** such as STAR indexes
+* **Reference data** such as Cellranger and STAR indexes
 * **Comments** associated with the project
 
 .. _qc_report_qc_summary_table:
