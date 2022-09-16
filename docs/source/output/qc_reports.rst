@@ -441,7 +441,7 @@ For example:
 Single library analyses
 ***********************
 
-For 10xGenomics datasets single library analyses may also have
+For 10x Genomics datasets single library analyses may also have
 been performed for each sample using the ``count`` command of the
 appropriate 10xGenomics pipeline (e.g. ``cellranger`` for scRNA-seq
 data, ``cellranger-atac`` for scATAC-seq data etc).
@@ -468,6 +468,13 @@ be found in the appropriate documentation for the 10xGenomics pipeline:
    The full set of outputs can be found under the ``cellranger_count``
    subdirectory of the project directory, when single library
    analysis has been performed.
+
+.. note::
+
+   For single cell multiome datasets there may also be a summary table
+   for CellRanger ARC's single library analyses; similarly for CellPlex
+   datasets a summary table for the multiplexing analysis may be
+   present (in both cases depending on the contents of the QC directory).
 
 .. _qc_report_dataset_wide_metrics:
 
