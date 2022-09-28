@@ -583,6 +583,9 @@ if __name__ == "__main__":
                 float(psutil.virtual_memory().total)/(1024.0**3)
                 *float(max_cores)/float(psutil.cpu_count()))
         print("-- Maximum memory: %s Gbs" % max_mem)
+        # Memory per core
+        mempercore = max_mem/float(max_cores)
+        print("-- Mem per core: %.1f Gbs" % mempercore)
         # Set number of threads for QC jobs
         if args.nthreads:
             nthreads = args.nthreads
@@ -593,9 +596,20 @@ if __name__ == "__main__":
         if args.nthreads:
             nthreads_star = args.nthreads
         else:
-            mempercore = max_mem/float(max_cores)
-            nthreads_star = int(math.ceil(32.0/mempercore))
+            nthreads_star = min(max_cores,
+                                int(math.ceil(32.0/mempercore)))
         print("-- Threads for STAR: %s" % nthreads_star)
+        if nthreads_star*mempercore < 32.0:
+            logger.warning("Insufficient memory for STAR?")
+        # Set number of cores for Qualimap jobs
+        if args.nthreads:
+            ncores_qualimap = args.nthreads
+        else:
+            ncores_qualimap = min(max_cores,
+                                  int(math.ceil(4.0/mempercore)*2))
+        print("-- Cores for Qualimap: %s" % ncores_qualimap)
+        if ncores_qualimap*mempercore < 8.0:
+            logger.warning("Insufficient memory for Qualimap?")
         # Remove limit on number of jobs
         print("-- Set maximum no of jobs to 'unlimited'")
         max_jobs = None
@@ -614,7 +628,7 @@ if __name__ == "__main__":
             'cellranger_runner': SimpleJobRunner(nslots=cellranger_localcores),
             'fastqc_runner': SimpleJobRunner(nslots=nthreads),
             'fastq_screen_runner': SimpleJobRunner(nslots=nthreads),
-            'qualimap_runner': default_runner,
+            'qualimap_runner': SimpleJobRunner(nslots=ncores_qualimap),
             'star_runner': SimpleJobRunner(nslots=nthreads_star),
             'verify_runner': default_runner,
             'report_runner': default_runner,
