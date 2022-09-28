@@ -46,7 +46,7 @@ from auto_process_ngs.tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
 from auto_process_ngs.qc.constants import PROTOCOLS
 
 # Module-specific logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("run_qc.py")
 
 # Versions and settings
 __version__ = auto_process_ngs.get_version()
