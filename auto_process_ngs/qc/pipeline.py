@@ -160,6 +160,7 @@ class QCPipeline(Pipeline):
         self.add_runner('fastqc_runner')
         self.add_runner('star_runner')
         self.add_runner('qualimap_runner')
+        self.add_runner('rseqc_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
@@ -866,6 +867,7 @@ class QCPipeline(Pipeline):
             os.path.join(qc_dir,'rseqc_genebody_coverage',organism_name),
             name=project.name)
         self.add_task(rseqc_gene_body_coverage,
+                      runner=self.runners['rseqc_runner'],
                       log_dir=log_dir)
         for task in post_tasks:
             rseqc_gene_body_coverage.required_by(task)
