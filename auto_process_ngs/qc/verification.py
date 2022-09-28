@@ -226,7 +226,8 @@ class QCVerifier(QCOutputs):
                          annotation_gtf=None,
                          cellranger_version=None,
                          cellranger_refdata=None,
-                         cellranger_use_multi_config=None):
+                         cellranger_use_multi_config=None,
+                         **extra_params):
         """
         Verify QC outputs for specific QC module
 
@@ -252,6 +253,8 @@ class QCVerifier(QCOutputs):
             cellranger count verification will attempt to
             use data (GEX samples and reference dataset) from
             the '10x_multi_config.csv' file
+          extra_params (mapping): any additional parameters
+            not required for verification
 
         Returns:
           Boolean: True if all outputs are present, False
