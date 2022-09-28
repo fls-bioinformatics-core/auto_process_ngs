@@ -167,9 +167,15 @@ QC_PROTOCOLS = {
             'strandedness',
             'rseqc_genebody_coverage',
             'qualimap_rnaseq',
-            'cellranger_count(cellranger_version=*;'
-                             'cellranger_refdata=*)',
-            'cellranger-arc_count'
+            'cellranger-arc_count',
+            # Also run Cellranger
+            # Set the chemistry to 'ARC-v1' and library to 'snRNA-seq'
+            # See https://kb.10xgenomics.com/hc/en-us/articles/360059656912
+            'cellranger_count(chemistry=ARC-v1;'
+                             'library=snRNA-seq;'
+                             'cellranger_version=*;'
+                             'cellranger_refdata=*;'
+                             'set_metadata=False)'
         ]
     },
 
@@ -187,8 +193,14 @@ QC_PROTOCOLS = {
             'rseqc_genebody_coverage',
             'qualimap_rnaseq',
             'cellranger-arc_count',
-            'cellranger-atac_count(cellranger_version=*;'
-                                  'cellranger_refdata=*)'
+            # Also run Cellranger ATAC
+            # Set the chemistry to 'ARC-v1' and library to 'scATAC-seq'
+            # See https://kb.10xgenomics.com/hc/en-us/articles/360061165691
+            'cellranger-atac_count(chemistry=ARC-v1;'
+                                  'library=scATAC-seq;'
+                                  'cellranger_version=*;'
+                                  'cellranger_refdata=*;'
+                                  'set_metadata=False)'
         ]
     },
 
@@ -204,7 +216,8 @@ QC_PROTOCOLS = {
             'strandedness',
             'rseqc_genebody_coverage',
             'qualimap_rnaseq',
-            'cellranger_count(cellranger_use_multi_config=True)',
+            'cellranger_count(cellranger_use_multi_config=True;'
+                             'set_metadata=False)',
             'cellranger_multi'
         ]
     },
