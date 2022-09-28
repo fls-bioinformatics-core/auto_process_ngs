@@ -346,6 +346,7 @@ class Settings:
                      'bcl_convert',
                      'qc',
                      'qualimap',
+                     'rseqc',
                      'star',
                      'stats',
                      'rsync',
@@ -360,6 +361,7 @@ class Settings:
         for name in ('fastqc',
                      'fastq_screen',
                      'qualimap',
+                     'rseqc',
                      'star',):
             self.runners[name] = config.getrunner('runners',name,
                                                   self.runners.qc)

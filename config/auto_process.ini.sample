@@ -136,6 +136,7 @@ bcl_convert = SimpleJobRunner
 fastqc = SimpleJobRunner
 fastq_screen  = SimpleJobRunner
 qualimap = SimpleJobRunner
+rseqc = SimpleJobRunner
 star = SimpleJobRunner
 stats = SimpleJobRunner
 rsync = SimpleJobRunner
