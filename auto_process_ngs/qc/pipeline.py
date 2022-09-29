@@ -416,7 +416,7 @@ class QCPipeline(Pipeline):
                     project,
                     qc_dir,
                     self.params.fastq_screens,
-                    qc_protocol=qc_protocol,
+                    read_numbers=read_numbers.seq_data,
                     legacy=self.params.legacy_screens,
                     verbose=self.params.VERBOSE
                 )
@@ -1302,7 +1302,7 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
     """
     Check the outputs from FastqScreen
     """
-    def init(self,project,qc_dir,screens,qc_protocol=None,
+    def init(self,project,qc_dir,screens,read_numbers=None,
              legacy=False,verbose=False):
         """
         Initialise the CheckFastqScreenOutputs task.
@@ -1315,6 +1315,7 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
           screens (mapping): mapping of screen names to
             FastqScreen conf files
           qc_protocol (str): QC protocol to use
+          read_numbers (list): read numbers to include
           legacy (bool): if True then use 'legacy' naming
             convention for output files (default is to
             use new format)
@@ -1342,7 +1343,7 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
                           self.args.project,
                           self.args.qc_dir,
                           screen,
-                          self.args.qc_protocol,
+                          self.args.read_numbers,
                           legacy=self.args.legacy)
     def finish(self):
         fastqs = set()
