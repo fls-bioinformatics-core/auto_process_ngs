@@ -1314,7 +1314,6 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           screens (mapping): mapping of screen names to
             FastqScreen conf files
-          qc_protocol (str): QC protocol to use
           read_numbers (list): read numbers to include
           legacy (bool): if True then use 'legacy' naming
             convention for output files (default is to
@@ -1491,7 +1490,6 @@ class CheckFastQCOutputs(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           read_numbers (list): list of read numbers to
             include
-          qc_protocol (str): QC protocol to use
           verbose (bool): if True then print additional
             information from the task
 
