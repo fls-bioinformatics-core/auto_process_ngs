@@ -1711,7 +1711,7 @@ def check_fastq_screen_outputs(project,qc_dir,screen,read_numbers=None,
                 fastqs.add(fastq)
     return sorted(list(fastqs))
 
-def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
+def check_fastqc_outputs(project,qc_dir,read_numbers=None):
     """
     Return Fastqs missing QC outputs from FastQC
 
@@ -1725,9 +1725,8 @@ def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
       qc_dir (str): path to the QC directory (relative
         path is assumed to be a subdirectory of the
         project)
-      qc_protocol (str): QC protocol to predict outputs
-        for; if not set then defaults to standard QC
-        based on ended-ness
+      read_numbers (list): read numbers to predict
+        outputs for
 
     Returns:
       List: list of Fastq files with missing outputs.
@@ -1737,8 +1736,8 @@ def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
     fastqs = set()
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
-        read_numbers = get_read_numbers(qc_protocol).qc
-        if project.fastq_attrs(fastq).read_number not in read_numbers:
+        if read_numbers and \
+           project.fastq_attrs(fastq).read_number not in read_numbers:
             # Ignore non-QC reads
             continue
         # FastQC outputs

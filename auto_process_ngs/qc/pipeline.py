@@ -456,7 +456,7 @@ class QCPipeline(Pipeline):
                     project_name,
                     project,
                     qc_dir,
-                    qc_protocol=qc_protocol,
+                    read_numbers=read_numbers.qc,
                     verbose=self.params.VERBOSE
                 )
                 self.add_task(check_fastqc,
@@ -1480,7 +1480,7 @@ class CheckFastQCOutputs(PipelineFunctionTask):
     """
     Check the outputs from FastQC
     """
-    def init(self,project,qc_dir,qc_protocol,verbose=False):
+    def init(self,project,qc_dir,read_numbers,verbose=False):
         """
         Initialise the CheckFastQCOutputs task.
 
@@ -1489,6 +1489,8 @@ class CheckFastQCOutputs(PipelineFunctionTask):
             QC for
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
+          read_numbers (list): list of read numbers to
+            include
           qc_protocol (str): QC protocol to use
           verbose (bool): if True then print additional
             information from the task
@@ -1505,7 +1507,7 @@ class CheckFastQCOutputs(PipelineFunctionTask):
                       check_fastqc_outputs,
                       self.args.project,
                       self.args.qc_dir,
-                      self.args.qc_protocol)
+                      self.args.read_numbers)
     def finish(self):
         fastqs = set()
         for result in self.result():

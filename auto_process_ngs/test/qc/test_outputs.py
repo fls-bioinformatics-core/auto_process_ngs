@@ -2245,9 +2245,9 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
 
-    def test_check_fastqc_outputs_standardPE_all_missing(self):
+    def test_check_fastqc_outputs_paired_end_all_missing(self):
         """
-        check_fastqc_outputs: all FastQC outputs missing (standardPE)
+        check_fastqc_outputs: all FastQC outputs missing (paired end)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -2259,12 +2259,12 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="standardPE"),
+                                              read_numbers=(1,2)),
                          project.fastqs)
 
-    def test_check_fastqc_outputs_standardPE_all_present(self):
+    def test_check_fastqc_outputs_paired_end_all_present(self):
         """
-        check_fastqc_outputs: all FastQC outputs present (standardPE)
+        check_fastqc_outputs: all FastQC outputs present (paired end)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -2279,12 +2279,12 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="standardPE"),
+                                              read_numbers=(1,2)),
                          [])
 
-    def test_check_fastqc_outputs_standardPE_some_missing(self):
+    def test_check_fastqc_outputs_paired_end_some_missing(self):
         """
-        check_fastqc_outputs: some FastQC outputs missing (standardPE)
+        check_fastqc_outputs: some FastQC outputs missing (paired end)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -2302,13 +2302,13 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="standardPE"),
+                                              read_numbers=(1,2)),
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R1_001.fastq.gz")])
 
-    def test_check_fastqc_outputs_standardSE_all_missing(self):
+    def test_check_fastqc_outputs_single_end_all_missing(self):
         """
-        check_fastqc_outputs: all FastQC outputs missing (standardSE)
+        check_fastqc_outputs: all FastQC outputs missing (single end)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
@@ -2319,12 +2319,12 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="standardSE"),
+                                              read_numbers=(1,)),
                          project.fastqs)
 
-    def test_check_fastqc_outputs_standardSE_all_present(self):
+    def test_check_fastqc_outputs_single_end_all_present(self):
         """
-        check_fastqc_outputs: all FastQC outputs present (standardSE)
+        check_fastqc_outputs: all FastQC outputs present (single end)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
@@ -2338,12 +2338,12 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="standardSE"),
+                                              read_numbers=(1,)),
                          [])
 
-    def test_check_fastqc_outputs_standardSE_some_missing(self):
+    def test_check_fastqc_outputs_single_end_some_missing(self):
         """
-        check_fastqc_outputs: some FastQC outputs missing (standardSE)
+        check_fastqc_outputs: some FastQC outputs missing (single end)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",),
@@ -2360,13 +2360,13 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="standardSE"),
+                                              read_numbers=(1,)),
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R1_001.fastq.gz")])
 
-    def test_check_fastqc_outputs_singlecell_all_missing(self):
+    def test_check_fastqc_outputs_single_cell_all_missing(self):
         """
-        check_fastqc_outputs: all FastQC outputs missing (singlecell)
+        check_fastqc_outputs: all FastQC outputs missing (single cell)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -2378,12 +2378,12 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="singlecell"),
+                                              read_numbers=(1,2,)),
                          project.fastqs)
 
-    def test_check_fastqc_outputs_singlecell_all_present(self):
+    def test_check_fastqc_outputs_single_cell_all_present(self):
         """
-        check_fastqc_outputs: all FastQC outputs present (singlecell)
+        check_fastqc_outputs: all FastQC outputs present (single cell)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -2398,12 +2398,12 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="singlecell"),
+                                              read_numbers=(1,2,)),
                          [])
 
-    def test_check_fastqc_outputs_singlecell_some_missing(self):
+    def test_check_fastqc_outputs_single_cell_some_missing(self):
         """
-        check_fastqc_outputs: some FastQC outputs missing (singlecell)
+        check_fastqc_outputs: some FastQC outputs missing (single cell)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -2421,7 +2421,7 @@ class TestCheckFastQCOutputs(unittest.TestCase):
         # Check
         self.assertEqual(check_fastqc_outputs(project,
                                               qc_dir="qc",
-                                              qc_protocol="singlecell"),
+                                              read_numbers=(1,2,)),
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R1_001.fastq.gz")])
 
