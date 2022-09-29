@@ -212,6 +212,22 @@ class QCPipeline(Pipeline):
         # Fetch the QC modules and read data
         reads,qc_modules = fetch_protocol_definition(qc_protocol)
 
+        # Read numbers with sequence data (based on protocol)
+        # Used to set which Fastqs should be mapped
+        read_numbers = get_read_numbers(qc_protocol).seq_data
+
+        # Indicate if data are paired
+        paired = (len(read_numbers) > 1)
+
+        # Determine if BAM files are required
+        require_bam_files = False
+        for qc_module in ('picard_insert_size_metrics',
+                          'rseqc_genebody_coverage',
+                          'qualimap_rnaseq'):
+            if qc_module in qc_modules:
+                require_bam_files = True
+                break
+
         # Clone the supplied project
         project = copy_analysis_project(project,fastq_dir=fastq_dir)
 
@@ -231,6 +247,12 @@ class QCPipeline(Pipeline):
         # Sort out other parameters
         if organism is None:
             organism = project.info.organism
+
+        # Sanitised organism name
+        organism_name = str(organism).\
+                        strip().\
+                        lower().\
+                        replace(' ','_')
 
         # Report details
         self.report("-- Protocol   : %s" % qc_protocol)
@@ -310,6 +332,54 @@ class QCPipeline(Pipeline):
                       runner=self.runners['report_runner'],
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
+
+        # Set up tasks to generate and characterise BAM files
+        if require_bam_files:
+
+            # Get STAR index
+            get_star_index = GetReferenceDataset(
+                "%s: get STAR index for '%s'" % (project.name,
+                                                 organism),
+                organism,
+                self.params.star_indexes)
+            self.add_task(get_star_index)
+            qc_metadata['star_index'] = \
+                get_star_index.output.reference_dataset
+
+            # Fetch BAM files
+            get_bam_files = GetBAMFiles(
+                "%s: get BAM files" % project.name,
+                project.fastqs,
+                get_star_index.output.reference_dataset,
+                os.path.join(qc_dir,'__bam_files',organism_name),
+                self.params.fastq_subset,
+                self.params.nthreads,
+                reads=read_numbers,
+                verbose=self.params.VERBOSE)
+            self.add_task(get_bam_files,
+                          requires=(setup_qc_dirs,),
+                          runner=self.runners['star_runner'],
+                          log_dir=log_dir)
+
+            # Get reference gene model for RSeQC
+            get_reference_gene_model = GetReferenceDataset(
+                "%s: get RSeQC reference gene model for '%s'" %
+                (project.name,
+                 organism),
+                organism,
+                self.params.annotation_bed_files)
+            self.add_task(get_reference_gene_model,
+                          log_dir=log_dir)
+
+            # Run RSeQC infer experiment
+            rseqc_infer_experiment = RunRSeQCInferExperiment(
+                "%s: infer experiment from BAM files (RSeQC)" %
+                project.name,
+                get_bam_files.output.bam_files,
+                get_reference_gene_model.output.reference_dataset,
+                os.path.join(qc_dir,'rseqc_infer_experiment',organism_name))
+            self.add_task(rseqc_infer_experiment,
+                          log_dir=log_dir)
 
         ################
         # Add QC modules
@@ -648,16 +718,76 @@ class QCPipeline(Pipeline):
                               requires=(run_cellranger_multi,),)
                 verify_qc.requires(set_cellranger_cell_count)
 
-        # Additional QC metrics
-        if organism:
-            self.add_extended_metrics(project,
-                                      qc_protocol,
-                                      qc_dir,
-                                      organism,
-                                      log_dir,
-                                      qc_metadata,
-                                      pre_tasks=(setup_qc_dirs,),
-                                      post_tasks=(verify_qc,))
+            ##########################
+            # RSeQC gene body coverage
+            ##########################
+            if qc_module_name == 'rseqc_genebody_coverage':
+                # Run RSeQC gene body coverage
+                rseqc_gene_body_coverage = RunRSeQCGenebodyCoverage(
+                    "%s: calculate gene body coverage (RSeQC)" % project.name,
+                    get_bam_files.output.bam_files,
+                    get_reference_gene_model.output.reference_dataset,
+                    os.path.join(qc_dir,
+                                 'rseqc_genebody_coverage',
+                                 organism_name),
+                    name=project.name)
+                self.add_task(rseqc_gene_body_coverage,
+                              runner=self.runners['rseqc_runner'],
+                              log_dir=log_dir)
+                verify_qc.requires(rseqc_gene_body_coverage)
+                qc_metadata['annotation_bed'] = \
+                    get_reference_gene_model.output.reference_dataset
+
+            ##########################
+            # Picard insert sizes
+            ##########################
+            if qc_module_name == 'picard_insert_size_metrics' and paired:
+                # Run Picard's CollectInsertSizeMetrics
+                insert_size_metrics = RunPicardCollectInsertSizeMetrics(
+                    "%s: Picard: collect insert size metrics" %
+                    project.name,
+                    get_bam_files.output.bam_files,
+                    os.path.join(qc_dir,'picard',organism_name))
+                self.add_task(insert_size_metrics,
+                              log_dir=log_dir)
+
+                collate_insert_sizes = CollateInsertSizes(
+                    "%s: collate insert size data" % project.name,
+                    get_bam_files.output.bam_files,
+                    os.path.join(qc_dir,'picard',organism_name),
+                    os.path.join(qc_dir,
+                                 'insert_sizes.%s.tsv' % organism_name))
+                self.add_task(collate_insert_sizes,
+                              requires=(insert_size_metrics,),
+                              log_dir=log_dir)
+                verify_qc.requires(collate_insert_sizes)
+
+            #################
+            # Qualimap RNASEQ
+            #################
+            if qc_module_name == 'qualimap_rnaseq':
+                # Get reference gene model for Qualimap
+                get_annotation_gtf = GetReferenceDataset(
+                    "%s: get GTF annotation for '%s'" % (project.name,
+                                                         organism),
+                    organism,
+                    self.params.annotation_gtf_files)
+                self.add_task(get_annotation_gtf,
+                              log_dir=log_dir)
+
+                # Run Qualimap RNA-seq analysis
+                qualimap_rnaseq = RunQualimapRnaseq(
+                    "%s: Qualimap rnaseq: RNA-seq metrics" % project.name,
+                    get_bam_files.output.bam_files,
+                    get_annotation_gtf.output.reference_dataset,
+                    os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
+                    bam_properties=rseqc_infer_experiment.output.experiments)
+                self.add_task(qualimap_rnaseq,
+                              runner=self.runners['qualimap_runner'],
+                              log_dir=log_dir)
+                verify_qc.requires(qualimap_rnaseq)
+                qc_metadata['annotation_gtf'] = \
+                    get_annotation_gtf.output.reference_dataset
 
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_module_name,
@@ -819,166 +949,6 @@ class QCPipeline(Pipeline):
 
         # Return the 'cellranger count' task
         return run_cellranger_count
-
-    def add_extended_metrics(self,project,qc_protocol,qc_dir,
-                             organism,log_dir,qc_metadata,
-                             pre_tasks,post_tasks):
-        """
-        Add additional optional QC metrics for a project
-
-        Arguments:
-          project (AnalysisProject): project to run additional
-            QC metrics for
-          qc_protocol (str): QC protocol to use
-          qc_dir (str): directory for QC outputs
-          organism (str): organism(s) associated with the
-            run
-          log_dir (str): directory for log files (defaults
-            to 'logs' subdirectory of the QC directory
-          qc_metadata (dict): dictionary of metadata items
-            to update from extended metrics
-          pre_tasks (list): list of tasks that must complete
-            before the extended metrics tasks can run
-          post_tasks (list): list of tasks that depend on
-            for the extended metrics to complete
-        """
-        # QC modules
-        reads,qc_modules = fetch_protocol_definition(qc_protocol)
-
-        # Read numbers with sequence data (based on protocol)
-        # Used to set which Fastqs should be mapped
-        read_numbers = get_read_numbers(qc_protocol).seq_data
-
-        # Sanitise organism name
-        organism_name = str(organism).\
-                        strip().\
-                        lower().\
-                        replace(' ','_')
-
-        # Indicate if data are paired
-        paired = (len(read_numbers) > 1)
-
-        # Set up tasks for BAM file generation
-        get_star_index = GetReferenceDataset(
-            "%s: get STAR index for '%s'" % (project.name,
-                                             organism),
-            organism,
-            self.params.star_indexes)
-        self.add_task(get_star_index)
-        get_bam_files = GetBAMFiles(
-            "%s: get BAM files" % project.name,
-            project.fastqs,
-            get_star_index.output.reference_dataset,
-            os.path.join(qc_dir,'__bam_files',organism_name),
-            self.params.fastq_subset,
-            self.params.nthreads,
-            reads=read_numbers,
-            verbose=self.params.VERBOSE)
-        self.add_task(get_bam_files,
-                      requires=pre_tasks,
-                      runner=self.runners['star_runner'],
-                      log_dir=log_dir)
-        qc_metadata['star_index'] = get_star_index.output.reference_dataset
-
-        # Get reference gene model for RSeQC
-        get_reference_gene_model = GetReferenceDataset(
-            "%s: get RSeQC reference gene model for '%s'" % (project.name,
-                                                             organism),
-            organism,
-            self.params.annotation_bed_files)
-        self.add_task(get_reference_gene_model,
-                      log_dir=log_dir)
-
-        # Run RSeQC infer experiment
-        rseqc_infer_experiment = RunRSeQCInferExperiment(
-            "%s: infer experiment from BAM files (RSeQC)" % project.name,
-            get_bam_files.output.bam_files,
-            get_reference_gene_model.output.reference_dataset,
-            os.path.join(qc_dir,'rseqc_infer_experiment',organism_name))
-        self.add_task(rseqc_infer_experiment,
-                      log_dir=log_dir)
-
-        ################
-        # Add QC modules
-        ################
-
-        for qc_module in qc_modules:
-
-            qc_module_name,qc_module_params = parse_qc_module_spec(qc_module)
-
-            ##########################
-            # RSeQC gene body coverage
-            ##########################
-            if qc_module_name == 'rseqc_genebody_coverage':
-                # Run RSeQC gene body coverage
-                rseqc_gene_body_coverage = RunRSeQCGenebodyCoverage(
-                    "%s: calculate gene body coverage (RSeQC)" % project.name,
-                    get_bam_files.output.bam_files,
-                    get_reference_gene_model.output.reference_dataset,
-                    os.path.join(qc_dir,
-                                 'rseqc_genebody_coverage',
-                                 organism_name),
-                    name=project.name)
-                self.add_task(rseqc_gene_body_coverage,
-                              runner=self.runners['rseqc_runner'],
-                              log_dir=log_dir)
-                for task in post_tasks:
-                    rseqc_gene_body_coverage.required_by(task)
-                qc_metadata['annotation_bed'] = \
-                    get_reference_gene_model.output.reference_dataset
-
-            ##########################
-            # Picard insert sizes
-            ##########################
-            if qc_module_name == 'picard_insert_size_metrics' and paired:
-                # Run Picard's CollectInsertSizeMetrics
-                insert_size_metrics = RunPicardCollectInsertSizeMetrics(
-                    "%s: Picard: collect insert size metrics" %
-                    project.name,
-                    get_bam_files.output.bam_files,
-                    os.path.join(qc_dir,'picard',organism_name))
-                self.add_task(insert_size_metrics,
-                              log_dir=log_dir)
-
-                collate_insert_sizes = CollateInsertSizes(
-                    "%s: collate insert size data" % project.name,
-                    get_bam_files.output.bam_files,
-                    os.path.join(qc_dir,'picard',organism_name),
-                    os.path.join(qc_dir,
-                                 'insert_sizes.%s.tsv' % organism_name))
-                self.add_task(collate_insert_sizes,
-                              requires=(insert_size_metrics,),
-                              log_dir=log_dir)
-                for task in post_tasks:
-                    collate_insert_sizes.required_by(task)
-
-            #################
-            # Qualimap RNASEQ
-            #################
-            if qc_module_name == 'qualimap_rnaseq':
-                # Get reference gene model for Qualimap
-                get_annotation_gtf = GetReferenceDataset(
-                    "%s: get GTF annotation for '%s'" % (project.name,
-                                                         organism),
-                    organism,
-                    self.params.annotation_gtf_files)
-                self.add_task(get_annotation_gtf,
-                              log_dir=log_dir)
-
-                # Run Qualimap RNA-seq analysis
-                qualimap_rnaseq = RunQualimapRnaseq(
-                    "%s: Qualimap rnaseq: RNA-seq metrics" % project.name,
-                    get_bam_files.output.bam_files,
-                    get_annotation_gtf.output.reference_dataset,
-                    os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
-                    bam_properties=rseqc_infer_experiment.output.experiments)
-                self.add_task(qualimap_rnaseq,
-                              runner=self.runners['qualimap_runner'],
-                              log_dir=log_dir)
-                for task in post_tasks:
-                    qualimap_rnaseq.required_by(task)
-                    qc_metadata['annotation_gtf'] = \
-                        get_annotation_gtf.output.reference_dataset
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             annotation_bed_files=None,annotation_gtf_files=None,
