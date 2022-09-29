@@ -510,6 +510,12 @@ class QCPipeline(Pipeline):
                 except KeyError:
                     set_metadata = True
 
+                # Whether to set cell count
+                try:
+                    set_cell_count = qc_module_params['set_cell_count']
+                except KeyError:
+                    set_cell_count = True
+
                 # Run cellranger* count
                 run_cellranger_count = self.add_cellranger_count(
                     project_name,
@@ -537,7 +543,8 @@ class QCPipeline(Pipeline):
                         run_cellranger_count.output.cellranger_refdata
                     update_qc_metadata.requires(run_cellranger_count)
 
-                    # Set cell count
+                # Set cell count
+                if set_cell_count:
                     set_cellranger_cell_count = \
                         SetCellCountFromCellrangerCount(
                             "%s: set cell count from single library analysis" %

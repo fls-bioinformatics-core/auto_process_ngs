@@ -175,6 +175,7 @@ QC_PROTOCOLS = {
                              'library=snRNA-seq;'
                              'cellranger_version=*;'
                              'cellranger_refdata=*;'
+                             'set_cell_count=false;'
                              'set_metadata=False)'
         ]
     },
@@ -200,6 +201,7 @@ QC_PROTOCOLS = {
                                   'library=scATAC-seq;'
                                   'cellranger_version=*;'
                                   'cellranger_refdata=*;'
+                                  'set_cell_count=false;'
                                   'set_metadata=False)'
         ]
     },
