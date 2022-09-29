@@ -212,12 +212,11 @@ class QCPipeline(Pipeline):
         # Fetch the QC modules and read data
         reads,qc_modules = fetch_protocol_definition(qc_protocol)
 
-        # Read numbers with sequence data (based on protocol)
-        # Used to set which Fastqs should be mapped
-        read_numbers = get_read_numbers(qc_protocol).seq_data
+        # Read numbers for sequence data and QC
+        read_numbers = get_read_numbers(qc_protocol)
 
-        # Indicate if data are paired
-        paired = (len(read_numbers) > 1)
+        # Determine whether sequence data are paired
+        paired = (len(read_numbers.seq_data) > 1)
 
         # Determine if BAM files are required
         require_bam_files = False
@@ -354,7 +353,7 @@ class QCPipeline(Pipeline):
                 os.path.join(qc_dir,'__bam_files',organism_name),
                 self.params.fastq_subset,
                 self.params.nthreads,
-                reads=read_numbers,
+                reads=read_numbers.seq_data,
                 verbose=self.params.VERBOSE)
             self.add_task(get_bam_files,
                           requires=(setup_qc_dirs,),
@@ -398,7 +397,7 @@ class QCPipeline(Pipeline):
                     project_name,
                     project,
                     qc_dir,
-                    qc_protocol=qc_protocol,
+                    read_numbers=read_numbers.qc,
                     fastq_attrs=project.fastq_attrs)
                 self.add_task(get_seq_lengths,
                               requires=(setup_qc_dirs,),
@@ -434,7 +433,7 @@ class QCPipeline(Pipeline):
                     self.params.fastq_screens,
                     subset=self.params.fastq_subset,
                     nthreads=self.params.nthreads,
-                    qc_protocol=qc_protocol,
+                    read_numbers=read_numbers.seq_data,
                     fastq_attrs=project.fastq_attrs,
                     legacy=self.params.legacy_screens
                 )
@@ -519,8 +518,7 @@ class QCPipeline(Pipeline):
                     qc_dir,
                     setup_fastq_strand_conf.output.fastq_strand_conf,
                     fastq_strand_subset=self.params.fastq_subset,
-                    nthreads=self.params.nthreads,
-                    qc_protocol=qc_protocol
+                    nthreads=self.params.nthreads
                 )
                 self.add_task(run_fastq_strand,
                               requires=(check_fastq_strand,),
@@ -1252,7 +1250,7 @@ class GetSeqLengthStats(PipelineFunctionTask):
     for Fastqs in a project, and write the data to
     JSON files.
     """
-    def init(self,project,qc_dir,qc_protocol=None,fastq_attrs=None):
+    def init(self,project,qc_dir,read_numbers=None,fastq_attrs=None):
         """
         Initialise the GetSeqLengthStats task
 
@@ -1261,7 +1259,8 @@ class GetSeqLengthStats(PipelineFunctionTask):
             to get the sequence length data from
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
-          qc_protocol (str): QC protocol being used
+          read_numbers (sequence): list of read numbers to
+            include (or None to include all reads)
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
         """
@@ -1272,9 +1271,10 @@ class GetSeqLengthStats(PipelineFunctionTask):
             self.args.project.fastqs,
             fastq_attrs=self.args.fastq_attrs)
         # Get sequence length data for Fastqs
-        read_numbers = get_read_numbers(self.args.qc_protocol).qc
         for fastq in self._fastqs:
-            if self.args.fastq_attrs(fastq).read_number not in read_numbers:
+            if self.args.read_numbers and \
+               self.args.fastq_attrs(fastq).read_number \
+               not in self.args.read_numbers:
                 continue
             outfile = os.path.join(self.args.qc_dir,
                                    "%s_seqlens.json" %
@@ -1368,7 +1368,7 @@ class RunFastqScreen(PipelineTask):
     Run FastqScreen
     """
     def init(self,fastqs,qc_dir,screens,subset=None,nthreads=None,
-             qc_protocol=None,fastq_attrs=None,legacy=False):
+             read_numbers=None,fastq_attrs=None,legacy=False):
         """
         Initialise the RunIlluminaQC task.
 
@@ -1385,7 +1385,8 @@ class RunFastqScreen(PipelineTask):
             for running Fastq_screen
           nthreads (int): number of threads/processors to
             use (defaults to number of slots set in runner)
-          qc_protocol (str): QC protocol to use
+          read_numbers (list): list of read numbers to
+            include when running Fastq Screen
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
           legacy (bool): if True then use 'legacy' naming
@@ -1405,9 +1406,10 @@ class RunFastqScreen(PipelineTask):
         if self.args.legacy:
             print("Using legacy FastqScreen output names")
         # Set up the FastqScreen runs for each Fastq
-        read_numbers = get_read_numbers(self.args.qc_protocol).seq_data
         for fastq in self.args.fastqs:
-            if self.args.fastq_attrs(fastq).read_number not in read_numbers:
+            if self.args.read_numbers and \
+               self.args.fastq_attrs(fastq).read_number not in \
+               self.args.read_numbers:
                 continue
             # Base name for Fastq file
             fastq_basename = os.path.basename(fastq)
@@ -1702,8 +1704,7 @@ class RunFastqStrand(PipelineTask):
     Run the fastq_strand.py utility
     """
     def init(self,fastq_pairs,qc_dir,fastq_strand_conf,
-             fastq_strand_subset=None,nthreads=None,
-             qc_protocol=None):
+             fastq_strand_subset=None,nthreads=None):
         """
         Initialise the RunFastqStrand task.
 
@@ -1721,7 +1722,6 @@ class RunFastqStrand(PipelineTask):
           nthreads (int): number of threads/processors to
             use (defaults to number of slots set in job
             runner)
-          qc_protocol (str): QC protocol to use
         """
         self.conda("star=2.7.7a",
                    "future")
