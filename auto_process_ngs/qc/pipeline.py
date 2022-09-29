@@ -93,10 +93,12 @@ from .outputs import check_cellranger_atac_count_outputs
 from .outputs import check_cellranger_arc_count_outputs
 from .picard import CollectInsertSizeMetrics
 from .protocols import determine_qc_protocol
+from .protocols import fetch_protocol_definition
 from .protocols import get_read_numbers
 from .rseqc import InferExperiment
 from .utils import get_bam_basename
 from .utils import set_cell_count_for_project
+from .verification import parse_qc_module_spec
 from .verification import verify_project
 from .fastq_strand import build_fastq_strand_conf
 from .seqlens import get_sequence_lengths
@@ -207,6 +209,9 @@ class QCPipeline(Pipeline):
         if qc_protocol is None:
             qc_protocol = determine_qc_protocol(project)
 
+        # Fetch the QC modules and read data
+        reads,qc_modules = fetch_protocol_definition(qc_protocol)
+
         # Clone the supplied project
         project = copy_analysis_project(project,fastq_dir=fastq_dir)
 
@@ -228,13 +233,17 @@ class QCPipeline(Pipeline):
             organism = project.info.organism
 
         # Report details
-        self.report("-- Protocol  : %s" % qc_protocol)
-        self.report("-- Directory : %s" % project.dirn)
-        self.report("-- Fastqs dir: %s" % project.fastq_dir)
-        self.report("-- QC dir    : %s" % qc_dir)
-        self.report("-- Library   : %s" % project.info.library_type)
-        self.report("-- Organism  : %s" % organism)
-        self.report("-- Report    : %s" % report_html)
+        self.report("-- Protocol   : %s" % qc_protocol)
+        self.report("-- Directory  : %s" % project.dirn)
+        self.report("-- Fastqs dir : %s" % project.fastq_dir)
+        self.report("-- QC dir     : %s" % qc_dir)
+        self.report("-- Library    : %s" % project.info.library_type)
+        self.report("-- SC platform: %s" % project.info.single_cell_platform)
+        self.report("-- Organism   : %s" % organism)
+        self.report("-- Report     : %s" % report_html)
+        self.report("QC modules :")
+        for qc_module in qc_modules:
+            self.report("-- %s" % qc_module)
 
         ####################
         # Build the pipeline
@@ -302,316 +311,335 @@ class QCPipeline(Pipeline):
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
 
-        # Get Fastq sequence length statistics
-        get_seq_lengths = GetSeqLengthStats(
-            "%s: get sequence length statistics" %
-            project_name,
-            project,
-            qc_dir,
-            qc_protocol=qc_protocol,
-            fastq_attrs=project.fastq_attrs)
-        self.add_task(get_seq_lengths,
-                      requires=(setup_qc_dirs,),
-                      runner=self.runners['fastqc_runner'],
-                      log_dir=log_dir)
-        verify_qc.requires(get_seq_lengths)
+        ################
+        # Add QC modules
+        ################
 
-        # Check outputs for FastqScreen
-        check_fastq_screen = CheckFastqScreenOutputs(
-            "%s: check FastqScreen outputs" %
-            project_name,
-            project,
-            qc_dir,
-            self.params.fastq_screens,
-            qc_protocol=qc_protocol,
-            legacy=self.params.legacy_screens,
-            verbose=self.params.VERBOSE
-        )
-        self.add_task(check_fastq_screen,
-                      requires=(setup_qc_dirs,),
-                      runner=self.runners['verify_runner'],
-                      log_dir=log_dir)
+        for qc_module in qc_modules:
 
-        # Run FastqScreen
-        run_fastq_screen = RunFastqScreen(
-            "%s: FastqScreen" % project_name,
-            check_fastq_screen.output.fastqs,
-            qc_dir,
-            self.params.fastq_screens,
-            subset=self.params.fastq_subset,
-            nthreads=self.params.nthreads,
-            qc_protocol=qc_protocol,
-            fastq_attrs=project.fastq_attrs,
-            legacy=self.params.legacy_screens
-        )
-        self.add_task(run_fastq_screen,
-                      requires=(check_fastq_screen,),
-                      runner=self.runners['fastq_screen_runner'],
-                      envmodules=self.envmodules['fastq_screen'],
-                      log_dir=log_dir)
-        qc_metadata['fastq_screens'] = self.params.fastq_screens
-        qc_metadata['legacy_screens'] = self.params.legacy_screens
-        verify_qc.requires(run_fastq_screen)
+            qc_module_name,qc_module_params = parse_qc_module_spec(qc_module)
 
-        # Check outputs for FastQC
-        check_fastqc = CheckFastQCOutputs(
-            "%s: check FastQC outputs" %
-            project_name,
-            project,
-            qc_dir,
-            qc_protocol=qc_protocol,
-            verbose=self.params.VERBOSE
-        )
-        self.add_task(check_fastqc,
-                      requires=(setup_qc_dirs,),
-                      runner=self.runners['verify_runner'],
-                      log_dir=log_dir)
+            ##################################
+            # Fastq sequence length statistics
+            ##################################
+            if qc_module_name == 'sequence_lengths':
+                get_seq_lengths = GetSeqLengthStats(
+                    "%s: get sequence length statistics" %
+                    project_name,
+                    project,
+                    qc_dir,
+                    qc_protocol=qc_protocol,
+                    fastq_attrs=project.fastq_attrs)
+                self.add_task(get_seq_lengths,
+                              requires=(setup_qc_dirs,),
+                              runner=self.runners['fastqc_runner'],
+                              log_dir=log_dir)
+                verify_qc.requires(get_seq_lengths)
 
-        # Run FastqQC
-        run_fastqc = RunFastQC(
-            "%s: FastQC" % project_name,
-            check_fastqc.output.fastqs,
-            qc_dir,
-            nthreads=self.params.nthreads
-        )
-        self.add_task(run_fastqc,
-                      requires=(check_fastqc,),
-                      runner=self.runners['fastqc_runner'],
-                      envmodules=self.envmodules['fastqc'],
-                      log_dir=log_dir)
-        verify_qc.requires(run_fastqc)
+            #############
+            # FastqScreen
+            #############
+            if qc_module_name == 'fastq_screen':
+                # Check outputs for FastqScreen
+                check_fastq_screen = CheckFastqScreenOutputs(
+                    "%s: check FastqScreen outputs" %
+                    project_name,
+                    project,
+                    qc_dir,
+                    self.params.fastq_screens,
+                    qc_protocol=qc_protocol,
+                    legacy=self.params.legacy_screens,
+                    verbose=self.params.VERBOSE
+                )
+                self.add_task(check_fastq_screen,
+                              requires=(setup_qc_dirs,),
+                              runner=self.runners['verify_runner'],
+                              log_dir=log_dir)
 
-        # Set up fastq_strand.conf file
-        setup_fastq_strand_conf = SetupFastqStrandConf(
-            "%s: conf file for strandedness (fastq_strand)" %
-            project_name,
-            project,
-            qc_dir=qc_dir,
-            organism=organism,
-            star_indexes=self.params.star_indexes
-        )
-        self.add_task(setup_fastq_strand_conf,
-                      requires=(setup_qc_dirs,),
-                      log_dir=log_dir)
+                # Run FastqScreen
+                run_fastq_screen = RunFastqScreen(
+                    "%s: FastqScreen" % project_name,
+                    check_fastq_screen.output.fastqs,
+                    qc_dir,
+                    self.params.fastq_screens,
+                    subset=self.params.fastq_subset,
+                    nthreads=self.params.nthreads,
+                    qc_protocol=qc_protocol,
+                    fastq_attrs=project.fastq_attrs,
+                    legacy=self.params.legacy_screens
+                )
+                self.add_task(run_fastq_screen,
+                              requires=(check_fastq_screen,),
+                              runner=self.runners['fastq_screen_runner'],
+                              envmodules=self.envmodules['fastq_screen'],
+                              log_dir=log_dir)
+                qc_metadata['fastq_screens'] = self.params.fastq_screens
+                qc_metadata['legacy_screens'] = self.params.legacy_screens
+                verify_qc.requires(run_fastq_screen)
 
-        # Check outputs for fastq_strand.py
-        check_fastq_strand = CheckFastqStrandOutputs(
-            "%s: check strandedness outputs (fastq_strand)" %
-            project_name,
-            project,
-            qc_dir,
-            setup_fastq_strand_conf.output.fastq_strand_conf,
-            qc_protocol=qc_protocol,
-            verbose=self.params.VERBOSE
-        )
-        self.add_task(check_fastq_strand,
-                      requires=(setup_fastq_strand_conf,),
-                      runner=self.runners['verify_runner'],
-                      log_dir=log_dir)
+            ########
+            # FastQC
+            ########
+            if qc_module_name == 'fastqc':
+                # Check outputs for FastQC
+                check_fastqc = CheckFastQCOutputs(
+                    "%s: check FastQC outputs" %
+                    project_name,
+                    project,
+                    qc_dir,
+                    qc_protocol=qc_protocol,
+                    verbose=self.params.VERBOSE
+                )
+                self.add_task(check_fastqc,
+                              requires=(setup_qc_dirs,),
+                              runner=self.runners['verify_runner'],
+                              log_dir=log_dir)
 
-        # Run fastq_strand.py
-        run_fastq_strand = RunFastqStrand(
-            "%s: strandedness (fastq_strand.py)" %
-            project_name,
-            check_fastq_strand.output.fastq_pairs,
-            qc_dir,
-            setup_fastq_strand_conf.output.fastq_strand_conf,
-            fastq_strand_subset=self.params.fastq_subset,
-            nthreads=self.params.nthreads,
-            qc_protocol=qc_protocol
-        )
-        self.add_task(run_fastq_strand,
-                      requires=(check_fastq_strand,),
-                      runner=self.runners['star_runner'],
-                      envmodules=self.envmodules['fastq_strand'],
-                      log_dir=log_dir)
-        verify_qc.requires(run_fastq_strand)
+                # Run FastqQC
+                run_fastqc = RunFastQC(
+                    "%s: FastQC" % project_name,
+                    check_fastqc.output.fastqs,
+                    qc_dir,
+                    nthreads=self.params.nthreads
+                )
+                self.add_task(run_fastqc,
+                              requires=(check_fastqc,),
+                              runner=self.runners['fastqc_runner'],
+                              envmodules=self.envmodules['fastqc'],
+                              log_dir=log_dir)
+                verify_qc.requires(run_fastqc)
 
-        if qc_protocol in ("10x_scRNAseq",
-                           "10x_snRNAseq",
-                           "10x_scATAC",
-                           "10x_Multiome_ATAC",
-                           "10x_Multiome_GEX",):
-            # Run cellranger* count
-            run_cellranger_count = self.add_cellranger_count(
-                project_name,
-                project,
-                qc_dir,
-                organism,
-                fastq_dir,
-                qc_protocol,
-                chemistry=self.params.cellranger_chemistry,
-                force_cells=self.params.cellranger_force_cells,
-                reference_dataset=self.params.cellranger_reference_dataset,
-                extra_projects=self.params.cellranger_extra_projects,
-                log_dir=log_dir,
-                required_tasks=(setup_qc_dirs,))
+            ##############
+            # Fastq_strand
+            ##############
+            if qc_module_name == 'strandedness':
+                # Set up fastq_strand.conf file
+                setup_fastq_strand_conf = SetupFastqStrandConf(
+                    "%s: conf file for strandedness (fastq_strand)" %
+                    project_name,
+                    project,
+                    qc_dir=qc_dir,
+                    organism=organism,
+                    star_indexes=self.params.star_indexes
+                )
+                self.add_task(setup_fastq_strand_conf,
+                              requires=(setup_qc_dirs,),
+                              log_dir=log_dir)
 
-            # Update metadata
-            qc_metadata['cellranger_version'] = \
-                    run_cellranger_count.output.cellranger_version
-            qc_metadata['cellranger_refdata'] = \
-                    run_cellranger_count.output.cellranger_refdata
-            update_qc_metadata.requires(run_cellranger_count)
+                # Check outputs for fastq_strand.py
+                check_fastq_strand = CheckFastqStrandOutputs(
+                    "%s: check strandedness outputs (fastq_strand)" %
+                    project_name,
+                    project,
+                    qc_dir,
+                    setup_fastq_strand_conf.output.fastq_strand_conf,
+                    qc_protocol=qc_protocol,
+                    verbose=self.params.VERBOSE
+                )
+                self.add_task(check_fastq_strand,
+                              requires=(setup_fastq_strand_conf,),
+                              runner=self.runners['verify_runner'],
+                              log_dir=log_dir)
 
-            # Set cell count
-            set_cellranger_cell_count = SetCellCountFromCellrangerCount(
-                "%s: set cell count from single library analysis" %
-                project_name,
-                project,
-                qc_dir
-            )
-            self.add_task(set_cellranger_cell_count,
-                          requires=(run_cellranger_count,
-                                    update_qc_metadata),)
-            verify_qc.requires(set_cellranger_cell_count)
+                # Run fastq_strand.py
+                run_fastq_strand = RunFastqStrand(
+                    "%s: strandedness (fastq_strand.py)" %
+                    project_name,
+                    check_fastq_strand.output.fastq_pairs,
+                    qc_dir,
+                    setup_fastq_strand_conf.output.fastq_strand_conf,
+                    fastq_strand_subset=self.params.fastq_subset,
+                    nthreads=self.params.nthreads,
+                    qc_protocol=qc_protocol
+                )
+                self.add_task(run_fastq_strand,
+                              requires=(check_fastq_strand,),
+                              runner=self.runners['star_runner'],
+                              envmodules=self.envmodules['fastq_strand'],
+                              log_dir=log_dir)
+                verify_qc.requires(run_fastq_strand)
 
-            # Extra protocols for multiome
-            if qc_protocol == "10x_Multiome_ATAC":
-                # See https://kb.10xgenomics.com/hc/en-us/articles/360061165691
-                # Need to set the chemistry to indicate it's
-                # multiome ATAC data
+            #############################
+            # 10x single library analysis
+            #############################
+            if qc_module_name in ('cellranger_count',
+                                  'cellranger-atac_count',
+                                  'cellranger-arc_count',):
+                # Set library type
+                try:
+                    library_type = qc_module_params['library']
+                except KeyError:
+                    library_type = project.info.library_type
+
+                # Set chemistry
+                try:
+                    chemistry = qc_module_params['chemistry']
+                except KeyError:
+                    chemistry = self.params.cellranger_chemistry
+
+                # Locate 'cellranger multi' config.csv file
+                # if required
+                try:
+                    cellranger_use_multi_config = \
+                        qc_module_params['cellranger_use_multi_config']
+                except KeyError:
+                    cellranger_use_multi_config = False
+                if cellranger_use_multi_config:
+                    get_cellranger_multi_config = GetCellrangerMultiConfig(
+                        "%s: get config file for 'cellranger multi'" %
+                        project_name,
+                        project,
+                        qc_dir
+                    )
+                    self.add_task(get_cellranger_multi_config,
+                                  requires=(setup_qc_dirs,),
+                                  log_dir=log_dir)
+                    samples = get_cellranger_multi_config.output.gex_libraries
+                    fastq_dirs = get_cellranger_multi_config.output.fastq_dirs
+                    reference_dataset = \
+                        get_cellranger_multi_config.output.reference_data_path
+                else:
+                    samples = None
+                    fastq_dirs = None
+                    reference_dataset = \
+                        self.params.cellranger_reference_dataset
+
+                # Whether to set metadata
+                try:
+                    set_metadata = qc_module_params['set_metadata']
+                except KeyError:
+                    set_metadata = True
+
+                # Run cellranger* count
                 run_cellranger_count = self.add_cellranger_count(
                     project_name,
                     project,
                     qc_dir,
                     organism,
                     fastq_dir,
-                    qc_protocol="10x_scATAC",
-                    chemistry="ARC-v1",
+                    qc_module_name,
+                    library_type=library_type,
+                    chemistry=chemistry,
                     force_cells=self.params.cellranger_force_cells,
-                    reference_dataset=\
-                    self.params.cellranger_reference_dataset,
+                    reference_dataset=reference_dataset,
+                    samples=samples,
+                    fastq_dirs=fastq_dirs,
+                    extra_projects=self.params.cellranger_extra_projects,
                     log_dir=log_dir,
                     required_tasks=(setup_qc_dirs,))
                 verify_qc.requires(run_cellranger_count)
 
-            elif qc_protocol == "10x_Multiome_GEX":
-                # See https://kb.10xgenomics.com/hc/en-us/articles/360059656912
-                # Need to set the chemistry to indicate it's
-                # multiome snRNA-seq data
-                run_cellranger_count = self.add_cellranger_count(
+                # Update metadata
+                if set_metadata:
+                    qc_metadata['cellranger_version'] = \
+                        run_cellranger_count.output.cellranger_version
+                    qc_metadata['cellranger_refdata'] = \
+                        run_cellranger_count.output.cellranger_refdata
+                    update_qc_metadata.requires(run_cellranger_count)
+
+                    # Set cell count
+                    set_cellranger_cell_count = \
+                        SetCellCountFromCellrangerCount(
+                            "%s: set cell count from single library analysis" %
+                            project_name,
+                            project,
+                            qc_dir
+                        )
+                    self.add_task(set_cellranger_cell_count,
+                                  requires=(run_cellranger_count,
+                                            update_qc_metadata),)
+                    verify_qc.requires(set_cellranger_cell_count)
+
+            ################################
+            # 10x cell multiplexing analysis
+            ################################
+            if qc_module_name == "cellranger_multi":
+
+                # Tasks 'check_cellranger_multi' depends on
+                check_cellranger_multi_requires = []
+
+                # Locate cellranger
+                required_cellranger = DetermineRequired10xPackage(
+                    "%s: determine required 'cellranger' package" %
+                    project_name,
+                    qc_module_name,
+                    self.params.cellranger_exe)
+                self.add_task(required_cellranger)
+
+                get_cellranger = Get10xPackage(
+                    "%s: get information on cellranger" % project_name,
+                    require_package=\
+                    required_cellranger.output.require_cellranger)
+                self.add_task(get_cellranger,
+                              requires=(required_cellranger,),
+                              envmodules=self.envmodules['cellranger'])
+                check_cellranger_multi_requires.append(get_cellranger)
+                qc_metadata['cellranger_version'] = \
+                        get_cellranger.output.package_version
+                update_qc_metadata.requires(get_cellranger)
+
+                # Locate config.csv file for 'cellranger multi'
+                get_cellranger_multi_config = GetCellrangerMultiConfig(
+                    "%s: get config file for 'cellranger multi'" %
                     project_name,
                     project,
-                    qc_dir,
-                    organism,
-                    fastq_dir,
-                    qc_protocol="10x_snRNAseq",
-                    chemistry="ARC-v1",
-                    force_cells=self.params.cellranger_force_cells,
-                    reference_dataset=\
-                    self.params.cellranger_reference_dataset,
-                    log_dir=log_dir,
-                    required_tasks=(setup_qc_dirs,))
-                verify_qc.requires(run_cellranger_count)
-
-        elif qc_protocol in ("10x_CellPlex",):
-
-            # Tasks 'check_cellranger_multi' depends on
-            check_cellranger_multi_requires = []
-
-            # Locate cellranger
-            required_cellranger = DetermineRequired10xPackage(
-                "%s: determine required 'cellranger' package" %
-                project_name,
-                qc_protocol,
-                self.params.cellranger_exe)
-            self.add_task(required_cellranger)
-
-            get_cellranger = Get10xPackage(
-                "%s: get information on cellranger" % project_name,
-                require_package=\
-                required_cellranger.output.require_cellranger)
-            self.add_task(get_cellranger,
-                          requires=(required_cellranger,),
-                          envmodules=self.envmodules['cellranger'])
-            check_cellranger_multi_requires.append(get_cellranger)
-            qc_metadata['cellranger_version'] = \
-                    get_cellranger.output.package_version
-            update_qc_metadata.requires(get_cellranger)
-
-            # Locate config.csv file for 'cellranger multi'
-            get_cellranger_multi_config = GetCellrangerMultiConfig(
-                "%s: get config file for 'cellranger multi'" %
-                project_name,
-                project,
-                qc_dir
-            )
-            self.add_task(get_cellranger_multi_config,
-                          requires=(setup_qc_dirs,),
-                          log_dir=log_dir)
-            check_cellranger_multi_requires.append(
-                get_cellranger_multi_config)
-            qc_metadata['cellranger_refdata'] = \
+                    qc_dir
+                )
+                self.add_task(get_cellranger_multi_config,
+                              requires=(setup_qc_dirs,),
+                              log_dir=log_dir)
+                check_cellranger_multi_requires.append(
+                    get_cellranger_multi_config)
+                qc_metadata['cellranger_refdata'] = \
                     get_cellranger_multi_config.output.reference_data_path
-            update_qc_metadata.requires(get_cellranger_multi_config)
+                update_qc_metadata.requires(get_cellranger_multi_config)
 
-            # Parent directory for cellranger multi outputs
-            # Set to project directory unless the 'cellranger_out_dir'
-            # parameter is set
-            cellranger_out_dir = FunctionParam(
-                lambda out_dir,project_dir:
-                out_dir if out_dir is not None else project_dir,
-                self.params.cellranger_out_dir,
-                project.dirn)
+                # Parent directory for cellranger multi outputs
+                # Set to project directory unless the 'cellranger_out_dir'
+                # parameter is set
+                cellranger_out_dir = FunctionParam(
+                    lambda out_dir,project_dir:
+                    out_dir if out_dir is not None else project_dir,
+                    self.params.cellranger_out_dir,
+                    project.dirn)
 
-            # Run cellranger multi
-            run_cellranger_multi = RunCellrangerMulti(
-                "%s: analyse cell multiplexing data (cellranger multi)" %
-                project_name,
-                project,
-                get_cellranger_multi_config.output.config_csv,
-                get_cellranger_multi_config.output.samples,
-                get_cellranger_multi_config.output.reference_data_path,
-                cellranger_out_dir,
-                qc_dir=qc_dir,
-                working_dir=self.params.WORKING_DIR,
-                cellranger_exe=get_cellranger.output.package_exe,
-                cellranger_version=get_cellranger.output.package_version,
-                cellranger_jobmode=self.params.cellranger_jobmode,
-                cellranger_maxjobs=self.params.cellranger_maxjobs,
-                cellranger_mempercore=self.params.cellranger_mempercore,
-                cellranger_jobinterval=self.params.cellranger_jobinterval,
-                cellranger_localcores=self.params.cellranger_localcores,
-                cellranger_localmem=self.params.cellranger_localmem,
-                qc_protocol=qc_protocol
-            )
-            self.add_task(run_cellranger_multi,
-                          requires=(get_cellranger,
-                                    get_cellranger_multi_config,),
-                          runner=self.runners['cellranger_runner'],
-                          envmodules=self.envmodules['cellranger'],
-                          log_dir=log_dir)
+                # Run cellranger multi
+                run_cellranger_multi = RunCellrangerMulti(
+                    "%s: analyse cell multiplexing data (cellranger multi)" %
+                    project_name,
+                    project,
+                    get_cellranger_multi_config.output.config_csv,
+                    get_cellranger_multi_config.output.samples,
+                    get_cellranger_multi_config.output.reference_data_path,
+                    cellranger_out_dir,
+                    qc_dir=qc_dir,
+                    working_dir=self.params.WORKING_DIR,
+                    cellranger_exe=get_cellranger.output.package_exe,
+                    cellranger_version=get_cellranger.output.package_version,
+                    cellranger_jobmode=self.params.cellranger_jobmode,
+                    cellranger_maxjobs=self.params.cellranger_maxjobs,
+                    cellranger_mempercore=self.params.cellranger_mempercore,
+                    cellranger_jobinterval=self.params.cellranger_jobinterval,
+                    cellranger_localcores=self.params.cellranger_localcores,
+                    cellranger_localmem=self.params.cellranger_localmem,
+                )
+                self.add_task(run_cellranger_multi,
+                              requires=(get_cellranger,
+                                        get_cellranger_multi_config,),
+                              runner=self.runners['cellranger_runner'],
+                              envmodules=self.envmodules['cellranger'],
+                              log_dir=log_dir)
 
-            # Set cell count
-            set_cellranger_cell_count = SetCellCountFromCellrangerCount(
-                "%s: set cell count from cell multiplexing analysis" %
-                project_name,
-                project,
-                qc_dir
-            )
-            self.add_task(set_cellranger_cell_count,
-                          requires=(run_cellranger_multi,),)
-            verify_qc.requires(set_cellranger_cell_count)
-
-            # Extra protocol for cellplex data
-            # (NB only run on the GEX "samples")
-            run_cellranger_count = self.add_cellranger_count(
-                project_name,
-                project,
-                qc_dir,
-                organism,
-                fastq_dir,
-                qc_protocol="10x_scRNAseq",
-                chemistry=self.params.cellranger_chemistry,
-                force_cells=self.params.cellranger_force_cells,
-                log_dir=log_dir,
-                samples=get_cellranger_multi_config.output.gex_libraries,
-                fastq_dirs=get_cellranger_multi_config.output.fastq_dirs,
-                reference_dataset=\
-                get_cellranger_multi_config.output.reference_data_path,
-                required_tasks=(setup_qc_dirs,))
-            verify_qc.requires(run_cellranger_count)
+                # Set cell count
+                set_cellranger_cell_count = SetCellCountFromCellrangerCount(
+                    "%s: set cell count from cell multiplexing analysis" %
+                    project_name,
+                    project,
+                    qc_dir
+                )
+                self.add_task(set_cellranger_cell_count,
+                              requires=(run_cellranger_multi,),)
+                verify_qc.requires(set_cellranger_cell_count)
 
         # Additional QC metrics
         if organism:
@@ -625,7 +653,8 @@ class QCPipeline(Pipeline):
                                       post_tasks=(verify_qc,))
 
     def add_cellranger_count(self,project_name,project,qc_dir,
-                             organism,fastq_dir,qc_protocol,chemistry,
+                             organism,fastq_dir,qc_module_name,
+                             library_type,chemistry,
                              force_cells,log_dir,samples=None,
                              fastq_dirs=None,reference_dataset=None,
                              extra_projects=None,required_tasks=None):
@@ -641,7 +670,9 @@ class QCPipeline(Pipeline):
             to subdirectory 'qc' of project directory)
           organism (str): organism for pipeline
           fastq_dir (str): directory holding Fastq files
-          qc_protocol (str): QC protocol to use
+          qc_module (str): QC module being used
+          library_type (str): type of data being analysed (e.g.
+            'scRNA-seq')
           chemistry (str): chemistry to use in single
             library analysis
           force_cells (int): if set then bypasses
@@ -671,14 +702,14 @@ class QCPipeline(Pipeline):
         # Locate cellranger
         required_cellranger = DetermineRequired10xPackage(
             "%s: determine required 10x pipeline package (%s)" %
-            (project_name,qc_protocol),
-            qc_protocol,
+            (project_name,qc_module_name),
+            qc_module_name,
             self.params.cellranger_exe)
         self.add_task(required_cellranger)
 
         get_cellranger = Get10xPackage(
             "%s: get information on 10x pipeline package (%s)" %
-            (project_name,qc_protocol),
+            (project_name,qc_module_name),
             require_package=\
             required_cellranger.output.require_cellranger)
         self.add_task(get_cellranger,
@@ -689,7 +720,7 @@ class QCPipeline(Pipeline):
         # Get reference data for cellranger
         get_cellranger_reference_data = GetCellrangerReferenceData(
             "%s: get single library analysis reference data (%s)" %
-            (project_name,qc_protocol),
+            (project_name,qc_module_name),
             project,
             organism=organism,
             transcriptomes=self.params.cellranger_transcriptomes,
@@ -698,7 +729,6 @@ class QCPipeline(Pipeline):
             multiome_references=self.params.cellranger_arc_references,
             cellranger_exe=get_cellranger.output.package_exe,
             cellranger_version=get_cellranger.output.package_version,
-            qc_protocol=qc_protocol,
             force_reference_data=reference_dataset
         )
         self.add_task(get_cellranger_reference_data,
@@ -708,8 +738,7 @@ class QCPipeline(Pipeline):
         check_cellranger_count_requires.append(get_cellranger_reference_data)
 
         # Make libraries.csv files (cellranger-arc only)
-        if qc_protocol in ("10x_Multiome_ATAC",
-                           "10x_Multiome_GEX",):
+        if qc_module_name == "cellranger-arc_count":
             make_cellranger_libraries = MakeCellrangerArcCountLibraries(
                 "%s: make libraries files for 'cellranger-arc count'" %
                 project_name,
@@ -725,12 +754,12 @@ class QCPipeline(Pipeline):
         # Check QC outputs for cellranger count
         check_cellranger_count = CheckCellrangerCountOutputs(
             "%s: check for single library analysis outputs (%s)" %
-            (project_name,qc_protocol),
+            (project_name,qc_module_name),
             project,
             fastq_dir=fastq_dir,
             samples=samples,
             qc_dir=qc_dir,
-            qc_protocol=qc_protocol,
+            qc_module=qc_module_name,
             extra_projects=extra_projects,
             cellranger_version=get_cellranger.output.package_version,
             cellranger_ref_data=\
@@ -754,11 +783,12 @@ class QCPipeline(Pipeline):
         # Run cellranger count
         run_cellranger_count = RunCellrangerCount(
             "%s: run single library analysis (%s)" %
-            (project_name,qc_protocol),
+            (project_name,project.info.library_type),
             check_cellranger_count.output.samples,
             check_cellranger_count.output.fastq_dir,
             get_cellranger_reference_data.output.reference_data_path,
-            cellranger_out_dir,
+            library_type=library_type,
+            out_dir=cellranger_out_dir,
             qc_dir=qc_dir,
             cellranger_exe=get_cellranger.output.package_exe,
             cellranger_version=get_cellranger.output.package_version,
@@ -770,8 +800,7 @@ class QCPipeline(Pipeline):
             cellranger_mempercore=self.params.cellranger_mempercore,
             cellranger_jobinterval=self.params.cellranger_jobinterval,
             cellranger_localcores=self.params.cellranger_localcores,
-            cellranger_localmem=self.params.cellranger_localmem,
-            qc_protocol=qc_protocol
+            cellranger_localmem=self.params.cellranger_localmem
         )
         self.add_task(run_cellranger_count,
                       requires=(get_cellranger,
@@ -806,6 +835,9 @@ class QCPipeline(Pipeline):
           post_tasks (list): list of tasks that depend on
             for the extended metrics to complete
         """
+        # QC modules
+        reads,qc_modules = fetch_protocol_definition(qc_protocol)
+
         # Read numbers with sequence data (based on protocol)
         # Used to set which Fastqs should be mapped
         read_numbers = get_read_numbers(qc_protocol).seq_data
@@ -859,64 +891,87 @@ class QCPipeline(Pipeline):
         self.add_task(rseqc_infer_experiment,
                       log_dir=log_dir)
 
-        # Run RSeQC gene body coverage
-        rseqc_gene_body_coverage = RunRSeQCGenebodyCoverage(
-            "%s: calculate gene body coverage (RSeQC)" % project.name,
-            get_bam_files.output.bam_files,
-            get_reference_gene_model.output.reference_dataset,
-            os.path.join(qc_dir,'rseqc_genebody_coverage',organism_name),
-            name=project.name)
-        self.add_task(rseqc_gene_body_coverage,
-                      runner=self.runners['rseqc_runner'],
-                      log_dir=log_dir)
-        for task in post_tasks:
-            rseqc_gene_body_coverage.required_by(task)
-        qc_metadata['annotation_bed'] = \
-            get_reference_gene_model.output.reference_dataset
+        ################
+        # Add QC modules
+        ################
 
-        # Run Picard's CollectInsertSizeMetrics
-        if paired:
-            insert_size_metrics = RunPicardCollectInsertSizeMetrics(
-                "%s: Picard: collect insert size metrics" % project.name,
-                get_bam_files.output.bam_files,
-                os.path.join(qc_dir,'picard',organism_name))
-            self.add_task(insert_size_metrics,
-                          log_dir=log_dir)
+        for qc_module in qc_modules:
 
-            collate_insert_sizes = CollateInsertSizes(
-                "%s: collate insert size data" % project.name,
-                get_bam_files.output.bam_files,
-                os.path.join(qc_dir,'picard',organism_name),
-                os.path.join(qc_dir,'insert_sizes.%s.tsv' % organism_name))
-            self.add_task(collate_insert_sizes,
-                          requires=(insert_size_metrics,),
-                          log_dir=log_dir)
-            for task in post_tasks:
-                collate_insert_sizes.required_by(task)
+            qc_module_name,qc_module_params = parse_qc_module_spec(qc_module)
 
-        # Get reference gene model for Qualimap
-        get_annotation_gtf = GetReferenceDataset(
-            "%s: get GTF annotation for '%s'" % (project.name,
-                                                 organism),
-            organism,
-            self.params.annotation_gtf_files)
-        self.add_task(get_annotation_gtf,
-                      log_dir=log_dir)
+            ##########################
+            # RSeQC gene body coverage
+            ##########################
+            if qc_module_name == 'rseqc_genebody_coverage':
+                # Run RSeQC gene body coverage
+                rseqc_gene_body_coverage = RunRSeQCGenebodyCoverage(
+                    "%s: calculate gene body coverage (RSeQC)" % project.name,
+                    get_bam_files.output.bam_files,
+                    get_reference_gene_model.output.reference_dataset,
+                    os.path.join(qc_dir,
+                                 'rseqc_genebody_coverage',
+                                 organism_name),
+                    name=project.name)
+                self.add_task(rseqc_gene_body_coverage,
+                              runner=self.runners['rseqc_runner'],
+                              log_dir=log_dir)
+                for task in post_tasks:
+                    rseqc_gene_body_coverage.required_by(task)
+                qc_metadata['annotation_bed'] = \
+                    get_reference_gene_model.output.reference_dataset
 
-        # Run Qualimap RNA-seq analysis
-        qualimap_rnaseq = RunQualimapRnaseq(
-            "%s: Qualimap rnaseq: RNA-seq metrics" % project.name,
-            get_bam_files.output.bam_files,
-            get_annotation_gtf.output.reference_dataset,
-            os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
-            bam_properties=rseqc_infer_experiment.output.experiments)
-        self.add_task(qualimap_rnaseq,
-                      runner=self.runners['qualimap_runner'],
-                      log_dir=log_dir)
-        for task in post_tasks:
-            qualimap_rnaseq.required_by(task)
-        qc_metadata['annotation_gtf'] = \
-            get_annotation_gtf.output.reference_dataset
+            ##########################
+            # Picard insert sizes
+            ##########################
+            if qc_module_name == 'picard_insert_size_metrics' and paired:
+                # Run Picard's CollectInsertSizeMetrics
+                insert_size_metrics = RunPicardCollectInsertSizeMetrics(
+                    "%s: Picard: collect insert size metrics" %
+                    project.name,
+                    get_bam_files.output.bam_files,
+                    os.path.join(qc_dir,'picard',organism_name))
+                self.add_task(insert_size_metrics,
+                              log_dir=log_dir)
+
+                collate_insert_sizes = CollateInsertSizes(
+                    "%s: collate insert size data" % project.name,
+                    get_bam_files.output.bam_files,
+                    os.path.join(qc_dir,'picard',organism_name),
+                    os.path.join(qc_dir,
+                                 'insert_sizes.%s.tsv' % organism_name))
+                self.add_task(collate_insert_sizes,
+                              requires=(insert_size_metrics,),
+                              log_dir=log_dir)
+                for task in post_tasks:
+                    collate_insert_sizes.required_by(task)
+
+            #################
+            # Qualimap RNASEQ
+            #################
+            if qc_module_name == 'qualimap_rnaseq':
+                # Get reference gene model for Qualimap
+                get_annotation_gtf = GetReferenceDataset(
+                    "%s: get GTF annotation for '%s'" % (project.name,
+                                                         organism),
+                    organism,
+                    self.params.annotation_gtf_files)
+                self.add_task(get_annotation_gtf,
+                              log_dir=log_dir)
+
+                # Run Qualimap RNA-seq analysis
+                qualimap_rnaseq = RunQualimapRnaseq(
+                    "%s: Qualimap rnaseq: RNA-seq metrics" % project.name,
+                    get_bam_files.output.bam_files,
+                    get_annotation_gtf.output.reference_dataset,
+                    os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
+                    bam_properties=rseqc_infer_experiment.output.experiments)
+                self.add_task(qualimap_rnaseq,
+                              runner=self.runners['qualimap_runner'],
+                              log_dir=log_dir)
+                for task in post_tasks:
+                    qualimap_rnaseq.required_by(task)
+                    qc_metadata['annotation_gtf'] = \
+                        get_annotation_gtf.output.reference_dataset
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             annotation_bed_files=None,annotation_gtf_files=None,
@@ -1725,7 +1780,7 @@ class DetermineRequired10xPackage(PipelineTask):
     Determine which 10xGenomics software package is required
 
     By default determines the package name based on the
-    supplied QC protocol, but this can be overridden by
+    supplied QC module, but this can be overridden by
     explicitly supplying a required package (which can
     also be a path to an executable).
 
@@ -1733,12 +1788,12 @@ class DetermineRequired10xPackage(PipelineTask):
     supplied to the 'Get10xPackage' task, which will
     do the job of actually locating an executable.
     """
-    def init(self,qc_protocol,require_cellranger=None):
+    def init(self,qc_module,require_cellranger=None):
         """
         Initialise the DetermineRequired10xPackage task
 
         Argument:
-          qc_protocol (str): QC protocol to use
+          qc_module (str): QC module being used
           require_cellranger (str): optional package name
             or path to an executable; if supplied then
             overrides the automatic package determination
@@ -1749,22 +1804,20 @@ class DetermineRequired10xPackage(PipelineTask):
         """
         self.add_output('require_cellranger',Param(type=str))
     def setup(self):
-        protocols = {
-            "10x_scRNAseq": "cellranger",
-            "10x_snRNAseq": "cellranger",
-            "10x_scATAC": "cellranger-atac",
-            "10x_Multiome_ATAC": "cellranger-arc",
-            "10x_Multiome_GEX": "cellranger-arc",
-            "10x_CellPlex": "cellranger",
+        qc_modules = {
+            "cellranger_count": "cellranger",
+            "cellranger-atac_count": "cellranger-atac",
+            "cellranger-arc_count": "cellranger-arc",
+            "cellranger_multi": "cellranger",
         }
         require_cellranger = self.args.require_cellranger
         if require_cellranger is None:
             try:
-                require_cellranger = protocols[self.args.qc_protocol]
+                require_cellranger = qc_modules[self.args.qc_module]
             except KeyError:
                 raise Exception("Can't identify 10xGenomics package "
-                                "required for protocol '%s'" %
-                                self.args.qc_protocol)
+                                "required for QC module '%s'" %
+                                self.args.qc_module)
         print("Required 10x package: %s" % require_cellranger)
         self.output.require_cellranger.set(require_cellranger)
 
@@ -1773,9 +1826,8 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
     """
     def init(self,project,organism=None,transcriptomes=None,
              premrna_references=None,atac_references=None,
-             multiome_references=None,qc_protocol=None,
-             cellranger_exe=None,cellranger_version=None,
-             force_reference_data=None):
+             multiome_references=None,cellranger_exe=None,
+             cellranger_version=None,force_reference_data=None):
         """
         Initialise the GetCellrangerReferenceData task
 
@@ -1800,7 +1852,6 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
             'cellranger-atac', 'spaceranger')
           cellranger_version (str): the version string for the
             Cellranger package
-          qc_protocol (str): QC protocol to use
           force_reference_data (str): if supplied then
             will be used as the reference dataset, instead of
             trying to locate appropriate reference data
@@ -1817,7 +1868,6 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
         # Report inputs
         print("Cellranger : %s" % self.args.cellranger_exe)
         print("Version    : %s" % self.args.cellranger_version)
-        print("QC protocol: %s" % self.args.qc_protocol)
         print("Organism(s): %s" % self.args.organism)
         # Check pre-determined reference dataset
         if self.args.force_reference_data:
@@ -1836,7 +1886,7 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
         cellranger_pkg = os.path.basename(self.args.cellranger_exe)
         if cellranger_pkg == "cellranger":
             references = self.args.transcriptomes
-            if self.args.qc_protocol == "10x_snRNAseq" and \
+            if self.args.project.info.library_type == "snRNA-seq" and \
                int(self.args.cellranger_version.split('.')[0]) < 5:
                 references = self.args.premrna_references
         elif cellranger_pkg == "cellranger-atac":
@@ -1845,9 +1895,9 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
             references = self.args.multiome_references
         else:
             self.fail(message="Don't know which reference "
-                      "dataset to use for '%s' and protocol '%s'" %
+                      "dataset to use for '%s' and library '%s'" %
                       (self.args.cellranger_exe,
-                       self.args.qc_protocol))
+                       self.args.project.info.library_type))
             return
         if references is None:
             references = {}
@@ -1975,7 +2025,7 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
     Check the outputs from cellranger(-atac) count
     """
     def init(self,project,fastq_dir=None,samples=None,qc_dir=None,
-             qc_protocol=None,extra_projects=None,
+             qc_module=None,extra_projects=None,
              cellranger_version=None,cellranger_ref_data=None,
              verbose=False):
         """
@@ -1991,7 +2041,7 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
           qc_dir (str): top-level QC directory to look
             for 'count' QC outputs (e.g. metrics CSV and
             summary HTML files)
-          qc_protocol (str): QC protocol to use
+          qc_module (str): QC protocol being used
           extra_projects (list): optional list of extra
             AnalysisProjects to include Fastqs from when
             running cellranger pipeline
@@ -2016,13 +2066,11 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
             # No reference data, nothing to check
             return
         # Determine which checking function to use
-        if self.args.qc_protocol in ("10x_scRNAseq",
-                                     "10x_snRNAseq",):
+        if self.args.qc_module == "cellranger_count":
             check_outputs = check_cellranger_count_outputs
-        elif self.args.qc_protocol == "10x_scATAC":
+        elif self.args.qc_module == "cellranger-atac_count":
             check_outputs = check_cellranger_atac_count_outputs
-        elif self.args.qc_protocol in ("10x_Multiome_ATAC",
-                                       "10x_Multiome_GEX",):
+        elif self.args.qc_module == "cellranger-arc_count":
             check_outputs = check_cellranger_arc_count_outputs
         # Set the prefix for cellranger/10x outputs
         prefix = os.path.join("cellranger_count",
@@ -2076,13 +2124,13 @@ class RunCellrangerCount(PipelineTask):
     """
     Run 'cellranger count'
     """
-    def init(self,samples,fastq_dir,reference_data_path,out_dir,
-             qc_dir=None,cellranger_exe=None,cellranger_version=None,
-             chemistry='auto',fastq_dirs=None,force_cells=None,
-             cellranger_jobmode='local',cellranger_maxjobs=None,
-             cellranger_mempercore=None,cellranger_jobinterval=None,
-             cellranger_localcores=None,cellranger_localmem=None,
-             qc_protocol=None):
+    def init(self,samples,fastq_dir,reference_data_path,library_type,
+             out_dir,qc_dir=None,cellranger_exe=None,
+             cellranger_version=None,chemistry='auto',fastq_dirs=None,
+             force_cells=None,cellranger_jobmode='local',
+             cellranger_maxjobs=None,cellranger_mempercore=None,
+             cellranger_jobinterval=None,cellranger_localcores=None,
+             cellranger_localmem=None):
         """
         Initialise the RunCellrangerCount task.
 
@@ -2095,6 +2143,8 @@ class RunCellrangerCount(PipelineTask):
             Fastq files
           reference_data_path (str): path to the cellranger
             compatible reference dataset
+          library_type (str): type of data being analysed
+            (e.g. 'scRNA-seq')
           out_dir (str): top-level directory to copy all
             final 'count' outputs into. Outputs won't be
             copied if no value is supplied
@@ -2134,7 +2184,6 @@ class RunCellrangerCount(PipelineTask):
             (defaults to number of slots set in runner)
           cellranger_localmem (int): maximum memory cellranger
             can request in jobmode 'local' (default: None)
-          qc_protocol (str): QC protocol to use
         """
         # Add outputs
         self.add_output('cellranger_version',Param(type=str))
@@ -2218,7 +2267,7 @@ class RunCellrangerCount(PipelineTask):
                 if cellranger_major_version >= 5:
                     # Hard-trim the input R1 sequence to 26bp
                     cmd.add_args("--r1-length=26")
-                    if self.args.qc_protocol == "10x_snRNAseq":
+                    if self.args.library_type == "snRNA-seq":
                         # For single nuclei RNA-seq specify the
                         # --include-introns for cellranger 5.0+
                         if cellranger_major_version == 7:
@@ -2385,7 +2434,7 @@ class RunCellrangerMulti(PipelineTask):
              cellranger_jobmode='local',cellranger_maxjobs=None,
              cellranger_mempercore=None,cellranger_jobinterval=None,
              cellranger_localcores=None,cellranger_localmem=None,
-             qc_protocol=None,working_dir=None):
+             working_dir=None):
         """
         Initialise the RunCellrangerMulti task.
 
@@ -2427,7 +2476,6 @@ class RunCellrangerMulti(PipelineTask):
             (defaults to number of slots set in runner)
           cellranger_localmem (int): maximum memory cellranger
             can request in jobmode 'local' (default: None)
-          qc_protocol (str): QC protocol to use
         """
         # Internal: top-level working directory
         self._working_dir = None
