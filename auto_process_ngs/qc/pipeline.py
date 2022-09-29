@@ -502,7 +502,7 @@ class QCPipeline(Pipeline):
                     project,
                     qc_dir,
                     setup_fastq_strand_conf.output.fastq_strand_conf,
-                    qc_protocol=qc_protocol,
+                    read_numbers=read_numbers.seq_data,
                     verbose=self.params.VERBOSE
                 )
                 self.add_task(check_fastq_strand,
@@ -1651,7 +1651,7 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
     Check the outputs from the fastq_strand.py utility
     """
     def init(self,project,qc_dir,fastq_strand_conf,
-             qc_protocol=None,verbose=False):
+             read_numbers=None,verbose=False):
         """
         Initialise the CheckFastqStrandOutputs task.
 
@@ -1662,7 +1662,8 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           fastq_strand_conf (str): path to the fastq_strand
             config file
-          qc_protocol (str): QC protocol to use
+          read_numbers (list): list of read numbers to
+            include when checking outputs
           verbose (bool): if True then print additional
             information from the task
 
@@ -1685,7 +1686,7 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
                       self.args.project,
                       self.args.qc_dir,
                       fastq_strand_conf,
-                      qc_protocol=self.args.qc_protocol)
+                      read_numbers=self.args.read_numbers)
     def finish(self):
         for result in self.result():
             self.output.fastq_pairs.extend(result)

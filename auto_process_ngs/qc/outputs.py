@@ -1748,7 +1748,7 @@ def check_fastqc_outputs(project,qc_dir,read_numbers=None):
     return sorted(list(fastqs))
 
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
-                               qc_protocol=None):
+                               read_numbers=None):
     """
     Return Fastqs missing QC outputs from fastq_strand.py
 
@@ -1767,9 +1767,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         included unless the path is `None` or the
         config file doesn't exist. Relative path is
         assumed to be a subdirectory of the project
-      qc_protocol (str): QC protocol to predict outputs
-        for; if not set then defaults to standard QC
-        based on ended-ness
+      read_numbers (list): read numbers to predict
+        outputs for
 
     Returns:
       List: list of Fastq file "pairs" with missing
@@ -1788,14 +1787,16 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
     if not os.path.exists(fastq_strand_conf):
         # No conf file, nothing to check
         return list()
-    read_numbers = get_read_numbers(qc_protocol).seq_data
     fastq_pairs = set()
     for fq_group in group_fastqs_by_name(
             remove_index_fastqs(project.fastqs,
                                 project.fastq_attrs),
             fastq_attrs=project.fastq_attrs):
         # Assemble Fastq pairs based on read numbers
-        fq_pair = tuple([fq_group[r-1] for r in read_numbers])
+        if read_numbers:
+            fq_pair = tuple([fq_group[r-1] for r in read_numbers])
+        else:
+            fq_pair = tuple([fq_group[0]])
         # Strand stats output
         output = os.path.join(qc_dir,
                               fastq_strand_output(fq_pair[0]))
