@@ -32,7 +32,9 @@ import os
 import base64
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
-from .analysis import AnalysisProjectQCDirInfo
+from .analysis import AnalysisFastq
+from .fastq_utils import group_fastqs_by_name
+from .metadata import AnalysisProjectQCDirInfo
 from .tenx_genomics_utils import CellrangerMultiConfigCsv
 from . import mockqcdata
 from . import mock10xdata
@@ -175,6 +177,95 @@ class MockQCOutputs:
             fp.write(mockqcdata.SEQ_LENS_JSON % { 'fastq': fastq })
 
     @classmethod
+    def picard_collect_insert_size_metrics(self,fq,organism,qc_dir):
+        """
+        Create mock outputs from Picard CollectInsertSizeMetrics
+        """
+        # Basename for insert size metrics outputs
+        basename = AnalysisFastq(fq)
+        basename.read_number = None
+        basename = str(basename)
+        out_dir = os.path.join(qc_dir,
+                               "picard",
+                               organism)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        for ext in ('.insert_size_metrics.txt',
+                    '.insert_size_histogram.pdf'):
+            f = os.path.join(out_dir,"%s%s" % (basename,ext))
+            with open(f,'wt') as fp:
+                if f.endswith('.txt'):
+                    fp.write(mockqcdata.PICARD_COLLECT_INSERT_SIZE_METRICS)
+                else:
+                    fp.write("Placeholder\n")
+
+    @classmethod
+    def rseqc_infer_experiment(self,fq,organism,qc_dir):
+        """
+        Create mock outputs from RSeQC infer_experiment.py
+        """
+        # Basename for mock infer_experiment.py log file
+        basename = AnalysisFastq(fq)
+        basename.read_number = None
+        basename = str(basename)
+        out_dir = os.path.join(qc_dir,
+                               "rseqc_infer_experiment",
+                               organism)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        f = os.path.join(out_dir,
+                         "%s.infer_experiment.log" % basename)
+        with open(f,'wt') as fp:
+            fp.write("""This is PairEnd Data
+Fraction of reads failed to determine: 0.0172
+Fraction of reads explained by "1++,1--,2+-,2-+": 0.4903
+Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
+""")
+
+    @classmethod
+    def rseqc_genebody_coverage(self,name,organism,qc_dir):
+        """
+        Create mock outputs from RSeQC geneBody_coverage.py
+        """
+        out_dir = os.path.join(qc_dir,
+                               "rseqc_genebody_coverage",
+                               organism)
+        os.makedirs(out_dir)
+        for ext in ('.geneBodyCoverage.curves.png',
+                    '.geneBodyCoverage.r',
+                    '.geneBodyCoverage.txt'):
+            f = os.path.join(out_dir,"%s%s" % (name,ext))
+            with open(f,'wt') as fp:
+                if f.endswith('.txt'):
+                    fp.write(mockqcdata.RSEQC_GENEBODY_COVERAGE_TXT)
+                else:
+                    fp.write("Placeholder\n")
+
+    @classmethod
+    def qualimap_rnaseq(self,fq,organism,qc_dir):
+        """
+        Create mock outputs from Qualimap 'rnaseq' function
+        """
+        # Basename for Qualimap rnaseq outputs
+        basename = AnalysisFastq(fq)
+        basename.read_number = None
+        basename = str(basename)
+        out_dir = os.path.join(qc_dir,
+                               "qualimap-rnaseq",
+                               organism,
+                               basename)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        for f in ('qualimapReport.html',
+                  'rnaseq_qc_results.txt'):
+            ff = os.path.join(out_dir,f)
+            with open(ff,'wt') as fp:
+                if f == 'rnaseq_qc_results.txt':
+                    fp.write(mockqcdata.QUALIMAP_RNASEQ_RESULTS)
+                else:
+                    fp.write("Placeholder\n")
+
+    @classmethod
     def multiqc(self,dirn,multiqc_html=None,version="1.8"):
         """
         Create mock output from MultiQC
@@ -308,9 +399,11 @@ class MockQCOutputs:
 
 def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      protocol=None,
+                     project_name=None,
                      screens=('model_organisms',
                               'other_organisms',
                               'rRNA',),
+                     organisms=('human',),
                      cellranger_pipelines=('cellranger',),
                      cellranger_samples=None,
                      cellranger_multi_samples=None,
@@ -318,6 +411,10 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      include_fastq_screen=True,
                      include_strandedness=True,
                      include_seqlens=True,
+                     include_rseqc_infer_experiment=False,
+                     include_rseqc_genebody_coverage=False,
+                     include_picard_insert_size_metrics=False,
+                     include_qualimap_rnaseq=False,
                      include_multiqc=False,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
@@ -332,8 +429,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
       fastq_dir (str): optional, set a non-standard
         directory for the Fastq files
       protocol (str): QC protocol to emulate
+      project_name (str): optional, specify the project name
       screens (list): optional, list of non-standard
         FastqScreen panel names
+      organisms (list): optional, list of organism names for
+        extended QC metrics
       cellranger_pipelines (list): list of 10xGenomics pipelines
         to make mock outputs for (e.g. 'cellranger',
         'cellranger-atac' etc)
@@ -345,6 +445,14 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
       include_strandedness (bool): include outputs from
         strandedness
       include_seqlens (bool): include sequence length metrics
+      include_rseqc_infer_experiment (bool): include RSeQC
+        infer_experiment.py outputs
+      include_rseqc_genebody_coverage (bool): include RSeQC
+        geneBody_coverage.py outputs
+      include_picard_insert_size_metrics (bool): include Picard
+        CollectInsertSizeMetrics outputs
+      include_qualimap_rnaseq (bool): include Qualimap 'rnaseq'
+        outputs
       include_multiqc (bool): include MultiQC outputs
       include_celllranger_count (bool): include 'cellranger
         count' outputs
@@ -363,9 +471,14 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
     # Make an empty QC dir
     if not os.path.exists(qc_dir):
         os.mkdir(qc_dir)
+    # Project name
+    if project_name is None:
+        project_name = os.path.basename(os.path.dirname(qc_dir))
     # QC metadata
     qc_info = AnalysisProjectQCDirInfo()
     qc_info['protocol'] = protocol
+    if organisms:
+        qc_info['organism'] = ','.join(organisms)
     # Populate with fake QC products
     for fq in fastq_names:
         # FastQC
@@ -377,17 +490,82 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                 MockQCOutputs.fastq_screen_v0_9_2(
                     fq,qc_dir,screen,legacy=legacy_screens)
             qc_info['fastq_screens'] = ','.join(screens)
-        # Strandedness
-        if include_strandedness:
-            MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
         # Sequence lengths
         if include_seqlens:
             MockQCOutputs.seqlens(fq,qc_dir)
+    for fq_group in group_fastqs_by_name(fastq_names):
+        if protocol in ('10x_scRNAseq',
+                        '10x_snRNAseq',
+                        '10x_Multiome_GEX',
+                        '10x_CellPlex',
+                        '10x_Visium',):
+            fq = fq_group[1]
+        else:
+            fq = fq_group[0]
+        # Strandedness
+        if include_strandedness:
+            MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
+        # RSeQC infer_experiment.py
+        if include_rseqc_infer_experiment:
+            for organism in organisms:
+                MockQCOutputs.rseqc_infer_experiment(
+                    fq,organism,qc_dir)
+        # Picard insert size metrics
+        if include_picard_insert_size_metrics:
+            for organism in organisms:
+                MockQCOutputs.picard_collect_insert_size_metrics(
+                    fq,organism,qc_dir)
+        # Qualimap rnaseq
+        if include_qualimap_rnaseq:
+            for organism in organisms:
+                MockQCOutputs.qualimap_rnaseq(fq,organism,qc_dir)
+    # Version file for RSeQC infer_experiment.py
+    if include_rseqc_infer_experiment:
+        for organism in organisms:
+            with open(os.path.join(qc_dir,
+                                   "rseqc_infer_experiment",
+                                   organism,
+                                   "_versions"),'wt') as fp:
+                fp.write("rseqc:infer_experiment\t4.0.0\n")
+    # Extra files for insert sizes
+    if include_picard_insert_size_metrics:
+        # Collated insert sizes
+        for organism in organisms:
+            with open(os.path.join(
+                    qc_dir,
+                    "insert_sizes.%s.tsv" % organisms),'wt') as fp:
+                fp.write("Placeholder\n")
+        # Picard version
+        for organism in organisms:
+            with open(os.path.join(qc_dir,
+                                   "picard",
+                                   organism,
+                                   "_versions"),'wt') as fp:
+                fp.write("picard\t2.27.1\n")
+    # Version file for Qualimap rnaseq
+    if include_qualimap_rnaseq:
+        for organism in organisms:
+            with open(os.path.join(qc_dir,
+                                   "qualimap-rnaseq",
+                                   organism,
+                                   "_versions"),'wt') as fp:
+                fp.write("qualimap\tv.2.2.2\n")
     # Strandedness conf file
     if include_strandedness:
         with open(os.path.join(qc_dir,
                                "fastq_strand.conf"),'wt') as fp:
             fp.write("Placeholder\n")
+    # RSeQC gene body coverage
+    if include_rseqc_genebody_coverage:
+        for organism in organisms:
+            MockQCOutputs.rseqc_genebody_coverage(project_name,
+                                                  organism,
+                                                  qc_dir)
+            with open(os.path.join(qc_dir,
+                                   "rseqc_genebody_coverage",
+                                   organism,
+                                   "_versions"),'wt') as fp:
+                fp.write("rseqc:genebody_coverage\t4.0.0\n")
     # MultiQC
     if include_multiqc:
         out_file = "multi%s_report.html" % os.path.basename(qc_dir)
@@ -465,6 +643,20 @@ PJB_CML2,CMO302,CML2
                                        config_csv=multi_config,
                                        prefix=multi_dir)
         qc_info['cellranger_version'] = version
+    # Additional metadata items
+    star_index = "/data/star/hg38"
+    annotation_bed = "/data/annotation/hg38.bed"
+    annotation_gtf = "/data/annotation/hg38.gtf"
+    if include_picard_insert_size_metrics:
+        qc_info['star_index'] = star_index
+    if include_rseqc_genebody_coverage or \
+       include_rseqc_infer_experiment:
+        qc_info['star_index'] = star_index
+        qc_info['annotation_bed'] = annotation_bed
+    if include_qualimap_rnaseq:
+        qc_info['star_index'] = star_index
+        qc_info['annotation_bed'] = annotation_bed
+        qc_info['annotation_gtf'] = annotation_gtf
     # Write out metadata file
     qc_info.save(os.path.join(qc_dir,"qc.info"))
     return qc_dir

@@ -135,6 +135,18 @@ def run_qc(ap,projects=None,fastq_screens=None,
         star_index = ap.settings.organisms[organism].star_index
         if star_index:
             star_indexes[organism] = star_index
+    # Annotation BEDs
+    annotation_bed_files = dict()
+    for organism in ap.settings.organisms:
+        annotation_bed = ap.settings.organisms[organism].annotation_bed
+        if annotation_bed:
+            annotation_bed_files[organism] = annotation_bed
+    # Annotation GTFs
+    annotation_gtf_files = dict()
+    for organism in ap.settings.organisms:
+        annotation_gtf = ap.settings.organisms[organism].annotation_gtf
+        if annotation_gtf:
+            annotation_gtf_files[organism] = annotation_gtf
     # Set 10x cellranger reference data
     if not cellranger_transcriptomes:
         cellranger_transcriptomes = dict()
@@ -185,6 +197,8 @@ def run_qc(ap,projects=None,fastq_screens=None,
             'fastq_screen_runner': (ap.settings.runners.fastq_screen
                                     if ap.settings.runners.fastq_screen
                                     else ap.settings.runners.qc),
+            'qualimap_runner': ap.settings.runners.qualimap,
+            'rseqc_runner': ap.settings.runners.rseqc,
             'star_runner': ap.settings.runners.star,
             'verify_runner': default_runner,
             'report_runner': default_runner,
@@ -195,6 +209,8 @@ def run_qc(ap,projects=None,fastq_screens=None,
             'cellranger_runner': runner,
             'fastqc_runner': runner,
             'fastq_screen_runner': runner,
+            'qualimap_runner': runner,
+            'rseqc_runner': runner,
             'star_runner': runner,
             'verify_runner': runner,
             'report_runner': runner,
@@ -245,6 +261,8 @@ def run_qc(ap,projects=None,fastq_screens=None,
     status = runqc.run(nthreads=nthreads,
                        fastq_screens=fastq_screens,
                        star_indexes=star_indexes,
+                       annotation_bed_files=annotation_bed_files,
+                       annotation_gtf_files=annotation_gtf_files,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,

@@ -37,8 +37,12 @@ run_qc (*)          `fastqc`_
 run_qc (*)          `fastq_screen`_
 run_qc (*)          `bowtie`_          Required by fastq_screen
 run_qc (*)          `STAR`_            Required for strandedness and alignment
+run_qc (*)          `picard`_          Required for insert size metrics
+run_qc (*)          `rseqc`_           Required for gene body coverage
+run_qc (*)          `qualimap`_        Required for per-Fastq genomic origin of reads etc
 run_qc              `cellranger`_      10xGenomics Chromium single-cell RNA-seq data only
-run_qc              `cellranger-atac`_ 10xGenomics Chromium single-cell ATAC-seq data only
+run_qc              `cellranger-atac`_ 10xGenomics single-cell ATAC-seq data only
+run_qc              `cellranger-arc`_  10xGenomics Multiome ATAC + GEX data
 run_qc (*)          `multiqc`_
 process_icell8      `cutadapt`_
 process_icell8      `fastq_screen`_
@@ -57,6 +61,9 @@ process_icell8      `bowtie2`_         Required by fastq_screen
 .. _bowtie: http://bowtie-bio.sourceforge.net/index.shtml
 .. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 .. _STAR: https://github.com/alexdobin/STAR
+.. _picard: https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-
+.. _rseqc: http://rseqc.sourceforge.net/#
+.. _qualimap: http://qualimap.conesalab.org/doc_html/command_line.html#rna-seq-qc
 .. _multiqc: http://multiqc.info/
 .. _cutadapt: http://cutadapt.readthedocs.io
 
@@ -166,11 +173,84 @@ section:
    use_legacy_screen_names = True
    ...
 
-Strandedness and single cell analyses
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Strandedness
+^^^^^^^^^^^^
 
 Strandedness determination requires ``STAR`` indexes for each
-organism of interest.
+organism of interest. These can be defined using appropriate
+settings in ``[organism:...]`` sections of the ``auto_process.ini``
+file, for example:
+
+::
+
+   [organism: human]
+   star_index = /data/genomeIndexes/hg38/STAR/
+
+   [organism: mouse]
+   star_index = /data/genomeIndexes/mm10/STAR/
+
+.. note::
+
+   The ``[organism:...]`` sections supersede the old
+   ``fastq_strand_indexes`` section of the ``auto_process.ini``
+   file; the older section is still recognised for now but is
+   deprecated and likely to be dropped in future.
+
+Insert size metrics (Picard)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Picard's ``CollectInsertSizeMetrics`` needs a STAR index for
+each organism of interest (in order to generate a BAM file from
+the sequences). This should be specfied in the ``[organism:...]``
+sections of the ``auto_process.ini`` configuration file, for example:
+
+::
+
+   [organism: human]
+   star_index = /data/genomeIndexes/hg38/STAR/
+
+RSeQC gene body coverage
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+RSeQC ``geneBody_coverage.py`` needs both a STAR index (in order
+to generate a BAM file from the sequences) and gene annotation in
+BED format, for each organism of interest. These should be specfied
+in the ``[organism:...]`` sections of the ``auto_process.ini``
+configuration file, for example:
+
+::
+
+   [organism: human]
+   star_index = /data/genomeIndexes/hg38/STAR/
+   annotation_bed = /data/genomeIndexes/hg38/hg38.HouseKeepingGenes.bed
+
+.. note::
+
+   Suitable gene model files for human and mouse can be downloaded
+   from the RSeQC webpages at
+   http://rseqc.sourceforge.net/#download-gene-models-update-on-12-14-2021
+
+Qualimap RNA-seq metrics
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Qualimap's ``rnaseq`` command a STAR index (in order to generate a BAM
+file from the sequences) and gene annotation in GTF format, for each
+organism of interest. The pipeline also requires annotation in BED
+format, in order to run RSeQC's ``infer_experiment.py`` command to
+determine strand specificity (which is needed as input to Qualimap).
+
+All these should be specfied in the ``[organism:...]`` sections of the
+``auto_process.ini`` configuration file, for example:
+
+::
+
+   [organism: human]
+   star_index = /data/genomeIndexes/hg38/STAR/
+   annotation_bed = /data/genomeIndexes/hg38/hg38.HouseKeepingGenes.bed
+   annotation_gtf = /data/genomeIndexes/hg38/gencode.v40.annotation.gtf
+
+Single cell analyses
+^^^^^^^^^^^^^^^^^^^^
 
 Single library analyses of 10xGenomics single cell data require
 the appropriate compatible reference datasets for
@@ -191,14 +271,12 @@ for example:
 ::
 
    [organism: human]
-   star_index = /data/genomeIndexes/hg38/STAR/
    cellranger_reference = /data/10x/refdata-cellranger-GRCh38-1.2.0
    cellranger_premrna_reference = /data/10x/refdata-cellranger-GRCh38-1.2.0_premrna
    cellranger_atac_reference = /data/10x/refdata-cellranger-atac-GRCh38-1.0.1
    cellranger_arc_reference = /data/10x/refdata-cellranger-arc-GRCh38-2020-A
-   
+
    [organism: mouse]
-   star_index = /data/genomeIndexes/mm10/STAR/
    cellranger_reference = /data/10x/refdata-cellranger-mm10-1.2.0
    cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-1.0.1
    cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A
@@ -229,10 +307,29 @@ explains how to generate a custom reference package for these data:
 .. note::
 
    The ``[organism:...]`` sections supersede the old
-   ``fastq_strand_indexes`` and ``10xgenomics...`` sections
-   of the ``auto_process.ini`` file; the old sections are
-   still recognised for now but are deprecated and likely to
-   be dropped in future.
+   ``10xgenomics...`` sections of the ``auto_process.ini`` file;
+   the old sections are still recognised for now but are
+   deprecated and likely to be dropped in future.
+
+Annotation data
+^^^^^^^^^^^^^^^
+
+Annotation data in BED and GTF formats can be specified for
+organisms of interest via the ``annotation_bed`` and ``annotation_gtf``
+settings respectively in ``[organism:...]`` sections of the
+``auto_process.ini`` file.
+
+For example:
+
+::
+
+   [organism: human]
+   annotation_bed = /data/genomeIndexes/hg38/annotation/hg38_NCBI_RefSeq_All.bed
+   annotation_gtf = /data/genomeIndexes/hg38/annotation/hg38_NCBI_RefSeq_All.gtf
+
+   [organism: mouse]
+   annotation_bed = /data/genomeIndexes/mm10/annotation/gencode.vM25.annotation.bed
+   annotation_gtf = /data/genomeIndexes/mm10/annotation/gencode.vM25.annotation.gtf
   
 .. _auto_process_reference_data_icell8:
 

@@ -46,7 +46,7 @@ from auto_process_ngs.tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
 from auto_process_ngs.qc.constants import PROTOCOLS
 
 # Module-specific logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("run_qc.py")
 
 # Versions and settings
 __version__ = auto_process_ngs.get_version()
@@ -500,6 +500,18 @@ if __name__ == "__main__":
         if star_index:
             star_indexes[organism] = star_index
 
+    # Annotation files
+    annotation_bed_files = dict()
+    for organism in __settings.organisms:
+        annotation_bed_file = __settings.organisms[organism].annotation_bed
+        if annotation_bed_file:
+            annotation_bed_files[organism] = annotation_bed_file
+    annotation_gtf_files = dict()
+    for organism in __settings.organisms:
+        annotation_gtf_file = __settings.organisms[organism].annotation_gtf
+        if annotation_gtf_file:
+            annotation_gtf_files[organism] = annotation_gtf_file
+
     # Cellranger settings
     cellranger_settings = __settings['10xgenomics']
 
@@ -571,6 +583,9 @@ if __name__ == "__main__":
                 float(psutil.virtual_memory().total)/(1024.0**3)
                 *float(max_cores)/float(psutil.cpu_count()))
         print("-- Maximum memory: %s Gbs" % max_mem)
+        # Memory per core
+        mempercore = max_mem/float(max_cores)
+        print("-- Mem per core: %.1f Gbs" % mempercore)
         # Set number of threads for QC jobs
         if args.nthreads:
             nthreads = args.nthreads
@@ -581,9 +596,20 @@ if __name__ == "__main__":
         if args.nthreads:
             nthreads_star = args.nthreads
         else:
-            mempercore = max_mem/float(max_cores)
-            nthreads_star = int(math.ceil(32.0/mempercore))
+            nthreads_star = min(max_cores,
+                                int(math.ceil(32.0/mempercore)))
         print("-- Threads for STAR: %s" % nthreads_star)
+        if nthreads_star*mempercore < 32.0:
+            logger.warning("Insufficient memory for STAR?")
+        # Set number of cores for Qualimap jobs
+        if args.nthreads:
+            ncores_qualimap = args.nthreads
+        else:
+            ncores_qualimap = min(max_cores,
+                                  int(math.ceil(4.0/mempercore)*2))
+        print("-- Cores for Qualimap: %s" % ncores_qualimap)
+        if ncores_qualimap*mempercore < 8.0:
+            logger.warning("Insufficient memory for Qualimap?")
         # Remove limit on number of jobs
         print("-- Set maximum no of jobs to 'unlimited'")
         max_jobs = None
@@ -602,6 +628,8 @@ if __name__ == "__main__":
             'cellranger_runner': SimpleJobRunner(nslots=cellranger_localcores),
             'fastqc_runner': SimpleJobRunner(nslots=nthreads),
             'fastq_screen_runner': SimpleJobRunner(nslots=nthreads),
+            'qualimap_runner': SimpleJobRunner(nslots=ncores_qualimap),
+            'rseqc_runner': SimpleJobRunner(),
             'star_runner': SimpleJobRunner(nslots=nthreads_star),
             'verify_runner': default_runner,
             'report_runner': default_runner,
@@ -629,6 +657,8 @@ if __name__ == "__main__":
                 'cellranger_runner': default_runner,
                 'fastqc_runner': default_runner,
                 'fastq_screen_runner': default_runner,
+                'qualimap_runner': default_runner,
+                'rseqc_runner': default_runner,
                 'star_runner': default_runner,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
@@ -641,6 +671,8 @@ if __name__ == "__main__":
                 'cellranger_runner': __settings.runners.cellranger,
                 'fastqc_runner': __settings.runners.fastqc,
                 'fastq_screen_runner': __settings.runners.fastq_screen,
+                'qualimap_runner': __settings.runners.qualimap,
+                'rseqc_runner': __settings.runners.rseqc,
                 'star_runner': __settings.runners.star,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
@@ -745,6 +777,8 @@ if __name__ == "__main__":
                        fastq_screens=fastq_screens,
                        fastq_subset=args.fastq_screen_subset,
                        star_indexes=star_indexes,
+                       annotation_bed_files=annotation_bed_files,
+                       annotation_gtf_files=annotation_gtf_files,
                        cellranger_chemistry=\
                        args.cellranger_chemistry,
                        cellranger_force_cells=\

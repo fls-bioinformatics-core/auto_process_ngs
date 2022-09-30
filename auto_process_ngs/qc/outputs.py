@@ -15,6 +15,11 @@ Provides the following functions:
 - fastq_screen_output: get names for fastq_screen outputs
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
+- picard_collect_insert_size_metrics_output: get names for Picard
+  CollectInsertSizeMetrics output
+- rseqc_genebody_coverage_output: get names for RSeQC geneBody_coverage.py
+  output
+- qualimap_rnaseq_output: get names for Qualimap 'rnaseq' output
 - cellranger_count_output: get names for cellranger count output
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - cellranger_arc_count_output: get names for cellranger-arc count output
@@ -72,6 +77,8 @@ class QCOutputs:
     - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
     - samples: sorted list of sample names extracted
       from Fastqs
+    - bams: sorted list of BAM file names
+    - organisms: sorted list of organism names
     - fastq_screens: sorted list of screen names
     - cellranger_references: sorted list of reference
       datasets used with 10x pipelines
@@ -95,6 +102,10 @@ class QCOutputs:
     - 'screens_[r1...]'
     - 'strandedness'
     - 'sequence_lengths'
+    - 'picard_insert_size_metrics'
+    - 'rseqc_genebody_coverage'
+    - 'rseqc_infer_experiment'
+    - 'qualimap_rnaseq'
     - 'icell8_stats'
     - 'icell8_report'
     - 'cellranger_count'
@@ -126,7 +137,9 @@ class QCOutputs:
         # Properties
         self.fastqs = set()
         self.samples = []
+        self.bams = set()
         self.reads = []
+        self.organisms = set()
         self.stats = AttributeDictionary(
             max_seqs=None,
             min_sequence_length_read={},
@@ -150,12 +163,18 @@ class QCOutputs:
         print("Fastqs:")
         for fq in self.fastqs:
             print("- %s" % fq)
+        print("BAMs:")
+        for b in self.bams:
+            print("- %s" % b)
         print("Samples:")
         for s in self.samples:
             print("- %s" % s)
         print("Reads:")
         for r in self.reads:
             print("- %s" % r)
+        print("Organisms:")
+        for o in self.organisms:
+            print("- %s" % o)
         print("Software:")
         for sw in self.software:
             print("- %s: %s" % (sw,','.join(self.software[sw])))
@@ -200,6 +219,10 @@ class QCOutputs:
                 self._collect_fastqc(files),
                 self._collect_fastq_strand(files),
                 self._collect_seq_lengths(files),
+                self._collect_picard_insert_size_metrics(self.qc_dir),
+                self._collect_rseqc_genebody_coverage(self.qc_dir),
+                self._collect_rseqc_infer_experiment(self.qc_dir),
+                self._collect_qualimap_rnaseq(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(self.qc_dir),
                 self._collect_cellranger_multi(self.qc_dir),
@@ -245,9 +268,13 @@ class QCOutputs:
         self.cellranger_references = sorted(self.cellranger_references)
         # Fastqs
         self.fastqs = sorted(list(self.fastqs))
+        # BAMs
+        self.bams = sorted(list(self.bams))
         # Samples
         samples = set([self.fastq_attrs(fq).sample_name
                        for fq in self.fastqs])
+        for bam in self.bams:
+            samples.add(self.fastq_attrs(bam).sample_name)
         for s in cellranger_count.samples:
             samples.add(s)
         self.samples = sorted(list(samples),
@@ -263,6 +290,8 @@ class QCOutputs:
                 reads.add("r%s" % (fq.read_number
                                    if fq.read_number is not None else '1'))
         self.reads = sorted(list(reads))
+        # Organisms
+        self.organisms = sorted(list(self.organisms))
         # Sort outputs
         self.outputs = sorted(self.outputs)
         # Sort output files
@@ -308,6 +337,18 @@ class QCOutputs:
                 self.fastqs.add(fq)
         except AttributeError:
             pass
+        # BAMs
+        try:
+            for bam in data.bam_files:
+                self.bams.add(bam)
+        except AttributeError:
+            pass
+        # Organisms
+        try:
+            for organism in data.organisms:
+                self.organisms.add(organism)
+        except AttributeError:
+            pass
         # Software versions
         for sw in data.software.keys():
             self.software[sw] = [str(v) if v else '?'
@@ -315,6 +356,45 @@ class QCOutputs:
         # Tags
         for tag in data.tags:
             self.outputs.add(tag)
+
+    def _read_versions_file(self,f,pkgs=None):
+        """
+        Internal: extract software info from 'versions' file
+
+        'versions' files (typically named ``_versions``)
+        should consist of one or more lines of text, with
+        each line comprising a software package name and
+        a version number, separated by a tab character.
+
+        Returns a dictionary where package names are keys,
+        and the corresponding values are lists of versions.
+
+        If an existing dictionary is supplied via the 'pkgs'
+        argument then any package information is added to this
+        dictionary; otherwise an empty dictionary is created
+        and populated.
+        """
+        if pkgs is not None:
+            software = pkgs
+        else:
+            software = dict()
+        if not os.path.exists(f):
+            return software
+        try:
+            with open(f,'rt') as fp:
+                for line in fp:
+                    try:
+                        pkg,version = line.strip().split('\t')
+                    except IndexError:
+                        continue
+                    try:
+                        software[pkg].append(version)
+                    except KeyError:
+                        software[pkg] = [version]
+        except Exception as ex:
+            logger.warning("%s: unable to extract versions: %s" %
+                           (f,ex))
+        return software
 
     def _collect_fastq_screens(self,files):
         """
@@ -609,6 +689,277 @@ class QCOutputs:
             max_seq_length=max_seq_length,
             reads=sorted(list(reads)),
             fastqs=sorted(list(fastqs)),
+            output_files=output_files,
+            tags=sorted(list(tags))
+        )
+
+    def _collect_picard_insert_size_metrics(self,qc_dir):
+        """
+        Collect information on Picard CollectInsertSizeMetrics outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'picard_collect_insert_size_metrics'
+        - software: dictionary of software and versions
+        - organisms: list of organisms with associated
+          outputs
+        - bam_files: list of associated BAM file names
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        software = {}
+        bam_files = set()
+        output_files = list()
+        tags = set()
+        # Look for Picard CollectInsertSizeMetrics outputs
+        organisms = set()
+        picard_dir = os.path.join(qc_dir,"picard")
+        if os.path.isdir(picard_dir):
+            # Look for subdirs with organism names
+            for d in filter(
+                    lambda dd:
+                    os.path.isdir(os.path.join(picard_dir,dd)),
+                    os.listdir(picard_dir)):
+                # Check for outputs
+                for f in filter(
+                        lambda ff:
+                        ff.endswith(".insert_size_metrics.txt"),
+                        os.listdir(os.path.join(picard_dir,d))):
+                    name = f[:-len(".insert_size_metrics.txt")]
+                    outputs = picard_collect_insert_size_metrics_output(
+                        name,
+                        prefix=os.path.join(picard_dir,d))
+                    if all([os.path.exists(f) for f in outputs]):
+                        # All outputs present
+                        organisms.add(d)
+                        bam_files.add(name)
+                        output_files.extend(outputs)
+                # Check for software information
+                software = self._read_versions_file(
+                    os.path.join(picard_dir,d,"_versions"),
+                    software)
+        if organisms:
+            tags.add("picard_insert_size_metrics")
+            if not software:
+                software['picard'] = [None]
+        # Look for collated insert sizes files
+        for f in filter(
+                lambda ff:
+                ff.startswith("insert_sizes.") and ff.endswith(".tsv"),
+                os.listdir(qc_dir)):
+            tags.add("collated_insert_sizes")
+            output_files.append(os.path.join(qc_dir,f))
+            organisms.add(f[len("insert_sizes."):-len(".tsv")])
+        # Return collected information
+        return AttributeDictionary(
+            name='picard_collect_insert_size_metrics',
+            software=software,
+            bam_files=sorted(list(bam_files)),
+            organisms=sorted(list(organisms)),
+            output_files=output_files,
+            tags=sorted(list(tags))
+        )
+
+    def _collect_rseqc_genebody_coverage(self,qc_dir):
+        """
+        Collect information on RSeQC geneBody_coverage.py outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'rseqc_genebody_coverage'
+        - software: dictionary of software and versions
+        - organisms: list of organisms with associated
+          outputs
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        software = {}
+        output_files = list()
+        tags = set()
+        # Look for RSeQC geneBody_coverage.py outputs
+        organisms = set()
+        genebody_cov_dir = os.path.join(qc_dir,
+                                        "rseqc_genebody_coverage")
+        if os.path.isdir(genebody_cov_dir):
+            # Look for subdirs with organism names
+            for d in filter(
+                    lambda dd:
+                    os.path.isdir(os.path.join(genebody_cov_dir,dd)),
+                    os.listdir(genebody_cov_dir)):
+                # Check for outputs
+                for f in filter(
+                        lambda ff:
+                        ff.endswith(".geneBodyCoverage.txt"),
+                        os.listdir(os.path.join(genebody_cov_dir,d))):
+                    name = f[:-len(".geneBodyCoverage.txt")]
+                    outputs = rseqc_genebody_coverage_output(
+                        name,
+                        prefix=os.path.join(genebody_cov_dir,d))
+                    if all([os.path.exists(f) for f in outputs]):
+                        # All outputs present
+                        organisms.add(d)
+                        output_files.extend(outputs)
+                # Check for software information
+                software = self._read_versions_file(
+                    os.path.join(genebody_cov_dir,
+                                 d,"_versions"),
+                    software)
+        if organisms:
+            tags.add("rseqc_genebody_coverage")
+            if not software:
+                software['rseqc:genebody_coverage'] = [None]
+        # Return collected information
+        return AttributeDictionary(
+            name='rseqc_genebody_coverage',
+            software=software,
+            organisms=sorted(list(organisms)),
+            output_files=output_files,
+            tags=sorted(list(tags))
+        )
+
+    def _collect_rseqc_infer_experiment(self,qc_dir):
+        """
+        Collect information on RSeQC infer_experiment.py outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'rseqc_infer_experiment'
+        - software: dictionary of software and versions
+        - organisms: list of organisms with associated
+          outputs
+        - bam_files: list of associated BAM file names
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        software = {}
+        bam_files = set()
+        output_files = list()
+        tags = set()
+        # Look for RSeQC infer_experiment.py outputs
+        organisms = set()
+        infer_experiment_dir = os.path.join(qc_dir,
+                                            "rseqc_infer_experiment")
+        if os.path.isdir(infer_experiment_dir):
+            # Look for subdirs with organism names
+            for d in filter(
+                    lambda dd:
+                    os.path.isdir(os.path.join(infer_experiment_dir,dd)),
+                    os.listdir(infer_experiment_dir)):
+                # Check for outputs
+                for f in filter(
+                        lambda ff:
+                        ff.endswith(".infer_experiment.log"),
+                        os.listdir(os.path.join(infer_experiment_dir,d))):
+                    print("- %s" % f)
+                    name = f[:-len(".infer_experiment.log")]
+                    organisms.add(d)
+                    bam_files.add(name)
+                    output_files.append(os.path.join(infer_experiment_dir,
+                                                     d,f))
+                # Check for software information
+                software = self._read_versions_file(
+                    os.path.join(infer_experiment_dir,
+                                 d,"_versions"),
+                    software)
+        if organisms:
+            tags.add("rseqc_infer_experiment")
+            if not software:
+                software['rseqc:infer_experiment'] = [None]
+        # Return collected information
+        return AttributeDictionary(
+            name='rseqc_infer_experiment',
+            software=software,
+            bam_files=sorted(list(bam_files)),
+            organisms=sorted(list(organisms)),
+            output_files=output_files,
+            tags=sorted(list(tags))
+        )
+
+    def _collect_qualimap_rnaseq(self,qc_dir):
+        """
+        Collect information on Qualimap 'rnaseq' outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'qualimap_rnaseq'
+        - software: dictionary of software and versions
+        - organisms: list of organisms with associated
+          outputs
+        - bam_files: list of associated BAM file names
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        software = {}
+        bam_files = set()
+        output_files = list()
+        tags = set()
+        # Look for Qualimap 'rnaseq' outputs
+        organisms = set()
+        qualimap_dir = os.path.join(qc_dir,"qualimap-rnaseq")
+        if os.path.isdir(qualimap_dir):
+            # Look for subdirs with organism names
+            for d in filter(
+                    lambda dd:
+                    os.path.isdir(os.path.join(qualimap_dir,dd)),
+                    os.listdir(qualimap_dir)):
+                # Look for subdirs with BAM file names
+                organism_dir = os.path.join(qualimap_dir,d)
+                for bam in filter(
+                        lambda dd:
+                        os.path.isdir(os.path.join(organism_dir,dd)),
+                        os.listdir(organism_dir)):
+                    # Check for Qualimap rnaseq outputs
+                    for f in filter(
+                            lambda ff:
+                            ff == "qualimapReport.html",
+                            os.listdir(os.path.join(organism_dir,bam))):
+                        outputs = [os.path.join(organism_dir,bam,ff)
+                                   for ff in ('qualimapReport.html',
+                                              'rnaseq_qc_results.txt')]
+                        if all([os.path.exists(ff) for ff in outputs]):
+                            # All outputs present
+                            organisms.add(d)
+                            bam_files.add(bam)
+                            output_files.extend(outputs)
+                            # Add additional outputs (CSS, images etc)
+                            for subdir in ('css',
+                                           'images_qualimapReport',
+                                           'raw_data_qualimapReport',):
+                                dd = os.path.join(organism_dir,bam,subdir)
+                                if os.path.exists(dd):
+                                    extra_files = [os.path.join(dd,ff)
+                                                   for ff in os.listdir(dd)]
+                                    output_files.extend(extra_files)
+                # Check for software information
+                software = self._read_versions_file(
+                    os.path.join(organism_dir,"_versions"),
+                    software)
+        if organisms:
+            tags.add("qualimap_rnaseq")
+            if not software:
+                software['qualimap'] = [None]
+        # Return collected information
+        return AttributeDictionary(
+            name='qualimap_rnaseq',
+            software=software,
+            bam_files=sorted(list(bam_files)),
+            organisms=sorted(list(organisms)),
             output_files=output_files,
             tags=sorted(list(tags))
         )
@@ -1055,6 +1406,92 @@ def fastq_strand_output(fastq):
     """
     return "%s_fastq_strand.txt" % strip_ngs_extensions(
         os.path.basename(fastq))
+
+def picard_collect_insert_size_metrics_output(filen,prefix=None):
+    """
+    Generate names of Picard CollectInsertSizeMetrics output
+
+    Given a Fastq or BAM file name, the output from Picard's
+    CollectInsertSizeMetrics function will look like:
+
+    - {PREFIX}/{FASTQ}.insert_size_metrics.txt
+    - {PREFIX}/{FASTQ}.insert_size_histogram.pdf
+
+    Arguments:
+      filen (str): name of Fastq or BAM file
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: CollectInsertSizeMetrics output (without leading
+        paths)
+
+    """
+    outputs = []
+    basename = os.path.basename(filen)
+    while basename.split('.')[-1] in ('bam',
+                                      'fastq',
+                                      'gz'):
+        basename = '.'.join(basename.split('.')[:-1])
+    for ext in ('.insert_size_metrics.txt',
+                '.insert_size_histogram.pdf'):
+        outputs.append("%s%s" % (basename,ext))
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
+
+def rseqc_genebody_coverage_output(name,prefix=None):
+    """
+    Generate names of RSeQC geneBody_coverage.py output
+
+    Given a basename, the output from geneBody_coverage.py
+    will look like:
+
+    - {PREFIX}/{NAME}.geneBodyCoverage.curves.png
+    - {PREFIX}/{NAME}.geneBodyCoverage.r
+    - {PREFIX}/{NAME}.geneBodyCoverage.txt
+
+    Arguments:
+      name (str): basename for output files
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: geneBody_coverage.py output (without leading paths)
+
+    """
+    outputs = []
+    for ext in ('.geneBodyCoverage.curves.png',
+                '.geneBodyCoverage.r',
+                '.geneBodyCoverage.txt'):
+        outputs.append("%s%s" % (name,ext))
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
+
+def qualimap_rnaseq_output(prefix=None):
+    """
+    Generate names of Qualimap 'rnaseq' output
+
+    The output from Qualimap 'rnaseq' are always::
+
+    - {PREFIX}/qualimapReport.html
+    - {PREFIX}/rnaseq_qc_results.txt
+    - {PREFIX}/...
+
+    Arguments:
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: Qualimap 'rnaseq' output (without leading paths)
+
+    """
+    outputs = ['qualimapReport.html',
+               'rnaseq_qc_results.txt']
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
 
 def cellranger_count_output(project,sample_name=None,
                             prefix="cellranger_count"):

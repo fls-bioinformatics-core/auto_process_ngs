@@ -30,6 +30,13 @@ Pipeline task classes:
 - RunCellrangerCount
 - RunCellrangerMulti
 - SetCellCountFromCellrangerCount
+- GetReferenceDataset
+- GetBAMFiles
+- RunRSeQCGenebodyCoverage
+- RunPicardCollectInsertSizeMetrics
+- CollateInsertSizes
+- RunRSeQCInferExperiment
+- RunQualimapRnaseq
 - ReportQC
 
 Also imports the following pipeline tasks:
@@ -46,15 +53,21 @@ import os
 import logging
 import tempfile
 import shutil
+import random
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
+from bcftbx.ngsutils import getreads
+from bcftbx.ngsutils import getreads_subset
+from ..analysis import AnalysisFastq
 from ..analysis import copy_analysis_project
 from ..bcl2fastq.pipeline import Get10xPackage
 from ..bcl2fastq.pipeline import FunctionParam
 from ..command import Command
 from ..fastq_utils import pair_fastqs_by_name
+from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline
 from ..pipeliner import PipelineTask
@@ -69,14 +82,20 @@ from ..tenx_genomics_utils import add_cellranger_args
 from ..utils import get_organism_list
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
+from .outputs import picard_collect_insert_size_metrics_output
+from .outputs import rseqc_genebody_coverage_output
+from .outputs import qualimap_rnaseq_output
 from .outputs import check_fastq_screen_outputs
 from .outputs import check_fastqc_outputs
 from .outputs import check_fastq_strand_outputs
 from .outputs import check_cellranger_count_outputs
 from .outputs import check_cellranger_atac_count_outputs
 from .outputs import check_cellranger_arc_count_outputs
+from .picard import CollectInsertSizeMetrics
 from .protocols import determine_qc_protocol
 from .protocols import get_read_numbers
+from .rseqc import InferExperiment
+from .utils import get_bam_basename
 from .utils import set_cell_count_for_project
 from .verification import verify_project
 from .fastq_strand import build_fastq_strand_conf
@@ -112,6 +131,8 @@ class QCPipeline(Pipeline):
 
         # Define parameters
         self.add_param('nthreads',type=int)
+        self.add_param('annotation_bed_files',type=dict)
+        self.add_param('annotation_gtf_files',type=dict)
         self.add_param('fastq_subset',type=int)
         self.add_param('cellranger_exe',type=str)
         self.add_param('cellranger_reference_dataset',type=str)
@@ -138,6 +159,8 @@ class QCPipeline(Pipeline):
         self.add_runner('fastq_screen_runner')
         self.add_runner('fastqc_runner')
         self.add_runner('star_runner')
+        self.add_runner('qualimap_runner')
+        self.add_runner('rseqc_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
@@ -590,6 +613,17 @@ class QCPipeline(Pipeline):
                 required_tasks=(setup_qc_dirs,))
             verify_qc.requires(run_cellranger_count)
 
+        # Additional QC metrics
+        if organism:
+            self.add_extended_metrics(project,
+                                      qc_protocol,
+                                      qc_dir,
+                                      organism,
+                                      log_dir,
+                                      qc_metadata,
+                                      pre_tasks=(setup_qc_dirs,),
+                                      post_tasks=(verify_qc,))
+
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_protocol,chemistry,
                              force_cells,log_dir,samples=None,
@@ -750,7 +784,142 @@ class QCPipeline(Pipeline):
         # Return the 'cellranger count' task
         return run_cellranger_count
 
+    def add_extended_metrics(self,project,qc_protocol,qc_dir,
+                             organism,log_dir,qc_metadata,
+                             pre_tasks,post_tasks):
+        """
+        Add additional optional QC metrics for a project
+
+        Arguments:
+          project (AnalysisProject): project to run additional
+            QC metrics for
+          qc_protocol (str): QC protocol to use
+          qc_dir (str): directory for QC outputs
+          organism (str): organism(s) associated with the
+            run
+          log_dir (str): directory for log files (defaults
+            to 'logs' subdirectory of the QC directory
+          qc_metadata (dict): dictionary of metadata items
+            to update from extended metrics
+          pre_tasks (list): list of tasks that must complete
+            before the extended metrics tasks can run
+          post_tasks (list): list of tasks that depend on
+            for the extended metrics to complete
+        """
+        # Read numbers with sequence data (based on protocol)
+        # Used to set which Fastqs should be mapped
+        read_numbers = get_read_numbers(qc_protocol).seq_data
+
+        # Sanitise organism name
+        organism_name = str(organism).\
+                        strip().\
+                        lower().\
+                        replace(' ','_')
+
+        # Indicate if data are paired
+        paired = (len(read_numbers) > 1)
+
+        # Set up tasks for BAM file generation
+        get_star_index = GetReferenceDataset(
+            "%s: get STAR index for '%s'" % (project.name,
+                                             organism),
+            organism,
+            self.params.star_indexes)
+        self.add_task(get_star_index)
+        get_bam_files = GetBAMFiles(
+            "%s: get BAM files" % project.name,
+            project.fastqs,
+            get_star_index.output.reference_dataset,
+            os.path.join(qc_dir,'__bam_files',organism_name),
+            self.params.fastq_subset,
+            self.params.nthreads,
+            reads=read_numbers,
+            verbose=self.params.VERBOSE)
+        self.add_task(get_bam_files,
+                      requires=pre_tasks,
+                      runner=self.runners['star_runner'],
+                      log_dir=log_dir)
+        qc_metadata['star_index'] = get_star_index.output.reference_dataset
+
+        # Get reference gene model for RSeQC
+        get_reference_gene_model = GetReferenceDataset(
+            "%s: get RSeQC reference gene model for '%s'" % (project.name,
+                                                             organism),
+            organism,
+            self.params.annotation_bed_files)
+        self.add_task(get_reference_gene_model,
+                      log_dir=log_dir)
+
+        # Run RSeQC infer experiment
+        rseqc_infer_experiment = RunRSeQCInferExperiment(
+            "%s: infer experiment from BAM files (RSeQC)" % project.name,
+            get_bam_files.output.bam_files,
+            get_reference_gene_model.output.reference_dataset,
+            os.path.join(qc_dir,'rseqc_infer_experiment',organism_name))
+        self.add_task(rseqc_infer_experiment,
+                      log_dir=log_dir)
+
+        # Run RSeQC gene body coverage
+        rseqc_gene_body_coverage = RunRSeQCGenebodyCoverage(
+            "%s: calculate gene body coverage (RSeQC)" % project.name,
+            get_bam_files.output.bam_files,
+            get_reference_gene_model.output.reference_dataset,
+            os.path.join(qc_dir,'rseqc_genebody_coverage',organism_name),
+            name=project.name)
+        self.add_task(rseqc_gene_body_coverage,
+                      runner=self.runners['rseqc_runner'],
+                      log_dir=log_dir)
+        for task in post_tasks:
+            rseqc_gene_body_coverage.required_by(task)
+        qc_metadata['annotation_bed'] = \
+            get_reference_gene_model.output.reference_dataset
+
+        # Run Picard's CollectInsertSizeMetrics
+        if paired:
+            insert_size_metrics = RunPicardCollectInsertSizeMetrics(
+                "%s: Picard: collect insert size metrics" % project.name,
+                get_bam_files.output.bam_files,
+                os.path.join(qc_dir,'picard',organism_name))
+            self.add_task(insert_size_metrics,
+                          log_dir=log_dir)
+
+            collate_insert_sizes = CollateInsertSizes(
+                "%s: collate insert size data" % project.name,
+                get_bam_files.output.bam_files,
+                os.path.join(qc_dir,'picard',organism_name),
+                os.path.join(qc_dir,'insert_sizes.%s.tsv' % organism_name))
+            self.add_task(collate_insert_sizes,
+                          requires=(insert_size_metrics,),
+                          log_dir=log_dir)
+            for task in post_tasks:
+                collate_insert_sizes.required_by(task)
+
+        # Get reference gene model for Qualimap
+        get_annotation_gtf = GetReferenceDataset(
+            "%s: get GTF annotation for '%s'" % (project.name,
+                                                 organism),
+            organism,
+            self.params.annotation_gtf_files)
+        self.add_task(get_annotation_gtf,
+                      log_dir=log_dir)
+
+        # Run Qualimap RNA-seq analysis
+        qualimap_rnaseq = RunQualimapRnaseq(
+            "%s: Qualimap rnaseq: RNA-seq metrics" % project.name,
+            get_bam_files.output.bam_files,
+            get_annotation_gtf.output.reference_dataset,
+            os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
+            bam_properties=rseqc_infer_experiment.output.experiments)
+        self.add_task(qualimap_rnaseq,
+                      runner=self.runners['qualimap_runner'],
+                      log_dir=log_dir)
+        for task in post_tasks:
+            qualimap_rnaseq.required_by(task)
+        qc_metadata['annotation_gtf'] = \
+            get_annotation_gtf.output.reference_dataset
+
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
+            annotation_bed_files=None,annotation_gtf_files=None,
             fastq_subset=None,cellranger_chemistry='auto',
             cellranger_force_cells=None,cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
@@ -776,6 +945,10 @@ class QCPipeline(Pipeline):
             FastqScreen conf files
           star_indexes (dict): mapping of organism IDs to
             directories with STAR indexes
+          annotation_bed_files (dict): mapping of organism
+            IDs to BED files with annotation data
+          annotation_gtf_files (dict): mapping of organism
+            IDs to GTF files with annotation data
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
           cellranger_chemistry (str): explicitly specify
@@ -906,6 +1079,8 @@ class QCPipeline(Pipeline):
                               exit_on_failure=PipelineFailure.DEFERRED,
                               params={
                                   'nthreads': nthreads,
+                                  'annotation_bed_files': annotation_bed_files,
+                                  'annotation_gtf_files': annotation_gtf_files,
                                   'fastq_subset': fastq_subset,
                                   'cellranger_chemistry': cellranger_chemistry,
                                   'cellranger_force_cells':
@@ -2513,6 +2688,810 @@ class SetCellCountFromCellrangerCount(PipelineTask):
                                        self.args.qc_dir)
         except Exception as ex:
             print("Failed to set the cell count: %s" % ex)
+
+class GetReferenceDataset(PipelineTask):
+    """
+    Acquire reference data for an organism from mapping
+
+    Generic lookup task which attempts to locate the matching
+    reference dataset from a mapping/dictionary.
+    """
+    def init(self,organism,references):
+        """
+        Initialise the GetReferenceDataset task
+
+        Arguments:
+          organism (str): name of the organism
+          references (mapping): mapping with organism names
+            as keys and reference datasets as corresponding
+            values
+
+        Outputs:
+          reference_dataset: reference dataset (set to None
+            if no dataset could be located)
+        """
+        self.add_output('reference_dataset',Param(type='str'))
+    def setup(self):
+        organism = str(self.args.organism).lower()
+        try:
+            self.output.reference_dataset.set(self.args.references[organism])
+            print("%s: located %s" % (organism,
+                                      self.output.reference_dataset.value))
+        except Exception as ex:
+            print("Unable to locate reference data for organism '%s'"
+                  % organism)
+
+class GetBAMFiles(PipelineFunctionTask):
+    """
+    Create BAM files from Fastqs using STAR
+
+    Runs STAR to generate BAM files from Fastq files. The
+    BAMs are then sorted and indexed using samtools.
+    """
+    def init(self,fastqs,star_index,out_dir,subset_size=None,
+             nthreads=None,reads=None,fastq_attrs=None,
+             verbose=False):
+        """
+        Initialise the GetBamFiles task
+
+        Arguments:
+          fastqs (list): list of Fastq files to generate
+            BAM files from
+          star_index (str): path to STAR index to use
+          out_dir (str): path to directory to write final
+            BAM files to
+          subset_size (int): specify size of a random subset
+            of reads to use in BAM file generation
+          nthreads (int): number of cores for STAR
+            to use
+          reads (list): optional, list of read numbers to
+            include (e.g. [1,2], [2] etc)
+          fastq_attrs (IlluminaFastq): optional, class to
+            use for extracting information from Fastq file
+            names
+          verbose (bool): if True then print additional
+            information from the task
+
+        Outputs:
+          bam_files: list of sorted BAM files
+        """
+        # Conda dependencies
+        self.conda("star=2.7.7a",
+                   "samtools")
+        # Internal variables
+        self._bam_files = list()
+        # Outputs
+        self.add_output('bam_files',ListParam())
+    def setup(self):
+        # Check for STAR index
+        if self.args.star_index:
+            print("STAR index: %s" % self.args.star_index)
+        else:
+            self.report("STAR index is not set, cannot generate BAM files")
+            return
+        # Remove index reads and group Fastqs
+        fq_pairs = group_fastqs_by_name(
+            remove_index_fastqs(self.args.fastqs))
+        # Filter reads
+        if self.args.fastq_attrs:
+            fastq_attrs = self.args.fastq_attrs
+        else:
+            fastq_attrs = AnalysisFastq
+        if self.args.reads:
+            filtered_pairs = []
+            for fq_pair in fq_pairs:
+                filtered_pair = []
+                for fq in fq_pair:
+                    if fastq_attrs(fq).read_number in self.args.reads:
+                        filtered_pair.append(fq)
+                filtered_pairs.append(filtered_pair)
+            fq_pairs = filtered_pairs
+        # Deal with threads
+        if self.args.nthreads:
+            nthreads = self.args.nthreads
+        else:
+            nthreads = self.runner_nslots
+        # Check for output directory
+        if not os.path.exists(self.args.out_dir):
+            print("Making output dir: %s" % self.args.out_dir)
+            os.makedirs(self.args.out_dir)
+        # Check each Fastq pair to see if a corresponding
+        # BAM file already exists
+        get_versions = False
+        for fq_pair in fq_pairs:
+            if self.args.verbose:
+                print("-- Fastq pair: %s" % fq_pair)
+            bam_file = os.path.join(self.args.out_dir,
+                                    "%s.bam" % get_bam_basename(
+                                        fq_pair[0],
+                                        self.args.fastq_attrs))
+            if self.args.verbose:
+                print("   BAM file: %s" % bam_file)
+            # Add to the list of expected outputs
+            self._bam_files.append(bam_file)
+            if not os.path.exists(bam_file) and self.args.star_index:
+                # Generate BAM file
+                self.add_call("Make BAM file",
+                              self.make_bam_file,
+                              fq_pair,
+                              self.args.star_index,
+                              bam_file,
+                              size=self.args.subset_size,
+                              nthreads=nthreads)
+                get_versions = True
+        # Get versions of STAR and samtools
+        if get_versions:
+            version_file = os.path.join(self.args.out_dir,
+                                        "_versions")
+            self.add_call("Get STAR and samtools versions",
+                          self.get_versions,
+                          version_file)
+    def get_versions(self,version_file):
+        # Get STAR version
+        star_cmd = Command('STAR','--version')
+        status = star_cmd.run_subprocess(log="__version_STAR")
+        if status != 0:
+            raise Exception("STAR returned non-zero exit code: %s"
+                            % status)
+        star_version = None
+        with open("__version_STAR",'rt') as fp:
+            for line in fp:
+                if line.startswith("STAR_"):
+                    # Example: STAR_2.4.2a
+                    star_version = '_'.join(line.strip().split('_')[1:])
+                    break
+        # Get samtools version
+        samtools_cmd = Command('samtools','--version')
+        status = samtools_cmd.run_subprocess(log="__version_samtools")
+        if status != 0:
+            raise Exception("samtools returned non-zero exit code: %s"
+                            % status)
+        samtools_version = None
+        with open("__version_samtools",'rt') as fp:
+            for line in fp:
+                if line.startswith("samtools"):
+                    # Example: samtools 1.15.1
+                    samtools_version = ' '.join(line.strip().split()[1:])
+                    break
+        # Write to output file
+        with open(version_file,'wt') as fp:
+            if star_version:
+                fp.write("star\t%s\n" % star_version)
+            if samtools_version:
+                fp.write("samtools\t%s\n" % samtools_version)
+    def make_bam_file(self,fastqs,genomedir,bam_file,size=None,
+                      nthreads=None):
+        ##############################
+        # Generate and sort a BAM file
+        ##############################
+        # Basename and prefix for output files
+        basename = os.path.basename(bam_file[:-4])
+        prefix = "%s_" % basename
+        # Make a temporary directory for fastqs
+        if size:
+            fastqs_dir = os.path.abspath("__%s_subset%d" % (basename,size))
+        else:
+            fastqs_dir = os.path.abspath("__%s" % basename)
+        print("Creating directory for Fastq subsetting: %s" % fastqs_dir)
+        mkdir(fastqs_dir)
+        # Generate subset of input reads
+        nreads = sum(1 for i in getreads(os.path.abspath(fastqs[0])))
+        if not size:
+            print("Using all reads/read pairs in Fastq file(s)")
+            size = nreads
+        elif size > nreads:
+            print("Number of reads smaller than requested subset")
+            size = nreads
+        else:
+            print("Using random subset of %d reads/read pairs"
+                  % size)
+        # Generate subset indices to extract
+        if size == nreads:
+            subset_indices = [i for i in range(nreads)]
+        else:
+            subset_indices = random.sample(range(nreads),size)
+        # Do the subsetting
+        fqs_in = filter(lambda fq: fq is not None,fastqs)
+        fastqs = []
+        for fq in fqs_in:
+            fq_subset = os.path.join(fastqs_dir,os.path.basename(fq))
+            if fq_subset.endswith(".gz"):
+                fq_subset = '.'.join(fq_subset.split('.')[:-1])
+            with open(fq_subset,'w') as fp:
+                for read in getreads_subset(os.path.abspath(fq),
+                                            subset_indices):
+                    fp.write('\n'.join(read) + '\n')
+                fastqs.append(fq_subset)
+        # Make a temporary directory for STAR
+        star_dir = os.path.abspath("__%s_STAR" % basename)
+        print("Creating directory for STAR subsetting: %s" % star_dir)
+        mkdir(star_dir)
+        # Output BAM file name will be "<prefix>Aligned.out.bam"
+        star_bam_file = os.path.join(star_dir,
+                                     "%sAligned.out.bam" % prefix)
+        # Build the STAR command line for mapping
+        star_cmd = Command('STAR',
+                           '--runMode','alignReads',
+                           '--genomeLoad','NoSharedMemory',
+                           '--genomeDir',os.path.abspath(genomedir),
+                           '--readFilesIn',fastqs[0])
+        if len(fastqs) > 1:
+            star_cmd.add_args(fastqs[1])
+        star_cmd.add_args('--outSAMtype','BAM','Unsorted',
+                          '--outSAMstrandField','intronMotif',
+                          '--outFileNamePrefix',prefix,
+                          '--runThreadN',nthreads)
+        print("Running %s" % star_cmd)
+        status = star_cmd.run_subprocess(working_dir=star_dir)
+        if status != 0:
+            raise Exception("STAR returned non-zero exit code: %s"
+                            % status)
+        # Make a temporary directory for sorting the BAM file
+        sort_dir = os.path.abspath("__%s_sort" % basename)
+        print("Creating directory for sorting BAM file: %s" % sort_dir)
+        mkdir(sort_dir)
+        # Sort the BAM file
+        sorted_bam_file = os.path.join(sort_dir,
+                                       "%s.sorted.bam" %
+                                       os.path.basename(star_bam_file)[:-4])
+        # Run the sorting
+        samtools_sort_cmd = Command('samtools',
+                                    'sort',
+                                    '-o',
+                                    sorted_bam_file,
+                                    star_bam_file)
+        print("Running %s" % samtools_sort_cmd)
+        status = samtools_sort_cmd.run_subprocess(working_dir=sort_dir)
+        if status != 0:
+            raise Exception("samtools sort returned non-zero exit code: %s" %
+                            status)
+        # Index the sorted BAM file (makes BAI file)
+        sorted_bam_file_index = "%s.bai" % sorted_bam_file
+        samtools_index_cmd = Command('samtools',
+                                     'index',
+                                     sorted_bam_file,
+                                     sorted_bam_file_index)
+        print("Running %s" % samtools_index_cmd)
+        status = samtools_index_cmd.run_subprocess(working_dir=sort_dir)
+        if status != 0:
+            raise Exception("samtools index returned non-zero exit code: %s" %
+                            status)
+        # Move the BAM and BAI files to final location
+        os.rename(sorted_bam_file,bam_file)
+        os.rename(sorted_bam_file_index,"%s.bai" % bam_file)
+        # Remove the temporary working directories
+        for dirn in (fastqs_dir,star_dir,sort_dir):
+            print("Removing %s" % dirn)
+            shutil.rmtree(dirn)
+        # Return the BAM file name
+        return bam_file
+    def finish(self):
+        for bam_file in self._bam_files:
+            if os.path.exists(bam_file):
+                self.output.bam_files.append(bam_file)
+
+class RunRSeQCInferExperiment(PipelineTask):
+    """
+    Run RSeQC's 'infer_experiment.py' on BAM files
+
+    Given a list of BAM files, for each file runs the
+    RSeQC 'infer_experiment.py' utility
+    (http://rseqc.sourceforge.net/#infer-experiment-py).
+
+    The log for each run is written to a file called
+    '<BASENAME>.infer_experiment.log'; the data are
+    also extracted and put into an output parameter
+    for direct consumption by downstream tasks.
+    """
+    def init(self,bam_files,reference_gene_model,out_dir):
+        """
+        Initialise the RunRSeQCInferExperiment task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to run infer_experiment.py on
+          reference_gene_model (str): path to BED file
+            with the reference gene model data
+          out_dir (str): path to a directory where the
+            output files will be written
+
+        Outputs:
+          experiments: a dictionary with BAM files as
+            keys; each value is another dictionary with
+            keys 'paired_end' (True for paired-end data,
+            False for single-end), 'reverse', 'forward'
+            and 'unstranded' (fractions of reads mapped
+            in each configuration).
+        """
+        # Conda dependencies
+        self.conda("rseqc=4.0.0",
+                   "r-base=4")
+        # Outputs
+        self.add_output('experiments',Param())
+    def setup(self):
+        # Check for reference gene model
+        if self.args.reference_gene_model:
+            print("Reference gene model: %s" %
+                  self.args.reference_gene_model)
+        else:
+            print("Reference gene model is not set, cannot "
+                  "run RSeQC infer_experiment.py")
+            return
+        # Set up command to run infer_experiment.py
+        get_version = False
+        for bam_file in self.args.bam_files:
+            if not os.path.exists(os.path.join(
+                    self.args.out_dir,
+                    "%s.infer_experiment.log" %
+                    os.path.basename(bam_file)[:-4])):
+                self.add_cmd("Run RSeQC infer_experiment.py",
+                             """
+                             infer_experiment.py \\
+                             -r {reference_gene_model} \\
+                             -i {bam_file} >{basename}.infer_experiment.log
+                             """.format(
+                                 reference_gene_model=\
+                                 self.args.reference_gene_model,
+                                 bam_file=bam_file,
+                                 basename=os.path.basename(bam_file)[:-4]))
+                get_version = True
+        # Get version of RSeQC
+        if get_version:
+            self.add_cmd("Get RSeQC infer_experiment.py version",
+                         """
+                         infer_experiment.py --version >_versions 2>&1
+                         """)
+    def finish(self):
+        if not self.args.reference_gene_model:
+            return
+        outputs = dict()
+        for bam_file in self.args.bam_files:
+            infer_expt_log = os.path.join(self._working_dir,
+                                          "%s.infer_experiment.log" %
+                                          os.path.basename(bam_file)[:-4])
+            # Copy to final destination
+            if os.path.exists(infer_expt_log):
+                if not os.path.exists(self.args.out_dir):
+                    os.makedirs(self.args.out_dir)
+                shutil.copy(infer_expt_log,self.args.out_dir)
+            # Load data from log file
+            infer_expt_log = os.path.join(self.args.out_dir,
+                                          os.path.basename(infer_expt_log))
+            infer_expt = InferExperiment(infer_expt_log)
+            # Dump data associated with previous BAM
+            outputs[bam_file] = {
+                'paired_end': infer_expt.paired_end,
+                'unstranded': infer_expt.unstranded,
+                'forward': infer_expt.forward,
+                'reverse': infer_expt.reverse,
+            }
+        # RSeQC version
+        if os.path.exists("_versions"):
+            rseqc_infer_experiment_version = None
+            with open("_versions",'rt') as fp:
+                for line in fp:
+                    if line.startswith("infer_experiment.py "):
+                        # Example: infer_experiment.py 4.0.0
+                        rseqc_infer_experiment_version = \
+                            ' '.join(line.strip().split(' ')[1:])
+            if rseqc_infer_experiment_version:
+                with open("_versions",'wt') as fp:
+                    fp.write("rseqc:infer_experiment\t%s\n" %
+                             rseqc_infer_experiment_version)
+            shutil.copy("_versions",self.args.out_dir)
+        # Set output
+        self.output.experiments.set(outputs)
+
+class RunRSeQCGenebodyCoverage(PipelineTask):
+    """
+    Run RSeQC's 'genebody_coverage.py' on BAM files
+
+    Given a collection of BAM files, runs the RSeQC
+    'genebody_coverage.py' utility
+    (http://rseqc.sourceforge.net/#genebody-coverage-py).
+    """
+    def init(self,bam_files,reference_gene_model,out_dir,name="rseqc"):
+        """
+        Initialise the RunRSeQCGenebodyCoverage task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to run genebody_coverage.py on
+          reference_gene_model (str): path to BED file
+            with the reference gene model data
+          out_dir (str): path to a directory where the
+            output files will be written
+          name (str): optional basename for the output
+            files (defaults to 'rseqc')
+        """
+        # Conda dependencies
+        self.conda("rseqc=4.0.0",
+                   "r-base=4")
+    def setup(self):
+        # Check we have BAM files
+        if len(self.args.bam_files) < 1:
+            print("No BAM files, cannot run RSeQC genebody_coverage.py")
+            return
+        # Check if outputs already exist
+        outputs_exist = True
+        for f in rseqc_genebody_coverage_output(self.args.name,
+                                                self.args.out_dir):
+            outputs_exist = (outputs_exist and os.path.exists(f))
+        if outputs_exist:
+            print("All outputs exist already, nothing to do")
+            return
+        # Check for reference gene model
+        if self.args.reference_gene_model:
+            print("Reference gene model: %s" %
+                  self.args.reference_gene_model)
+        else:
+            print("Reference gene model is not set, cannot run RSeQC "
+                  "geneBody_coverage.py")
+            return
+        # Set up command to run genebody_coverage.py
+        self.add_cmd("Run RSeQC geneBody_coverage.py",
+                     """
+                     # Get version
+                     geneBody_coverage.py --version >_versions 2>&1
+                     # Run geneBody_coverage
+                     geneBody_coverage.py \\
+                         -r {reference_gene_model} \\
+                         -i {bam_files} \\
+                         -f png \\
+                         -o {basename}
+                     """.format(
+                         reference_gene_model=self.args.reference_gene_model,
+                         bam_files=','.join(self.args.bam_files),
+                         basename=self.args.name))
+    def finish(self):
+        if not self.args.reference_gene_model or \
+           len(self.args.bam_files) < 1:
+            return
+        # Copy outputs to final location
+        if not os.path.exists(self.args.out_dir):
+            os.makedirs(self.args.out_dir,exist_ok=True)
+        for f in rseqc_genebody_coverage_output(self.args.name,
+                                                self.args.out_dir):
+            if not os.path.exists(f):
+                # Copy new version to ouput location
+                shutil.copy(os.path.basename(f),self.args.out_dir)
+        # RSeQC version version
+        if os.path.exists("_versions"):
+            rseqc_genebody_coverage_version = None
+            with open("_versions",'rt') as fp:
+                for line in fp:
+                    if line.startswith("geneBody_coverage.py "):
+                        # Example: geneBody_coverage.py 4.0.0
+                        rseqc_genebody_coverage_version = \
+                            ' '.join(line.strip().split(' ')[1:])
+            if rseqc_genebody_coverage_version:
+                with open("_versions",'wt') as fp:
+                    fp.write("rseqc:genebody_coverage\t%s\n" %
+                             rseqc_genebody_coverage_version)
+            shutil.copy("_versions",self.args.out_dir)
+
+class RunPicardCollectInsertSizeMetrics(PipelineTask):
+    """
+    Run Picard 'CollectInsertSizeMetrics' on BAM files
+
+    Given a list of BAM files, for each file first runs
+    the Picard 'CleanSam' utility (to remove alignments
+    that would otherwise cause problems for the insert
+    size calculations) and then 'CollectInsertSizeMetrics'
+    to generate the insert size metrics.
+
+    Note that this task should only be run on BAM files
+    with paired-end data.
+    """
+    def init(self,bam_files,out_dir):
+        """
+        Initialise the RunPicardCollectInsertSizeMetrics
+        task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to run CollectInsertSizeMetrics on
+          out_dir (str): path to a directory where the
+            output files will be written
+        """
+        # Conda dependencies
+        self.conda("picard=2.27.1",
+                   "r-base=4")
+    def setup(self):
+        # Set up commands to run CleanSam and
+        # CollectInsertSizeMetrics for each BAM file
+        get_version = False
+        for bam in self.args.bam_files:
+            # Check if outputs already exist
+            outputs_exist = True
+            for f in picard_collect_insert_size_metrics_output(
+                    bam,
+                    self.args.out_dir):
+                outputs_exist = (outputs_exist and os.path.exists(f))
+            if outputs_exist:
+                # Skip this BAM
+                continue
+            # Add command to get insert sizes
+            self.add_cmd("%s: collect insert size metrics" %
+                         os.path.basename(bam),
+                         """
+                         tmpdir=$(mktemp -d)
+                         picard CleanSam \\
+                             -I {bam} \\
+                             -O $tmpdir/{basename}.bam \\
+                             -XX:ActiveProcessorCount={nslots} \\
+                         && \\
+                         picard CollectInsertSizeMetrics \\
+                             -I $tmpdir/{basename}.bam \\
+                             -O {basename}.insert_size_metrics.txt \\
+                             -H {basename}.insert_size_histogram.pdf \\
+                             -XX:ActiveProcessorCount={nslots}
+                         """.format(bam=bam,
+                                    basename=os.path.basename(bam)[:-4],
+                                    nslots=self.runner_nslots))
+            get_version = True
+        # Get version of Picard
+        if get_version:
+            self.add_cmd("Get Picard version",
+                         """
+                         # Get version of CollectInsertSizeMetrics
+                         picard CollectInsertSizeMetrics --version >_versions 2>&1
+                         # Force zero exit code
+                         exit 0
+                         """)
+    def finish(self):
+        # Check if any BAM files were processed
+        if not self.args.bam_files:
+            return
+        # Copy outputs to final location
+        if not os.path.exists(self.args.out_dir):
+            print("Creating output dir '%s'" % self.args.out_dir)
+            os.makedirs(self.args.out_dir)
+        for bam in self.args.bam_files:
+            for f in picard_collect_insert_size_metrics_output(
+                    bam,
+                    self.args.out_dir):
+                if not os.path.exists(f):
+                    # Copy new version to ouput location
+                    shutil.copy(os.path.basename(f),self.args.out_dir)
+        # Picard version
+        if os.path.exists("_versions"):
+            picard_version = None
+            with open("_versions",'rt') as fp:
+                for line in fp:
+                    if line.startswith("Version:"):
+                        # Example: Version:2.27.1
+                        picard_version = ':'.join(line.strip().split(':')[1:])
+                        break
+            if picard_version:
+                with open("_versions",'wt') as fp:
+                    fp.write("picard\t%s\n" % picard_version)
+            shutil.copy("_versions",self.args.out_dir)
+
+class CollateInsertSizes(PipelineTask):
+    """
+    Collate insert size metrics data from multiple BAMs
+
+    Gathers together the Picard insert size data from a
+    set of BAM files and puts them into a single TSV
+    file.
+    """
+    def init(self,bam_files,picard_out_dir,out_file,delimiter='\t'):
+        """
+        Initialise the CollateInsertSizes task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to get associated insert size data for
+          picard_out_dir (str): path to the directory
+            containing the Picard CollectInsertSizeMetrics
+            output files
+          out_file (str): path to the output TSV file
+          delimiter (str): specify the delimiter to use
+            in the output file
+        """
+        pass
+    def setup(self):
+        # Set up a TabFile instance for the collated data
+        tf = TabFile(column_names=("Bam file",
+                                   "Mean insert size",
+                                   "Standard deviation",
+                                   "Median insert size",
+                                   "Median absolute deviation"))
+        metrics_files = []
+        for bam in self.args.bam_files:
+            # Get metrics file associated with this BAM file
+            outputs = list(filter(lambda f:
+                                  f.endswith('.txt') and
+                                  os.path.exists(f),
+                                  picard_collect_insert_size_metrics_output(
+                                      os.path.basename(bam)[:-4],
+                                      prefix=self.args.picard_out_dir)))
+            if not outputs:
+                # No metrics located
+                print("%s: no associated Picard insert size "
+                      "metrics file found in %s" %
+                      (bam,
+                       self.args.picard_out_dir))
+                continue
+            metrics_files.append(outputs[0])
+        # Check there is data to collate
+        if not metrics_files:
+            print("no insert size metrics files recovered")
+            return
+        # Set up a TabFile instance for the collated data
+        tf = TabFile(column_names=("Bam file",
+                                   "Mean insert size",
+                                   "Standard deviation",
+                                   "Median insert size",
+                                   "Median absolute deviation"))
+        for metrics_file in metrics_files:
+            # Get mean and median insert sizes
+            insert_size_metrics = CollectInsertSizeMetrics(metrics_file)
+            tf.append(data=(
+                os.path.basename(bam),
+                insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
+                insert_size_metrics.metrics['STANDARD_DEVIATION'],
+                insert_size_metrics.metrics['MEDIAN_INSERT_SIZE'],
+                insert_size_metrics.metrics['MEDIAN_ABSOLUTE_DEVIATION']
+            ))
+        # Output to file
+        print("Writing to %s" % self.args.out_file)
+        tf.write(self.args.out_file,
+                 include_header=True,
+                 delimiter=self.args.delimiter)
+
+class RunQualimapRnaseq(PipelineTask):
+    """
+    Run Qualimap's 'rnaseq' module on BAM files
+
+    Given a list of BAM files, for each file runs the
+    Qualimap 'rnaseq' module
+    (http://qualimap.conesalab.org/doc_html/command_line.html#rna-seq-qc)
+    """
+    def init(self,bam_files,feature_file,out_dir,
+             bam_properties):
+        """
+        Initialise the RunQualimapRnaseq task
+
+        Arguments:
+          bam_files (list): list of paths to BAM files
+            to run Qualimap rnaseq on
+          feature_file (str): path to GTF file with the
+            reference annotation data
+          out_dir (str): path to a directory where the
+            output files will be written
+          bam_properties (mapping): properties for each
+            BAM file from RSeQC 'infer_experiment.py'
+            (used to determine if BAM is paired and
+            what the strand-specificity is)
+        """
+        self.conda("qualimap=2.2")
+        self.java_mem_size = '8G'
+    def setup(self):
+        # Check for feature file
+        if self.args.feature_file:
+            print("Feature file: %s" % self.args.feature_file)
+        else:
+            print("Feature file is not set, cannot run Qualimap rnaseq")
+            return
+        # Check for BAM file properties
+        if self.args.bam_properties:
+            self.bam_files = self.args.bam_files
+        else:
+            print("No properties for BAM files, cannot run Qualimap "
+                  "rnaseq")
+            return
+        # Set up Qualimap rnaseq for each BAM file
+        get_version = False
+        for bam in self.args.bam_files:
+            # Output directory for individual BAM file
+            bam_name = os.path.basename(bam)[:-4]
+            out_dir = os.path.join(self.args.out_dir,bam_name)
+            # Check for existing outputs
+            outputs_exist = True
+            for f in qualimap_rnaseq_output(out_dir):
+                outputs_exist = (outputs_exist and os.path.exists(f))
+            if outputs_exist:
+                # Skip running Qualimap for this BAM
+                continue
+            # Get properties for BAM file
+            paired_end = self.args.bam_properties[bam]['paired_end']
+            unstranded = self.args.bam_properties[bam]['unstranded']
+            forward = self.args.bam_properties[bam]['forward']
+            reverse = self.args.bam_properties[bam]['reverse']
+            # Check data are valid
+            if paired_end is None or \
+               unstranded is None or \
+               forward is None or \
+               reverse is None:
+                print("Bad properties data supplied for %s" %
+                      os.path.basename(bam))
+                for item in self.args.bam_properties[bam]:
+                    print("-- %s: %s" % (item,
+                                         self.args.bam_properties[bam][item]))
+                print("Skipping Qualimap for this BAM file")
+                continue
+            # Set sequencing protocol (aka strand specificity)
+            # Qualimap sequencing protocol can be
+            # 'strand-specific-forward', 'strand-specific-reverse',
+            # or 'non-strand-specific'
+            if reverse > forward and reverse > unstranded:
+                seq_protocol = "strand-specific-reverse"
+            elif forward > reverse and forward > unstranded:
+                seq_protocol = "strand-specific-forward"
+            else:
+                seq_protocol = "non-strand-specific"
+            # Run Qualimap
+            self.add_cmd("Run qualimap rnaseq on %s" %
+                         os.path.basename(bam),
+                         """
+                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={nthreads} -Xmx{java_mem_size}"
+                         qualimap rnaseq \\
+                             -bam {bam} \\
+                             -gtf {feature_file} \\
+                             -p {sequencing_protocol} \\
+                             {paired} \\
+                             -outdir {out_dir} \\
+                             -outformat HTML \\
+                             --java-mem-size={java_mem_size}
+                         """.format(
+                             bam=bam,
+                             feature_file=self.args.feature_file,
+                             sequencing_protocol=seq_protocol,
+                             paired=('-pe' if paired_end else ''),
+                             out_dir=bam_name,
+                             nthreads=self.runner_nslots,
+                             java_mem_size=self.java_mem_size))
+            get_version = True
+        # Get version of Qualimap
+        if get_version:
+            self.add_cmd("Get Qualimap version",
+                         """
+                         qualimap --help >_versions 2>&1
+                         """)
+    def finish(self):
+        missing_outputs = False
+        if not self.args.feature_file:
+            return
+        if not self.args.bam_properties:
+            return
+        for bam in self.args.bam_files:
+            # Check outputs for each BAM
+            bam_name = os.path.basename(bam)[:-4]
+            out_dir = os.path.join(self.args.out_dir,bam_name)
+            outputs_exist = True
+            for f in qualimap_rnaseq_output(out_dir):
+                outputs_exist = (outputs_exist and os.path.exists(f))
+            if outputs_exist:
+                print("outputs already exist for %s" % bam_name)
+            else:
+                if not os.path.exists(bam_name):
+                    print("*** %s: outputs not found ***" % bam_name)
+                    missing_outputs = True
+                else:
+                    os.makedirs(self.args.out_dir,exist_ok=True)
+                    print("copying outputs for %s" % bam_name)
+                    if os.path.exists(out_dir):
+                        # Remove existing (incomplete) outputs
+                        shutil.rmtree(out_dir)
+                    shutil.copytree(bam_name,out_dir)
+        # Qualimap version
+        if os.path.exists("_versions"):
+            qualimap_version = None
+            with open("_versions",'rt') as fp:
+                for line in fp:
+                    if line.startswith("QualiMap "):
+                        # Example: QualiMap v.2.2.2-dev
+                        qualimap_version = ' '.join(line.strip().split(' ')[1:])
+                        break
+            if qualimap_version:
+                with open("_versions",'wt') as fp:
+                    fp.write("qualimap\t%s\n" % qualimap_version)
+            shutil.copy("_versions",self.args.out_dir)
+        # Raise failure if errors were encountered
+        if missing_outputs:
+            self.fail(message="Some outputs are missing")
 
 class VerifyQC(PipelineFunctionTask):
     """

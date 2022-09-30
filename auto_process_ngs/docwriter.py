@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     docwriter.py: HTML document generation library
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 #########################################################################
 
@@ -48,6 +48,8 @@ The full list of available classes are:
 - Target: create anchor for referencing via a link
 - Para: wrap heterogeneous items into a single block
 - WarningIcon: create an inline warning icon image
+- DocumentIcon: create an inline 'document' icon image
+- LinkIcon: create an inline 'link' icon image
 """
 
 #######################################################################
@@ -63,6 +65,14 @@ from bcftbx.htmlpagewriter import HTMLPageWriter
 VALID_CSS_ID_CHARS = "-_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
 WARNING_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAkFBMVEX/oAD/////pQD/ogD/rC//587/nwD/3Kr/7Mz/pwD//PX/nQD/9+n/szX/+O3///3/4rr/1Zr/4rf/v2P/xnX/89//5r//tUH/79j/+fL/rSf/sC7/w23/0I//2qb/vFf/yXz/zYT/t07/uVr/yYb/rAf/s0P/5cT/1pj/3q//t0j/zJH/vlz/yHj/157/qhjbULfEAAAAAXRSTlMAQObYZgAAAAFiS0dEAIgFHUgAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfjBgsMGw801p5CAAAAcklEQVRIx+3VMQ6AMAxD0fIvwv1vicSABIpI7BYGqOe8oVIatzZzDUfU+aIiiAzuEagGVAOqOQ0sexJDRladkDwkInQTKoT3CTXCJF8kyScu7dgzJFxlRv9K51w4xDh9gek8yuPKwqkkp/iserVK/FfZAOKECZLQoDSVAAAAAElFTkSuQmCC'
+
+DOCUMENT_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAACMAAAAjCAIAAACRuyQOAAAAeUlEQVR4nO2WwQnAMAhFtXQcp8hipYs5hfvYQ48RW5CKpL6jgf/zURJRVSGFLccGAHazKiIRUSKai3mZ2imCPREzzOycjjEeFeplenNrn3qZuk8W9TJ1nyzw/nPxxKCQgx4Ka77l7dRO6zuhuZf3DvtfJ3siviAv0wV+rCCXYocntQAAAABJRU5ErkJggg=='
+
+# Free icon from https://www.iconfinder.com/icons/298812/link_external_icon
+LINK_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAALxJREFUSEvtlUEOgkAMRR977wS3cqnu5FTEQ5m4w3RR0uBMO84AiYldkQH+6/+0oWPn6nbW53DAnHFkGzkD98D58vzaQQlAtCNIMyCCFAFOwNOJ4gpcoki9iLwB8MSFWeQgB4jEmwA5cTl/memqcjAAUyLzGyAAKW2gCmAFlGPF9UwgCvzYZLsHuW+gOyAiAnCrdop64LFSFrDWqBe1gFTXSfd/gI3q64iiAfHuF+3BbwJauk6+e/g/eXMHb4r7KhlDs+RNAAAAAElFTkSuQmCC'
+
+# Free icon from https://www.iconfinder.com/icons/3994354/arrow_download_downloading_interface_save_icon
+DOWNLOAD_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAT9JREFUWEftlzFuAjEQRR8SxwjhOiAaCqKkQEoVqOAyVElNlERp6BDXCdcgIvrIlowF2J5FbIrdCjAz/83Y/qNtUfPTqlmfKgAD4BXYAxNgbSmmCsAWuHOi+nx/awBVHj6mYkxBTrUBaDrQdOBmHegBb3BwzRmwSlzDIbBwDvkCbC4ZVI4P/AAdl2QHjIEvJxAb0SOwBNpuQbHdqgCh5SqXh/iMEj9F4lq+CoBa+h1U5SF8lZ5DYOFv+v4QbNnJRuRsgQJHwEckcKmzv8Az8J4aULkAJRDZ4koqgJK5nupEjnjf3SrpTwRQOtfPQeSIS/RITwAWQ4khcsUFcKRnBVCi0HDmqdMeHMarAaQO+Ln1BuD/d8C6t6a4U7fAlMgaFBuRNY81bisAWaNesfzMtyYrjZMjTkuGUalA1v9rB/gDH0JPb88OcusAAAAASUVORK5CYII='
 
 #######################################################################
 # Classes
@@ -1036,6 +1046,66 @@ class WarningIcon(Img):
         """
         Img.__init__(self,
                      "data:image/png;base64,%s" % WARNING_ICON_BASE64,
+                     title=title,
+                     height=size,
+                     width=size)
+
+class DocumentIcon(Img):
+    """
+    Create image with an inline document icon
+
+    Arguments:
+      title (str): optional, content to mark with
+        the icon
+      size (int): optional height/width specifier for
+        the icon (defaults to 35)
+    """
+    def __init__(self,title=None,size=35):
+        """
+        Create new WarningIcon instance
+        """
+        Img.__init__(self,
+                     "data:image/png;base64,%s" % DOCUMENT_ICON_BASE64,
+                     title=title,
+                     height=size,
+                     width=size)
+
+class LinkIcon(Img):
+    """
+    Create image with an inline 'link' icon
+
+    Arguments:
+      title (str): optional, content to mark with
+        the icon
+      size (int): optional height/width specifier for
+        the icon (defaults to 32)
+    """
+    def __init__(self,title=None,size=32):
+        """
+        Create new LinkIcon instance
+        """
+        Img.__init__(self,
+                     "data:image/png;base64,%s" % LINK_ICON_BASE64,
+                     title=title,
+                     height=size,
+                     width=size)
+
+class DownloadIcon(Img):
+    """
+    Create image with an inline 'download' icon
+
+    Arguments:
+      title (str): optional, content to mark with
+        the icon
+      size (int): optional height/width specifier for
+        the icon (defaults to 32)
+    """
+    def __init__(self,title=None,size=32):
+        """
+        Create new DownloadIcon instance
+        """
+        Img.__init__(self,
+                     "data:image/png;base64,%s" % DOWNLOAD_ICON_BASE64,
                      title=title,
                      height=size,
                      width=size)

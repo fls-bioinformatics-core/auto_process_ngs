@@ -71,6 +71,7 @@ automatically within the QC report.
 
 import sys
 import os
+import re
 import logging
 import time
 import ast
@@ -97,6 +98,9 @@ from ..docwriter import Target
 from ..docwriter import List
 from ..docwriter import Para
 from ..docwriter import WarningIcon
+from ..docwriter import DocumentIcon
+from ..docwriter import LinkIcon
+from ..docwriter import DownloadIcon
 from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
@@ -109,6 +113,9 @@ from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
 from .outputs import QCOutputs
+from .picard import CollectInsertSizeMetrics
+from .plots import RGB_COLORS
+from .plots import Plot
 from .plots import useqlenplot
 from .plots import ureadcountplot
 from .plots import uscreenplot
@@ -117,8 +124,14 @@ from .plots import uboxplot
 from .plots import ustrandplot
 from .plots import uduplicationplot
 from .plots import uadapterplot
+from .plots import uinsertsizeplot
+from .plots import ucoverageprofileplot
+from .plots import ugenomicoriginplot
 from .plots import encode_png
+from .qualimap import QualimapRnaseq
+from .rseqc import InferExperiment
 from .seqlens import SeqLens
+from .utils import get_bam_basename
 from ..tenx_genomics_utils import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
@@ -132,6 +145,7 @@ logger = logging.getLogger(__name__)
 
 from .constants import FASTQ_SCREENS
 from .constants import QC_REPORT_CSS_STYLES
+from .constants import JS_TOGGLE_FUNCTION
 
 # Metadata field descriptions
 METADATA_FIELD_DESCRIPTIONS = {
@@ -146,6 +160,9 @@ METADATA_FIELD_DESCRIPTIONS = {
     'number_of_cells': 'Number of cells',
     'organism': 'Organism',
     'protocol': 'QC protocol',
+    'star_index': 'STAR index',
+    'annotation_bed': 'Annotation (BED)',
+    'annotation_gtf': 'Annotation (GTF)',
     'cellranger_reference': 'Cellranger reference datasets',
     'multiqc': 'MultiQC report',
     'icell8_stats': 'ICELL8 statistics',
@@ -159,10 +176,15 @@ SOFTWARE_PACKAGE_NAMES = {
     'cellranger': 'Cellranger',
     'cellranger-atac': 'Cellranger ATAC',
     'cellranger-arc': 'Cellranger ARC',
-    'spaceranger': 'Spaceranger',
     'fastqc': 'FastQC',
     'fastq_screen': 'FastqScreen',
     'fastq_strand': 'FastqStrand',
+    'multiqc': 'MultiQC',
+    'picard': 'Picard Tools',
+    'qualimap': 'QualiMap',
+    'rseqc:genebody_coverage': 'RSeQC geneBody_coverage.py',
+    'rseqc:infer_experiment': 'RSeQC infer_experiment.py',
+    'spaceranger': 'Spaceranger',
 }
 
 # Field descriptions for summary tables
@@ -172,6 +194,7 @@ SUMMARY_FIELD_DESCRIPTIONS = {
     'sample': ('Sample','Sample name'),
     'fastq' : ('Fastq','Fastq file'),
     'fastqs': ('Fastqs','Fastq files in each sample'),
+    'bam_file': ('BAM','BAM file'),
     'reads': ('#reads','Number of reads/read pairs'),
     'read_lengths': ('Lengths',
                      'Mean sequence length and range'),
@@ -214,6 +237,19 @@ SUMMARY_FIELD_DESCRIPTIONS = {
     'strandedness': ('Strand',
                      'Proportions of reads mapping to forward and reverse '
                      'strands'),
+    'insert_size_histogram': ('Insert size',
+                              'Picard insert size histogram'),
+    'coverage_profile_along_genes': ('Coverage',
+                                     'Qualimap rna-seq gene coverage '
+                                     'profile'),
+    'reads_genomic_origin': ('Genomic origin',
+                             'Qualimap rna-seq genomic origin of reads'),
+    'strand_specificity': ('Strand',
+                           'Fraction of reads mapping to forward and reverse '
+                           'strands from RSeQC infer_experiment.py'),
+    'strandedness_.*': ('Strand',
+                        'Fraction of reads mapping to forward and reverse '
+                        'strands (from RSeQC infer_experiment.py)'),
     'cellranger_count': ('Single library analyses',
                          'Web summary from Cellranger* single library '
                          'analysis for this sample'),
@@ -338,6 +374,8 @@ class QCReport(Document):
                 title = "QC report: %s" % primary_project.name
         # Initialise superclass
         Document.__init__(self,title)
+        # Flag to indicate if toggle sections are present
+        self._has_toggle_sections = False
         # Collect initial QC data across all projects
         self.output_files = []
         self.outputs = set()
@@ -372,6 +410,7 @@ class QCReport(Document):
         self._init_metadata_table(projects)
         self._init_processing_software_table()
         self._init_qc_software_table()
+        self._init_reference_data_table(projects)
         # Initialise report sections
         self.preamble = self._init_preamble_section()
         self.warnings = self._init_warnings_section()
@@ -442,7 +481,6 @@ class QCReport(Document):
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'strandedness',
                                        'sequence_duplication',
                                        'adapter_content']
                 else:
@@ -451,25 +489,21 @@ class QCReport(Document):
                                        'reads',
                                        'read_counts',
                                        'read_lengths',
-                                       'strandedness',
                                        'sequence_duplication',
-                                       'adapter_content',]
-                if 'strandedness' not in project.outputs:
-                    try:
-                        summary_fields_.remove('strandedness')
-                    except ValueError:
-                        pass
-                if 'sequence_lengths' in project.outputs:
-                    for read in project.reads:
-                        summary_fields_.append('read_lengths_dist_%s' % read)
-                else:
+                                       'adapter_content']
+                if 'strandedness' in project.outputs:
+                    summary_fields_.append('strandedness')
+                if 'picard_insert_size_metrics' in project.outputs:
+                    summary_fields_.append('insert_size_histogram')
+                if 'qualimap_rnaseq' in project.outputs:
+                    summary_fields_.extend(
+                        ['coverage_profile_along_genes',
+                         'reads_genomic_origin'])
+                if 'sequence_lengths' not in project.outputs:
                     try:
                         summary_fields_.remove('read_counts')
                     except ValueError:
                         pass
-                for read in project.reads:
-                    if ('fastqc_%s' % read) in project.outputs:
-                        summary_fields_.append('fastqc_%s' % read)
                 for read in project.reads:
                     if ('fastqc_%s' % read) in project.outputs:
                         summary_fields_.append('boxplot_%s' % read)
@@ -487,10 +521,15 @@ class QCReport(Document):
                     report_attrs_.append('strandedness')
             # Add data for this project to the report
             print("Adding project '%s' to the report..." % project.name)
-            self.report_metadata(project)
+            self.report_metadata(project,
+                                 self.metadata_table,
+                                 self.metadata_items)
             self.report_processing_software(project)
             self.report_qc_software(project)
             self.report_comments(project)
+            self.report_metadata(project,
+                                 self.reference_data_table,
+                                 self.reference_data_items)
             # Create a summary subsection for multi-project reporting
             if self.multi_project:
                 project_summary = self.summary.add_subsection(
@@ -499,6 +538,13 @@ class QCReport(Document):
             else:
                 project_summary = self.summary
             # Create a new summary table
+            project_summary.add(
+                "%d sample%s | %d fastq%s" % (
+                    len(project.samples),
+                    ('s' if len(project.samples) != 1 else ''),
+                    len(project.fastqs),
+                    ('s' if len(project.fastqs) != 1 else ''))
+            )
             summary_table = self.add_summary_table(project,
                                                    summary_fields_,
                                                    section=project_summary)
@@ -601,6 +647,36 @@ class QCReport(Document):
                         sample,
                         multiplex_analysis_table,
                         multiplex_analysis_fields)
+            # Extended metrics
+            if 'rseqc_genebody_coverage' in project.outputs or \
+               'picard_insert_size_metrics' in project.outputs or \
+               'multiqc' in project.outputs:
+                extended_metrics = project_summary.add_subsection(
+                    name="extended_metrics_%s" % sanitize_name(project.id))
+                # RSeQC genebody coverage
+                if 'rseqc_genebody_coverage' in project.outputs:
+                    self.report_genebody_coverage(project,
+                                                  section=extended_metrics)
+                # Insert sizes
+                if 'picard_insert_size_metrics' in project.outputs:
+                    self.report_insert_size_metrics(project,
+                                                    section=extended_metrics)
+                # MultiQC report
+                if 'multiqc' in project.outputs:
+                    self.report_multiqc(project,
+                                        section=extended_metrics)
+                # Add an empty section to clear HTML floats
+                clear = project_summary.add_subsection(
+                    css_classes=("clear",))
+            # Report additional metrics in a separate table
+            additional_metrics = self._add_toggle_section(
+                project_summary,
+                name="additional_metrics",
+                show_text="Show additional summary metrics",
+                hide_text="Hide additional summary metrics",
+                help_text="Summary table with additional QC metrics")
+            self.report_additional_metrics(project,
+                                           section=additional_metrics)
         # Report the status
         self.report_status()
 
@@ -618,16 +694,12 @@ class QCReport(Document):
                           'PI',
                           'library_type',
                           'organism',
-                          'protocol',]
+                          'protocol']
         if self.has_single_cell:
             for item in ('single_cell_platform',
                          'number_of_cells',):
                 metadata_items.insert(metadata_items.index('organism'),
                                       item)
-        if 'cellranger_count' in self.outputs:
-            metadata_items.append('cellranger_reference')
-        if 'multiqc' in self.outputs:
-            metadata_items.append('multiqc')
         if 'icell8_stats' in self.outputs:
             metadata_items.append('icell8_stats')
         if 'icell8_report' in self.outputs:
@@ -647,6 +719,35 @@ class QCReport(Document):
         # Store table and metadata items as attribute
         self.metadata_table = metadata_table
         self.metadata_items = metadata_items
+
+    def _init_reference_data_table(self,projects):
+        """
+        Internal: set up a table for reference data
+
+        Associated CSS class is 'metadata'
+        """
+        # Identify reference data items
+        reference_data_items = ['star_index',
+                                'annotation_bed',
+                                'annotation_gtf']
+        if 'cellranger_count' in self.outputs or \
+           'cellranger_multi' in self.outputs:
+            reference_data_items.append('cellranger_reference')
+        if self.multi_project:
+            reference_data_items.insert(0,'project_id')
+        # Make table with one column per project
+        columns = ['item']
+        for project in projects:
+            columns.append(project.id)
+        reference_data_table = Table(columns)
+        reference_data_table.no_header()
+        reference_data_table.add_css_classes('metadata')
+        # Add rows for metadata items
+        for item in reference_data_items:
+            reference_data_table.add_row(item=self.metadata_titles[item])
+        # Store table and metadata items as attribute
+        self.reference_data_table = reference_data_table
+        self.reference_data_items = reference_data_items
 
     def _init_processing_software_table(self):
         """
@@ -709,6 +810,10 @@ class QCReport(Document):
         qc_software_info = info.add_subsection("QC software",
                                                css_classes=("info",))
         qc_software_info.add(self.qc_software_table)
+        reference_data_info = info.add_subsection(
+            "Reference data",
+            css_classes=("info",))
+        reference_data_info.add(self.reference_data_table)
         # Add an empty section to clear HTML floats
         clear = summary.add_subsection(css_classes=("clear",))
         # Add additional subsections for comments etc
@@ -781,33 +886,90 @@ class QCReport(Document):
         # Update the list of files
         self.output_files = output_files
 
+    def _add_toggle_section(self,parent_section,name,title=None,
+                            show_text="Show",hide_text="Hide",
+                            help_text=None,hidden_by_default=True,
+                            css_classes=None):
+        """
+        Create a new section with a button to control visibility
+
+        Arguments:
+          parent_section (Section): section to create
+            the toggle section within
+          name (str): name (ID) for the toggle section
+          title (str): optional title for the section
+          show_text (str): text to display on the
+            control button when the section is hidden
+          hide_text (str): text to dislay on the
+            control button when the section is visible
+          help_text (str): text to display when the
+            mouse is over the control button
+          hidden_by_default (bool): if True then make
+            the toggle section hidden initially
+          css_classes (list): list of additional CSS
+            classes to associate with the section
+
+        Returns:
+          Section: document section controlled by the
+            toggle button.
+        """
+        # Create a new section
+        if hidden_by_default:
+            style = 'display:none;'
+        else:
+            style = None
+        toggle_section = Section(title=title,
+                                 name=name,
+                                 level=parent_section.level+1,
+                                 css_classes=css_classes,
+                                 style=style)
+        toggle_section.add_css_classes('toggle_section')
+        # Create a control button
+        toggle_button = ToggleButton(toggle_section,
+                                     show_text=show_text,
+                                     hide_text=hide_text,
+                                     help_text=help_text,
+                                     hidden_by_default=
+                                     hidden_by_default)
+        parent_section.add(toggle_button,
+                           toggle_section)
+        # Add Javascript toggle function and set flag
+        if not self._has_toggle_sections:
+            self.add_javascript(JS_TOGGLE_FUNCTION)
+            self._has_toggle_sections = True
+        # Return the section
+        return toggle_section
+
     def add_summary_table(self,project,fields,section):
         """
         Create a new table for summarising samples from a project
 
         Associated CSS classes are 'summary' and 'fastq_summary'
         """
-        # Generate headers for table
-        tbl_headers = {
-            f: "<space title=\"%s\">%s</span>" %
-            ('\n'.join(textwrap.wrap(self.field_descriptions[f][1],width=20)),
-             self.field_descriptions[f][0])
-            for f in self.field_descriptions.keys()
-        }
+        # Generate column headers for table
+        tbl_headers = {}
+        for field in fields:
+            # Look for matching field
+            th = None
+            for f in self.field_descriptions.keys():
+                if re.match('^%s$' % f,field):
+                    # Construct the header
+                    th = "<span title=\"%s\">%s</span>" % \
+                                       ('\n'.join(textwrap.wrap(
+                                           self.field_descriptions[f][1],
+                                           width=20)),
+                                       self.field_descriptions[f][0])
+                    break
+            if th is None:
+                # Generic header for unrecognised field
+                th = "<span title=\"%s\">%s</span>" % (field,field)
+            tbl_headers[field] = th
         # Create the table
         summary_tbl = Table(fields,**tbl_headers)
         summary_tbl.add_css_classes('summary','fastq_summary')
         if "cellranger_count" in fields:
             summary_tbl.add_css_classes('single_library_analyses',
                                         column='cellranger_count')
-        # Append to the summary section
-        section.add(
-            "%d sample%s | %d fastq%s" % (
-                len(project.samples),
-                ('s' if len(project.samples) != 1 else ''),
-                len(project.fastqs),
-                ('s' if len(project.fastqs) != 1 else ''))
-        )
         section.add(summary_tbl)
         return summary_tbl
 
@@ -859,12 +1021,19 @@ class QCReport(Document):
         section.add(multiplexing_tbl)
         return multiplexing_tbl
 
-    def report_metadata(self,project):
+    def report_metadata(self,project,tbl,items):
         """
-        Report the project metadata
+        Report project metadata to a table
 
-        Adds entries for the project metadata to the "metadata"
-        table in the report
+        Adds entries for project metadata items to the
+        specified table
+
+        Arguments:
+          project (QCProject): project to report
+          tbl (Table): table to report the metadata
+            items to
+          items (list): list of metadata items to
+            report to the table
         """
         # Determine the root directory for QC outputs
         if self.data_dir:
@@ -876,7 +1045,7 @@ class QCReport(Document):
             project_data_dir = os.path.relpath(project_data_dir,
                                                self.relpath)
         # Add metadata items
-        for idx,item in enumerate(self.metadata_items):
+        for idx,item in enumerate(items):
             # Try to acquire the value from QC metadata
             try:
                 value = project.qc_info[item]
@@ -929,9 +1098,9 @@ class QCReport(Document):
                         raise Exception("Unrecognised item to report: '%s'"
                                         % item)
             # Update the value in the metadata table
-            self.metadata_table.set_value(idx,
-                                          project.id,
-                                          value)
+            tbl.set_value(idx,
+                          project.id,
+                          value)
 
     def report_processing_software(self,project):
         """
@@ -1137,6 +1306,161 @@ class QCReport(Document):
             # report
             self.status = False
 
+    def report_additional_metrics(self,project,section):
+        """
+        Report additional QC metrics
+
+        Creates a summary table in the specified section
+        to report additional metrics to those in the main
+        summary section (e.g. adapters, FastQC summary,
+        read length distributions etc)
+
+        Arguments:
+          project (QCProject): project to report
+          section (Section): document section to add
+            the report to
+        """
+        # Set the fields for the additional metrics
+        if len(project.reads) > 1:
+            fields = ['sample',
+                      'fastqs']
+        else:
+            fields = ['sample',
+                      'fastq']
+        if 'rseqc_infer_experiment' in project.outputs:
+            # Strandedness from infer_experiment.py
+            fields.append('strand_specificity')
+        if 'sequence_lengths' in project.outputs:
+            for read in project.reads:
+                fields.append('read_lengths_dist_%s' % read)
+        for read in project.reads:
+            if ('fastqc_%s' % read) in project.outputs:
+                fields.append('fastqc_%s' % read)
+        # Add a new table
+        summary_table = self.add_summary_table(
+                project,
+                fields,
+                section=section)
+        # Report the metrics for each sample
+        for sample in project.samples:
+            reporter = SampleQCReporter(project,
+                                        sample,
+                                        qc_dir=project.qc_dir,
+                                        fastq_attrs=project.fastq_attrs)
+            reporter.update_summary_table(summary_table,
+                                          fields=fields,
+                                          relpath=self.relpath)
+
+    def report_genebody_coverage(self,project,section):
+        """
+        Add RSeQC gene body coverage reports to a document section
+
+        Arguments:
+          project (QCProject): parent project
+          section (Section): section to add the report to
+        """
+        # Determine location of QC artefacts
+        qc_dir = self.fetch_qc_dir(project)
+        # Create new subsection
+        rseqc_coverage = section.add_subsection("Gene Body Coverage",
+                                                css_classes=("info",))
+        # Make a subsection for each organism
+        for organism in project.organisms:
+            coverage_dir = os.path.join(qc_dir,
+                                        "rseqc_genebody_coverage",
+                                        organism)
+            if not os.path.exists(coverage_dir):
+                # No outputs for this organism
+                continue
+            # Create a container for the outputs
+            coverage = rseqc_coverage.add_subsection(
+                name='rseqc_genebody_coverage_%s' % organism)
+            # Acquire plot PNG
+            png = os.path.join(coverage_dir,
+                               "%s.geneBodyCoverage.curves.png"
+                               % project.name)
+            if not os.path.exists(png):
+                # Missing PNG
+                coverage.add(WarningIcon(),"No RSeQC gene body coverage plot")
+            else:
+                # Embed image in report
+                if self.relpath:
+                    # Convert to relative path
+                    png = os.path.relpath(png,self.relpath)
+                    coverage.add("Gene body coverage from RSeQC for "
+                                 "'%s' mapped to '%s'" % (project.name,
+                                                          organism),
+                                 Img(png,
+                                     href=png,
+                                     title="Gene body coverage from RSeQC "
+                                     "(mapped to %s); click for PNG" %
+                                     organism,
+                                     name="gene_body_coverage_%s" % organism))
+            # Add link to MultiQC plot
+            if 'multiqc' in project.outputs:
+                multiqc_report = "multi%s_report.html" \
+                                 % os.path.basename(project.qc_dir)
+                multiqc_plot = "%s#rseqc-gene_body_coverage" % multiqc_report
+                coverage.add("%s %s" %
+                             (LinkIcon(size=20),
+                              Link("MultiQC interactive RSeQC gene body "
+                                   "coverage plot",
+                                   target=multiqc_plot)))
+        # Return the subsection
+        return coverage
+
+    def report_insert_size_metrics(self,project,section):
+        """
+        Add links to insert size metrics to a document section
+
+        Arguments:
+          project (QCProject): parent project
+          section (Section): section to add the report to
+        """
+        # Get location of QC artefacts
+        qc_dir = self.fetch_qc_dir(project)
+        # Create new subsection
+        insert_sizes = section.add_subsection("Insert sizes",
+                                              css_classes=("info",))
+        # Add a link to the insert sizes TSV for each organism
+        for organism in project.organisms:
+            insert_sizes_file = os.path.join(
+                self.fetch_qc_dir(project),
+                "insert_sizes.%s.tsv" % organism)
+            if os.path.exists(insert_sizes_file):
+                if self.relpath:
+                    # Convert to relative path
+                    insert_sizes_file = os.path.relpath(insert_sizes_file,
+                                                        self.relpath)
+                    insert_sizes.add("%s %s" %
+                                     (DownloadIcon(size=20),
+                                      Link("Collated insert sizes for '%s' "
+                                           "(TSV) " % organism,
+                                           target=insert_sizes_file)))
+        # Return the subsection
+        return insert_sizes
+
+    def report_multiqc(self,project,section):
+        """
+        Add link to MultiQC report to a document section
+
+        Arguments:
+          project (QCProject): parent project
+          section (Section): section to add the report to
+        """
+        # Create new subsection
+        multiqc = section.add_subsection("MultiQC",
+                                         css_classes=("info",))
+        # Add a link to the MultiQC report
+        multiqc_report = "multi%s_report.html" \
+                         % os.path.basename(project.qc_dir)
+        multiqc.add("%s %s" %
+                    (LinkIcon(size=20),
+                     Link("MultiQC report",
+                          target=multiqc_report)))
+        # Return the subsection
+        return multiqc
+
     def fetch_qc_dir(self,project):
         """
         Return path to QC dir for reporting
@@ -1197,8 +1521,10 @@ class QCProject:
     - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
     - samples: sorted list of sample names extracted
       from Fastqs
+    - bams: sorted list of BAM file names
     - multiplexed_samples: sorted list of sample names
       for multiplexed samples (e.g. 10x CellPlex)
+    - organisms: sorted list of organism names
     - outputs: list of QC output categories detected (see
       below for valid values)
     - output_files: list of absolute paths to QC output
@@ -1412,6 +1738,8 @@ class QCProject:
                                fastq_attrs=self.fastq_attrs)
         # Fastqs
         self.fastqs = qc_outputs.fastqs
+        # BAMs
+        self.bams = qc_outputs.bams
         # Reads
         self.reads = qc_outputs.reads
         # Samples
@@ -1419,6 +1747,8 @@ class QCProject:
             set(qc_outputs.samples +
                 [s.name for s in self.project.samples])),
                 key=lambda s: split_sample_name(s))
+        # Organisms
+        self.organisms = qc_outputs.organisms
         # Fastq screens
         self.fastq_screens = qc_outputs.fastq_screens
         # Single library analyses reference data
@@ -1491,7 +1821,7 @@ class SampleQCReporter:
                 qc_dir = os.path.join(project.dirn)
         else:
             qc_dir = project.qc_dir
-        # Group Fastqs associated with this project
+        # Group Fastqs associated with this sample
         self.fastqs = sorted(list(
             filter(lambda fq:
                    project.fastq_attrs(fq).sample_name == sample,
@@ -1872,7 +2202,10 @@ class SampleQCReporter:
             if relpath:
                 web_summary = os.path.relpath(web_summary,
                                               relpath)
-            value = Link(self.sample,web_summary)
+            value = Link(DocumentIcon(title="%s: web_summary.html"
+                                      % self.sample,
+                                      size=20),
+                         target=web_summary)
         else:
             raise KeyError("'%s': unrecognised field for single "
                            "library analysis table" % field)
@@ -1940,11 +2273,24 @@ class FastqGroupQCReporter:
     - reporters: dictionary mapping read ids to FastqQCReporter
       instances
     - paired_end: whether FastqGroup is paired end
+    - bam: associated BAM file name
     - fastq_strand_txt: location of associated Fastq_strand
       output
 
     Provides the following methods:
 
+    - infer_experiment: fetch data from RSeQC
+      'infer_experiment.py'
+    - ustrandednessplot: return mini-plot of strandedness
+      data from RSeQC 'infer_experiment.py'
+    - insert_size_metrics: fetch insert size metrics
+    - uinsertsizeplot: return mini-plot of insert size
+      histogram
+    - qualimap_rnaseq: fetch Qualimap 'rnaseq' metrics
+    - ucoverageprofileplot: return mini-plot of gene
+      coverage profile
+    - ugenomicoriginplot: return mini-plot of genomic origin
+      of reads data
     - strandedness: fetch strandedness data for this group
     - ustrandplot: return mini-strand stats summary plot
     - report_strandedness: write report for strandedness
@@ -1992,6 +2338,12 @@ class FastqGroupQCReporter:
                                                    self.fastq_attrs)
             self.reads.add(read)
         self.reads = sorted(list(self.reads))
+        # Locate matching BAM file
+        self.bam = None
+        for fastq in fastqs:
+            bam = get_bam_basename(fastq,self.fastq_attrs)
+            if bam in self.project.bams:
+                self.bam = "%s" % bam
 
     @property
     def paired_end(self):
@@ -2014,6 +2366,106 @@ class FastqGroupQCReporter:
                 if os.path.isfile(fastq_strand_txt):
                     return fastq_strand_txt
         return None
+
+    def infer_experiment(self,organism):
+        """
+        Return RSeQC infer_experiment.py data for organism
+        """
+        if self.bam:
+            infer_experiment_log = os.path.join(
+                self.qc_dir,
+                "rseqc_infer_experiment",
+                organism,
+                "%s.infer_experiment.log" % self.bam)
+            if os.path.isfile(infer_experiment_log):
+                return InferExperiment(infer_experiment_log)
+        return None
+
+    def ustrandednessplot(self,organism,width=50,height=24):
+        """
+        Return a mini-plot for RSeQC strandness data
+        """
+        # Fetch data
+        infer_experiment = self.infer_experiment(organism)
+        fwd_data = [ self.infer_experiment(organism).forward,
+                     1.0 - self.infer_experiment(organism).forward ]
+        rvs_data = [ self.infer_experiment(organism).reverse,
+                     1.0 - self.infer_experiment(organism).reverse ]
+        # Create plot with two horizontal bars
+        p = Plot(width,height)
+        bar_length = width - 4
+        bar_height = height/2 - 4
+        # Start and end on x-axis (same for both)
+        x1 = (width - bar_length)/2
+        x2 = (width + bar_length)/2
+        # Plot the 'reverse' bar
+        y1 = (height/4 - bar_height/2)
+        y2 = (height/4 + bar_height/2)
+        p.bar(rvs_data,
+              (x1,y1),(x2,y2),
+              (RGB_COLORS.black,RGB_COLORS.lightgrey))
+        # Plot the 'forward' bar
+        y1 = y1 + height/2
+        y2 = y2 + height/2
+        p.bar(fwd_data,
+              (x1,y1),(x2,y2),
+              (RGB_COLORS.black,RGB_COLORS.lightgrey))
+        return p.encoded_png()
+
+    def insert_size_metrics(self,organism):
+        """
+        Return Picard insert size metrics for specified organism
+        """
+        if self.bam:
+            insert_size_metrics_txt = os.path.join(
+                self.qc_dir,
+                "picard",
+                organism,
+                "%s.insert_size_metrics.txt" % self.bam)
+            if os.path.isfile(insert_size_metrics_txt):
+                return CollectInsertSizeMetrics(insert_size_metrics_txt)
+        return None
+
+    def uinsertsizeplot(self,organism):
+        """
+        Return a mini-plot with the Picard insert size histogram
+        """
+        return uinsertsizeplot(
+            self.insert_size_metrics(organism).histogram,
+            inline=True)
+
+    def qualimap_rnaseq(self,organism):
+        """
+        Return Qualimap 'rnaseq' outputs instance for specified organism
+        """
+        if self.bam:
+            qualimap_rnaseq_dir = os.path.join(
+                self.qc_dir,
+                "qualimap-rnaseq",
+                organism,
+                self.bam)
+            if os.path.isdir(qualimap_rnaseq_dir):
+                return QualimapRnaseq(qualimap_rnaseq_dir)
+        return None
+
+    def ucoverageprofileplot(self,organism):
+        """
+        Return a mini-plot of the Qualimap gene coverage profile
+        """
+        return ucoverageprofileplot(
+            self.qualimap_rnaseq(organism).\
+            raw_coverage_profile_along_genes_total,
+            inline=True)
+
+    def ugenomicoriginplot(self,organism,width=100,height=40):
+        """
+        Return a mini-barplot of the Qualimap genomic origin of reads data
+        """
+        return ugenomicoriginplot(
+            self.qualimap_rnaseq(organism).reads_genomic_origin,
+            width=width,
+            height=height,
+            inline=True)
 
     def strandedness(self):
         """
@@ -2272,6 +2724,7 @@ class FastqGroupQCReporter:
 
         - fastqs (if paired-end)
         - fastq (if single-end)
+        - bam_file
         - reads
         - read_lengths
         - read_counts
@@ -2290,6 +2743,10 @@ class FastqGroupQCReporter:
         - screens_r2
         - screens_r3
         - strandedness
+        - strand_specificity
+        - insert_size_histogram
+        - coverage_profile_along_genes
+        - reads_genomic_origin
 
         Arguments:
           field (str): name of the field to report; if the
@@ -2303,6 +2760,8 @@ class FastqGroupQCReporter:
                 value.append(Link(self.reporters[read].name,
                                   "#%s" % self.reporters[read].safe_name))
             value = "<br />".join([str(x) for x in value])
+        elif field == "bam_file":
+            value = self.bam
         elif field == "reads":
             if self.reporters[self.reads[0]].sequence_lengths:
                 value = pretty_print_reads(
@@ -2422,6 +2881,78 @@ class FastqGroupQCReporter:
                         href="#strandedness_%s" %
                         self.reporters[self.reads[0]].safe_name,
                         title=self.strandedness())
+        elif field.startswith("endedness_"):
+            organism = field[len("endedness_"):]
+            infer_experiment = self.infer_experiment(organism)
+            if infer_experiment:
+                value = ("PE" if infer_experiment.paired_end else "SE")
+        elif field == "strand_specificity":
+            value = []
+            for organism in self.project.organisms:
+                infer_experiment = self.infer_experiment(organism)
+                if infer_experiment:
+                    infer_experiment_log = infer_experiment.log_file
+                    if relpath:
+                        infer_experiment_log = os.path.relpath(
+                            infer_experiment_log,
+                            relpath)
+                    value.append(Img(self.ustrandednessplot(organism),
+                                     title="%s: %s: Fwd %.2f%% | Rev %.2f%% "
+                                     "(Unstr %.2f%%)" %
+                                     (self.bam,
+                                      organism,
+                                      infer_experiment.forward*100.0,
+                                      infer_experiment.reverse*100.0,
+                                      infer_experiment.unstranded*100.0),
+                                     href=infer_experiment_log))
+                else:
+                    value.append(WarningIcon(size=24))
+            value = '<br />'.join([str(x) for x in value])
+        elif field == "insert_size_histogram":
+            value = []
+            for organism in self.project.organisms:
+                histogram_pdf = os.path.join(
+                    os.path.dirname(
+                        self.insert_size_metrics(organism).metrics_file),
+                    "%s.insert_size_histogram.pdf" % self.bam)
+                if relpath:
+                    histogram_pdf = os.path.relpath(histogram_pdf,
+                                                    relpath)
+                value.append(Img(self.uinsertsizeplot(organism),
+                                 title="%s: insert size histogram for "
+                                 "%s (click for PDF)"
+                                 % (self.bam,organism),
+                                 href=histogram_pdf))
+            value = '<br />'.join([str(x) for x in value])
+        elif field == "reads_genomic_origin":
+            value = []
+            for organism in self.project.organisms:
+                title = ["Genomic origin of reads for %s:" % organism]
+                genomic_origin = \
+                    self.qualimap_rnaseq(organism).reads_genomic_origin
+                for name in genomic_origin:
+                    title.append("- %s: %s (%s%%)" %
+                                 (name,
+                                  genomic_origin[name][0],
+                                  genomic_origin[name][1]))
+                link = self.qualimap_rnaseq(organism).\
+                    link_to_output("Reads Genomic Origin",
+                                   relpath=relpath)
+                value.append(Img(self.ugenomicoriginplot(organism),
+                                 title='\n'.join(title),
+                                 href=link))
+            value = '<br />'.join([str(x) for x in value])
+        elif field == "coverage_profile_along_genes":
+            value = []
+            for organism in self.project.organisms:
+                link = self.qualimap_rnaseq(organism).\
+                       link_to_output("Coverage Profile Along Genes (Total)",
+                                      relpath=relpath)
+                value.append(Img(self.ucoverageprofileplot(organism),
+                                 title="%s: Qualimap gene coverage profile "
+                                 "for %s" % (self.bam,organism),
+                                 href=link))
+            value = '<br />'.join([str(x) for x in value])
         else:
             raise KeyError("'%s': unrecognised field for summary "
                            "table" % field)
@@ -2747,7 +3278,8 @@ class FastqQCReporter:
           inline (bool): if True then return plot in format for
             inlining in HTML document
         """
-        return uboxplot(self.fastqc.data.path,inline=inline)
+        return uboxplot(self.fastqc.data.path,max_width=100,
+                        inline=inline)
 
     def uduplicationplot(self,mode='dup',inline=True):
         """
@@ -2800,6 +3332,101 @@ class FastqQCReporter:
         for name in self.fastq_screen.names:
             screen_files.append(self.fastq_screen[name].txt)
         return uscreenplot(screen_files,screen_width=30,inline=inline)
+
+class ToggleButton:
+    """
+    Utility class for creating a 'toggle button'
+
+    A 'toggle button' is an HTML button that is linked
+    to a document section such that successive button
+    clicks toggle the section's visibility, between
+    'visible' and 'hidden' states.
+
+    The toggle functionality is provided by a JavaScript
+    function which changes the section's 'display'
+    attribute to 'block' (to make it visible) and 'none'
+    (to hide it).
+
+    The button will always have the 'toggle_button'
+    CSS class associated with it, in addition to any
+    others specified.
+
+    Example usage:
+
+    >>> d = Document()
+    >>> s = Section('Toggle section')
+    >>> b = ToggleButton(s)
+    >>> d.add(b,s)
+
+    Arguments:
+      toggle_section (Section): section to toggle the
+        visibility of
+      show_text (str): text to show on the button
+        when the section is in the hidden state
+      hide_text (str): text to show on the button
+        when the section is in the visible state
+      help_text (str): text to show when the mouse
+        is over the button
+      css_classes (list): additional CSS classes to
+        associate with the button
+      hidden_by_default (bool): if True then the
+        section will be hidden by default
+    """
+    def __init__(self,toggle_section,show_text="Show",hide_text="Hide",
+                 css_classes=None,help_text=None,hidden_by_default=True):
+        """
+        Create a new ToggleButton instance
+        """
+        self._toggle_section = toggle_section
+        self._show_text = show_text
+        self._hide_text = hide_text
+        self._help_text = help_text
+        self._css_classes = ["toggle_button"]
+        if css_classes:
+            for cls in css_classes:
+                self._css_classes.append(cls)
+        self._hidden_by_default = hidden_by_default
+
+    def html(self):
+        """
+        Generate HTML version of the toggle button
+
+        Returns:
+          String: HTML representation of the button.
+        """
+        # Set id for button based on section
+        name = "toggle_%s" % self._toggle_section.name
+        # Default visibility
+        if self._hidden_by_default:
+            button_text = self._show_text
+        else:
+            button_text = self._hide_text
+        # Help text
+        if self._help_text:
+            title = "title='%s' " % self._help_text
+        else:
+            title = ""
+        # Generate HTML code for control button
+        html = ["<button id=\"{toggle_button_name}\" ",
+                "{title}",
+                "class=\"{css_classes}\" ",
+                "onclick=\"toggleBlock(",
+                "'{section_name}',"
+                "'{toggle_button_name}',"
+                "'{show_text}',"
+                "'{hide_text}')\">{button_text}",
+                "</button>"]
+        return ''.join(html).format(
+            toggle_button_name=name,
+            title=title,
+            css_classes=' '.join(self._css_classes),
+            section_name=self._toggle_section.name,
+            show_text=self._show_text,
+            hide_text=self._hide_text,
+            button_text=button_text)
+
+    def __repr__(self):
+        return self.html()
 
 #######################################################################
 # Functions

@@ -31,6 +31,7 @@ from ..metadata import AnalysisProjectQCDirInfo
 from .constants import FASTQ_SCREENS
 from .protocols import fetch_protocol_definition
 from .outputs import QCOutputs
+from .utils import get_bam_basename
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 
 # Module specific logger
@@ -63,7 +64,9 @@ class QCVerifier(QCOutputs):
     def __init__(self,qc_dir,fastq_attrs=None):
         QCOutputs.__init__(self,qc_dir,fastq_attrs=fastq_attrs)
 
-    def verify(self,fastqs,qc_protocol,fastq_screens=None,
+    def verify(self,fastqs,qc_protocol,organism=None,
+               fastq_screens=None,star_index=None,
+               annotation_bed=None,annotation_gtf=None,
                cellranger_version=None,cellranger_refdata=None,
                cellranger_use_multi_config=None):
         """
@@ -72,8 +75,12 @@ class QCVerifier(QCOutputs):
         Arguments:
           fastqs (list): list of Fastqs to verify outputs for
           qc_protocol (str): QC protocol to verify against
+          organism (str): organism associated with outputs
           fastq_screens (list): list of panel names to verify
             FastqScreen outputs against
+          star_index (str): path to STAR index
+          annotation_bed (str): path to BED annotation file
+          annotation_gtf (str): path to GTF annotation file
           cellranger_version (str): specific version of 10x
             package to check for
           cellranger_refdata (str): specific 10x reference
@@ -102,7 +109,11 @@ class QCVerifier(QCOutputs):
             samples=samples,
             seq_data_reads=reads.seq_data,
             qc_reads=reads.qc,
+            organism=organism,
             fastq_screens=fastq_screens,
+            star_index=star_index,
+            annotation_bed=annotation_bed,
+            annotation_gtf=annotation_gtf,
             cellranger_version=cellranger_version,
             cellranger_refdata=cellranger_refdata,
             cellranger_use_multi_config=cellranger_use_multi_config
@@ -131,14 +142,18 @@ class QCVerifier(QCOutputs):
             # Verify outputs for this QC module
             verified[qc_module] = self.verify_qc_module(qc_module,
                                                         **params)
-
+        # Make templates for parameter and status
+        field_width = 21
+        for qc_module in qc_modules:
+            field_width = max(len(qc_module),field_width)
+        parameter_template_str = "{parameter:%ss}: {value}" % field_width
+        qc_module_template_str = "{name:%ss}: {status:4s}{params}" % field_width
         # Report parameters and status of checks
-        parameter_template_str = "{parameter:21s}: {value}"
-        qc_module_template_str = "{name:21s}: {status:4s}{params}"
         print("-"*(10+len(self.qc_dir)))
         print("QC dir  : %s" % self.qc_dir)
         print("Protocol: %s" % qc_protocol)
         print("-"*(10+len(self.qc_dir)))
+        # Report parameters
         print("Parameters:")
         for p in default_params:
             if p == 'fastqs':
@@ -173,27 +188,42 @@ class QCVerifier(QCOutputs):
             else:
                 print(parameter_template_str.format(parameter=p,
                                                     value=default_params[p]))
-        print("-"*27)
+        print("-"*(field_width+6))
+        # Report the status for each module
         for name in verified:
+            # Get string version of status
+            if verified[name] is None:
+                qc_module_status = '****'
+            elif verified[name]:
+                qc_module_status = 'PASS'
+            else:
+                qc_module_status = 'FAIL'
+            # Report status of module
             print(qc_module_template_str.format(
                 name=name,
-                status=('PASS' if verified[name] else 'FAIL'),
+                status=qc_module_status,
                 params=(" %s" % params_for_module[name]
                         if params_for_module[name] else '')))
-        status = all([verified[m] for m in verified])
-        print("-"*27)
+        # Status for QC as a whole
+        status = all([verified[m] for m in verified
+                      if verified[m] is not None])
+        print("-"*(field_width+6))
         print(qc_module_template_str.format(
             name="QC STATUS",
             status=('PASS' if status else 'FAIL'),
             params=''))
-        print("-"*27)
+        print("-"*(field_width+6))
 
         # Return verification status
         return status
 
     def verify_qc_module(self,name,fastqs=None,samples=None,
                          seq_data_reads=None,qc_reads=None,
+                         organism=None,
                          fastq_screens=None,
+                         star_index=None,
+                         annotation_bed=None,
+                         annotation_gtf=None,
                          cellranger_version=None,
                          cellranger_refdata=None,
                          cellranger_use_multi_config=None):
@@ -208,8 +238,12 @@ class QCVerifier(QCOutputs):
             sequence data
           qc_reads (list): list of reads to perform general
             QC on
+          organism (str): organism associated with outputs
           fastq_screens (list): list of panel names to verify
             FastqScreen outputs against
+          star_index (str): path to STAR index
+          annotation_bed (str): path to BED annotation file
+          annotation_gtf (str): path to GTF annotation file
           cellranger_version (str): specific version of 10x
             package to check for
           cellranger_refdata (str): specific 10x reference
@@ -231,7 +265,7 @@ class QCVerifier(QCOutputs):
         if name == "fastqc":
             if not fastqs:
                 # Nothing to check
-                return True
+                return None
             try:
                 # Filter Fastq names
                 fastqs = self.filter_fastqs(qc_reads,fastqs)
@@ -247,7 +281,7 @@ class QCVerifier(QCOutputs):
         elif name == "fastq_screen":
             if not fastqs or not fastq_screens:
                 # Nothing to check
-                return True
+                return None
             try:
                 # Filter Fastq names
                 fastqs = self.filter_fastqs(seq_data_reads,fastqs)
@@ -270,7 +304,7 @@ class QCVerifier(QCOutputs):
         elif name == "sequence_lengths":
             if not fastqs:
                 # Nothing to check
-                return True
+                return None
             try:
                 # Filter Fastq names
                 fastqs = self.filter_fastqs(qc_reads,fastqs)
@@ -288,7 +322,7 @@ class QCVerifier(QCOutputs):
                "fastq_strand.conf" not in self.config_files:
                 # No Fastqs or no conf file so strandedness
                 # outputs not expected
-                return True
+                return None
             if "strandedness" not in self.outputs:
                 # No strandedness outputs present
                 return False
@@ -297,6 +331,76 @@ class QCVerifier(QCOutputs):
             # Check that outputs exist for every Fastq
             for fq in fastqs:
                 if fq not in self.data('fastq_strand').fastqs:
+                    return False
+            return True
+
+        elif name == "rseqc_genebody_coverage":
+            if not fastqs:
+                # Nothing to check
+                return None
+            if not organism:
+                # No organism specified
+                return None
+            if not star_index or not annotation_bed:
+                # No STAR index or annotation
+                return None
+            if "rseqc_genebody_coverage" not in self.outputs:
+                # No RSeQC gene body coverage present
+                return False
+            if organism.lower() not in \
+               self.data('rseqc_genebody_coverage').organisms:
+                return False
+            return True
+
+        elif name == "picard_insert_size_metrics":
+            if not fastqs:
+                # Nothing to check
+                return None
+            if not organism:
+                # No organism specified
+                return None
+            if not star_index:
+                # No STAR index
+                return None
+            if "picard_insert_size_metrics" not in self.outputs:
+                # No insert size metrics present
+                return False
+            if organism.lower() not in \
+               self.data('picard_collect_insert_size_metrics').organisms:
+                return False
+            # Filter Fastq names and convert to BAM names
+            bams = [get_bam_basename(fq)
+                    for fq in self.filter_fastqs(seq_data_reads[:1],fastqs)]
+            # Check that outputs exist for every BAM
+            for bam in bams:
+                if bam not in self.data('picard_collect_insert_size_metrics').\
+                   bam_files:
+                    return False
+            return True
+
+        elif name == "qualimap_rnaseq":
+            if not fastqs:
+                # Nothing to check
+                return None
+            if not organism:
+                # No organism specified
+                return None
+            if not star_index or \
+               not annotation_gtf or \
+               not annotation_bed:
+                # No STAR index or annotation
+                return None
+            if "qualimap_rnaseq" not in self.outputs:
+                # No Qualimap 'rnaseq' outputs present
+                return False
+            if organism.lower() not in self.data('qualimap_rnaseq').organisms:
+                return False
+            # Filter Fastq names and convert to BAM names
+            bams = [get_bam_basename(fq)
+                    for fq in self.filter_fastqs(seq_data_reads[:1],fastqs)]
+            # Check that outputs exist for every BAM
+            for bam in bams:
+                if bam not in self.data('qualimap_rnaseq').bam_files:
                     return False
             return True
 
@@ -627,6 +731,10 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
     logger.debug("verify: qc_dir (final)  : %s" % qc_dir)
     cellranger_version = None
     cellranger_refdata = None
+    star_index = None
+    annotation_bed=None
+    annotation_gtf=None
+    organism = None
     fastq_screens = None
     qc_info_file = os.path.join(qc_dir,"qc.info")
     if os.path.exists(qc_info_file):
@@ -634,11 +742,27 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
         if not qc_protocol:
             qc_protocol = qc_info['protocol']
         try:
+            organism = qc_info['organism']
+        except KeyError:
+            pass
+        try:
             cellranger_refdata = qc_info['cellranger_refdata']
         except KeyError:
             pass
         try:
             cellranger_version = qc_info['cellranger_version']
+        except KeyError:
+            pass
+        try:
+            star_index = qc_info['star_index']
+        except KeyError:
+            pass
+        try:
+            annotation_bed = qc_info['annotation_bed']
+        except KeyError:
+            pass
+        try:
+            annotation_gtf = qc_info['annotation_gtf']
         except KeyError:
             pass
         try:
@@ -651,11 +775,15 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
             pass
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
-    logger.debug("verify: fastq screens : %s" % fastq_screens)
+    logger.debug("verify: fastq screens : %s" % (fastq_screens,))
     verifier = QCVerifier(qc_dir,
                           fastq_attrs=project.fastq_attrs)
     return verifier.verify(project.fastqs,
                            qc_protocol,
+                           organism=organism,
                            fastq_screens=fastq_screens,
+                           star_index=star_index,
+                           annotation_bed=annotation_bed,
+                           annotation_gtf=annotation_gtf,
                            cellranger_version=cellranger_version,
                            cellranger_refdata=cellranger_refdata)

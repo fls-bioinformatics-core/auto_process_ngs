@@ -11,6 +11,11 @@ from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockFastqStrandPy
+from auto_process_ngs.mock import MockStar
+from auto_process_ngs.mock import MockSamtools
+from auto_process_ngs.mock import MockPicard
+from auto_process_ngs.mock import MockRSeQC
+from auto_process_ngs.mock import MockQualimap
 from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import MockAnalysisProject
@@ -72,6 +77,13 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -79,7 +91,8 @@ class TestQCPipeline(unittest.TestCase):
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"))
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -87,6 +100,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -95,11 +114,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -117,6 +139,13 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -124,14 +153,21 @@ class TestQCPipeline(unittest.TestCase):
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"))
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
-        status = runqc.run(poll_interval=POLL_INTERVAL,
+        status = runqc.run(star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
+                           poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         self.assertEqual(status,0)
@@ -139,10 +175,13 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -154,13 +193,18 @@ class TestQCPipeline(unittest.TestCase):
                                                         "PJB",f)),
                             "Missing %s" % f)
 
-    def test_qcpipeline_with_strandedness(self):
-        """QCPipeline: standard QC run with strandedness determination
+    def test_qcpipeline_with_no_star_index(self):
+        """QCPipeline: standard QC run with no STAR index
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -177,8 +221,10 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
-                           star_indexes=
-                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -192,6 +238,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -202,15 +251,28 @@ class TestQCPipeline(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
+        for f in ("PJB1_S1_001",
+                  "PJB2_S2_001"):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                         "PJB",
+                                                         "qc",
+                                                         "__bam_files",
+                                                         "human",
+                                                         "%s.bam" % f)))
 
-    def test_qcpipeline_with_missing_strandedness(self):
-        """QCPipeline: standard QC fails with missing strandedness outputs
+    def test_qcpipeline_with_no_rseqc_reference(self):
+        """QCPipeline: standard QC run with no RSeQC reference gene model
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"),
-                                 no_outputs=True)
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -229,6 +291,147 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        for f in ("PJB1_S1_001",
+                  "PJB2_S2_001"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",
+                                                        "qc",
+                                                        "__bam_files",
+                                                        "human",
+                                                        "%s.bam" % f)))
+
+    def test_qcpipeline_with_no_qualimap_reference(self):
+        """QCPipeline: standard QC run with no Qualimap reference gene model
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,None)
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        for f in ("PJB1_S1_001",
+                  "PJB2_S2_001"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",
+                                                        "qc",
+                                                        "__bam_files",
+                                                        "human",
+                                                        "%s.bam" % f)))
+
+    def test_qcpipeline_with_missing_strandedness(self):
+        """QCPipeline: standard QC fails with missing strandedness outputs
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"),
+                                 no_outputs=True)
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -242,6 +445,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -260,13 +466,21 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"))
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -274,6 +488,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=False)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -282,11 +502,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -309,12 +532,20 @@ class TestQCPipeline(unittest.TestCase):
                                             no_outputs=True,
                                             exit_code=1)
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz"))
+                                       "PJB1_S1_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -322,6 +553,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -330,11 +567,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -353,12 +593,20 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz"))
+                                       "PJB1_S1_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -366,6 +614,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            legacy_screens=True,
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
@@ -375,10 +629,13 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -404,12 +661,20 @@ class TestQCPipeline(unittest.TestCase):
         MockFastQC.create(os.path.join(self.bin,"fastqc"),
                                        no_outputs=True,
                                        exit_code=1)
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz"))
+                                       "PJB1_S1_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -417,6 +682,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -425,11 +696,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -448,13 +722,21 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"),
                            no_outputs=True)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz"))
+                                       "PJB1_S1_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -462,6 +744,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -470,11 +758,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -495,6 +786,13 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -502,7 +800,8 @@ class TestQCPipeline(unittest.TestCase):
         p = MockAnalysisProject("PJB",
                                 fastq_names=("PJB1_S1_R1_001.fastq.gz",
                                              "PJB1_S1_R2_001.fastq.gz"),
-                                fastq_dir="fastqs.cells")
+                                fastq_dir="fastqs.cells",
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -511,6 +810,12 @@ class TestQCPipeline(unittest.TestCase):
                           fastq_dir="fastqs.cells",
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -519,11 +824,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs.cells"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -541,12 +849,20 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz"))
+                                       "PJB1_S1_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -555,6 +871,12 @@ class TestQCPipeline(unittest.TestCase):
                           qc_dir="qc.non_default",
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -563,11 +885,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc.non_default","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -591,12 +916,20 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB2_S2_R1_001.fastq.gz"))
+                                       "PJB2_S2_R1_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -604,6 +937,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -612,11 +951,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardSE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -634,6 +976,13 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -641,12 +990,14 @@ class TestQCPipeline(unittest.TestCase):
         p = MockAnalysisProject("AB",("AB1_S1_R1_001.fastq.gz",
                                       "AB1_S1_R2_001.fastq.gz",
                                       "AB2_S2_R1_001.fastq.gz",
-                                      "AB2_S2_R2_001.fastq.gz"))
+                                      "AB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         p = MockAnalysisProject("CD",("CD3_S3_R1_001.fastq.gz",
                                       "CD3_S3_R2_001.fastq.gz",
                                       "CD4_S4_R1_001.fastq.gz",
-                                      "CD4_S4_R2_001.fastq.gz"))
+                                      "CD4_S4_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Mouse' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -655,6 +1006,15 @@ class TestQCPipeline(unittest.TestCase):
                                               os.path.join(self.wd,p)),
                               multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index',
+                             'mouse': '/data/mm10/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed',
+                             'mouse': '/data/mm10/mm10.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf',
+                             'mouse': '/data/mm10/mm10.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -663,22 +1023,28 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"AB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"AB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"CD","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Mouse")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"CD","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/mm10/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/mm10/mm10.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/mm10/mm10.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -696,6 +1062,13 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -705,7 +1078,8 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB1_S1_I1_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
                                        "PJB2_S2_R2_001.fastq.gz",
-                                       "PJB2_S2_I1_001.fastq.gz"))
+                                       "PJB2_S2_I1_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -713,6 +1087,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -721,11 +1101,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -743,6 +1126,13 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -750,7 +1140,8 @@ class TestQCPipeline(unittest.TestCase):
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"))
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -758,6 +1149,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            batch_size=3,
@@ -767,11 +1164,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -791,6 +1191,13 @@ class TestQCPipeline(unittest.TestCase):
         MockFastQC.create(os.path.join(self.bin,"fastqc"),
                                        no_outputs=True,
                                        exit_code=1)
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -798,7 +1205,8 @@ class TestQCPipeline(unittest.TestCase):
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"))
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -806,6 +1214,12 @@ class TestQCPipeline(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            batch_size=3,
@@ -815,11 +1229,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -838,12 +1255,20 @@ class TestQCPipeline(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz"))
+                                       "PJB1_S1_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Non-default log dir
         log_dir = os.path.join(self.wd,"logs")
@@ -856,6 +1281,12 @@ class TestQCPipeline(unittest.TestCase):
                           multiqc=True,
                           log_dir=log_dir)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -864,11 +1295,14 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -893,6 +1327,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="3.1.0",
                                  assert_include_introns=False)
@@ -917,6 +1357,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0' },
                            poll_interval=POLL_INTERVAL,
@@ -932,6 +1376,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"3.1.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-GRCh38-1.2.0")
@@ -965,6 +1412,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="5.0.1",
                                  assert_include_introns=False)
@@ -989,6 +1442,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1004,6 +1461,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1037,6 +1497,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0",
                                  assert_include_introns=False)
@@ -1061,6 +1527,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1076,6 +1546,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1109,6 +1582,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="7.0.0",
                                  assert_include_introns=True)
@@ -1133,6 +1612,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1148,6 +1631,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1181,6 +1667,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -1208,6 +1700,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_exe=os.path.join(cellranger_bin,
@@ -1225,6 +1721,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1258,6 +1757,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  assert_force_cells=10000)
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1281,6 +1786,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_force_cells=10000,
@@ -1297,6 +1806,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1330,6 +1842,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="3.1.0",
                                  assert_include_introns=False)
@@ -1354,6 +1872,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_premrna_references=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0_premrna' },
                            poll_interval=POLL_INTERVAL,
@@ -1369,6 +1891,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"3.1.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-GRCh38-1.2.0_premrna")
@@ -1402,6 +1927,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="7.0.0",
                                  assert_include_introns=True)
@@ -1436,6 +1967,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_extra_projects=[
@@ -1454,6 +1989,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1499,6 +2037,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         # Mock cellranger 5.0.1 with check on --include-introns
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
@@ -1524,6 +2068,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1539,6 +2087,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1572,6 +2123,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0",
@@ -1596,6 +2153,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1611,6 +2172,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1644,10 +2208,16 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="7.0.0",
                                  assert_include_introns=True)
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock analysis project
@@ -1668,6 +2238,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1683,6 +2257,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1716,6 +2293,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
                                  version="1.2.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1741,6 +2324,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-1.2.0' },
@@ -1757,6 +2344,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"1.2.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-atac-GRCh38-1.2.0")
@@ -1790,6 +2380,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
                                  version="2.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1815,6 +2411,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -1831,6 +2431,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0")
@@ -1864,6 +2467,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
                                  assert_force_cells=10000)
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -1889,6 +2498,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -1906,6 +2519,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0")
@@ -1940,6 +2556,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
                                  version="2.0.0",
                                  assert_chemistry="ARC-v1")
@@ -1966,6 +2588,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -1985,6 +2611,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2019,6 +2648,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0",
                                  assert_include_introns=True,
@@ -2044,6 +2679,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
@@ -2062,6 +2701,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2096,6 +2738,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
                                  version="2.0.0",
                                  assert_chemistry="ARC-v1")
@@ -2150,6 +2798,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -2169,6 +2821,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"1.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2216,6 +2871,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"),
                                  version="2.0.0",
                                  assert_chemistry="ARC-v1")
@@ -2270,6 +2931,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -2289,6 +2954,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2335,6 +3003,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0",
                                  assert_include_introns=True,
@@ -2390,6 +3064,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
@@ -2408,6 +3086,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"1.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2454,6 +3135,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0",
                                  assert_include_introns=True,
@@ -2509,6 +3196,10 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
@@ -2527,6 +3218,9 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2573,6 +3267,12 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -2615,6 +3315,10 @@ PBB,CMO302,PBB
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-gex-GRCh38-2020-A' },
@@ -2631,6 +3335,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
@@ -2673,6 +3380,12 @@ PBB,CMO302,PBB
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="6.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -2695,6 +3408,10 @@ PBB,CMO302,PBB
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-gex-GRCh38-2020-A' },
@@ -2711,6 +3428,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -2735,6 +3455,12 @@ PBB,CMO302,PBB
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -2756,6 +3482,10 @@ PBB,CMO302,PBB
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -2771,6 +3501,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -2789,6 +3522,12 @@ PBB,CMO302,PBB
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -2810,6 +3549,10 @@ PBB,CMO302,PBB
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -2823,6 +3566,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -2841,6 +3587,12 @@ PBB,CMO302,PBB
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version='5.0.1')
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -2865,6 +3617,10 @@ PBB,CMO302,PBB
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -2880,6 +3636,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -2913,6 +3672,12 @@ PBB,CMO302,PBB
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
                                  version="5.0.1")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
@@ -2936,6 +3701,10 @@ PBB,CMO302,PBB
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -2949,6 +3718,9 @@ PBB,CMO302,PBB
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -2966,6 +3738,13 @@ PBB,CMO302,PBB
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -2973,13 +3752,15 @@ PBB,CMO302,PBB
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"))
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # Add existing QC outputs
         UpdateAnalysisProject(
             AnalysisProject("PJB",os.path.join(self.wd,"PJB"))).add_qc_outputs(
                 protocol="standardSE",
-                include_fastq_strand=False,
+                include_fastq_strand=True,
+                include_seqlens=True,
                 include_multiqc=True)
         # Set up and run the QC
         runqc = QCPipeline()
@@ -2988,6 +3769,12 @@ PBB,CMO302,PBB
                           qc_protocol="standardPE",
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': '/data/hg38/hg38.bed' },
+                           annotation_gtf_files=
+                           { 'human': '/data/hg38/hg38.gtf' },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -2996,11 +3783,14 @@ PBB,CMO302,PBB
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
-        self.assertEqual(qc_info.organism,None)
+        self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports

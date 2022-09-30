@@ -1,6 +1,10 @@
 QC Reports
 ==========
 
+********
+Overview
+********
+
 The :doc:`auto_process run_qc <../using/run_qc>` command outputs an
 HTML report for the QC for each of the projects in the analysis
 directory, which enables an assessment of the quality of the Fastq
@@ -12,21 +16,42 @@ An example of the top of a QC report index page is shown below:
 .. image:: ../images/qc/qc_report_full.png
    :align: center
 
-The report consists of:
+****************
+Report structure
+****************
+
+Each report consists of a number of different elements which are
+shown schematically below:
+
+.. image:: ../images/qc/qc_report_schematic.png
+   :align: center
+
+The key element is the top-level summary section which itself
+consists of a number of subsections:
 
 * :ref:`qc_report_project_metadata`
 * :ref:`qc_report_qc_summary_table`
-* :ref:`qc_report_qc_outputs_per_fastq`
+* :ref:`qc_report_single_library_analyses`
+* :ref:`qc_report_dataset_wide_metrics`
+
+Below this top-level summary there are more detailed per-sample
+and per-Fastq reports (see :ref:`qc_report_qc_outputs_per_fastq`).
 
 .. _qc_report_project_metadata:
 
-************************
-Project metadata summary
-************************
+*************************************
+Metadata, reference data and comments
+*************************************
 
-The project metadata table summarises information associated with the
-project, including the user, PI, library type, organisms and QC
-protocol.
+This section contains a number of tables and subsections which
+summarise information associated with the project and QC:
+
+* **General information** including the user, PI, library type,
+  organism(s) and QC protocol
+* **Processing software** and versions (if available)
+* **QC software** and versions (if available)
+* **Reference data** such as Cellranger and STAR indexes
+* **Comments** associated with the project
 
 .. _qc_report_qc_summary_table:
 
@@ -42,11 +67,18 @@ For example:
 .. image:: ../images/qc/qc_report_summary.png
    :align: center
 
-The summary includes the following metrics for example sample
+The summary includes the following basic information for each sample
 and Fastq:
 
-* Number of reads or read pairs
-* Mean and range of sequence lengths
+* Sample name
+* Fastq names associated with each sample
+* Number of reads or read pairs for each Fastq
+* Mean and range of sequence lengths for each Fastq
+
+Additionally the following metrics are reported (typically in the
+form of small summary plots, which are described in the appropriate
+sections below):
+
 * :ref:`qc_report_quality_boxplots`
 * :ref:`qc_report_fastqc_summary_plots`
 * :ref:`qc_report_fastq_screen_summary_plots`
@@ -55,6 +87,9 @@ and Fastq:
 * :ref:`qc_report_sequence_length_dist_plots`
 * :ref:`qc_report_sequence_duplication_plots`
 * :ref:`qc_report_adapter_summary_plots`
+* :ref:`qc_report_insert_size_dist_plots`
+* :ref:`qc_report_qualimap_rnaseq_coverage`
+* :ref:`qc_report_qualimap_rnaseq_origin_genomic_reads`
 
 One purpose of this table is to help pick up on trends and identify
 any outliers within the dataset as a whole; hence the main function
@@ -67,16 +102,6 @@ The sample and Fastq names in the table link through to the
 full QC outputs for the sample or Fastqs in question; other items
 (e.g. the quality boxplots) link to the relevant parts of the full
 QC outputs section (see :ref:`qc_report_qc_outputs_per_fastq`).
-
-An additional summary table may appear after this one with details
-of outputs from 10xGenomics single library analyses (see
-:ref:`qc_report_single_library_analyses`).
-
-.. note::
-
-   In earlier versions of the QC reports, links to single library
-   analyses were appended directly to the main summary table, and
-   no separate sigle library analyses table was present.
 
 .. _qc_report_quality_boxplots:
 
@@ -365,12 +390,58 @@ For example:
 .. |adapter_uplot_adptrs_sml| image:: ../images/auto/qc/adapter_uplot_adptrs_sml.png
 .. |adapter_uplot_adptrs_lrg| image:: ../images/auto/qc/adapter_uplot_adptrs_lrg.png
 
-.. _qc_report_single_library_analyses:
+.. _qc_report_insert_size_dist_plots:
 
-Single library analyses
+Insert size distribution plots
+------------------------------
+
+These plots are small versions of the insert size distribution
+histograms output by Picard's ``CollectInsertSizeMetrics`` utility.
+
+For example:
+
+.. image:: ../images/auto/qc/picard_insert_size_uplot.png
+   :align: center
+
+The insert size metrics are also collated across all samples into
+a single TSV file (see :ref:`qc_collated_picard_insert_sizes`).
+
+.. _qc_report_qualimap_rnaseq_coverage:
+
+Qualimap coverage plots
 -----------------------
 
-For 10xGenomics datasets single library analyses may also have
+Plot summarising the mean coverage profile of all transcripts with
+non-zero coverage as produced by Qualimap's RNA-seq analysis;
+essentially these are the data from the
+*coverage_profile_along_genes_(total).txt* output file.
+
+For example:
+
+.. image:: ../images/auto/qc/qualimap_gene_body_coverage_uplot.png
+   :align: center
+
+.. _qc_report_qualimap_rnaseq_origin_genomic_reads:
+
+Qualimap origin of genomic reads plots
+--------------------------------------
+
+Bar chart summarising the genomic origin of reads data from Qualimap's
+RNA-seq analysis; specifically this indicates the fraction of the read
+alignments which fall into exonic, intronic and intergenic regions.
+
+For example:
+
+.. image:: ../images/auto/qc/qualimap_genomic_origin_reads.png
+   :align: center
+
+.. _qc_report_single_library_analyses:
+
+***********************
+Single library analyses
+***********************
+
+For 10x Genomics datasets single library analyses may also have
 been performed for each sample using the ``count`` command of the
 appropriate 10xGenomics pipeline (e.g. ``cellranger`` for scRNA-seq
 data, ``cellranger-atac`` for scATAC-seq data etc).
@@ -397,6 +468,61 @@ be found in the appropriate documentation for the 10xGenomics pipeline:
    The full set of outputs can be found under the ``cellranger_count``
    subdirectory of the project directory, when single library
    analysis has been performed.
+
+.. note::
+
+   For single cell multiome datasets there may also be a summary table
+   for CellRanger ARC's single library analyses; similarly for CellPlex
+   datasets a summary table for the multiplexing analysis may be
+   present (in both cases depending on the contents of the QC directory).
+
+.. _qc_report_dataset_wide_metrics:
+
+********************************
+Dataset-wide metrics and reports
+********************************
+
+This section contains any dataset-wide metrics and additional
+reports, including:
+
+* :ref:`qc_rseqc_gene_body_coverage`
+* :ref:`qc_collated_picard_insert_sizes`
+* :ref:`qc_multiqc_report`
+
+.. _qc_rseqc_gene_body_coverage:
+
+RSeQC gene body coverage plot
+------------------------------
+
+This is the gene body coverage plot generated by RSeQC's
+``genebody_coverage.py`` utility, as a PNG.
+
+For example:
+
+.. image:: ../images/qc/qc_report_rseqc_gene_body_coverage.png
+   :align: center
+
+.. _qc_collated_picard_insert_sizes:
+
+Collated insert sizes
+---------------------
+
+This is a TSV (tab-delimited values) file which contains the
+following data for each aligned Fastq, from the output of Picard's
+``CollectInsertSizeMetrics`` command:
+
+* BAM file name
+* Mean insert size
+* Standard deviation
+* Median insert size
+* Median absolute deviation
+
+.. _qc_multiqc_report:
+
+MultiQC report
+--------------
+
+The HTML report generated by MultiQC when run on the QC directory.
    
 .. _qc_report_qc_outputs_per_fastq:
 

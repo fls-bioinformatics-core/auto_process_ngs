@@ -1,5 +1,5 @@
 #     mockqcdata.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2022 Peter Briggs
 #
 ########################################################################
 
@@ -1028,6 +1028,103 @@ SEQ_LENS_JSON = """{
         "76": 52434
     }
 }
+"""
+
+RSEQC_GENEBODY_COVERAGE_TXT = """Percentile	1	2	3	4	5	6	7	8	9	10
+SMP1_S1_R1_001	3264.0	6663.0	10749.0	15281.0	19831.0	23679.0	26241.0	28684.0	31556.0	34055.0
+SMP2_S2_R1_001	3071.0	7003.0	11984.0	17241.0	22453.0	26756.0	30356.0	33396.0	36437.0	39849.0
+"""
+
+PICARD_COLLECT_INSERT_SIZE_METRICS = """"## htsjdk.samtools.metrics.StringHeader
+# CollectInsertSizeMetrics --Histogram_FILE Sample.insert_size_histogram.pdf --INPUT Sample.bam --OUTPUT Sample.insert_size_metrics.txt --DEVIATIONS 10.0 --MINIMUM_PCT 0.05 --METRIC_ACCUMULATION_LEVEL ALL_READS --INCLUDE_DUPLICATES false --ASSUME_SORTED true --STOP_AFTER 0 --VERBOSITY INFO --QUIET false --VALIDATION_STRINGENCY STRICT --COMPRESSION_LEVEL 5 --MAX_RECORDS_IN_RAM 500000 --CREATE_INDEX false --CREATE_MD5_FILE false --GA4GH_CLIENT_SECRETS client_secrets.json --help false --version false --showHidden false --USE_JDK_DEFLATER false --USE_JDK_INFLATER false
+## htsjdk.samtools.metrics.StringHeader
+# Started on: Mon Oct 04 12:53:24 BST 2021
+
+## METRICS CLASS	picard.analysis.InsertSizeMetrics
+MEDIAN_INSERT_SIZE	MODE_INSERT_SIZE	MEDIAN_ABSOLUTE_DEVIATION	MIN_INSERT_SIZE	MAX_INSERT_SIZE	MEAN_INSERT_SIZE	STANDARD_DEVIATION	READ_PAIRS	PAIR_ORIENTATION	WIDTH_OF_10_PERCENT	WIDTH_OF_20_PERCENT	WIDTH_OF_30_PERCENT	WIDTH_OF_40_PERCENT	WIDTH_OF_50_PERCENT	WIDTH_OF_60_PERCENT	WIDTH_OF_70_PERCENT	WIDTH_OF_80_PERCENT	WIDTH_OF_90_PERCENT	WIDTH_OF_95_PERCENT	WIDTH_OF_99_PERCENT	SAMPLE	LIBRARY	READ_GROUP
+139	103	37	28	753074	153.754829	69.675347	175847	FR	15	31	47	61	75	93	115	157	323	975	31983			
+
+## HISTOGRAM	java.lang.Integer
+insert_size	All_Reads.fr_count
+28	1
+29	1
+30	1
+31	1
+32	1
+33	2
+34	3
+"""
+
+QUALIMAP_RNASEQ_RESULTS = """RNA-Seq QC report
+-----------------------------------
+
+>>>>>>> Input
+
+    bam file = /path/to/SMP1_S1_R1_001.bam
+    gff file = /path/to/annotation.gtf
+    counting algorithm = uniquely-mapped-reads
+    protocol = strand-specific-reverse
+
+
+>>>>>>> Reads alignment
+
+    reads aligned (left/right) = 175,847 / 175,847
+    read pairs aligned  = 175,847
+    total alignments = 728,678
+    secondary alignments = 376,984
+    non-unique alignments = 357,582
+    aligned to genes  = 63,784
+    ambiguous alignments = 160,764
+    no feature assigned = 19,130
+    not aligned = 0
+
+
+>>>>>>> Reads genomic origin
+
+    exonic =  63,784 (76.93%)
+    intronic = 4,778 (5.76%)
+    intergenic = 14,352 (17.31%)
+    overlapping exon = 6,523 (7.87%)
+    rRNA = 0 (0%)
+
+
+>>>>>>> Transcript coverage profile
+
+    5' bias = 0.73
+    3' bias = 0.41
+    5'-3' bias = 1.52
+
+
+>>>>>>> Junction analysis
+
+    reads at junctions = 28,238
+
+    AGAT : 3.22%
+    AGGT : 3.18%
+    ATCT : 2.79%
+    ACCT : 2.79%
+    AGCT : 2.66%
+    GCCT : 2.02%
+    AGGA : 1.94%
+    TTCT : 1.82%
+    AGAA : 1.78%
+    TCCT : 1.66%
+    TGCT : 1.34%
+"""
+
+QUALIMAP_RAW_COVERAGE_PROFILE = \
+"""#Transcript position	Transcript coverage profile
+0.0	22.648923862529898
+1.0	36.072848086812215
+2.0	49.90661635235814
+3.0	61.26286478838015
+4.0	67.64863079300177
+5.0	71.3660047159799
+6.0	71.9260591904655
+7.0	79.80361428985356
+8.0	82.33718275058882
+9.0	81.62987377703458
+10.0	81.9124541146298
 """
 
 # Base64 encoded generic example PNG

@@ -218,12 +218,16 @@ Runner name                   Used for
 ``fastq_screen``              Running ``FastqScreen`` in the QC pipeline
 ``star``                      Running pipeline tasks which use ``STAR``
                               (e.g. strandedness, alignment etc)
+``qualimap``                  Running ``Qualimap`` in the QC pipeline
+``rseqc``                     Running ``RSeQC`` ``geneBody_coverage.py``
+                              in the QC pipeline
 ``cellranger``                Running ``cellranger`` in Fastq generation
                               and QC pipelines
 ``qc``                        Running generally computationally intensive
                               QC commands (used as a fallback if
-                              ``fastqc``, ``fastq_screen`` or ``star``
-                              runners are not explicitly set)
+                              ``fastqc``, ``fastq_screen``, ``star``,
+			      ``qualimap`` or ``rseqc`` runners are not
+                              explicitly set)
 ``icell8``                    Default runner for commands in the ICELL8
                               processing pipeline
 ``icell8_contaminant_filter`` Running the contaminant filtering in the
