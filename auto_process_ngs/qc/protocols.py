@@ -19,6 +19,7 @@ For example:
 ::
 
     "ExampleProtocol": {
+        "description": "Example QC protocol"
         "reads": { "seq_data": ('r1','r3'), "index": ('r2') },
         "qc_modules": ['fastqc','fastq_screen','sequence_lengths']
     }
@@ -61,6 +62,7 @@ from bcftbx.utils import AttributeDictionary
 QC_PROTOCOLS = {
 
     "standardSE": {
+        "description": "Standard single-end data (R1 Fastqs only)",
         "reads": {
             "seq_data": ('r1',),
             "index": ()
@@ -76,6 +78,7 @@ QC_PROTOCOLS = {
     },
 
     "standardPE": {
+        "description": "Standard paired-end data (R1/R2 Fastq pairs)",
         "reads": {
             "seq_data": ('r1','r2',),
             "index": ()
@@ -92,6 +95,7 @@ QC_PROTOCOLS = {
     },
 
     "singlecell": {
+        "description": "ICELL8 single cell RNA-seq",
         "reads": {
             "seq_data": ('r2',),
             "index": ('r1',)
@@ -107,6 +111,7 @@ QC_PROTOCOLS = {
     },
 
     "10x_scRNAseq": {
+        "description": "10xGenomics single cell RNA-seq",
         "reads": {
             "seq_data": ('r2',),
             "index": ('r1',)
@@ -123,6 +128,7 @@ QC_PROTOCOLS = {
     },
 
     "10x_snRNAseq": {
+        "description": "10xGenomics single nuclei RNA-seq",
         "reads": {
             "seq_data": ('r2',),
             "index": ('r1',)
@@ -139,6 +145,7 @@ QC_PROTOCOLS = {
     },
 
     "10x_scATAC": {
+        "description": "10xGenomics single cell ATAC-seq",
         "reads": {
             "seq_data": ('r1','r3',),
             "index": ()
@@ -156,6 +163,7 @@ QC_PROTOCOLS = {
     },
 
     "10x_Multiome_GEX": {
+        "description": "10xGenomics single cell multiome gene expression data",
         "reads": {
             "seq_data": ('r2',),
             "index": ('r1',)
@@ -181,6 +189,7 @@ QC_PROTOCOLS = {
     },
 
     "10x_Multiome_ATAC": {
+        "description": "10xGenomics single cell multiome ATAC-seq data",
         "reads": {
             "seq_data": ('r1','r3',),
             "index": ()
@@ -207,6 +216,7 @@ QC_PROTOCOLS = {
     },
 
     "10x_CellPlex": {
+        "description": "10xGenomics CellPlex cell multiplexing data",
         "reads": {
             "seq_data": ('r2',),
             "index": ('r1',)
@@ -219,12 +229,14 @@ QC_PROTOCOLS = {
             'rseqc_genebody_coverage',
             'qualimap_rnaseq',
             'cellranger_count(cellranger_use_multi_config=True;'
+                             'set_cell_count=false;'
                              'set_metadata=False)',
             'cellranger_multi'
         ]
     },
 
     "10x_Visium": {
+        "description": "10xGenomics Visium spatial RNA-seq",
         "reads": {
             "seq_data": ('r2',),
             "index": ('r1',)
@@ -240,6 +252,7 @@ QC_PROTOCOLS = {
     },
 
     "ParseEvercode": {
+        "description": "Parse Biosciences Evercode data",
         "reads": {
             "seq_data": ('r1',),
             "index": ('r2',)
@@ -256,6 +269,7 @@ QC_PROTOCOLS = {
     },
 
     "ICELL8_scATAC": {
+        "description": "ICELL8 single cell ATAC-seq",
         "reads": {
             "seq_data": ('r1','r2',),
             "index": ()
