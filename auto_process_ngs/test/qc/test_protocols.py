@@ -8,12 +8,84 @@ import tempfile
 import shutil
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.qc.protocols import QCProtocol
 from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.protocols import get_read_numbers
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
+
+class TestQCProtocol(unittest.TestCase):
+    """
+    Tests for the QCProtocol class
+    """
+    def test_qcprotocol_null_protocol(self):
+        """
+        QCProtocol: check 'null' protocol
+        """
+        p = QCProtocol(name="null",
+                       description=None,
+                       seq_data_reads=None,
+                       index_reads=None,
+                       qc_modules=None)
+        self.assertEqual(p.name,"null")
+        self.assertEqual(p.description,"")
+        self.assertEqual(p.reads.seq_data,())
+        self.assertEqual(p.reads.index,())
+        self.assertEqual(p.reads.qc,())
+        self.assertEqual(p.read_numbers.seq_data,())
+        self.assertEqual(p.read_numbers.index,())
+        self.assertEqual(p.read_numbers.qc,())
+        self.assertEqual(p.qc_modules,[])
+
+    def test_qcprotocol_example_paired_end_protocol(self):
+        """
+        QCProtocol: check basic paired-end protocol
+        """
+        p = QCProtocol(name="basicPE",
+                       description="Basic paired-end QC",
+                       seq_data_reads=['r1','r2'],
+                       index_reads=None,
+                       qc_modules=("fastqc",
+                                   "fastq_screen",
+                                   "sequence_lengths"))
+        self.assertEqual(p.name,"basicPE")
+        self.assertEqual(p.description,"Basic paired-end QC")
+        self.assertEqual(p.reads.seq_data,('r1','r2'))
+        self.assertEqual(p.reads.index,())
+        self.assertEqual(p.reads.qc,('r1','r2'))
+        self.assertEqual(p.read_numbers.seq_data,(1,2))
+        self.assertEqual(p.read_numbers.index,())
+        self.assertEqual(p.read_numbers.qc,(1,2))
+        self.assertEqual(p.qc_modules,
+                         ["fastq_screen",
+                          "fastqc",
+                          "sequence_lengths"])
+
+    def test_qcprotocol_example_single_cell_protocol(self):
+        """
+        QCProtocol: check basic single cell protocol
+        """
+        p = QCProtocol(name="basicSC",
+                       description="Basic single cell QC",
+                       seq_data_reads=['r2'],
+                       index_reads=['r1'],
+                       qc_modules=("fastqc",
+                                   "fastq_screen",
+                                   "sequence_lengths"))
+        self.assertEqual(p.name,"basicSC")
+        self.assertEqual(p.description,"Basic single cell QC")
+        self.assertEqual(p.reads.seq_data,('r2',))
+        self.assertEqual(p.reads.index,('r1',))
+        self.assertEqual(p.reads.qc,('r1','r2'))
+        self.assertEqual(p.read_numbers.seq_data,(2,))
+        self.assertEqual(p.read_numbers.index,(1,))
+        self.assertEqual(p.read_numbers.qc,(1,2))
+        self.assertEqual(p.qc_modules,
+                         ["fastq_screen",
+                          "fastqc",
+                          "sequence_lengths"])
 
 class TestDetermineQCProtocolFunction(unittest.TestCase):
     """
@@ -420,17 +492,21 @@ class TestFetchProtocolDefinition(unittest.TestCase):
         """
         fetch_protocol_definition: check definition is returned
         """
-        reads,qc_modules = fetch_protocol_definition("standardPE")
-        self.assertEqual(reads.seq_data,['r1','r2'])
-        self.assertEqual(reads.index,[])
-        self.assertEqual(reads.qc,['r1','r2'])
-        self.assertEqual(qc_modules,['fastqc',
-                                     'fastq_screen',
-                                     'sequence_lengths',
-                                     'strandedness',
-                                     'picard_insert_size_metrics',
-                                     'rseqc_genebody_coverage',
-                                     'qualimap_rnaseq'])
+        p = fetch_protocol_definition("standardPE")
+        self.assertEqual(p.name,"standardPE")
+        self.assertEqual(p.reads.seq_data,('r1','r2'))
+        self.assertEqual(p.reads.index,())
+        self.assertEqual(p.reads.qc,('r1','r2'))
+        self.assertEqual(p.read_numbers.seq_data,(1,2))
+        self.assertEqual(p.read_numbers.index,())
+        self.assertEqual(p.read_numbers.qc,(1,2))
+        self.assertEqual(p.qc_modules,['fastq_screen',
+                                       'fastqc',
+                                       'picard_insert_size_metrics',
+                                       'qualimap_rnaseq',
+                                       'rseqc_genebody_coverage',
+                                       'sequence_lengths',
+                                       'strandedness'])
 
     def test_fetch_protocol_definition_unknown_protocol(self):
         """
@@ -448,16 +524,16 @@ class TestGetReadNumbers(unittest.TestCase):
         """
         # Standard PE
         read_numbers = get_read_numbers("standardPE")
-        self.assertEqual(read_numbers.seq_data,[1,2])
-        self.assertEqual(read_numbers.index,[])
-        self.assertEqual(read_numbers.qc,[1,2])
+        self.assertEqual(read_numbers.seq_data,(1,2))
+        self.assertEqual(read_numbers.index,())
+        self.assertEqual(read_numbers.qc,(1,2))
         # 10x single cell RNA-seq
         read_numbers = get_read_numbers("10x_scRNAseq")
-        self.assertEqual(read_numbers.seq_data,[2])
-        self.assertEqual(read_numbers.index,[1])
-        self.assertEqual(read_numbers.qc,[1,2])
+        self.assertEqual(read_numbers.seq_data,(2,))
+        self.assertEqual(read_numbers.index,(1,))
+        self.assertEqual(read_numbers.qc,(1,2))
         # 10x single cell ATAC
         read_numbers = get_read_numbers("10x_scATAC")
-        self.assertEqual(read_numbers.seq_data,[1,3])
-        self.assertEqual(read_numbers.index,[])
-        self.assertEqual(read_numbers.qc,[1,3])
+        self.assertEqual(read_numbers.seq_data,(1,3))
+        self.assertEqual(read_numbers.index,())
+        self.assertEqual(read_numbers.qc,(1,3))

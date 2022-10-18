@@ -40,8 +40,9 @@ For example:
 The available modifiers are the same as the parameter list for the
 ``check_outputs`` in the ``QCVerifier`` class.
 
-This module also provides the following functions:
+This module also provides the following classes and functions:
 
+- QCProtocol: class representing a QC protocol
 - determine_qc_protocol: get QC protocol for a project
 - fetch_protocol_definition: get the definition for a QC protocol
 - get_read_numbers: get the read numbers associated with a QC protocol
@@ -284,6 +285,76 @@ QC_PROTOCOLS = {
 }
 
 #######################################################################
+# Classes
+#######################################################################
+
+class QCProtocol:
+    """
+    Class defining a QC protocol
+
+    Properties:
+
+    - name: protocol name
+    - description: text description
+    - reads: AttributeDictionary with elements 'seq_data',
+      'index', and 'qc' (listing sequence data, index reads,
+      and all read for QC, respectively)
+    - read_numbers: AttributeDictionary with the same
+      elements as 'reads', listing non-index read numbers.
+    - qc_modules: list of QC module definitions
+
+    Reads are supplied as 'r1', 'i2' etc; read numbers are
+    integers without the leading 'r' (NB index reads are
+    not included).
+
+    Arguments:
+      name (str): name of the protocol
+      description (str): protocol description
+      seq_data_reads (list): read names associated
+        with sequence data
+      index_reads (list): read names associated with
+        index data
+      qc_modules (list): list of names of associated
+        QC modules
+    """
+    def __init__(self,name,description,seq_data_reads,index_reads,
+                 qc_modules):
+        # Store name, description and modules
+        self.name = str(name)
+        self.description = (str(description) if description is not None
+                            else "")
+        self.qc_modules = (sorted([m for m in qc_modules])
+                           if qc_modules is not None else [])
+        # Normalise and store supplied read names
+        self.reads = AttributeDictionary(
+            seq_data=self.__reads(seq_data_reads),
+            index=self.__reads(index_reads))
+        # Generate and store QC read names
+        self.reads['qc'] = self.__reads(self.reads.seq_data +
+                                        self.reads.index)
+        # Extract and store read numbers
+        self.read_numbers = AttributeDictionary(
+            seq_data=self.__read_numbers(self.reads.seq_data),
+            index=self.__read_numbers(self.reads.index),
+            qc=self.__read_numbers(self.reads.qc))
+
+    def __reads(self,reads):
+        # Internal: normalise read names (sort and convert
+        # to lowercase)
+        if not reads:
+            return tuple()
+        return tuple(sorted([r.lower() for r in reads]))
+
+    def __read_numbers(self,reads):
+        # Internal: extract read numbers (discard leading
+        # character from read names and convert to integer)
+        read_numbers = []
+        for r in reads:
+            if r.startswith('r'):
+                read_numbers.append(int(r[1:]))
+        return tuple(sorted(read_numbers))
+
+#######################################################################
 # Functions
 #######################################################################
 
@@ -354,27 +425,21 @@ def fetch_protocol_definition(name):
       name (str): name of the QC protocol
 
     Returns:
-      Tuple: definition as a tuple of the form
-        (reads,qc_modules) where 'reads' is an
-        AttributeDictionary with elements 'seq_data',
-        'index', and 'qc' (listing sequence data,
-        index reads, and all reads for QC,
-        respectively) and 'qc_modules' is a list
-        of QC module definitions.
+      QCProtocol: QCProtocol object representing
+        the requested protocol
+
+    Raises:
+      KeyError: when the requested protocol isn't
+        defined.
     """
     if name not in QC_PROTOCOLS:
         raise KeyError("%s: undefined QC protocol" % name)
     protocol_defn = QC_PROTOCOLS[name]
-    reads = AttributeDictionary()
-    try:
-        reads['seq_data'] = list(protocol_defn['reads']['seq_data'])
-        reads['index'] = list(protocol_defn['reads']['index'])
-        reads['qc'] = sorted(reads.seq_data + reads.index)
-        qc_modules = [m for m in protocol_defn['qc_modules']]
-    except KeyError as ex:
-        raise Exception("%s: exception loading QC protocol "
-                        "definition: %s" % (name,ex))
-    return (reads,qc_modules)
+    return QCProtocol(name=name,
+                      description=protocol_defn['description'],
+                      seq_data_reads=protocol_defn['reads']['seq_data'],
+                      index_reads=protocol_defn['reads']['index'],
+                      qc_modules=protocol_defn['qc_modules'])
 
 def get_read_numbers(protocol):
     """
@@ -392,12 +457,4 @@ def get_read_numbers(protocol):
         'index' and 'qc', mapping to lists of read numbers
         for each type of read data.
     """
-    reads,qc_modules = fetch_protocol_definition(protocol)
-    read_numbers = AttributeDictionary(seq_data=[],
-                                       index=[],
-                                       qc=[])
-    for name in ('seq_data','index','qc'):
-        for read in reads[name]:
-            if read.startswith('r'):
-                read_numbers[name].append(int(read[1:]))
-    return read_numbers
+    return fetch_protocol_definition(protocol).read_numbers
