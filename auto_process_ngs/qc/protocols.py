@@ -45,7 +45,6 @@ This module also provides the following classes and functions:
 - QCProtocol: class representing a QC protocol
 - determine_qc_protocol: get QC protocol for a project
 - fetch_protocol_definition: get the definition for a QC protocol
-- get_read_numbers: get the read numbers associated with a QC protocol
 """
 
 #######################################################################
@@ -440,21 +439,3 @@ def fetch_protocol_definition(name):
                       seq_data_reads=protocol_defn['reads']['seq_data'],
                       index_reads=protocol_defn['reads']['index'],
                       qc_modules=protocol_defn['qc_modules'])
-
-def get_read_numbers(protocol):
-    """
-    Return the read numbers for a QC protocol definition
-
-    Given a QC protocol, returns the integer read numbers
-    for sequence data reads, index reads, and QC reads
-    associated with that protocol.
-
-    Arguments:
-      protocol (str): name of the QC protocol
-
-    Returns:
-      AttributeDictionary: dictionary with keys 'seq_data',
-        'index' and 'qc', mapping to lists of read numbers
-        for each type of read data.
-    """
-    return fetch_protocol_definition(protocol).read_numbers

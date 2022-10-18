@@ -11,7 +11,6 @@ from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.qc.protocols import QCProtocol
 from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
-from auto_process_ngs.qc.protocols import get_read_numbers
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -515,25 +514,3 @@ class TestFetchProtocolDefinition(unittest.TestCase):
         self.assertRaises(KeyError,
                           fetch_protocol_definition,
                           "whazzdis?")
-
-class TestGetReadNumbers(unittest.TestCase):
-
-    def test_get_read_numbers(self):
-        """
-        get_read_numbers: check for sample protocol definitions
-        """
-        # Standard PE
-        read_numbers = get_read_numbers("standardPE")
-        self.assertEqual(read_numbers.seq_data,(1,2))
-        self.assertEqual(read_numbers.index,())
-        self.assertEqual(read_numbers.qc,(1,2))
-        # 10x single cell RNA-seq
-        read_numbers = get_read_numbers("10x_scRNAseq")
-        self.assertEqual(read_numbers.seq_data,(2,))
-        self.assertEqual(read_numbers.index,(1,))
-        self.assertEqual(read_numbers.qc,(1,2))
-        # 10x single cell ATAC
-        read_numbers = get_read_numbers("10x_scATAC")
-        self.assertEqual(read_numbers.seq_data,(1,3))
-        self.assertEqual(read_numbers.index,())
-        self.assertEqual(read_numbers.qc,(1,3))
