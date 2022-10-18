@@ -94,7 +94,6 @@ from .outputs import check_cellranger_arc_count_outputs
 from .picard import CollectInsertSizeMetrics
 from .protocols import determine_qc_protocol
 from .protocols import fetch_protocol_definition
-from .protocols import get_read_numbers
 from .rseqc import InferExperiment
 from .utils import get_bam_basename
 from .utils import set_cell_count_for_project
@@ -209,11 +208,14 @@ class QCPipeline(Pipeline):
         if qc_protocol is None:
             qc_protocol = determine_qc_protocol(project)
 
-        # Fetch the QC modules and read data
-        reads,qc_modules = fetch_protocol_definition(qc_protocol)
+        # Fetch the QC protocol definition
+        protocol = fetch_protocol_definition(qc_protocol)
+
+        # QC modules
+        qc_modules = protocol.qc_modules
 
         # Read numbers for sequence data and QC
-        read_numbers = get_read_numbers(qc_protocol)
+        read_numbers = protocol.read_numbers
 
         # Determine whether sequence data are paired
         paired = (len(read_numbers.seq_data) > 1)
