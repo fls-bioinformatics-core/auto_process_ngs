@@ -52,7 +52,6 @@ from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
-from .protocols import get_read_numbers
 from .seqlens import SeqLens
 
 # Module specific logger
