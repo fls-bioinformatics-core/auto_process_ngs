@@ -95,7 +95,7 @@ class QCVerifier(QCOutputs):
             False otherwise.
         """
         # Look up protocol definition
-        reads,qc_modules = fetch_protocol_definition(qc_protocol)
+        protocol = fetch_protocol_definition(qc_protocol)
 
         # Sample names
         samples = set()
@@ -107,8 +107,8 @@ class QCVerifier(QCOutputs):
         default_params = dict(
             fastqs=fastqs,
             samples=samples,
-            seq_data_reads=reads.seq_data,
-            qc_reads=reads.qc,
+            seq_data_reads=protocol.reads.seq_data,
+            qc_reads=protocol.reads.qc,
             organism=organism,
             fastq_screens=fastq_screens,
             star_index=star_index,
@@ -123,7 +123,7 @@ class QCVerifier(QCOutputs):
         verified = dict()
         params_for_module = dict()
 
-        for qc_module in qc_modules:
+        for qc_module in protocol.qc_modules:
 
             # Handle QC module specification
             qc_module,module_params = parse_qc_module_spec(qc_module)
@@ -144,7 +144,7 @@ class QCVerifier(QCOutputs):
                                                         **params)
         # Make templates for parameter and status
         field_width = 21
-        for qc_module in qc_modules:
+        for qc_module in protocol.qc_modules:
             field_width = max(len(qc_module),field_width)
         parameter_template_str = "{parameter:%ss}: {value}" % field_width
         qc_module_template_str = "{name:%ss}: {status:4s}{params}" % field_width
@@ -226,7 +226,8 @@ class QCVerifier(QCOutputs):
                          annotation_gtf=None,
                          cellranger_version=None,
                          cellranger_refdata=None,
-                         cellranger_use_multi_config=None):
+                         cellranger_use_multi_config=None,
+                         **extra_params):
         """
         Verify QC outputs for specific QC module
 
@@ -252,6 +253,8 @@ class QCVerifier(QCOutputs):
             cellranger count verification will attempt to
             use data (GEX samples and reference dataset) from
             the '10x_multi_config.csv' file
+          extra_params (mapping): any additional parameters
+            not required for verification
 
         Returns:
           Boolean: True if all outputs are present, False

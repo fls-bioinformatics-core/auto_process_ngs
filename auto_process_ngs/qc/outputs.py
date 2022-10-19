@@ -52,7 +52,6 @@ from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
-from .protocols import get_read_numbers
 from .seqlens import SeqLens
 
 # Module specific logger
@@ -1670,7 +1669,7 @@ def cellranger_multi_output(project,config_csv,sample_name=None,
         outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
 
-def check_fastq_screen_outputs(project,qc_dir,screen,qc_protocol=None,
+def check_fastq_screen_outputs(project,qc_dir,screen,read_numbers=None,
                                legacy=False):
     """
     Return Fastqs missing QC outputs from FastqScreen
@@ -1686,9 +1685,9 @@ def check_fastq_screen_outputs(project,qc_dir,screen,qc_protocol=None,
         path is assumed to be a subdirectory of the
         project)
       screen (str): screen name to check
-      qc_protocol (str): QC protocol to predict outputs
-        for; if not set then defaults to standard QC
-        based on ended-ness
+      read_numbers (list): read numbers to define Fastqs
+        to predict outputs for; if not set then all
+        non-index reads will be included
       legacy (bool): if True then check for 'legacy'-style
          names (defult: False)
 
@@ -1700,8 +1699,8 @@ def check_fastq_screen_outputs(project,qc_dir,screen,qc_protocol=None,
     fastqs = set()
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
-        read_numbers = get_read_numbers(qc_protocol).seq_data
-        if project.fastq_attrs(fastq).read_number not in read_numbers:
+        if read_numbers and \
+           project.fastq_attrs(fastq).read_number not in read_numbers:
             # Ignore non-data reads
             continue
         for output in [os.path.join(qc_dir,f)
@@ -1711,7 +1710,7 @@ def check_fastq_screen_outputs(project,qc_dir,screen,qc_protocol=None,
                 fastqs.add(fastq)
     return sorted(list(fastqs))
 
-def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
+def check_fastqc_outputs(project,qc_dir,read_numbers=None):
     """
     Return Fastqs missing QC outputs from FastQC
 
@@ -1725,9 +1724,8 @@ def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
       qc_dir (str): path to the QC directory (relative
         path is assumed to be a subdirectory of the
         project)
-      qc_protocol (str): QC protocol to predict outputs
-        for; if not set then defaults to standard QC
-        based on ended-ness
+      read_numbers (list): read numbers to predict
+        outputs for
 
     Returns:
       List: list of Fastq files with missing outputs.
@@ -1737,8 +1735,8 @@ def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
     fastqs = set()
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
-        read_numbers = get_read_numbers(qc_protocol).qc
-        if project.fastq_attrs(fastq).read_number not in read_numbers:
+        if read_numbers and \
+           project.fastq_attrs(fastq).read_number not in read_numbers:
             # Ignore non-QC reads
             continue
         # FastQC outputs
@@ -1749,7 +1747,7 @@ def check_fastqc_outputs(project,qc_dir,qc_protocol=None):
     return sorted(list(fastqs))
 
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
-                               qc_protocol=None):
+                               read_numbers=None):
     """
     Return Fastqs missing QC outputs from fastq_strand.py
 
@@ -1768,9 +1766,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         included unless the path is `None` or the
         config file doesn't exist. Relative path is
         assumed to be a subdirectory of the project
-      qc_protocol (str): QC protocol to predict outputs
-        for; if not set then defaults to standard QC
-        based on ended-ness
+      read_numbers (list): read numbers to predict
+        outputs for
 
     Returns:
       List: list of Fastq file "pairs" with missing
@@ -1789,14 +1786,16 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
     if not os.path.exists(fastq_strand_conf):
         # No conf file, nothing to check
         return list()
-    read_numbers = get_read_numbers(qc_protocol).seq_data
     fastq_pairs = set()
     for fq_group in group_fastqs_by_name(
             remove_index_fastqs(project.fastqs,
                                 project.fastq_attrs),
             fastq_attrs=project.fastq_attrs):
         # Assemble Fastq pairs based on read numbers
-        fq_pair = tuple([fq_group[r-1] for r in read_numbers])
+        if read_numbers:
+            fq_pair = tuple([fq_group[r-1] for r in read_numbers])
+        else:
+            fq_pair = tuple([fq_group[0]])
         # Strand stats output
         output = os.path.join(qc_dir,
                               fastq_strand_output(fq_pair[0]))
