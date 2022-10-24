@@ -56,7 +56,7 @@ class IndexBuilder:
         """
         self._runner = runner
 
-    def run(self,build_cmd,working_dir,conda_pkgs=None):
+    def _run(self,build_cmd,working_dir,conda_pkgs=None):
         """
         Internal: run an index building command
 
@@ -188,9 +188,9 @@ class IndexBuilder:
                                  ebwt_basename)
         # Run the command
         print("%s" % build_index_cmd)
-        ret_code = self.run(build_index_cmd,
-                            working_dir,
-                            conda_pkgs=(bowtie_pkg,))
+        ret_code = self._run(build_index_cmd,
+                             working_dir,
+                             conda_pkgs=(bowtie_pkg,))
         if ret_code != 0:
             raise Exception("%s: returned non-zero exit code (%s)"
                             % (build_index_cmd,ret_code))
@@ -247,9 +247,9 @@ class IndexBuilder:
                                  bt2_basename)
         # Run the command
         print("%s" % build_index_cmd)
-        ret_code = self.run(build_index_cmd,
-                            working_dir,
-                            conda_pkgs=(bowtie2_pkg,))
+        ret_code = self._run(build_index_cmd,
+                             working_dir,
+                             conda_pkgs=(bowtie2_pkg,))
         if ret_code != 0:
             raise Exception("%s: returned non-zero exit code (%s)"
                             % (build_index_cmd,ret_code))
@@ -315,9 +315,9 @@ class IndexBuilder:
                                      memory_limit)
         # Run the command
         print("%s" % build_index_cmd)
-        ret_code = self.run(build_index_cmd,
-                            working_dir,
-                            conda_pkgs=(star_pkg,))
+        ret_code = self._run(build_index_cmd,
+                             working_dir,
+                             conda_pkgs=(star_pkg,))
         if ret_code != 0:
             raise Exception("%s: returned non-zero exit code (%s)"
                             % (build_index_cmd,ret_code))
