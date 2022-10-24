@@ -7,6 +7,7 @@ import os
 import tempfile
 import shutil
 from bcftbx.JobRunner import SimpleJobRunner
+from auto_process_ngs.mock import MockBowtieBuild
 from auto_process_ngs.mock import MockStar
 from auto_process_ngs.indexes import IndexBuilder
 
@@ -63,5 +64,46 @@ class TestIndexBuilderSTAR(unittest.TestCase):
             self.assertTrue(os.path.exists(
                 os.path.join(self.wd,
                              "star_index",
+                             f)),
+                            "Missing output file: %s" % f)
+
+class TestIndexBuilderBowtie(unittest.TestCase):
+
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='TestIndexes')
+        # Temporary 'bin' dir
+        self.bin = os.path.join(self.wd,"bin")
+        os.mkdir(self.bin)
+        # Store original PATH
+        self.path = os.environ['PATH']
+        # Add 'bin' to PATH
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+
+    def tearDown(self):
+        # Restore PATH
+        os.environ['PATH'] = self.path
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_build_bowtie_index(self):
+        MockBowtieBuild.create(os.path.join(self.bin,"bowtie-build"))
+        builder = IndexBuilder(SimpleJobRunner())
+        retcode = builder.bowtie("/data/example.fasta",
+                                 os.path.join(self.wd,"bowtie_index"))
+        self.assertEqual(retcode,0)
+        self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                    "bowtie_index")))
+        for f in ("example.1.ebwt",
+                  "example.2.ebwt",
+                  "example.3.ebwt",
+                  "example.4.ebwt",
+                  "example.rev.1.ebwt",
+                  "example.rev.2.ebwt"):
+            self.assertTrue(os.path.exists(
+                os.path.join(self.wd,
+                             "bowtie_index",
                              f)),
                             "Missing output file: %s" % f)
