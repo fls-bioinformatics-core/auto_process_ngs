@@ -149,7 +149,7 @@ class IndexBuilder:
         Remove working directory
         """
         if os.path.isdir(working_dir):
-            print("Removing %s" % working_dir)
+            logger.debug("Removing %s" % working_dir)
             shutil.rmtree(working_dir)
 
     def bowtie(self,fasta,out_dir,ebwt_basename=None,
