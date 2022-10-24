@@ -202,6 +202,7 @@ class IndexBuilder:
             shutil.copy(os.path.join(working_dir,f),
                         os.path.join(out_dir,f))
         print("Index files in %s" % out_dir)
+        return ret_code
 
     def bowtie2(self,fasta,out_dir,bt2_basename=None,
                 nthreads=None,bowtie2_version=None):
