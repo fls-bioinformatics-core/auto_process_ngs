@@ -262,6 +262,7 @@ class IndexBuilder:
             shutil.copy(os.path.join(working_dir,f),
                         os.path.join(out_dir,f))
         print("Index files in %s" % out_dir)
+        return ret_code
 
     def STAR(self,fasta,annotation,out_dir,memory_limit=None,
              overhang=100,nthreads=None,star_version=None):
