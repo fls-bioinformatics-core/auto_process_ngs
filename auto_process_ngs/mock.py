@@ -3434,7 +3434,6 @@ sys.exit(MockQualimap(path=sys.argv[0],
         Internal: configure the mock Qualimap executable
         """
         self._path = path
-        self._component = os.path.basename(self._path)
         self._exit_code = exit_code
 
     def main(self,args):
@@ -3460,7 +3459,7 @@ usage: qualimap <tool> [options]
         # Build top-level parser
         p = argparse.ArgumentParser()
         sp = p.add_subparsers(dest='command')
-        # cleanSam subparser
+        # 'rnaseq' subparser
         rnaseq = sp.add_parser("rnaseq")
         rnaseq.add_argument('-bam',action='store',dest='bam_file')
         rnaseq.add_argument('-gtf',action='store',dest='feature_file')
