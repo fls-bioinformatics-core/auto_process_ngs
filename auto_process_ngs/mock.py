@@ -45,6 +45,7 @@ the external software required for parts of the pipeline:
 - MockQualimap
 - MockMultiQC
 - MockConda
+- MockBowtieBuild
 
 There also is a wrapper for the 'Mock10xPackageExe' class which
 is maintained for backwards compatibility:
@@ -3644,6 +3645,90 @@ return 1
             print("conda:")
             print("%s" % fp.read())
         return path
+
+class MockBowtieBuild:
+    """
+    Create mock bowtie-build
+
+    This class can be used to create a mock bowtie-build
+    executable, which in turn can be used in place of
+    an actual executable for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockBowtieBuild.create("/tmpbin/bowtie-build")
+
+    The resulting executable will generate mock outputs
+    when run on the appropriate files (ignoring their
+    contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,exit_code=0):
+        """
+        Create a "mock" bowtie-build executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockBowtieBuild
+sys.exit(MockBowtieBuild(path=sys.argv[0],
+                         exit_code=%s).main(sys.argv[1:]))
+""" % exit_code)
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("%s:" % os.path.basename(path))
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,path,exit_code=0):
+        """
+        Internal: configure the mock bowtie-build executable
+        """
+        self._path = path
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock bowtie-build functionality
+        """
+        # Build parser
+        p = argparse.ArgumentParser()
+        p.add_argument('ebwt_basename')
+        p.add_argument('-f',action="store",dest="fasta")
+        # Process command line
+        args = p.parse_args(args)
+        # Generate placeholder output files
+        for ext in ("1.ebwt",
+                    "2.ebwt",
+                    "3.ebwt",
+                    "4.ebwt",
+                    "rev.1.ebwt",
+                    "rev.2.ebwt"):
+            with open("%s.%s" % (args.ebwt_basename,ext),'wt') as fp:
+                fp.write("Placeholder")
+        # Finish
+        return self._exit_code
 
 class MockCellrangerExe(Mock10xPackageExe):
     """
