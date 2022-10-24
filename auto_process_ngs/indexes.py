@@ -328,3 +328,4 @@ class IndexBuilder:
             shutil.copy(os.path.join(star_dir,f),
                         os.path.join(out_dir,f))
         print("Index files in %s" % out_dir)
+        return ret_code
