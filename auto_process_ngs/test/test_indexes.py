@@ -16,11 +16,11 @@ from auto_process_ngs.indexes import IndexBuilder
 REMOVE_TEST_OUTPUTS = True
 
 # Tests
-class TestIndexBuilderSTAR(unittest.TestCase):
+class TestIndexBuilder(unittest.TestCase):
 
     def setUp(self):
         # Temporary working dir
-        self.wd = tempfile.mkdtemp(suffix='TestIndexes')
+        self.wd = tempfile.mkdtemp(suffix='TestIndexBuilder')
         # Temporary 'bin' dir
         self.bin = os.path.join(self.wd,"bin")
         os.mkdir(self.bin)
@@ -38,6 +38,9 @@ class TestIndexBuilderSTAR(unittest.TestCase):
             shutil.rmtree(self.wd)
 
     def test_build_star_index(self):
+        """
+        IndexBuilder: build STAR indexes
+        """
         MockStar.create(os.path.join(self.bin,"STAR"))
         builder = IndexBuilder(SimpleJobRunner())
         retcode = builder.STAR("/data/example.fasta",
@@ -68,28 +71,10 @@ class TestIndexBuilderSTAR(unittest.TestCase):
                              f)),
                             "Missing output file: %s" % f)
 
-class TestIndexBuilderBowtie(unittest.TestCase):
-
-    def setUp(self):
-        # Temporary working dir
-        self.wd = tempfile.mkdtemp(suffix='TestIndexes')
-        # Temporary 'bin' dir
-        self.bin = os.path.join(self.wd,"bin")
-        os.mkdir(self.bin)
-        # Store original PATH
-        self.path = os.environ['PATH']
-        # Add 'bin' to PATH
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-
-    def tearDown(self):
-        # Restore PATH
-        os.environ['PATH'] = self.path
-        # Remove the temporary test directory
-        if REMOVE_TEST_OUTPUTS:
-            shutil.rmtree(self.wd)
-
     def test_build_bowtie_index(self):
+        """
+        IndexBuilder: build Bowtie indexes
+        """
         MockBowtieBuild.create(os.path.join(self.bin,"bowtie-build"))
         builder = IndexBuilder(SimpleJobRunner())
         retcode = builder.bowtie("/data/example.fasta",
@@ -109,28 +94,10 @@ class TestIndexBuilderBowtie(unittest.TestCase):
                              f)),
                             "Missing output file: %s" % f)
 
-class TestIndexBuilderBowtie2(unittest.TestCase):
-
-    def setUp(self):
-        # Temporary working dir
-        self.wd = tempfile.mkdtemp(suffix='TestIndexes')
-        # Temporary 'bin' dir
-        self.bin = os.path.join(self.wd,"bin")
-        os.mkdir(self.bin)
-        # Store original PATH
-        self.path = os.environ['PATH']
-        # Add 'bin' to PATH
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-
-    def tearDown(self):
-        # Restore PATH
-        os.environ['PATH'] = self.path
-        # Remove the temporary test directory
-        if REMOVE_TEST_OUTPUTS:
-            shutil.rmtree(self.wd)
-
     def test_build_bowtie2_index(self):
+        """
+        IndexBuilder: build Bowtie2 indexes
+        """
         MockBowtie2Build.create(os.path.join(self.bin,"bowtie2-build"))
         builder = IndexBuilder(SimpleJobRunner())
         retcode = builder.bowtie2("/data/example.fasta",
