@@ -2943,19 +2943,57 @@ sys.exit(MockStar(path=sys.argv[0],
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
-        p.add_argument('--runMode',action="store")
+        p.add_argument('--runMode',action="store",dest='run_mode')
+        p.add_argument('--genomeDir',action="store",dest='genome_dir')
+        p.add_argument('--limitGenomeGenerateRAM',action="store")
+        p.add_argument('--runThreadN',action="store")
+        # Alignment options
         p.add_argument('--genomeLoad',action="store")
-        p.add_argument('--genomeDir',action="store")
         p.add_argument('--readFilesIn',action="store",nargs='+')
         p.add_argument('--quantMode',action="store")
         p.add_argument('--outSAMtype',action="store",nargs=2)
         p.add_argument('--outSAMstrandField',action="store")
         p.add_argument('--outFileNamePrefix',action="store",dest='prefix')
-        p.add_argument('--runThreadN',action="store")
+        # Indexing options
+        p.add_argument('--genomeFastaFiles',action="store",nargs='+')
+        p.add_argument('--sjdbGTFfile',action="store")
+        p.add_argument('--sjdbOverhang',action="store")
         args = p.parse_args(args)
+        # --runMode: genomeGenerate
+        if args.run_mode == "genomeGenerate":
+            self._genome_generate(args)
+        # --runMode: alignReads
+        if args.run_mode == "alignReads":
+            self._align_reads(args)
+        # Exit
+        print("%s: return exit code: %s" % (self._path,
+                                            self._exit_code))
+        return self._exit_code
+
+    def _genome_generate(self,args):
+        for f in ("chrLength.txt",
+                  "chrName.txt",
+                  "exonGeTrInfo.tab",
+                  "geneInfo.tab",
+                  "genomeParameters.txt",
+                  "Log.out",
+                  "SAindex",
+                  "sjdbList.fromGTF.out.tab",
+                  "transcriptInfo.tab",
+                  "chrNameLength.txt",
+                  "chrStart.txt",
+                  "exonInfo.tab",
+                  "Genome",
+                  "SA",
+                  "sjdbInfo.txt",
+                  "sjdbList.out.tab"):
+            with open(os.path.join(args.genome_dir,f),'wt') as fp:
+                fp.write("Placeholder")
+
+    def _align_reads(self,args):
         if self._no_outputs:
             # Exit without outputs
-            return self._exit_code
+            return
         with open("%sAligned.out.bam" % args.prefix,'wt') as fp:
             fp.write("Placeholder")
         with open("%sReadsPerGene.out.tab" % args.prefix,'wt') as fp:
@@ -3001,10 +3039,6 @@ ENSG00000240361.1	0	0	0
 ENSG00000186092.4	0	0	0
 ENSG00000238009.6	0	0	0
 """)
-        # Exit
-        print("%s: return exit code: %s" % (self._path,
-                                            self._exit_code))
-        return self._exit_code
 
 class MockSamtools:
     """
