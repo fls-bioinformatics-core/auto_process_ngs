@@ -30,10 +30,10 @@ import logging
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.analysis import AnalysisFastq
 from auto_process_ngs.analysis import locate_project_info_file
 from auto_process_ngs.metadata import AnalysisProjectInfo
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
-from auto_process_ngs.fastq_utils import IlluminaFastqAttrs
 from auto_process_ngs.fastq_utils import group_fastqs_by_name
 import auto_process_ngs
 import auto_process_ngs.settings
@@ -362,7 +362,7 @@ if __name__ == "__main__":
     out_dir = args.out_dir
     qc_dir = args.qc_dir
     master_fastq_dir = None
-    fastq_attrs = IlluminaFastqAttrs
+    fastq_attrs = AnalysisFastq
     extra_files = set()
 
     # Deal with inputs
@@ -757,7 +757,7 @@ if __name__ == "__main__":
         atexit.register(cleanup_atexit,project_dir)
 
     # Load the project
-    project = AnalysisProject(project_dir)
+    project = AnalysisProject(project_dir,fastq_attrs=fastq_attrs)
     print("Loaded project '%s'" % project.name)
 
     # Set working directory for pipeline
