@@ -356,6 +356,7 @@ class QCPipeline(Pipeline):
                 self.params.fastq_subset,
                 self.params.nthreads,
                 reads=read_numbers.seq_data,
+                fastq_attrs=project.fastq_attrs,
                 verbose=self.params.VERBOSE)
             self.add_task(get_bam_files,
                           requires=(setup_qc_dirs,),
@@ -2799,13 +2800,15 @@ class GetBAMFiles(PipelineFunctionTask):
             self.report("STAR index is not set, cannot generate BAM files")
             return
         # Remove index reads and group Fastqs
-        fq_pairs = group_fastqs_by_name(
-            remove_index_fastqs(self.args.fastqs))
-        # Filter reads
         if self.args.fastq_attrs:
             fastq_attrs = self.args.fastq_attrs
         else:
             fastq_attrs = AnalysisFastq
+        fq_pairs = group_fastqs_by_name(
+            remove_index_fastqs(self.args.fastqs,
+                                fastq_attrs=fastq_attrs),
+            fastq_attrs=fastq_attrs)
+        # Filter reads
         if self.args.reads:
             filtered_pairs = []
             for fq_pair in fq_pairs:
