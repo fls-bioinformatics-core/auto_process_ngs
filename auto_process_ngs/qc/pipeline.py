@@ -3459,6 +3459,11 @@ class RunQualimapRnaseq(PipelineTask):
                          os.path.basename(bam),
                          """
                          export _JAVA_OPTIONS="-XX:ParallelGCThreads={nthreads} -Xmx{java_mem_size}"
+                         if [ ! -z "$DISPLAY" ] ; then
+                             echo "DISPLAY set to $DISPLAY"
+                             echo "Unsetting to disable interactive window"
+                             export DISPLAY=
+                         fi
                          qualimap rnaseq \\
                              -bam {bam} \\
                              -gtf {feature_file} \\
