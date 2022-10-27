@@ -136,10 +136,6 @@ if __name__ == "__main__":
                            "QC directory already exists in <OUT_DIR> "
                            "(default: stop if output QC directory already "
                            "exists)")
-    reporting.add_argument('--force',action='store_true',
-                           help="force generation of HTML report even if "
-                           "pipeline fails (default: don't generate HTML "
-                           "report on pipeline failure")
     # Project metadata
     metadata = p.add_argument_group('Metadata')
     metadata.add_argument('--organism',metavar='ORGANISM',
@@ -305,6 +301,10 @@ if __name__ == "__main__":
                            "temporary directory is deleted)")
     # Deprecated options
     deprecated = p.add_argument_group('Deprecated/redundant options')
+    deprecated.add_argument('--force',action='store_true',
+                            help="redundant: HTML report generation will "
+                            "always be attempted (even when pipeline "
+                            "fails)")
     deprecated.add_argument('--multiqc',action='store_true',
                             dest='run_multiqc', default=False,
                             help="redundant: MultiQC report is generated "
@@ -810,18 +810,19 @@ if __name__ == "__main__":
                        working_dir=working_dir,
                        legacy_screens=use_legacy_screen_names,
                        verbose=args.verbose)
+
+    # Report if QC pipeline failed
     if status:
         logger.critical("QC failed (see warnings above)")
-        if args.force:
-            logger.warning("Forcing generation of HTML report")
-            report_qc(project,
-                      qc_dir=qc_dir,
-                      qc_protocol=args.qc_protocol,
-                      report_html=out_file,
-                      zip_outputs=True,
-                      multiqc=(not args.no_multiqc),
-                      force=True,
-                      runner=runners['report_runner'])
+        logger.warning("Forcing generation of HTML report")
+        report_qc(project,
+                  qc_dir=qc_dir,
+                  qc_protocol=args.qc_protocol,
+                  report_html=out_file,
+                  zip_outputs=True,
+                  multiqc=(not args.no_multiqc),
+                  force=True,
+                  runner=runners['report_runner'])
 
     # Update the QC metadata
     announce("Updating QC metadata")
