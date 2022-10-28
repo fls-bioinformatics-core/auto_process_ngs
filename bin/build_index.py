@@ -18,18 +18,32 @@ __version__ = get_version()
 __settings = Settings()
 
 #######################################################################
+# Constants
+#######################################################################
+
+_ALIGNERS = {
+    'bowtie': '1.0.0',
+    'bowtie2': '2.4.1',
+    'star': '2.7.7a'
+}
+
+#######################################################################
 # Main program
 #######################################################################
 
 def main():
+    # List of aligner names
+    aligners = tuple(sorted(_ALIGNERS.keys()))
     # Create parser to handle command line
     p = argparse.ArgumentParser(description="Generate indexes for "
                                 "aligners")
     p.add_argument('-v','--version',action='version',
                    version="%(prog)s "+__version__)
     p.add_argument('aligner',metavar="ALIGNER",
-                   choices=['bowtie','bowtie2','star'],
-                   help="aligner to build index for")
+                   choices=list(_ALIGNERS),
+                   help="aligner to build index for (one of %s)" %
+                   ', '.join(["'%s'" % aligner
+                              for aligner in _ALIGNERS]))
     p.add_argument('fasta',metavar="FASTA",
                    help="FASTA file with sequence")
     p.add_argument('annotation',metavar="ANNOTATION",nargs='?',
@@ -50,6 +64,12 @@ def main():
                         "(defaults to FASTA file basename)")
     # Advanced options
     advanced = p.add_argument_group('Advanced options')
+    advanced.add_argument('-V','--aligner-version',metavar='VERSION',
+                          action='store',
+                          dest="aligner_version",default=None,
+                          help="specify the version of the aligner to "
+                          "target (only works if conda dependency "
+                          "resolution is configured)")
     advanced.add_argument('-r','--runner',metavar='RUNNER',action='store',
                           dest="runner",default=None,
                           help="explicitly specify runner definition for "
@@ -60,14 +80,23 @@ def main():
     p.add_argument_group()
     args = p.parse_args()
 
+    # Aligner
+    aligner = args.aligner.lower()
+
+    # Aligner version
+    aligner_version = args.aligner_version
+    if aligner_version is None:
+        aligner_version = _ALIGNERS[aligner]
+    print("Requested %s version: %s" % (aligner,aligner_version))
+
     # Acquire runner
     if args.runner:
         # Use runner supplied on command line
         runner = fetch_runner(args.runner)
     else:
-        if args.aligner in ("bowtie","bowtie2"):
+        if aligner in ("bowtie","bowtie2"):
             runner = __settings.runners.fastq_screen
-        elif args.aligner == "star":
+        elif aligner == "star":
             runner = __settings.runners.star
     print("Job runner: %s" % runner)
 
@@ -75,17 +104,17 @@ def main():
     builder = IndexBuilder(runner)
 
     # Build indexes
-    if args.aligner == "bowtie":
+    if aligner == "bowtie":
         builder.bowtie(args.fasta,args.out_dir,
                        ebwt_basename=args.ebwt_base,
-                       bowtie_version="1.0.0")
-    elif args.aligner == "bowtie2":
+                       bowtie_version=aligner_version)
+    elif aligner == "bowtie2":
         builder.bowtie2(args.fasta,args.out_dir,
                         bt2_basename=args.bt2_base,
-                        bowtie2_version="2.4.1")
-    elif args.aligner == "star":
-        builder.star(args.fasta,args.annotation,args.out_dir,
-                     star_version="2.4.2a")
+                        bowtie2_version=aligner_version)
+    elif aligner == "star":
+        builder.STAR(args.fasta,args.annotation,args.out_dir,
+                     star_version=aligner_version)
 
 if __name__ == '__main__':
     main()
