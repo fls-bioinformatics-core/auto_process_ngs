@@ -143,6 +143,8 @@ class IndexBuilder:
           pkgs (list): conda packages required for the
             environment being activated
         """
+        # Make environment name from packages
+        env_name = make_conda_env_name(*pkgs)
         # Set up conda wrapper
         if not self._conda_env_dir:
             logger.warning("conda environment directory not specified, "
@@ -151,7 +153,6 @@ class IndexBuilder:
             return None
         env_dir = os.path.abspath(self._conda_env_dir)
         conda = CondaWrapper(env_dir=env_dir)
-        env_name = make_conda_env_name(*pkgs)
         try:
             conda.create_env(env_name,*pkgs)
             conda_env = os.path.join(env_dir,env_name)
