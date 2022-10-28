@@ -45,7 +45,7 @@ class TestIndexBuilder(unittest.TestCase):
         IndexBuilder: build STAR indexes
         """
         MockStar.create(os.path.join(self.bin,"STAR"))
-        builder = IndexBuilder(SimpleJobRunner())
+        builder = IndexBuilder(SimpleJobRunner(),use_conda=False)
         retcode = builder.STAR("/data/example.fasta",
                                "/data/example.gtf",
                                os.path.join(self.wd,"star_index"))
@@ -79,7 +79,7 @@ class TestIndexBuilder(unittest.TestCase):
         IndexBuilder: build Bowtie indexes
         """
         MockBowtieBuild.create(os.path.join(self.bin,"bowtie-build"))
-        builder = IndexBuilder(SimpleJobRunner())
+        builder = IndexBuilder(SimpleJobRunner(),use_conda=False)
         retcode = builder.bowtie("/data/example.fasta",
                                  os.path.join(self.wd,"bowtie_index"))
         self.assertEqual(retcode,0)
@@ -102,7 +102,7 @@ class TestIndexBuilder(unittest.TestCase):
         IndexBuilder: build Bowtie2 indexes
         """
         MockBowtie2Build.create(os.path.join(self.bin,"bowtie2-build"))
-        builder = IndexBuilder(SimpleJobRunner())
+        builder = IndexBuilder(SimpleJobRunner(),use_conda=False)
         retcode = builder.bowtie2("/data/example.fasta",
                                   os.path.join(self.wd,"bowtie2_index"))
         self.assertEqual(retcode,0)
