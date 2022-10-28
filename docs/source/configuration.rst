@@ -527,6 +527,50 @@ Alternatively a comma-separated list can be provided:
 If no version is explicitly specified then the highest available
 version will be used.
 
+.. _qc_pipeline_configuration:
+
+-------------------------
+QC pipeline configuration
+-------------------------
+
+Several steps in the QC pipeline require reference data to be
+defined as described in the section
+:ref:`auto_process_reference_data_run_qc`.
+
+Additionally the ``[qc]`` section allows other aspects of the
+QC pipeline operation to be explicitly specified.
+
+The default size of the subset of reads used by FastqScreen
+when generating the screens can be set using the
+``fastq_screen_subset`` parameter, e.g.:
+
+::
+
+   [qc]
+   fastq_screen_subset = 10000
+   ...
+
+By default the QC pipeline creates FastqScreen outputs using
+the following naming convention:
+
+::
+
+   {FASTQ}_screen_{SCREEN_NAME}.png
+   {FASTQ}_screen_{SCREEN_NAME}.txt
+
+for example ``PJB_S1_L001_R1_001_screen_model_organisms.png``.
+
+It is possible to revert to the older "legacy" naming
+convention (``{FASTQ}_{SCREEN_NAME}_screen.png`` etc) by
+setting the ``use_legacy_screen_names`` parameter in the ``qc``
+section:
+
+::
+
+   [qc]
+   use_legacy_screen_names = True
+   ...
+
 .. _data_transfer_destinations:
 
 --------------------------
