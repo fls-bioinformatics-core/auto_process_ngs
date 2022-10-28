@@ -107,7 +107,9 @@ def main():
     print("Job runner: %s" % runner)
 
     # Set up index builder
-    builder = IndexBuilder(runner)
+    builder = IndexBuilder(runner,
+                           use_conda=Settings().conda.enable_conda,
+                           conda_env_dir=Settings().conda.env_dir)
 
     # Build indexes
     if aligner == "bowtie":

@@ -33,7 +33,6 @@ from .command import Command
 from .conda import CondaWrapper
 from .conda import CondaWrapperError
 from .conda import make_conda_env_name
-from .settings import Settings
 from .simple_scheduler import SchedulerJob
 
 # Module-specific logger
@@ -56,12 +55,19 @@ class IndexBuilder:
     Arguments:
       runner (JobRunner): JobRunner instance that will be
         used to run the index command
+      use_conda (bool): if True then try to use Conda to
+        resolve the dependencies for building the indexes
+      conda_env_dir (str): explicitly specify the directory
+        to look for/create Conda environments in
     """
-    def __init__(self,runner):
+    def __init__(self,runner,use_conda=False,
+                 conda_env_dir=None):
         """
         Create a new IndexBuilder instance
         """
         self._runner = runner
+        self._use_conda = bool(use_conda)
+        self._conda_env_dir = conda_env_dir
 
     def _run(self,build_cmd,working_dir,conda_pkgs=None):
         """
@@ -82,21 +88,8 @@ class IndexBuilder:
             for pkg in conda_pkgs:
                 print("- %s" % pkg)
             # Check if conda environments are enabled
-            if Settings().conda.enable_conda:
-                # Get location for conda environments
-                conda_env_dir = Settings().conda.env_dir
-                # Set up conda wrapper
-                conda = CondaWrapper(env_dir=conda_env_dir)
-                env_name = make_conda_env_name(*conda_pkgs)
-                try:
-                    conda.create_env(env_name,*conda_pkgs)
-                    conda_env = os.path.join(conda_env_dir,env_name)
-                    # Script fragment to activate the environment
-                    conda_activate_cmd = conda.activate_env_cmd(conda_env)
-                except CondaWrapperError as ex:
-                    # Failed to acquire the environment
-                    logger.warning("failed to acquire conda environment "
-                                   "'%s': %s" % (env_name,ex))
+            if self._use_conda:
+                conda_activate_cmd = self._conda_activate_cmd(conda_pkgs)
             else:
                 print("Conda dependency resolution not enabled")
         # Wrap the command in a script
@@ -136,6 +129,39 @@ class IndexBuilder:
                 logger.warning("Stderr not available")
         # Return the exit code
         return build_indexes.exit_code
+
+    def _conda_activate_cmd(self,pkgs):
+        """
+        Return the script required to activate a Conda env
+
+        Builds or locates a Conda environment with the
+        requested packages, and returns the script to
+        use to activate the environment (or None if the
+        environment can't be located or built).
+
+        Arguments:
+          pkgs (list): conda packages required for the
+            environment being activated
+        """
+        # Set up conda wrapper
+        if not self._conda_env_dir:
+            logger.warning("conda environment directory not specified, "
+                           "unable to acquire conda environment '%s'" %
+                           env_name)
+            return None
+        env_dir = os.path.abspath(self._conda_env_dir)
+        conda = CondaWrapper(env_dir=env_dir)
+        env_name = make_conda_env_name(*pkgs)
+        try:
+            conda.create_env(env_name,*pkgs)
+            conda_env = os.path.join(env_dir,env_name)
+            # Script fragment to activate the environment
+            return conda.activate_env_cmd(conda_env)
+        except CondaWrapperError as ex:
+            # Failed to acquire the environment
+            logger.warning("failed to acquire conda environment "
+                           "'%s': %s" % (env_name,ex))
+            return None
 
     def get_working_dir(self,remove_on_exit=True):
         """
