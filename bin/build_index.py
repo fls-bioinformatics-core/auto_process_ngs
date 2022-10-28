@@ -59,9 +59,15 @@ def main():
     # Bowtie2-specific options
     bowtie2 = p.add_argument_group('Bowtie-specific options')
     bowtie2.add_argument("--bt2_base",metavar='NAME',action='store',
-                        dest="bt2_base",default=None,
-                        help="specify basename for output .bt2 files "
-                        "(defaults to FASTA file basename)")
+                         dest="bt2_base",default=None,
+                         help="specify basename for output .bt2 files "
+                         "(defaults to FASTA file basename)")
+    # STAR-specific options
+    star = p.add_argument_group('STAR-specific options')
+    star.add_argument("--overhang",metavar='N',action='store',
+                      dest="overhang",default=100,
+                      help="set value for STAR --sjdbOverhang "
+                      "option (default: 100)")
     # Advanced options
     advanced = p.add_argument_group('Advanced options')
     advanced.add_argument('-V','--aligner-version',metavar='VERSION',
@@ -114,6 +120,7 @@ def main():
                         bowtie2_version=aligner_version)
     elif aligner == "star":
         builder.STAR(args.fasta,args.annotation,args.out_dir,
+                     overhang=args.overhang,
                      star_version=aligner_version)
 
 if __name__ == '__main__':
