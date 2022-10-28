@@ -11,6 +11,9 @@ from auto_process_ngs.mock import MockBowtieBuild
 from auto_process_ngs.mock import MockBowtie2Build
 from auto_process_ngs.mock import MockStar
 from auto_process_ngs.indexes import IndexBuilder
+from auto_process_ngs.indexes import bowtie_build
+from auto_process_ngs.indexes import bowtie2_build
+from auto_process_ngs.indexes import star
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -116,3 +119,68 @@ class TestIndexBuilder(unittest.TestCase):
                              "bowtie2_index",
                              f)),
                             "Missing output file: %s" % f)
+
+class TestBowtieBuildFunction(unittest.TestCase):
+
+    def test_bowtie_build(self):
+        """
+        bowtie_build: check index generation command
+        """
+        self.assertEqual(
+            str(bowtie_build("/data/example.fasta","example")),
+            "bowtie-build -f /data/example.fasta example")
+
+class TestBowtie2BuildFunction(unittest.TestCase):
+
+    def test_bowtie2_build(self):
+        """
+        bowtie2_build: check index generation command
+        """
+        self.assertEqual(
+            str(bowtie2_build("/data/example.fasta",
+                              "example")),
+            "bowtie2-build -f /data/example.fasta example")
+
+    def test_bowtie2_build_nthreads(self):
+        """
+        bowtie2_build: check index generation command with threads
+        """
+        self.assertEqual(
+            str(bowtie2_build("/data/example.fasta",
+                              "example",
+                              nthreads=8)),
+            "bowtie2-build --threads 8 -f /data/example.fasta example")
+
+class TestStarFunction(unittest.TestCase):
+
+    def test_star_basic(self):
+        """
+        star: check basic index generation command
+        """
+        self.assertEqual(
+            str(star("/data/example.fasta",
+                     "/data/example.gtf",
+                     "/indexes/example/star")),
+            "STAR --runMode genomeGenerate "
+            "--genomeFastaFiles /data/example.fasta "
+            "--sjdbGTFfile /data/example.gtf "
+            "--genomeDir /indexes/example/star")
+
+    def test_star_full(self):
+        """
+        star: check full index generation command
+        """
+        self.assertEqual(
+            str(star("/data/example.fasta",
+                     "/data/example.gtf",
+                     "/indexes/example/star",
+                     overhang=100,
+                     nthreads=12,
+                     memory_limit=32)),
+            "STAR --runMode genomeGenerate "
+            "--genomeFastaFiles /data/example.fasta "
+            "--sjdbGTFfile /data/example.gtf "
+            "--genomeDir /indexes/example/star "
+            "--sjdbOverhang 100 "
+            "--runThreadN 12 "
+            "--limitGenomeGenerateRAM 32")

@@ -11,6 +11,13 @@ indexes for various aligners:
 - bowtie
 - bowtie2
 - STAR
+
+There are also functions for constructing Command instances to run
+the appropriate index building commands:
+
+- bowtie_build
+- bowtie2_build
+- star
 """
 
 #######################################################################
@@ -183,9 +190,7 @@ class IndexBuilder:
         # Working directory
         working_dir = self.get_working_dir()
         # Command to build index
-        build_index_cmd = Command("bowtie-build")
-        build_index_cmd.add_args("-f",fasta,
-                                 ebwt_basename)
+        build_index_cmd = bowtie_build(fasta,ebwt_basename)
         # Run the command
         print("%s" % build_index_cmd)
         ret_code = self._run(build_index_cmd,
@@ -241,11 +246,8 @@ class IndexBuilder:
         # Working directory
         working_dir = self.get_working_dir()
         # Command to build index
-        build_index_cmd = Command("bowtie2-build")
-        if nthreads and nthreads > 1:
-            build_index_cmd.add_args("--threads",nthreads)
-        build_index_cmd.add_args("-f",fasta,
-                                 bt2_basename)
+        build_index_cmd = bowtie2_build(fasta,bt2_basename,
+                                        nthreads=nthreads)
         # Run the command
         print("%s" % build_index_cmd)
         ret_code = self._run(build_index_cmd,
@@ -304,17 +306,10 @@ class IndexBuilder:
         star_dir = os.path.join(working_dir,"star_index")
         os.makedirs(star_dir)
         # Command to build index
-        build_index_cmd = Command("STAR",
-                                  "--runMode","genomeGenerate")
-        if nthreads and nthreads > 1:
-            build_index_cmd.add_args("--runThreadN",nthreads)
-        build_index_cmd.add_args("--genomeFastaFiles",fasta,
-                                 "--sjdbGTFfile",annotation,
-                                 "--sjdbOverhang",overhang,
-                                 "--genomeDir",star_dir)
-        if memory_limit:
-            build_index_cmd.add_args("--limitGenomeGenerateRAM",
-                                     memory_limit)
+        build_index_cmd = star(fasta,annotation,star_dir,
+                               overhang=overhang,
+                               nthreads=nthreads,
+                               memory_limit=memory_limit)
         # Run the command
         print("%s" % build_index_cmd)
         ret_code = self._run(build_index_cmd,
@@ -331,3 +326,84 @@ class IndexBuilder:
                         os.path.join(out_dir,f))
         print("Index files in %s" % out_dir)
         return ret_code
+
+#######################################################################
+# Functions
+#######################################################################
+
+def bowtie_build(fasta,ebwt_basename):
+    """
+    Return command to run 'bowtie-build'
+
+    Argument:
+      fasta (str): path to input Fasta file
+      ebwt_basename (str): basename for output
+        'ebwt' index files (can include a
+        leading path)
+
+    Returns:
+      Command: object with the 'build-bowtie'
+        command.
+    """
+    build_index_cmd = Command("bowtie-build",
+                              "-f",fasta,
+                              ebwt_basename)
+    return build_index_cmd
+
+def bowtie2_build(fasta,bt2_basename,nthreads=None):
+    """
+    Return command to run 'bowtie2-build'
+
+    Argument:
+      fasta (str): path to input Fasta file
+      bt2_basename (str): basename for output
+        'bt2' index files (can include a
+        leading path)
+      nthreads (int): optional, specify the
+        number of threads to run 'bowtie2-build'
+        with
+
+    Returns:
+      Command: object with the 'build2-bowtie'
+        command.
+    """
+    build_index_cmd = Command("bowtie2-build")
+    if nthreads and nthreads > 1:
+        build_index_cmd.add_args("--threads",nthreads)
+    build_index_cmd.add_args("-f",fasta,
+                             bt2_basename)
+    return build_index_cmd
+
+def star(fasta,annotation,out_dir,overhang=None,nthreads=None,
+         memory_limit=None):
+    """
+    Return command to run 'STAR' to build an index
+
+    Argument:
+      fasta (str): path to input Fasta file
+      annotation (str): path to input annotation file
+      out_dir (str): path to directory to write index
+         files into
+      overhang (int): optional, specify the overhang
+         value to use
+      nthreads (int): optional, specify the
+        number of threads to run 'STAR' with
+      memory_limit (int): optional, specify the memory
+        limit to run 'STAR' with
+
+    Returns:
+      Command: object with the 'STAR' command.
+    """
+    build_index_cmd = Command("STAR",
+                              "--runMode","genomeGenerate",
+                              "--genomeFastaFiles",fasta,
+                              "--sjdbGTFfile",annotation,
+                              "--genomeDir",out_dir)
+    if overhang:
+        build_index_cmd.add_args("--sjdbOverhang",overhang)
+    if nthreads and nthreads > 1:
+        build_index_cmd.add_args("--runThreadN",nthreads)
+    if memory_limit:
+        build_index_cmd.add_args("--limitGenomeGenerateRAM",
+                                 memory_limit)
+    return build_index_cmd
