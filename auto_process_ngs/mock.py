@@ -45,6 +45,8 @@ the external software required for parts of the pipeline:
 - MockQualimap
 - MockMultiQC
 - MockConda
+- MockBowtieBuild
+- MockBowtie2Build
 
 There also is a wrapper for the 'Mock10xPackageExe' class which
 is maintained for backwards compatibility:
@@ -2943,19 +2945,57 @@ sys.exit(MockStar(path=sys.argv[0],
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
-        p.add_argument('--runMode',action="store")
+        p.add_argument('--runMode',action="store",dest='run_mode')
+        p.add_argument('--genomeDir',action="store",dest='genome_dir')
+        p.add_argument('--limitGenomeGenerateRAM',action="store")
+        p.add_argument('--runThreadN',action="store")
+        # Alignment options
         p.add_argument('--genomeLoad',action="store")
-        p.add_argument('--genomeDir',action="store")
         p.add_argument('--readFilesIn',action="store",nargs='+')
         p.add_argument('--quantMode',action="store")
         p.add_argument('--outSAMtype',action="store",nargs=2)
         p.add_argument('--outSAMstrandField',action="store")
         p.add_argument('--outFileNamePrefix',action="store",dest='prefix')
-        p.add_argument('--runThreadN',action="store")
+        # Indexing options
+        p.add_argument('--genomeFastaFiles',action="store",nargs='+')
+        p.add_argument('--sjdbGTFfile',action="store")
+        p.add_argument('--sjdbOverhang',action="store")
         args = p.parse_args(args)
+        # --runMode: genomeGenerate
+        if args.run_mode == "genomeGenerate":
+            self._genome_generate(args)
+        # --runMode: alignReads
+        if args.run_mode == "alignReads":
+            self._align_reads(args)
+        # Exit
+        print("%s: return exit code: %s" % (self._path,
+                                            self._exit_code))
+        return self._exit_code
+
+    def _genome_generate(self,args):
+        for f in ("chrLength.txt",
+                  "chrName.txt",
+                  "exonGeTrInfo.tab",
+                  "geneInfo.tab",
+                  "genomeParameters.txt",
+                  "Log.out",
+                  "SAindex",
+                  "sjdbList.fromGTF.out.tab",
+                  "transcriptInfo.tab",
+                  "chrNameLength.txt",
+                  "chrStart.txt",
+                  "exonInfo.tab",
+                  "Genome",
+                  "SA",
+                  "sjdbInfo.txt",
+                  "sjdbList.out.tab"):
+            with open(os.path.join(args.genome_dir,f),'wt') as fp:
+                fp.write("Placeholder")
+
+    def _align_reads(self,args):
         if self._no_outputs:
             # Exit without outputs
-            return self._exit_code
+            return
         with open("%sAligned.out.bam" % args.prefix,'wt') as fp:
             fp.write("Placeholder")
         with open("%sReadsPerGene.out.tab" % args.prefix,'wt') as fp:
@@ -3001,10 +3041,6 @@ ENSG00000240361.1	0	0	0
 ENSG00000186092.4	0	0	0
 ENSG00000238009.6	0	0	0
 """)
-        # Exit
-        print("%s: return exit code: %s" % (self._path,
-                                            self._exit_code))
-        return self._exit_code
 
 class MockSamtools:
     """
@@ -3398,7 +3434,6 @@ sys.exit(MockQualimap(path=sys.argv[0],
         Internal: configure the mock Qualimap executable
         """
         self._path = path
-        self._component = os.path.basename(self._path)
         self._exit_code = exit_code
 
     def main(self,args):
@@ -3424,7 +3459,7 @@ usage: qualimap <tool> [options]
         # Build top-level parser
         p = argparse.ArgumentParser()
         sp = p.add_subparsers(dest='command')
-        # cleanSam subparser
+        # 'rnaseq' subparser
         rnaseq = sp.add_parser("rnaseq")
         rnaseq.add_argument('-bam',action='store',dest='bam_file')
         rnaseq.add_argument('-gtf',action='store',dest='feature_file')
@@ -3610,6 +3645,174 @@ return 1
             print("conda:")
             print("%s" % fp.read())
         return path
+
+class MockBowtieBuild:
+    """
+    Create mock bowtie-build
+
+    This class can be used to create a mock bowtie-build
+    executable, which in turn can be used in place of
+    an actual executable for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockBowtieBuild.create("/tmpbin/bowtie-build")
+
+    The resulting executable will generate mock outputs
+    when run on the appropriate files (ignoring their
+    contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,exit_code=0):
+        """
+        Create a "mock" bowtie-build executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockBowtieBuild
+sys.exit(MockBowtieBuild(path=sys.argv[0],
+                         exit_code=%s).main(sys.argv[1:]))
+""" % exit_code)
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("%s:" % os.path.basename(path))
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,path,exit_code=0):
+        """
+        Internal: configure the mock bowtie-build executable
+        """
+        self._path = path
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock bowtie-build functionality
+        """
+        # Build parser
+        p = argparse.ArgumentParser()
+        p.add_argument('ebwt_basename')
+        p.add_argument('-f',action="store",dest="fasta")
+        # Process command line
+        args = p.parse_args(args)
+        # Generate placeholder output files
+        for ext in ("1.ebwt",
+                    "2.ebwt",
+                    "3.ebwt",
+                    "4.ebwt",
+                    "rev.1.ebwt",
+                    "rev.2.ebwt"):
+            with open("%s.%s" % (args.ebwt_basename,ext),'wt') as fp:
+                fp.write("Placeholder")
+        # Finish
+        return self._exit_code
+
+class MockBowtie2Build:
+    """
+    Create mock bowtie2-build
+
+    This class can be used to create a mock bowtie2-build
+    executable, which in turn can be used in place of
+    an actual executable for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockBowtie2Build.create("/tmpbin/bowtie2-build")
+
+    The resulting executable will generate mock outputs
+    when run on the appropriate files (ignoring their
+    contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,exit_code=0):
+        """
+        Create a "mock" bowtie2-build executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockBowtie2Build
+sys.exit(MockBowtie2Build(path=sys.argv[0],
+                          exit_code=%s).main(sys.argv[1:]))
+""" % exit_code)
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("%s:" % os.path.basename(path))
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,path,exit_code=0):
+        """
+        Internal: configure the mock bowtie-build executable
+        """
+        self._path = path
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock bowtie-build functionality
+        """
+        # Build parser
+        p = argparse.ArgumentParser()
+        p.add_argument('bt2_basename')
+        p.add_argument('-f',action="store",dest="fasta")
+        # Process command line
+        args = p.parse_args(args)
+        # Generate placeholder output files
+        for ext in ("1.bt2",
+                    "2.bt2",
+                    "3.bt2",
+                    "4.bt2",
+                    "rev.1.bt2",
+                    "rev.2.bt2"):
+            with open("%s.%s" % (args.bt2_basename,ext),'wt') as fp:
+                fp.write("Placeholder")
+        # Finish
+        return self._exit_code
 
 class MockCellrangerExe(Mock10xPackageExe):
     """

@@ -608,6 +608,7 @@ are available:
 for utility in ("analyse_barcodes.py",
                 "assign_barcodes.py",
                 "audit_projects.py",
+                "build_indexes.py",
                 "concat_fastqs.py",
                 "barcode_splitter.py",
                 "download_fastqs.py",
