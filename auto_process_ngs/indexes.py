@@ -164,7 +164,7 @@ class IndexBuilder:
                            "'%s': %s" % (env_name,ex))
             return None
 
-    def get_working_dir(self,remove_on_exit=True):
+    def _get_working_dir(self,remove_on_exit=True):
         """
         Create and return a temporary working directory
 
@@ -175,10 +175,10 @@ class IndexBuilder:
                                        suffix=".tmp",
                                        dir=os.getcwd())
         if remove_on_exit:
-            atexit.register(self.remove_working_dir,working_dir)
+            atexit.register(self._remove_working_dir,working_dir)
         return working_dir
 
-    def remove_working_dir(self,working_dir):
+    def _remove_working_dir(self,working_dir):
         """
         Remove working directory
         """
@@ -215,7 +215,7 @@ class IndexBuilder:
         if bowtie_version:
             bowtie_pkg += ("=%s" % bowtie_version)
         # Working directory
-        working_dir = self.get_working_dir()
+        working_dir = self._get_working_dir()
         # Command to build index
         build_index_cmd = bowtie_build_cmd(fasta,ebwt_basename)
         # Run the command
@@ -271,7 +271,7 @@ class IndexBuilder:
         if bowtie2_version:
             bowtie2_pkg += ("=%s" % bowtie2_version)
         # Working directory
-        working_dir = self.get_working_dir()
+        working_dir = self._get_working_dir()
         # Command to build index
         build_index_cmd = bowtie2_build_cmd(fasta,bt2_basename,
                                             nthreads=nthreads)
@@ -328,7 +328,7 @@ class IndexBuilder:
         if star_version:
             star_pkg += ("=%s" % star_version)
         # Working directory
-        working_dir = self.get_working_dir()
+        working_dir = self._get_working_dir()
         # STAR index directory
         star_dir = os.path.join(working_dir,"star_index")
         os.makedirs(star_dir)
