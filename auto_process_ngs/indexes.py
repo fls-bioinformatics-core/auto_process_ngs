@@ -15,9 +15,9 @@ indexes for various aligners:
 There are also functions for constructing Command instances to run
 the appropriate index building commands:
 
-- bowtie_build
-- bowtie2_build
-- star
+- bowtie_build_cmd
+- bowtie2_build_cmd
+- star_genome_generate_cmd
 """
 
 #######################################################################
@@ -217,7 +217,7 @@ class IndexBuilder:
         # Working directory
         working_dir = self.get_working_dir()
         # Command to build index
-        build_index_cmd = bowtie_build(fasta,ebwt_basename)
+        build_index_cmd = bowtie_build_cmd(fasta,ebwt_basename)
         # Run the command
         print("%s" % build_index_cmd)
         ret_code = self._run(build_index_cmd,
@@ -273,8 +273,8 @@ class IndexBuilder:
         # Working directory
         working_dir = self.get_working_dir()
         # Command to build index
-        build_index_cmd = bowtie2_build(fasta,bt2_basename,
-                                        nthreads=nthreads)
+        build_index_cmd = bowtie2_build_cmd(fasta,bt2_basename,
+                                            nthreads=nthreads)
         # Run the command
         print("%s" % build_index_cmd)
         ret_code = self._run(build_index_cmd,
@@ -333,10 +333,11 @@ class IndexBuilder:
         star_dir = os.path.join(working_dir,"star_index")
         os.makedirs(star_dir)
         # Command to build index
-        build_index_cmd = star(fasta,annotation,star_dir,
-                               overhang=overhang,
-                               nthreads=nthreads,
-                               memory_limit=memory_limit)
+        build_index_cmd = star_genome_generate_cmd(
+            fasta,annotation,star_dir,
+            overhang=overhang,
+            nthreads=nthreads,
+            memory_limit=memory_limit)
         # Run the command
         print("%s" % build_index_cmd)
         ret_code = self._run(build_index_cmd,
@@ -358,7 +359,7 @@ class IndexBuilder:
 # Functions
 #######################################################################
 
-def bowtie_build(fasta,ebwt_basename):
+def bowtie_build_cmd(fasta,ebwt_basename):
     """
     Return command to run 'bowtie-build'
 
@@ -377,7 +378,7 @@ def bowtie_build(fasta,ebwt_basename):
                               ebwt_basename)
     return build_index_cmd
 
-def bowtie2_build(fasta,bt2_basename,nthreads=None):
+def bowtie2_build_cmd(fasta,bt2_basename,nthreads=None):
     """
     Return command to run 'bowtie2-build'
 
@@ -401,8 +402,9 @@ def bowtie2_build(fasta,bt2_basename,nthreads=None):
                              bt2_basename)
     return build_index_cmd
 
-def star(fasta,annotation,out_dir,overhang=None,nthreads=None,
-         memory_limit=None):
+def star_genome_generate_cmd(fasta,annotation,out_dir,
+                             overhang=None,nthreads=None,
+                             memory_limit=None):
     """
     Return command to run 'STAR' to build an index
 
