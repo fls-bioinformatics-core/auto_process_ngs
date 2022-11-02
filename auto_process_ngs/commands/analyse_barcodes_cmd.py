@@ -93,10 +93,23 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
     # Log dir and log file
     ap.set_log_dir(ap.get_log_subdir('analyse_barcodes'))
     log_file = os.path.join(ap.log_dir,"analyse_barcodes.log")
-    # Set up runner
-    if runner is None:
-        runner = ap.settings.general.default_runner
-    runner.set_log_dir(ap.log_dir)
+
+    # Set up pipeline runners
+    default_runner = ap.settings.general.default_runner
+    runners = {
+        'barcode_analysis_runner': ap.settings.runners.barcode_analysis,
+    }
+    if runner is not None:
+        # Override configured runners
+        default_runner = runner
+        for r in runners:
+            runner[r] = runner
+    else:
+        default_runner = ap.settings.general.default_runner
+    # Set log directory
+    for r in runners:
+        runners[r].set_log_dir(ap.log_dir)
+    default_runner.set_log_dir(ap.log_dir)
     # Get scheduler parameters
     max_jobs = ap.settings.general.max_concurrent_jobs
     poll_interval = ap.settings.general.poll_interval
@@ -110,7 +123,8 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
         sample_sheet=sample_sheet,
         force=force,
         log_file=log_file,
-        runner=runner,
+        runners=runners,
+        default_runner=default_runner,
         max_jobs=max_jobs,
         poll_interval=poll_interval,
         verbose=False)

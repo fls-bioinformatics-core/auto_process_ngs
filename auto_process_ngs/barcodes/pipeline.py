@@ -99,6 +99,9 @@ class AnalyseBarcodes(Pipeline):
         self.add_param('cutoff',type=float,value=0.001)
         self.add_param('force',type=bool,value=False)
 
+        # Define runners
+        self.add_runner('barcode_analysis_runner')
+
         # Get a list of projects
         if self._bcl2fastq_dir is not None:
             # Load data from bcl2fastq output
@@ -165,6 +168,7 @@ class AnalyseBarcodes(Pipeline):
                 self.params.counts_dir,
                 lanes=self.params.lanes)
             self.add_task(count_barcodes,
+                          runner=self.runners['barcode_analysis_runner'],
                           requires=(setup_barcode_analysis_dir,
                                     load_illumina_data))
             count_tasks.append(count_barcodes)
@@ -178,6 +182,7 @@ class AnalyseBarcodes(Pipeline):
             lanes=self.params.lanes,
             use_project_name="undetermined")
         self.add_task(count_barcodes,
+                      runner=self.runners['barcode_analysis_runner'],
                       requires=(setup_barcode_analysis_dir,
                                 load_illumina_data))
         count_tasks.append(count_barcodes)
@@ -201,6 +206,7 @@ class AnalyseBarcodes(Pipeline):
             title=self.params.title
         )
         self.add_task(report_barcodes,
+                      runner=self.runners['barcode_analysis_runner'],
                       requires=(list_counts_files,))
 
         # Add final outputs to the pipeline
@@ -240,8 +246,8 @@ class AnalyseBarcodes(Pipeline):
     def run(self,barcode_analysis_dir,bcl2fastq_dir=None,title=None,
             lanes=None,mismatches=None,bases_mask=None,cutoff=None,
             sample_sheet=None,force=False,working_dir=None,log_file=None,
-            batch_size=None,max_jobs=1,poll_interval=5,runner=None,
-            verbose=False):
+            batch_size=None,max_jobs=1,poll_interval=5,runners=None,
+            default_runner=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -280,8 +286,11 @@ class AnalyseBarcodes(Pipeline):
             concurrent jobs in scheduler (default: 1)
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (default: 5s)
-          runner (JobRunner): JobRunner instance to use to
-             run jobs
+          runners (dict): mapping of names to JobRunner
+            instances; valid names are
+            'barcode_analysis_runner' and 'default'
+          default_runner (JobRunner): optional default
+            job runner to use
           verbose (bool): if True then report additional
             information for diagnostics
         """
@@ -330,6 +339,10 @@ class AnalyseBarcodes(Pipeline):
         barcode_analysis_dir = os.path.abspath(barcode_analysis_dir)
         counts_dir = os.path.join(barcode_analysis_dir,"counts")
 
+        # Runners
+        if runners is None:
+            runners = dict()
+
         # Execute the pipeline
         status = Pipeline.run(self,
                               working_dir=working_dir,
@@ -353,7 +366,8 @@ class AnalyseBarcodes(Pipeline):
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
-                              default_runner=runner,
+                              runners=runners,
+                              default_runner=default_runner,
                               finalize_outputs=True,
                               verbose=verbose)
 
