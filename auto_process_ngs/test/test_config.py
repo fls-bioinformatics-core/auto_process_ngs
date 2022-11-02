@@ -99,6 +99,14 @@ class TestConfig(unittest.TestCase):
                                                          'GEJobRunner'),
                                    GEJobRunner))
 
+    def test_getrunner_with_runner_instance_as_default(self):
+        """Check Config.getrunner works with runner instance as default
+        """
+        self.assertTrue(isinstance(self.config.getrunner('runners',
+                                                         'your_runner',
+                                                         GEJobRunner()),
+                                   GEJobRunner))
+
     def test_get_with_None_value(self):
         """Check Config.get works for parameters set to 'None'
         """
