@@ -190,7 +190,8 @@ def run_qc(ap,projects=None,fastq_screens=None,
     if runner is None:
         default_runner = ap.settings.general.default_runner
         runners={
-            'cellranger_runner': ap.settings.runners.cellranger,
+            'cellranger_count_runner': ap.settings.runners.cellranger_count,
+            'cellranger_multi_runner': ap.settings.runners.cellranger_multi,
             'fastqc_runner': (ap.settings.runners.fastqc
                               if ap.settings.runners.fastqc
                               else ap.settings.runners.qc),
@@ -206,7 +207,8 @@ def run_qc(ap,projects=None,fastq_screens=None,
     else:
         default_runner = runner
         runners={
-            'cellranger_runner': runner,
+            'cellranger_count_runner': runner,
+            'cellranger_multi_runner': runner,
             'fastqc_runner': runner,
             'fastq_screen_runner': runner,
             'qualimap_runner': runner,
