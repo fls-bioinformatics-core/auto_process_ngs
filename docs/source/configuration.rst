@@ -205,9 +205,14 @@ section of the settings file:
 ============================= =========================================
 Runner name                   Used for
 ============================= =========================================
+``barcode_analysis``          Running barcode analysis tasks in Fastq
+                              generation
 ``bcl2fastq``                 Running ``bcl2fastq`` in Fastq generation
 ``bcl_convert``               Running ``bcl-convert`` in Fastq
                               generation
+``cellranger_mkfastq``        Running ``cellranger* mkfastq``
+``cellranger_count``          Running ``cellranger* count``
+``cellranger_multi``          Running ``cellranger multi``
 ``stats``                     Running commands to generate statistics
                               after Fastq generation (e.g.
 			      ``fastq_statistics.py``)
@@ -221,19 +226,24 @@ Runner name                   Used for
 ``qualimap``                  Running ``Qualimap`` in the QC pipeline
 ``rseqc``                     Running ``RSeQC`` ``geneBody_coverage.py``
                               in the QC pipeline
-``cellranger``                Running ``cellranger`` in Fastq generation
-                              and QC pipelines
-``qc``                        Running generally computationally intensive
-                              QC commands (used as a fallback if
-                              ``fastqc``, ``fastq_screen``, ``star``,
-			      ``qualimap`` or ``rseqc`` runners are not
-                              explicitly set)
 ``icell8``                    Default runner for commands in the ICELL8
                               processing pipeline
 ``icell8_contaminant_filter`` Running the contaminant filtering in the
                               ICELL8 pipeline
 ``icell8_statistics``         Generating statistics for ICELL8 data
 ``icell8_report``             Reporting on the ICELL8 pipeline
+============================= =========================================
+
+The following runners are supported but deprecated:
+
+============================= =========================================
+``cellranger``                Running ``cellranger`` in Fastq generation
+                              and QC pipelines (used as a fallback for
+			      ``cellranger_*`` runners)
+``qc``                        Running generally computationally intensive
+                              QC commands (used as a fallback for
+                              ``fastqc``, ``fastq_screen``, ``star``,
+			      ``qualimap`` and ``rseqc`` runners)
 ============================= =========================================
 
 .. _setting_number_of_cpus:
