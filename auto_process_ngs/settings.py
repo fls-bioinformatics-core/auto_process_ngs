@@ -345,8 +345,12 @@ class Settings:
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',None)
         # Define runners for specific jobs
         self.add_section('runners')
-        for name in ('bcl2fastq',
+        for name in ('barcode_analysis',
+                     'bcl2fastq',
                      'bcl_convert',
+                     'cellranger_count',
+                     'cellranger_mkfastq',
+                     'cellranger_multi',
                      'qc',
                      'qualimap',
                      'rseqc',
@@ -360,6 +364,12 @@ class Settings:
                      'cellranger',):
             self.runners[name] = config.getrunner('runners',name,
                                                   default_runner)
+        # Handle new runners that default to the 'cellranger' runner
+        for name in ('cellranger_count',
+                     'cellranger_mkfastq',
+                     'cellranger_multi',):
+            self.runners[name] = config.getrunner('runners',name,
+                                                  self.runners.cellranger)
         # Handle new runners that default to the 'qc' runner
         for name in ('fastqc',
                      'fastq_screen',
