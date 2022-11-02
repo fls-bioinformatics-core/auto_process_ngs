@@ -383,6 +383,7 @@ class MakeFastqs(Pipeline):
         self.add_runner('rsync_runner')
         self.add_runner('bcl2fastq_runner')
         self.add_runner('bclconvert_runner')
+        self.add_runner('barcode_analysis_runner')
         self.add_runner('demultiplex_icell8_atac_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('cellranger_atac_runner')
@@ -1842,9 +1843,13 @@ class MakeFastqs(Pipeline):
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
-            instances; valid names are 'qc_runner',
-            'report_runner','cellranger_runner',
-            'verify_runner','default'
+            instances; valid names are 'rsync_runner,
+            'bcl2fastq_runner', 'bclconvert_runner',
+            'barcode_analysis_runner',
+            'demultiplex_icell8_atac_runner',
+            'cellranger_runner', 'cellranger_atac_runner',
+            'cellranger_arc_runner', 'spaceranger_runner',
+            'default'
           envmodules (mapping): mapping of names to
             environment module file lists; valid names are
             'bcl2fastq','cellranger_mkfastq',
