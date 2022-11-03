@@ -541,14 +541,25 @@ Additionally the ``[qc]`` section allows other aspects of the
 QC pipeline operation to be explicitly specified.
 
 The default size of the subset of reads used by FastqScreen
-when generating the screens can be set using the
-``fastq_screen_subset`` parameter, e.g.:
+when generating the screens, generating BAM files and so on
+can be set using the ``fastq_subset_size`` parameter, e.g.:
 
 ::
 
    [qc]
-   fastq_screen_subset = 10000
+   fastq_subset_size = 10000
    ...
+
+Setting this to 0 will force all reads to be used for the
+appropriate QC stages (note that this can result in extended
+run time for the QC pipeline, and larger intermediate and
+final output files).
+
+.. note::
+
+   ``fastq_subset_size`` replaces the deprecated legacy
+   ``fastq_screen_subset`` parameter (which will however be
+   used as a fallback if ``subset_size`` is not present).
 
 By default the QC pipeline creates FastqScreen outputs using
 the following naming convention:
