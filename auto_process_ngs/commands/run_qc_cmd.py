@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def run_qc(ap,projects=None,fastq_screens=None,
-           fastq_screen_subset=100000,nthreads=None,
+           fastq_subset=100000,nthreads=None,
            runner=None,fastq_dir=None,qc_dir=None,
            cellranger_exe=None,
            cellranger_chemistry='auto',
@@ -56,9 +56,9 @@ def run_qc(ap,projects=None,fastq_screens=None,
         projects)
       fastq_screens (dict): mapping of Fastq screen names to
         corresponding conf files, to use for contaminant screens
-      fastq_screen_subset (int): subset of reads to use in
-        FastQScreen, set to zero or None to use all reads
-        (default: 100000)
+      fastq_subset (int): maximum size of subset of reads to use
+        for FastQScreen, BAM file generation etc; set to zero or
+        None to use all reads (default: 100000)
       nthreads (int): specify number of threads to run the QC jobs
         with (default: 1)
       runner (JobRunner): specify a non-default job runner to use
@@ -260,6 +260,7 @@ def run_qc(ap,projects=None,fastq_screens=None,
     # Run the QC
     status = runqc.run(nthreads=nthreads,
                        fastq_screens=fastq_screens,
+                       fastq_subset=fastq_subset,
                        star_indexes=star_indexes,
                        annotation_bed_files=annotation_bed_files,
                        annotation_gtf_files=annotation_gtf_files,
