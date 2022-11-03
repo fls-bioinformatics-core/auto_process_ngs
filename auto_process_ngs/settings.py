@@ -192,11 +192,14 @@ class Settings:
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
-        self.qc['use_legacy_screen_names'] = \
-                                             config.getboolean(
-                                                 'qc',
-                                                 'use_legacy_screen_names',
-                                                 False)
+        self.qc['fastq_subset_size'] = config.getint(
+            'qc',
+            'subset_size',
+            self.qc.fastq_screen_subset)
+        self.qc['use_legacy_screen_names'] = config.getboolean(
+            'qc',
+            'use_legacy_screen_names',
+            False)
         # Fastq screens
         self.add_section('screens')
         for section in filter(lambda x: x.startswith('screen:'),
