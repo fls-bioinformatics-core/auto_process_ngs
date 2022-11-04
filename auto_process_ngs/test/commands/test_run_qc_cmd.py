@@ -13,6 +13,7 @@ from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockFastqStrandPy
+from auto_process_ngs.mock import MockGtf2bed
 from auto_process_ngs.mock import MockStar
 from auto_process_ngs.mock import MockSamtools
 from auto_process_ngs.mock import MockPicard
@@ -55,6 +56,17 @@ class TestAutoProcessRunQc(unittest.TestCase):
             with open(conf_file,'wt') as fp:
                 fp.write("")
             self.fastq_screens[screen] = conf_file
+        # Add (empty) reference data files
+        self.ref_data = dict()
+        for build in ('hg38','mm10',):
+            self.ref_data[build] = {}
+            build_dir = os.path.join(self.data,build)
+            os.mkdir(build_dir)
+            for ext in ('bed','gtf'):
+                f = os.path.join(build_dir,"%s.%s" % (build,ext))
+                with open(f,'wt') as fp:
+                    fp.write("")
+                self.ref_data[build][ext] = f
         # Store original location so we can get back at the end
         self.pwd = os.getcwd()
         # Store original PATH
@@ -83,6 +95,7 @@ class TestAutoProcessRunQc(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -98,7 +111,7 @@ class TestAutoProcessRunQc(unittest.TestCase):
                                "CDE": { "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
-        # Settings file with polling interval
+        # Settings file with reference data and polling interval
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
@@ -106,14 +119,18 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/hg38/star_index
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 
 [organism:mouse]
 star_index = /data/mm10/star_index
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
-""".format(poll_interval=POLL_INTERVAL))
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -174,6 +191,7 @@ annotation_gtf = /data/mm10/mm10.gtf
                                               "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -190,8 +208,7 @@ annotation_gtf = /data/mm10/mm10.gtf
                                "CDE": { "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
-        # Settings file with fastq_strand indexes and
-        # polling interval
+        # Settings file with reference data and polling interval
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
@@ -199,14 +216,18 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
-""".format(poll_interval=POLL_INTERVAL))
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -264,6 +285,7 @@ annotation_gtf = /data/mm10/mm10.gtf
                                               "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -281,8 +303,7 @@ annotation_gtf = /data/mm10/mm10.gtf
                                         "Single cell platform": "ICELL8", } },
             top_dir=self.dirn)
         mockdir.create()
-        # Settings file with fastq_strand indexes and
-        # polling interval
+        # Settings file with reference data and polling interval
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
@@ -290,14 +311,18 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
-""".format(poll_interval=POLL_INTERVAL))
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -311,10 +336,103 @@ annotation_gtf = /data/mm10/mm10.gtf
         for p in ("AB","CDE"):
             qc_dir = os.path.join(mockdir.dirn,p,"qc")
             qcoutputs = QCOutputs(qc_dir)
-            print(qcoutputs.outputs)
             for qc_module in ("fastqc_r1",
                               "fastqc_r2",
                               "screens_r2",
+                              "sequence_lengths",
+                              "strandedness",
+                              "rseqc_genebody_coverage",
+                              "rseqc_infer_experiment",
+                              "qualimap_rnaseq",
+                              "multiqc"):
+                self.assertTrue(qc_module in qcoutputs.outputs,
+                                "Project '%s': missing output '%s'" %
+                                (p,qc_module))
+        # Check output and reports
+        for p in ("AB","CDE","undetermined"):
+            for f in ("qc",
+                      "qc_report.html",
+                      "qc_report.%s.%s.zip" % (
+                          p,
+                          '170901_M00879_0087_000000000-AGEW9'),
+                      "multiqc_report.html"):
+                self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
+                                                            p,f)),
+                                "Missing %s in project '%s'" % (f,p))
+            # Check zip file has MultiQC report
+            zip_file = os.path.join(mockdir.dirn,p,
+                                    "qc_report.%s.%s.zip" % (
+                                        p,
+                                        '170901_M00879_0087_000000000-AGEW9'))
+            with zipfile.ZipFile(zip_file) as z:
+                multiqc = os.path.join(
+                    "qc_report.%s.%s" % (
+                        p,'170901_M00879_0087_000000000-AGEW9'),
+                    "multiqc_report.html")
+                self.assertTrue(multiqc in z.namelist())
+
+    def test_run_qc_single_end(self):
+        """run_qc: single-end QC run
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,
+                                              "fastq_strand.py"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            paired_end=False,
+            metadata={ "instrument_datestamp": "170901" },
+            project_metadata={ "AB": { "Organism": "human", },
+                               "CDE": { "Organism": "mouse", } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Settings file with reference data and polling interval
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = {poll_interval}
+
+[organism:human]
+star_index = /data/genomeIndexes/hg38/STAR
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
+
+[organism:mouse]
+star_index = /data/genomeIndexes/mm10/STAR
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=Settings(settings_ini))
+        # Run the QC
+        status = run_qc(ap,
+                        fastq_screens=self.fastq_screens,
+                        run_multiqc=True,
+                        max_jobs=1)
+        self.assertEqual(status,0)
+        # Check detected outputs
+        for p in ("AB","CDE"):
+            qc_dir = os.path.join(mockdir.dirn,p,"qc")
+            qcoutputs = QCOutputs(qc_dir)
+            for qc_module in ("fastqc_r1",
+                              "screens_r1",
                               "sequence_lengths",
                               "strandedness",
                               "rseqc_genebody_coverage",
@@ -357,6 +475,7 @@ annotation_gtf = /data/mm10/mm10.gtf
                                               "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -379,8 +498,7 @@ annotation_gtf = /data/mm10/mm10.gtf
                                         "Library type": "scRNA-seq", } },
             top_dir=self.dirn)
         mockdir.create()
-        # Settings file with fastq_strand indexes and
-        # polling interval
+        # Settings file with reference data and polling interval
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
@@ -388,16 +506,20 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 cellranger_reference = /data/cellranger/transcriptomes/hg38
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""".format(poll_interval=POLL_INTERVAL))
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -458,6 +580,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                                               "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -482,8 +605,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                                         "Library type": "snRNA-seq", } },
             top_dir=self.dirn)
         mockdir.create()
-        # Settings file with fastq_strand indexes and
-        # polling interval
+        # Settings file with reference data and polling interval
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
@@ -491,16 +613,20 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 cellranger_premrna_reference = /data/cellranger/transcriptomes/hg38_pre_mrna
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
 cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
-""".format(poll_interval=POLL_INTERVAL))
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -561,6 +687,7 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
                                               "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -594,16 +721,20 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 cellranger_reference = /data/cellranger/transcriptomes/hg38
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""".format(poll_interval=POLL_INTERVAL))
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -664,6 +795,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                                               "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -697,16 +829,20 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 cellranger_reference = /data/cellranger/transcriptomes/hg38
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
 cellranger_reference = /data/cellranger/transcriptomes/mm10
-""".format(poll_interval=POLL_INTERVAL))
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -768,6 +904,7 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -800,16 +937,20 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 cellranger_atac_reference = /data/cellranger/atac_references/hg38
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
 cellranger_atac_reference = /data/cellranger/atac_references/mm10
-""".format(poll_interval=POLL_INTERVAL))
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -872,6 +1013,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
                                               "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -902,14 +1044,18 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
-""".format(poll_interval=POLL_INTERVAL))
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -970,6 +1116,7 @@ annotation_gtf = /data/mm10/mm10.gtf
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -999,11 +1146,13 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
 cellranger_arc_reference = /data/cellranger/arc_references/hg38-arc
 cellranger_atac_reference = /data/cellranger/atac_references/hg38-atac
-""".format(poll_interval=POLL_INTERVAL))
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -1067,6 +1216,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/hg38-atac
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1096,11 +1246,13 @@ poll_interval = {poll_interval}
 
 [organism:mouse]
 star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = /data/mm10/mm10.bed
-annotation_gtf = /data/mm10/mm10.gtf
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
 cellranger_reference = /data/cellranger/gex_references/mm10-gex
 cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
-""".format(poll_interval=POLL_INTERVAL))
+""".format(mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
@@ -1161,6 +1313,7 @@ cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
                                               "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1188,9 +1341,11 @@ poll_interval = {poll_interval}
 
 [organism:human]
 star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = /data/hg38/hg38.bed
-annotation_gtf = /data/hg38/hg38.gtf
-""".format(poll_interval=POLL_INTERVAL))
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           poll_interval=POLL_INTERVAL))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn,
                          settings=Settings(settings_ini))
