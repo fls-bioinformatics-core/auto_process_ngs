@@ -38,6 +38,7 @@ the external software required for parts of the pipeline:
 - MockFastqScreen
 - MockFastQC
 - MockFastqStrandPy
+- MockGtf2bed
 - MockStar
 - MockSamtools
 - MockPicard
@@ -2849,6 +2850,110 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
                     genome = line.split('\t')[0]
                     fp.write("%s	13.13	93.21\n" % genome)
         # Exit
+        return self._exit_code
+
+class MockGtf2bed:
+    """
+    Create mock 'gtf2bed' (from bedops)
+
+    This class can be used to create a mock
+    gtf2bed executable, which in turn can be used
+    in place of the actual fastqc program for
+    testing purposes.
+
+    To create a mock script, use the 'create' static
+    method, e.g.
+
+    >>> MockGtf2bed.create("/tmpbin/gtf2bed")
+
+    The resulting executable will generate mock outputs
+    when run on GTF files (ignoring their content).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+
+    The following flags can also be used:
+
+    - `no_outputs` configures the mock executable not
+      to write any output
+    """
+
+    @staticmethod
+    def create(path,version=None,no_outputs=False,
+               exit_code=0):
+        """
+        Create a mock 'gtf2bed' utility
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          version (str): explicit version string
+          no_outputs (bool): if True then make
+            don't create mock outputs
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockGtf2bed
+sys.exit(MockGtf2bed(version=%s,
+                     no_outputs=%s,
+                     exit_code=%s).main(sys.argv[1:]))
+            """ % (("\"%s\"" % version
+                    if version is not None
+                    else None),
+                   no_outputs,
+                   exit_code))
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("gtf2bed:")
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,version=None,no_outputs=False,
+                 exit_code=0):
+        """
+        Internal: configure the mock gtf2bed
+        """
+        if version is None:
+            version = "2.4.41"
+        self._version = str(version)
+        self._no_outputs = no_outputs
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock gtf2bed functionality
+        """
+        # No args
+        if not args:
+            return self._exit_code
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("-w","--version",action="store_true")
+        args = p.parse_args(args)
+        # Report version and exit
+        if args.w:
+            print("""convert2bed -i gtf
+  version:  %s
+  author:   Alex Reynolds
+""" % self._version)
+            return self._exit_code
+        # Read stdin and generate stdout
+        for line in sys.stdin:
+            if not self._no_outputs:
+                print("GTF2BED: placeholder")
         return self._exit_code
 
 class MockStar:
