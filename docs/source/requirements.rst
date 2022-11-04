@@ -215,9 +215,8 @@ Qualimap RNA-seq metrics
 
 Qualimap's ``rnaseq`` command a STAR index (in order to generate a BAM
 file from the sequences) and gene annotation in GTF format, for each
-organism of interest. The pipeline also requires annotation in BED
-format, in order to run RSeQC's ``infer_experiment.py`` command to
-determine strand specificity (which is needed as input to Qualimap).
+organism of interest. The pipeline uses RSeQC's ``infer_experiment.py``
+command to determine strand specificity for input to Qualimap.
 
 All these should be specfied in the ``[organism:...]`` sections of the
 ``auto_process.ini`` configuration file, for example:
@@ -226,7 +225,6 @@ All these should be specfied in the ``[organism:...]`` sections of the
 
    [organism: human]
    star_index = /data/genomeIndexes/hg38/STAR/
-   annotation_bed = /data/genomeIndexes/hg38/hg38.HouseKeepingGenes.bed
    annotation_gtf = /data/genomeIndexes/hg38/gencode.v40.annotation.gtf
 
 STAR indexes can be created manually, or by using the ``build_index.py``
