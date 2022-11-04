@@ -35,6 +35,7 @@ Pipeline task classes:
 - RunRSeQCGenebodyCoverage
 - RunPicardCollectInsertSizeMetrics
 - CollateInsertSizes
+- ConvertGTFToBed
 - RunRSeQCInferExperiment
 - RunQualimapRnaseq
 - ReportQC
@@ -175,7 +176,7 @@ class QCPipeline(Pipeline):
 
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
                     qc_protocol=None,report_html=None,multiqc=False,
-                    sample_pattern=None,log_dir=None):
+                    sample_pattern=None,log_dir=None,convert_gtf=False):
         """
         Add a project to the QC pipeline
 
@@ -198,6 +199,10 @@ class QCPipeline(Pipeline):
           log_dir (str): directory to write log files to
             (defaults to 'logs' subdirectory of the QC
             directory)
+          convert_gtf (bool): if True then convert
+            GTF files to BED for 'infer_experiment.py'
+            (otherwise only use explicitly defined BED
+            files)
         """
         ###################
         # Do internal setup
@@ -373,13 +378,45 @@ class QCPipeline(Pipeline):
                 self.params.annotation_bed_files)
             self.add_task(get_reference_gene_model,
                           log_dir=log_dir)
+            qc_metadata['annotation_bed'] = \
+                get_reference_gene_model.output.reference_dataset
+
+            # Get GTF annotation
+            get_annotation_gtf = GetReferenceDataset(
+                "%s: get GTF annotation for '%s'" % (project.name,
+                                                     organism),
+                organism,
+                self.params.annotation_gtf_files)
+            self.add_task(get_annotation_gtf,
+                          log_dir=log_dir)
+            qc_metadata['annotation_gtf'] = \
+                get_annotation_gtf.output.reference_dataset
+
+            # BED annotation for infer experiment
+            if convert_gtf:
+                # Convert GTF annotation to BED
+                get_bed_annotation_from_gtf = ConvertGTFToBed(
+                    "%s: convert GTF annotation to BED for '%s'" %
+                    (project.name,
+                     organism),
+                    get_annotation_gtf.output.reference_dataset,
+                    os.path.join(qc_dir,'%s.annotation.bed' %
+                                 organism_name))
+                self.add_task(get_bed_annotation_from_gtf,
+                              log_dir=log_dir)
+                reference_gene_model_file = get_bed_annotation_from_gtf.\
+                                            output.bed_file
+            else:
+                # Use pre-defined BED file
+                reference_gene_model_file = get_reference_gene_model.\
+                                            output.reference_dataset
 
             # Run RSeQC infer experiment
             rseqc_infer_experiment = RunRSeQCInferExperiment(
                 "%s: infer experiment from BAM files (RSeQC)" %
                 project.name,
                 get_bam_files.output.bam_files,
-                get_reference_gene_model.output.reference_dataset,
+                reference_gene_model_file,
                 os.path.join(qc_dir,'rseqc_infer_experiment',organism_name))
             self.add_task(rseqc_infer_experiment,
                           log_dir=log_dir)
@@ -737,8 +774,6 @@ class QCPipeline(Pipeline):
                               runner=self.runners['rseqc_runner'],
                               log_dir=log_dir)
                 verify_qc.requires(rseqc_gene_body_coverage)
-                qc_metadata['annotation_bed'] = \
-                    get_reference_gene_model.output.reference_dataset
 
             ##########################
             # Picard insert sizes
@@ -768,15 +803,6 @@ class QCPipeline(Pipeline):
             # Qualimap RNASEQ
             #################
             if qc_module_name == 'qualimap_rnaseq':
-                # Get reference gene model for Qualimap
-                get_annotation_gtf = GetReferenceDataset(
-                    "%s: get GTF annotation for '%s'" % (project.name,
-                                                         organism),
-                    organism,
-                    self.params.annotation_gtf_files)
-                self.add_task(get_annotation_gtf,
-                              log_dir=log_dir)
-
                 # Run Qualimap RNA-seq analysis
                 qualimap_rnaseq = RunQualimapRnaseq(
                     "%s: Qualimap rnaseq: RNA-seq metrics" % project.name,
@@ -788,8 +814,6 @@ class QCPipeline(Pipeline):
                               runner=self.runners['qualimap_runner'],
                               log_dir=log_dir)
                 verify_qc.requires(qualimap_rnaseq)
-                qc_metadata['annotation_gtf'] = \
-                    get_annotation_gtf.output.reference_dataset
 
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_module_name,
@@ -3003,6 +3027,54 @@ class GetBAMFiles(PipelineFunctionTask):
         for bam_file in self._bam_files:
             if os.path.exists(bam_file):
                 self.output.bam_files.append(bam_file)
+
+class ConvertGTFToBed(PipelineTask):
+    """
+    Convert a GTF file to a BED file using BEDOPS 'gtf2bed'
+    """
+    def init(self,gtf_in,bed_out):
+        """
+        Initialise the ConvertGTFToBed task
+
+        Arguments:
+          gtf_in (str): path to the input GTF file
+          bed_out (str): path to the output BED file
+        """
+        # Conda dependencies
+        self.conda("bedops=2.4.41")
+        # Outputs
+        self.add_output('bed_file',Param())
+    def setup(self):
+        # Check for input GTF
+        if self.args.gtf_in:
+            print("Input GTF file: %s" % self.args.gtf_in)
+        else:
+            print("Input GTF file not supplied")
+            return
+        # Set up command to run BEDOPS gtf2bed
+        self.add_cmd("Run RSeQC infer_experiment.py",
+                     """
+                     # Get version
+                     echo gtf2bed $(gtf2bed --version 2>&1 | grep version: | cut -d: -f2) >_versions
+                     # Convert GTF to BED
+                     gtf2bed <{gtf_in} >out.bed
+                     if [ $? -ne 0 ] ; then
+                       echo "GTF to BED conversion failed"
+                       exit 1
+                     fi
+                     """.format(gtf_in=self.args.gtf_in))
+    def finish(self):
+        # No output expected
+        if not self.args.gtf_in:
+            return
+        # Copy BED file to final location
+        bed_out = os.path.join(self._working_dir,"out.bed")
+        if os.path.exists(bed_out):
+            print("Copy BED file to %s" % self.args.bed_out)
+            shutil.copy(bed_out,self.args.bed_out)
+            self.output.bed_file.set(self.args.bed_out)
+        else:
+            raise Exception("failed to generate BED file")
 
 class RunRSeQCInferExperiment(PipelineTask):
     """
