@@ -1851,7 +1851,7 @@ class MakeFastqs(Pipeline):
           runners (dict): mapping of names to JobRunner
             instances; valid names are 'rsync_runner,
             'bcl2fastq_runner', 'bclconvert_runner',
-            'barcode_analysis_runner', 'merge_fastqs',
+            'barcode_analysis_runner', 'merge_fastqs_runner',
             'demultiplex_icell8_atac_runner',
             'cellranger_runner', 'cellranger_atac_runner',
             'cellranger_arc_runner', 'spaceranger_runner',

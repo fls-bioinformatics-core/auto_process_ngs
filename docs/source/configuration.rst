@@ -221,6 +221,7 @@ Runner name                   Used for
                               generation, archiving etc)
 ``fastqc``                    Running ``FastQC`` in the QC pipeline
 ``fastq_screen``              Running ``FastqScreen`` in the QC pipeline
+``merge_fastqs``              Merging Fastq files in Fastq generation
 ``star``                      Running pipeline tasks which use ``STAR``
                               (e.g. strandedness, alignment etc)
 ``qualimap``                  Running ``Qualimap`` in the QC pipeline
