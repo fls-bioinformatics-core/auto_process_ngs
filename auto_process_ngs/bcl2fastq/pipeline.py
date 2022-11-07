@@ -933,7 +933,7 @@ class MakeFastqs(Pipeline):
             self.params.out_dir
         )
         self.add_task(merge_fastq_dirs,
-                      runner=self.runners.merge_fastqs_runner)
+                      runner=self.runners['merge_fastqs_runner'])
 
         ##########################
         # Statistics and reporting
@@ -1231,7 +1231,8 @@ class MakeFastqs(Pipeline):
                             self.params.create_empty_fastqs,
                             skip_merge=output_dirs_exist)
                         self.add_task(make_fastqs,
-                                      runner=self.runners.merge_fastqs_runner)
+                                      runner=
+                                      self.runners['merge_fastqs_runner'])
                         # Run BCL Convert for each lane in subset
                         for lane in lanes:
                             # Output dir for this lane
@@ -1345,7 +1346,8 @@ class MakeFastqs(Pipeline):
                             self.params.create_empty_fastqs,
                             skip_merge=final_output_exists)
                         self.add_task(make_fastqs,
-                                      runner=self.runners.merge_fastqs_runner
+                                      runner=
+                                      self.runners['merge_fastqs_runner'],
                                       requires=(bcl_convert,))
             # ICELL8 RNA-seq
             if protocol == "icell8":
