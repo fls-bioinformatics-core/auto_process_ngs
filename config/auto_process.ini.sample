@@ -134,6 +134,7 @@ nprocessors = 1
 bcl2fastq = SimpleJobRunner
 bcl_convert = SimpleJobRunner
 barcode_analysis = SimpleJobRunner
+merge_fastqs = SimpleJobRunner
 fastqc = SimpleJobRunner
 fastq_screen  = SimpleJobRunner
 qualimap = SimpleJobRunner
