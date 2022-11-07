@@ -194,7 +194,7 @@ class Settings:
                                                        100000)
         self.qc['fastq_subset_size'] = config.getint(
             'qc',
-            'subset_size',
+            'fastq_subset_size',
             self.qc.fastq_screen_subset)
         self.qc['use_legacy_screen_names'] = config.getboolean(
             'qc',
