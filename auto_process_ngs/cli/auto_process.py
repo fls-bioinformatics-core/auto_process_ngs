@@ -583,7 +583,7 @@ def add_run_qc_command(cmdparser):
                               "projects in ANALYSIS_DIR.")
     # Defaults
     default_nthreads = __settings.qc.nprocessors
-    fastq_screen_subset = __settings.qc.fastq_screen_subset
+    fastq_subset_size = __settings.qc.fastq_subset_size
     max_concurrent_jobs = __settings.general.max_concurrent_jobs
     max_cores = __settings.general.max_cores
     max_batches = __settings.general.max_batches
@@ -608,13 +608,13 @@ def add_run_qc_command(cmdparser):
                    "Fastq files to run the QC on.")
     # QC pipeline options
     qc_options = p.add_argument_group('QC options')
-    qc_options.add_argument('--fastq_screen_subset',action='store',
+    qc_options.add_argument('--fastq_subset',action='store',
                             dest='subset',type=int,
-                            default=fastq_screen_subset,
+                            default=fastq_subset_size,
                             help="specify size of subset of total reads to "
-                            "use for fastq_screen (i.e. --subset option); "
+                            "use for fastq_screen, BAM file generation etc "
                             "(default %d, set to 0 to use all reads)" %
-                            fastq_screen_subset)
+                            fastq_subset_size)
     qc_options.add_argument('-t','--threads',action='store',dest="nthreads",
                             type=int,default=default_nthreads,
                             help="number of threads to use for QC script "
@@ -1379,7 +1379,7 @@ def run_qc(args):
     # Do the run_qc step
     retcode = d.run_qc(projects=args.project_pattern,
                        fastq_screens=fastq_screens,
-                       fastq_screen_subset=args.subset,
+                       fastq_subset=args.subset,
                        nthreads=args.nthreads,
                        fastq_dir=args.fastq_dir,
                        qc_dir=args.qc_dir,

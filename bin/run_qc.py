@@ -165,7 +165,7 @@ if __name__ == "__main__":
                             ", ".join(["'%s'" % x for x in PROTOCOLS]))
     qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
                             action='store',dest='fastq_screen_subset',
-                            default=__settings.qc.fastq_screen_subset,
+                            default=__settings.qc.fastq_subset_size,
                             type=int,
                             help="specify size of subset of total reads "
                             "to use for fastq_screen (i.e. --subset "
