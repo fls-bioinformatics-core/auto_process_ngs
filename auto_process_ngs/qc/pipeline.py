@@ -176,7 +176,7 @@ class QCPipeline(Pipeline):
 
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
                     qc_protocol=None,report_html=None,multiqc=False,
-                    sample_pattern=None,log_dir=None,convert_gtf=False):
+                    sample_pattern=None,log_dir=None,convert_gtf=True):
         """
         Add a project to the QC pipeline
 
@@ -201,8 +201,8 @@ class QCPipeline(Pipeline):
             directory)
           convert_gtf (bool): if True then convert
             GTF files to BED for 'infer_experiment.py'
-            (otherwise only use explicitly defined BED
-            files)
+            (default; otherwise only use the explicitly
+            defined BED files)
         """
         ###################
         # Do internal setup
