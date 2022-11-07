@@ -72,6 +72,7 @@ class TestSettings(unittest.TestCase):
         self.assertTrue(isinstance(s.runners.barcode_analysis,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.fastqc,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.fastq_screen,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.merge_fastqs,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.qualimap,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.rseqc,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.rsync,SimpleJobRunner))

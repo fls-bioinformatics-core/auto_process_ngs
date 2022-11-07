@@ -348,6 +348,7 @@ class Settings:
         for name in ('barcode_analysis',
                      'bcl2fastq',
                      'bcl_convert',
+                     'merge_fastqs',
                      'qc',
                      'stats',
                      'rsync',
