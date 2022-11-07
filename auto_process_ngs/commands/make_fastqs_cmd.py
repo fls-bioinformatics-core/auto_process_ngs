@@ -339,6 +339,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         'cellranger_runner': ap.settings.runners.cellranger_mkfastq,
         'cellranger_atac_runner': ap.settings.runners.cellranger_mkfastq,
         'cellranger_arc_runner': ap.settings.runners.cellranger_mkfastq,
+        'merge_fastqs_runner': ap.settings.runners.merge_fastqs,
         'spaceranger_runner': ap.settings.runners.cellranger_mkfastq,
         'stats_runner': ap.settings.runners.stats,
     }
