@@ -735,47 +735,62 @@ def add_publish_qc_command(cmdparser):
                               "be copied without further checking; if no "
                               "report is found then QC results will be "
                               "verified and a report generated first.")
-    p.add_argument('--projects',action='store',
-                   dest='project_pattern',default=None,
-                   help="simple wildcard-based pattern specifying a subset "
-                   "of projects and samples to publish the QC for. "
-                   "PROJECT_PATTERN can specify a single project, or a set "
-                   "of projects.")
-    p.add_argument('--qc_dir',action='store',
-                   dest='qc_dir',default=None,
-                   help="specify target directory to copy QC reports to. "
-                   "QC_DIR can be a local directory, or a remote location "
-                   "in the form '[[user@]host:]directory'. Overrides the "
-                   "default settings.")
-    p.add_argument('--use-hierarchy',choices=["yes","no"],
-                   dest='use_hierarchy',default=default_use_hierarchy,
-                   help="use YEAR/PLATFORM hierarchy under QC_DIR; can be "
-                   "'yes' or 'no' (default: %s)" % default_use_hierarchy)
-    p.add_argument('--exclude-zip-files',choices=["yes","no"],
-                   dest='exclude_zip_files',default=default_exclude_zips,
-                   help="exclude ZIP archives from publication; can be 'yes' "
-                   "or 'no' (default: %s)" % default_exclude_zips)
-    p.add_argument('--ignore-missing-qc',action='store_true',
-                   dest='ignore_missing_qc',default=False,
-                   help="skip projects where QC results are missing or "
-                   "can't be verified, or where reports can't be generated.")
-    p.add_argument('--regenerate-reports',action='store_true',
-                   dest='regenerate_reports',default=False,
-                   help="attempt to regenerate existing QC reports")
-    p.add_argument('--force',action='store_true',
-                   dest='force',default=False,
-                   help="force generation of QC reports for all projects "
-                   "even if verification has failed")
-    p.add_argument('--suppress-warnings',action='store_true',
-                   dest='suppress_warnings',default=False,
-                   help="don't include warning messages even if there are "
-                   "missing metrics in individual QC reports")
-    p.add_argument('--legacy',action='store_true',
-                   dest='legacy_mode',default=False,
-                   help="legacy mode: include links to MultiQC, cellranger "
-                   "count and ICELL8 reports in the top-level index page")
-    add_runner_option(p)
-    add_debug_option(p)
+    destination = p.add_argument_group('Destination options')
+    destination.add_argument('--qc_dir',action='store',
+                             dest='qc_dir',default=None,
+                             help="specify target directory to copy QC "
+                             "reports to. QC_DIR can be a local directory, "
+                             "or a remote location in the form "
+                             "'[[user@]host:]directory'. Overrides the "
+                             "default settings.")
+    destination.add_argument('--use-hierarchy',choices=["yes","no"],
+                             dest='use_hierarchy',
+                             default=default_use_hierarchy,
+                             help="use YEAR/PLATFORM hierarchy under QC_DIR; "
+                             "can be 'yes' or 'no' (default: %s)" %
+                             default_use_hierarchy)
+    projects = p.add_argument_group('Projects and data options')
+    projects.add_argument('--projects',action='store',
+                          dest='project_pattern',default=None,
+                          help="simple wildcard-based pattern specifying a "
+                          "subset of projects and samples to publish the QC "
+                          "for. PROJECT_PATTERN can specify a single "
+                          "project, or a set of projects.")
+    projects.add_argument('--ignore-missing-qc',action='store_true',
+                          dest='ignore_missing_qc',default=False,
+                          help="skip projects where QC results are missing "
+                          "or can't be verified, or where reports can't be "
+                          "generated.")
+    projects.add_argument('--exclude-zip-files',choices=["yes","no"],
+                          dest='exclude_zip_files',
+                          default=default_exclude_zips,
+                          help="exclude ZIP archives from publication; can "
+                          "be 'yes' or 'no' (default: %s)" %
+                          default_exclude_zips)
+    qcreports = p.add_argument_group('QC reporting options')
+    qcreports.add_argument('--regenerate-reports',action='store_true',
+                           dest='regenerate_reports',default=False,
+                           help="attempt to regenerate existing QC reports")
+    qcreports.add_argument('--force',action='store_true',
+                           dest='force',default=False,
+                           help="force generation of QC reports for all "
+                           "projects even if verification has failed")
+    qcreports.add_argument('--suppress-warnings',action='store_true',
+                           dest='suppress_warnings',default=False,
+                           help="don't include warning messages in "
+                           "(re)generated QC reports or top level index "
+                           "even if there are missing metrics in individual "
+                           "QC reports (NB won't be applied for pre-existing "
+                           "reports; combine with --regenerate-reports and "
+                           "--force to update all reports)")
+    qcreports.add_argument('--legacy',action='store_true',
+                           dest='legacy_mode',default=False,
+                           help="legacy mode: include links to MultiQC, "
+                           "'cellranger count' and ICELL8 reports in the "
+                           "top-level index page")
+    advanced = p.add_argument_group('Advanced/debugging options')
+    add_runner_option(advanced)
+    add_debug_option(advanced)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
