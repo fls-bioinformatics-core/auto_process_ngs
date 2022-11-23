@@ -247,6 +247,13 @@ The following runners are supported but deprecated:
 			      ``qualimap`` and ``rseqc`` runners)
 ============================= =========================================
 
+.. note::
+
+   It's recommended to only explicitly configure those runners
+   for which the default runner is not suitable, to avoid a
+   proliferation of unnecessary runner defintions in the
+   configuration file.
+
 .. _setting_number_of_cpus:
 
 --------------------------------
