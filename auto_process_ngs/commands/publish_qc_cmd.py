@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     publish_qc_cmd.py: implement auto process publish_qc command
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 #########################################################################
 
@@ -66,7 +66,8 @@ div.footer { font-style: italic;
 
 def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                regenerate_reports=False,force=False,use_hierarchy=False,
-               exclude_zip_files=False,legacy=False,runner=None):
+               exclude_zip_files=False,legacy=False,runner=None,
+               suppress_warnings=False):
     """
     Copy the QC reports to the webserver
 
@@ -581,7 +582,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 qc_artefacts = project_qc[project.name].qc_dirs[qc_dir]
                 if not qc_artefacts:
                     report_html.add(WarningIcon(),"QC reports not available")
-                elif not status[project.name][qc_dir]:
+                elif not status[project.name][qc_dir] and not suppress_warnings:
                     # Indicate a problem
                     report_html.add(WarningIcon())
                 qc_base = "%s_report" % qc_dir

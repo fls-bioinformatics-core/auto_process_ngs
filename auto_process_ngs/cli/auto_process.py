@@ -766,6 +766,10 @@ def add_publish_qc_command(cmdparser):
                    dest='force',default=False,
                    help="force generation of QC reports for all projects "
                    "even if verification has failed")
+    p.add_argument('--suppress-warnings',action='store_true',
+                   dest='suppress_warnings',default=False,
+                   help="don't include warning messages even if there are "
+                   "missing metrics in individual QC reports")
     p.add_argument('--legacy',action='store_true',
                    dest='legacy_mode',default=False,
                    help="legacy mode: include links to MultiQC, cellranger "
@@ -1426,6 +1430,7 @@ def publish_qc(args):
                  ignore_missing_qc=args.ignore_missing_qc,
                  regenerate_reports=args.regenerate_reports,
                  force=args.force,legacy=args.legacy_mode,
+                 suppress_warnings=args.suppress_warnings,
                  runner=runner)
 
 def archive(args):
