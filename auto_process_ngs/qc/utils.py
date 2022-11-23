@@ -94,7 +94,8 @@ def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
 
 def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
               report_html=None,zip_outputs=True,multiqc=False,
-              force=False,runner=None,log_dir=None):
+              force=False,runner=None,log_dir=None,
+              suppress_warning=False):
     """
     Generate report for the QC run for a project
 
@@ -119,6 +120,10 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         for running the reporting
       log_dir (str): optional, specify a directory to
         write logs to
+      suppress_warning (bool): if True then don't show the
+        warning message even when there are missing metrics
+        (default: show the warning if there are missing
+        metrics)
 
     Returns:
       Integer: exit code from reporting job (zero indicates
@@ -165,6 +170,8 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         report_cmd.add_args("--zip")
     if force:
         report_cmd.add_args("--force")
+    if suppress_warning:
+        report_cmd.add_args("--suppress-warning")
     report_cmd.add_args(project.dirn)
     # Check if environment modules are defined
     module_load_cmds = None
