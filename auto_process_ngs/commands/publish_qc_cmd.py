@@ -318,6 +318,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                               qc_dir=qc_dir,
                                               multiqc=True,
                                               force=force,
+                                              suppress_warning=
+                                              suppress_warnings,
                                               runner=runner,
                                               log_dir=ap.log_dir)
                     if report_status == 0:
