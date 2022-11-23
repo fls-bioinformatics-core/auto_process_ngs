@@ -159,6 +159,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             base_url = ap.settings.qc_web_server.url
     else:
         location = fileops.Location(location)
+    if not location.is_remote:
+        # Local path: make absolute
+        location = fileops.Location(os.path.abspath(str(location)))
     if use_hierarchy:
         datestamp = str(ap.metadata.instrument_datestamp)
         if len(datestamp) == 6:
