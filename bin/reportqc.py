@@ -75,6 +75,10 @@ def main():
                            dest='force',default=False,
                            help="force generation of reports even if "
                            "verification fails")
+    reporting.add_argument('--suppress-warning',action='store_true',
+                           dest='suppress_warning',default=False,
+                           help="don't include warning message even if "
+                           "there are missing metrics")
     data_dir_group = reporting.add_mutually_exclusive_group()
     data_dir_group.add_argument('--data-dir',action='store_true',
                                 dest='use_data_dir',
@@ -303,7 +307,8 @@ def main():
                              filename=out_file,
                              relative_links=True,
                              use_data_dir=use_data_dir,
-                             make_zip=args.zip)
+                             make_zip=args.zip,
+                             suppress_warning=args.suppress_warning)
         print("Wrote QC report to %s" % out_file)
     # Finish with appropriate exit code
     print("%s completed: exit code %s (%s)" %
