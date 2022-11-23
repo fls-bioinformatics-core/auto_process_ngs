@@ -749,6 +749,11 @@ def add_publish_qc_command(cmdparser):
                              help="use YEAR/PLATFORM hierarchy under QC_DIR; "
                              "can be 'yes' or 'no' (default: %s)" %
                              default_use_hierarchy)
+    destination.add_argument('--url',action='store',
+                             dest='base_url',default=None,
+                             help="specify the 'base' URL for accessing the "
+                             "published reports. Overrides the default "
+                             "settings")
     projects = p.add_argument_group('Projects and data options')
     projects.add_argument('--projects',action='store',
                           dest='project_pattern',default=None,
@@ -1440,6 +1445,7 @@ def publish_qc(args):
     d = AutoProcess(analysis_dir)
     d.publish_qc(projects=args.project_pattern,
                  location=args.qc_dir,
+                 base_url=args.base_url,
                  use_hierarchy=(args.use_hierarchy == 'yes'),
                  exclude_zip_files=(args.exclude_zip_files == 'yes'),
                  ignore_missing_qc=args.ignore_missing_qc,

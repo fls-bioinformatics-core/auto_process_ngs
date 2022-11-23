@@ -67,7 +67,7 @@ div.footer { font-style: italic;
 def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                regenerate_reports=False,force=False,use_hierarchy=False,
                exclude_zip_files=False,legacy=False,runner=None,
-               suppress_warnings=False):
+               base_url=None,suppress_warnings=False):
     """
     Copy the QC reports to the webserver
 
@@ -135,6 +135,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         explicitly include MultiQC reports for each project)
       runner (JobRunner): explicitly specify the job runner to
         send jobs to (overrides runner set in the configuration)
+      base_url (str): base URL for the QC server
+      suppress_warnings (bool): if True then don't report
+        warnings in QC reports or the index page (even if there
+        are missing metrics in individual reports)
     """
     # Turn off saving of parameters etc
     ap._save_params = False
@@ -151,6 +155,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     # Get location to publish qc reports to
     if location is None:
         location = fileops.Location(ap.settings.qc_web_server.dirn)
+        if base_url is None:
+            base_url = ap.settings.qc_web_server.url
     else:
         location = fileops.Location(location)
     if use_hierarchy:
@@ -760,12 +766,13 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if sched is not None:
         sched.stop()
     # Print the URL if given
-    if ap.settings.qc_web_server.url is not None:
-        url = ap.settings.qc_web_server.url
+    if base_url is not None:
+        url = base_url
         if use_hierarchy:
             url = os.path.join(url,
                                year,
-                               platform,
-                               os.path.basename(ap.analysis_dir),
-                               "index.html")
+                               platform)
+        url = os.path.join(url,
+                           os.path.basename(ap.analysis_dir),
+                           "index.html")
         print("QC published to %s" % url)
