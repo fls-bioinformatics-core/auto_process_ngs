@@ -351,6 +351,7 @@ class Settings:
                      'merge_fastqs',
                      'qc',
                      'stats',
+                     'publish_qc',
                      'rsync',
                      'icell8',
                      'icell8_contaminant_filter',

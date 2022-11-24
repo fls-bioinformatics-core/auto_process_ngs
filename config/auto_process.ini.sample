@@ -141,6 +141,7 @@ qualimap = SimpleJobRunner
 rseqc = SimpleJobRunner
 star = SimpleJobRunner
 stats = SimpleJobRunner
+publish_qc = SimpleJobRunner
 rsync = SimpleJobRunner
 cellranger_mkfastq = SimpleJobRunner
 cellranger_count = SimpleJobRunner
