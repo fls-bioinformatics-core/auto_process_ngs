@@ -164,12 +164,16 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             raise Exception("Invalid datestamp '%s' (use "
                             "--year option)" % datestamp)
         platform = ap.metadata.platform
+    # Set up runner
+    if runner is None:
+        runner = ap.settings.runners.publish_qc
     # Check the settings
     if location.is_remote:
         print("Copying QC to remote directory")
         print("user:\t%s" % location.user)
         print("host:\t%s" % location.server)
         print("dirn:\t%s" % location.path)
+        print("runner:\t%s" % runner)
     else:
         print("Copying QC to local directory")
     if use_hierarchy:
@@ -386,8 +390,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if projects:
         # Make log directory and set up scheduler
         # to farm out the intensive operations to
-        if runner is None:
-            runner = ap.settings.general.default_runner
         sched = SimpleScheduler(
             runner=runner,
             max_concurrent=ap.settings.general.max_concurrent_jobs,
