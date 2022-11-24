@@ -16,6 +16,7 @@ import ast
 import glob
 from .. import fileops
 from ..simple_scheduler import SimpleScheduler
+from ..simple_scheduler import SchedulerReporter
 from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import Link
@@ -59,6 +60,27 @@ img      { vertical-align: middle; }
 div.footer { font-style: italic;
              font-size: 70%; }
 """
+
+#######################################################################
+# Classes
+#######################################################################
+
+class PublishQCSchedulerReporter(SchedulerReporter):
+    """
+    Custom reporter for scheduler
+    """
+    def __init__(self):
+        SchedulerReporter.__init__(
+            self,
+            scheduler_status="[%(time_stamp)s] %(n_running)d running, "
+            "%(n_waiting)d waiting, %(n_finished)d finished",
+            job_scheduled="[%(time_stamp)s] scheduled job '%(job_name)s' "
+            "#%(job_number)d",
+            job_start="[%(time_stamp)s] started job '%(job_name)s' "
+            "#%(job_number)d (%(job_id)s)",
+            job_end="[%(time_stamp)s] completed job '%(job_name)s' "
+            "#%(job_number)d (%(job_id)s)"
+        )
 
 #######################################################################
 # Command functions
@@ -408,6 +430,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         # to farm out the intensive operations to
         sched = SimpleScheduler(
             runner=runner,
+            reporter=PublishQCSchedulerReporter(),
             max_concurrent=ap.settings.general.max_concurrent_jobs,
             poll_interval=ap.settings.general.poll_interval
         )
