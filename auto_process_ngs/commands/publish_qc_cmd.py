@@ -394,7 +394,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     else:
         dirn = str(location)
     dirn = os.path.join(dirn,os.path.basename(ap.analysis_dir))
-    # Create the publication directory
+    # Remove existing publication directory
+    if fileops.exists(dirn):
+        print("Found existing publication directory, removing")
+        fileops.remove_dir(dirn)
+    # (Re)create the publication directory
     fileops.mkdir(dirn,recursive=True)
     if not fileops.exists(dirn):
         raise Exception("Failed to create directory: %s" % dirn)

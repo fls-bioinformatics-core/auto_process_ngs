@@ -1321,3 +1321,38 @@ poll_interval = 0.5
                              "160621_K00879_0087_000000000-AGEW9_analysis",
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_erases_previously_published_data(self):
+        """publish_qc: erases previously published data
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir)
+        # Add additional content
+        extra_file = os.path.join(publication_dir,
+                                  "160621_K00879_0087_000000000-AGEW9_analysis",
+                                  "extra_file.txt")
+        with open(extra_file,'wt') as fp:
+            fp.write("Placeholder")
+        self.assertTrue(os.path.exists(extra_file))
+        # Republish
+        publish_qc(ap,location=publication_dir)
+        # Check additional content was removed
+        self.assertFalse(os.path.exists(extra_file))
