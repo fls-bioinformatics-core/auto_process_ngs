@@ -309,6 +309,22 @@ class TestExists(FileopsTestCase):
         self.assertTrue(exists(test_dir))
         self.assertFalse(exists(missing))
 
+class TestIsDir(FileopsTestCase):
+    """Tests for the 'isdir' function
+    """
+    def test_local_isdir(self):
+        """fileops.isdir: test for a local file/directory
+        """
+        test_file = os.path.join(self.test_dir,'test.txt')
+        with open(test_file,'w') as fp:
+            fp.write("This is a test file")
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        os.mkdir(test_dir)
+        missing = os.path.join(self.test_dir,'missing')
+        self.assertFalse(isdir(test_file))
+        self.assertTrue(isdir(test_dir))
+        self.assertFalse(isdir(missing))
+
 class TestRemoveFile(FileopsTestCase):
     """Tests for the 'remove_file' function
     """
@@ -331,6 +347,62 @@ class TestRemoveFile(FileopsTestCase):
         status = remove_file(test_dir)
         self.assertEqual(status,1)
         self.assertTrue(os.path.exists(test_dir))
+
+class TestRemoveDir(FileopsTestCase):
+    """Tests for the 'remove_dir' function
+    """
+    def test_local_remove_dir(self):
+        """fileops.remove_dir: remove a local directory
+        """
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        os.mkdir(test_dir)
+        self.assertTrue(os.path.exists(test_dir))
+        test_file = os.path.join(test_dir,'test.txt')
+        with open(test_file,'w') as fp:
+            fp.write("This is a test file")
+        self.assertTrue(os.path.exists(test_file))
+        status = remove_dir(test_dir)
+        self.assertEqual(status,0)
+        self.assertFalse(os.path.exists(test_dir))
+    def test_local_remove_dir_recursive(self):
+        """fileops.remove_dir: remove a local directory recursively
+        """
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        os.mkdir(test_dir)
+        self.assertTrue(os.path.exists(test_dir))
+        for subdir1 in ('a','b','c'):
+            os.mkdir(os.path.join(test_dir,subdir1))
+            for subdir2 in ('d','e'):
+                os.mkdir(os.path.join(test_dir,subdir1,subdir2))
+                test_file = os.path.join(test_dir,
+                                         subdir1,
+                                         subdir2,
+                                         'test.txt')
+                with open(test_file,'w') as fp:
+                    fp.write("This is a test file")
+                self.assertTrue(os.path.exists(test_file))
+        status = remove_dir(test_dir)
+        self.assertEqual(status,0)
+        self.assertFalse(os.path.exists(test_dir))
+    def test_local_remove_dir_empty_dir(self):
+        """fileops.remove_dir: remove an empty local directory
+        """
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        os.mkdir(test_dir)
+        self.assertTrue(os.path.exists(test_dir))
+        status = remove_dir(test_dir)
+        self.assertEqual(status,0)
+        self.assertFalse(os.path.exists(test_dir))
+    def test_local_remove_dir_fails_on_file(self):
+        """fileops.remove_dir: cannot remove a local file
+        """
+        test_file = os.path.join(self.test_dir,'test.txt')
+        with open(test_file,'w') as fp:
+            fp.write("This is a test file")
+        self.assertTrue(os.path.exists(test_file))
+        status = remove_dir(test_file)
+        self.assertEqual(status,1)
+        self.assertTrue(os.path.exists(test_file))
 
 class TestDiskUsage(FileopsTestCase):
     """Tests for the 'disk_usage' function
