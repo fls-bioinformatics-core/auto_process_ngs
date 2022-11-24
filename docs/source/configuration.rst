@@ -227,6 +227,7 @@ Runner name                   Used for
 ``qualimap``                  Running ``Qualimap`` in the QC pipeline
 ``rseqc``                     Running ``RSeQC`` ``geneBody_coverage.py``
                               in the QC pipeline
+``publish_qc``                Running jobs for QC publication
 ``icell8``                    Default runner for commands in the ICELL8
                               processing pipeline
 ``icell8_contaminant_filter`` Running the contaminant filtering in the
