@@ -339,6 +339,10 @@ class QCReport(Document):
         this directory and make link paths to these copies;
         relative path will be treated as a subdirectory of the
         project
+      suppress_warning (bool): if True then don't show the
+        warning message even when there are missing metrics
+        (default: show the warning if there are missing
+        metrics)
     """
     # Field descriptions for summary table
     field_descriptions = SUMMARY_FIELD_DESCRIPTIONS
@@ -349,7 +353,8 @@ class QCReport(Document):
     software_packages = sorted(list(software_names.keys()))
 
     def __init__(self,projects,title=None,qc_dir=None,report_attrs=None,
-                 summary_fields=None,relpath=None,data_dir=None):
+                 summary_fields=None,relpath=None,data_dir=None,
+                 suppress_warning=False):
         """
         Create a new QCReport instance
         """
@@ -406,6 +411,8 @@ class QCReport(Document):
         self.relpath = relpath
         # Status of report
         self.status = True
+        # Suppress warning?
+        self.suppress_warning = bool(suppress_warning)
         # Initialise tables
         self._init_metadata_table(projects)
         self._init_processing_software_table()
@@ -1483,7 +1490,7 @@ class QCReport(Document):
         """
         Set the visibility of the "warnings" section
         """
-        if self.status:
+        if self.status or self.suppress_warning:
             # Turn off display of warnings section
             self.warnings.add_css_classes("hide")
 
@@ -3435,7 +3442,7 @@ class ToggleButton:
 def report(projects,title=None,filename=None,qc_dir=None,
            report_attrs=None,summary_fields=None,
            relative_links=False,use_data_dir=False,
-           make_zip=False):
+           make_zip=False,suppress_warning=False):
     """
     Report the QC for a project
 
@@ -3461,6 +3468,10 @@ def report(projects,title=None,filename=None,qc_dir=None,
       make_zip (boolean): if True then also create a ZIP
         archive of the QC report and outputs (default is
         not to create the ZIP archive)
+      suppress_warning (bool): if True then don't show the
+        warning message even when there are missing metrics
+        (default: show the warning if there are missing
+        metrics)
 
     Returns:
       String: filename of the output HTML report.
@@ -3487,7 +3498,8 @@ def report(projects,title=None,filename=None,qc_dir=None,
                       report_attrs=report_attrs,
                       summary_fields=summary_fields,
                       data_dir=data_dir,
-                      relpath=relpath)
+                      relpath=relpath,
+                      suppress_warning=suppress_warning)
     # Styles
     report.add_css_rule(QC_REPORT_CSS_STYLES)
     # Write the report

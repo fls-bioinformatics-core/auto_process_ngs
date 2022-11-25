@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     publish_qc_cmd.py: implement auto process publish_qc command
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
 #
 #########################################################################
 
@@ -16,6 +16,7 @@ import ast
 import glob
 from .. import fileops
 from ..simple_scheduler import SimpleScheduler
+from ..simple_scheduler import SchedulerReporter
 from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import Link
@@ -61,12 +62,34 @@ div.footer { font-style: italic;
 """
 
 #######################################################################
+# Classes
+#######################################################################
+
+class PublishQCSchedulerReporter(SchedulerReporter):
+    """
+    Custom reporter for scheduler
+    """
+    def __init__(self):
+        SchedulerReporter.__init__(
+            self,
+            scheduler_status="[%(time_stamp)s] %(n_running)d running, "
+            "%(n_waiting)d waiting, %(n_finished)d finished",
+            job_scheduled="[%(time_stamp)s] scheduled job '%(job_name)s' "
+            "#%(job_number)d",
+            job_start="[%(time_stamp)s] started job '%(job_name)s' "
+            "#%(job_number)d (%(job_id)s)",
+            job_end="[%(time_stamp)s] completed job '%(job_name)s' "
+            "#%(job_number)d (%(job_id)s)"
+        )
+
+#######################################################################
 # Command functions
 #######################################################################
 
 def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                regenerate_reports=False,force=False,use_hierarchy=False,
-               exclude_zip_files=False,legacy=False,runner=None):
+               exclude_zip_files=False,legacy=False,runner=None,
+               base_url=None,suppress_warnings=False):
     """
     Copy the QC reports to the webserver
 
@@ -134,6 +157,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         explicitly include MultiQC reports for each project)
       runner (JobRunner): explicitly specify the job runner to
         send jobs to (overrides runner set in the configuration)
+      base_url (str): base URL for the QC server
+      suppress_warnings (bool): if True then don't report
+        warnings in QC reports or the index page (even if there
+        are missing metrics in individual reports)
     """
     # Turn off saving of parameters etc
     ap._save_params = False
@@ -150,8 +177,13 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     # Get location to publish qc reports to
     if location is None:
         location = fileops.Location(ap.settings.qc_web_server.dirn)
+        if base_url is None:
+            base_url = ap.settings.qc_web_server.url
     else:
         location = fileops.Location(location)
+    if not location.is_remote:
+        # Local path: make absolute
+        location = fileops.Location(os.path.abspath(str(location)))
     if use_hierarchy:
         datestamp = str(ap.metadata.instrument_datestamp)
         if len(datestamp) == 6:
@@ -317,6 +349,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                               qc_dir=qc_dir,
                                               multiqc=True,
                                               force=force,
+                                              suppress_warning=
+                                              suppress_warnings,
                                               runner=runner,
                                               log_dir=ap.log_dir)
                     if report_status == 0:
@@ -382,7 +416,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     else:
         dirn = str(location)
     dirn = os.path.join(dirn,os.path.basename(ap.analysis_dir))
-    # Create the publication directory
+    # Remove existing publication directory
+    if fileops.exists(dirn):
+        print("Found existing publication directory, removing")
+        fileops.remove_dir(dirn)
+    # (Re)create the publication directory
     fileops.mkdir(dirn,recursive=True)
     if not fileops.exists(dirn):
         raise Exception("Failed to create directory: %s" % dirn)
@@ -392,6 +430,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         # to farm out the intensive operations to
         sched = SimpleScheduler(
             runner=runner,
+            reporter=PublishQCSchedulerReporter(),
             max_concurrent=ap.settings.general.max_concurrent_jobs,
             poll_interval=ap.settings.general.poll_interval
         )
@@ -581,7 +620,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 qc_artefacts = project_qc[project.name].qc_dirs[qc_dir]
                 if not qc_artefacts:
                     report_html.add(WarningIcon(),"QC reports not available")
-                elif not status[project.name][qc_dir]:
+                elif not status[project.name][qc_dir] and not suppress_warnings:
                     # Indicate a problem
                     report_html.add(WarningIcon())
                 qc_base = "%s_report" % qc_dir
@@ -757,12 +796,13 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if sched is not None:
         sched.stop()
     # Print the URL if given
-    if ap.settings.qc_web_server.url is not None:
-        url = ap.settings.qc_web_server.url
+    if base_url is not None:
+        url = base_url
         if use_hierarchy:
             url = os.path.join(url,
                                year,
-                               platform,
-                               os.path.basename(ap.analysis_dir),
-                               "index.html")
+                               platform)
+        url = os.path.join(url,
+                           os.path.basename(ap.analysis_dir),
+                           "index.html")
         print("QC published to %s" % url)

@@ -31,7 +31,9 @@ These functions perform specific operations directly:
 - unzip: unpack a ZIP archive
 - rename: rename (move) a file or directory
 - exists: test if a file or directory exists
+- isdir: test if a path is a directory
 - remove_file: remove (delete) a file
+- remove_dir: remove (delete) a directory
 - disk_usage: get info on disk usage for a path
 
 These functions generate commands that can be executed e.g.
@@ -378,6 +380,30 @@ def exists(path):
     retval,output = test_cmd.subprocess_check_output()
     return (retval == 0)
 
+def isdir(path):
+    """
+    Test if a path is a directory
+
+    Arguments:
+      path (str): path to check
+
+    Returns:
+      Boolean: True if path is a directory,
+        False otherwise.
+    """
+    path = Location(path)
+    test_cmd = applications.Command('test',
+                                    '-d',
+                                    path.path)
+    if path.is_remote:
+        # Run test on remote system
+        test_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            test_cmd.command_line)
+    retval,output = test_cmd.subprocess_check_output()
+    return (retval == 0)
+
 def remove_file(path):
     """
     Remove (delete) a file
@@ -392,6 +418,32 @@ def remove_file(path):
     path = Location(path)
     rm_cmd = applications.Command('rm',
                                   '-f',
+                                  path.path)
+    if path.is_remote:
+        # Run removal on remote system
+        rm_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            rm_cmd.command_line)
+    retval,output = rm_cmd.subprocess_check_output()
+    return retval
+
+def remove_dir(path):
+    """
+    Remove (delete) a directory
+
+    Arguments:
+      path(str): path to directory to delete
+
+    Returns:
+      Integer: zero on success, non-zero on
+        failure.
+    """
+    path = Location(path)
+    if not isdir(path.path):
+        return 1
+    rm_cmd = applications.Command('rm',
+                                  '-rf',
                                   path.path)
     if path.is_remote:
         # Run removal on remote system

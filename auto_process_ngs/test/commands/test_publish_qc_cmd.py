@@ -31,7 +31,7 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = 0.1
 """)
         self.settings = Settings(settings_ini)
         # Create a temp 'bin' dir
@@ -1321,3 +1321,99 @@ poll_interval = 0.5
                              "160621_K00879_0087_000000000-AGEW9_analysis",
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_erases_previously_published_data(self):
+        """publish_qc: erases previously published data
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir)
+        # Add additional content
+        extra_file = os.path.join(publication_dir,
+                                  "160621_K00879_0087_000000000-AGEW9_analysis",
+                                  "extra_file.txt")
+        with open(extra_file,'wt') as fp:
+            fp.write("Placeholder")
+        self.assertTrue(os.path.exists(extra_file))
+        # Republish
+        publish_qc(ap,location=publication_dir)
+        # Check additional content was removed
+        self.assertFalse(os.path.exists(extra_file))
+
+    def test_publish_qc_with_backup_project(self):
+        """publish_qc: handle 'backup' copy of project
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Add extra 'backup' project by copying the
+        # existing undetermine project
+        shutil.copytree(
+            os.path.join(self.dirn,
+                         "160621_K00879_0087_000000000-AGEW9_analysis",
+                         "undetermined"),
+            os.path.join(self.dirn,
+                         "undetermined.bak"))
+        shutil.move(
+            os.path.join(self.dirn,
+                         "undetermined.bak"),
+            os.path.join(self.dirn,
+                         "160621_K00879_0087_000000000-AGEW9_analysis"))
+        self.assertTrue(os.path.isdir(
+            os.path.join(self.dirn,
+                         "160621_K00879_0087_000000000-AGEW9_analysis",
+                         "undetermined.bak")))
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              project.info.run)
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+        self.assertFalse(os.path.exists(
+            os.path.join(publication_dir,
+                         "160621_K00879_0087_000000000-AGEW9_analysis",
+                         "undetermined.bak")))
