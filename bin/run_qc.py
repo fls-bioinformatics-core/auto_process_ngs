@@ -625,7 +625,10 @@ if __name__ == "__main__":
         # Set up local runners
         default_runner = SimpleJobRunner()
         runners = {
-            'cellranger_runner': SimpleJobRunner(nslots=cellranger_localcores),
+            'cellranger_count_runner':
+            SimpleJobRunner(nslots=cellranger_localcores),
+            'cellranger_multi_runner':
+            SimpleJobRunner(nslots=cellranger_localcores),
             'fastqc_runner': SimpleJobRunner(nslots=nthreads),
             'fastq_screen_runner': SimpleJobRunner(nslots=nthreads),
             'qualimap_runner': SimpleJobRunner(nslots=ncores_qualimap),
@@ -654,7 +657,8 @@ if __name__ == "__main__":
             print("Setting up runners supplied on command line")
             default_runner = fetch_runner(args.runner)
             runners = {
-                'cellranger_runner': default_runner,
+                'cellranger_count_runner': default_runner,
+                'cellranger_multi_runner': default_runner,
                 'fastqc_runner': default_runner,
                 'fastq_screen_runner': default_runner,
                 'qualimap_runner': default_runner,
@@ -668,7 +672,8 @@ if __name__ == "__main__":
             print("Setting up runners from configuration")
             default_runner = __settings.general.default_runner
             runners = {
-                'cellranger_runner': __settings.runners.cellranger,
+                'cellranger_count_runner': __settings.runners.cellranger_count,
+                'cellranger_multi_runner': __settings.runners.cellranger_multi,
                 'fastqc_runner': __settings.runners.fastqc,
                 'fastq_screen_runner': __settings.runners.fastq_screen,
                 'qualimap_runner': __settings.runners.qualimap,

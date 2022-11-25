@@ -80,6 +80,6 @@ class Config(ConfigParser):
             return default
     def getrunner(self,section,option,default='SimpleJobRunner'):
         try:
-            return fetch_runner(self.get(section,option,default))
-        except Exception:
+            return fetch_runner(self.get(section,option,str(default)))
+        except Exception as ex:
             return None

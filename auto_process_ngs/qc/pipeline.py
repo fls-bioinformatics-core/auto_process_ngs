@@ -162,7 +162,8 @@ class QCPipeline(Pipeline):
         self.add_runner('star_runner')
         self.add_runner('qualimap_runner')
         self.add_runner('rseqc_runner')
-        self.add_runner('cellranger_runner')
+        self.add_runner('cellranger_count_runner')
+        self.add_runner('cellranger_multi_runner')
         self.add_runner('report_runner')
 
         # Define module environment modules
@@ -704,7 +705,7 @@ class QCPipeline(Pipeline):
                 self.add_task(run_cellranger_multi,
                               requires=(get_cellranger,
                                         get_cellranger_multi_config,),
-                              runner=self.runners['cellranger_runner'],
+                              runner=self.runners['cellranger_multi_runner'],
                               envmodules=self.envmodules['cellranger'],
                               log_dir=log_dir)
 
@@ -944,7 +945,7 @@ class QCPipeline(Pipeline):
                       requires=(get_cellranger,
                                 get_cellranger_reference_data,
                                 check_cellranger_count,),
-                      runner=self.runners['cellranger_runner'],
+                      runner=self.runners['cellranger_count_runner'],
                       envmodules=self.envmodules['cellranger'],
                       log_dir=log_dir)
 
@@ -1058,8 +1059,9 @@ class QCPipeline(Pipeline):
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
             instances; valid names are 'fastqc_runner',
-            'fastq_screen_runner','star_runner',
-            'report_runner','cellranger_runner',
+            'fastq_screen_runner','star_runner','rseqc_runner',
+            'qualimap_runner','cellranger_count_runner',
+            'cellranger_multi_runner','report_runner',
             'verify_runner', and 'default'
           enable_conda (bool): if True then enable use of
             conda environments to satisfy task dependencies

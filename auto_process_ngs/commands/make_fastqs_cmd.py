@@ -332,13 +332,15 @@ def make_fastqs(ap,protocol='standard',platform=None,
     default_runner = ap.settings.general.default_runner
     runners = {
         'rsync_runner': ap.settings.runners.rsync,
+        'barcode_analysis_runner': ap.settings.runners.barcode_analysis,
         'bcl2fastq_runner': ap.settings.runners.bcl2fastq,
         'bclconvert_runner': ap.settings.runners.bcl_convert,
         'demultiplex_icell8_atac_runner': ap.settings.runners.bcl2fastq,
-        'cellranger_runner': ap.settings.runners.cellranger,
-        'cellranger_atac_runner': ap.settings.runners.cellranger,
-        'cellranger_arc_runner': ap.settings.runners.cellranger,
-        'spaceranger_runner': ap.settings.runners.cellranger,
+        'cellranger_runner': ap.settings.runners.cellranger_mkfastq,
+        'cellranger_atac_runner': ap.settings.runners.cellranger_mkfastq,
+        'cellranger_arc_runner': ap.settings.runners.cellranger_mkfastq,
+        'merge_fastqs_runner': ap.settings.runners.merge_fastqs,
+        'spaceranger_runner': ap.settings.runners.cellranger_mkfastq,
         'stats_runner': ap.settings.runners.stats,
     }
     if runner is not None:

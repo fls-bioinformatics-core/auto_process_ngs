@@ -383,10 +383,12 @@ class MakeFastqs(Pipeline):
         self.add_runner('rsync_runner')
         self.add_runner('bcl2fastq_runner')
         self.add_runner('bclconvert_runner')
+        self.add_runner('barcode_analysis_runner')
         self.add_runner('demultiplex_icell8_atac_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('cellranger_atac_runner')
         self.add_runner('cellranger_arc_runner')
+        self.add_runner('merge_fastqs_runner')
         self.add_runner('spaceranger_runner')
         self.add_runner('stats_runner')
 
@@ -930,7 +932,8 @@ class MakeFastqs(Pipeline):
             fastq_out_dirs,
             self.params.out_dir
         )
-        self.add_task(merge_fastq_dirs)
+        self.add_task(merge_fastq_dirs,
+                      runner=self.runners['merge_fastqs_runner'])
 
         ##########################
         # Statistics and reporting
@@ -1227,7 +1230,9 @@ class MakeFastqs(Pipeline):
                             create_empty_fastqs=
                             self.params.create_empty_fastqs,
                             skip_merge=output_dirs_exist)
-                        self.add_task(make_fastqs)
+                        self.add_task(make_fastqs,
+                                      runner=
+                                      self.runners['merge_fastqs_runner'])
                         # Run BCL Convert for each lane in subset
                         for lane in lanes:
                             # Output dir for this lane
@@ -1341,6 +1346,8 @@ class MakeFastqs(Pipeline):
                             self.params.create_empty_fastqs,
                             skip_merge=final_output_exists)
                         self.add_task(make_fastqs,
+                                      runner=
+                                      self.runners['merge_fastqs_runner'],
                                       requires=(bcl_convert,))
             # ICELL8 RNA-seq
             if protocol == "icell8":
@@ -1842,9 +1849,13 @@ class MakeFastqs(Pipeline):
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
-            instances; valid names are 'qc_runner',
-            'report_runner','cellranger_runner',
-            'verify_runner','default'
+            instances; valid names are 'rsync_runner,
+            'bcl2fastq_runner', 'bclconvert_runner',
+            'barcode_analysis_runner', 'merge_fastqs_runner',
+            'demultiplex_icell8_atac_runner',
+            'cellranger_runner', 'cellranger_atac_runner',
+            'cellranger_arc_runner', 'spaceranger_runner',
+            'default'
           envmodules (mapping): mapping of names to
             environment module file lists; valid names are
             'bcl2fastq','cellranger_mkfastq',

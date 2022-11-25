@@ -253,13 +253,20 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         if dry_run:
             log_dir += '_dry_run'
         ap.set_log_dir(ap.get_log_subdir(log_dir))
-        # Set up runner
+        # Set up runners
         if runner is None:
-            runner = ap.settings.runners.rsync
-        runner.set_log_dir(ap.log_dir)
+            rsync_runner = ap.settings.runners.rsync
+            default_runner = ap.settings.general.default_runner
+        else:
+            rsync_runner = runner
+            default_runner = runner
+        # Set log directory
+        for r in (rsync_runner,
+                  default_runner,):
+            r.set_log_dir(ap.log_dir)
         # Setup a scheduler for multiple rsync jobs
         sched = simple_scheduler.SimpleScheduler(
-            runner=runner,
+            runner=default_runner,
             max_concurrent=ap.settings.general.max_concurrent_jobs,
             poll_interval=ap.settings.general.poll_interval)
         sched.start()
@@ -293,7 +300,8 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 extra_options=extra_options)
             print("Running %s" % rsync_fastqs)
             rsync_fastqs_job = sched.submit(rsync_fastqs,
-                                            name="rsync.archive_fastqs")
+                                            name="rsync.archive_fastqs",
+                                            runner=rsync_runner)
             # Exclude fastqs from main rsync
             for fastq_dir in fastq_dirs:
                 excludes.append('--exclude=%s' % fastq_dir)
@@ -315,6 +323,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             extra_options=excludes)
         print("Running %s" % rsync)
         rsync_job = sched.submit(rsync,name="rsync.archive",
+                                 runner=rsync_runner,
                                  wait_for=wait_for)
         archiving_jobs.append(rsync_job)
         # Wait for jobs to complete

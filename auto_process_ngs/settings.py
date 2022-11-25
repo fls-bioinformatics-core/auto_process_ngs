@@ -345,13 +345,13 @@ class Settings:
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',None)
         # Define runners for specific jobs
         self.add_section('runners')
-        for name in ('bcl2fastq',
+        for name in ('barcode_analysis',
+                     'bcl2fastq',
                      'bcl_convert',
+                     'merge_fastqs',
                      'qc',
-                     'qualimap',
-                     'rseqc',
-                     'star',
                      'stats',
+                     'publish_qc',
                      'rsync',
                      'icell8',
                      'icell8_contaminant_filter',
@@ -360,7 +360,16 @@ class Settings:
                      'cellranger',):
             self.runners[name] = config.getrunner('runners',name,
                                                   default_runner)
-        # Handle new runners that default to the 'qc' runner
+        # Handle runners that fall back to the 'cellranger' runner
+        for name in ('cellranger_count',
+                     'cellranger_mkfastq',):
+            self.runners[name] = config.getrunner('runners',name,
+                                                  self.runners.cellranger)
+        # Handle runners that fall back to the 'cellranger_count' runner
+        for name in ('cellranger_multi',):
+            self.runners[name] = config.getrunner('runners',name,
+                                                  self.runners.cellranger_count)
+        # Handle runners that fall back to the 'qc' runner
         for name in ('fastqc',
                      'fastq_screen',
                      'qualimap',
