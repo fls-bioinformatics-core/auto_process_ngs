@@ -11,6 +11,7 @@ from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockFastqStrandPy
+from auto_process_ngs.mock import MockGtf2bed
 from auto_process_ngs.mock import MockStar
 from auto_process_ngs.mock import MockSamtools
 from auto_process_ngs.mock import MockPicard
@@ -55,6 +56,17 @@ class TestQCPipeline(unittest.TestCase):
             with open(conf_file,'wt') as fp:
                 fp.write("")
             self.fastq_screens[screen] = conf_file
+        # Add (empty) reference data files
+        self.ref_data = dict()
+        for build in ('hg38','mm10',):
+            self.ref_data[build] = {}
+            build_dir = os.path.join(self.data,build)
+            os.mkdir(build_dir)
+            for ext in ('bed','gtf'):
+                f = os.path.join(build_dir,"%s.%s" % (build,ext))
+                with open(f,'wt') as fp:
+                    fp.write("")
+                self.ref_data[build][ext] = f
         # Store original location
         self.pwd = os.getcwd()
         # Store original PATH
@@ -81,6 +93,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -103,9 +116,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -120,8 +133,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -143,6 +156,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -164,9 +178,9 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -180,8 +194,8 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,None)
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -202,6 +216,7 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -222,9 +237,9 @@ class TestQCPipeline(unittest.TestCase):
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -239,8 +254,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,None)
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -270,6 +285,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -292,7 +308,7 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -308,7 +324,7 @@ class TestQCPipeline(unittest.TestCase):
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
         self.assertEqual(qc_info.annotation_bed,None)
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -338,6 +354,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -360,7 +377,7 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -375,7 +392,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
         self.assertEqual(qc_info.annotation_gtf,None)
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
@@ -407,6 +424,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -429,9 +447,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -446,8 +464,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -470,6 +488,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -491,9 +510,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -508,8 +527,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -536,6 +555,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -556,9 +576,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -573,8 +593,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -597,6 +617,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -617,9 +638,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            legacy_screens=True,
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
@@ -634,8 +655,8 @@ class TestQCPipeline(unittest.TestCase):
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastq_screens,None)
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -665,6 +686,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -685,9 +707,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -702,8 +724,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -726,6 +748,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -747,9 +770,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -764,8 +787,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -790,6 +813,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -813,9 +837,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -830,8 +854,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -853,6 +877,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -874,9 +899,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -891,8 +916,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -920,6 +945,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -940,9 +966,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -957,8 +983,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -980,6 +1006,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1010,11 +1037,11 @@ class TestQCPipeline(unittest.TestCase):
                            { 'human': '/data/hg38/star_index',
                              'mouse': '/data/mm10/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed',
-                             'mouse': '/data/mm10/mm10.bed' },
+                           { 'human': self.ref_data['hg38']['bed'],
+                             'mouse': self.ref_data['mm10']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf',
-                             'mouse': '/data/mm10/mm10.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'],
+                             'mouse': self.ref_data['mm10']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -1029,8 +1056,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check QC metadata
@@ -1043,8 +1070,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/mm10/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/mm10/mm10.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/mm10/mm10.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['mm10']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['mm10']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -1066,6 +1093,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1090,9 +1118,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -1107,8 +1135,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -1130,6 +1158,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1152,9 +1181,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            batch_size=3,
@@ -1170,8 +1199,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -1195,6 +1224,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1217,9 +1247,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            batch_size=3,
@@ -1235,8 +1265,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -1259,6 +1289,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1284,9 +1315,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -1301,8 +1332,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -1330,6 +1361,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1358,9 +1390,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0' },
                            poll_interval=POLL_INTERVAL,
@@ -1377,8 +1409,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"3.1.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-GRCh38-1.2.0")
@@ -1415,6 +1447,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1443,9 +1476,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1462,8 +1495,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1500,6 +1533,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1528,9 +1562,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1547,8 +1581,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1585,6 +1619,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1613,9 +1648,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -1632,8 +1667,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1670,6 +1705,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1701,9 +1737,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_exe=os.path.join(cellranger_bin,
@@ -1722,8 +1758,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1760,6 +1796,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1787,9 +1824,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_force_cells=10000,
@@ -1807,8 +1844,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -1845,6 +1882,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1873,9 +1911,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_premrna_references=
                            { 'human': '/data/refdata-cellranger-GRCh38-1.2.0_premrna' },
                            poll_interval=POLL_INTERVAL,
@@ -1892,8 +1930,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"3.1.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-GRCh38-1.2.0_premrna")
@@ -1930,6 +1968,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -1968,9 +2007,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_extra_projects=[
@@ -1990,8 +2029,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -2040,6 +2079,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2069,9 +2109,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -2088,8 +2128,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -2126,6 +2166,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2154,9 +2195,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -2173,8 +2214,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -2210,6 +2251,7 @@ class TestQCPipeline(unittest.TestCase):
         MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockPicard.create(os.path.join(self.bin,"picard"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
@@ -2239,9 +2281,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -2258,8 +2300,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"7.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -2296,6 +2338,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2325,9 +2368,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-1.2.0' },
@@ -2345,8 +2388,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"1.2.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-atac-GRCh38-1.2.0")
@@ -2383,6 +2426,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2412,9 +2456,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -2432,8 +2476,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0")
@@ -2470,6 +2514,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2499,9 +2544,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -2520,8 +2565,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0")
@@ -2559,6 +2604,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2589,9 +2635,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -2612,8 +2658,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2651,6 +2697,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2680,9 +2727,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
@@ -2702,8 +2749,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2741,6 +2788,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2799,9 +2847,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -2822,8 +2870,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"1.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -2874,6 +2922,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -2932,9 +2981,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_atac_references=
                            { 'human':
                              '/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0' },
@@ -2955,8 +3004,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -3006,6 +3055,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3065,9 +3115,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
@@ -3087,8 +3137,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"1.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -3138,6 +3188,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3197,9 +3248,9 @@ class TestQCPipeline(unittest.TestCase):
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            cellranger_arc_references=
@@ -3219,8 +3270,8 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"2.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-arc-GRCh38-2020-A")
@@ -3270,6 +3321,7 @@ class TestQCPipeline(unittest.TestCase):
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3316,9 +3368,9 @@ PBB,CMO302,PBB
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-gex-GRCh38-2020-A' },
@@ -3336,8 +3388,8 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
@@ -3383,6 +3435,7 @@ PBB,CMO302,PBB
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3409,9 +3462,9 @@ PBB,CMO302,PBB
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_arc_references=
                            { 'human':
                              '/data/refdata-cellranger-gex-GRCh38-2020-A' },
@@ -3429,8 +3482,8 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"6.0.0")
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3458,6 +3511,7 @@ PBB,CMO302,PBB
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3483,9 +3537,9 @@ PBB,CMO302,PBB
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -3502,8 +3556,8 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3525,6 +3579,7 @@ PBB,CMO302,PBB
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3550,9 +3605,9 @@ PBB,CMO302,PBB
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -3567,8 +3622,8 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3590,6 +3645,7 @@ PBB,CMO302,PBB
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3618,9 +3674,9 @@ PBB,CMO302,PBB
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            cellranger_transcriptomes=
                            { 'human': '/data/refdata-gex-GRCh38-2020-A' },
                            poll_interval=POLL_INTERVAL,
@@ -3637,8 +3693,8 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,"5.0.1")
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
@@ -3675,6 +3731,7 @@ PBB,CMO302,PBB
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3702,9 +3759,9 @@ PBB,CMO302,PBB
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -3719,8 +3776,8 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
@@ -3742,6 +3799,7 @@ PBB,CMO302,PBB
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3772,9 +3830,9 @@ PBB,CMO302,PBB
                            star_indexes=
                            { 'human': '/data/hg38/star_index' },
                            annotation_bed_files=
-                           { 'human': '/data/hg38/hg38.bed' },
+                           { 'human': self.ref_data['hg38']['bed'] },
                            annotation_gtf_files=
-                           { 'human': '/data/hg38/hg38.gtf' },
+                           { 'human': self.ref_data['hg38']['gtf'] },
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
@@ -3789,8 +3847,8 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
-        self.assertEqual(qc_info.annotation_bed,"/data/hg38/hg38.bed")
-        self.assertEqual(qc_info.annotation_gtf,"/data/hg38/hg38.gtf")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         # Check output and reports
