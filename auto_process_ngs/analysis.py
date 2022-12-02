@@ -1438,6 +1438,9 @@ def match_run_id(run,d):
       analysis directory (e.g. '201029_SN01234_0000123_AHXXXX')
     - a run identifier (e.g. 'HISEQ_201029#123')
 
+    If the identifier is a wildcard ('*') then any valid
+    analysis directory will be a match.
+
     Arguments:
       run (str): run identifier
       d (str): path to a run to check against
@@ -1459,7 +1462,7 @@ def match_run_id(run,d):
         analysis_dir = AnalysisDir(d)
         # Check run name
         logger.debug("%s: run name = %s" % (d,analysis_dir.run_name))
-        if analysis_dir.run_name == run:
+        if analysis_dir.run_name == run or run == '*':
             return d
         # Check run reference ID
         run_id = run_reference_id(
@@ -1492,6 +1495,12 @@ def locate_run(run,start_dir=None,ascend=False):
     - the name of a sequencing run associated with an
       analysis directory (e.g. '201029_SN01234_0000123_AHXXXX')
     - a run identifier (e.g. 'HISEQ_201029#123')
+
+    If the run identifier is a wildcard ('*') then
+    the first valid analysis directory that is
+    encountered on the search path will be matched;
+    note that this may result in non-deterministic
+    behaviour.
 
     Arguments:
       run (str): identifier for the run to locate
@@ -1565,6 +1574,7 @@ def locate_project(project_id,start_dir=None,ascend=False):
     - a valid project identifier (e.g.
       '201029_SN01234_0000123_AHXXXX_analysis:AB',
       'HISEQ_201029#123:AB' etc)
+    - a project name
 
     Arguments:
       project_id (str): identifier for the project
@@ -1594,6 +1604,15 @@ def locate_project(project_id,start_dir=None,ascend=False):
         return AnalysisProject(project)
     # Assume it's a run/project/sample specification
     run,project,sample = split_sample_reference(project_id)
+    # No run identifier supplied
+    if run is None:
+        run = '*'
+        # Also: if a project name was supplied
+        # without a sample then it will have been
+        # assigned to 'sample'
+        if sample and project is None:
+            project = sample
+            sample = None
     # Locate the run
     run = locate_run(run,start_dir=start_dir,ascend=ascend)
     if not run:

@@ -1481,6 +1481,9 @@ class TestMatchRunId(unittest.TestCase):
         # Run is a reference ID
         self.assertTrue(
             match_run_id("HISEQ_201029#87",run_dir))
+        # Run is a wildcard
+        self.assertTrue(
+            match_run_id("*",run_dir))
         # Run doesn't match
         self.assertFalse(
             match_run_id("UNKNOWN_201029#87",run_dir))
@@ -1527,6 +1530,9 @@ class TestLocateRun(unittest.TestCase):
         # Run is a reference ID
         self.assertEqual(run_dir,
                          locate_run("HISEQ_201029#87",start_dir=self.dirn))
+        # Run is a wildcard ('*')
+        self.assertEqual(run_dir,
+                         locate_run("*",start_dir=self.dirn))
         # Start from run directory
         self.assertEqual(run_dir,
                          locate_run(os.path.join(
@@ -1639,9 +1645,21 @@ class TestLocateProject(unittest.TestCase):
         self.assertEqual(project_dir,
                          locate_project("HISEQ_201029#87:AB",
                                         start_dir=self.dirn).dirn)
+        # Project specification where run is a wild card
+        self.assertEqual(project_dir,
+                         locate_project("*:AB",
+                                        start_dir=self.dirn).dirn)
         # Project specification also specifies a sample
         self.assertEqual(project_dir,
                          locate_project("HISEQ_201029#87:AB/AB1",
+                                        start_dir=self.dirn).dirn)
+        # Project specification includes sample but doesn't specify a run
+        self.assertEqual(project_dir,
+                         locate_project("AB/AB1",
+                                        start_dir=self.dirn).dirn)
+        # Project specification doesn't include run or sample
+        self.assertEqual(project_dir,
+                         locate_project("AB",
                                         start_dir=self.dirn).dirn)
         # Project doesn't exist
         self.assertEqual(None,locate_run("UNKNOWN:AB",start_dir=self.dirn))
