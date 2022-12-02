@@ -18,6 +18,7 @@ from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
 from auto_process_ngs.qc.utils import get_bam_basename
+from auto_process_ngs.qc.utils import get_seq_data_samples
 from auto_process_ngs.qc.utils import set_cell_count_for_project
 
 # Set to False to keep test output dirs
@@ -210,6 +211,69 @@ class TestGetBamBasename(unittest.TestCase):
                          "SM1_S1_L001_001")
         self.assertEqual(get_bam_basename("SM1_S1_R1_001.fastq.gz"),
                          "SM1_S1_001")
+
+class TestGetSeqDataSamples(unittest.TestCase):
+    """
+    Tests for the 'get_seq_data_samples' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestSetCellCountForProject')
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+    def _make_mock_analysis_project(self,library_type,
+                                    single_cell_platform=None):
+        # Create a mock AnalysisProject
+        m = MockAnalysisProject('PJB',
+                                fastq_names=("PJB1_S1_L001_R1_001.fastq.gz",
+                                             "PJB1_S1_L001_R2_001.fastq.gz",
+                                             "PJB2_S2_L001_R1_001.fastq.gz",
+                                             "PJB2_S2_L001_R2_001.fastq.gz",),
+                                metadata={'Single cell platform':
+                                          single_cell_platform,
+                                          'Library type': library_type,})
+        m.create(top_dir=self.wd)
+        return os.path.join(self.wd,'PJB')
+
+    def test_get_seq_data_samples(self):
+        """
+        get_seq_data_samples: standard analysis project
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project("RNA-seq")
+        # Check sequence data samples
+        self.assertEqual(get_seq_data_samples(project_dir),
+                         ["PJB1","PJB2"])
+
+    def test_get_seq_data_samples_10x_cellplex(self):
+        """
+        get_seq_data_samples: 10x CellPlex project
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "CellPlex",
+            single_cell_platform="10xGenomics Chromium 3'v3")
+        # Make 10x_multi_config.csv file
+        with open(os.path.join(project_dir,"10x_multi_config.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1,{fastq_dir},any,PJB1,gene expression,
+PJB2,{fastq_dir},any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""".format(fastq_dir=os.path.join(project_dir,'fastqs')))
+        # Check sequence data samples
+        self.assertEqual(get_seq_data_samples(project_dir),
+                         ["PJB1"])
 
 class TestSetCellCountForProject(unittest.TestCase):
     """
