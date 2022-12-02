@@ -558,7 +558,8 @@ class MultiomeLibraries:
                 run,project,remote_sample = split_sample_reference(
                     linked_sample)
                 linked_project = locate_project(
-                    "%s:%s" % (run,project),
+                    "%s%s" % ('%s:' % run if run else '',
+                              project),
                     start_dir=os.path.dirname(self._filen),
                     ascend=True)
                 if not linked_project:
@@ -613,7 +614,8 @@ class MultiomeLibraries:
                 run,project,linked_sample = \
                     split_sample_reference(sample_id)
                 project = locate_project(
-                    "%s:%s" % (run,project),
+                    "%s%s" % ('%s:' % run if run else '',
+                              project),
                     start_dir=os.path.dirname(self._filen),
                     ascend=True)
                 if not project:

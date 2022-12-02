@@ -20,6 +20,7 @@ from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_LIBRARIES
+from auto_process_ngs.mock10xdata import MULTIOME_LIBRARIES_NO_RUN
 from auto_process_ngs.tenx_genomics_utils import *
 
 # Set to False to keep test output dirs
@@ -758,8 +759,44 @@ class TestMultiomeLibraries(unittest.TestCase):
                               lanes=(1,2,3,4),
                               top_dir=self.wd)
         run.add_fastq_batch('PB_GEX','PB1_GEX','PB1_GEX_S1',lanes=(1,2,3,4))
-        run.add_fastq_batch('PB_GEX','PB2_GEX','PB2_GEX_S1',lanes=(1,2,3,4))
+        run.add_fastq_batch('PB_GEX','PB2_GEX','PB2_GEX_S2',lanes=(1,2,3,4))
         run.create()
+        # Check list of linked projects
+        linked_projects = m.linked_projects()
+        self.assertEqual(len(linked_projects),1)
+        self.assertEqual(linked_projects[0].dirn,
+                         os.path.join(self.wd,
+                                      "210111_NB01234_00012_ABXXXXX_analysis",
+                                      "PB_GEX"))
+
+    def test_multiome_libraries_linked_projects_same_run(self):
+        """MultiomeLibraries: return linked projects from same run
+        """
+        # Create run with linked projects
+        run = MockAnalysisDir("210111_NB01234_00012_ABXXXXX",
+                              "nextseq",
+                              project_metadata={
+                                  'PB_ATAC': {
+                                      'Library type': 'ATAC',
+                                  },
+                                  'PB_GEX': {
+                                      'Library type': 'GEX',
+                                  },
+                              },
+                              lanes=(1,2,3,4),
+                              top_dir=self.wd)
+        run.add_fastq_batch('PB_ATAC','PB1_ATAC','PB1_ATAC_S1',lanes=(1,2,3,4))
+        run.add_fastq_batch('PB_ATAC','PB2_ATAC','PB2_ATAC_S2',lanes=(1,2,3,4))
+        run.add_fastq_batch('PB_GEX','PB1_GEX','PB1_GEX_S3',lanes=(1,2,3,4))
+        run.add_fastq_batch('PB_GEX','PB2_GEX','PB2_GEX_S4',lanes=(1,2,3,4))
+        run.create()
+        # Put multiome libraries file into ATAC project
+        multiome_libraries_info = os.path.join(run.dirn,
+                                               "PB_ATAC",
+                                               "10x_multiome_libraries.info")
+        with open(multiome_libraries_info,'wt') as fp:
+            fp.write(MULTIOME_LIBRARIES_NO_RUN)
+        m = MultiomeLibraries(multiome_libraries_info)
         # Check list of linked projects
         linked_projects = m.linked_projects()
         self.assertEqual(len(linked_projects),1)
