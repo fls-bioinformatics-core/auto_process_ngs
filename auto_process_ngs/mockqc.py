@@ -407,6 +407,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      cellranger_pipelines=('cellranger',),
                      cellranger_samples=None,
                      cellranger_multi_samples=None,
+                     seq_data_samples=None,
                      include_fastqc=True,
                      include_fastq_screen=True,
                      include_strandedness=True,
@@ -439,6 +440,10 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         'cellranger-atac' etc)
       cellranger_samples (list): list of sample names to
         produce 'cellranger count' outputs for
+      cellranger_multi_samples (list): list of multiplexed
+        sample names for 10x CellPlex
+      seq_data_samples (list): list with subset of sample
+        names which include sequence (i.e. biological) data
       include_fastqc (bool): include outputs from Fastqc
       include_fastq_screen (bool): include outputs from
         FastqScreen
@@ -458,8 +463,6 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         count' outputs
       include_cellranger_multi (bool): include 'cellranger
         multi' outputs
-      cellranger_multi_samples (list): list of sample names to
-        produce 'cellranger multi' outputs for
       legacy_screens (bool): if True then use legacy naming
         convention for FastqScreen outputs
       legacy_cellranger_outs (bool): if True then use legacy
@@ -481,18 +484,22 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         qc_info['organism'] = ','.join(organisms)
     # Populate with fake QC products
     for fq in fastq_names:
+        # Sequence lengths
+        if include_seqlens:
+            MockQCOutputs.seqlens(fq,qc_dir)
         # FastQC
         if include_fastqc:
             MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
         # Fastq_screen
         if include_fastq_screen:
+            if seq_data_samples and \
+           (AnalysisFastq(fq).sample_name not in seq_data_samples):
+                # Skip for non-biological samples
+                continue
             for screen in screens:
                 MockQCOutputs.fastq_screen_v0_9_2(
                     fq,qc_dir,screen,legacy=legacy_screens)
             qc_info['fastq_screens'] = ','.join(screens)
-        # Sequence lengths
-        if include_seqlens:
-            MockQCOutputs.seqlens(fq,qc_dir)
     for fq_group in group_fastqs_by_name(fastq_names):
         if protocol in ('10x_scRNAseq',
                         '10x_snRNAseq',
@@ -502,6 +509,10 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             fq = fq_group[1]
         else:
             fq = fq_group[0]
+        if seq_data_samples and \
+           AnalysisFastq(fq).sample_name not in seq_data_samples:
+            # Skip for non-biological samples
+            continue
         # Strandedness
         if include_strandedness:
             MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
