@@ -76,6 +76,9 @@ class QCOutputs:
     - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
     - samples: sorted list of sample names extracted
       from Fastqs
+    - seq_data_samples: sorted list of samples with
+      biological data (rather than e.g. feature
+      barcodes)
     - bams: sorted list of BAM file names
     - organisms: sorted list of organism names
     - fastq_screens: sorted list of screen names
@@ -136,6 +139,7 @@ class QCOutputs:
         # Properties
         self.fastqs = set()
         self.samples = []
+        self.seq_data_samples = []
         self.bams = set()
         self.reads = []
         self.organisms = set()
@@ -174,6 +178,9 @@ class QCOutputs:
         print("Organisms:")
         for o in self.organisms:
             print("- %s" % o)
+        print("Biological samples:")
+        for s in self.seq_data_samples:
+            print("- %s" % s)
         print("Software:")
         for sw in self.software:
             print("- %s: %s" % (sw,','.join(self.software[sw])))
@@ -278,6 +285,14 @@ class QCOutputs:
             samples.add(s)
         self.samples = sorted(list(samples),
                               key=lambda s: split_sample_name(s))
+        # Samples with biological sequence data
+        if os.path.exists(os.path.join(self.qc_dir,'10x_multi_config.csv')):
+            cf = CellrangerMultiConfigCsv(os.path.join(self.qc_dir,
+                                                       '10x_multi_config.csv'))
+            self.seq_data_samples.extend([s for s in cf.gex_libraries
+                                          if s in samples])
+        else:
+            self.seq_data_samples = [s for s in self.samples]
         # Determine reads
         reads = set()
         for fastq in self.fastqs:
