@@ -45,6 +45,7 @@ class TestQCVerifier(unittest.TestCase):
                      cellranger_pipelines=('cellranger',),
                      cellranger_samples=None,
                      cellranger_multi_samples=None,
+                     seq_data_samples=None,
                      include_fastqc=True,
                      include_fastq_screen=True,
                      include_strandedness=True,
@@ -68,6 +69,7 @@ class TestQCVerifier(unittest.TestCase):
             cellranger_pipelines=cellranger_pipelines,
             cellranger_samples=cellranger_samples,
             cellranger_multi_samples=cellranger_multi_samples,
+            seq_data_samples=seq_data_samples,
             include_fastqc=include_fastqc,
             include_fastq_screen=include_fastq_screen,
             include_strandedness=include_strandedness,
@@ -1312,6 +1314,9 @@ class TestQCVerifier(unittest.TestCase):
         qc_dir = self._make_qc_dir('qc',
                                    protocol="10x_CellPlex",
                                    fastq_names=fastq_names,
+                                   seq_data_samples=("PJB1_GEX",),
+                                   include_rseqc_genebody_coverage=True,
+                                   include_qualimap_rnaseq=True,
                                    include_cellranger_count=True,
                                    include_cellranger_multi=True,
                                    cellranger_pipelines=('cellranger',),
@@ -1323,15 +1328,21 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB_CML1',
                                        'PJB_CML2',
                                    ))
+        verify_params = dict()
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_CellPlex",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="6.1.2",
-                                           cellranger_refdata=\
-                                           "/data/refdata-cellranger-2020-A"))
+        self.assertTrue(qc_verifier.verify(
+            fastqs=fastq_names,
+            qc_protocol="10x_CellPlex",
+            organism="Human",
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            star_index="/data/star/hg38",
+            annotation_bed="/data/annotation/hg38.bed",
+            annotation_gtf="/data/annotation/hg38.gtf",
+            cellranger_version="6.1.2",
+            cellranger_refdata=\
+            "/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_multi_no_config(self):
         """
@@ -1542,6 +1553,7 @@ class TestVerifyProject(unittest.TestCase):
                                fastq_dir="fastqs",qc_dir="qc",
                                fastq_names=None,
                                sample_names=None,
+                               seq_data_samples=None,
                                screens=('model_organisms',
                                         'other_organisms',
                                         'rRNA',),
@@ -1571,6 +1583,7 @@ class TestVerifyProject(unittest.TestCase):
             qc_dir=qc_dir,
             fastq_names=fastq_names,
             sample_names=sample_names,
+            seq_data_samples=seq_data_samples,
             screens=screens,
             include_fastqc=include_fastqc,
             include_fastq_screen=include_fastq_screen,
@@ -1633,6 +1646,8 @@ class TestVerifyProject(unittest.TestCase):
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_CellPlex',
+            sample_names=('PJB1_GEX','PJB2_CML',),
+            seq_data_samples=('PJB1_GEX',),
             include_cellranger_multi=True,
             cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
         project = AnalysisProject(analysis_dir)
@@ -1644,6 +1659,8 @@ class TestVerifyProject(unittest.TestCase):
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_CellPlex',
+            sample_names=('PJB1_GEX','PJB2_CML',),
+            seq_data_samples=('PJB1_GEX',),
             include_cellranger_multi=True,
             include_cellranger_count=True,
             cellranger_pipelines=('cellranger',),

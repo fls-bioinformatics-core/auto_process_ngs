@@ -103,10 +103,19 @@ class QCVerifier(QCOutputs):
             samples.add(self.fastq_attrs(fq).sample_name)
         samples = sorted(list(samples))
 
+        # Subsets of samples and Fastqs with sequence data
+        # (i.e. biological data rather than feature barcodes etc)
+        seq_data_samples = self.identify_seq_data(samples)
+        seq_data_fastqs = [fq for fq in fastqs
+                           if self.fastq_attrs(fq).sample_name
+                           in seq_data_samples]
+
         # Default parameters for verification
         default_params = dict(
             fastqs=fastqs,
             samples=samples,
+            seq_data_fastqs=seq_data_fastqs,
+            seq_data_samples=seq_data_samples,
             seq_data_reads=protocol.reads.seq_data,
             qc_reads=protocol.reads.qc,
             organism=organism,
@@ -218,6 +227,8 @@ class QCVerifier(QCOutputs):
         return status
 
     def verify_qc_module(self,name,fastqs=None,samples=None,
+                         seq_data_fastqs=None,
+                         seq_data_samples=None,
                          seq_data_reads=None,qc_reads=None,
                          organism=None,
                          fastq_screens=None,
@@ -235,6 +246,10 @@ class QCVerifier(QCOutputs):
           name (str): QC module name
           fastqs (list): list of Fastqs
           samples (list): list of sample names
+          seq_data_fastqs (list): list of Fastqs with
+            sequence (i.e. biological) data
+          seq_data_samples (list): list of sample names
+            with sequence (i.e. biological) data
           seq_data_reads (list): list of reads containing
             sequence data
           qc_reads (list): list of reads to perform general
@@ -264,6 +279,10 @@ class QCVerifier(QCOutputs):
           Exception: if the specified QC module name is not
             recognised.
         """
+        # Seq data Fastqs defaults to all Fastqs
+        if seq_data_fastqs is None:
+            seq_data_fastqs = fastqs
+
         # Perform checks based on QC module
         if name == "fastqc":
             if not fastqs:
@@ -282,12 +301,13 @@ class QCVerifier(QCOutputs):
                 return False
 
         elif name == "fastq_screen":
-            if not fastqs or not fastq_screens:
+            if not seq_data_fastqs or not fastq_screens:
                 # Nothing to check
                 return None
             try:
                 # Filter Fastq names
-                fastqs = self.filter_fastqs(seq_data_reads,fastqs)
+                fastqs = self.filter_fastqs(seq_data_reads,
+                                            seq_data_fastqs)
                 # Check outputs exist for each screen
                 for screen in fastq_screens:
                     if screen not in self.data('fastq_screen').\
@@ -321,7 +341,7 @@ class QCVerifier(QCOutputs):
                 return False
 
         elif name == "strandedness":
-            if not fastqs or \
+            if not seq_data_fastqs or \
                "fastq_strand.conf" not in self.config_files:
                 # No Fastqs or no conf file so strandedness
                 # outputs not expected
@@ -330,7 +350,8 @@ class QCVerifier(QCOutputs):
                 # No strandedness outputs present
                 return False
             # Filter Fastq names
-            fastqs = self.filter_fastqs(seq_data_reads[:1],fastqs)
+            fastqs = self.filter_fastqs(seq_data_reads[:1],
+                                        seq_data_fastqs)
             # Check that outputs exist for every Fastq
             for fq in fastqs:
                 if fq not in self.data('fastq_strand').fastqs:
@@ -338,7 +359,7 @@ class QCVerifier(QCOutputs):
             return True
 
         elif name == "rseqc_genebody_coverage":
-            if not fastqs:
+            if not seq_data_fastqs:
                 # Nothing to check
                 return None
             if not organism:
@@ -356,7 +377,7 @@ class QCVerifier(QCOutputs):
             return True
 
         elif name == "picard_insert_size_metrics":
-            if not fastqs:
+            if not seq_data_fastqs:
                 # Nothing to check
                 return None
             if not organism:
@@ -373,7 +394,8 @@ class QCVerifier(QCOutputs):
                 return False
             # Filter Fastq names and convert to BAM names
             bams = [get_bam_basename(fq)
-                    for fq in self.filter_fastqs(seq_data_reads[:1],fastqs)]
+                    for fq in self.filter_fastqs(seq_data_reads[:1],
+                                                 seq_data_fastqs)]
             # Check that outputs exist for every BAM
             for bam in bams:
                 if bam not in self.data('picard_collect_insert_size_metrics').\
@@ -382,7 +404,7 @@ class QCVerifier(QCOutputs):
             return True
 
         elif name == "qualimap_rnaseq":
-            if not fastqs:
+            if not seq_data_fastqs:
                 # Nothing to check
                 return None
             if not organism:
@@ -400,7 +422,8 @@ class QCVerifier(QCOutputs):
                 return False
             # Filter Fastq names and convert to BAM names
             bams = [get_bam_basename(fq)
-                    for fq in self.filter_fastqs(seq_data_reads[:1],fastqs)]
+                    for fq in self.filter_fastqs(seq_data_reads[:1],
+                                                 seq_data_fastqs)]
             # Check that outputs exist for every BAM
             for bam in bams:
                 if bam not in self.data('qualimap_rnaseq').bam_files:
@@ -549,6 +572,26 @@ class QCVerifier(QCOutputs):
         return filter_fastqs(reads,
                              fastqs,
                              fastq_attrs=self.fastq_attrs)
+
+    def identify_seq_data(self,samples):
+        """
+        Identify samples with sequence (biological) data
+
+        Arguments:
+          samples (list): list of all sample names
+
+        Returns:
+          List: subset of sample names with sequence data.
+        """
+        # Check for 10x_multi_config.csv
+        if "10x_multi_config.csv" in self.config_files:
+            # Get GEX sample names from multi config file
+            cf = CellrangerMultiConfigCsv(
+                os.path.join(self.qc_dir,"10x_multi_config.csv"))
+            seq_data = [s for s in cf.gex_libraries if s in samples]
+        else:
+            seq_data = [s for s in samples]
+        return seq_data
 
 #######################################################################
 # Functions
