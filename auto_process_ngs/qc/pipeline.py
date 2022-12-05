@@ -14,6 +14,7 @@ Pipeline classes:
 Pipeline task classes:
 
 - SetupQCDirs
+- GetSequenceDataSamples
 - GetSeqLengthStats
 - CheckFastqScreenOutputs
 - RunFastqScreen
@@ -97,6 +98,7 @@ from .protocols import determine_qc_protocol
 from .protocols import fetch_protocol_definition
 from .rseqc import InferExperiment
 from .utils import get_bam_basename
+from .utils import get_seq_data_samples
 from .utils import set_cell_count_for_project
 from .verification import parse_qc_module_spec
 from .verification import verify_project
@@ -340,6 +342,13 @@ class QCPipeline(Pipeline):
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
 
+        # Characterise samples
+        get_seq_data = GetSequenceDataSamples(
+            "%s: identify sequence data samples" % project.name,
+            project,
+            fastq_attrs=project.fastq_attrs)
+        self.add_task(get_seq_data)
+
         # Set up tasks to generate and characterise BAM files
         if require_bam_files:
 
@@ -362,6 +371,7 @@ class QCPipeline(Pipeline):
                 self.params.fastq_subset,
                 self.params.nthreads,
                 reads=read_numbers.seq_data,
+                include_samples=get_seq_data.output.seq_data_samples,
                 fastq_attrs=project.fastq_attrs,
                 verbose=self.params.VERBOSE)
             self.add_task(get_bam_files,
@@ -458,6 +468,8 @@ class QCPipeline(Pipeline):
                     qc_dir,
                     self.params.fastq_screens,
                     read_numbers=read_numbers.seq_data,
+                    include_samples=get_seq_data.output.seq_data_samples,
+                    fastq_attrs=project.fastq_attrs,
                     legacy=self.params.legacy_screens,
                     verbose=self.params.VERBOSE
                 )
@@ -544,6 +556,7 @@ class QCPipeline(Pipeline):
                     qc_dir,
                     setup_fastq_strand_conf.output.fastq_strand_conf,
                     read_numbers=read_numbers.seq_data,
+                    include_samples=get_seq_data.output.seq_data_samples,
                     verbose=self.params.VERBOSE
                 )
                 self.add_task(check_fastq_strand,
@@ -1228,6 +1241,36 @@ class SetupQCDirs(PipelineFunctionTask):
         if not os.path.exists(log_dir):
             mkdir(log_dir)
 
+class GetSequenceDataSamples(PipelineTask):
+    """
+    Identify samples with sequence (i.e. biological) data
+    """
+    def init(self,project,fastq_attrs):
+        """
+        Initialise the GetSequenceDataSamples task
+
+        Arguments:
+          project (AnalysisProject): project to get
+            samples for
+          fastq_attrs (BaseFastqAttrs): class to use for
+            extracting data from Fastq names
+
+        Outputs:
+          seq_data_samples (list): list of samples with
+            biological data
+        """
+        self.add_output('seq_data_samples',list())
+    def setup(self):
+        # Identify samples with biological data
+        seq_data_samples = get_seq_data_samples(self.args.project.dirn,
+                                                self.args.fastq_attrs)
+        # Report
+        print("Samples with sequence data:")
+        for sample in seq_data_samples:
+            print("- %s" % sample)
+        # Set outputs
+        self.output.seq_data_samples.extend(seq_data_samples)
+
 class UpdateQCMetadata(PipelineTask):
     """
     Update the metadata stored for this QC run
@@ -1332,7 +1375,8 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
     Check the outputs from FastqScreen
     """
     def init(self,project,qc_dir,screens,read_numbers=None,
-             legacy=False,verbose=False):
+             include_samples=None,fastq_attrs=None,legacy=False,
+             verbose=False):
         """
         Initialise the CheckFastqScreenOutputs task.
 
@@ -1344,6 +1388,10 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
           screens (mapping): mapping of screen names to
             FastqScreen conf files
           read_numbers (list): read numbers to include
+          include_samples (list): optional, list of sample
+            names to include
+          fastq_attrs (BaseFastqAttrs): class to use for
+            extracting data from Fastq names
           legacy (bool): if True then use 'legacy' naming
             convention for output files (default is to
             use new format)
@@ -1377,6 +1425,10 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
         fastqs = set()
         for result in self.result():
             for fq in result:
+                if self.args.include_samples:
+                    if self.args.fastq_attrs(fq).sample_name \
+                       not in self.args.include_samples:
+                        continue
                 fastqs.add(fq)
         self.output.fastqs.extend(list(fastqs))
         if self.output.fastqs:
@@ -1399,7 +1451,7 @@ class RunFastqScreen(PipelineTask):
     def init(self,fastqs,qc_dir,screens,subset=None,nthreads=None,
              read_numbers=None,fastq_attrs=None,legacy=False):
         """
-        Initialise the RunIlluminaQC task.
+        Initialise the RunFastqScreen task.
 
         Arguments:
           fastqs (list): list of paths to Fastq files to
@@ -1677,8 +1729,8 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
     """
     Check the outputs from the fastq_strand.py utility
     """
-    def init(self,project,qc_dir,fastq_strand_conf,
-             read_numbers=None,verbose=False):
+    def init(self,project,qc_dir,fastq_strand_conf,read_numbers=None,
+             include_samples=None,verbose=False):
         """
         Initialise the CheckFastqStrandOutputs task.
 
@@ -1691,6 +1743,8 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
             config file
           read_numbers (list): list of read numbers to
             include when checking outputs
+          include_samples (list): optional, list of sample
+            names to include
           verbose (bool): if True then print additional
             information from the task
 
@@ -1716,7 +1770,12 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
                       read_numbers=self.args.read_numbers)
     def finish(self):
         for result in self.result():
-            self.output.fastq_pairs.extend(result)
+            for fq_pair in result:
+                if self.args.include_samples:
+                    if self.args.project.fastq_attrs(fq_pair[0]).sample_name \
+                       not in self.args.include_samples:
+                        continue
+                self.output.fastq_pairs.append(fq_pair)
         if self.output.fastq_pairs:
             if self.args.verbose:
                 print("Fastq pairs with missing QC outputs from "
@@ -2785,8 +2844,8 @@ class GetBAMFiles(PipelineFunctionTask):
     BAMs are then sorted and indexed using samtools.
     """
     def init(self,fastqs,star_index,out_dir,subset_size=None,
-             nthreads=None,reads=None,fastq_attrs=None,
-             verbose=False):
+             nthreads=None,reads=None,include_samples=None,
+             fastq_attrs=None,verbose=False):
         """
         Initialise the GetBamFiles task
 
@@ -2802,6 +2861,8 @@ class GetBAMFiles(PipelineFunctionTask):
             to use
           reads (list): optional, list of read numbers to
             include (e.g. [1,2], [2] etc)
+          include_samples (list): optional, list of sample
+            names to include
           fastq_attrs (IlluminaFastq): optional, class to
             use for extracting information from Fastq file
             names
@@ -2825,13 +2886,20 @@ class GetBAMFiles(PipelineFunctionTask):
         else:
             self.report("STAR index is not set, cannot generate BAM files")
             return
-        # Remove index reads and group Fastqs
+        # Remove Fastqs not in listed sample names
         if self.args.fastq_attrs:
             fastq_attrs = self.args.fastq_attrs
         else:
             fastq_attrs = AnalysisFastq
+        if self.args.include_samples:
+            fastqs = [fq for fq in self.args.fastqs
+                      if fastq_attrs(fq).sample_name in
+                      self.args.include_samples]
+        else:
+            fastqs = self.args.fastqs
+        # Remove index reads and group Fastqs
         fq_pairs = group_fastqs_by_name(
-            remove_index_fastqs(self.args.fastqs,
+            remove_index_fastqs(fastqs,
                                 fastq_attrs=fastq_attrs),
             fastq_attrs=fastq_attrs)
         # Filter reads

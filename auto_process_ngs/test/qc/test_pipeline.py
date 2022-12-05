@@ -3423,6 +3423,17 @@ PBB,CMO302,PBB
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
+        # Verify missing outputs for multiplex capture samples
+        for f in ("PJB2_MC_S2_R2_001_fastq_strand.txt",
+                  "PJB2_MC_S2_R2_001_screen_model_organisms.txt",
+                  "PJB2_MC_S2_R2_001_screen_other_organisms.txt",
+                  "PJB2_MC_S2_R2_001_screen_rRNA.txt",
+                  "qualimap-rnaseq/human/PJB2_MC_S2_001",):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                         "PJB",
+                                                         "qc",
+                                                         f)),
+                             "Found %s (shouldn't exist)" % f)
 
     #@unittest.skip("Skipped")
     def test_qcpipeline_cellplex_no_10x_multi_config_file(self):
