@@ -119,6 +119,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -191,6 +192,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -264,6 +266,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -350,6 +353,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -440,6 +444,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -508,6 +513,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -584,6 +590,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -658,6 +665,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -730,6 +738,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -798,6 +807,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -876,6 +886,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -953,6 +964,7 @@ class TestMakeFastqs(unittest.TestCase):
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1045,6 +1057,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1137,6 +1150,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1221,6 +1235,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1296,6 +1311,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1380,6 +1396,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1455,6 +1472,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1544,6 +1562,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1622,6 +1641,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1704,6 +1724,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1779,6 +1800,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1862,6 +1884,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -1935,6 +1958,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2018,6 +2042,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2085,6 +2110,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2150,6 +2176,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2223,6 +2250,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2295,6 +2323,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2386,6 +2415,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2534,6 +2564,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2661,6 +2692,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2811,6 +2843,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -2916,6 +2949,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3021,6 +3055,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3117,6 +3152,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3199,6 +3235,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3317,6 +3354,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3440,6 +3478,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3559,6 +3598,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3679,6 +3719,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3791,6 +3832,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3927,6 +3969,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4073,6 +4116,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4185,6 +4229,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4262,6 +4307,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        poll_interval=POLL_INTERVAL)
         # Check outputs
         self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4358,6 +4404,7 @@ AB1,AB1,,,,,AB,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4433,6 +4480,7 @@ AB1,AB1,,,,,AB,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4533,6 +4581,7 @@ AB1,AB1,,,,,AB,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4628,6 +4677,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4755,6 +4805,7 @@ Unassigned-Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4844,6 +4895,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -4938,6 +4990,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5031,6 +5084,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5125,6 +5179,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"illumina")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5240,6 +5295,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5334,6 +5390,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5429,6 +5486,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5544,6 +5602,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5638,6 +5697,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5733,6 +5793,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5828,6 +5889,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -5922,6 +5984,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6018,6 +6081,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6114,6 +6178,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6207,6 +6272,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6301,6 +6367,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6380,6 +6447,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6458,6 +6526,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"nextseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6563,6 +6632,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6637,6 +6707,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6705,6 +6776,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6771,6 +6843,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6840,6 +6913,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"illumina")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -6912,6 +6986,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(status,0)
         # Check outputs
         self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -7361,6 +7436,81 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                               subset(lanes=[1,]),
                               subset(lanes=[2,3,4])
                           ))
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_standard_protocol_novaseq(self):
+        """
+        MakeFastqs: standard protocol/bcl2fastq: NovaSeq data
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "221206_A7001250_00042_AHGXXXX",
+            "novaseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.novaseq)
+        # Create mock bcl2fastq
+        # Check that bases mask is as expected
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the test
+        p = MakeFastqs(run_dir,
+                       sample_sheet,
+                       protocol="standard",
+                       platform="novaseq")
+        status = p.run(analysis_dir,
+                       poll_interval=POLL_INTERVAL)
+        self.assertEqual(status,0)
+        # Check outputs
+        self.assertEqual(p.output.platform,"novaseq")
+        self.assertEqual(p.output.flow_cell_mode,"SP")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bcl2fastq_info,
+                         (os.path.join(self.bin,"bcl2fastq"),
+                          "bcl2fastq",
+                          "2.20.0.422"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in (os.path.join("primary_data",
+                                    "221206_A7001250_00042_AHGXXXX"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "221206_A7001250_00042_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
 
 class TestSubsetFunction(unittest.TestCase):
     """
