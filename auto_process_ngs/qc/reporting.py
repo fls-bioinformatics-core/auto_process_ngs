@@ -282,6 +282,18 @@ SUMMARY_FIELD_DESCRIPTIONS = {
                       'Corresponding sample for single cell multiome analysis')
 }
 
+# Fields that are only applicable for biological data
+SEQ_DATA_SUMMARY_FIELDS = (
+    'bam_file',
+    'screens_.*',
+    'strandedness',
+    'strandedness_.*',
+    'insert_size_histogram',
+    'coverage_profile_along_genes',
+    'reads_genomic_origin',
+    'strand_specificity',
+)
+
 #######################################################################
 # Classes
 #######################################################################
@@ -2716,8 +2728,13 @@ class FastqGroupQCReporter:
                 # Encountered an exception trying to acquire the value
                 # for the field
                 if not self.is_seq_data:
-                    summary_table.set_value(idx,field,"&nbsp;")
-                    continue
+                    is_seq_data_field = any([bool(re.match('^%s$' % f,field))
+                                             for f in SEQ_DATA_SUMMARY_FIELDS])
+                    if is_seq_data_field:
+                        # Field not valid for non-biological
+                        # data so missing value is OK
+                        summary_table.set_value(idx,field,"&nbsp;")
+                        continue
                 fastqs = ", ".join([self.reporters[r].name
                                     for r in self.reads])
                 logger.warning("Exception setting '%s' in summary table "
