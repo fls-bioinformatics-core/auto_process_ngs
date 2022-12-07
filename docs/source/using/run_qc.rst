@@ -121,6 +121,21 @@ reports can be copied there for sharing using the
    pipeline by using the ``run_qc.py`` utility; see the
    section on :doc:`running the QC standalone <run_qc_standalone>`.
 
+--------------------------------
+Samples with non-biological data
+--------------------------------
+
+For some types of dataset (e.g. 10x Genomics CellPlex data), not
+all samples in the dataset contain biological data (for example,
+CellPlex datasets also have "multiplexing capture" samples which
+contain feature barcodes).
+
+Where these types of samples can be identified by the pipeline
+(for example, information in the ``10x_multi_config.csv`` file
+for CellPlex) only metrics that are appropriate for non-biological
+samples will be generated (e.g. screens, strandedness etc) and
+reported.
+
 ------------------
 Additional options
 ------------------
