@@ -115,6 +115,8 @@ Field name                Associated value
 ``single_cell_platform``  Name of the single-cell platform
                           (e.g. ``ICELL8``), or empty field
 			  if not a single-cell project
+``flow_cell_mode``        The flow cell mode stored in the
+                          run metadata
 ``organism``              Organism(s) associated with the
                           project
 ``no_of_samples``         Number of samples in the project
