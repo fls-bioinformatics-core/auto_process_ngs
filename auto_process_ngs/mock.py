@@ -4070,6 +4070,7 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
                                fastq_dir='fastqs',
                                fastq_names=None,
                                sample_names=None,
+                               seq_data_samples=None,
                                screens=('model_organisms',
                                         'other_organisms',
                                         'rRNA',),
@@ -4105,6 +4106,8 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
         names
       sample_names (list): optional, explicit list of sample
         names
+      seq_data_samples (list): list with subset of sample
+        names which include sequence (i.e. biological) data
       screens (list): optional, list of non-standard
         FastqScreen panel names
       include_fastqc (bool): include outputs from Fastqc
@@ -4170,6 +4173,7 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
                      cellranger_pipelines=cellranger_pipelines,
                      cellranger_samples=cellranger_samples,
                      cellranger_multi_samples=cellranger_multi_samples,
+                     seq_data_samples=seq_data_samples,
                      include_fastqc=include_fastqc,
                      include_fastq_screen=include_fastq_screen,
                      include_strandedness=include_strandedness,

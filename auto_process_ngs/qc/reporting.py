@@ -282,6 +282,18 @@ SUMMARY_FIELD_DESCRIPTIONS = {
                       'Corresponding sample for single cell multiome analysis')
 }
 
+# Fields that are only applicable for biological data
+SEQ_DATA_SUMMARY_FIELDS = (
+    'bam_file',
+    'screens_.*',
+    'strandedness',
+    'strandedness_.*',
+    'insert_size_histogram',
+    'coverage_profile_along_genes',
+    'reads_genomic_origin',
+    'strand_specificity',
+)
+
 #######################################################################
 # Classes
 #######################################################################
@@ -1209,6 +1221,8 @@ class QCReport(Document):
             css_classes=('sample',))
         reporter = SampleQCReporter(project,
                                     sample,
+                                    is_seq_data=(sample in
+                                                 project.seq_data_samples),
                                     qc_dir=qc_dir,
                                     fastq_attrs=project.fastq_attrs)
         reads = reporter.reads
@@ -1754,6 +1768,8 @@ class QCProject:
             set(qc_outputs.samples +
                 [s.name for s in self.project.samples])),
                 key=lambda s: split_sample_name(s))
+        # Biological samples
+        self.seq_data_samples = [s for s in qc_outputs.seq_data_samples]
         # Organisms
         self.organisms = qc_outputs.organisms
         # Fastq screens
@@ -1804,20 +1820,23 @@ class SampleQCReporter:
         'sample',
         'cellranger_count',
     )
-    def __init__(self,project,sample,qc_dir=None,
-                 fastq_attrs=AnalysisFastq):
+    def __init__(self,project,sample,is_seq_data=True,
+                 qc_dir=None,fastq_attrs=AnalysisFastq):
         """
         Create a new SampleQCReporter
 
         Arguments:
           project (QCProject): project to report
           sample (str): name of sample to report
+          is_seq_data (bool): if True then the sample
+            contains biological data
           qc_dir (str): path to the directory holding the
             QC artefacts
           fastq_attrs (BaseFastqAttrs): class for extracting
             data from Fastq names
         """
         self.sample = str(sample)
+        self.is_seq_data = bool(is_seq_data)
         self.fastq_groups = []
         self.cellranger_count = []
         self.cellranger_multi = []
@@ -1839,7 +1858,8 @@ class SampleQCReporter:
                 qc_dir=qc_dir,
                 project=project,
                 project_id=project.id,
-                fastq_attrs=fastq_attrs))
+                fastq_attrs=fastq_attrs,
+                is_seq_data=self.is_seq_data))
         # Reads associated with the sample
         if self.fastq_groups:
             self.reads = [r for r in self.fastq_groups[0].reads]
@@ -2314,9 +2334,11 @@ class FastqGroupQCReporter:
       project_id (str): identifier for the project
       fastq_attrs (BaseFastqAttrs): class for extracting
         data from Fastq names
+      is_seq_data (bool): if True then indicates that the
+        group contains biological data
     """
     def __init__(self,fastqs,qc_dir,project,project_id=None,
-                 fastq_attrs=AnalysisFastq):
+                 fastq_attrs=AnalysisFastq,is_seq_data=True):
         """
         Create a new FastqGroupQCReporter
         """
@@ -2324,6 +2346,7 @@ class FastqGroupQCReporter:
         self.project = project
         self.project_id = project_id
         self.fastq_attrs = fastq_attrs
+        self.is_seq_data = bool(is_seq_data)
         # Assign fastqs to reads
         self.fastqs = defaultdict(lambda: None)
         self.reporters = defaultdict(lambda: None)
@@ -2704,6 +2727,14 @@ class FastqGroupQCReporter:
             except Exception as ex:
                 # Encountered an exception trying to acquire the value
                 # for the field
+                if not self.is_seq_data:
+                    is_seq_data_field = any([bool(re.match('^%s$' % f,field))
+                                             for f in SEQ_DATA_SUMMARY_FIELDS])
+                    if is_seq_data_field:
+                        # Field not valid for non-biological
+                        # data so missing value is OK
+                        summary_table.set_value(idx,field,"&nbsp;")
+                        continue
                 fastqs = ", ".join([self.reporters[r].name
                                     for r in self.reads])
                 logger.warning("Exception setting '%s' in summary table "

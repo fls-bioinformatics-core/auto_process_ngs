@@ -11,6 +11,8 @@ Provides the following functions:
 - verify_qc: verify the QC run for a project
 - report_qc: generate report for the QC run for a project
 - get_bam_basename: return the BAM file basename from a Fastq filename
+- get_seq_data_samples: identify samples with biological (sequencing)
+  data
 - set_cell_count_for_project: sets total number of cells for a project
 """
 
@@ -29,6 +31,7 @@ from ..conda import CondaWrapperError
 from ..conda import make_conda_env_name
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
+from ..tenx_genomics_utils import CellrangerMultiConfigCsv
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
 
@@ -277,6 +280,40 @@ def get_bam_basename(fastq,fastq_attrs=None):
     bam_basename = fastq_attrs(fastq)
     bam_basename.read_number = None
     return str(bam_basename)
+
+def get_seq_data_samples(project_dir,fastq_attrs=None):
+    """
+    Identify samples with biological (sequencing) data
+
+    Arguments:
+      project_dir (str): path to the project directory
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        data from Fastq names (defaults to 'AnalysisFastq')
+
+    Returns:
+      List: list with subset of samples with biological
+        data
+    """
+    # Set up
+    if fastq_attrs is None:
+        fastq_attrs = AnalysisFastq
+    project = AnalysisProject(project_dir,
+                              fastq_attrs=fastq_attrs)
+    # Initial sample list
+    samples = sorted([s.name for s in project.samples])
+    # 10x Genomics CellPlex
+    single_cell_platform = project.info.single_cell_platform
+    if single_cell_platform:
+        if single_cell_platform.startswith("10xGenomics Chromium 3'") and \
+           project.info.library_type == "CellPlex":
+            # Check for config file
+            config_file = os.path.join(project.dirn,
+                                       "10x_multi_config.csv")
+            if os.path.exists(config_file):
+                config_csv = CellrangerMultiConfigCsv(config_file)
+                samples = sorted([s for s in config_csv.gex_libraries
+                                  if s in samples])
+    return samples
 
 def set_cell_count_for_project(project_dir,qc_dir=None):
     """
