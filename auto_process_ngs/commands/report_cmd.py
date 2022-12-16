@@ -611,6 +611,9 @@ def fetch_value(ap,project,field):
     elif field == 'sequencer_model':
         return ('' if not ap.metadata.sequencer_model
                 else ap.metadata.sequencer_model)
+    elif field == 'flow_cell_mode':
+        return ('' if not ap.metadata.flow_cell_mode
+                else ap.metadata.flow_cell_mode)
     elif field == 'no_of_samples' or field == '#samples':
         if cellplex_config:
             # Number of multiplexed samples

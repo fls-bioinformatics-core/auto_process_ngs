@@ -863,6 +863,42 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_projects_novaseq_flow_cell_mode(self):
+        """report: report run in 'projects' mode with NovaSeq flow cell mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '221216_A00879_0047_000000000-AGEW9',
+            'novaseq',
+            metadata={ "source": "testing",
+                       "run_number": 47,
+                       "sequencer_model": "NovaSeq 6000",
+                       "flow_cell_mode": "SP" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "NovaSeq 6000" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "NovaSeq 6000" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        expected = """221216\tNOVASEQ_221216#47\t47\tSP\ttesting\t\tAB\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tNOVASEQ\tNovaSeq 6000\t2\t\tyes\tAB1-2\t%s
+221216\tNOVASEQ_221216#47\t47\tSP\ttesting\t\tCDE\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tNOVASEQ\tNovaSeq 6000\t2\t\tyes\tCDE3-4\t%s
+""" % (ap.params.analysis_dir,ap.params.analysis_dir)
+        custom_fields = ['datestamp','run_id','run_number','flow_cell_mode','source','null','project','user','PI','library_type','single_cell_platform','organism','platform','sequencer_model','#samples','#cells','paired_end','samples','path']
+        for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
     def test_report_projects_single_cell(self):
         """report: report single-cell run in 'projects' mode
         """
