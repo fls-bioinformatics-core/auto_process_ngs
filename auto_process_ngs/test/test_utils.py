@@ -1055,6 +1055,34 @@ class TestParseVersion(unittest.TestCase):
         self.assertTrue(
             parse_version("") < parse_version("1.8.4"))
 
+class TestParseSampleSheetSpec(unittest.TestCase):
+    """Tests for the parse_samplesheet_spec function
+    """
+    def test_parse_samplesheet_spec_value_only(self):
+        """parse_samplesheet_spec: value only
+        """
+        self.assertEqual(parse_samplesheet_spec("Value"),
+                         ("Value",None,None,None))
+
+    def test_parse_samplesheet_spec_value_and_lanes(self):
+        """parse_samplesheet_spec: value and lanes
+        """
+        self.assertEqual(parse_samplesheet_spec("1-2,3,4:Value"),
+                         ("Value",[1,2,3,4],None,None))
+
+    def test_parse_samplesheet_spec_value_and_pattern(self):
+        """parse_samplesheet_spec: value and column pattern
+        """
+        self.assertEqual(parse_samplesheet_spec("SAMPLE_ID=*:Value"),
+                         ("Value",None,"SAMPLE_ID","*"))
+
+    def test_parse_samplesheet_spec_value_lanes_and_pattern(self):
+        """parse_samplesheet_spec: value, lanes and and column pattern
+        """
+        self.assertEqual(parse_samplesheet_spec(
+            "1-2,3,4:SAMPLE_ID=*:Value"),
+                         ("Value",[1,2,3,4],"SAMPLE_ID","*"))
+
 class TestPrettyPrintRows(unittest.TestCase):
     """Tests for the pretty_print_rows function
 
