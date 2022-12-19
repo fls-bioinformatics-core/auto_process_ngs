@@ -61,6 +61,7 @@ from . import get_version
 @add_command("update_fastq_stats",commands.update_fastq_stats)
 @add_command("import_project",commands.import_project)
 @add_command("clone",commands.clone)
+@add_command("samplesheet",commands.samplesheet)
 class AutoProcess:
     """
     Class implementing an automatic fastq generation and QC
@@ -300,20 +301,6 @@ class AutoProcess:
                 except KeyError:
                     print("Unable to get sequencer model for "
                           "instrument '%s'" % instrument_name)
-
-    def edit_samplesheet(self):
-        """
-        Bring up SampleSheet in an editor
-        """
-        # Fetch the sample sheet
-        sample_sheet_file = self.params.sample_sheet
-        if sample_sheet_file is None:
-            logging.error("No sample sheet file to edit")
-            return
-        edit_file(sample_sheet_file)
-        # Check updated sample sheet and issue warnings
-        if check_and_warn(sample_sheet_file=sample_sheet_file):
-            logging.error("Sample sheet may have problems, see warnings above")
 
     def init_readme(self):
         """
