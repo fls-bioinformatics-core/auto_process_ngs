@@ -14,6 +14,7 @@ from auto_process_ngs.samplesheet_utils import has_invalid_characters
 from auto_process_ngs.samplesheet_utils import barcode_is_valid
 from auto_process_ngs.samplesheet_utils import barcode_is_10xgenomics
 from auto_process_ngs.samplesheet_utils import get_close_names
+from auto_process_ngs.samplesheet_utils import set_samplesheet_column
 
 sample_sheet_header = """[Header]
 IEMFileVersion,4
@@ -345,4 +346,99 @@ class TestCloseNamesFunction(unittest.TestCase):
                                           "Filipe Greer",)),
                          { "Andrew Bloggs": ["Andrew Blogs"],
                            "Andrew Blogs": ["Andrew Bloggs"] })
-        
+
+class TestSetSampleSheetSetColumn(unittest.TestCase):
+    def test_set_samplesheet_column_project_to_name(self):
+        """
+        set_samplesheet_column: set project to sample name
+        """
+        sample_sheet_data = u"""[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,Sample_AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,Sample_AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,Sample_CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,Sample_FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        s = SampleSheet(fp=StringIO(sample_sheet_data))
+        s1 = set_samplesheet_column(s,"SAMPLE_PROJECT","SAMPLE_NAME")
+        for line in s1:
+            self.assertEqual(line['Sample_Project'],line['Sample_Name'])
+    def test_set_samplesheet_column_project_to_id(self):
+        """
+        set_samplesheet_column: set project to sample ID
+        """
+        sample_sheet_data = u"""[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,Sample_AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,Sample_AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,Sample_CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,Sample_FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        s = SampleSheet(fp=StringIO(sample_sheet_data))
+        s1 = set_samplesheet_column(s,"SAMPLE_PROJECT","SAMPLE_ID")
+        for line in s1:
+            self.assertEqual(line['Sample_Project'],line['Sample_ID'])
+    def test_set_samplesheet_column_project_to_value(self):
+        """
+        set_samplesheet_column: set project to a specific value
+        """
+        sample_sheet_data = u"""[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,Sample_AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,Sample_AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,Sample_CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,Sample_FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        s = SampleSheet(fp=StringIO(sample_sheet_data))
+        s1 = set_samplesheet_column(s,"SAMPLE_PROJECT","Project1")
+        for line in s1:
+            self.assertEqual(line['Sample_Project'],"Project1")
+    def test_set_samplesheet_column_project_to_value_for_lane(self):
+        """
+        set_samplesheet_column: set project to specific value for a lane
+        """
+        sample_sheet_data = u"""[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,Sample_AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,Sample_AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,Sample_CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,Sample_FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        s = SampleSheet(fp=StringIO(sample_sheet_data))
+        s1 = set_samplesheet_column(s,"SAMPLE_PROJECT","Project1",
+                                    lanes=[1])
+        for line in s1:
+            if line['Lane'] == 1:
+                self.assertEqual(line['Sample_Project'],"Project1")
+            else:
+                self.assertNotEqual(line['Sample_Project'],"Project1")
+    def test_set_samplesheet_column_names_to_ids(self):
+        """
+        set_samplesheet_column: set sample names to sample IDs
+        """
+        sample_sheet_data = u"""[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,Sample_AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,Sample_AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,Sample_CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,Sample_FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        s = SampleSheet(fp=StringIO(sample_sheet_data))
+        s1 = set_samplesheet_column(s,"SAMPLE_NAME","SAMPLE_ID")
+        for line in s1:
+            self.assertEqual(line['Sample_Name'],line['Sample_ID'])
+    def test_set_samplesheet_column_ids_to_names(self):
+        """
+        set_samplesheet_column: set sample IDs to sample names
+        """
+        sample_sheet_data = u"""[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,Sample_AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,Sample_AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,Sample_CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,Sample_FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        s = SampleSheet(fp=StringIO(sample_sheet_data))
+        s1 = set_samplesheet_column(s,"SAMPLE_ID","SAMPLE_NAME")
+        for line in s1:
+            self.assertEqual(line['Sample_Name'],line['Sample_ID'])
