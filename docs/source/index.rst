@@ -54,6 +54,12 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    Importing projects </using/import_project>
    Running QC stand-alone <using/run_qc_standalone>
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Helpers
+
+   Sample sheet manipulations <using/samplesheet>
+
 .. _control-files:
 
 .. toctree::
