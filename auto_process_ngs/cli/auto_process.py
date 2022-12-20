@@ -222,21 +222,22 @@ def add_samplesheet_command(cmdparser):
     mutex.add_argument('--set-sample-id',
                        metavar="[LANES:][COL=PATTERN:]NEW_ID",
                        action='store',dest='set_sample_id',
-                       help="update the sample ID field for the "
-                       "lines matching the supplied set of lanes "
-                       "(specified as e.g. '1', '1,2,3', '1-3', "
-                       "'1,3-5' etc) and/or columns with the supplied "
-                       "glob-stype pattern. NEW_ID can be either "
+                       help="update the sample ID field."
+                       "Optional LANES specifies one or more lanes "
+                       "(e.g. '1', '1,2,3', '1-3', '1,3-5') to update; "
+                       "optional COL=PATTERN specifies a glob-style "
+                       "pattern to match to an arbitrary column (e.g. "
+                       "'Sample_Name=ITS*'); NEW_ID can be either "
                        "'SAMPLE_NAME' or an arbitrary string")
     mutex.add_argument('--set-sample-name',metavar="NEW_NAME",
                        action='store',dest='set_sample_name',
-                       help="update the sample name field; "
-                       "NEW_NAME should be of the form "
-                       "'[<lanes>:]<name>'; optional <lanes> specifies "
-                       "which lanes to update. If no lanes are specified "
-                       "then all samples will have their name set to "
-                       "<name>, which can be either 'SAMPLE_ID', "
-                       "or an arbitrary string")
+                       help="update the sample name field."
+                       "Optional LANES specifies one or more lanes "
+                       "(e.g. '1', '1,2,3', '1-3', '1,3-5') to update; "
+                       "optional COL=PATTERN specifies a glob-style "
+                       "pattern to match to an arbitrary column (e.g. "
+                       "'Sample_Name=ITS*'); NEW_NAME can be either "
+                       "'SAMPLE_ID' or an arbitrary string")
     mutex.add_argument('-e','--edit',action='store_true',dest='edit',
                        default=False,
                        help="bring up sample sheet file in an editor "
