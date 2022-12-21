@@ -859,16 +859,17 @@ def add_report_command(cmdparser):
                                help="Generate reporting information",
                                description="Report information on analysis "
                                "in ANALYSIS_DIR.")
-    p.add_argument('--logging',action='store_true',dest='logging',
-                   default=False,
-                   help="print short report suitable for logging file")
-    p.add_argument('--summary',action='store_true',dest='summary',
-                   default=False,
-                   help="print full report suitable for bioinformaticians")
-    p.add_argument('--projects',action='store_true',dest='projects',
-                   default=False,
-                   help="print tab-delimited line (one per project) "
-                   "suitable for injection into a spreadsheet")
+    mutex = p.add_mutually_exclusive_group()
+    mutex.add_argument('--logging',action='store_true',dest='logging',
+                       default=False,
+                       help="print short report suitable for logging file")
+    mutex.add_argument('--summary',action='store_true',dest='summary',
+                       default=False,
+                       help="print full report suitable for bioinformaticians")
+    mutex.add_argument('--projects',action='store_true',dest='projects',
+                       default=False,
+                       help="print tab-delimited line (one per project) "
+                       "suitable for injection into a spreadsheet")
     p.add_argument('--fields',action='store',dest='fields',default=None,
                    help="fields to report")
     p.add_argument('--template',action='store',dest='template',
