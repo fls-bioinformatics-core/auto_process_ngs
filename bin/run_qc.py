@@ -178,6 +178,16 @@ if __name__ == "__main__":
                             "(default: %s)" % ('taken from job runner'
                                                if not default_nthreads
                                                else default_nthreads,))
+    # Mapping options
+    mapping = p.add_argument_group('STAR options')
+    mapping.add_argument('--star-index',action='store',
+                         metavar="INDEX",
+                         dest='star_index',
+                         help="specify the path to the STAR genome index "
+                         "to use when mapping reads for metrics such as "
+                         "strandedness etc (overrides the "
+                         "organism-specific indexes defined in the config "
+                         "file)")
     # Cellranger options
     cellranger = p.add_argument_group('Cellranger/10xGenomics options')
     cellranger.add_argument('--cellranger',action='store',
@@ -499,6 +509,9 @@ if __name__ == "__main__":
         star_index = __settings.organisms[organism].star_index
         if star_index:
             star_indexes[organism] = star_index
+    force_star_index = args.star_index
+    if force_star_index:
+        force_star_index = os.path.abspath(force_star_index)
 
     # Annotation files
     annotation_bed_files = dict()
@@ -813,6 +826,7 @@ if __name__ == "__main__":
                        enable_conda=enable_conda,
                        conda_env_dir=args.conda_env_dir,
                        working_dir=working_dir,
+                       force_star_index=force_star_index,
                        legacy_screens=use_legacy_screen_names,
                        verbose=args.verbose)
 
