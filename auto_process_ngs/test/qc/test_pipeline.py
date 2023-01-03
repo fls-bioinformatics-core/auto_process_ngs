@@ -145,6 +145,19 @@ class TestQCPipeline(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
+        # Check collated Picard insert sizes
+        collated_insert_sizes = os.path.join(self.wd,
+                                             "PJB",
+                                             "qc",
+                                             "insert_sizes.human.tsv")
+        self.assertTrue(os.path.exists(collated_insert_sizes),
+                        "Missing collated insert sizes TSV")
+        with open(collated_insert_sizes,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """#Bam file	Mean insert size	Standard deviation	Median insert size	Median absolute deviation
+PJB1_S1_001.bam	153.754829	69.675347	139	37
+PJB2_S2_001.bam	153.754829	69.675347	139	37
+""")
 
     def test_qcpipeline_with_no_screens(self):
         """QCPipeline: standard QC run with no screens defined
