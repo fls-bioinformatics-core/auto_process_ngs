@@ -93,6 +93,25 @@ default ``run_qc.py`` will stop without running the pipeline;
 to override this behaviour and update an existing QC output
 directory, specify the ``-u`` or ``--update`` option.
 
+Specifying reference data
+-------------------------
+
+By default the reference data used in the QC pipeline (for
+example the ``STAR`` index or the genome annotation) are
+determined from the configuration file according to the
+organism associated with the dataset.
+
+If no matching reference data are found then the following
+options are available:
+
+* ``--star-index``: sets the path to the ``STAR`` index
+  to use
+* ``--gtf``: sets the path to the genome annotation in
+  GTF format
+
+Note that these options will also override the reference data
+which are set in the configuration.
+
 Running 10xGenomics single library analyses
 -------------------------------------------
 
