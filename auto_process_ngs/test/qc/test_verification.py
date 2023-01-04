@@ -298,6 +298,18 @@ class TestQCVerifier(unittest.TestCase):
                              fastqs=fastq_names,
                              organism="Human",
                              star_index="/data/indexes/STAR"))
+        # Organism name contains spaces
+        qc_dir = self._make_qc_dir('qc.homo_sapiens',
+                                   fastq_names=fastq_names[:-2],
+                                   organisms=('Homo sapiens',),
+                                   include_rseqc_genebody_coverage=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'rseqc_genebody_coverage',
+            fastqs=fastq_names,
+            organism="Homo sapiens",
+            star_index="/data/indexes/STAR",
+            annotation_bed="/data/annot/human.bed"))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
@@ -355,6 +367,18 @@ class TestQCVerifier(unittest.TestCase):
             fastqs=fastq_names,
             seq_data_reads=('r1','r2'),
             organism="Human",
+            star_index="/data/indexes/STAR"))
+        # Organism name contains spaces
+        qc_dir = self._make_qc_dir('qc.homo_sapiens',
+                                   fastq_names=fastq_names,
+                                   organisms=('Homo sapiens',),
+                                   include_picard_insert_size_metrics=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'picard_insert_size_metrics',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Homo sapiens",
             star_index="/data/indexes/STAR"))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
@@ -415,6 +439,20 @@ class TestQCVerifier(unittest.TestCase):
                              seq_data_reads=('r1','r2'),
                              organism="Human",
                              star_index="/data/indexes/STAR"))
+        # Organism name contains spaces
+        qc_dir = self._make_qc_dir('qc.homo_sapiens',
+                                   fastq_names=fastq_names,
+                                   organisms=('Homo sapiens',),
+                                   include_qualimap_rnaseq=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'qualimap_rnaseq',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Homo sapiens",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf",
+            annotation_bed="/data/annot/human.bed"))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
