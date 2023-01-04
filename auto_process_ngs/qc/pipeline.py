@@ -3472,7 +3472,7 @@ class CollateInsertSizes(PipelineTask):
                                    "Standard deviation",
                                    "Median insert size",
                                    "Median absolute deviation"))
-        metrics_files = []
+        metrics_files = {}
         for bam in self.args.bam_files:
             # Get metrics file associated with this BAM file
             outputs = list(filter(lambda f:
@@ -3488,7 +3488,7 @@ class CollateInsertSizes(PipelineTask):
                       (bam,
                        self.args.picard_out_dir))
                 continue
-            metrics_files.append(outputs[0])
+            metrics_files[os.path.basename(bam)] = outputs[0]
         # Check there is data to collate
         if not metrics_files:
             print("no insert size metrics files recovered")
@@ -3499,8 +3499,9 @@ class CollateInsertSizes(PipelineTask):
                                    "Standard deviation",
                                    "Median insert size",
                                    "Median absolute deviation"))
-        for metrics_file in metrics_files:
+        for bam in sorted(list(metrics_files.keys())):
             # Get mean and median insert sizes
+            metrics_file = metrics_files[bam]
             insert_size_metrics = CollectInsertSizeMetrics(metrics_file)
             tf.append(data=(
                 os.path.basename(bam),
