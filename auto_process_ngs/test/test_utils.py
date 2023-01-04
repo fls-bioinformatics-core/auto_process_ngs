@@ -563,6 +563,20 @@ class TestGetOrganismList(unittest.TestCase):
         self.assertEqual(get_organism_list("Homo sapiens, Mus  musculus "),
                          ["homo_sapiens","mus_musculus"])
 
+class TestNormaliseOrganismName(unittest.TestCase):
+    """Tests for the normalise_organism_name function
+    """
+
+    def test_normalise_organism_name(self):
+        """normalise_organism_name: check normalisation
+        """
+        self.assertEqual(normalise_organism_name("Mouse"),"mouse")
+        self.assertEqual(normalise_organism_name("mouse"),"mouse")
+        self.assertEqual(normalise_organism_name("Mus musculus"),
+                         "mus_musculus")
+        self.assertEqual(normalise_organism_name(" Mus  musculus "),
+                         "mus_musculus")
+
 class TestSplitUserHostDir(unittest.TestCase):
     """Tests for the split_user_host_dir function
 
