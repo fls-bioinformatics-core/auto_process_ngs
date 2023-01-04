@@ -3530,7 +3530,7 @@ class CollateInsertSizes(PipelineTask):
             metrics_file = metrics_files[bam]
             insert_size_metrics = CollectInsertSizeMetrics(metrics_file)
             tf.append(data=(
-                os.path.basename(bam),
+                bam,
                 insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
                 insert_size_metrics.metrics['STANDARD_DEVIATION'],
                 insert_size_metrics.metrics['MEDIAN_INSERT_SIZE'],
