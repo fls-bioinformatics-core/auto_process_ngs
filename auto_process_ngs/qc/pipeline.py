@@ -157,6 +157,7 @@ class QCPipeline(Pipeline):
         self.add_param('fastq_screens',type=dict)
         self.add_param('star_indexes',type=dict)
         self.add_param('force_star_index',type=str)
+        self.add_param('force_gtf_annotation',type=str)
         self.add_param('legacy_screens',type=bool,value=False)
 
         # Define runners
@@ -398,7 +399,8 @@ class QCPipeline(Pipeline):
                 "%s: get GTF annotation for '%s'" % (project.name,
                                                      organism),
                 organism,
-                self.params.annotation_gtf_files)
+                self.params.annotation_gtf_files,
+                force_reference=self.params.force_gtf_annotation)
             self.add_task(get_annotation_gtf,
                           log_dir=log_dir)
             qc_metadata['annotation_gtf'] = \
@@ -1002,7 +1004,8 @@ class QCPipeline(Pipeline):
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,cellranger_exe=None,
             cellranger_extra_projects=None,cellranger_reference_dataset=None,
-            cellranger_out_dir=None,force_star_index=None,working_dir=None,
+            cellranger_out_dir=None,force_star_index=None,
+            force_gtf_annotation=None,working_dir=None,
             log_file=None,batch_size=None,batch_limit=None,max_jobs=1,
             max_slots=None,poll_interval=5,runners=None,default_runner=None,
             enable_conda=False,conda=None,conda_env_dir=None,
@@ -1078,6 +1081,9 @@ class QCPipeline(Pipeline):
           force_star_index (str): explicitly specify STAR
             index to use (default: index is determined
             automatically)
+          force_gtf_annotation (str): explicitly specify
+            GTF annotation to use (default: annotation
+            file is determined automatically)
           working_dir (str): optional path to a working
             directory (defaults to temporary directory in
             the current directory)
@@ -1185,6 +1191,7 @@ class QCPipeline(Pipeline):
                                   'fastq_screens': fastq_screens,
                                   'star_indexes': star_indexes,
                                   'force_star_index': force_star_index,
+                                  'force_gtf_annotation': force_gtf_annotation,
                                   'legacy_screens': legacy_screens,
                               },
                               poll_interval=poll_interval,
