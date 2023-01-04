@@ -1,5 +1,5 @@
 #     mockqc.py: module providing mock Illumina QC data for testing
-#     Copyright (C) University of Manchester 2016-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2023 Peter Briggs
 #
 ########################################################################
 
@@ -36,6 +36,7 @@ from .analysis import AnalysisFastq
 from .fastq_utils import group_fastqs_by_name
 from .metadata import AnalysisProjectQCDirInfo
 from .tenx_genomics_utils import CellrangerMultiConfigCsv
+from .utils import normalise_organism_name
 from . import mockqcdata
 from . import mock10xdata
 
@@ -482,6 +483,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
     qc_info['protocol'] = protocol
     if organisms:
         qc_info['organism'] = ','.join(organisms)
+    # Normalise organism names
+    organisms_ = [normalise_organism_name(x) for x in organisms]
     # Populate with fake QC products
     for fq in fastq_names:
         # Sequence lengths
@@ -518,21 +521,21 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             MockQCOutputs.fastq_strand_v0_0_4(fq,qc_dir)
         # RSeQC infer_experiment.py
         if include_rseqc_infer_experiment:
-            for organism in organisms:
+            for organism in organisms_:
                 MockQCOutputs.rseqc_infer_experiment(
                     fq,organism,qc_dir)
         # Picard insert size metrics
         if include_picard_insert_size_metrics:
-            for organism in organisms:
+            for organism in organisms_:
                 MockQCOutputs.picard_collect_insert_size_metrics(
                     fq,organism,qc_dir)
         # Qualimap rnaseq
         if include_qualimap_rnaseq:
-            for organism in organisms:
+            for organism in organisms_:
                 MockQCOutputs.qualimap_rnaseq(fq,organism,qc_dir)
     # Version file for RSeQC infer_experiment.py
     if include_rseqc_infer_experiment:
-        for organism in organisms:
+        for organism in organisms_:
             with open(os.path.join(qc_dir,
                                    "rseqc_infer_experiment",
                                    organism,
@@ -541,13 +544,13 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
     # Extra files for insert sizes
     if include_picard_insert_size_metrics:
         # Collated insert sizes
-        for organism in organisms:
+        for organism in organisms_:
             with open(os.path.join(
                     qc_dir,
-                    "insert_sizes.%s.tsv" % organisms),'wt') as fp:
+                    "insert_sizes.%s.tsv" % organism),'wt') as fp:
                 fp.write("Placeholder\n")
         # Picard version
-        for organism in organisms:
+        for organism in organisms_:
             with open(os.path.join(qc_dir,
                                    "picard",
                                    organism,
@@ -555,7 +558,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                 fp.write("picard\t2.27.1\n")
     # Version file for Qualimap rnaseq
     if include_qualimap_rnaseq:
-        for organism in organisms:
+        for organism in organisms_:
             with open(os.path.join(qc_dir,
                                    "qualimap-rnaseq",
                                    organism,
@@ -568,7 +571,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             fp.write("Placeholder\n")
     # RSeQC gene body coverage
     if include_rseqc_genebody_coverage:
-        for organism in organisms:
+        for organism in organisms_:
             MockQCOutputs.rseqc_genebody_coverage(project_name,
                                                   organism,
                                                   qc_dir)

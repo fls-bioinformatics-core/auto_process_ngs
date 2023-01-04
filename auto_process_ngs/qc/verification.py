@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     verification: utilities for verification of QC outputs
-#     Copyright (C) University of Manchester 2022 Peter Briggs
+#     Copyright (C) University of Manchester 2022-2023 Peter Briggs
 #
 
 """
@@ -33,6 +33,7 @@ from .protocols import fetch_protocol_definition
 from .outputs import QCOutputs
 from .utils import get_bam_basename
 from ..tenx_genomics_utils import CellrangerMultiConfigCsv
+from ..utils import normalise_organism_name
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -371,7 +372,7 @@ class QCVerifier(QCOutputs):
             if "rseqc_genebody_coverage" not in self.outputs:
                 # No RSeQC gene body coverage present
                 return False
-            if organism.lower() not in \
+            if normalise_organism_name(organism) not in \
                self.data('rseqc_genebody_coverage').organisms:
                 return False
             return True
@@ -389,7 +390,7 @@ class QCVerifier(QCOutputs):
             if "picard_insert_size_metrics" not in self.outputs:
                 # No insert size metrics present
                 return False
-            if organism.lower() not in \
+            if normalise_organism_name(organism) not in \
                self.data('picard_collect_insert_size_metrics').organisms:
                 return False
             # Filter Fastq names and convert to BAM names
@@ -418,7 +419,8 @@ class QCVerifier(QCOutputs):
             if "qualimap_rnaseq" not in self.outputs:
                 # No Qualimap 'rnaseq' outputs present
                 return False
-            if organism.lower() not in self.data('qualimap_rnaseq').organisms:
+            if normalise_organism_name(organism) not in \
+               self.data('qualimap_rnaseq').organisms:
                 return False
             # Filter Fastq names and convert to BAM names
             bams = [get_bam_basename(fq)

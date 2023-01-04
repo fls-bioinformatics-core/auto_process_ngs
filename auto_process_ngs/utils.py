@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_ngs module
-#     Copyright (C) University of Manchester 2013-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
 #
 ########################################################################
 #
@@ -25,6 +25,7 @@ Functions:
 
 - bases_mask_is_paired_end:
 - get_organism_list:
+- normalise_organism_name:
 - split_user_host_dir:
 - get_numbered_subdir:
 - find_executables:
@@ -650,11 +651,31 @@ def get_organism_list(organisms):
     """
     if not organisms:
         return []
+    return [normalise_organism_name(x)
+            for x in str(organisms).split(',')]
+
+def normalise_organism_name(name):
+    """
+    Return normalised organism name
+
+    Normalisation consists of converting names to
+    lower case and spaces to underscores.
+
+    E.g.
+
+    "Human" -> 'human'
+    "Xenopus tropicalis" -> 'xenopus_tropicalis'
+
+    Arguments:
+      name (str): organism name
+
+    Returns:
+      String: normalised organism name
+    """
     # Make lowercase, split on commas and replace whitespace
     # with single underscore, then strip leading/trailing
     # underscores
-    return [re.sub(r'\s+','_',x).strip('_')
-            for x in str(organisms).lower().split(',')]
+    return re.sub(r'\s+','_',str(name).lower()).strip('_')
 
 def split_user_host_dir(location):
     # Split a location of the form [[user@]host:]dir into its
