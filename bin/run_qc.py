@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc.py: run QC pipeline on arbitrary fastq files
-#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
 #
 #########################################################################
 #
@@ -178,6 +178,23 @@ if __name__ == "__main__":
                             "(default: %s)" % ('taken from job runner'
                                                if not default_nthreads
                                                else default_nthreads,))
+    # Reference data options
+    refdata = p.add_argument_group('Reference data')
+    refdata.add_argument('--star-index',action='store',
+                         metavar="INDEX",
+                         dest='star_index',
+                         help="specify the path to the STAR genome index "
+                         "to use when mapping reads for metrics such as "
+                         "strandedness etc (overrides the "
+                         "organism-specific indexes defined in the config "
+                         "file)")
+    refdata.add_argument('--gtf',action='store',
+                         metavar="GTF",
+                         dest='gtf_annotation',
+                         help="specify the path to the GTF annotation "
+                         "file to use for metrics such as 'qualimap "
+                         "rnaseq' (overrides the organism-specific GTF "
+                         "files defined in the config file)")
     # Cellranger options
     cellranger = p.add_argument_group('Cellranger/10xGenomics options')
     cellranger.add_argument('--cellranger',action='store',
@@ -499,6 +516,9 @@ if __name__ == "__main__":
         star_index = __settings.organisms[organism].star_index
         if star_index:
             star_indexes[organism] = star_index
+    force_star_index = args.star_index
+    if force_star_index:
+        force_star_index = os.path.abspath(force_star_index)
 
     # Annotation files
     annotation_bed_files = dict()
@@ -511,6 +531,9 @@ if __name__ == "__main__":
         annotation_gtf_file = __settings.organisms[organism].annotation_gtf
         if annotation_gtf_file:
             annotation_gtf_files[organism] = annotation_gtf_file
+    force_gtf_annotation = args.gtf_annotation
+    if force_gtf_annotation:
+        force_gtf_annotation = os.path.abspath(force_gtf_annotation)
 
     # Cellranger settings
     cellranger_settings = __settings['10xgenomics']
@@ -813,6 +836,8 @@ if __name__ == "__main__":
                        enable_conda=enable_conda,
                        conda_env_dir=args.conda_env_dir,
                        working_dir=working_dir,
+                       force_star_index=force_star_index,
+                       force_gtf_annotation=force_gtf_annotation,
                        legacy_screens=use_legacy_screen_names,
                        verbose=args.verbose)
 

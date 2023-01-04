@@ -411,9 +411,7 @@ class QCVerifier(QCOutputs):
             if not organism:
                 # No organism specified
                 return None
-            if not star_index or \
-               not annotation_gtf or \
-               not annotation_bed:
+            if not star_index or not annotation_gtf:
                 # No STAR index or annotation
                 return None
             if "qualimap_rnaseq" not in self.outputs:

@@ -156,6 +156,8 @@ class QCPipeline(Pipeline):
         self.add_param('cellranger_localmem',type=int)
         self.add_param('fastq_screens',type=dict)
         self.add_param('star_indexes',type=dict)
+        self.add_param('force_star_index',type=str)
+        self.add_param('force_gtf_annotation',type=str)
         self.add_param('legacy_screens',type=bool,value=False)
 
         # Define runners
@@ -357,7 +359,8 @@ class QCPipeline(Pipeline):
                 "%s: get STAR index for '%s'" % (project.name,
                                                  organism),
                 organism,
-                self.params.star_indexes)
+                self.params.star_indexes,
+                force_reference=self.params.force_star_index)
             self.add_task(get_star_index)
             qc_metadata['star_index'] = \
                 get_star_index.output.reference_dataset
@@ -396,7 +399,8 @@ class QCPipeline(Pipeline):
                 "%s: get GTF annotation for '%s'" % (project.name,
                                                      organism),
                 organism,
-                self.params.annotation_gtf_files)
+                self.params.annotation_gtf_files,
+                force_reference=self.params.force_gtf_annotation)
             self.add_task(get_annotation_gtf,
                           log_dir=log_dir)
             qc_metadata['annotation_gtf'] = \
@@ -1000,9 +1004,10 @@ class QCPipeline(Pipeline):
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,cellranger_exe=None,
             cellranger_extra_projects=None,cellranger_reference_dataset=None,
-            cellranger_out_dir=None,working_dir=None,log_file=None,
-            batch_size=None,batch_limit=None,max_jobs=1,max_slots=None,
-            poll_interval=5,runners=None,default_runner=None,
+            cellranger_out_dir=None,force_star_index=None,
+            force_gtf_annotation=None,working_dir=None,
+            log_file=None,batch_size=None,batch_limit=None,max_jobs=1,
+            max_slots=None,poll_interval=5,runners=None,default_runner=None,
             enable_conda=False,conda=None,conda_env_dir=None,
             envmodules=None,legacy_screens=False,verbose=False):
         """
@@ -1073,6 +1078,12 @@ class QCPipeline(Pipeline):
           cellranger_out_dir (str): specify directory to
             put full cellranger outputs into (default:
             project directory)
+          force_star_index (str): explicitly specify STAR
+            index to use (default: index is determined
+            automatically)
+          force_gtf_annotation (str): explicitly specify
+            GTF annotation to use (default: annotation
+            file is determined automatically)
           working_dir (str): optional path to a working
             directory (defaults to temporary directory in
             the current directory)
@@ -1179,6 +1190,8 @@ class QCPipeline(Pipeline):
                                   cellranger_extra_projects,
                                   'fastq_screens': fastq_screens,
                                   'star_indexes': star_indexes,
+                                  'force_star_index': force_star_index,
+                                  'force_gtf_annotation': force_gtf_annotation,
                                   'legacy_screens': legacy_screens,
                               },
                               poll_interval=poll_interval,
@@ -2811,7 +2824,7 @@ class GetReferenceDataset(PipelineTask):
     Generic lookup task which attempts to locate the matching
     reference dataset from a mapping/dictionary.
     """
-    def init(self,organism,references):
+    def init(self,organism,references,force_reference=None):
         """
         Initialise the GetReferenceDataset task
 
@@ -2820,6 +2833,9 @@ class GetReferenceDataset(PipelineTask):
           references (mapping): mapping with organism names
             as keys and reference datasets as corresponding
             values
+          force_reference (str): if specified then return
+            the supplied value instead of determining from
+            the organism
 
         Outputs:
           reference_dataset: reference dataset (set to None
@@ -2827,14 +2843,24 @@ class GetReferenceDataset(PipelineTask):
         """
         self.add_output('reference_dataset',Param(type='str'))
     def setup(self):
-        organism = str(self.args.organism).lower()
-        try:
-            self.output.reference_dataset.set(self.args.references[organism])
-            print("%s: located %s" % (organism,
-                                      self.output.reference_dataset.value))
-        except Exception as ex:
-            print("Unable to locate reference data for organism '%s'"
-                  % organism)
+        if self.args.force_reference:
+            print("Using supplied dataset: %s" %
+                  self.args.force_reference)
+            self.output.reference_dataset.set(
+                self.args.force_reference)
+        elif self.args.organism:
+            organism = str(self.args.organism).lower()
+            try:
+                self.output.reference_dataset.set(
+                    self.args.references[organism])
+                print("%s: located %s" %
+                      (organism,
+                       self.output.reference_dataset.value))
+            except Exception as ex:
+                print("Unable to locate reference data for organism '%s'"
+                      % organism)
+        else:
+            print("No organism supplied, unable to look up reference data")
 
 class GetBAMFiles(PipelineFunctionTask):
     """
@@ -3504,7 +3530,7 @@ class CollateInsertSizes(PipelineTask):
             metrics_file = metrics_files[bam]
             insert_size_metrics = CollectInsertSizeMetrics(metrics_file)
             tf.append(data=(
-                os.path.basename(bam),
+                bam,
                 insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
                 insert_size_metrics.metrics['STANDARD_DEVIATION'],
                 insert_size_metrics.metrics['MEDIAN_INSERT_SIZE'],
