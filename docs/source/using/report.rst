@@ -139,9 +139,13 @@ Field name                Associated value
 ========================= ========================
 
 Composite fields can be specified by joining two or more fields
-with the ``+`` character (for example, ``project+run_id``); the
-resulting value will be the values of the individual fields
-joined by underscores.
+with the ``+`` character (for example, ``organism+library_type``);
+the resulting value will be the (non-null) values of the individual
+fields separated by spaces.
+
+To specify an alternative separator for a composite field, prefix
+the field with ``[...]:`` where ``...`` is the desired delimiter
+(for example, ``[_]:project+run_id`` will use an underscore).
 
 Commonly used sets of fields can be made into "templates", which
 can be defined in the ``reporting_templates`` section of the
