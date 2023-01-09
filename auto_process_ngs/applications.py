@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
 #
 ########################################################################
 #
@@ -32,12 +32,6 @@ the 'run_subprocess' method of the Command object, e.g:
 
 >>> rsync.run_subprocess()
 """
-
-#######################################################################
-# Module metadata
-#######################################################################
-
-__version__ = "0.0.10"
 
 #######################################################################
 # Import modules that this module depends on
@@ -379,6 +373,11 @@ class general:
         # Additional options
         if extra_options is not None:
             rsync_cmd.add_args(*extra_options)
+        # Escape spaces in source and target, if required
+        if ' ' in source:
+            source = source.replace(' ','\ ')
+        if ' ' in target:
+            target = target.replace(' ','\ ')
         # Make rsync command
         rsync_cmd.add_args(source,target)
         return rsync_cmd
