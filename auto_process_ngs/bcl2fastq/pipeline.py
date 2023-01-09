@@ -71,7 +71,6 @@ from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..bcl2fastq.utils import convert_bases_mask_to_override_cycles
 from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
-from ..fileops import Location
 from ..icell8.utils import get_bases_mask_icell8
 from ..icell8.utils import get_bases_mask_icell8_atac
 from ..samplesheet_utils import barcode_is_10xgenomics
@@ -93,6 +92,7 @@ from ..tenx_genomics_utils import spaceranger_info
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
 from ..tenx_genomics_utils import get_bases_mask_10x_multiome
 from ..tenx_genomics_utils import make_qc_summary_html
+from ..utils import Location
 from ..utils import find_executables
 from .reporting import ProcessingQCReport
 

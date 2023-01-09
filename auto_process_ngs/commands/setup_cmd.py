@@ -15,9 +15,9 @@ from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..applications import general as general_applications
 from ..fileops import exists
-from ..fileops import Location
 from ..samplesheet_utils import predict_outputs
 from ..samplesheet_utils import check_and_warn
+from ..utils  import Location
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import SampleSheet
