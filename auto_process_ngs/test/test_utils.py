@@ -519,6 +519,89 @@ class TestFileLock(unittest.TestCase):
         self.assertTrue(flock.has_lock)
         flock.release()
 
+class TestLocation(unittest.TestCase):
+    """
+    Tests for the Location class
+    """
+    def test_location_user_server_path(self):
+        """
+        Location: handle user@host.name:/path/to/somewhere
+        """
+        location = Location('user@host.name:/path/to/somewhere')
+        self.assertEqual(location.user,'user')
+        self.assertEqual(location.server,'host.name')
+        self.assertEqual(location.path,'/path/to/somewhere')
+        self.assertTrue(location.is_remote)
+        self.assertFalse(location.is_url)
+        self.assertEqual(location.url,None)
+        self.assertEqual(location.protocol,None)
+        self.assertEqual(str(location),'user@host.name:/path/to/somewhere')
+    def test_location_server_path(self):
+        """
+        Location: handle host.name:/path/to/somewhere
+        """
+        location = Location('host.name:/path/to/somewhere')
+        self.assertEqual(location.user,None)
+        self.assertEqual(location.server,'host.name')
+        self.assertEqual(location.path,'/path/to/somewhere')
+        self.assertTrue(location.is_remote)
+        self.assertFalse(location.is_url)
+        self.assertEqual(location.url,None)
+        self.assertEqual(location.protocol,None)
+        self.assertEqual(str(location),'host.name:/path/to/somewhere')
+    def test_location_path(self):
+        """
+        Location: handle /path/to/somewhere
+        """
+        location = Location('/path/to/somewhere')
+        self.assertEqual(location.user,None)
+        self.assertEqual(location.server,None)
+        self.assertEqual(location.path,'/path/to/somewhere')
+        self.assertFalse(location.is_remote)
+        self.assertFalse(location.is_url)
+        self.assertEqual(location.url,None)
+        self.assertEqual(location.protocol,None)
+        self.assertEqual(str(location),'/path/to/somewhere')
+    def test_location_http_url(self):
+        """
+        Location: handle http://example.com/path/to/url
+        """
+        location = Location('http://example.com/path/to/url')
+        self.assertEqual(location.user,None)
+        self.assertEqual(location.server,'example.com')
+        self.assertEqual(location.path,'path/to/url')
+        self.assertFalse(location.is_remote)
+        self.assertTrue(location.is_url)
+        self.assertEqual(location.url,'http://example.com/path/to/url')
+        self.assertEqual(location.protocol,'http')
+        self.assertEqual(str(location),'http://example.com/path/to/url')
+    def test_location_https_url(self):
+        """
+        Location: handle https://example.com/path/to/url
+        """
+        location = Location('https://example.com/path/to/url')
+        self.assertEqual(location.user,None)
+        self.assertEqual(location.server,'example.com')
+        self.assertEqual(location.path,'path/to/url')
+        self.assertFalse(location.is_remote)
+        self.assertTrue(location.is_url)
+        self.assertEqual(location.protocol,'https')
+        self.assertEqual(location.url,'https://example.com/path/to/url')
+        self.assertEqual(str(location),'https://example.com/path/to/url')
+    def test_location_file_url(self):
+        """
+        Location: handle file:///path/to/file
+        """
+        location = Location('file:///path/to/file')
+        self.assertEqual(location.user,None)
+        self.assertEqual(location.server,None)
+        self.assertEqual(location.path,'/path/to/file')
+        self.assertFalse(location.is_remote)
+        self.assertTrue(location.is_url)
+        self.assertEqual(location.protocol,'file')
+        self.assertEqual(location.url,'file:///path/to/file')
+        self.assertEqual(str(location),'file:///path/to/file')
+
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
 

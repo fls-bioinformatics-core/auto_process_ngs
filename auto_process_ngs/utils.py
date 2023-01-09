@@ -20,6 +20,7 @@ Classes:
 - ProgressChecker:
 - FileLock:
 - FileLockError:
+- Location: extracts information from a location specifier
 
 Functions:
 
@@ -607,6 +608,110 @@ class FileLockError(Exception):
     """
     Exceptions associated with the FileLock class
     """
+
+class Location:
+    """
+    Class for examining a file-system location specifier
+
+    A location specifier can be a local or a remote file or
+    directory. The general form is:
+
+    ``[[user@]server:]path``
+
+    For a local location, only the 'path' component needs to
+    be supplied.
+
+    For a remote location, 'server' and 'path' must be
+    supplied, while 'user' is optional.
+
+    Alternatively the location can be a URL identifier of
+    the form:
+
+    ``protocol://server/path``
+
+    The following properties are available:
+
+    - user: the user name (or None if not specified)
+    - server: the server name (or None if not specified)
+    - path: the path component
+    - is_remote: True if the location is on a remote host,
+      False if it is local (or if it is a URL)
+    - is_url: True if the location points to a URL
+    - url: the URL identifier, if the location points to
+      a URL (or None if not a URL)
+    - protocol: the URL protocol (or None if not a URL)
+
+    Arguments:
+       location (str): location specifer of the form
+          '[[user@]server:]path'
+    """
+    def __init__(self,location):
+        self._location = location
+        self._user = None
+        self._server = None
+        self._path = None
+        self._url = None
+        self._protocol = None
+        for protocol in ('http','https','ftp','ftps','file',):
+            protocol_ = "%s://" % protocol
+            if self._location.startswith(protocol_):
+                self._url = self._location
+                self._protocol = protocol
+                self._server = self._location[len(protocol_):].split('/')[0]
+                if not self._server:
+                    self._server = None
+                    self._path = self._location[len(protocol_):]
+                else:
+                    self._path = '/'.join(self._location[len(protocol_):].split('/')[1:])
+                break
+        if not self._url:
+            self._user,self._server,self._path = split_user_host_dir(
+                self._location)
+    @property
+    def user(self):
+        """
+        Return 'user' part of '[[user@]server:]path'
+        """
+        return self._user
+    @property
+    def server(self):
+        """
+        Return 'server' part of '[[user@]server:]path'
+        """
+        return self._server
+    @property
+    def path(self):
+        """
+        Return 'path' part of '[[user@]server:]path'
+        """
+        return self._path
+    @property
+    def is_remote(self):
+        """
+        Check if location is on a remote server
+        """
+        return (self._server is not None and not self.is_url)
+    @property
+    def is_url(self):
+        """
+        Check if location is a URL
+        """
+        return (self._url is not None)
+    @property
+    def url(self):
+        """
+        Return path as a URL (or None if not a URL)
+        """
+        return self._url
+    @property
+    def protocol(self):
+        """
+        Return URL protocol (or None if not a URL)
+        """
+        return self._protocol
+    def __repr__(self):
+        return self._location
+
 
 #######################################################################
 # Functions

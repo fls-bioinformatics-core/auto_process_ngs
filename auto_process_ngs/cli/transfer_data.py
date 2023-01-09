@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2023 Peter Briggs
 #
 #########################################################################
 #
@@ -24,12 +24,12 @@ from ..analysis import AnalysisProject
 from ..command import Command
 from ..simple_scheduler import SimpleScheduler
 from ..simple_scheduler import SchedulerReporter
-from ..fileops import Location
 from ..fileops import exists
 from ..fileops import mkdir
 from ..fileops import copy_command
 from ..settings import Settings
 from ..settings import get_config_dir
+from ..utils import Location
 from .. import get_version
 
 # Logging
