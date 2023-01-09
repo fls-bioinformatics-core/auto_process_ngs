@@ -379,6 +379,11 @@ class general:
         # Additional options
         if extra_options is not None:
             rsync_cmd.add_args(*extra_options)
+        # Escape spaces in source and target, if required
+        if ' ' in source:
+            source = source.replace(' ','\ ')
+        if ' ' in target:
+            target = target.replace(' ','\ ')
         # Make rsync command
         rsync_cmd.add_args(source,target)
         return rsync_cmd
