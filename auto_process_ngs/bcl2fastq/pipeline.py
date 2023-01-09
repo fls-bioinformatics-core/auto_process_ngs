@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq.pipeline.py: pipelines for Fastq generation
-#     Copyright (C) University of Manchester 2020-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2020-2023 Peter Briggs
 #
 
 """

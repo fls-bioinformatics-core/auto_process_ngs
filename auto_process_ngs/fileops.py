@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     fileops: single interface for file ops on local and remote systems
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017,2023 Peter Briggs
 #
 ########################################################################
 #
