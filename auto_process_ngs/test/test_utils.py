@@ -602,6 +602,91 @@ class TestLocation(unittest.TestCase):
         self.assertEqual(location.url,'file:///path/to/file')
         self.assertEqual(str(location),'file:///path/to/file')
 
+class TestFetchFile(unittest.TestCase):
+    """
+    Tests for the fetch_file function
+    """
+    def setUp(self):
+        # Set up test data and directories
+        self.wd = tempfile.mkdtemp(suffix='TestFetchFile')
+        # Source and destination directories
+        self.src_dir = os.path.join(self.wd,'source')
+        os.mkdir(self.src_dir)
+        self.dst_dir = os.path.join(self.wd,'destination')
+        os.mkdir(self.dst_dir)
+        # Source file
+        self.src_file = os.path.join(self.src_dir,"test")
+        self.src_content = "This is a test file\n"
+        with open(self.src_file,'wt') as fp:
+            fp.write(self.src_content)
+        # Move to working dir
+        self.cwd = os.getcwd()
+        os.chdir(self.wd)
+
+    def tearDown(self):
+        # Move back to original dir
+        os.chdir(self.cwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.wd)
+
+    def test_fetch_file_local(self):
+        """
+        fetch_file: copy a local file
+        """
+        dst_file = os.path.join(self.dst_dir,"test_copy")
+        self.assertFalse(os.path.exists(dst_file))
+        f = fetch_file(self.src_file,dst_file)
+        self.assertEqual(f,dst_file)
+        self.assertTrue(os.path.exists(dst_file))
+        with open(dst_file,'rt') as fp:
+            self.assertEqual(fp.read(),self.src_content)
+
+    @unittest.skip("Not implemented")
+    def test_fetch_file_remote(self):
+        """
+        fetch_file: copy a remote file
+        """
+        pass
+
+    def test_fetch_file_url(self):
+        """
+        fetch_file: copy a file from a URL
+        """
+        src_url = "file://%s" % self.src_file
+        dst_file = os.path.join(self.dst_dir,"test_copy")
+        self.assertFalse(os.path.exists(dst_file))
+        f = fetch_file(src_url,dst_file)
+        self.assertEqual(f,dst_file)
+        self.assertTrue(os.path.exists(dst_file))
+        with open(dst_file,'rt') as fp:
+            self.assertEqual(fp.read(),self.src_content)
+
+    def test_fetch_file_local_dest_is_directory(self):
+        """
+        fetch_file: copy a local file (destination is a directory)
+        """
+        dst_file = os.path.join(self.dst_dir,
+                                os.path.basename(self.src_file))
+        self.assertFalse(os.path.exists(dst_file))
+        f = fetch_file(self.src_file,self.dst_dir)
+        self.assertEqual(f,dst_file)
+        self.assertTrue(os.path.exists(dst_file))
+        with open(dst_file,'rt') as fp:
+            self.assertEqual(fp.read(),self.src_content)
+
+    def test_fetch_file_local_dest_not_specified(self):
+        """
+        fetch_file: copy a local file (destination not specified)
+        """
+        dst_file = os.path.join(self.wd,
+                                os.path.basename(self.src_file))
+        self.assertFalse(os.path.exists(dst_file))
+        f = fetch_file(self.src_file)
+        self.assertEqual(f,dst_file)
+        self.assertTrue(os.path.exists(dst_file))
+        with open(dst_file,'rt') as fp:
+            self.assertEqual(fp.read(),self.src_content)
+
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
 
