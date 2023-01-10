@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
 #
 #########################################################################
 
@@ -9,8 +9,6 @@ import os
 import uuid
 import shutil
 import logging
-from urllib.request import urlopen
-from urllib.error import URLError
 from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..applications import general as general_applications
@@ -18,6 +16,7 @@ from ..fileops import exists
 from ..samplesheet_utils import predict_outputs
 from ..samplesheet_utils import check_and_warn
 from ..utils  import Location
+from ..utils import fetch_file
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import SampleSheet
@@ -147,45 +146,22 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                 targets = (sample_sheet,)
             # Try each possibility until one sticks
             for target in targets:
-                target = Location(target)
-                tmp_sample_sheet = os.path.join(ap.tmp_dir,
-                                                os.path.basename(target.path))
-                if target.is_url:
-                    # Try fetching samplesheet from URL
-                    print("Trying '%s'" % target.url)
-                    try:
-                        urlfp = urlopen(target.url)
-                        with open(tmp_sample_sheet,'w') as fp:
-                            fp.write(urlfp.read().decode())
-                    except URLError as ex:
-                        # Failed to download from URL
-                        raise Exception("Error fetching sample sheet data "
-                                        "from '%s': %s" % (target.url,ex))
-                else:
-                    # Assume target samplesheet is a file on a local
-                    # or remote server
-                    if target.is_remote:
-                        target_sample_sheet = str(target)
-                    else:
-                        if os.path.isabs(target.path):
-                            target_sample_sheet = target.path
-                        else:
-                            target_sample_sheet = os.path.join(data_dir,
-                                                               target.path)
-                    print("Trying '%s'" % target_sample_sheet)
-                    rsync = general_applications.rsync(target_sample_sheet,
-                                                       ap.tmp_dir)
-                    print("%s" % rsync)
-                    status = rsync.run_subprocess(log=ap.log_path('rsync.sample_sheet.log'))
-                    if status != 0:
-                        logger.warning("Failed to fetch sample sheet '%s'"
-                                       % target_sample_sheet)
-                        tmp_sample_sheet = None
-                    else:
-                        break
+                if not Location(target).is_url:
+                    target = os.path.join(data_dir,target)
+                print("Trying '%s'" % target)
+                try:
+                    tmp_sample_sheet = os.path.join(
+                        ap.tmp_dir,
+                        os.path.basename(target))
+                    fetch_file(target,tmp_sample_sheet)
+                    break
+                except Exception as ex:
+                    logger.warning("Failed to fetch sample sheet '%s': %s"
+                                   % (target,ex))
+                    tmp_sample_sheet = None
             # Bail out if no sample sheet was acquired
             if tmp_sample_sheet is None:
-                raise Exception("Unable to acquire sample sheet")
+                raise Exception("Unable to locate a sample sheet file")
             # Keep a copy of the original sample sheet
             original_sample_sheet = os.path.join(ap.analysis_dir,
                                                  'SampleSheet.orig.csv')
@@ -227,30 +203,10 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     if extra_files:
         for extra_file in extra_files:
             print("Importing '%s'" % extra_file)
-            extra_file = Location(extra_file)
-            if extra_file.is_url:
-                # Try fetching file from URL
-                try:
-                    urlfp = urlopen(extra_file.url)
-                    with open(os.path.join(ap.analysis_dir,
-                                           os.path.basename(extra_file.path)),
-                              'w') as fp:
-                        fp.write(urlfp.read().decode())
-                except URLError as ex:
-                    # Failed to download from URL
-                    raise Exception("Error fetching '%s': %s" %
-                                    (extra_file.url,ex))
-            else:
-                # File is on a local or remote server
-                if extra_file.is_remote:
-                    extra_file_path = str(extra_file)
-                else:
-                    extra_file_path = os.path.abspath(extra_file.path)
-                rsync = general_applications.rsync(extra_file_path,
-                                                   ap.analysis_dir)
-                status = rsync.run_subprocess(log=ap.log_path('rsync.extra_file.log'))
-                if status != 0:
-                    raise Exception("Failed to fetch '%s'" % extra_file_path)
+            try:
+                fetch_file(extra_file,ap.analysis_dir)
+            except Exception as ex:
+                raise Exception("Failed to fetch '%s'" % extra_file_path)
     # Check supplied unaligned Fastq dir
     if unaligned_dir is not None:
         try:
