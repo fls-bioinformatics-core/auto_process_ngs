@@ -206,7 +206,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             try:
                 fetch_file(extra_file,ap.analysis_dir)
             except Exception as ex:
-                raise Exception("Failed to fetch '%s'" % extra_file_path)
+                raise Exception("Failed to fetch '%s'" % extra_file)
     # Check supplied unaligned Fastq dir
     if unaligned_dir is not None:
         try:
