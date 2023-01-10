@@ -24,6 +24,7 @@ Classes:
 
 Functions:
 
+- fetch_file:
 - bases_mask_is_paired_end:
 - get_organism_list:
 - normalise_organism_name:
@@ -53,6 +54,8 @@ import tempfile
 import operator
 import time
 import fcntl
+from urllib.request import urlopen
+from urllib.error import URLError
 from .command import Command
 import bcftbx.utils as bcf_utils
 from bcftbx.Md5sum import md5sum
@@ -716,6 +719,75 @@ class Location:
 #######################################################################
 # Functions
 #######################################################################
+
+def fetch_file(src,dest=None):
+    """
+    Fetch a copy of a file from an arbitrary location
+
+    Gets a copy of a file which can be specified as either
+    a local or a remote path (i.e. using the syntax
+    ``[[USER@]HOST:]PATH``) or as URL.
+
+    If a destination file name is not supplied then the
+    destination file name will be that of the source file
+    and will be copied to the current working directory;
+    if the supplied destination is a directory then the
+    destination file name will be that of the source file
+    and will be copied to that directory.
+
+    The destination must be a local file or directory.
+
+    Arguments:
+      src (str): path or URL of the file to be copied
+      dest (str): optional, local destination file name
+        or directory to copy ``src`` to
+
+    Returns:
+      String: path to the copy.
+    """
+    logger.debug("Fetching file '%s'" % src)
+    src = Location(src)
+    # Sort out destination
+    if not dest:
+        # Use the source file name
+        dest = os.path.basename(src.path)
+    elif os.path.isdir(dest):
+        # Specified destination is a directory
+        dest = os.path.join(dest,
+                             os.path.basename(src.path))
+    dest = os.path.abspath(dest)
+    # Copy the file
+    if src.is_url:
+        # File is a URL
+        with tempfile.TemporaryFile('w+b') as fp:
+            # Get URL contents
+            try:
+                urlfp = urlopen(src.url)
+                fp.write(urlfp.read())
+            except URLError as ex:
+                # Failed to download from URL
+                raise Exception("Error fetching file from '%s': %s" %
+                                (src.url,ex))
+            # Copy content to local file
+            fp.seek(0)
+            with open(dest,'wb') as fpp:
+                fpp.write(fp.read())
+    else:
+        # File is on a local or remote server
+        if src.is_remote:
+            src = str(src)
+            cp = 'scp'
+        else:
+            src = os.path.abspath(src.path)
+            cp = 'cp'
+        copy_command = Command(cp,src,dest)
+        logger.debug("Running '%s'" % copy_command)
+        #status = copy_command.run_subprocess()
+        status,output = copy_command.subprocess_check_output()
+        if status != 0:
+            raise Exception("Error fetching file from '%s': %s" %
+                            (src,output))
+    return dest
 
 def bases_mask_is_paired_end(bases_mask):
     # Determine if run is paired end based on bases mask string
