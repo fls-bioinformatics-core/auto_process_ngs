@@ -863,6 +863,97 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_projects_with_composite_custom_fields(self):
+        """report: report run in 'projects' mode with composite custom fields
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Single cell platform": "10xGenomics Chromium 3'v3",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report with composite field
+        # (i.e. using '+' notation)
+        expected = """MISEQ_170901#87\tAlison Bell\tHuman RNA-seq
+MISEQ_170901#87\tCharles David Edwards\tMouse ChIP-seq
+"""
+        custom_fields = ['run_id','user','organism+library_type']
+        for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+        # Generate projects report with composite field with
+        # null value in subfield
+        expected = """MISEQ_170901#87\tAlison Bell\t10xGenomics Chromium 3'v3 RNA-seq
+MISEQ_170901#87\tCharles David Edwards\tChIP-seq
+"""
+        custom_fields = ['run_id','user','single_cell_platform+library_type']
+        for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+        # Generate projects report with composite field with
+        # alternative delimiter (i.e. using '[...]:' notation)
+        expected = """MISEQ_170901#87\tAlison Bell\ttesting_87
+MISEQ_170901#87\tCharles David Edwards\ttesting_87
+"""
+        custom_fields = ['run_id','user','[_]:source+run_number']
+        for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_projects_novaseq_flow_cell_mode(self):
+        """report: report run in 'projects' mode with NovaSeq flow cell mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '221216_A00879_0047_000000000-AGEW9',
+            'novaseq',
+            metadata={ "source": "testing",
+                       "run_number": 47,
+                       "sequencer_model": "NovaSeq 6000",
+                       "flow_cell_mode": "SP" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "NovaSeq 6000" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "NovaSeq 6000" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        expected = """221216\tNOVASEQ_221216#47\t47\tSP\ttesting\t\tAB\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tNOVASEQ\tNovaSeq 6000\t2\t\tyes\tAB1-2\t%s
+221216\tNOVASEQ_221216#47\t47\tSP\ttesting\t\tCDE\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tNOVASEQ\tNovaSeq 6000\t2\t\tyes\tCDE3-4\t%s
+""" % (ap.params.analysis_dir,ap.params.analysis_dir)
+        custom_fields = ['datestamp','run_id','run_number','flow_cell_mode','source','null','project','user','PI','library_type','single_cell_platform','organism','platform','sequencer_model','#samples','#cells','paired_end','samples','path']
+        for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
     def test_report_projects_single_cell(self):
         """report: report single-cell run in 'projects' mode
         """

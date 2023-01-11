@@ -371,6 +371,7 @@ class MakeFastqs(Pipeline):
 
         # Internal parameters
         self.add_param('_platform')
+        self.add_param('_flow_cell_mode')
         self.add_param('_bcl2fastq_info')
         self.add_param('_bclconvert_info')
         self.add_param('_cellranger_info')
@@ -402,6 +403,7 @@ class MakeFastqs(Pipeline):
 
         # Pipeline outputs
         self.add_output('platform',self.params._platform)
+        self.add_output('flow_cell_mode',self.params._flow_cell_mode)
         self.add_output('primary_data_dir',self.params.primary_data_dir)
         self.add_output('acquired_primary_data',Param())
         self.add_output('bcl2fastq_info',self.params._bcl2fastq_info)
@@ -1707,6 +1709,8 @@ class MakeFastqs(Pipeline):
             PathExistsParam(
                 fetch_primary_data.output.run_dir))
         self.params._platform.set(identify_platform.output.platform)
+        self.params._flow_cell_mode.set(identify_platform.output.\
+                                        flow_cell_mode)
 
         # Update outputs with bcl2fastq information
         for get_bcl2fastq_task in (get_bcl2fastq,
@@ -2108,14 +2112,26 @@ class IdentifyPlatform(PipelineTask):
           platform (str): optional, specify the platform
         Outputs:
           platform: sequencer platform
+          flow_cell_mode: flow cell mode, if defined
         """
         self.add_output('platform',Param(type='str'))
+        self.add_output('flow_cell_mode',Param(type='str'))
     def setup(self):
         # Load input data and acquire the platform
         illumina_run = IlluminaRun(self.args.run_dir,
                                    platform=self.args.platform)
         self.output.platform.set(illumina_run.platform)
         print("Platform identified as '%s'" % illumina_run.platform)
+        # Flow cell mode
+        if illumina_run.runparameters:
+            flow_cell_mode = illumina_run.\
+                             runparameters.\
+                             flowcell_mode
+        if flow_cell_mode:
+            print("Flow cell mode identified as '%s'" % flow_cell_mode)
+            self.output.flow_cell_mode.set(flow_cell_mode)
+        else:
+            print("Unable to identify flow cell mode")
 
 class MakeSampleSheet(PipelineTask):
     """

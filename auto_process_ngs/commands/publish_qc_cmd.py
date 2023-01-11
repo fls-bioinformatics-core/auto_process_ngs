@@ -452,7 +452,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                        value=ap.metadata.platform)
     if ap.metadata.sequencer_model:
         params_tbl.add_row(param="Sequencer",
-                           value=ap.metadata.sequencer_model)
+                           value="%s%s" %
+                           (ap.metadata.sequencer_model,
+                            " (%s flow cell)" % ap.metadata.flow_cell_mode
+                            if ap.metadata.flow_cell_mode
+                            else ''))
     params_tbl.add_row(param="Endedness",
                        value=('Paired end' if ap.paired_end
                               else 'Single end'))

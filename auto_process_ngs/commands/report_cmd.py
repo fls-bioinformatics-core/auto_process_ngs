@@ -500,8 +500,13 @@ def report_projects(ap,fields=None):
 
     Composite fields can be specified by joining two or more
     fields with '+' (e.g. 'project+run_id'); the resulting
-    value will be the values of the individual fields joined by
-    underscores.
+    value will be the values of the individual fields separated
+    by spaces (with null values simply ignored).
+
+    An alternative delimiter can be explicitly specified by
+    prefacing the composite field with a pair of square braces
+    enclosing the new delimiter, followed by a colon (e.g.
+    '[_]:user+PI' will use an underscore instead of a space).
 
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the
@@ -535,13 +540,25 @@ def report_projects(ap,fields=None):
     for project in analysis_dir.projects:
         project_line = []
         for field in fields:
+            # Default delimiter for this field
+            delimiter = ' '
+            # Check for custom delimiter (for composite
+            # fields, starts with '[...]:'
+            if field.startswith('['):
+                field_ = field.split(':')
+                if len(field_) > 1 and field_[-2].endswith(']'):
+                    delimiter = ':'.join(field_[:-1])[1:-1]
+                    field = field_[-1]
             # Deal with composite fields (multiple field names
             # joined with '+')
             value = []
             for subfield in field.split('+'):
-                value.append(fetch_value(ap,project,subfield))
+                subvalue = fetch_value(ap,project,subfield)
+                if subvalue:
+                    # Only append if there is a value
+                    value.append(subvalue)
             # Append to the output line
-            project_line.append('_'.join(value))
+            project_line.append(delimiter.join(value))
         report.append('\t'.join(project_line))
     report = '\n'.join(report)
     return report
@@ -611,6 +628,9 @@ def fetch_value(ap,project,field):
     elif field == 'sequencer_model':
         return ('' if not ap.metadata.sequencer_model
                 else ap.metadata.sequencer_model)
+    elif field == 'flow_cell_mode':
+        return ('' if not ap.metadata.flow_cell_mode
+                else ap.metadata.flow_cell_mode)
     elif field == 'no_of_samples' or field == '#samples':
         if cellplex_config:
             # Number of multiplexed samples

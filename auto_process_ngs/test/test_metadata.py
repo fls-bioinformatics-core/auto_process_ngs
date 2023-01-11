@@ -325,6 +325,7 @@ class TestAnalysisDirMetadata(unittest.TestCase):
         self.assertEqual(metadata.instrument_run_number,None)
         self.assertEqual(metadata.instrument_flow_cell_id,None)
         self.assertEqual(metadata.sequencer_model,None)
+        self.assertEqual(metadata.flow_cell_mode,None)
 
 class TestProjectMetadataFile(unittest.TestCase):
     """Tests for the ProjectMetadataFile class

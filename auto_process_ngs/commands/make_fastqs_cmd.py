@@ -443,6 +443,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
     if status == 0:
         # Platform
         ap.metadata['platform'] = make_fastqs.output.platform
+        # Flow cell mode
+        ap.metadata['flow_cell_mode'] = make_fastqs.output.flow_cell_mode
         # Software used for processing
         try:
             processing_software = ast.literal_eval(
