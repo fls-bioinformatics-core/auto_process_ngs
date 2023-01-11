@@ -5,6 +5,10 @@
 #
 #########################################################################
 
+#######################################################################
+# Imports
+#######################################################################
+
 import os
 import uuid
 import shutil
@@ -21,10 +25,6 @@ from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import split_run_name_full
-
-#######################################################################
-# Imports
-#######################################################################
 
 # Module specific logger
 logger = logging.getLogger(__name__)
