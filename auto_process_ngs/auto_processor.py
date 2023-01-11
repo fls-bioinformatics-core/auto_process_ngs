@@ -933,3 +933,8 @@ class AutoProcess:
                 metadata_ok = False
                 logging.warning("Metadata item '%s' is not set" % item)
         return metadata_ok
+
+    def __str__(self):
+        # Implement string representation
+        # as the run reference id
+        return str(self.run_reference_id)
