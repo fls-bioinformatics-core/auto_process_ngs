@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 #
-#     decorators.py: decorator functions for auto_process_ngs
+#     decorators.py: decorator functions for AutoProcessor
 #     Copyright (C) University of Manchester 2023 Peter Briggs
 #
+
+"""
+Implements decorators for use with the ``AutoProcessor`` class.
+"""
 
 #######################################################################
 # Imports
@@ -20,11 +24,18 @@ logger = logging.getLogger(__name__)
 
 def add_command(name,f):
     """
-    Add a method to a class
+    Add a method to an AutoProcessor class
 
     Implements an '@add_command' decorator which can be
-    used to add a function to a class as a new method
-    (aka 'command').
+    used to add a function to an AutoProcessor class as
+    a new method (aka 'command').
+
+    When the method is invoked additional output is added
+    to report the run ID and the command name, and to mark
+    the start and end of the command execution.
+
+    Additionally the command execution is wrapped in a
+    ``try/except`` block.
 
     For example:
 
@@ -46,6 +57,14 @@ def add_command(name,f):
 
     The function must accept a class instance as the
     first argument.
+
+    Arguments:
+      name (str): name of the command (which will be the
+        method name when added)
+      f (object): callable object (e.g. function) that
+        will be invoked by the command. The first
+        argument of the callable must be an
+        AutoProcessor-like class
     """
     def wrapped_func(*args,**kws):
         # Wraps execution of the supplied
