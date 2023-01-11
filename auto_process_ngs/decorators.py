@@ -35,8 +35,11 @@ def add_command(name,f):
     ... class Example:
     ...   def __init__(self):
     ...      self.person = "World"
+    ...   def __str__(self):
+    ...      return "Example: '%s'" % self.person
     ...
     >>> Example().greeting()
+    [2023-01-11 09:36:04] Example: 'World'
     [2023-01-11 09:36:04] Running 'greeting' command
     Hello World
     [2023-01-11 09:36:04] greeting: finished
@@ -48,6 +51,11 @@ def add_command(name,f):
         # Wraps execution of the supplied
         # function to trap exceptions and
         # add additional commentary
+        try:
+            cls = args[0]
+            print("[%s] %s" % (timestamp(),str(cls)))
+        except Exception as ex:
+            pass
         print("[%s] Running '%s' command" % (timestamp(),name))
         try:
             ret = f(*args,**kws)
