@@ -105,8 +105,8 @@ def add_setup_command(cmdparser):
                               help="Set up a new analysis directory",
                               description="Set up automatic processing of "
                               "Illumina sequencing data from RUN_DIR.")
-    p.add_argument('--sample-sheet',action='store',dest='sample_sheet',
-                   default=None,
+    p.add_argument('-s','--samplesheet','--sample-sheet',
+                   action='store',dest='sample_sheet',default=None,
                    help="Copy sample sheet file from name and location "
                    "SAMPLE_SHEET (default is to look for SampleSheet.csv "
                    "inside DIR). SAMPLE_SHEET can be a local or remote "
