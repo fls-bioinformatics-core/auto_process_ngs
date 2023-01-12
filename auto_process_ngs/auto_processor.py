@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
 #
 #########################################################################
 #
@@ -32,6 +32,7 @@ from bcftbx.FASTQFile import FastqIterator
 from . import commands
 from .analysis import AnalysisProject
 from .analysis import run_reference_id
+from .decorators import add_command
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
 from .metadata import ProjectMetadataFile
@@ -43,59 +44,6 @@ from .settings import Settings
 from .exceptions import MissingParameterFileException
 from functools import reduce
 from . import get_version
-
-#######################################################################
-# Decorators
-#######################################################################
-
-def add_command(name,f):
-    """
-    Add a method to a class
-
-    Implements an '@add_command' decorator which can be
-    used to add a function to a class as a new method
-    (aka 'command').
-
-    For example:
-
-    >>> def hello(cls):
-    ...    print("Hello %s" % cls.person)
-    ...
-    >>> @command("greeting",hello)
-    ... class Example:
-    ...   def __init__(self):
-    ...      self.person = "World"
-    ...
-    >>> Example().greeting()
-    Running 'greeting' command
-    Hello World
-    'greeting': finished
-
-    The function must accept a class instance as the
-    first argument.
-    """
-    def wrapped_func(*args,**kws):
-        # Wraps execution of the supplied
-        # function to trap exceptions and
-        # add additional commentary
-        print("[%s] Running '%s' command" % (timestamp(),name))
-        try:
-            ret = f(*args,**kws)
-        except Exception as ex:
-            logging.fatal("%s: %s" % (name,ex))
-            ret = 1
-        else:
-            print("[%s] %s: finished" % (timestamp(),name))
-        return ret
-    def timestamp():
-        # Return the current time
-        return time.strftime("%Y-%m-%d %H:%M:%S")
-    def wrapper(cls):
-        # Adds the supplied function to
-        # to the class
-        setattr(cls,name,wrapped_func)
-        return cls
-    return wrapper
 
 #######################################################################
 # Classes
@@ -985,3 +933,8 @@ class AutoProcess:
                 metadata_ok = False
                 logging.warning("Metadata item '%s' is not set" % item)
         return metadata_ok
+
+    def __str__(self):
+        # Implement string representation
+        # as the run reference id
+        return str(self.run_reference_id)
