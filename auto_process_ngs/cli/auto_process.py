@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/auto_process.py: command line interface for auto_process_ngs
-#     Copyright (C) University of Manchester 2013-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
 #
 #########################################################################
 #
@@ -105,12 +105,15 @@ def add_setup_command(cmdparser):
                               help="Set up a new analysis directory",
                               description="Set up automatic processing of "
                               "Illumina sequencing data from RUN_DIR.")
-    p.add_argument('--sample-sheet',action='store',dest='sample_sheet',
-                   default=None,
+    p.add_argument('-s','--samplesheet','--sample-sheet',
+                   action='store',dest='sample_sheet',default=None,
                    help="Copy sample sheet file from name and location "
                    "SAMPLE_SHEET (default is to look for SampleSheet.csv "
                    "inside DIR). SAMPLE_SHEET can be a local or remote "
                    "file, or a URL")
+    p.add_argument('-r','--run-number',action='store',dest='run_number',
+                   metavar="RUN_NUMBER",default=None,
+                   help="Set facility run number")
     p.add_argument('-f','--file',action='append',dest='extra_files',
                    metavar="FILE",default=None,
                    help="Additional file(s) to copy into new analysis "
@@ -1129,6 +1132,7 @@ def setup(args):
         d.setup(args.run_dir,
                 analysis_dir=args.analysis_dir,
                 sample_sheet=args.sample_sheet,
+                run_number=args.run_number,
                 extra_files=args.extra_files,
                 unaligned_dir=args.unaligned_dir)
 

@@ -5,6 +5,10 @@
 #
 #########################################################################
 
+#######################################################################
+# Imports
+#######################################################################
+
 import os
 import uuid
 import shutil
@@ -22,10 +26,6 @@ from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import split_run_name_full
 
-#######################################################################
-# Imports
-#######################################################################
-
 # Module specific logger
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
-          extra_files=None,unaligned_dir=None):
+          run_number=None,extra_files=None,unaligned_dir=None):
     """
     Set up the initial analysis directory
 
@@ -50,6 +50,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
         sample sheet file; can be a local or remote file, or
         a URL (optional, will use sample sheet from the
         source data directory if present)
+      run_number (str): facility run number
       extra_files (list): arbitrary additional files to copy
         into the new analysis directory; each file can be a
         local or remote file or a URL
@@ -96,31 +97,35 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                            ap.analysis_dir)
     # Run datestamp, instrument name and instrument run number
     try:
-        datestamp,instrument,run_number,flow_cell_prefix,flow_cell_id = \
-                                    split_run_name_full(run_name)
-        run_number = run_number.lstrip('0')
+        datestamp,\
+            instrument_name,\
+            instrument_run_number,\
+            flow_cell_prefix,\
+            flow_cell_id = \
+                split_run_name_full(run_name)
+        instrument_run_number = instrument_run_number.lstrip('0')
         flow_cell = flow_cell_prefix + flow_cell_id
     except Exception as ex:
         logger.warning("Unable to extract information from run name '%s'" \
                        % run_name)
         logger.warning("Exception: %s" % ex)
         datestamp = None
-        instrument= None
-        run_number = None
+        instrument_name = None
+        instrument_run_number = None
         flow_cell = None
     # Identify missing data and attempt to acquire
     # Sequencing platform
     platform = ap.metadata.platform
     if platform is None:
         platform = get_sequencer_platform(data_dir,
-                                          instrument=instrument,
+                                          instrument=instrument_name,
                                           settings=ap.settings)
     print("Platform identified as '%s'" % platform)
     # Sequencer model
     model = ap.metadata.sequencer_model
     if model is None:
         try:
-            model = ap.settings.sequencers[instrument]['model']
+            model = ap.settings.sequencers[instrument_name]['model']
         except KeyError:
             pass
     if model:
@@ -247,12 +252,13 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     # Store the metadata
     ap.metadata['run_name'] = ap.run_name
     ap.metadata['platform'] = platform
-    ap.metadata['instrument_name'] = instrument
+    ap.metadata['instrument_name'] = instrument_name
     ap.metadata['instrument_datestamp'] = datestamp
-    ap.metadata['instrument_run_number'] = run_number
+    ap.metadata['instrument_run_number'] = instrument_run_number
     ap.metadata['instrument_flow_cell_id'] = flow_cell
     ap.metadata['sequencer_model'] = model
     ap.metadata['source'] = data_source
+    ap.metadata['run_number'] = run_number
     # Make a 'projects.info' metadata file
     if not ap.params.project_metadata:
         if unaligned_dir is not None:
