@@ -40,7 +40,7 @@ import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
 from auto_process_ngs.qc.pipeline import QCPipeline
 from auto_process_ngs.qc.utils import report_qc
-from auto_process_ngs.tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
+from auto_process_ngs.tenx import CELLRANGER_ASSAY_CONFIGS
 
 # QC protocols
 from auto_process_ngs.qc.constants import PROTOCOLS

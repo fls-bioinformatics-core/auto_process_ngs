@@ -132,7 +132,7 @@ from .qualimap import QualimapRnaseq
 from .rseqc import InferExperiment
 from .seqlens import SeqLens
 from .utils import get_bam_basename
-from ..tenx_genomics_utils import MultiomeLibraries
+from ..tenx.multiome import MultiomeLibraries
 from ..utils import ZipArchive
 from .. import get_version
 

@@ -21,7 +21,7 @@ from .. import analysis
 from .. import utils
 from .. import fileops
 from ..qc.utils import verify_qc
-from ..tenx_genomics_utils import CellrangerMultiConfigCsv
+from ..tenx.cellplex import CellrangerMultiConfigCsv
 
 # Module specific logger
 logger = logging.getLogger(__name__)

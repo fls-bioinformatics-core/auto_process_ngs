@@ -82,8 +82,8 @@ from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .analysis import AnalysisFastq
 from .fastq_utils import pair_fastqs_by_name
-from .tenx_genomics_utils import CellrangerMultiConfigCsv
-from .tenx_genomics_utils import flow_cell_id
+from .tenx.cellplex import CellrangerMultiConfigCsv
+from .tenx.utils import flow_cell_id
 from .utils import ZipArchive
 from .mockqc import MockQCOutputs
 from .mockqc import make_mock_qc_dir

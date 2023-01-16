@@ -35,7 +35,7 @@ from bcftbx.mock import MockIlluminaData
 from .analysis import AnalysisFastq
 from .fastq_utils import group_fastqs_by_name
 from .metadata import AnalysisProjectQCDirInfo
-from .tenx_genomics_utils import CellrangerMultiConfigCsv
+from .tenx.cellplex import CellrangerMultiConfigCsv
 from .utils import normalise_organism_name
 from . import mockqcdata
 from . import mock10xdata

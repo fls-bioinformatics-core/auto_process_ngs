@@ -16,7 +16,7 @@ from ..analysis import AnalysisDir
 from .. import applications
 from .. import fileops
 from .. import simple_scheduler
-from .. import tenx_genomics_utils
+from ..tenx.utils import flow_cell_id
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.utils import format_file_size
 from bcftbx.utils import list_dirs
@@ -246,8 +246,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             excludes.append('--exclude=%s' % dirn)
         # 10xgenomics products to exclude
         excludes.append('--exclude=*.mro')
-        excludes.append('--exclude=%s*' %
-                        tenx_genomics_utils.flow_cell_id(ap.run_name))
+        excludes.append('--exclude=%s*' % flow_cell_id(ap.run_name))
         # Log dir
         log_dir = 'archive%s' % ('_final' if final else '_staging')
         if dry_run:

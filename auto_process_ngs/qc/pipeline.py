@@ -78,9 +78,9 @@ from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineParam as Param
 from ..pipeliner import ListParam
 from ..pipeliner import PipelineFailure
-from ..tenx_genomics_utils import CellrangerMultiConfigCsv
-from ..tenx_genomics_utils import MultiomeLibraries
-from ..tenx_genomics_utils import add_cellranger_args
+from ..tenx.cellplex import CellrangerMultiConfigCsv
+from ..tenx.multiome import MultiomeLibraries
+from ..tenx.utils import add_cellranger_args
 from ..utils import get_organism_list
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
