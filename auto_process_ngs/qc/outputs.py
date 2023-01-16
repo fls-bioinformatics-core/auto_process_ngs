@@ -45,7 +45,7 @@ from ..analysis import AnalysisFastq
 from ..analysis import split_sample_name
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
-from ..tenx_genomics_utils import CellrangerMultiConfigCsv
+from ..tenx.cellplex import CellrangerMultiConfigCsv
 from .constants import FASTQ_SCREENS
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen

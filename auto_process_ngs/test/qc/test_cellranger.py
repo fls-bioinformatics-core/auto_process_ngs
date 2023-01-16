@@ -9,8 +9,8 @@ import tempfile
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
-from auto_process_ngs.tenx_genomics_utils import CellrangerMultiConfigCsv
-from auto_process_ngs.tenx_genomics_utils import MultiplexSummary
+from auto_process_ngs.tenx.cellplex import CellrangerMultiConfigCsv
+from auto_process_ngs.tenx.metrics import MultiplexSummary
 
 from auto_process_ngs.qc.cellranger import CellrangerCount
 from auto_process_ngs.qc.cellranger import CellrangerMulti

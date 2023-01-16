@@ -32,7 +32,7 @@ from .constants import FASTQ_SCREENS
 from .protocols import fetch_protocol_definition
 from .outputs import QCOutputs
 from .utils import get_bam_basename
-from ..tenx_genomics_utils import CellrangerMultiConfigCsv
+from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..utils import normalise_organism_name
 
 # Module specific logger

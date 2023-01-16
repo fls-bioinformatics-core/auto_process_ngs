@@ -15,7 +15,7 @@ import json
 import logging
 import bcftbx.IlluminaData as IlluminaData
 from .. import analysis
-from .. import tenx_genomics_utils
+from .. import tenx
 from .. import icell8
 
 # Module specific logger
@@ -106,7 +106,7 @@ def setup_analysis_dirs(ap,
     for line in project_metadata:
         sc_platform = line['SC_Platform']
         if sc_platform and sc_platform != '.':
-            if not sc_platform in tenx_genomics_utils.PLATFORMS and \
+            if not sc_platform in tenx.PLATFORMS and \
                not sc_platform in icell8.PLATFORMS and \
                not sc_platform in ('Parse Evercode',):
                 logger.error("Unknown single cell platform for '%s': "

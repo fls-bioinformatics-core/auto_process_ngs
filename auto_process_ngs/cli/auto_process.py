@@ -82,7 +82,7 @@ from ..envmod import load as envmod_load
 from ..samplesheet_utils import predict_outputs
 from ..settings import Settings
 from ..settings import locate_settings_file
-from ..tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
+from ..tenx import CELLRANGER_ASSAY_CONFIGS
 from ..utils import paginate
 
 # Module specific logger

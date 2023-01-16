@@ -2,11 +2,11 @@
 #
 # Handle outputs from cellranger
 import os
-from ..tenx_genomics_utils import GexSummary
-from ..tenx_genomics_utils import AtacSummary
-from ..tenx_genomics_utils import MultiplexSummary
-from ..tenx_genomics_utils import MultiomeSummary
-from ..tenx_genomics_utils import CellrangerMultiConfigCsv
+from ..tenx.metrics import GexSummary
+from ..tenx.metrics import AtacSummary
+from ..tenx.metrics import MultiplexSummary
+from ..tenx.metrics import MultiomeSummary
+from ..tenx.cellplex import CellrangerMultiConfigCsv
 
 class CellrangerCount:
     """

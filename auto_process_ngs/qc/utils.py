@@ -31,7 +31,7 @@ from ..conda import CondaWrapperError
 from ..conda import make_conda_env_name
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
-from ..tenx_genomics_utils import CellrangerMultiConfigCsv
+from ..tenx.cellplex import CellrangerMultiConfigCsv
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
 
