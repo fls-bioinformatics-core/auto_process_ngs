@@ -2064,6 +2064,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         elif self._package_name == 'cellranger':
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
+            if version[0] > 6:
+                header += '\n'
         elif self._package_name == 'cellranger-arc':
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
