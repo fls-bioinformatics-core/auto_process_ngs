@@ -151,7 +151,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                 targets = (sample_sheet,)
             # Try each possibility until one sticks
             for target in targets:
-                if not Location(target).is_url:
+                if not (Location(target).is_url or Location(target).is_remote) :
                     target = os.path.join(data_dir,target)
                 print("Trying '%s'" % target)
                 try:
