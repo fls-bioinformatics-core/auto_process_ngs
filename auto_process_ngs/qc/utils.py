@@ -373,10 +373,41 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
             pass
     else:
         print("%s: not found" % qc_info_file)
-    # Determine whether we're handling output from 'count'
-    # or from 'multi'
-    if os.path.exists(os.path.join(qc_dir,"cellranger_count")):
+    # Determine whether we're handling output from 'multi'
+    # or from 'count'
+    if os.path.exists(os.path.join(qc_dir,"cellranger_multi")):
+        # Handle outputs from 'multi'
+        print("Looking for '%s multi' outputs" % pipeline)
+        number_of_cells = 0
+        try:
+            multi_outs = CellrangerMulti(
+                os.path.join(qc_dir,
+                             "cellranger_multi",
+                             cellranger_version,
+                             os.path.basename(
+                                 cellranger_refdata)),
+                cellranger_exe=pipeline)
+            if multi_outs.sample_names:
+                for sample in multi_outs.sample_names:
+                    print("- %s" % sample)
+                    try:
+                        ncells = multi_outs.metrics(sample).cells
+                        print("  %d cells" % ncells)
+                        number_of_cells += ncells
+                    except Exception as ex:
+                        raise Exception("Failed to add cell count for sample "
+                                        "'%s': %s" % (sample,ex))
+            else:
+                raise Exception("No samples found under %s" %
+                                os.path.join(qc_dir,"cellranger_multi"))
+        except Exception as ex:
+            number_of_cells = None
+            logger.warning("Unable to set cell count from data in "
+                           "%s: %s" %
+                           (os.path.join(qc_dir,"cellranger_multi"),ex))
+    elif os.path.exists(os.path.join(qc_dir,"cellranger_count")):
         # Handle outputs from 'count'
+        print("Looking for '%s count' outputs" % pipeline)
         # Determine possible locations for outputs
         count_dirs = []
         # New-style with 'version' and 'reference' subdirectories
@@ -425,35 +456,6 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 except Exception as ex:
                     logger.warning("Unable to get cell counts from '%s': %s"
                                    % (count_dir,ex))
-    elif os.path.exists(os.path.join(qc_dir,"cellranger_multi")):
-        # Handle outputs from 'multi'
-        number_of_cells = 0
-        try:
-            multi_outs = CellrangerMulti(
-                os.path.join(qc_dir,
-                             "cellranger_multi",
-                             cellranger_version,
-                             os.path.basename(
-                                 cellranger_refdata)),
-                cellranger_exe=pipeline)
-            if multi_outs.sample_names:
-                for sample in multi_outs.sample_names:
-                    print("- %s" % sample)
-                    try:
-                        ncells = multi_outs.metrics(sample).cells
-                        print("  %d cells" % ncells)
-                        number_of_cells += ncells
-                    except Exception as ex:
-                        raise Exception("Failed to add cell count for sample "
-                                        "'%s': %s" % (sample,ex))
-            else:
-                raise Exception("No samples found under %s" %
-                                os.path.join(qc_dir,"cellranger_multi"))
-        except Exception as ex:
-            number_of_cells = None
-            logger.warning("Unable to set cell count from data in "
-                           "%s: %s" %
-                           (os.path.join(qc_dir,"cellranger_multi"),ex))
     else:
         # No known outputs to get cell counts from
         raise Exception("No 10xGenomics analysis subdirectories found?")
