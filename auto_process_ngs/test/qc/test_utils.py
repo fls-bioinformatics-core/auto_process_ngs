@@ -572,7 +572,7 @@ Cellranger version\t6.0.0
                          None)
         # Update the cell counts
         print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
+        set_cell_count_for_project(project_dir,source="multi")
         # Check updated cell count
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
@@ -635,10 +635,16 @@ Cellranger version\t6.0.0
                          None)
         # Update the cell counts
         print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
+        set_cell_count_for_project(project_dir,source="multi")
         # Check updated cell count
         self.assertEqual(AnalysisProject(project_dir).info.number_of_cells,
                          10350)
+        # Update the cell counts from "count" outputs
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir,source="count")
+        # Check updated cell count
+        self.assertEqual(AnalysisProject(project_dir).info.number_of_cells,
+                         2272)
 
     def test_set_cell_count_project_missing_library_type(self):
         """
