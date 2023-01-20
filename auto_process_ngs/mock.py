@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2023 Peter Briggs
 #
 ########################################################################
 
@@ -2064,6 +2064,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         elif self._package_name == 'cellranger':
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
+            if version[0] > 6:
+                header += '\n'
         elif self._package_name == 'cellranger-arc':
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
@@ -2318,9 +2320,13 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             outs_dir = os.path.join(top_dir,"outs")
             os.mkdir(outs_dir)
             if self._package_name == "cellranger":
+                if version[0] < 7:
+                    metrics_data = mock10xdata.METRICS_SUMMARY
+                else:
+                    metrics_data = mock10xdata.METRICS_SUMMARY_7_1_0
                 metrics_file = os.path.join(outs_dir,"metrics_summary.csv")
                 with open(metrics_file,'w') as fp:
-                    fp.write(mock10xdata.METRICS_SUMMARY)
+                    fp.write(metrics_data)
             elif self._package_name in "cellranger-atac":
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
@@ -2371,6 +2377,10 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                       "multi/multiplexing_analysis",):
                 os.mkdir(os.path.join(outs_dir,d))
             # Per sample outs
+            if version[0] < 7:
+                metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY
+            else:
+                metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_7_1_0
             for sample in config.sample_names:
                 sample_dir = os.path.join(outs_dir,
                                           "per_sample_outs",
@@ -2379,7 +2389,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_file = os.path.join(sample_dir,
                                             "metrics_summary.csv")
                 with open(metrics_file,'wt') as fp:
-                    fp.write(mock10xdata.CELLPLEX_METRICS_SUMMARY)
+                    fp.write(metrics_data)
                 web_summary_file = os.path.join(sample_dir,
                                                 "web_summary.html")
                 with open(web_summary_file,'wt') as fp:

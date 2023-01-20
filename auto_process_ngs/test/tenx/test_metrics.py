@@ -7,9 +7,11 @@ import tempfile
 import os
 import shutil
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
+from auto_process_ngs.mock10xdata import METRICS_SUMMARY_7_1_0
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY
+from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_7_1_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY_2_0_0
 from auto_process_ngs.tenx.metrics import *
@@ -40,6 +42,19 @@ class TestGexSummary(unittest.TestCase):
         self.assertEqual(m.estimated_number_of_cells,2272)
         self.assertEqual(m.mean_reads_per_cell,107875)
         self.assertEqual(m.median_genes_per_cell,1282)
+        self.assertEqual(m.frac_reads_in_cells,"12.0%")
+
+    def test_gex_summary_cellranger_7_1_0(self):
+        """GexSummary: check metrics are extracted from CSV file (CellRanger 7.1.0)
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(METRICS_SUMMARY_7_1_0)
+        m = GexSummary(summary_csv)
+        self.assertEqual(m.estimated_number_of_cells,5529)
+        self.assertEqual(m.mean_reads_per_cell,551)
+        self.assertEqual(m.median_genes_per_cell,267)
+        self.assertEqual(m.frac_reads_in_cells,"88.5%")
 
 class TestAtacSummary(unittest.TestCase):
     """
@@ -158,3 +173,16 @@ class TestMultiplexSummary(unittest.TestCase):
         self.assertEqual(m.median_genes_per_cell,3086)
         self.assertEqual(m.total_genes_detected,21260)
         self.assertEqual(m.median_umi_counts_per_cell,10515)
+
+    def test_multiplex_summary_cellranger_7_1_0(self):
+        """MultiplexSummary: check metrics are extracted from CSV file (Cellranger 7.1.0)
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(CELLPLEX_METRICS_SUMMARY_7_1_0)
+        m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.cells,1569)
+        self.assertEqual(m.median_reads_per_cell,26198)
+        self.assertEqual(m.median_genes_per_cell,2468)
+        self.assertEqual(m.total_genes_detected,20942)
+        self.assertEqual(m.median_umi_counts_per_cell,6685)
