@@ -30,7 +30,7 @@ Pipeline task classes:
 - CheckCellrangerCountOutputs
 - RunCellrangerCount
 - RunCellrangerMulti
-- SetCellCountFromCellrangerCount
+- SetCellCountFromCellranger
 - GetReferenceDataset
 - GetBAMFiles
 - RunRSeQCGenebodyCoverage
@@ -672,11 +672,12 @@ class QCPipeline(Pipeline):
                 # Set cell count
                 if set_cell_count:
                     set_cellranger_cell_count = \
-                        SetCellCountFromCellrangerCount(
+                        SetCellCountFromCellranger(
                             "%s: set cell count from single library analysis" %
                             project_name,
                             project,
-                            qc_dir
+                            qc_dir,
+                            source="count"
                         )
                     self.add_task(set_cellranger_cell_count,
                                   requires=(run_cellranger_count,
@@ -764,11 +765,12 @@ class QCPipeline(Pipeline):
                               log_dir=log_dir)
 
                 # Set cell count
-                set_cellranger_cell_count = SetCellCountFromCellrangerCount(
+                set_cellranger_cell_count = SetCellCountFromCellranger(
                     "%s: set cell count from cell multiplexing analysis" %
                     project_name,
                     project,
-                    qc_dir
+                    qc_dir,
+                    source="multi"
                 )
                 self.add_task(set_cellranger_cell_count,
                               requires=(run_cellranger_multi,),)
@@ -2792,20 +2794,22 @@ class RunCellrangerMulti(PipelineTask):
             self.fail(message="Some outputs missing from cellranger multi")
             return
 
-class SetCellCountFromCellrangerCount(PipelineTask):
+class SetCellCountFromCellranger(PipelineTask):
     """
     Update the number of cells in the project metadata from
-    'cellranger count' output
+    'cellranger count' or 'cellranger multi' output
     """
-    def init(self,project,qc_dir=None):
+    def init(self,project,qc_dir=None,source="count"):
         """
-        Initialise the SetCellCountFromCellrangerCount task.
+        Initialise the SetCellCountFromCellranger task.
 
         Arguments:
           project (AnalysisProject): project to update the
             number of cells for
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
+          source (str): either 'count' (the default) or
+            'multi'
         """
         pass
     def setup(self):
@@ -2813,7 +2817,8 @@ class SetCellCountFromCellrangerCount(PipelineTask):
         # metric file
         try:
             set_cell_count_for_project(self.args.project.dirn,
-                                       self.args.qc_dir)
+                                       self.args.qc_dir,
+                                       source=self.args.source)
         except Exception as ex:
             print("Failed to set the cell count: %s" % ex)
 

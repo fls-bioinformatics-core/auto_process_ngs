@@ -315,15 +315,21 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
                                   if s in samples])
     return samples
 
-def set_cell_count_for_project(project_dir,qc_dir=None):
+def set_cell_count_for_project(project_dir,qc_dir=None,
+                               source="count"):
     """
     Set the total number of cells for a project
 
-    Sums the number of cells for each sample in a project
-    (as determined from 'cellranger count' and extracted
-    from the 'metrics_summary.csv' file for scRNA-seq, or
-    from 'cellranger-atac count' and extracted from the
-    'summary.csv' file for scATAC-seq).
+    Depending on the specified 'source', sums the number
+    of cells for each sample in a project as determined
+    from either 'cellranger* count' or 'cellranger multi'.
+
+    Depending the 10x Genomics package and analysis type
+    the cell count for individual samples is extracted
+    from the 'metrics_summary.csv' file for scRNA-seq
+    (i.e. 'cellranger count' or 'cellranger multi'), or
+    from the 'summary.csv' file for scATAC (ie.
+    'cellranger-atac count').
 
     The final count is written to the 'number_of_cells'
     metadata item for the project.
@@ -332,6 +338,8 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
       project_dir (str): path to the project directory
       qc_dir (str): path to QC directory (if not the default
         QC directory for the project)
+      source (str): either 'count' or 'multi' (default is
+        'count')
 
     Returns:
       Integer: exit code, non-zero values indicate problems
@@ -373,9 +381,46 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
             pass
     else:
         print("%s: not found" % qc_info_file)
-    # Determine whether we're handling output from 'count'
-    # or from 'multi'
-    if os.path.exists(os.path.join(qc_dir,"cellranger_count")):
+    # Determine whether we're handling output from 'multi'
+    # or from 'count'
+    if source == "multi":
+        print("Looking for '%s multi' outputs" % pipeline)
+        if not os.path.exists(os.path.join(qc_dir,"cellranger_multi")):
+            logger.warning("Unable to set cell count: no data found")
+            return
+        # Handle outputs from 'multi'
+        number_of_cells = 0
+        try:
+            multi_outs = CellrangerMulti(
+                os.path.join(qc_dir,
+                             "cellranger_multi",
+                             cellranger_version,
+                             os.path.basename(
+                                 cellranger_refdata)),
+                cellranger_exe=pipeline)
+            if multi_outs.sample_names:
+                for sample in multi_outs.sample_names:
+                    print("- %s" % sample)
+                    try:
+                        ncells = multi_outs.metrics(sample).cells
+                        print("  %d cells" % ncells)
+                        number_of_cells += ncells
+                    except Exception as ex:
+                        raise Exception("Failed to add cell count for sample "
+                                        "'%s': %s" % (sample,ex))
+            else:
+                raise Exception("No samples found under %s" %
+                                os.path.join(qc_dir,"cellranger_multi"))
+        except Exception as ex:
+            number_of_cells = None
+            logger.warning("Unable to set cell count from data in "
+                           "%s: %s" %
+                           (os.path.join(qc_dir,"cellranger_multi"),ex))
+    elif source == "count":
+        print("Looking for '%s count' outputs" % pipeline)
+        if not os.path.exists(os.path.join(qc_dir,"cellranger_count")):
+            logger.warning("Unable to set cell count: no data found")
+            return
         # Handle outputs from 'count'
         # Determine possible locations for outputs
         count_dirs = []
@@ -391,6 +436,7 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                                        "cellranger_count"))
         # Check each putative output location in turn
         for count_dir in count_dirs:
+            print("Examining %s" % count_dir)
             # Check that the directory exists
             if os.path.exists(count_dir):
                 number_of_cells = 0
@@ -425,38 +471,9 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 except Exception as ex:
                     logger.warning("Unable to get cell counts from '%s': %s"
                                    % (count_dir,ex))
-    elif os.path.exists(os.path.join(qc_dir,"cellranger_multi")):
-        # Handle outputs from 'multi'
-        number_of_cells = 0
-        try:
-            multi_outs = CellrangerMulti(
-                os.path.join(qc_dir,
-                             "cellranger_multi",
-                             cellranger_version,
-                             os.path.basename(
-                                 cellranger_refdata)),
-                cellranger_exe=pipeline)
-            if multi_outs.sample_names:
-                for sample in multi_outs.sample_names:
-                    print("- %s" % sample)
-                    try:
-                        ncells = multi_outs.metrics(sample).cells
-                        print("  %d cells" % ncells)
-                        number_of_cells += ncells
-                    except Exception as ex:
-                        raise Exception("Failed to add cell count for sample "
-                                        "'%s': %s" % (sample,ex))
-            else:
-                raise Exception("No samples found under %s" %
-                                os.path.join(qc_dir,"cellranger_multi"))
-        except Exception as ex:
-            number_of_cells = None
-            logger.warning("Unable to set cell count from data in "
-                           "%s: %s" %
-                           (os.path.join(qc_dir,"cellranger_multi"),ex))
     else:
         # No known outputs to get cell counts from
-        raise Exception("No 10xGenomics analysis subdirectories found?")
+        raise Exception("Unknown source type: '%s'" % source)
     if number_of_cells is not None:
         # Report
         print("Total number of cells: %d" % number_of_cells)
