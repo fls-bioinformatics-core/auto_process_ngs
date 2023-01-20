@@ -97,4 +97,5 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :maxdepth: 2
    :caption: Developer Documentation
 
+   developers/update_cellranger
    developers/api_docs/index
