@@ -455,6 +455,7 @@ if __name__ == "__main__":
         print("Unable to locate project metadata")
 
     # Per task environment modules
+    envmodules = dict()
     for name in ('fastqc',
                  'fastq_screen',
                  'fastq_strand',
