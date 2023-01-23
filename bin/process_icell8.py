@@ -29,7 +29,6 @@ from auto_process_ngs.icell8.utils import ICell8WellList
 from auto_process_ngs.icell8.pipeline import ICell8QCFilter
 from auto_process_ngs.icell8.pipeline import ICell8FinalReporting
 from auto_process_ngs.qc.pipeline import QCPipeline
-import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings
 import auto_process_ngs.settings
@@ -133,12 +132,6 @@ if __name__ == "__main__":
                    help="maxiumum number of concurrent jobs to run "
                    "(default: %d)"
                    % __settings.general.max_concurrent_jobs)
-    p.add_argument('--modulefiles',action='store',
-                   dest='modulefiles',default=None,
-                   help="comma-separated list of environment "
-                   "modules to load before executing commands "
-                   "(overrides any modules specified in the global "
-                   "settings)")
     p.add_argument("--no-contaminant-filter",action='store_true',
                    dest='no_contaminant_filter',
                    help="don't perform contaminant filter step "
@@ -165,18 +158,6 @@ if __name__ == "__main__":
                    "instead): number of threads to use with multicore "
                    "tasks (e.g. 'contaminant_filter')")
     args = p.parse_args()
-
-    # Deal with environment modules
-    modulefiles = args.modulefiles
-    if modulefiles is None:
-        try:
-            modulefiles = __modulefiles['process_icell8']
-        except KeyError:
-            # No environment modules specified
-            pass
-    if modulefiles is not None:
-        for modulefile in modulefiles.split(','):
-            envmod.load(modulefile)
 
     # Per task environment modules
     envmodules = dict()
@@ -326,10 +307,6 @@ if __name__ == "__main__":
                                          runner,
                                          nprocs if nprocs
                                          else runner.nslots))
-    if modulefiles is not None:
-        print("Environment modules:")
-        for modulefile in modulefiles.split(','):
-            print("-- %s" % modulefile)
     print("Clean-up intermediate Fastqs: %s" %
           ('yes' if do_clean_up else 'no'))
 
