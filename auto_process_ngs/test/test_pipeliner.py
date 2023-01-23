@@ -12,7 +12,6 @@ import getpass
 import platform
 import cloudpickle
 from builtins import range
-import auto_process_ngs.envmod as envmod
 from auto_process_ngs.mock import MockConda
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.command import Command
@@ -72,6 +71,26 @@ exit 0
 """)
         os.chmod(os.path.join(bin_dir,"fastqc"),0o775)
         return fastqc_
+
+def _envmodules_is_available():
+    """
+    Check if environment modules package is available
+
+    Returns:
+      Boolean: True if environment modules package is available
+        on the system, False if not
+    """
+    modulecmd_dirs = ('/usr/bin',
+                      '/usr/local/modules-4.4.1/bin',
+                      '/opt/clusterware/opt/Modules/bin',
+                      '/opt/clusterware/opt/modules/bin',)
+    for d in modulecmd_dirs:
+        modulecmd = os.path.join(d,'modulecmd')
+        if not os.path.isfile(modulecmd):
+            modulecmd = None
+        else:
+            break
+    return (modulecmd is not None)
 
 # Unit tests
 
@@ -806,7 +825,7 @@ class TestPipeline(unittest.TestCase):
         with open(out_file,'rt') as fp:
             self.assertEqual(fp.read(),"item1\nitem2\n")
 
-    @unittest.skipIf(not envmod.__ENVMODULES__,
+    @unittest.skipIf(not _envmodules_is_available(),
                      "Environment modules not available")
     def test_pipeline_with_envmodules(self):
         """
@@ -859,7 +878,7 @@ prepend-path PATH %s
         # Check the outputs
         self.assertEqual(exit_status,0)
 
-    @unittest.skipIf(not envmod.__ENVMODULES__,
+    @unittest.skipIf(not _envmodules_is_available(),
                      "Environment modules not available")
     def test_pipeline_fails_with_missing_modules_environment(self):
         """
@@ -897,7 +916,7 @@ prepend-path PATH %s
         # Check the pipeline failed (non-zero exit)
         self.assertNotEqual(exit_status,0)
 
-    @unittest.skipIf(not envmod.__ENVMODULES__,
+    @unittest.skipIf(not _envmodules_is_available(),
                      "Environment modules not available")
     def test_pipeline_add_envmodules_twice_raises_exception(self):
         """
