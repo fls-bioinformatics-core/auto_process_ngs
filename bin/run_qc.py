@@ -37,7 +37,6 @@ from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.fastq_utils import group_fastqs_by_name
 import auto_process_ngs
 import auto_process_ngs.settings
-import auto_process_ngs.envmod as envmod
 from auto_process_ngs.qc.pipeline import QCPipeline
 from auto_process_ngs.qc.utils import report_qc
 from auto_process_ngs.tenx import CELLRANGER_ASSAY_CONFIGS
@@ -326,10 +325,6 @@ if __name__ == "__main__":
                             dest='run_multiqc', default=False,
                             help="redundant: MultiQC report is generated "
                             "by default (use --no-multiqc to disable)")
-    deprecated.add_argument('--modulefiles',action='store',
-                            dest='modulefiles',default=None,
-                            help="deprecated: environment modules should "
-                            "be set on per-task basis")
     deprecated.add_argument('--fastq_dir',metavar='SUBDIR',
                             action='store',dest='fastq_dir',default=None,
                             help="unsupported: point DIR directly to Fastq "
@@ -356,11 +351,6 @@ if __name__ == "__main__":
                        "run by default")
         logger.warning("Use '--no-multiqc' to turn off MultiQC report "
                        "generation")
-    if args.modulefiles:
-        logger.warning("'--modulefiles' option is deprecated and may not "
-                       "work")
-        logger.warning("Environment modules should be set on a per-task "
-                       "basis in the config file")
     if args.cellranger_transcriptomes:
         logger.warning("'--10x_transcriptome' option is deprecated")
         logger.warning("Use '--cellranger-reference' instead")
@@ -463,17 +453,6 @@ if __name__ == "__main__":
                                                     else ''))
     else:
         print("Unable to locate project metadata")
-
-    # Set up environment
-    envmodules = dict()
-    if args.modulefiles is None:
-        modulefiles = __modulefiles['run_qc']
-    else:
-        modulefiles = args.modulefiles
-    if modulefiles is not None:
-        announce("Setting up environment")
-        for modulefile in modulefiles.split(','):
-            envmod.load(modulefile)
 
     # Per task environment modules
     for name in ('fastqc',
