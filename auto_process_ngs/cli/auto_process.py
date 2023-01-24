@@ -78,7 +78,6 @@ from ..bcl2fastq.pipeline import PROTOCOLS
 from ..bcl2fastq.pipeline import subset
 from ..commands.make_fastqs_cmd import BCL2FASTQ_DEFAULTS
 from ..commands.report_cmd import ReportingMode
-from ..envmod import load as envmod_load
 from ..samplesheet_utils import predict_outputs
 from ..settings import Settings
 from ..settings import locate_settings_file
@@ -224,7 +223,6 @@ def add_make_fastqs_command(cmdparser):
                               description="Generate fastq files from raw "
                               "bcl files produced by Illumina sequencer.")
     # General options
-    add_modulefiles_option(p)
     add_no_save_option(p)
     add_debug_option(p)
     p.add_argument('--id',action='store',dest='name',default=None,
@@ -715,7 +713,6 @@ def add_run_qc_command(cmdparser):
                           help="specify the working directory for the "
                           "pipeline operations")
     add_runner_option(advanced)
-    add_modulefiles_option(advanced)
     add_debug_option(advanced)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
@@ -1633,19 +1630,6 @@ def update_fastq_stats(args):
 
 # Supporting functions
 
-def add_modulefiles_option(p,dest='modulefiles',default=None):
-    """
-    Add a --modulefiles argument to a parser instance
-
-    The values can be accessed via the 'modulefiles' property of the
-    parser.
-    """
-    add_arg(p,'--modulefiles',action='store',
-            dest=dest,default=default,
-            help="Specify comma-separated list of environment "
-            "modules to load before executing commands (overrides "
-            "any modules specified in the global settings)")
-
 def set_debug(debug_flag):
     """
     Turn on debug output
@@ -1717,22 +1701,6 @@ def main():
         allow_save = not args.no_save
     except AttributeError:
         allow_save = True
-
-    # Set up environment modules
-    modulefiles = None
-    try:
-        modulefiles = args.modulefiles
-    except AttributeError:
-        pass
-    if modulefiles is None:
-        try:
-            modulefiles = __settings.modulefiles[cmd]
-        except KeyError:
-            # No environment modules specified
-            pass
-    if modulefiles is not None:
-        for modulefile in modulefiles.split(','):
-            envmod_load(modulefile)
 
     # Locate and run the requested command
     try:
