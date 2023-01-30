@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2023 Peter Briggs
 #
 
 """
@@ -726,6 +726,8 @@ class QCPipeline(Pipeline):
                     get_cellranger_multi_config)
                 qc_metadata['cellranger_refdata'] = \
                     get_cellranger_multi_config.output.reference_data_path
+                qc_metadata['cellranger_probeset'] = \
+                    get_cellranger_multi_config.output.probe_set_path
                 update_qc_metadata.requires(get_cellranger_multi_config)
 
                 # Parent directory for cellranger multi outputs
@@ -2067,6 +2069,7 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         self.add_output('gex_libraries',ListParam())
         self.add_output('fastq_dirs',dict())
         self.add_output('reference_data_path',Param(type=str))
+        self.add_output('probe_set_path',Param(type=str))
     def setup(self):
         # Check for top-level libraries file
         config_file = os.path.join(self.args.project.dirn,
@@ -2082,6 +2085,7 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         samples = config_csv.sample_names
         gex_libraries = config_csv.gex_libraries
         reference_data_path = config_csv.reference_data_path
+        probe_set_path = config_csv.probe_set_path
         fastq_dirs = config_csv.fastq_dirs
         print("Samples:")
         for sample in samples:
@@ -2099,6 +2103,7 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         self.output.samples.extend(samples)
         self.output.gex_libraries.extend(gex_libraries)
         self.output.reference_data_path.set(reference_data_path)
+        self.output.probe_set_path.set(probe_set_path)
         for sample in fastq_dirs:
             self.output.fastq_dirs[sample] = fastq_dirs[sample]
 

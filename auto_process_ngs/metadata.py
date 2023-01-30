@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     metadata: classes for storing metadata on analysis objects
-#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
 #
 ########################################################################
 #
@@ -666,6 +666,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     organism: the organism(s) that the QC was run with
     cellranger_version: version of cellranger/10x software used
     cellranger_refdata: reference datasets used with cellranger
+    cellranger_probeset: probe set used with cellranger
     fastq_screens: names of panels used with fastq_screen
     star_index: index used by STAR
     annotation_bed: BED file with gene annotation
@@ -686,6 +687,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                 'organism': 'Organism',
                 'cellranger_version': 'Cellranger version',
                 'cellranger_refdata': 'Cellranger reference datasets',
+                'cellranger_probeset': 'Cellranger reference probe set',
                 'fastq_screens': 'FastqScreen panels',
                 'star_index': 'STAR index',
                 'annotation_bed': 'BED gene annotation file',
