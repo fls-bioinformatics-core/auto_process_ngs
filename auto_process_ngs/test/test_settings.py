@@ -333,6 +333,7 @@ cellranger_reference = /data/10x/refdata-gex-GRCh38-2020-A
 cellranger_premrna_reference = /data/10x/refdata-cellranger-GRCh38-1.0.1-pre_mrna
 cellranger_atac_reference = /data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
 cellranger_arc_reference = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
+cellranger_probe_set = /data/10x/Probe_Set_v1.0_GRCh38-2020-A.csv
 
 [organism:mouse]
 star_index = /data/mm10/star
@@ -342,6 +343,7 @@ annotation_gtf = /data/mm10/annotation/mm10.gtf
 cellranger_reference = /data/10x/refdata-gex-mm10-2020-A
 cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
 cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
+cellranger_probe_set = /data/10x/Probe_Set_v1.0_mm10-2020-A.csv
 """)
         # Load settings
         s = Settings(settings_file)
@@ -363,6 +365,8 @@ cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
         self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_probe_set'],
+                         '/data/10x/Probe_Set_v1.0_GRCh38-2020-A.csv')
         self.assertTrue('mouse' in s.organisms)
         self.assertEqual(s.organisms['mouse']['star_index'],
                          '/data/mm10/star')
@@ -380,6 +384,8 @@ cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
         self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_probe_set'],
+                         '/data/10x/Probe_Set_v1.0_mm10-2020-A.csv')
 
     def test_legacy_organism_definitions(self):
         """Settings: handle sections for specific indices (no 'organism:...' sections)
@@ -423,6 +429,7 @@ mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
         self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_probe_set'],None)
         self.assertTrue('mouse' in s.organisms)
         self.assertEqual(s.organisms['mouse']['star_index'],
                          '/data/mm10/star')
@@ -437,6 +444,7 @@ mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
                          '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
         self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_probe_set'],None)
 
     def test_mixed_organism_definitions(self):
         """Settings: handle mixture of 'organism:...' and index sections
@@ -457,6 +465,7 @@ annotation_gtf = /data/mm10/annotation/mm10.gtf
 cellranger_reference = /data/10x/refdata-gex-mm10-2020-A
 cellranger_atac_reference = /data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0
 cellranger_arc_reference = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
+cellranger_probe_set = /data/10x/Probe_Set_v1.0_mm10-2020-A.csv
 
 [fastq_strand_indexes]
 human = /data/hg38/star
@@ -494,6 +503,7 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
                          '/data/10x/refdata-cellranger-atac-GRCh38-2020-A-2.0.0')
         self.assertEqual(s.organisms['human']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0')
+        self.assertEqual(s.organisms['human']['cellranger_probe_set'],None)
         self.assertTrue('mouse' in s.organisms)
         self.assertEqual(s.organisms['mouse']['star_index'],
                          '/data/mm10/star')
@@ -511,6 +521,8 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
                          '/data/10x/refdata-cellranger-atac-mm10-2020-A-2.0.0')
         self.assertEqual(s.organisms['mouse']['cellranger_arc_reference'],
                          '/data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0')
+        self.assertEqual(s.organisms['mouse']['cellranger_probe_set'],
+                         '/data/10x/Probe_Set_v1.0_mm10-2020-A.csv')
 
     def test_screen_definitions(self):
         """Settings: handle 'screen:...' sections

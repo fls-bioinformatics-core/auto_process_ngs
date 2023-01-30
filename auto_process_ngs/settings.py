@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2023 Peter Briggs
 #
 #########################################################################
 #
@@ -527,6 +527,7 @@ class Settings:
         - cellranger_premrna_reference (str)
         - cellranger_atac_reference (str)
         - cellranger_arc_reference (str)
+        - cellranger_probe_set (str)
 
         Arguments:
           section (str): name of the section to retrieve the
@@ -545,7 +546,8 @@ class Settings:
                 'annotation_gtf',
                 'cellranger_premrna_reference',
                 'cellranger_atac_reference',
-                'cellranger_arc_reference'):
+                'cellranger_arc_reference',
+                'cellranger_probe_set'):
             if section and config:
                 values[param] = config.get(section,param,None)
             else:
