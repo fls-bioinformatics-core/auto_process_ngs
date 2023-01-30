@@ -393,6 +393,13 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
         for f in ("_cmdline",):
             with open(os.path.join(qc_dir,prefix,f),'wt') as fp:
                 fp.write(cmdline)
+        # Config file
+        if config_csv:
+            with open(config_csv,'rt') as fp:
+                with open(os.path.join(qc_dir,
+                                       prefix,
+                                       "outs","config.csv"),'wt') as fpp:
+                    fpp.write(fp.read())
 
 #######################################################################
 # Functions
