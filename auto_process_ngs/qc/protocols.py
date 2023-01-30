@@ -247,7 +247,8 @@ QC_PROTOCOLS = {
             'sequence_lengths',
             'strandedness',
             'rseqc_genebody_coverage',
-            'qualimap_rnaseq'
+            'qualimap_rnaseq',
+            'cellranger_multi'
         ]
     },
 
