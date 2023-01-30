@@ -37,6 +37,7 @@ QC protocol           Used for
 ``10x_Multiome_ATAC`` 10xGenomics single cell multiome ATAC-seq data
 ``10x_Multiome_GEX``  10xGenomics single cell multiome gene expression data
 ``10x_CellPlex``      10xGenomics CellPlex cell multiplexing data
+``10x_Flex``          10xGenomics Flex (fixed RNA profiling) data
 ``ParseEvercode``     Parse Evercode single cell RNA-seq
 ``singlecell``        ICELL8 single cell RNA-seq
 ``ICELL8_scATAC``     ICELL8 single cell ATAC-seq
@@ -83,8 +84,9 @@ QC module                      Details
 ``cellranger-arc_count``       Single cell multiome analysis using
                                `cellranger_arc`_ ``count`` (requires
                                :doc:`10x_multiome_libraries.info <../control_files/10x_multiome_libraries_info>`)
-``cellranger_multi``           Cell multiplexing analysis using
-                               `cellranger`_ ``multi`` (requires
+``cellranger_multi``           Cell multiplexing and fixed RNA profiling
+                               analyses using `cellranger`_ ``multi``
+                               (requires
                                :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`)
 ============================== ======================
 
