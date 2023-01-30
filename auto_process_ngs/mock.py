@@ -2409,6 +2409,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             cmdline_file = os.path.join(top_dir,"_cmdline")
             with open(cmdline_file,'w') as fp:
                 fp.write("%s\n" % cmdline)
+            # config.csv file
+            config_csv = os.path.join(top_dir,"outs","config.csv")
+            with open(config_csv,'wt') as fp:
+                with open(args.csv,'rt') as fpp:
+                    fp.write(fpp.read())
         else:
             print("%s: not implemented" % args.command)
         print("Return exit code: %s" % self._exit_code)
