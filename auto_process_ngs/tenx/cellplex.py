@@ -36,6 +36,7 @@ class CellrangerMultiConfigCsv:
 
     - sample_names: list of multiplexed sample names
     - reference_data_path: path to the reference dataset
+    - probe_set_path: path to the probe set
     - gex_libraries: list of Fastq IDs associated
       with GEX data
 
@@ -61,6 +62,7 @@ class CellrangerMultiConfigCsv:
         self._filen = os.path.abspath(filen)
         self._samples = {}
         self._reference_data_path = None
+        self._probe_set_path = None
         self._gex_libraries = {}
         self._fastq_dirs = {}
         self._read_config_csv()
@@ -88,7 +90,8 @@ class CellrangerMultiConfigCsv:
                     current_section = None
                     continue
                 if current_section == "samples":
-                    if line.startswith('sample_id,cmo_ids'):
+                    if line.startswith('sample_id,cmo_ids') or \
+                       line.startswith('sample_id,probe_set_ids'):
                         # Header line, skip
                         continue
                     else:
@@ -112,8 +115,10 @@ class CellrangerMultiConfigCsv:
                         # Extract reference dataset
                         self._reference_data_path = ','.join(
                             line.split(',')[1:]).strip()
-                        logger.debug("Found reference dataset '%s'" %
-                                     self._reference_data_path)
+                    elif line.startswith('probe-set,'):
+                        # Extract probe set
+                        self._probe_set_path = ','.join(
+                            line.split(',')[1:]).strip()
                 elif current_section == "libraries":
                     if line.startswith('fastq_id,fastqs,'):
                         # Header line, skip
@@ -162,6 +167,13 @@ class CellrangerMultiConfigCsv:
         Return the path to the reference dataset from config.csv
         """
         return self._reference_data_path
+
+    @property
+    def probe_set_path(self):
+        """
+        Return the path to the probe set file from config.csv
+        """
+        return self._probe_set_path
 
     @property
     def gex_libraries(self):
