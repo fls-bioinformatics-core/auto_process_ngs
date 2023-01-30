@@ -2794,6 +2794,13 @@ class RunCellrangerMulti(PipelineTask):
                                                     top_dir,
                                                     qc_top_dir))
                 shutil.copy(path,qc_top_dir)
+            # Config file
+            path = os.path.join(top_dir,"outs","config.csv")
+            if os.path.exists(path):
+                print("Copying config.csv")
+                shutil.copy(path,os.path.join(self.args.qc_dir,
+                                              qc_top_dir,
+                                              "outs"))
         # Delayed task failure from earlier errors
         if has_errors:
             self.fail(message="Some outputs missing from cellranger multi")
