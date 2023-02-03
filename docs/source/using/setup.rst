@@ -86,9 +86,9 @@ within the source data and will use this by default.
 
 However if the sequencing run doesn't include a sample
 sheet file (for example, NextSeq runs), or if you want to
-use an alternative sample sheet, then the ``--sample-sheet``
-option can be used to explicitly specify the sample sheet
-file.
+use an alternative sample sheet, then the
+``-s``/``--sample-sheet`` option can be used to explicitly
+specify the sample sheet file.
 
 For example:
 
@@ -141,6 +141,15 @@ For example:
    is configured, or that ``ssh-agent`` is used for the
    current session, to suppress multiple password prompts
    each time the remote system is accessed.
+
+.. _setup_specifying_facility_run_number:
+
+**********************************
+Specifying the facility run number
+**********************************
+
+The facility run number can be explicitly specified using the
+``-r``/``--run-number`` option of the ``setup`` command.
 
 .. _setup_specifying_additional_files:
 
