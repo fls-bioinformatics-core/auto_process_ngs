@@ -36,6 +36,7 @@ class TestQCProtocol(unittest.TestCase):
         self.assertEqual(p.read_numbers.seq_data,())
         self.assertEqual(p.read_numbers.index,())
         self.assertEqual(p.read_numbers.qc,())
+        self.assertEqual(p.read_range,{})
         self.assertEqual(p.qc_modules,[])
 
     def test_qcprotocol_example_paired_end_protocol(self):
@@ -57,6 +58,8 @@ class TestQCProtocol(unittest.TestCase):
         self.assertEqual(p.read_numbers.seq_data,(1,2))
         self.assertEqual(p.read_numbers.index,())
         self.assertEqual(p.read_numbers.qc,(1,2))
+        self.assertEqual(p.read_range.r1,None)
+        self.assertEqual(p.read_range.r2,None)
         self.assertEqual(p.qc_modules,
                          ["fastq_screen",
                           "fastqc",
@@ -81,6 +84,34 @@ class TestQCProtocol(unittest.TestCase):
         self.assertEqual(p.read_numbers.seq_data,(2,))
         self.assertEqual(p.read_numbers.index,(1,))
         self.assertEqual(p.read_numbers.qc,(1,2))
+        self.assertEqual(p.read_range.r1,None)
+        self.assertEqual(p.read_range.r2,None)
+        self.assertEqual(p.qc_modules,
+                         ["fastq_screen",
+                          "fastqc",
+                          "sequence_lengths"])
+
+    def test_qcprotocol_example_paired_end_protocol_with_ranges(self):
+        """
+        QCProtocol: check basic paired end protocol with ranges
+        """
+        p = QCProtocol(name="basicPE_with_ranges",
+                       description="Basic paired-end QC with ranges",
+                       seq_data_reads=['r1','r2:1-50'],
+                       index_reads=None,
+                       qc_modules=("fastqc",
+                                   "fastq_screen",
+                                   "sequence_lengths"))
+        self.assertEqual(p.name,"basicPE_with_ranges")
+        self.assertEqual(p.description,"Basic paired-end QC with ranges")
+        self.assertEqual(p.reads.seq_data,('r1','r2',))
+        self.assertEqual(p.reads.index,())
+        self.assertEqual(p.reads.qc,('r1','r2'))
+        self.assertEqual(p.read_numbers.seq_data,(1,2))
+        self.assertEqual(p.read_numbers.index,())
+        self.assertEqual(p.read_numbers.qc,(1,2))
+        self.assertEqual(p.read_range.r1,None)
+        self.assertEqual(p.read_range.r2,(1,50))
         self.assertEqual(p.qc_modules,
                          ["fastq_screen",
                           "fastqc",

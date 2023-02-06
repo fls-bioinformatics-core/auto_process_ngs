@@ -316,12 +316,27 @@ class QCProtocol:
       'index', and 'qc' (listing sequence data, index reads,
       and all read for QC, respectively)
     - read_numbers: AttributeDictionary with the same
-      elements as 'reads', listing non-index read numbers.
+      elements as 'reads', listing non-index read numbers
+    - read_range: AttributeDictionary with normalised read
+      names as elements and range of bases (as a tuple) as
+      the values
     - qc_modules: list of QC module definitions
 
     Reads are supplied as 'r1', 'i2' etc; read numbers are
     integers without the leading 'r' (NB index reads are
     not included).
+
+    Read ranges define subsequences within each read which
+    contain the biologically significant data, and can be
+    appended to the supplied reads using the syntax:
+
+    READ[:[START]-[END]]
+
+    For example: 'r1:1-50'. These can ben accessed via the
+    'read_range' property as e.g. 'read_range.r1' and will
+    be returned as either 'None' (if no range was supplied),
+    or a tuple '(START,END)' (where either 'START' or 'END'
+    will be 'None' if no limit was supplied).
 
     Arguments:
       name (str): name of the protocol
@@ -353,13 +368,42 @@ class QCProtocol:
             seq_data=self.__read_numbers(self.reads.seq_data),
             index=self.__read_numbers(self.reads.index),
             qc=self.__read_numbers(self.reads.qc))
+        # Extract and store sequence ranges for reads
+        self.read_range = AttributeDictionary()
+        if not seq_data_reads:
+            seq_data_reads = tuple()
+        if not index_reads:
+            index_reads = tuple()
+        for r in list(seq_data_reads) + list(index_reads):
+            rd,rng = self.__parse_read_defn(r)
+            self.read_range[rd] = rng
+
+    def __parse_read_defn(self,read):
+        # Internal: process a read definition string of the
+        # form 'READ[:[START]-[END]]' and return a tuple
+        # of (READ,(START,END)) or (READ,None) (if no range
+        # was supplied)
+        # Extract read and range
+        try:
+            rd,rng = read.split(':')
+        except ValueError:
+            rd,rng = (read,None)
+        # Convert read to lower case
+        rd = rd.lower()
+        # Deal with range
+        if rng:
+            rng = tuple([int(s) for s in rng.split('-')])
+        else:
+            rng = None
+        return (rd,rng)
 
     def __reads(self,reads):
-        # Internal: normalise read names (sort and convert
-        # to lowercase)
+        # Internal: normalise read names (remove range spec,
+        # then convert to lowercase and sort)
         if not reads:
             return tuple()
-        return tuple(sorted([r.lower() for r in reads]))
+        return tuple(sorted([self.__parse_read_defn(r)[0]
+                             for r in reads]))
 
     def __read_numbers(self,reads):
         # Internal: extract read numbers (discard leading
