@@ -1537,6 +1537,75 @@ class TestQCOutputs(unittest.TestCase):
                          ['10x_multi_config.csv',
                           'fastq_strand.conf'])
 
+    def test_qcoutputs_10x_cellranger_multi_flex(self):
+        """
+        QCOutputs: 10xGenomics Flex data with 'cellranger multi'
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Flex",
+                                   fastq_names=(
+                                       'PJB1_flex_S1_R1_001',
+                                       'PJB1_flex_S1_R2_001',
+                                   ),
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_flex',
+                                   ),
+                                   cellranger_multi_samples=(
+                                       'PJB_BC1',
+                                       'PJB_BC2',
+                                   ))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_multi',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_flex_S1_R1_001',
+                          'PJB1_flex_S1_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_flex',])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1_flex'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,
+                         ['/data/probe-set-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,
+                         ['PJB_BC1','PJB_BC2'])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '6.1.2' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
+
     def test_qcoutputs_with_non_standard_qc_dir(self):
         """
         QCOutputs: non-standard QC directory
