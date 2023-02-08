@@ -91,7 +91,7 @@ class CellrangerMultiConfigCsv:
                     continue
                 if current_section == "samples":
                     if line.startswith('sample_id,cmo_ids') or \
-                       line.startswith('sample_id,probe_set_ids'):
+                       line.startswith('sample_id,probe_barcode_ids'):
                         # Header line, skip
                         continue
                     else:

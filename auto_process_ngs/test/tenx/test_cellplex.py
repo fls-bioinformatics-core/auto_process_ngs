@@ -79,7 +79,7 @@ fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 PJB1_Flex,/data/runs/fastqs,any,PJB1,gene expression,
 
 [samples]
-sample_id,probe_set_ids,description
+sample_id,probe_barcode_ids,description
 PB1,BC001,PB1
 PB2,BC002,PB2
 """)
