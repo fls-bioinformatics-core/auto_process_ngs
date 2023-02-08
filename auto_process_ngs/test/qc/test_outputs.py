@@ -60,13 +60,15 @@ class TestQCOutputs(unittest.TestCase):
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
                      legacy_screens=False,
-                     legacy_cellranger_outs=False):
+                     legacy_cellranger_outs=False,
+                     protocol=None):
         # Create working directory and qc dir
         if self.wd is None:
             self.wd = tempfile.mkdtemp(suffix='.test_QCOutputs')
         return make_mock_qc_dir(
             os.path.join(self.wd,qc_dir),
             fastq_names,
+            protocol=protocol,
             screens=screens,
             cellranger_pipelines=cellranger_pipelines,
             cellranger_samples=cellranger_samples,
@@ -1387,11 +1389,12 @@ class TestQCOutputs(unittest.TestCase):
                           'libraries.PJB1.csv',
                           'libraries.PJB2.csv'])
 
-    def test_qcoutputs_10x_cellranger_multi(self):
+    def test_qcoutputs_10x_cellranger_multi_cellplex(self):
         """
         QCOutputs: 10xGenomics CellPlex data with 'cellranger multi'
         """
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
                                    fastq_names=(
                                        'PJB1_GEX_S1_R1_001',
                                        'PJB1_GEX_S1_R2_001',
@@ -1414,7 +1417,6 @@ class TestQCOutputs(unittest.TestCase):
                           'fastqc_r1',
                           'fastqc_r2',
                           'multiqc',
-                          'screens_r1',
                           'screens_r2',
                           'sequence_lengths',
                           'strandedness'])
@@ -1435,6 +1437,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,
                          ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
@@ -1459,11 +1462,12 @@ class TestQCOutputs(unittest.TestCase):
                          ['10x_multi_config.csv',
                           'fastq_strand.conf'])
 
-    def test_qcoutputs_10x_cellranger_multi_and_count(self):
+    def test_qcoutputs_10x_cellranger_multi_and_count_cellplex(self):
         """
         QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' and 'count'
         """
         qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
                                    fastq_names=(
                                        'PJB1_GEX_S1_R1_001',
                                        'PJB1_GEX_S1_R2_001',
@@ -1488,7 +1492,6 @@ class TestQCOutputs(unittest.TestCase):
                           'fastqc_r1',
                           'fastqc_r2',
                           'multiqc',
-                          'screens_r1',
                           'screens_r2',
                           'sequence_lengths',
                           'strandedness'])
@@ -1509,6 +1512,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,
                          ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
         self.assertEqual(qc_outputs.reads,['r1','r2'])

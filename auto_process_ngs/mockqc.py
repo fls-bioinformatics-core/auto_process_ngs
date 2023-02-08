@@ -506,6 +506,15 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
            (AnalysisFastq(fq).sample_name not in seq_data_samples):
                 # Skip for non-biological samples
                 continue
+            if protocol in ('10x_scRNAseq',
+                            '10x_snRNAseq',
+                            '10x_Multiome_GEX',
+                            '10x_CellPlex',
+                            '10x_Flex',
+                            '10x_Visium',) and \
+            (AnalysisFastq(fq).read_number == 1):
+                # Skip for R1 reads
+                continue
             for screen in screens:
                 MockQCOutputs.fastq_screen_v0_9_2(
                     fq,qc_dir,screen,legacy=legacy_screens)
@@ -515,6 +524,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                         '10x_snRNAseq',
                         '10x_Multiome_GEX',
                         '10x_CellPlex',
+                        '10x_Flex',
                         '10x_Visium',):
             fq = fq_group[1]
         else:
@@ -634,24 +644,41 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
     # Cellranger multi
     if include_cellranger_multi:
         # Make cellranger multi config.csv file
-        multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
-        with open(multi_config,'wt') as fp:
-            if not fastq_dir:
-                fastq_dir = os.path.join(os.path.dirname(qc_dir),
-                                         "fastqs")
-            fp.write("""[gene-expression]
+        if protocol == "10x_Flex":
+            config_template = """[gene-expression]
+reference,/data/refdata-cellranger-2020-A
+probe-set,/data/probe-set-2020-A
+no-bam,true
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_flex,{fastq_dir},any,PJB1,gene expression,
+
+[samples]
+sample_id,probe_barcode_ids,description
+PJB_BC1,BC001,BC1
+PJB_BC2,BC002,BC2
+"""
+        else:
+            config_template = """[gene-expression]
 reference,/data/refdata-cellranger-2020-A
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB1_GEX,%s,any,PJB1,gene expression,
-PJB2_MC,%s,any,PJB2,Multiplexing Capture,
+PJB1_GEX,{fastq_dir},any,PJB1,gene expression,
+PJB2_MC,{fastq_dir},any,PJB2,Multiplexing Capture,
 
 [samples]
 sample_id,cmo_ids,description
 PJB_CML1,CMO301,CML1
 PJB_CML2,CMO302,CML2
-""" % (fastq_dir,fastq_dir))
+"""
+        multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
+        with open(multi_config,'wt') as fp:
+            if not fastq_dir:
+                fastq_dir = os.path.join(os.path.dirname(qc_dir),
+                                         "fastqs")
+            fp.write(config_template.format(fastq_dir=fastq_dir))
         # Cellranger version
         version = "6.1.2"
         # Set top-level output dir
