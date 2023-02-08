@@ -3098,7 +3098,7 @@ sys.exit(MockSeqtk(version=%s,
                 sys.stderr.write("%s\n" % ex)
                 return 1
             if args.fastq_in != '-':
-                close(fp)
+                fp.close()
         else:
             print("%s: not implemented" % args.command)
         return self._exit_code
