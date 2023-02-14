@@ -2589,9 +2589,14 @@ class RunCellrangerMulti(PipelineTask):
         cellranger_major_version = int(cellranger_version.split('.')[0])
         # Expected outputs from cellranger multi
         self._top_level_files = ("_cmdline",)
-        self._outs_files_multi_analysis = ("tag_calls_summary.csv",)
+        self._outs_files_multi_analysis = ()
         self._outs_files_per_sample = ("web_summary.html",
                                        "metrics_summary.csv")
+        # Additional optional outputs
+        self._extra_files = (os.path.join("outs",
+                                          "multi",
+                                          "multiplexing_analysis",
+                                          "tag_calls_summary.csv"),)
         # Check outputs and run cellranger if required
         multi_dir = os.path.abspath(
             os.path.join(self.args.out_dir,
@@ -2801,6 +2806,16 @@ class RunCellrangerMulti(PipelineTask):
                 shutil.copy(path,os.path.join(self.args.qc_dir,
                                               qc_top_dir,
                                               "outs"))
+            # Additional files
+            for f in self._extra_files:
+                path = os.path.join(top_dir,f)
+                if os.path.exists(path):
+                    print("Copying %s from %s to %s" % (f,
+                                                        top_dir,
+                                                        qc_top_dir))
+                    shutil.copy(path,
+                                os.path.dirname(
+                                    os.path.join(qc_top_dir,f)))
         # Delayed task failure from earlier errors
         if has_errors:
             self.fail(message="Some outputs missing from cellranger multi")

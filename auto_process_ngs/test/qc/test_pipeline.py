@@ -3379,6 +3379,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 multi_outputs="cellplex",
                                  version="6.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
@@ -3505,6 +3506,7 @@ PBB,CMO302,PBB
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 multi_outputs="cellplex",
                                  version="6.0.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
@@ -3583,6 +3585,7 @@ PBB,CMO302,PBB
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 multi_outputs="flex",
                                  version="7.1.0")
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
@@ -3658,14 +3661,12 @@ PB2,BC002,PB2
                   "qc/cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PB1/metrics_summary.csv",
                   "qc/cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PB2/web_summary.html",
                   "qc/cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PB2/metrics_summary.csv",
-                  "qc/cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/multi/multiplexing_analysis/tag_calls_summary.csv",
                   "cellranger_multi",
                   "cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/_cmdline",
                   "cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PB1/web_summary.html",
                   "cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PB1/metrics_summary.csv",
                   "cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PB2/web_summary.html",
                   "cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/per_sample_outs/PB2/metrics_summary.csv",
-                  "cellranger_multi/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/outs/multi/multiplexing_analysis/tag_calls_summary.csv",
                   #"qc/cellranger_count",
                   #"qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_Flex/_cmdline",
                   #"qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_Flex/outs/web_summary.html",
