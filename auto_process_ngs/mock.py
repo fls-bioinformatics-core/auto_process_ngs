@@ -1790,7 +1790,7 @@ class Mock10xPackageExe:
                assert_filter_single_index=None,
                assert_filter_dual_index=None,
                reads=None,multiome_data=None,
-               version=None):
+               multi_outputs=None,version=None):
         """
         Create a "mock" 10xGenomics package executable
 
@@ -1834,6 +1834,9 @@ class Mock10xPackageExe:
             will be created
           multiome_data (str): either 'GEX' or
             'ATAC' (when mocking 'cellranger-arc')
+          multi_outputs (str): set type of
+            outputs for 'cellranger multi' (either
+            'cellplex' or 'flex')
           version (str): version of package to
             report
         """
@@ -1856,6 +1859,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            assert_filter_dual_index=%s,
                            reads=%s,
                            multiome_data=%s,
+                           multi_outputs=%r,
                            version=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    ("\"%s\"" % platform
@@ -1875,6 +1879,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                    ("\"%s\"" % multiome_data
                     if multiome_data is not None
                     else None),
+                   multi_outputs,
                    ("\"%s\"" % version
                     if version is not None
                     else None)))
@@ -1895,6 +1900,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                  assert_filter_dual_index=None,
                  reads=None,
                  multiome_data=None,
+                 multi_outputs=None,
                  version=None):
         """
         Internal: configure the mock 10xGenomics package
@@ -1921,6 +1927,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._assert_filter_single_index = assert_filter_single_index
         self._assert_filter_dual_index = assert_filter_dual_index
         self._multiome_data = str(multiome_data).upper()
+        self._multi_outputs = str(multi_outputs).lower()
         if self._package_name == 'cellranger-arc':
             assert self._multiome_data is not None
         if reads is None:
@@ -2395,10 +2402,17 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 with open(web_summary_file,'wt') as fp:
                     fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
             # Multiplexing outs
-            for f in ("assignment_confidence_table.csv",
-                      "cells_per_tag.json",
-                      "tag_calls_per_cell.csv",
-                      "tag_calls_summary.csv"):
+            if self._multi_outputs == 'cellplex':
+                multi_outputs = ("assignment_confidence_table.csv",
+                                 "cells_per_tag.json",
+                                 "tag_calls_per_cell.csv",
+                                 "tag_calls_summary.csv")
+            elif self._multi_outputs == 'flex':
+                multi_outputs = ("cells_per_tag.json",
+                                 "frp_gem_barcode_overlap.csv")
+            else:
+                multi_outputs = ()
+            for f in multi_outputs:
                 multiplexing_output = os.path.join(outs_dir,
                                                    "multi",
                                                    "multiplexing_analysis",f)
