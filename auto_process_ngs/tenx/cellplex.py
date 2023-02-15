@@ -141,7 +141,7 @@ class CellrangerMultiConfigCsv:
                         # Store Fastq dir
                         self._fastq_dirs[name] = fastqs
                         # Store GEX libraries
-                        if feature_type != "gene expression":
+                        if feature_type.lower() != "gene expression":
                             # Ignore
                             continue
                         self._gex_libraries[name] = {

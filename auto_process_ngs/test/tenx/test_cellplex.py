@@ -33,7 +33,7 @@ reference,/data/refdata-cellranger-gex-GRCh38-2020-A
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,gene expression,
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
 PJB2_MC,/data/runs/fastqs_mc,any,PJB2,Multiplexing Capture,
 
 [samples]
@@ -54,7 +54,7 @@ PBB,CMO302,PBB
                          { 'fastqs': '/data/runs/fastqs_gex',
                            'lanes': 'any',
                            'library_id': 'PJB1',
-                           'feature_type': 'gene expression',
+                           'feature_type': 'Gene Expression',
                            'subsample_rate': ''
                          })
         self.assertEqual(config_csv.fastq_dirs,
