@@ -567,3 +567,97 @@ class TestSpacerangerInfo(unittest.TestCase):
         spaceranger = self._make_mock_spaceranger_131()
         self.assertEqual(spaceranger_info(name='spaceranger'),
                          (spaceranger,'spaceranger','1.3.1'))
+
+class TestMakeMultiConfigTemplate(unittest.TestCase):
+    """
+    Tests for the make_multi_config_template function
+    """
+    def setUp(self):
+        # Make temporary working dir
+        self.wd = tempfile.mkdtemp(suffix="TestMakeMultiConfigTemplate")
+
+    def tearDown(self):
+        # Remove temp dir
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_make_multi_config_template_default(self):
+        """
+        make_multi_config_template: check default template
+        """
+        expected_content = """[gene-expression]
+reference,/path/to/transcriptome
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+
+[samples]
+sample_id,cmo_ids,description
+MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
+"""
+        out_file = os.path.join(self.wd,"10x_multi_config.csv")
+        make_multi_config_template(out_file)
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            actual_content = '\n'.join([line for line in fp.read().split('\n')
+                                        if not line.startswith('#')])
+        self.assertEqual(expected_content,actual_content)
+
+    def test_make_multi_config_template_flex(self):
+        """
+        make_multi_config_template: check fixed RNA profiling (Flex) template
+        """
+        expected_content = """[gene-expression]
+reference,/data/mm10_transcriptome
+probe-set,/data/mm10_probe_set.csv
+no-bam,true
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB_Flex,/runs/novaseq_50/fastqs,any,PJB_Flex,[Gene Expression|Multiplexing Capture],
+
+[samples]
+sample_id,probe_barcode_ids,description
+MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
+"""
+        out_file = os.path.join(self.wd,"10x_multi_config.csv")
+        make_multi_config_template(out_file,
+                                   reference="/data/mm10_transcriptome",
+                                   probe_set="/data/mm10_probe_set.csv",
+                                   fastq_dir="/runs/novaseq_50/fastqs",
+                                   samples=("PJB_Flex",),
+                                   no_bam=True,
+                                   library_type="Flex")
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            actual_content = '\n'.join([line for line in fp.read().split('\n')
+                                        if not line.startswith('#')])
+        self.assertEqual(expected_content,actual_content)
+
+    def test_make_multi_config_template_cellplex(self):
+        """
+        make_multi_config_template: check CellPlex template
+        """
+        expected_content = """[gene-expression]
+reference,/data/mm10_transcriptome
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Multiplexing Capture],
+PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Multiplexing Capture],
+
+[samples]
+sample_id,cmo_ids,description
+MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
+"""
+        out_file = os.path.join(self.wd,"10x_multi_config.csv")
+        make_multi_config_template(out_file,
+                                   reference="/data/mm10_transcriptome",
+                                   fastq_dir="/runs/novaseq_50/fastqs",
+                                   samples=("PJB_CML","PJB_GEX"),
+                                   library_type="CellPlex")
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            actual_content = '\n'.join([line for line in fp.read().split('\n')
+                                        if not line.startswith('#')])
+        self.assertEqual(expected_content,actual_content)

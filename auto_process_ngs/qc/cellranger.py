@@ -273,6 +273,10 @@ class CellrangerMulti:
             except Exception:
                 pass
         self._reference_data = reference_data
+        try:
+            self._probe_set = self.config.probe_set_path
+        except Exception:
+            self._probe_set = None
         self._version = version
         # Paths to metrics and web summary files
         for smpl in self.sample_names:
@@ -344,6 +348,13 @@ class CellrangerMulti:
         Reference dataset
         """
         return self._reference_data
+
+    @property
+    def probe_set(self):
+        """
+        Probe set
+        """
+        return self._probe_set
 
     def metrics_csv(self,name):
         """

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
 #
 
 """
@@ -164,6 +164,7 @@ METADATA_FIELD_DESCRIPTIONS = {
     'annotation_bed': 'Annotation (BED)',
     'annotation_gtf': 'Annotation (GTF)',
     'cellranger_reference': 'Cellranger reference datasets',
+    'cellranger_probe_set': 'Cellranger probe set',
     'multiqc': 'MultiQC report',
     'icell8_stats': 'ICELL8 statistics',
     'icell8_report': 'ICELL8 processing report',
@@ -752,6 +753,9 @@ class QCReport(Document):
         if 'cellranger_count' in self.outputs or \
            'cellranger_multi' in self.outputs:
             reference_data_items.append('cellranger_reference')
+        for project in projects:
+            if project.cellranger_probe_sets:
+                reference_data_items.append('cellranger_probe_set')
         if self.multi_project:
             reference_data_items.insert(0,'project_id')
         # Make table with one column per project
@@ -1099,6 +1103,19 @@ class QCReport(Document):
                                 value.add_item(os.path.basename(ref))
                         else:
                             # No reference datasets
+                            continue
+                    elif item == 'cellranger_probe_set':
+                        if len(project.cellranger_probe_sets) == 1:
+                            # Single probe set
+                            value = os.path.basename(
+                                project.cellranger_probe_sets[0])
+                        elif len(project.cellranger_probe_sets) > 1:
+                            # Many probe sets
+                            value = List()
+                            for prb in project.cellranger_probe_sets:
+                                value.add_item(os.path.basename(prb))
+                        else:
+                            # No probe sets
                             continue
                     elif item == 'multiqc':
                         multiqc_report = "multi%s_report.html" \
@@ -1776,6 +1793,8 @@ class QCProject:
         self.fastq_screens = qc_outputs.fastq_screens
         # Single library analyses reference data
         self.cellranger_references = qc_outputs.cellranger_references
+        # 10x probe sets
+        self.cellranger_probe_sets = qc_outputs.cellranger_probe_sets
         # Multiplexed samples
         self.multiplexed_samples = qc_outputs.multiplexed_samples
         # QC outputs

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc/outputs: utilities to predict and check QC pipeline outputs
-#     Copyright (C) University of Manchester 2019-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2023 Peter Briggs
 #
 """
 Provides utility classes and functions for QC outputs.
@@ -84,6 +84,8 @@ class QCOutputs:
     - fastq_screens: sorted list of screen names
     - cellranger_references: sorted list of reference
       datasets used with 10x pipelines
+    - cellranger_probe_sets: sorted list of probe set
+      files used with 10x pipelines
     - multiplexed_samples: sorted list of sample names
       for multiplexed samples (e.g. 10x CellPlex)
     - outputs: list of QC output categories detected (see
@@ -272,6 +274,7 @@ class QCOutputs:
             if reference_data not in self.cellranger_references:
                 self.cellranger_references.append(reference_data)
         self.cellranger_references = sorted(self.cellranger_references)
+        self.cellranger_probe_sets = cellranger_multi.probe_sets
         # Fastqs
         self.fastqs = sorted(list(self.fastqs))
         # BAMs
@@ -1167,6 +1170,7 @@ class QCOutputs:
         - name: set to 'cellranger_multi'
         - software: dictionary of software and versions
         - references: list of associated reference datasets
+        - probe_sets: list of associated probe sets
         - fastqs: list of associated Fastq names
         - multiplexed_samples: list of associated multiplexed
           sample names
@@ -1185,6 +1189,7 @@ class QCOutputs:
         output_files = list()
         multiplexed_samples = set()
         cellranger_references = set()
+        cellranger_probe_sets = set()
         samples_by_pipeline = dict()
         tags = set()
         # Look for cellranger multi outputs
@@ -1222,6 +1227,9 @@ class QCOutputs:
                                 cellranger_name = 'cellranger'
                             cellranger_references.add(
                                 cellranger_multi.reference_data)
+                            if cellranger_multi.probe_set:
+                                cellranger_probe_sets.add(
+                                    cellranger_multi.probe_set)
                         except OSError:
                             pass
                     # Add outputs, samples and version
@@ -1252,6 +1260,7 @@ class QCOutputs:
             name='cellranger_multi',
             software=software,
             references=sorted(list(cellranger_references)),
+            probe_sets=sorted(list(cellranger_probe_sets)),
             fastqs=[],
             multiplexed_samples=sorted(list(multiplexed_samples)),
             pipelines=sorted([p for p in samples_by_pipeline]),

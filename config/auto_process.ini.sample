@@ -62,6 +62,7 @@ create_empty_fastqs = False
 # - cellranger_premrna_reference
 # - cellranger_atac_reference
 # - cellranger_arc_reference
+# - cellranger_probe_set
 # These values will be specific to the local site
 #[organism:human]
 #star_index = /data/genomeIndexes/hg38/STAR/
@@ -72,6 +73,7 @@ create_empty_fastqs = False
 #cellranger_premrna_reference = /data/cellranger/refdata-cellranger-GRCh38-1.0.1-pre_mrna
 #cellranger_atac_reference = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1
 #cellranger_arc_reference = /data/cellranger/refdata-cellranger-arc-GRCh38-2020-A
+#cellranger_probe_set = /data/cellranger/Probe_Set_v1.0_GRCh38-2020-A.csv
 
 # QC settings
 [qc]

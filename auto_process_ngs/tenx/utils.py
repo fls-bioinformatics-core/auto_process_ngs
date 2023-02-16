@@ -17,6 +17,7 @@ pipelines:
 - spaceranger_info
 - make_qc_summary_html
 - add_cellranger_args
+- make_multi_config_template
 """
 
 #######################################################################
@@ -525,3 +526,76 @@ def add_cellranger_args(cellranger_cmd,
     if disable_ui:
         cellranger_cmd.add_args("--disable-ui")
     return cellranger_cmd
+
+def make_multi_config_template(f,reference=None,probe_set=None,
+                               fastq_dir=None,samples=None,
+                               no_bam=None,library_type="CellPlex"):
+    """
+    Write a template configuration file for 'cellranger multi'
+
+    Generates a template for the 'cellranger multi'
+    configuration file, which can be used with either CellPlex
+    or fixed RNA profiling (Flex) data.
+
+    The format and parameters for different data types are
+    described in the 10x Genomics 'cellranger' documentation:
+
+    * CellPlex: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
+    * Flex: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi-frp#cellranger-multi
+
+    Arguments:
+      f (str): path that output template file will be
+        written to
+      reference (str): path to reference transcriptome
+      probe_set (str): path to probe set CSV file
+      fastq_dir (str): path to directory with Fastq files
+      samples (list): list of sample names
+      no_bam (bool): if set then will be the value of the
+        'no-bam' setting
+      library_type (str): specify the type of data that the
+        configuration file will be used with, either
+        'CellPlex' (the default) or 'Flex'
+    """
+    with open(f,'wt') as fp:
+        fp.write("## 10x_multi_config.csv\n"
+                 "## See:\n")
+        if library_type == "CellPlex":
+                 fp.write("## * CellPlex: https://support.10xgenomics.com/"
+                          "single-cell-gene-expression/software/pipelines/"
+                          "latest/using/multi#cellranger-multi\n")
+        elif library_type == "Flex":
+            fp.write("## * Flex:https://support.10xgenomics.com/"
+                     "single-cell-gene-expression/software/pipelines/"
+                     "latest/using/multi-frp#cellranger-multi\n")
+        # Gene expression section
+        fp.write("[gene-expression]\n")
+        fp.write("reference,%s\n" %
+                 (reference if reference
+                  else "/path/to/transcriptome"))
+        if library_type == "Flex":
+            fp.write("probe-set,%s\n" %
+                     (probe_set if probe_set
+                      else "/path/to/probe/set"))
+        fp.write("#force-cells,n\n")
+        if no_bam is not None:
+            fp.write("no-bam,%s\n" % str(no_bam).lower())
+        else:
+            fp.write("#no-bam,true|false\n")
+        fp.write("\n")
+        # Libraries section
+        fp.write("[libraries]\n"
+                 "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
+        if samples:
+            for sample in samples:
+                fp.write("{sample},{fastqs_dir},any,{sample},[Gene Expression|Multiplexing Capture],\n".format(
+                    sample=sample,
+                    fastqs_dir=(fastq_dir if fastq_dir else "/path/to/fastqs")))
+        fp.write("\n")
+        # Samples section
+        fp.write("[samples]\n")
+        if library_type == "CellPlex":
+            fp.write("sample_id,cmo_ids,description\n"
+                     "MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION\n")
+        elif library_type == "Flex":
+            fp.write("sample_id,probe_barcode_ids,description\n"
+                     "MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION\n")

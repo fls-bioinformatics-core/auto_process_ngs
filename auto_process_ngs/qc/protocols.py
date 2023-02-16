@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     protocols: define and handle QC protocols
-#     Copyright (C) University of Manchester 2022 Peter Briggs
+#     Copyright (C) University of Manchester 2022-2023 Peter Briggs
 #
 
 """
@@ -235,6 +235,23 @@ QC_PROTOCOLS = {
         ]
     },
 
+    "10x_Flex": {
+        "description": "10xGenomics fixed RNA profiling (Flex) data",
+        "reads": {
+            "seq_data": ('r2',),
+            "index": ('r1',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq',
+            'cellranger_multi'
+        ]
+    },
+
     "10x_Visium": {
         "description": "10xGenomics Visium spatial RNA-seq",
         "reads": {
@@ -390,6 +407,9 @@ def determine_qc_protocol(project):
                                   "CellPlex snRNA-seq"):
                 # 10xGenomics CellPlex (cell multiplexing)
                 protocol = "10x_CellPlex"
+            elif library_type == "Flex":
+                # 10xGenomics Flex (fixed RNA profiling)
+                protocol = "10x_Flex"
         elif single_cell_platform == 'Parse Evercode':
             if library_type == "scRNA-seq":
                 # Parse Evercode snRNAseq

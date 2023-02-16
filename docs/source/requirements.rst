@@ -292,6 +292,28 @@ explains how to generate a custom reference package for these data:
    the old sections are still recognised for now but are
    deprecated and likely to be dropped in future.
 
+10x Genomics fixed RNA profiling (Flex) analyses
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Analysis of 10xGenomics single cell fixed RNA profiling data
+("Flex") uses ``cellranger multi`` and requires:
+
+* Reference transcriptome dataset, and
+* Probe set data
+
+These can be defined for specific organisms using the
+``cellranger_reference`` and ``cellranger_probe_set`` settings
+in ``[organism:...]`` sections of the ``auto_process.ini`` file,
+for example:
+
+::
+
+   [organism: human]
+   cellranger_reference = /data/10x/refdata-cellranger-GRCh38-1.2.0
+   cellranger_probe_set = /data/10x/Chromium_Mouse_Transcriptome_Probe_Set_v1.0_mm10-2020-A.csv
+
+* **scRNA-seq data**: transcriptome reference data set
+
 Annotation data
 ^^^^^^^^^^^^^^^
 

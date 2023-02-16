@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     setup_analysis_dirs_cmd.py: implement 'setup_analysis_dirs' command
-#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
 #
 #########################################################################
 
@@ -17,6 +17,7 @@ import bcftbx.IlluminaData as IlluminaData
 from .. import analysis
 from .. import tenx
 from .. import icell8
+from ..utils import normalise_organism_name
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -179,47 +180,53 @@ def setup_analysis_dirs(ap,
                         fp.write("#%s\t[RUN:][PROJECT][/SAMPLE]\n" % sample)
             except Exception as ex:
                 logger.warning("Failed to create '%s': %s" % (f,ex))
-        if single_cell_platform.startswith("10xGenomics Chromium") and \
-           library_type.startswith("CellPlex"):
-            # Acquire reference dataset
-            print("-- looking up reference for '%s'" % organism)
+        elif single_cell_platform.startswith("10xGenomics Chromium") and \
+           (library_type.startswith("CellPlex") or
+            library_type == "Flex"):
+            # Set library type for config
+            library = library_type.split()[0]
+            print("-- setting up 'multi' config file for '%s'" % library)
+            # Acquire reference transcriptome dataset
+            print("-- looking up transcriptome for '%s'" % organism)
             try:
-                organism_id = organism.lower().replace(' ','_')
+                organism_id = normalise_organism_name(organism)
                 print("-- using ID '%s'" % organism_id)
                 reference_dataset = ap.settings.organisms[organism_id].\
                                     cellranger_reference
                 print("-- found %s" % reference_dataset)
             except Exception as ex:
                 logger.warning("Failed to locate 10xGenomics reference "
-                               "dataset for project '%s': %s" %
+                               "transcriptome for project '%s': %s" %
                                (project_name,ex))
                 reference_dataset = None
+            # Acquire probe set
+            if library == "Flex":
+                print("-- looking up probe set for '%s'" % organism)
+                try:
+                    organism_id = normalise_organism_name(organism)
+                    print("-- using ID '%s'" % organism_id)
+                    probe_set = ap.settings.organisms[organism_id].\
+                                cellranger_probe_set
+                    print("-- found %s" % probe_set)
+                except Exception as ex:
+                    logger.warning("Failed to locate 10xGenomics reference "
+                                   "probe set for project '%s': %s" %
+                                   (project_name,ex))
+                    probe_set = None
+            else:
+                probe_set = None
             # Make template 10x_multi_config.csv file
             f = "10x_multi_config.csv.template"
             print("-- making %s" % f)
             f = os.path.join(project.dirn,f)
             try:
-                with open(f,'wt') as fp:
-                    fp.write("## 10x_multi_config.csv\n"
-                             "## See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi\n")
-                    # Gene expression section
-                    fp.write("[gene-expression]\n"
-                             "reference,%s\n" %
-                             (reference_dataset if reference_dataset
-                              else "PATH_TO_REFERENCE_DATASET"))
-                    fp.write("\n")
-                    # Libraries section
-                    fp.write("[libraries]\n"
-                             "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
-                    for sample in project.samples:
-                        fp.write("{sample},{fastqs_dir},any,{sample},[gene expression|Multiplexing Capture],\n".format(
-                            sample=sample.name,
-                            fastqs_dir=project.fastq_dir))
-                    fp.write("\n")
-                    # Samples section
-                    fp.write("[samples]\n"
-                             "sample_id,cmo_ids,description\n"
-                             "MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION\n")
+                tenx.utils.make_multi_config_template(
+                    f,
+                    reference=reference_dataset,
+                    probe_set=probe_set,
+                    fastq_dir=project.fastq_dir,
+                    samples=[s.name for s in project.samples],
+                    library_type=library)
             except Exception as ex:
                 logger.warning("Failed to create '%s': %s" % (f,ex))
         # Additional subdir for Visium images
