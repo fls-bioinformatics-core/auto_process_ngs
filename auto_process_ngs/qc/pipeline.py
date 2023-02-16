@@ -2588,43 +2588,25 @@ class RunCellrangerMulti(PipelineTask):
         cellranger_version = self.args.cellranger_version
         cellranger_major_version = int(cellranger_version.split('.')[0])
         # Expected outputs from cellranger multi
-        self._top_level_files = ("_cmdline",)
-        self._outs_files_multi_analysis = ()
-        self._outs_files_per_sample = ("web_summary.html",
-                                       "metrics_summary.csv")
-        # Additional optional outputs
-        self._extra_files = (os.path.join("outs",
-                                          "multi",
-                                          "multiplexing_analysis",
-                                          "tag_calls_summary.csv"),)
+        self._expected_files = ["_cmdline",]
+        for sample in self.args.samples:
+            for f in ("web_summary.html",
+                      "metrics_summary.csv"):
+                # Per-sample outputs
+                self._expected_files.append(os.path.join("outs",
+                                                         "per_sample_outs",
+                                                         sample,
+                                                         f))
         # Check outputs and run cellranger if required
         multi_dir = os.path.abspath(
             os.path.join(self.args.out_dir,
                          "cellranger_multi",
                          cellranger_version,
                          os.path.basename(self.args.reference_data_path)))
-        outs_dir = os.path.join(multi_dir,"outs")
-        # Per sample outputs
-        for sample in self.args.samples:
-            for f in self._outs_files_per_sample:
-                path = os.path.join(outs_dir,
-                                    "per_sample_outs",
-                                    sample,f)
-                if not os.path.exists(path):
-                    self.run_cellranger_multi = True
-                    break
-        # Multiplexing analysis outputs
-        for f in self._outs_files_multi_analysis:
-            path = os.path.join(outs_dir,
-                                "multi",
-                                "multiplexing_analysis",f)
-            if not os.path.exists(path):
-                self.run_cellranger_multi = True
-                break
-        # Top level outputs
-        for f in self._top_level_files:
-            path = os.path.join(multi_dir,f)
-            if not os.path.exists(path):
+        for path in self._expected_files:
+            if not os.path.exists(os.path.join(multi_dir,path)):
+                # At least one expected file is missing
+                # so we need to run 'multi'
                 self.run_cellranger_multi = True
                 break
         if not self.run_cellranger_multi:
@@ -2685,141 +2667,62 @@ class RunCellrangerMulti(PipelineTask):
                              os.path.basename(
                                  self.args.reference_data_path)
                 ))
-        outs_dir = os.path.join(top_dir,"outs")
-        missing_files = []
-        # Per sample outputs
-        for sample in self.args.samples:
-            for f in self._outs_files_per_sample:
-                path = os.path.join(outs_dir,
-                                    "per_sample_outs",
-                                    sample,f)
-                if not os.path.exists(path):
-                    print("Missing: %s" % path)
-                    missing_files.append(path)
-        # Multiplexing analysis outputs
-        for f in self._outs_files_multi_analysis:
-            path = os.path.join(outs_dir,
-                                "multi",
-                                "multiplexing_analysis",f)
-            if not os.path.exists(path):
-                print("Missing: %s" % path)
-                missing_files.append(path)
-        # Top level outputs
-        for f in self._top_level_files:
-            path = os.path.join(top_dir,f)
-            if not os.path.exists(path):
-                print("Missing: %s" % path)
-                missing_files.append(path)
-        if missing_files:
-            print("Some output files missing from multiplexing analysis")
-            has_errors = True
+        for path in self._expected_files:
+            if not os.path.exists(os.path.join(top_dir,path)):
+                # At least one expected file is missing
+                has_errors = True
+                break
+        # Destination for final outputs
+        multi_dir = os.path.abspath(
+            os.path.join(self.args.out_dir,
+                         "cellranger_multi",
+                         self.args.cellranger_version,
+                         os.path.basename(
+                             self.args.reference_data_path)
+            ))
+        if has_errors:
+            self.fail(message="Some outputs missing from cellranger multi")
+            return
         elif self.run_cellranger_multi:
             # Move multi outputs to final destination
-            multi_dir = os.path.abspath(
-                os.path.join(self.args.out_dir,
-                             "cellranger_multi",
-                             self.args.cellranger_version,
-                             os.path.basename(
-                                 self.args.reference_data_path)
-                ))
             print("Moving contents of %s to %s" % (top_dir,multi_dir))
             if not os.path.exists(multi_dir):
                 mkdirs(multi_dir)
             for d in os.listdir(top_dir):
                 shutil.move(os.path.join(top_dir,d),
                             multi_dir)
-        # Also copy outputs to QC directory
+        # Copy subset of outputs to QC directory
         if self.args.qc_dir:
             print("Copying outputs to QC directory")
-            # Top level output directory
-            top_dir = os.path.abspath(
-                os.path.join(self.args.out_dir,
+            # Build list of QC outputs to copy
+            qc_files = [f for f in self._expected_files]
+            qc_files.append(os.path.join("outs",
+                                         "config.csv"))
+            qc_files.append(os.path.join("outs",
+                                         "multi",
+                                         "multiplexing_analysis",
+                                         "tag_calls_summary.csv"))
+            # Final destination for QC outputs
+            qc_multi_dir = os.path.abspath(
+                os.path.join(self.args.qc_dir,
                              "cellranger_multi",
                              self.args.cellranger_version,
                              os.path.basename(
                                  self.args.reference_data_path)))
-            # Per sample outputs
-            for sample in self.args.samples:
-                print("Sample: %s" % sample)
-                # Location of outputs
-                outs_dir = os.path.join(top_dir,
-                                        "outs",
-                                        "per_sample_outs",
-                                        sample)
-                # Set location to copy QC outputs to
-                qc_outs_dir = os.path.abspath(
-                    os.path.join(self.args.qc_dir,
-                                 "cellranger_multi",
-                                 self.args.cellranger_version,
-                                 os.path.basename(
-                                     self.args.reference_data_path),
-                                 "outs",
-                                 "per_sample_outs",
-                                 sample))
-                # Make directories and copy the files
-                mkdirs(qc_outs_dir)
-                for f in self._outs_files_per_sample:
-                    path = os.path.join(outs_dir,f)
-                    print("Copying %s from %s to %s" % (f,
-                                                        outs_dir,
-                                                        qc_outs_dir))
-                    shutil.copy(path,qc_outs_dir)
-            # Multiplexing analysis outputs
-            outs_dir = os.path.join(top_dir,
-                                    "outs",
-                                    "multi",
-                                    "multiplexing_analysis")
-            qc_outs_dir = os.path.abspath(
-                    os.path.join(self.args.qc_dir,
-                                 "cellranger_multi",
-                                 self.args.cellranger_version,
-                                 os.path.basename(
-                                     self.args.reference_data_path),
-                                 "outs",
-                                 "multi",
-                                 "multiplexing_analysis"))
-            mkdirs(qc_outs_dir)
-            for f in self._outs_files_multi_analysis:
-                path = os.path.join(outs_dir,f)
-                print("Copying %s from %s to %s" % (f,
-                                                    outs_dir,
-                                                    qc_outs_dir))
-                shutil.copy(path,qc_outs_dir)
-            # Top level outputs
-            qc_top_dir = os.path.abspath(
-                    os.path.join(self.args.qc_dir,
-                                 "cellranger_multi",
-                                 self.args.cellranger_version,
-                                 os.path.basename(
-                                     self.args.reference_data_path)))
-            mkdirs(qc_top_dir)
-            for f in self._top_level_files:
-                path = os.path.join(top_dir,f)
-                print("Copying %s from %s to %s" % (f,
-                                                    top_dir,
-                                                    qc_top_dir))
-                shutil.copy(path,qc_top_dir)
-            # Config file
-            path = os.path.join(top_dir,"outs","config.csv")
-            if os.path.exists(path):
-                print("Copying config.csv")
-                shutil.copy(path,os.path.join(self.args.qc_dir,
-                                              qc_top_dir,
-                                              "outs"))
-            # Additional files
-            for f in self._extra_files:
-                path = os.path.join(top_dir,f)
-                if os.path.exists(path):
-                    print("Copying %s from %s to %s" % (f,
-                                                        top_dir,
-                                                        qc_top_dir))
-                    shutil.copy(path,
-                                os.path.dirname(
-                                    os.path.join(qc_top_dir,f)))
-        # Delayed task failure from earlier errors
-        if has_errors:
-            self.fail(message="Some outputs missing from cellranger multi")
-            return
+            # Copy the files
+            for path in qc_files:
+                src = os.path.join(multi_dir,path)
+                if not os.path.exists(src):
+                    # File not found, note and skip
+                    print("INFO: no file '%s' found" % path)
+                    continue
+                # Determine destination and copy
+                dst = os.path.normpath(os.path.join(qc_multi_dir,
+                                                    os.path.dirname(path)))
+                print("Copying file '%s'" % path)
+                if not os.path.exists(dst):
+                    mkdirs(dst)
+                shutil.copy(src,dst)
 
 class SetCellCountFromCellranger(PipelineTask):
     """
