@@ -1357,13 +1357,23 @@ class GetSequenceDataFastqs(PipelineTask):
         examples = {}
         # Process Fastqs
         for fq in fastqs:
-            read_number = fastq_attrs(fq).read_number
+            # Build path for final Fastq file
             ffq = os.path.join(self.args.out_dir,
                                os.path.basename(fq))
+            self.output.fastqs.append(ffq)
+            # Remove existing symlinks in case
+            # original files have since moved
             if os.path.islink(ffq):
-                # Remove existing symlinks
                 os.remove(ffq)
+            elif os.path.exists(ffq):
+                # Don't regenerate existing files
+                continue
+            # Always symlink to index reads
+            if fastq_attrs(fq).is_index_read:
+                os.symlink(fq,ffq)
+                continue
             # Get read ranges
+            read_number = fastq_attrs(fq).read_number
             try:
                 rng = read_range[read_number]
             except KeyError:
@@ -1393,13 +1403,11 @@ class GetSequenceDataFastqs(PipelineTask):
                     """.format(cmd=' | '.join(cmd)))
                 if read_number not in examples:
                     examples[read_number] = ' | '.join(cmd)
-            # Print examples
-            if examples:
-                print("Example commands:")
-                for rd in sorted(list(examples.keys())):
-                    print("- %s" % examples[rd ])
-            # Update outputs
-            self.output.fastqs.append(ffq)
+        # Print examples
+        if examples:
+            print("Example commands:")
+            for rd in sorted(list(examples.keys())):
+                print("- %s" % examples[rd ])
 
 class UpdateQCMetadata(PipelineTask):
     """
