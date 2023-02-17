@@ -12,6 +12,7 @@ from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockFastqStrandPy
 from auto_process_ngs.mock import MockGtf2bed
+from auto_process_ngs.mock import MockSeqtk
 from auto_process_ngs.mock import MockStar
 from auto_process_ngs.mock import MockSamtools
 from auto_process_ngs.mock import MockPicard
@@ -3581,6 +3582,7 @@ PBB,CMO302,PBB
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockSeqtk.create(os.path.join(self.bin,"seqtk"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -3692,6 +3694,7 @@ PB2,BC002,PB2
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockSeqtk.create(os.path.join(self.bin,"seqtk"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
