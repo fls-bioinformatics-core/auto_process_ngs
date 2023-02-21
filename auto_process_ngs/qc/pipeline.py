@@ -483,6 +483,7 @@ class QCPipeline(Pipeline):
                     project,
                     qc_dir,
                     self.params.fastq_screens,
+                    fastqs=get_seq_fastqs.output.fastqs,
                     read_numbers=read_numbers.seq_data,
                     include_samples=get_seq_data.output.seq_data_samples,
                     fastq_attrs=project.fastq_attrs,
@@ -571,6 +572,7 @@ class QCPipeline(Pipeline):
                     project,
                     qc_dir,
                     setup_fastq_strand_conf.output.fastq_strand_conf,
+                    fastqs=get_seq_fastqs.output.fastqs,
                     read_numbers=read_numbers.seq_data,
                     include_samples=get_seq_data.output.seq_data_samples,
                     verbose=self.params.VERBOSE
@@ -1512,9 +1514,9 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
     """
     Check the outputs from FastqScreen
     """
-    def init(self,project,qc_dir,screens,read_numbers=None,
-             include_samples=None,fastq_attrs=None,legacy=False,
-             verbose=False):
+    def init(self,project,qc_dir,screens,fastqs=None,
+             read_numbers=None,include_samples=None,
+             fastq_attrs=None,legacy=False,verbose=False):
         """
         Initialise the CheckFastqScreenOutputs task.
 
@@ -1525,6 +1527,9 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           screens (mapping): mapping of screen names to
             FastqScreen conf files
+          fastqs (list): explicit list of Fastq files
+            to check against (default is to use Fastqs
+            from supplied analysis project)
           read_numbers (list): read numbers to include
           include_samples (list): optional, list of sample
             names to include
@@ -1557,7 +1562,8 @@ class CheckFastqScreenOutputs(PipelineFunctionTask):
                           self.args.project,
                           self.args.qc_dir,
                           screen,
-                          self.args.read_numbers,
+                          fastqs=self.args.fastqs,
+                          read_numbers=self.args.read_numbers,
                           legacy=self.args.legacy)
     def finish(self):
         fastqs = set()
@@ -1867,8 +1873,8 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
     """
     Check the outputs from the fastq_strand.py utility
     """
-    def init(self,project,qc_dir,fastq_strand_conf,read_numbers=None,
-             include_samples=None,verbose=False):
+    def init(self,project,qc_dir,fastq_strand_conf,fastqs=None,
+             read_numbers=None,include_samples=None,verbose=False):
         """
         Initialise the CheckFastqStrandOutputs task.
 
@@ -1879,6 +1885,9 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           fastq_strand_conf (str): path to the fastq_strand
             config file
+          fastqs (list):  explicit list of Fastq files
+            to check against (default is to use Fastqs
+            from supplied analysis project)
           read_numbers (list): list of read numbers to
             include when checking outputs
           include_samples (list): optional, list of sample
@@ -1905,6 +1914,7 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
                       self.args.project,
                       self.args.qc_dir,
                       fastq_strand_conf,
+                      fastqs=self.args.fastqs,
                       read_numbers=self.args.read_numbers)
     def finish(self):
         for result in self.result():
