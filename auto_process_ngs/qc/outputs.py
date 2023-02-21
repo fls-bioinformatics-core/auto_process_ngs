@@ -1693,8 +1693,8 @@ def cellranger_multi_output(project,config_csv,sample_name=None,
         outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
 
-def check_fastq_screen_outputs(project,qc_dir,screen,read_numbers=None,
-                               legacy=False):
+def check_fastq_screen_outputs(project,qc_dir,screen,fastqs=None,
+                               read_numbers=None,legacy=False):
     """
     Return Fastqs missing QC outputs from FastqScreen
 
@@ -1709,6 +1709,8 @@ def check_fastq_screen_outputs(project,qc_dir,screen,read_numbers=None,
         path is assumed to be a subdirectory of the
         project)
       screen (str): screen name to check
+      fastqs (list): optional list of Fastqs to check
+        against (defaults to Fastqs from the project)
       read_numbers (list): read numbers to define Fastqs
         to predict outputs for; if not set then all
         non-index reads will be included
@@ -1720,8 +1722,12 @@ def check_fastq_screen_outputs(project,qc_dir,screen,read_numbers=None,
     """
     if not os.path.isabs(qc_dir):
         qc_dir = os.path.join(project.dirn,qc_dir)
+    if not fastqs:
+        fastqs_in = project.fastqs
+    else:
+        fastqs_in = fastqs
     fastqs = set()
-    for fastq in remove_index_fastqs(project.fastqs,
+    for fastq in remove_index_fastqs(fastqs_in,
                                      project.fastq_attrs):
         if read_numbers and \
            project.fastq_attrs(fastq).read_number not in read_numbers:

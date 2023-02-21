@@ -2359,6 +2359,62 @@ class TestCheckFastqScreenOutputs(unittest.TestCase):
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R1_001.fastq.gz")])
 
+    def test_check_fastq_screen_outputs_all_missing_specify_fastqs(self):
+        """
+        check_fastq_screen_outputs: all screen outputs missing (specify Fastqs)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Copy Fastqs to alternative location
+        alt_fastqs_dir = os.path.join(self.wd,"alt_fastqs")
+        os.mkdir(alt_fastqs_dir)
+        project = AnalysisProject(os.path.join(self.wd,"PJB"))
+        for fq in project.fastqs:
+            shutil.copyfile(fq,os.path.join(alt_fastqs_dir,
+                                            os.path.basename(fq)))
+        alt_fastqs = [os.path.join(alt_fastqs_dir,os.path.basename(fq))
+                      for fq in project.fastqs]
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    read_numbers=(1,2),
+                                                    fastqs=alt_fastqs),
+                         alt_fastqs)
+
+    def test_check_fastq_screen_outputs_all_present_specify_fastqs(self):
+        """
+        check_fastq_screen_outputs: all screen outputs present (specify Fastqs)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Copy Fastqs to alternative location
+        alt_fastqs_dir = os.path.join(self.wd,"alt_fastqs")
+        os.mkdir(alt_fastqs_dir)
+        project = AnalysisProject(os.path.join(self.wd,"PJB"))
+        for fq in project.fastqs:
+            shutil.copyfile(fq,os.path.join(alt_fastqs_dir,
+                                            os.path.basename(fq)))
+        alt_fastqs = [os.path.join(alt_fastqs_dir,os.path.basename(fq))
+                      for fq in project.fastqs]
+        # Add QC artefacts
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check
+        self.assertEqual(check_fastq_screen_outputs(project,
+                                                    qc_dir="qc",
+                                                    screen="model_organisms",
+                                                    read_numbers=(1,2),
+                                                    fastqs=alt_fastqs),
+                         [])
+
 class TestCheckFastQCOutputs(unittest.TestCase):
     """
     Tests for the 'check_fastqc_outputs' function
