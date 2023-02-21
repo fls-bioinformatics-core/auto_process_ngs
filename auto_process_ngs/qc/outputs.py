@@ -1777,7 +1777,7 @@ def check_fastqc_outputs(project,qc_dir,read_numbers=None):
     return sorted(list(fastqs))
 
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
-                               read_numbers=None):
+                               fastqs=None,read_numbers=None):
     """
     Return Fastqs missing QC outputs from fastq_strand.py
 
@@ -1796,6 +1796,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         included unless the path is `None` or the
         config file doesn't exist. Relative path is
         assumed to be a subdirectory of the project
+      fastqs (list): optional list of Fastqs to check
+        against (defaults to Fastqs from the project)
       read_numbers (list): read numbers to predict
         outputs for
 
@@ -1816,9 +1818,13 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
     if not os.path.exists(fastq_strand_conf):
         # No conf file, nothing to check
         return list()
+    if not fastqs:
+        fastqs_in = project.fastqs
+    else:
+        fastqs_in = fastqs
     fastq_pairs = set()
     for fq_group in group_fastqs_by_name(
-            remove_index_fastqs(project.fastqs,
+            remove_index_fastqs(fastqs_in,
                                 project.fastq_attrs),
             fastq_attrs=project.fastq_attrs):
         # Assemble Fastq pairs based on read numbers

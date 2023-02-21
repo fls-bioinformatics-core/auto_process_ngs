@@ -2797,6 +2797,72 @@ class TestCheckFastqStrandOutputs(unittest.TestCase):
                                                     read_numbers=(1,)),
                          [])
 
+    def test_check_fastq_strand_outputs_all_missing_specify_fastqs(self):
+        """
+        check_fastq_strand_outputs: fastq_strand.py output missing (specify Fastqs)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Make fastq_strand.conf
+        fastq_strand_conf = os.path.join(project.dirn,"fastq_strand.conf")
+        with open(fastq_strand_conf,'w') as fp:
+            fp.write("")
+        # Copy Fastqs to alternative location
+        alt_fastqs_dir = os.path.join(self.wd,"alt_fastqs")
+        os.mkdir(alt_fastqs_dir)
+        for fq in project.fastqs:
+            shutil.copyfile(fq,os.path.join(alt_fastqs_dir,
+                                            os.path.basename(fq)))
+        alt_fastqs = [os.path.join(alt_fastqs_dir,os.path.basename(fq))
+                      for fq in project.fastqs]
+        # Check the outputs
+        self.assertEqual(check_fastq_strand_outputs(project,
+                                                    "qc",
+                                                    fastq_strand_conf,
+                                                    read_numbers=(1,2),
+                                                    fastqs=alt_fastqs),
+                         [(os.path.join(alt_fastqs_dir,
+                                        "PJB1_S1_R1_001.fastq.gz"),
+                           os.path.join(alt_fastqs_dir,
+                                        "PJB1_S1_R2_001.fastq.gz")),])
+
+    def test_check_fastq_strand_outputs_all_present_specify_fastqs(self):
+        """
+        check_fastq_strand_outputs: fastq_strand.py output present (specify Fastqs)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject(os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="standardPE",
+            include_fastq_strand=True,
+            include_multiqc=False)
+        fastq_strand_conf = os.path.join(project.dirn,"fastq_strand.conf")
+        with open(fastq_strand_conf,'w') as fp:
+            fp.write("")
+        # Copy Fastqs to alternative location
+        alt_fastqs_dir = os.path.join(self.wd,"alt_fastqs")
+        os.mkdir(alt_fastqs_dir)
+        for fq in project.fastqs:
+            shutil.copyfile(fq,os.path.join(alt_fastqs_dir,
+                                            os.path.basename(fq)))
+        alt_fastqs = [os.path.join(alt_fastqs_dir,os.path.basename(fq))
+                      for fq in project.fastqs]
+        # Check the outputs
+        self.assertEqual(check_fastq_strand_outputs(project,
+                                                    "qc",
+                                                    fastq_strand_conf,
+                                                    read_numbers=(1,2),
+                                                    fastqs=alt_fastqs),
+                         [])
+
 class TestCheckCellrangerCountOutputs(unittest.TestCase):
     """
     Tests for the 'check_cellranger_count_outputs' function
