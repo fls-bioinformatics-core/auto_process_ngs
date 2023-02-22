@@ -1397,7 +1397,8 @@ class GetSequenceDataFastqs(PipelineTask):
                     cmd.append("seqtk trimfq -L %d -" % length)
                 if trim_leading:
                     cmd.append("seqtk trimfq -b %d -" % trim_leading)
-                cmd.append("gzip >{fq_out}".format(fq_out=ffq))
+                cmd.append("gzip -{compression} >{fq_out}".\
+                           format(fq_out=ffq,compression=2))
                 self.add_cmd(
                     "Run SeqTK 'trimfq' on '%s'" % os.path.basename(fq),
                     """
