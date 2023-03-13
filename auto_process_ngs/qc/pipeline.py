@@ -307,6 +307,7 @@ class QCPipeline(Pipeline):
         # Build a dictionary of QC metadata items to
         # update
         qc_metadata = dict(protocol=qc_protocol,
+                           protocol_summary=protocol.summarise(),
                            organism=organism,
                            fastq_dir=project.fastq_dir)
 
