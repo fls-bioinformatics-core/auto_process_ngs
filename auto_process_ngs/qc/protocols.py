@@ -385,18 +385,16 @@ class QCProtocol:
         Generate plain-text description of the protocol
         """
         summary = []
-        if self.name:
-            summary.append("'%s' protocol" % self.name)
         if self.reads.seq_data:
             summary.append("biological data in %s" %
                            self.__summarise_reads(self.reads.seq_data))
         else:
-            summary.append("no reads assigned with biological data")
+            summary.append("no reads explicitly assigned as biological data")
         if self.reads.index:
             summary.append("index data in %s" %
                            self.__summarise_reads(self.reads.index))
         else:
-            summary.append("no reads assigned with index data")
+            summary.append("no reads explicitly assigned as index data")
         if self.__mapped_metrics():
             has_ranges = False
             if self.reads.seq_data:
@@ -410,7 +408,10 @@ class QCProtocol:
             else:
                 summary.append("mapped metrics generated using only "
                                "biological data reads")
-        return '; '.join(summary)
+        summary = '; '.join(summary)
+        if self.name:
+            summary = "'%s' protocol: %s" % (self.name,summary)
+        return summary
 
     def __parse_read_defn(self,read):
         # Internal: process a read definition string of the

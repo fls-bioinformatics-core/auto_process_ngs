@@ -38,9 +38,9 @@ class TestQCProtocol(unittest.TestCase):
         self.assertEqual(p.read_numbers.qc,())
         self.assertEqual(p.read_range,{})
         self.assertEqual(p.qc_modules,[])
-        self.assertEqual(p.summarise(),"'null' protocol; no reads "
-                         "assigned with biological data; no reads "
-                         "assigned with index data")
+        self.assertEqual(p.summarise(),"'null' protocol: no reads "
+                         "explicitly assigned as biological data; no "
+                         "reads explicitly assigned as index data")
 
     def test_qcprotocol_example_paired_end_protocol(self):
         """
@@ -67,10 +67,10 @@ class TestQCProtocol(unittest.TestCase):
                          ["fastq_screen",
                           "fastqc",
                           "sequence_lengths"])
-        self.assertEqual(p.summarise(),"'basicPE' protocol; biological "
-                         "data in R1 and R2; no reads assigned with index "
-                         "data; mapped metrics generated using only "
-                         "biological data reads")
+        self.assertEqual(p.summarise(),"'basicPE' protocol: biological "
+                         "data in R1 and R2; no reads explicitly assigned "
+                         "as index data; mapped metrics generated using "
+                         "only biological data reads")
 
     def test_qcprotocol_example_single_cell_protocol(self):
         """
@@ -97,7 +97,7 @@ class TestQCProtocol(unittest.TestCase):
                          ["fastq_screen",
                           "fastqc",
                           "sequence_lengths"])
-        self.assertEqual(p.summarise(),"'basicSC' protocol; biological "
+        self.assertEqual(p.summarise(),"'basicSC' protocol: biological "
                          "data in R2 only; index data in R2 only; mapped "
                          "metrics generated using only biological data "
                          "reads")
@@ -127,9 +127,9 @@ class TestQCProtocol(unittest.TestCase):
                          ["fastq_screen",
                           "fastqc",
                           "sequence_lengths"])
-        self.assertEqual(p.summarise(),"'basicPE_with_ranges' protocol; "
+        self.assertEqual(p.summarise(),"'basicPE_with_ranges' protocol: "
                          "biological data in R1 and R2 (R2 bases 1 to 50); "
-                         "no reads assigned with index data; mapped "
+                         "no reads explicitly assigned as index data; mapped "
                          "metrics generated using only subsequences of "
                          "biological data reads")
 
