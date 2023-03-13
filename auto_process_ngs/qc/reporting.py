@@ -557,14 +557,19 @@ class QCReport(Document):
                     name=sanitize_name(project.id))
             else:
                 project_summary = self.summary
-            # Create a new summary table
-            project_summary.add(
+            # Add a section for notes
+            project_notes = project_summary.add_subsection()
+            project_notes.add(
                 "%d sample%s | %d fastq%s" % (
                     len(project.samples),
                     ('s' if len(project.samples) != 1 else ''),
                     len(project.fastqs),
                     ('s' if len(project.fastqs) != 1 else ''))
             )
+            # Protocol summary
+            if project.qc_info.protocol_summary:
+                project_notes.add(project.qc_info.protocol_summary)
+            # Create a new summary table
             summary_table = self.add_summary_table(project,
                                                    summary_fields_,
                                                    section=project_summary)
