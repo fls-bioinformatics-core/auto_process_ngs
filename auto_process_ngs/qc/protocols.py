@@ -453,7 +453,7 @@ class QCProtocol:
         # Internal: generate a plain text description of the
         # sequence data and index reads and ranges
         reads = []
-        for r in self.reads.seq_data:
+        for r in rds:
             rd = r.upper()
             if r in self.read_range:
                 rng = self.read_range[r]

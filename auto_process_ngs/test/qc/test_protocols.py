@@ -98,7 +98,7 @@ class TestQCProtocol(unittest.TestCase):
                           "fastqc",
                           "sequence_lengths"])
         self.assertEqual(p.summarise(),"'basicSC' protocol: biological "
-                         "data in R2 only; index data in R2 only; mapped "
+                         "data in R2 only; index data in R1 only; mapped "
                          "metrics generated using only biological data "
                          "reads")
 
