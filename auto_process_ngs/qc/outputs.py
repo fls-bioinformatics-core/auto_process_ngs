@@ -269,7 +269,8 @@ class QCOutputs:
         # Cellranger multi
         cellranger_multi = self.data('cellranger_multi')
         # Multiplexed samples
-        self.multiplexed_samples = cellranger_multi.multiplexed_samples
+        self.multiplexed_samples = sorted(cellranger_multi.multiplexed_samples,
+                                          key=lambda s: split_sample_name(s))
         for reference_data in cellranger_multi.references:
             if reference_data not in self.cellranger_references:
                 self.cellranger_references.append(reference_data)
