@@ -47,7 +47,9 @@ The protocol is determined automatically for each project, based
 on the metadata.
 
 In turn each protocol defines a set of "QC modules" that are run
-by the QC pipeline.
+by the QC pipeline, as well as "sequence data reads" (reads that
+contain biological data) and "index data reads" (reads that
+contain index data).
 
 ----------
 QC modules
@@ -137,6 +139,19 @@ Where these types of samples can be identified by the pipeline
 for CellPlex) only metrics that are appropriate for non-biological
 samples will be generated (e.g. screens, strandedness etc) and
 reported.
+
+-------------------------------------
+QC metric using subsequences in reads
+-------------------------------------
+
+Some metrics can be applied to subsequences within reads (rather
+than the whole sequence), if a range of bases is defined within
+the protocol.
+
+Specifically, where subsequences are specified for sequence data
+reads (i.e. reads containing biological data) then the "mapped"
+QC modules (for example, FastqScreen or strandedness) will only
+use those subsequences.
 
 ------------------
 Additional options

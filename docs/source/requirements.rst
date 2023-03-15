@@ -44,6 +44,7 @@ run_qc              `cellranger`_      10xGenomics Chromium single-cell RNA-seq 
 run_qc              `cellranger-atac`_ 10xGenomics single-cell ATAC-seq data only
 run_qc              `cellranger-arc`_  10xGenomics Multiome ATAC + GEX data
 run_qc (*)          `multiqc`_
+run_qc (*)          `seqtk`_           Required for protocols mapping subsequences of reads (e.g. ``10x_Flex``)
 process_icell8      `cutadapt`_
 process_icell8      `fastq_screen`_
 process_icell8      `bowtie2`_         Required by fastq_screen
@@ -65,6 +66,7 @@ process_icell8      `bowtie2`_         Required by fastq_screen
 .. _rseqc: http://rseqc.sourceforge.net/#
 .. _qualimap: http://qualimap.conesalab.org/doc_html/command_line.html#rna-seq-qc
 .. _multiqc: http://multiqc.info/
+.. _seqtk: https://github.com/lh3/seqtk
 .. _cutadapt: http://cutadapt.readthedocs.io
 
 (*) indicates packages that only need to be installed if
