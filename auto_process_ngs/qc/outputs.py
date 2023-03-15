@@ -269,7 +269,8 @@ class QCOutputs:
         # Cellranger multi
         cellranger_multi = self.data('cellranger_multi')
         # Multiplexed samples
-        self.multiplexed_samples = cellranger_multi.multiplexed_samples
+        self.multiplexed_samples = sorted(cellranger_multi.multiplexed_samples,
+                                          key=lambda s: split_sample_name(s))
         for reference_data in cellranger_multi.references:
             if reference_data not in self.cellranger_references:
                 self.cellranger_references.append(reference_data)
@@ -1693,8 +1694,8 @@ def cellranger_multi_output(project,config_csv,sample_name=None,
         outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
 
-def check_fastq_screen_outputs(project,qc_dir,screen,read_numbers=None,
-                               legacy=False):
+def check_fastq_screen_outputs(project,qc_dir,screen,fastqs=None,
+                               read_numbers=None,legacy=False):
     """
     Return Fastqs missing QC outputs from FastqScreen
 
@@ -1709,6 +1710,8 @@ def check_fastq_screen_outputs(project,qc_dir,screen,read_numbers=None,
         path is assumed to be a subdirectory of the
         project)
       screen (str): screen name to check
+      fastqs (list): optional list of Fastqs to check
+        against (defaults to Fastqs from the project)
       read_numbers (list): read numbers to define Fastqs
         to predict outputs for; if not set then all
         non-index reads will be included
@@ -1720,8 +1723,12 @@ def check_fastq_screen_outputs(project,qc_dir,screen,read_numbers=None,
     """
     if not os.path.isabs(qc_dir):
         qc_dir = os.path.join(project.dirn,qc_dir)
+    if not fastqs:
+        fastqs_in = project.fastqs
+    else:
+        fastqs_in = fastqs
     fastqs = set()
-    for fastq in remove_index_fastqs(project.fastqs,
+    for fastq in remove_index_fastqs(fastqs_in,
                                      project.fastq_attrs):
         if read_numbers and \
            project.fastq_attrs(fastq).read_number not in read_numbers:
@@ -1771,7 +1778,7 @@ def check_fastqc_outputs(project,qc_dir,read_numbers=None):
     return sorted(list(fastqs))
 
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
-                               read_numbers=None):
+                               fastqs=None,read_numbers=None):
     """
     Return Fastqs missing QC outputs from fastq_strand.py
 
@@ -1790,6 +1797,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         included unless the path is `None` or the
         config file doesn't exist. Relative path is
         assumed to be a subdirectory of the project
+      fastqs (list): optional list of Fastqs to check
+        against (defaults to Fastqs from the project)
       read_numbers (list): read numbers to predict
         outputs for
 
@@ -1810,9 +1819,13 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
     if not os.path.exists(fastq_strand_conf):
         # No conf file, nothing to check
         return list()
+    if not fastqs:
+        fastqs_in = project.fastqs
+    else:
+        fastqs_in = fastqs
     fastq_pairs = set()
     for fq_group in group_fastqs_by_name(
-            remove_index_fastqs(project.fastqs,
+            remove_index_fastqs(fastqs_in,
                                 project.fastq_attrs),
             fastq_attrs=project.fastq_attrs):
         # Assemble Fastq pairs based on read numbers

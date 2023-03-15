@@ -238,7 +238,7 @@ QC_PROTOCOLS = {
     "10x_Flex": {
         "description": "10xGenomics fixed RNA profiling (Flex) data",
         "reads": {
-            "seq_data": ('r2',),
+            "seq_data": ('r2:1-50',),
             "index": ('r1',)
         },
         "qc_modules": [
@@ -316,12 +316,27 @@ class QCProtocol:
       'index', and 'qc' (listing sequence data, index reads,
       and all read for QC, respectively)
     - read_numbers: AttributeDictionary with the same
-      elements as 'reads', listing non-index read numbers.
+      elements as 'reads', listing non-index read numbers
+    - read_range: AttributeDictionary with normalised read
+      names as elements and range of bases (as a tuple) as
+      the values
     - qc_modules: list of QC module definitions
 
     Reads are supplied as 'r1', 'i2' etc; read numbers are
     integers without the leading 'r' (NB index reads are
     not included).
+
+    Read ranges define subsequences within each read which
+    contain the biologically significant data, and can be
+    appended to the supplied reads using the syntax:
+
+    READ[:[START]-[END]]
+
+    For example: 'r1:1-50'. These can ben accessed via the
+    'read_range' property as e.g. 'read_range.r1' and will
+    be returned as either 'None' (if no range was supplied),
+    or a tuple '(START,END)' (where either 'START' or 'END'
+    will be 'None' if no limit was supplied).
 
     Arguments:
       name (str): name of the protocol
@@ -353,13 +368,77 @@ class QCProtocol:
             seq_data=self.__read_numbers(self.reads.seq_data),
             index=self.__read_numbers(self.reads.index),
             qc=self.__read_numbers(self.reads.qc))
+        # Extract and store sequence ranges for reads
+        self.read_range = AttributeDictionary()
+        if not seq_data_reads:
+            seq_data_reads = tuple()
+        if not index_reads:
+            index_reads = tuple()
+        for r in list(seq_data_reads) + list(index_reads):
+            rd,rng = self.__parse_read_defn(r)
+            self.read_range[rd] = rng
+
+    def summarise(self):
+        """
+        Summarise protocol
+
+        Generate plain-text description of the protocol
+        """
+        summary = []
+        if self.reads.seq_data:
+            summary.append("biological data in %s" %
+                           self.__summarise_reads(self.reads.seq_data))
+        else:
+            summary.append("no reads explicitly assigned as biological data")
+        if self.reads.index:
+            summary.append("index data in %s" %
+                           self.__summarise_reads(self.reads.index))
+        else:
+            summary.append("no reads explicitly assigned as index data")
+        if self.__mapped_metrics():
+            has_ranges = False
+            if self.reads.seq_data:
+                for rd in self.reads.seq_data:
+                    if self.read_range[rd]:
+                        has_ranges = True
+                        break
+            if has_ranges:
+                summary.append("mapped metrics generated using only "
+                               "subsequences of biological data reads")
+            else:
+                summary.append("mapped metrics generated using only "
+                               "biological data reads")
+        summary = '; '.join(summary)
+        if self.name:
+            summary = "'%s' protocol: %s" % (self.name,summary)
+        return summary
+
+    def __parse_read_defn(self,read):
+        # Internal: process a read definition string of the
+        # form 'READ[:[START]-[END]]' and return a tuple
+        # of (READ,(START,END)) or (READ,None) (if no range
+        # was supplied)
+        # Extract read and range
+        try:
+            rd,rng = read.split(':')
+        except ValueError:
+            rd,rng = (read,None)
+        # Convert read to lower case
+        rd = rd.lower()
+        # Deal with range
+        if rng:
+            rng = tuple([int(s) for s in rng.split('-')])
+        else:
+            rng = None
+        return (rd,rng)
 
     def __reads(self,reads):
-        # Internal: normalise read names (sort and convert
-        # to lowercase)
+        # Internal: normalise read names (remove range spec,
+        # then convert to lowercase and sort)
         if not reads:
             return tuple()
-        return tuple(sorted([r.lower() for r in reads]))
+        return tuple(sorted([self.__parse_read_defn(r)[0]
+                             for r in reads]))
 
     def __read_numbers(self,reads):
         # Internal: extract read numbers (discard leading
@@ -369,6 +448,43 @@ class QCProtocol:
             if r.startswith('r'):
                 read_numbers.append(int(r[1:]))
         return tuple(sorted(read_numbers))
+
+    def __summarise_reads(self,rds):
+        # Internal: generate a plain text description of the
+        # sequence data and index reads and ranges
+        reads = []
+        for r in rds:
+            rd = r.upper()
+            if r in self.read_range:
+                rng = self.read_range[r]
+                if rng and (rng[0] or rng[1]):
+                    if not rng[0]:
+                        rd += " (%s first %sbp)" % (rd,rng[1])
+                    elif not rng[1]:
+                        rd += " (%s from %s base)" % (rd,rng[0])
+                    else:
+                        rd += " (%s bases %s to %s)" % (rd,rng[0],rng[1])
+                reads.append(rd)
+        if len(reads) == 1:
+            reads[0] += " only"
+        elif len(reads) > 1:
+            reads[-2] += " and %s" % reads[-1]
+            reads = reads[0:-1]
+        return ', '.join(reads)
+
+    def __mapped_metrics(self):
+        # Internal: return list of QC module names within
+        # the protocol which produce mapped metrics
+        mapped_metrics = []
+        for qc_defn in self.qc_modules:
+            qc_module = qc_defn.split('(')[0]
+            if qc_module in ('fastq_screen',
+                             'strandedness',
+                             'picard_insert_size_metrics',
+                             'rseqc_genebody_coverage',
+                             'qualimap_rnaseq'):
+                mapped_metrics.append(qc_module)
+        return mapped_metrics
 
 #######################################################################
 # Functions

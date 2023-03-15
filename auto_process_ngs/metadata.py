@@ -662,7 +662,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     The data items are:
 
     fastq_dir: the name of the associated Fastq subdirectory
-    protocol: the QC protocol used
+    protocol: name of the QC protocol used
     organism: the organism(s) that the QC was run with
     cellranger_version: version of cellranger/10x software used
     cellranger_refdata: reference datasets used with cellranger
@@ -671,6 +671,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     star_index: index used by STAR
     annotation_bed: BED file with gene annotation
     annotation_gtf: GTF file with gene annotation
+    protocol_summary: free-text summary of the QC protocol
     """
     def __init__(self,filen=None):
         """Create a new AnalysisProjectQCDirInfo instance
@@ -692,6 +693,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                 'star_index': 'STAR index',
                 'annotation_bed': 'BED gene annotation file',
                 'annotation_gtf': 'GTF gene annotation file',
+                'protocol_summary': 'Protocol summary',
             },
             order = (
                 'fastq_dir',

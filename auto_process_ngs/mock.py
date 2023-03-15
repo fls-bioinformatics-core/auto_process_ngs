@@ -39,6 +39,7 @@ the external software required for parts of the pipeline:
 - MockFastQC
 - MockFastqStrandPy
 - MockGtf2bed
+- MockSeqtk
 - MockStar
 - MockSamtools
 - MockPicard
@@ -78,6 +79,7 @@ from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
+from bcftbx.FASTQFile import get_fastq_file_handle
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .analysis import AnalysisFastq
@@ -2887,7 +2889,7 @@ class MockGtf2bed:
 
     This class can be used to create a mock
     gtf2bed executable, which in turn can be used
-    in place of the actual fastqc program for
+    in place of the actual gtf2bed program for
     testing purposes.
 
     To create a mock script, use the 'create' static
@@ -2983,6 +2985,122 @@ sys.exit(MockGtf2bed(version=%s,
         for line in sys.stdin:
             if not self._no_outputs:
                 print("GTF2BED: placeholder")
+        return self._exit_code
+
+class MockSeqtk:
+    """
+    Create mock 'seqtk'
+
+    This class can be used to create a mock
+    seqtk executable, which in turn can be used
+    in place of the actual seqtk program for
+    testing purposes.
+
+    To create a mock script, use the 'create' static
+    method, e.g.
+
+    >>> MockGtf2bed.create("/tmpbin/seqtk")
+
+    The resulting executable will generate mock outputs
+    when run on Fastq files (ignoring their content).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+
+    The following flags can also be used:
+
+    - `no_outputs` configures the mock executable not
+      to write any output
+    """
+
+    @staticmethod
+    def create(path,version=None,no_outputs=False,
+               exit_code=0):
+        """
+        Create a mock 'seqtk' utility
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          version (str): explicit version string
+          no_outputs (bool): if True then make
+            don't create mock outputs
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print("Building mock executable: %s" % path)
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockSeqtk
+sys.exit(MockSeqtk(version=%s,
+                  no_outputs=%s,
+                  exit_code=%s).main(sys.argv[1:]))
+            """ % (("\"%s\"" % version
+                    if version is not None
+                    else None),
+                   no_outputs,
+                   exit_code))
+            os.chmod(path,0o775)
+        with open(path,'r') as fp:
+            print("gtf2bed:")
+            print("%s" % fp.read())
+        return path
+
+    def __init__(self,version=None,no_outputs=False,
+                 exit_code=0):
+        """
+        Internal: configure the mock seqtk
+        """
+        if version is None:
+            version = "1.3"
+        self._version = str(version)
+        self._no_outputs = no_outputs
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock seqtk functionality
+        """
+        # Build top-level parser
+        p = argparse.ArgumentParser()
+        sp = p.add_subparsers(dest='command')
+
+        # 'trimfq' subparser
+        trimfq = sp.add_parser('trimfq')
+        trimfq.add_argument('-b',action='store')
+        trimfq.add_argument('-L',action='store')
+        trimfq.add_argument('fastq_in')
+
+        # Process command line
+        args = p.parse_args()
+
+        # Handle commands
+        if args.command == "trimfq":
+            # trimfq command
+            # Echo the input Fastq to stdout
+            if args.fastq_in == '-':
+                fp = sys.stdin
+            else:
+                fp = get_fastq_file_handle(args.fastq_in,'rt')
+            try:
+                sys.stdout.write(fp.read())
+            except Exception as ex:
+                sys.stderr.write("%s\n" % ex)
+                return 1
+            if args.fastq_in != '-':
+                fp.close()
+        else:
+            print("%s: not implemented" % args.command)
         return self._exit_code
 
 class MockStar:
