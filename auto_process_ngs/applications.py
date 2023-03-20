@@ -449,5 +449,6 @@ class general:
         if recursive:
             scp_command.add_args('-r')
         scp_command.add_args(source,
-                             '%s@%s:%s' % (user,server,target))
+                             '%s%s:%s' % ('%s@' % user if user else '',
+                                          server,target))
         return scp_command

@@ -184,3 +184,9 @@ class TestGeneral(unittest.TestCase):
                         recursive=True).command_line,
             ['scp','-r','my_dir','user@example.com:remotedir'])
 
+    def test_scp_no_user(self):
+        """Construct 'scp' command lines with no remote user
+        """
+        self.assertEqual(
+            general.scp(None,'example.com','my_file','remotedir').command_line,
+            ['scp','my_file','example.com:remotedir'])
