@@ -38,3 +38,7 @@ only if the value in that column matches the glob-style
 
 The ``-e``/``--edit`` argument brings up the sample sheet in an
 editor to allow changes to be made manually.
+
+The ``-i``/``--import`` argument enables content from an external
+sample sheet file to be imported and used as the new default
+sample sheet.
