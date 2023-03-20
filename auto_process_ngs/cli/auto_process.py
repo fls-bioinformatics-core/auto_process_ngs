@@ -238,6 +238,13 @@ def add_samplesheet_command(cmdparser):
                        "pattern to match to an arbitrary column (e.g. "
                        "'Sample_Name=ITS*'); NEW_NAME can be either "
                        "'SAMPLE_ID' or an arbitrary string")
+    mutex.add_argument('--import',action='store',metavar="SAMPLE_SHEET",
+                       dest='import_sample_sheet',
+                       default=None,
+                       help="replace existing sample sheet file with "
+                       "version copied from the specified location; "
+                       "SAMPLE_SHEET can be a local or remote "
+                       "file, or a URL")
     mutex.add_argument('-e','--edit',action='store_true',dest='edit',
                        default=False,
                        help="bring up sample sheet file in an editor "
@@ -1257,6 +1264,10 @@ def samplesheet(args):
     elif args.predict:
         # Predict the outputs
         d.samplesheet(SampleSheetOperation.PREDICT)
+    elif args.import_sample_sheet:
+        # Import new sample sheet file
+        d.samplesheet(SampleSheetOperation.IMPORT,
+                      args.import_sample_sheet)
     else:
         # Show raw sample sheet
         d.samplesheet(SampleSheetOperation.VIEW)
