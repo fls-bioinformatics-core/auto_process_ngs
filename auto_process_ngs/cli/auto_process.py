@@ -238,7 +238,7 @@ def add_samplesheet_command(cmdparser):
                        "pattern to match to an arbitrary column (e.g. "
                        "'Sample_Name=ITS*'); NEW_NAME can be either "
                        "'SAMPLE_ID' or an arbitrary string")
-    mutex.add_argument('--import',action='store',metavar="SAMPLE_SHEET",
+    mutex.add_argument('-i','--import',action='store',metavar="SAMPLE_SHEET",
                        dest='import_sample_sheet',
                        default=None,
                        help="replace existing sample sheet file with "
