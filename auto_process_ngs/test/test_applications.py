@@ -163,6 +163,12 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(general.ssh_command('user','example.com',('ls','-l')).command_line,
                          ['ssh','user@example.com','ls','-l'])
 
+    def test_ssh_cmd_no_user(self):
+        """Construct 'ssh' command lines with no remote user
+        """
+        self.assertEqual(general.ssh_command(None,'example.com',('ls','-l')).command_line,
+                         ['ssh','example.com','ls','-l'])
+
     def test_scp(self):
         """Construct 'scp' command lines
         """

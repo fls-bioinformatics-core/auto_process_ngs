@@ -422,7 +422,8 @@ class general:
           Command object.
 
         """
-        ssh_command = Command('ssh','%s@%s' % (user,server))
+        ssh_command = Command('ssh','%s%s' % ('%s@' % user if user else '',
+                                              server))
         ssh_command.add_args(*cmd)
         return ssh_command
 
