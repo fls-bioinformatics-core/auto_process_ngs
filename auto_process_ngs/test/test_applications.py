@@ -163,6 +163,12 @@ class TestGeneral(unittest.TestCase):
         self.assertEqual(general.ssh_command('user','example.com',('ls','-l')).command_line,
                          ['ssh','user@example.com','ls','-l'])
 
+    def test_ssh_cmd_no_user(self):
+        """Construct 'ssh' command lines with no remote user
+        """
+        self.assertEqual(general.ssh_command(None,'example.com',('ls','-l')).command_line,
+                         ['ssh','example.com','ls','-l'])
+
     def test_scp(self):
         """Construct 'scp' command lines
         """
@@ -178,3 +184,9 @@ class TestGeneral(unittest.TestCase):
                         recursive=True).command_line,
             ['scp','-r','my_dir','user@example.com:remotedir'])
 
+    def test_scp_no_user(self):
+        """Construct 'scp' command lines with no remote user
+        """
+        self.assertEqual(
+            general.scp(None,'example.com','my_file','remotedir').command_line,
+            ['scp','my_file','example.com:remotedir'])
