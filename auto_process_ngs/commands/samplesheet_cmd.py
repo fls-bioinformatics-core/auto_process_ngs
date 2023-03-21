@@ -200,7 +200,7 @@ def import_samplesheet(ap,new_sample_sheet):
         fetch_file(new_sample_sheet,tmp_sample_sheet)
     except Exception as ex:
         raise Exception("Error importing sample sheet data "
-                        "from '%s': %s" % (sample_sheet,ex))
+                        "from '%s': %s" % (new_sample_sheet,ex))
     # Keep a copy of the imported sample sheet
     imported_sample_sheet = os.path.join(ap.analysis_dir,
                                          'SampleSheet.imported.csv')
