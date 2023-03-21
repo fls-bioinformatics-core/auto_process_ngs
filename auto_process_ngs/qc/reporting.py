@@ -156,6 +156,7 @@ METADATA_FIELD_DESCRIPTIONS = {
     'PI': 'PI',
     'library_type': 'Library type',
     'sequencer_model': 'Sequencer model',
+    'flow_cell_mode': 'Flow cell mode',
     'single_cell_platform': 'Single cell preparation platform',
     'number_of_cells': 'Number of cells',
     'organism': 'Organism',
@@ -715,6 +716,7 @@ class QCReport(Document):
         metadata_items = ['run_id',
                           'run',
                           'sequencer_model',
+                          'flow_cell_mode',
                           'user',
                           'PI',
                           'library_type',
@@ -1096,6 +1098,11 @@ class QCReport(Document):
                         if value is None:
                             # Unable to determine run id
                             continue
+                    elif item == 'flow_cell_mode':
+                        value = project.run_metadata['flow_cell_mode']
+                        if value is None:
+                            # Unable to determine flow cell mode
+                            value = '&nbsp;'
                     elif item == 'cellranger_reference':
                         if len(project.cellranger_references) == 1:
                             # Single reference dataset
