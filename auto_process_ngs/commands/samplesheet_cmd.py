@@ -152,7 +152,10 @@ def view_samplesheet(ap):
         analysis directory to operate on
     """
     with open(ap.params.sample_sheet,'rt') as fp:
-        paginate(fp.read())
+        content = "Current samplesheet '%s'\n\n%s" % (
+            ap.params.sample_sheet,
+            fp.read())
+        paginate(content)
 
 def predict_samplesheet_outputs(ap):
     """
@@ -162,8 +165,10 @@ def predict_samplesheet_outputs(ap):
       ap (AutoProcessor): autoprocessor pointing to the
         analysis directory to operate on
     """
-    paginate(predict_outputs(
-        sample_sheet_file=ap.params.sample_sheet))
+    content = "Current samplesheet '%s'\n\n%s" % (
+        ap.params.sample_sheet,
+        predict_outputs(sample_sheet_file=ap.params.sample_sheet))
+    paginate(content)
 
 def edit_samplesheet(ap):
     """
