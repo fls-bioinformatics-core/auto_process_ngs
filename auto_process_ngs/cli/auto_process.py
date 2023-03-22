@@ -209,6 +209,11 @@ def add_samplesheet_command(cmdparser):
                               description="Query and manipulate sample "
                               "sheets")
     mutex = p.add_mutually_exclusive_group()
+    mutex.add_argument('--use',metavar="SAMPLE_SHEET",action='store',
+                       dest='use_samplesheet',
+                       help="update the default sample sheet file to "
+                       "SAMPLE_SHEET (must be a file on the local file "
+                       "system)")
     mutex.add_argument('--set-project',
                        metavar="[LANES:][COL=PATTERN:]NEW_PROJECT",
                        action='store',dest='set_project',
@@ -1234,7 +1239,15 @@ def samplesheet(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
-    if args.set_project:
+    if args.use_samplesheet:
+        # Update the sample sheet in the config
+        sample_sheet_file = os.path.abspath(args.use_samplesheet)
+        if not os.path.exists(sample_sheet_file):
+            raise Exception("samplesheet: '%s' not found" %
+                            sample_sheet_file)
+        d.params['sample_sheet'] = sample_sheet_file
+        print("samplesheet: updated to use '%s'" % d.params.sample_sheet)
+    elif args.set_project:
         # Set the sample project
         name,lanes,fnmatch_col,pattern = \
             parse_samplesheet_spec(args.set_project)
