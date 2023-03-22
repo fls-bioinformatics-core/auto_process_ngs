@@ -32,6 +32,7 @@ Functions:
 - get_numbered_subdir:
 - find_executables:
 - parse_version:
+- parse_samplesheet_spec:
 - pretty_print_rows:
 - write_script_file:
 - edit_file:
@@ -1099,6 +1100,50 @@ def parse_version(s):
             pass
         items.append(i)
     return tuple(items)
+
+def parse_samplesheet_spec(s):
+    """
+    Split sample sheet line specification into components
+
+    Given a sample sheet line specification of the form
+    "[LANES:][COL=PATTERN:]VALUE", split into the
+    component parts and return as a tuple:
+
+    (VALUE,LANES,COL,PATTERN)
+
+    where 'LANES' is a list of lanes (or 'None', if not
+    present), and the others will be strings (or 'None',
+    if not present).
+
+    Arguments:
+      s (str): specification string
+
+    Returns:
+      Tuple: the extracted components as
+        (VALUE,LANES,COL,PATTERN).
+    """
+    # Initialise
+    value = None
+    lanes = None
+    column = None
+    pattern = None
+    # Split input string
+    items = s.split(':')
+    # Value is at the end
+    value = items[-1]
+    items = items[:-1]
+    # Optional column matching
+    if items:
+        if '=' in items[-1]:
+            # Pattern to match
+            column,pattern = items[-1].split('=')
+            items = items[:-1]
+    # Optional lanes
+    if items:
+        # Lane specification
+        lanes = bcf_utils.parse_lanes(items[0])
+    # Return as tuple
+    return (value,lanes,column,pattern)
 
 def pretty_print_rows(data,prepend=False):
     """Format row-wise data into 'pretty' lines

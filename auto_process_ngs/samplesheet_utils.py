@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     samplesheet_utils.py: utilities for handling samplesheet files
-#     Copyright (C) University of Manchester 2016-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2022 Peter Briggs
 #
 ########################################################################
 #
@@ -23,6 +23,7 @@ Helper functions:
 
 - has_invalid_characters: check if a file contains invalid characters
 - get_close_names: return closely matching names from a list
+- set_samplesheet_column: update values in sample sheet columns
 
 """
 
@@ -32,6 +33,7 @@ Helper functions:
 
 import difflib
 import re
+import fnmatch
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
 
@@ -429,3 +431,82 @@ def get_close_names(names):
                     close_names[name1] = []
                 close_names[name1].append(name)
     return close_names
+
+def set_samplesheet_column(sample_sheet,column,new_value,
+                           lanes=None,where=None):
+    """
+    Set the values in a column (optionally to a subset of lines)
+
+    Sets the values in a sample sheet column to a new value,
+    which can be either a string, or the value of another
+    column in the same line (by specifying 'SAMPLE_PROJECT',
+    'SAMPLE_NAME' or 'SAMPLE_ID' as the value).
+
+    By default the value will updated for all lines in the
+    sample sheet, however a subset of lines can be selected by
+    specifying a list of lane numbers (only for sample sheets
+    which have a 'Lane' column), and/or where the value in another
+    column matches a supplied glob-style pattern).
+
+    Arguments:
+      sample_sheet (str): either the path to a Sample Sheet file
+        or a 'SampleSheet' instance
+      column (str): name of the column to update, must be
+        either the actual name of a column or one of the special
+        values 'SAMPLE_PROJECT', 'SAMPLE_NAME' or 'SAMPLE_ID'
+      new_value (str): the new value to set the column to, or
+        one of the special values 'SAMPLE_PROJECT', 'SAMPLE_NAME'
+        or 'SAMPLE_ID' (to use the value from another column)
+      lanes (list): if specified then selects the subset of lines
+        where the 'Lane' number matches one in the list
+      where (tuple): if specified then should be a tuple of the
+        form '(col,pattern)' where 'col' is a column name (or
+        special value for a column) and 'pattern' is a
+        glob-style pattern, which will be used to select a
+        subset of lines
+
+    Returns:
+      SampleSheet: instance of the 'SampleSheet' class with
+        the updated data.
+    """
+    # Load sample sheet data
+    if not isinstance(sample_sheet,SampleSheet):
+        sample_sheet = SampleSheet(sample_sheet=sample_sheet)
+    # Identify special columns
+    columns = {
+        "SAMPLE_PROJECT": sample_sheet.sample_project_column,
+        "SAMPLE_NAME": sample_sheet.sample_name_column,
+        "SAMPLE_ID": sample_sheet.sample_id_column
+    }
+    # Assign column to update
+    if column in columns:
+        column = columns[column]
+    # Column to match
+    fnmatch_col = None
+    if where:
+        try:
+            fnmatch_col,pattern = where
+            if fnmatch_col:
+                if fnmatch_col in columns:
+                    fnmatch_col = columns[fnmatch_col]
+                if fnmatch_col not in sample_sheet.column_names:
+                    raise KeyError("Column '%s' not found in sample sheet" %
+                                   fnmatch_col)
+        except TypeError:
+            pass
+    # Loop over the data in the sheet
+    for line in sample_sheet:
+        if lanes and line['Lane'] not in lanes:
+            # Lane doesn't match
+            continue
+        if fnmatch_col and not fnmatch.fnmatch(line[fnmatch_col],
+                                               pattern):
+            # Column value doesn't match
+            continue
+        # Update the target column
+        if new_value in columns:
+            line[column] = line[columns[new_value]]
+        else:
+            line[column] = new_value
+    # Return SampleSheet instance with updated data
+    return sample_sheet

@@ -78,11 +78,13 @@ from ..bcl2fastq.pipeline import PROTOCOLS
 from ..bcl2fastq.pipeline import subset
 from ..commands.make_fastqs_cmd import BCL2FASTQ_DEFAULTS
 from ..commands.report_cmd import ReportingMode
+from ..commands.samplesheet_cmd import SampleSheetOperation
 from ..samplesheet_utils import predict_outputs
 from ..settings import Settings
 from ..settings import locate_settings_file
 from ..tenx import CELLRANGER_ASSAY_CONFIGS
 from ..utils import paginate
+from ..utils import parse_samplesheet_spec
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -204,12 +206,59 @@ def add_samplesheet_command(cmdparser):
     """
     p = cmdparser.add_command('samplesheet',
                               help="Sample sheet manipulation",
-                              description="Query and manipulate sample sheets")
-    p.add_argument('-e','--edit',action='store_true',dest='edit',
-                   default=False,
-                   help="bring up sample sheet file in an editor to make "
-                   "changes manually")
-    add_debug_option(p)
+                              description="Query and manipulate sample "
+                              "sheets")
+    mutex = p.add_mutually_exclusive_group()
+    mutex.add_argument('--use',metavar="SAMPLE_SHEET",action='store',
+                       dest='use_samplesheet',
+                       help="update the default sample sheet file to "
+                       "SAMPLE_SHEET (must be a file on the local file "
+                       "system)")
+    mutex.add_argument('--set-project',
+                       metavar="[LANES:][COL=PATTERN:]NEW_PROJECT",
+                       action='store',dest='set_project',
+                       help="update the sample project field. "
+                       "Optional LANES specifies one or more lanes "
+                       "(e.g. '1', '1,2,3', '1-3', '1,3-5') to update; "
+                       "optional COL=PATTERN specifies a glob-style "
+                       "pattern to match to an arbitrary column (e.g. "
+                       "'Sample_Name=ITS*'); NEW_PROJECT is the new "
+                       "project name")
+    mutex.add_argument('--set-sample-id',
+                       metavar="[LANES:][COL=PATTERN:]NEW_ID",
+                       action='store',dest='set_sample_id',
+                       help="update the sample ID field."
+                       "Optional LANES specifies one or more lanes "
+                       "(e.g. '1', '1,2,3', '1-3', '1,3-5') to update; "
+                       "optional COL=PATTERN specifies a glob-style "
+                       "pattern to match to an arbitrary column (e.g. "
+                       "'Sample_Name=ITS*'); NEW_ID can be either "
+                       "'SAMPLE_NAME' or an arbitrary string")
+    mutex.add_argument('--set-sample-name',metavar="NEW_NAME",
+                       action='store',dest='set_sample_name',
+                       help="update the sample name field."
+                       "Optional LANES specifies one or more lanes "
+                       "(e.g. '1', '1,2,3', '1-3', '1,3-5') to update; "
+                       "optional COL=PATTERN specifies a glob-style "
+                       "pattern to match to an arbitrary column (e.g. "
+                       "'Sample_Name=ITS*'); NEW_NAME can be either "
+                       "'SAMPLE_ID' or an arbitrary string")
+    mutex.add_argument('-i','--import',action='store',metavar="SAMPLE_SHEET",
+                       dest='import_sample_sheet',
+                       default=None,
+                       help="replace existing sample sheet file with "
+                       "version copied from the specified location; "
+                       "SAMPLE_SHEET can be a local or remote "
+                       "file, or a URL")
+    mutex.add_argument('-e','--edit',action='store_true',dest='edit',
+                       default=False,
+                       help="bring up sample sheet file in an editor "
+                       "to make changes manually")
+    mutex.add_argument('-p','--predict',action='store_true',dest='predict',
+                       default=False,
+                       help="show predicted outputs from sample sheet")
+    advanced = p.add_argument_group("Advanced options")
+    add_debug_option(advanced)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
@@ -1190,14 +1239,51 @@ def samplesheet(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
-    # Sample sheet operations
-    if args.edit:
+    if args.use_samplesheet:
+        # Update the sample sheet in the config
+        sample_sheet_file = os.path.abspath(args.use_samplesheet)
+        if not os.path.exists(sample_sheet_file):
+            raise Exception("samplesheet: '%s' not found" %
+                            sample_sheet_file)
+        d.params['sample_sheet'] = sample_sheet_file
+        print("samplesheet: updated to use '%s'" % d.params.sample_sheet)
+    elif args.set_project:
+        # Set the sample project
+        name,lanes,fnmatch_col,pattern = \
+            parse_samplesheet_spec(args.set_project)
+        d.samplesheet(SampleSheetOperation.SET_PROJECT,
+                      name,
+                      lanes=lanes,
+                      where=(fnmatch_col,pattern))
+    elif args.set_sample_name:
+        # Set the sample name
+        name,lanes,fnmatch_col,pattern = \
+            parse_samplesheet_spec(args.set_project)
+        d.samplesheet(SampleSheetOperation.SET_SAMPLE_NAME,
+                      name,
+                      lanes=lanes,
+                      where=(fnmatch_col,pattern))
+    elif args.set_sample_id:
+        # Set the sample ID
+        name,lanes,fnmatch_col,pattern = \
+            parse_samplesheet_spec(args.set_project)
+        d.samplesheet(SampleSheetOperation.SET_SAMPLE_ID,
+                      name,
+                      lanes=lanes,
+                      where=(fnmatch_col,pattern))
+    elif args.edit:
         # Manually edit the sample sheet
-        d.edit_samplesheet()
-    else:
+        d.samplesheet(SampleSheetOperation.EDIT)
+    elif args.predict:
         # Predict the outputs
-        paginate(predict_outputs(
-            sample_sheet_file=d.params.sample_sheet))
+        d.samplesheet(SampleSheetOperation.PREDICT)
+    elif args.import_sample_sheet:
+        # Import new sample sheet file
+        d.samplesheet(SampleSheetOperation.IMPORT,
+                      args.import_sample_sheet)
+    else:
+        # Show raw sample sheet
+        d.samplesheet(SampleSheetOperation.VIEW)
 
 def make_fastqs(args):
     """
