@@ -48,15 +48,6 @@ from ..qc.constants import PROTOCOLS
 # Module-specific logger
 logger = logging.getLogger("run_qc")
 
-# Versions and settings
-__version__ = get_version()
-__settings = Settings()
-try:
-    __modulefiles = __settings.modulefiles
-except KeyError:
-    # No environment modules specified
-    __modulefiles = None
-
 #######################################################################
 # Functions
 #######################################################################
@@ -108,7 +99,7 @@ def add_metadata_options(p):
                           help="explicitly specify the single cell "
                           "platform (e.g. '10xGenomics Chromium 3'v3')")
 
-def add_pipeline_options(p):
+def add_pipeline_options(p,fastq_subset_size,default_nthreads):
     """
     QC pipeline options
     """
@@ -123,14 +114,12 @@ def add_pipeline_options(p):
                             ", ".join(["'%s'" % x for x in PROTOCOLS]))
     qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
                             action='store',dest='fastq_screen_subset',
-                            default=__settings.qc.fastq_subset_size,
+                            default=fastq_subset_size,
                             type=int,
                             help="specify size of subset of total reads "
                             "to use for fastq_screen (i.e. --subset "
                             "option); (default %d, set to 0 to use all "
-                            "reads)" %
-                            __settings.qc.fastq_screen_subset)
-    default_nthreads = __settings.qc.nprocessors
+                            "reads)" % fastq_subset_size)
     qc_options.add_argument('-t','--threads',action='store',
                             dest="nthreads",type=int,default=None,
                             help="number of threads to use for QC script "
@@ -192,7 +181,7 @@ def add_10x_options(p):
                             "cell detection algorithms (default is to use "
                             "built-in cell detection)")
 
-def add_conda_options(p):
+def add_conda_options(p,enable_conda,conda_env_dir):
     """
     Conda options
     """
@@ -201,15 +190,15 @@ def add_conda_options(p):
                        dest="enable_conda",default=None,
                        help="use conda to resolve task dependencies; can "
                        "be 'yes' or 'no' (default: %s)" %
-                       ("yes" if __settings.conda.enable_conda else "no"))
+                       ("yes" if enable_conda else "no"))
     conda.add_argument('--conda-env-dir',action='store',
-                       dest="conda_env_dir",default=__settings.conda.env_dir,
+                       dest="conda_env_dir",default=conda_env_dir,
                        help="specify directory for conda enviroments "
                        "(default: %s)" % ('temporary directory'
-                                          if not __settings.conda.env_dir else
-                                          __settings.conda.env_dir))
+                                          if not conda_env_dir else
+                                          conda_env_dir))
 
-def add_job_control_options(p):
+def add_job_control_options(p,max_cores,max_jobs,max_batches):
     """
     Job control options
     """
@@ -220,38 +209,31 @@ def add_job_control_options(p):
                           "any runners defined in the configuration or on "
                           "the command line)")
     pipeline.add_argument('-c','--maxcores',metavar='N',action='store',
-                          dest='max_cores',type=int,
-                          default=__settings.general.max_cores,
+                          dest='max_cores',type=int,default=max_cores,
                           help="maximum number of cores available for QC "
                           "jobs when using --local (default %s, change in "
                           "in settings file)" %
-                          (__settings.general.max_cores
-                           if __settings.general.max_cores else 'no limit'))
+                          (max_cores if max_cores else 'no limit'))
     pipeline.add_argument('-m','--maxmem',metavar='M',action='store',
                           dest='max_mem',type=int,default=None,
                           help="maximum total memory jobs can request at "
                           "once when using --local (in Gbs; default: "
                           "unlimited)")
     pipeline.add_argument('-j','--maxjobs',metavar='N',action='store',
-                          dest='max_jobs',type=int,
-                          default=__settings.general.max_concurrent_jobs,
+                          dest='max_jobs',type=int,default=max_jobs,
                           help="explicitly specify maximum number of "
                           "concurrent QC jobs to run (default %s, change "
                           "in settings file; ignored when using --local)"
-                          % (__settings.general.max_concurrent_jobs
-                             if __settings.general.max_concurrent_jobs
-                             else 'no limit'))
+                          % (max_jobs if max_jobs else 'no limit'))
     pipeline.add_argument('-b','--maxbatches',type=int,action='store',
                           dest='max_batches',metavar='NBATCHES',
-                          default=__settings.general.max_batches,
+                          default=max_batches,
                           help="enable dynamic batching of pipeline "
                           "jobs with maximum number of batches set to "
                           "NBATCHES (default: %s)"
-                          % (__settings.general.max_batches
-                             if __settings.general.max_batches
-                             else 'no batching'))
+                          % (max_batches if max_batches else 'no batching'))
 
-def add_advanced_options(p):
+def add_advanced_options(p,use_legacy_screen_names):
     """
     Advanced options
     """
@@ -276,8 +258,7 @@ def add_advanced_options(p):
                           help="use 'legacy' naming convention for "
                           "FastqScreen output files; can be 'yes' or 'no' "
                           "(default: %s)" %
-                          ("yes" if __settings.qc.use_legacy_screen_names
-                           else "no"))
+                          ("yes" if use_legacy_screen_names else "no"))
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
@@ -543,13 +524,16 @@ def cleanup_atexit(tmp_project_dir):
 # Main program
 
 def main():
+    # Get configuration settings
+    settings = Settings()
+
     # Make a command line parser
     p = argparse.ArgumentParser(
         description="Run the QC pipeline standalone on an arbitrary "
         "set of Fastq files.")
     # Build parser
     p.add_argument('--version', action='version',
-                   version=("%%(prog)s %s" % __version__))
+                   version=("%%(prog)s %s" % get_version()))
     p.add_argument("inputs",metavar="DIR | FASTQ [ FASTQ ... ]",
                    nargs="+",
                    help="directory or list of Fastq files to run the "
@@ -557,12 +541,20 @@ def main():
     # Add option groups
     add_reporting_options(p)
     add_metadata_options(p)
-    add_pipeline_options(p)
+    add_pipeline_options(p,
+                         fastq_subset_size=settings.qc.fastq_screen_subset,
+                         default_nthreads=settings.qc.nprocessors)
     add_reference_data_options(p)
     add_10x_options(p)
-    add_conda_options(p)
-    add_job_control_options(p)
-    add_advanced_options(p)
+    add_conda_options(p,
+                      enable_conda=settings.conda.enable_conda,
+                      conda_env_dir=settings.conda.env_dir)
+    add_job_control_options(p,
+                            max_cores=settings.general.max_cores,
+                            max_jobs=settings.general.max_concurrent_jobs,
+                            max_batches=settings.general.max_batches)
+    add_advanced_options(p,use_legacy_screen_names=
+                         settings.qc.use_legacy_screen_names)
     add_debug_options(p)
     add_deprecated_options(p)
 
@@ -627,7 +619,7 @@ def main():
                  'cellranger',
                  'report_qc',):
         try:
-            envmodules[name] = __modulefiles[name]
+            envmodules[name] = settings.modulefiles[name]
         except KeyError:
             envmodules[name] = None
 
@@ -638,53 +630,53 @@ def main():
     # Conda dependency resolution
     enable_conda = args.enable_conda
     if enable_conda is None:
-        enable_conda = __settings.conda.enable_conda
+        enable_conda = settings.conda.enable_conda
     else:
         enable_conda = (args.enable_conda == "yes")
 
     # Fastq screens
-    if __settings.qc.fastq_screens:
+    if settings.qc.fastq_screens:
         fastq_screens = dict()
-        for screen in __settings.qc.fastq_screens.split(','):
-            fastq_screens[screen] = __settings.screens[screen].conf_file
+        for screen in settings.qc.fastq_screens.split(','):
+            fastq_screens[screen] = settings.screens[screen].conf_file
     else:
         fastq_screens = None
     use_legacy_screen_names = args.use_legacy_screen_names
     if use_legacy_screen_names is None:
-        use_legacy_screen_names = __settings.qc.use_legacy_screen_names
+        use_legacy_screen_names = settings.qc.use_legacy_screen_names
     else:
         use_legacy_screen_names = (use_legacy_screen_names == "yes")
 
     # STAR indexes
-    star_indexes = fetch_reference_data(__settings,'star_index')
+    star_indexes = fetch_reference_data(settings,'star_index')
     force_star_index = args.star_index
     if force_star_index:
         force_star_index = os.path.abspath(force_star_index)
 
     # Annotation files
-    annotation_bed_files = fetch_reference_data(__settings,
+    annotation_bed_files = fetch_reference_data(settings,
                                                 'annotation_bed')
-    annotation_gtf_files = fetch_reference_data(__settings,
+    annotation_gtf_files = fetch_reference_data(settings,
                                                 'annotation_gtf')
     force_gtf_annotation = args.gtf_annotation
     if force_gtf_annotation:
         force_gtf_annotation = os.path.abspath(force_gtf_annotation)
 
     # Cellranger settings
-    cellranger_settings = __settings['10xgenomics']
+    cellranger_settings = settings['10xgenomics']
 
     # Cellranger reference datasets
     cellranger_transcriptomes = fetch_reference_data(
-        __settings,
+        settings,
         'cellranger_reference')
     cellranger_premrna_references = fetch_reference_data(
-        __settings,
+        settings,
         'cellranger_premrna_reference')
     cellranger_atac_references = fetch_reference_data(
-        __settings,
+        settings,
         'cellranger_atac_reference')
     cellranger_multiome_references = fetch_reference_data(
-        __settings,
+        settings,
         'cellranger_arc_reference')
 
     # Add in organism-specific references supplied on the command line
@@ -774,7 +766,7 @@ def main():
         if args.nthreads:
             nthreads = args.nthreads
         else:
-            nthreads = __settings.qc.nprocessors
+            nthreads = settings.qc.nprocessors
         # Cellranger settings
         cellranger_jobmode = cellranger_settings.cellranger_jobmode
         cellranger_mempercore = cellranger_settings.cellranger_mempercore
@@ -800,15 +792,15 @@ def main():
         else:
             # Runners from configuration
             print("Setting up runners from configuration")
-            default_runner = __settings.general.default_runner
+            default_runner = settings.general.default_runner
             runners = {
-                'cellranger_count_runner': __settings.runners.cellranger_count,
-                'cellranger_multi_runner': __settings.runners.cellranger_multi,
-                'fastqc_runner': __settings.runners.fastqc,
-                'fastq_screen_runner': __settings.runners.fastq_screen,
-                'qualimap_runner': __settings.runners.qualimap,
-                'rseqc_runner': __settings.runners.rseqc,
-                'star_runner': __settings.runners.star,
+                'cellranger_count_runner': settings.runners.cellranger_count,
+                'cellranger_multi_runner': settings.runners.cellranger_multi,
+                'fastqc_runner': settings.runners.fastqc,
+                'fastq_screen_runner': settings.runners.fastq_screen,
+                'qualimap_runner': settings.runners.qualimap,
+                'rseqc_runner': settings.runners.rseqc,
+                'star_runner': settings.runners.star,
                 'verify_runner': default_runner,
                 'report_runner': default_runner,
             }
