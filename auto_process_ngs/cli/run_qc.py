@@ -420,6 +420,65 @@ def process_inputs(input_list):
         info_file=info_file,
         extra_files=extra_files)
 
+def get_execution_environment():
+    """
+    Fetch information on the local execution environment
+
+    Interrogates the local system to get information
+    on number of cores, memory etc.
+
+    It returns a dictionary-like object with the following
+    elements:
+
+    - 'cpu_count': total number of CPUs
+    - 'total_mem': total amount of memory (Gb)
+    - 'nslots': value of the 'NSLOTS' env variable
+    - 'max_cores': maximum available cores
+    - 'max_mem': maximum available memory (Gb)
+    - 'mem_per_core': memory per core (Gb)
+
+    Available cores is the number of CPUs, or the
+    value of 'NSLOTS' if set. Available memory is
+    the proportion of total memory scaled by the
+    number of available cores. Memory per core
+    is the total memory divided by the total number
+    of CPUs.
+
+    Returns:
+      AttributeDictionary: elements are 'cpu_count',
+        'total_mem', 'nslots', 'max_cores', 'max_mem'
+        and 'mem_per_core'
+    """
+    # Get numbers of cores
+    cpu_count = psutil.cpu_count()
+    try:
+        # If NSLOTS is set in the environment
+        # then assume we're running on an SGE
+        # node and this sets the maximum number
+        # of available cores
+        max_cores = int(os.environ['NSLOTS'])
+        nslots = max_cores
+    except KeyError:
+        # Set limit from local machine
+        max_cores = cpu_count
+        nslots = None
+    # Get total memory (in Gbs)
+    total_mem = float(psutil.virtual_memory().total)/(1024.0**3)
+    # Memory per core
+    mem_per_core = total_mem/float(cpu_count)
+    # Maximum available memory
+    # (memory per core times the number of cores
+    # being used)
+    max_mem = mem_per_core*float(max_cores)
+    # Return the values
+    return AttributeDictionary(
+        cpu_count=cpu_count,
+        total_mem=total_mem,
+        nslots=nslots,
+        max_cores=max_cores,
+        max_mem=max_mem,
+        mem_per_core=mem_per_core)
+
 def fetch_reference_data(s,name):
     """
     Fetch reference data for all organisms
@@ -651,53 +710,33 @@ def main():
         # Used local runners and set defaults according to
         # resources available on local system
         print("Running locally: overriding settings in configuration")
-        # Set maximum number of slots
+        local_env = get_execution_environment()
         if not max_cores:
-            try:
-                # If NSLOTS is set in the environment
-                # then assume we're running on an SGE
-                # node and this sets the maximum number
-                # of available cores
-                max_cores = int(os.environ['NSLOTS'])
-            except KeyError:
-                # Set limit from local machine
-                max_cores = psutil.cpu_count()
-        print("-- Maximum cores: %s" % max_cores)
-        # Set maximum memory
+            max_cores = local_env.max_cores
         if args.max_mem:
             max_mem = args.max_mem
         else:
-            # Maximum memory is scaled by the proportion
-            # of the total cores being used
-            # Needs to be converted from bytes to Gbs
-            max_mem = math.floor(
-                float(psutil.virtual_memory().total)/(1024.0**3)
-                *float(max_cores)/float(psutil.cpu_count()))
-        print("-- Maximum memory: %s Gbs" % max_mem)
-        # Memory per core
-        mempercore = max_mem/float(max_cores)
+            max_mem = local_env.max_mem
+        mempercore = local_env.mem_per_core
+        print("-- Maximum cores: %d" % max_cores)
+        print("-- Maximum memory: %.1f Gbs" % max_mem)
         print("-- Mem per core: %.1f Gbs" % mempercore)
-        # Set number of threads for QC jobs
+        # Set the default threads for different jobs
+        nthreads = min(max_cores,8)
+        nthreads_star = min(max_cores,
+                                int(math.ceil(32.0/mempercore)))
+        ncores_qualimap = min(max_cores,
+                              int(math.ceil(4.0/mempercore)*2))
+        # Override if nthreads was explicitly set
+        # on the command line
         if args.nthreads:
             nthreads = args.nthreads
-        else:
-            nthreads = min(max_cores,8)
-        print("-- Threads for QC: %s" % nthreads)
-        # Set number of threads for STAR jobs
-        if args.nthreads:
             nthreads_star = args.nthreads
-        else:
-            nthreads_star = min(max_cores,
-                                int(math.ceil(32.0/mempercore)))
+            ncores_qualimap = args.nthreads
+        print("-- Threads for QC: %s" % nthreads)
         print("-- Threads for STAR: %s" % nthreads_star)
         if nthreads_star*mempercore < 32.0:
             logger.warning("Insufficient memory for STAR?")
-        # Set number of cores for Qualimap jobs
-        if args.nthreads:
-            ncores_qualimap = args.nthreads
-        else:
-            ncores_qualimap = min(max_cores,
-                                  int(math.ceil(4.0/mempercore)*2))
         print("-- Cores for Qualimap: %s" % ncores_qualimap)
         if ncores_qualimap*mempercore < 8.0:
             logger.warning("Insufficient memory for Qualimap?")
@@ -711,8 +750,8 @@ def main():
         cellranger_jobinterval = None
         cellranger_localcores = min(max_cores,16)
         cellranger_localmem = max_mem
-        print("-- Cellranger localcores: %s" % cellranger_localcores)
-        print("-- Cellranger localmem  : %s" % cellranger_localmem)
+        print("-- Cellranger localcores: %d" % cellranger_localcores)
+        print("-- Cellranger localmem  : %.1f Gbs" % cellranger_localmem)
         # Set up local runners
         default_runner = SimpleJobRunner()
         runners = {
