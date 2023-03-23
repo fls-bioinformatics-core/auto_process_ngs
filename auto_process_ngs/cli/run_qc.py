@@ -29,6 +29,7 @@ import atexit
 import logging
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.utils import AttributeDictionary
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.analysis import AnalysisFastq
 from auto_process_ngs.analysis import locate_project_info_file
@@ -329,6 +330,96 @@ def add_deprecated_options(p):
                             "to specify reference dataset for single "
                             "library analysis")
 
+def process_inputs(input_list):
+    """
+    Process the inputs and return Fastqs etc
+
+    The inputs can be one of:
+
+    - a subdirectory in a project
+    - a project directory
+    - a non-project directory with Fastqs
+    - a 'raw' list of Fastqs
+
+    The function attempts to determine which type the inputs
+    are, generate a list of Fastq files, and locate any related
+    filesystem objects (for example a "parent" project directory).
+
+    It returns a dictionary-like object with the following
+    elements:
+
+    - 'fastqs': a list of Fastq files
+    - 'dir_path': the directory supplied as an input, if any
+    - 'info_file': path to an AnalysisProject metadata file
+    - 'extra_files': any additional QC-related config files
+
+    Returns:
+      AttributeDictionary: elements are 'fastqs', 'dir_path',
+        'info_file' and 'extra_files'
+    """
+    # Initialise
+    inputs = []
+    dir_path = None
+    info_file = None
+    extra_files = set()
+    # Process list of inputs
+    for f in input_list:
+        for ff in glob.glob(os.path.abspath(f)):
+            if not os.path.exists(ff):
+                # Input not found
+                logger.fatal("%s: input not found" % ff)
+                sys.exit(1)
+            elif os.path.isdir(ff) and len(input_list) > 1:
+                # Can only be a single directory
+                logger.fatal("Input must be a single directory, or a list of "
+                             "Fastqs")
+                sys.exit(1)
+            else:
+                inputs.append(ff)
+    # Get list of Fastqs from directory
+    if len(inputs) == 1 and os.path.isdir(inputs[0]):
+        dir_path = inputs[0]
+        if not os.path.isdir(dir_path):
+            logger.fatal("%s: directory not found" % dir_path)
+            sys.exit(1)
+        # See if directory contains Fastqs
+        inputs = [os.path.join(dir_path,f)
+                  for f in os.listdir(inputs[0])
+                  if (f.endswith('.fastq') or
+                      f.endswith('.fq') or
+                      f.endswith('.fastq.gz'))]
+        if not inputs:
+            # No Fastqs, try loading as a project
+            inputs = list(AnalysisProject(dir_path).fastqs)
+            master_fastq_dir = AnalysisProject(dir_path).fastq_dir
+        else:
+            # Store the source directory for Fastqs
+            master_fastq_dir = dir_path
+        # Check we have some Fastqs
+        if not inputs:
+            logger.fatal("%s: no Fastqs found" % dir_path)
+            sys.exit(1)
+        # Look for project metadata
+        info_file = locate_project_info_file(dir_path)
+        # Look for extra files
+        for f in ('10x_multiome_libraries.info',
+                  '10x_multi_config.csv',):
+            ff = os.path.join(dir_path,f)
+            if os.path.isfile(ff):
+                extra_files.add(ff)
+    else:
+        # Look for a metadata file based on Fastqs
+        for fq in inputs:
+            info_file = locate_project_info_file(os.path.dirname(fq))
+            if info_file:
+                break
+    # Return processed inputs
+    return AttributeDictionary(
+        fastqs=inputs,
+        dir_path=dir_path,
+        info_file=info_file,
+        extra_files=extra_files)
+
 def announce(title):
     """
     Print arbitrary string as a title
@@ -413,89 +504,30 @@ def main():
 
     # Initialise
     project_metadata = AnalysisProjectInfo()
-    dir_path = os.getcwd()
     out_dir = args.out_dir
     qc_dir = args.qc_dir
     master_fastq_dir = None
     fastq_attrs = AnalysisFastq
-    extra_files = set()
 
     # Deal with inputs
-    #
-    # Possibilities are:
-    # - subdirectory in a project
-    # - project directory
-    # - non-project directory with Fastqs
-    # - list of Fastqs
     announce("Locating inputs")
-    inputs = []
-    for f in args.inputs:
-        for ff in glob.glob(os.path.abspath(f)):
-            if not os.path.exists(ff):
-                # Input not found
-                logger.fatal("%s: input not found" % ff)
-                sys.exit(1)
-            elif os.path.isdir(ff) and len(args.inputs) > 1:
-                # Can only be a single directory
-                logger.fatal("Input must be a single directory, or a list of "
-                             "Fastqs")
-                sys.exit(1)
-            else:
-                inputs.append(ff)
-    # Get list of Fastqs from directory
-    dir_path = None
-    if len(inputs) == 1 and os.path.isdir(inputs[0]):
-        dir_path = inputs[0]
-        if not os.path.isdir(dir_path):
-            logger.fatal("%s: directory not found" % dir_path)
-            sys.exit(1)
-        # See if directory contains Fastqs
-        inputs = [os.path.join(dir_path,f)
-                  for f in os.listdir(inputs[0])
-                  if (f.endswith('.fastq') or
-                      f.endswith('.fq') or
-                      f.endswith('.fastq.gz'))]
-        if not inputs:
-            # No Fastqs, try loading as a project
-            inputs = list(AnalysisProject(dir_path).fastqs)
-            master_fastq_dir = AnalysisProject(dir_path).fastq_dir
-        else:
-            # Store the source directory for Fastqs
-            master_fastq_dir = dir_path
-        # Check we have some Fastqs
-        if not inputs:
-            logger.fatal("%s: no Fastqs found" % dir_path)
-            sys.exit(1)
-        # Look for project metadata
-        info_file = locate_project_info_file(dir_path)
-        # Look for extra files
-        for f in ('10x_multiome_libraries.info',
-                  '10x_multi_config.csv',):
-            ff = os.path.join(dir_path,f)
-            if os.path.isfile(ff):
-                extra_files.add(ff)
-    else:
-        # Look for a metadata file based on Fastqs
-        for fq in inputs:
-            info_file = locate_project_info_file(os.path.dirname(fq))
-            if info_file:
-                break
+    inputs = process_inputs(args.inputs)
     # Filter out index reads
-    inputs = [fq for fq in inputs
-              if not fastq_attrs(fq).is_index_read]
-    if not inputs:
+    inputs.fastqs = [fq for fq in inputs.fastqs
+                     if not fastq_attrs(fq).is_index_read]
+    if not inputs.fastqs:
         logger.fatal("No Fastqs found")
         sys.exit(1)
 
     # Report what was found
-    for fqs in group_fastqs_by_name(inputs,fastq_attrs=fastq_attrs):
+    for fqs in group_fastqs_by_name(inputs.fastqs,fastq_attrs=fastq_attrs):
         print("%s:" % fastq_attrs(fqs[0]).sample_name)
         for fq in fqs:
             print("  %s" % fq)
-    print("Located %s Fastq%s" % (len(inputs),
-                                  's' if len(inputs) != 1 else ''))
-    if info_file:
-        print("Located project metadata in %s%s" % (info_file,
+    print("Located %s Fastq%s" % (len(inputs.fastqs),
+                                  's' if len(inputs.fastqs) != 1 else ''))
+    if inputs.info_file:
+        print("Located project metadata in %s%s" % (inputs.info_file,
                                                     " (will be ignored)"
                                                     if args.ignore_metadata
                                                     else ''))
@@ -737,8 +769,8 @@ def main():
     # Output directory
     announce("Setting up output destinations")
     if not out_dir:
-        if dir_path:
-            out_dir = dir_path
+        if inputs.dir_path:
+            out_dir = inputs.dir_path
         else:
             out_dir = os.getcwd()
     out_dir = os.path.abspath(out_dir)
@@ -776,13 +808,13 @@ def main():
     fastq_dir = os.path.join(project_dir,"fastqs")
     os.mkdir(fastq_dir)
     print("Populating %s" % fastq_dir)
-    for fq in inputs:
+    for fq in inputs.fastqs:
         # Make symlinks to the Fastq files
         os.symlink(fq,os.path.join(fastq_dir,os.path.basename(fq)))
 
     # Set up metadata
-    if info_file and not args.ignore_metadata:
-        project_metadata.load(info_file)
+    if inputs.info_file and not args.ignore_metadata:
+        project_metadata.load(inputs.info_file)
     if args.name:
         # Set project name to user-supplied value
         project_metadata['name'] = args.name
@@ -797,7 +829,7 @@ def main():
         project_metadata['single_cell_platform'] = args.single_cell_platform
 
     # Import extra files specified by the user
-    for f in list(extra_files):
+    for f in list(inputs.extra_files):
         print("Importing %s" % f)
         os.symlink(f,os.path.join(project_dir,os.path.basename(f)))
 
