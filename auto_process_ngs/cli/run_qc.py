@@ -30,27 +30,27 @@ import logging
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import AttributeDictionary
-from auto_process_ngs.analysis import AnalysisProject
-from auto_process_ngs.analysis import AnalysisFastq
-from auto_process_ngs.analysis import locate_project_info_file
-from auto_process_ngs.metadata import AnalysisProjectInfo
-from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
-from auto_process_ngs.fastq_utils import group_fastqs_by_name
-import auto_process_ngs
-import auto_process_ngs.settings
-from auto_process_ngs.qc.pipeline import QCPipeline
-from auto_process_ngs.qc.utils import report_qc
-from auto_process_ngs.tenx import CELLRANGER_ASSAY_CONFIGS
+from ..analysis import AnalysisProject
+from ..analysis import AnalysisFastq
+from ..analysis import locate_project_info_file
+from ..metadata import AnalysisProjectInfo
+from ..metadata import AnalysisProjectQCDirInfo
+from ..fastq_utils import group_fastqs_by_name
+from ..settings import Settings
+from .. import get_version
+from ..qc.pipeline import QCPipeline
+from ..qc.utils import report_qc
+from ..tenx import CELLRANGER_ASSAY_CONFIGS
 
 # QC protocols
-from auto_process_ngs.qc.constants import PROTOCOLS
+from ..qc.constants import PROTOCOLS
 
 # Module-specific logger
-logger = logging.getLogger("run_qc.py")
+logger = logging.getLogger("run_qc")
 
 # Versions and settings
-__version__ = auto_process_ngs.get_version()
-__settings = auto_process_ngs.settings.Settings()
+__version__ = get_version()
+__settings = Settings()
 try:
     __modulefiles = __settings.modulefiles
 except KeyError:
