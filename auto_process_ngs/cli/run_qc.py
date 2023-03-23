@@ -60,6 +60,275 @@ except KeyError:
 # Functions
 #######################################################################
 
+def add_reporting_options(p):
+    """
+    Reporting options
+    """
+    reporting = p.add_argument_group('Output and reporting')
+    reporting.add_argument('-n','--name',action='store',
+                           help="name for the project (used in report "
+                           "title)")
+    reporting.add_argument('-o','--out_dir',action='store',
+                           help="top-level directory for reports and "
+                           "QC output subdirectory (default: current "
+                           "working directory)")
+    reporting.add_argument('--qc_dir',
+                           help="explicitly specify QC output directory. "
+                           "NB if a relative path is supplied then it's "
+                           "assumed to be a subdirectory of OUT_DIR "
+                           "(default: <OUT_DIR>/qc)")
+    reporting.add_argument('-f','--filename',action='store',
+                           help="file name for output QC report (default: "
+                           "<OUT_DIR>/<QC_DIR_NAME>_report.html)")
+    reporting.add_argument('-u','--update',action='store_true',
+                           help="force QC pipeline to run even if output "
+                           "QC directory already exists in <OUT_DIR> "
+                           "(default: stop if output QC directory already "
+                           "exists)")
+
+def add_metadata_options(p):
+    """
+    Metadara options
+    """
+    metadata = p.add_argument_group('Metadata')
+    metadata.add_argument('--organism',metavar='ORGANISM',
+                          action='store',dest='organism',default=None,
+                          help="explicitly specify organism (e.g. "
+                          "'human', 'mouse'). Multiple organisms "
+                          "should be separated by commas (e.g. "
+                          "'human,mouse')")
+    metadata.add_argument('--library-type',metavar='LIBRARY',
+                          action='store',dest='library_type',default=None,
+                          help="explicitly specify library type (e.g. "
+                          "'RNA-seq', 'ChIP-seq')")
+    metadata.add_argument('--single-cell-platform',metavar='PLATFORM',
+                          action='store',dest='single_cell_platform',
+                          default=None,
+                          help="explicitly specify the single cell "
+                          "platform (e.g. '10xGenomics Chromium 3'v3')")
+
+def add_pipeline_options(p):
+    """
+    QC pipeline options
+    """
+    qc_options = p.add_argument_group('QC options')
+    qc_options.add_argument('-p','--protocol',metavar='PROTOCOL',
+                            action='store',dest='qc_protocol',
+                            default=None,choices=PROTOCOLS,
+                            help="explicitly specify the QC protocol to "
+                            "use; can be one of %s. If not set then "
+                            "protocol will be determined automatically "
+                            "based on directory contents and metadata." %
+                            ", ".join(["'%s'" % x for x in PROTOCOLS]))
+    qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
+                            action='store',dest='fastq_screen_subset',
+                            default=__settings.qc.fastq_subset_size,
+                            type=int,
+                            help="specify size of subset of total reads "
+                            "to use for fastq_screen (i.e. --subset "
+                            "option); (default %d, set to 0 to use all "
+                            "reads)" %
+                            __settings.qc.fastq_screen_subset)
+    default_nthreads = __settings.qc.nprocessors
+    qc_options.add_argument('-t','--threads',action='store',
+                            dest="nthreads",type=int,default=None,
+                            help="number of threads to use for QC script "
+                            "(default: %s)" % ('taken from job runner'
+                                               if not default_nthreads
+                                               else default_nthreads,))
+
+def add_reference_data_options(p):
+    """
+    Reference data options
+    """
+    refdata = p.add_argument_group('Reference data')
+    refdata.add_argument('--star-index',action='store',
+                         metavar="INDEX",
+                         dest='star_index',
+                         help="specify the path to the STAR genome index "
+                         "to use when mapping reads for metrics such as "
+                         "strandedness etc (overrides the "
+                         "organism-specific indexes defined in the config "
+                         "file)")
+    refdata.add_argument('--gtf',action='store',
+                         metavar="GTF",
+                         dest='gtf_annotation',
+                         help="specify the path to the GTF annotation "
+                         "file to use for metrics such as 'qualimap "
+                         "rnaseq' (overrides the organism-specific GTF "
+                         "files defined in the config file)")
+
+def add_10x_options(p):
+    """
+    Cellranger/10x Genomics options
+    """
+    cellranger = p.add_argument_group('Cellranger/10xGenomics options')
+    cellranger.add_argument('--cellranger',action='store',
+                            metavar='CELLRANGER_EXE',
+                            dest='cellranger_exe',
+                            help="explicitly specify path to Cellranger "
+                            "executable to use for single library "
+                            "analysis")
+    cellranger.add_argument('--cellranger-reference',action='store',
+                            metavar='REFERENCE',
+                            dest='cellranger_reference_dataset',
+                            help="specify the path to the reference "
+                            "dataset to use when running single libary "
+                            "analysis (overrides the organism-specific "
+                            "references defined in the config file)")
+    cellranger.add_argument("--10x_chemistry",
+                            choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
+                            dest="cellranger_chemistry",default="auto",
+                            help="assay configuration for 10xGenomics "
+                            "scRNA-seq; if set to 'auto' (the default) then "
+                            "cellranger will attempt to determine this "
+                            "automatically")
+    cellranger.add_argument("--10x_force_cells",action='store',
+                            metavar="N_CELLS",
+                            dest="cellranger_force_cells",
+                            help="force number of cells for 10xGenomics "
+                            "scRNA-seq and scATAC-seq, overriding automatic "
+                            "cell detection algorithms (default is to use "
+                            "built-in cell detection)")
+
+def add_conda_options(p):
+    """
+    Conda options
+    """
+    conda = p.add_argument_group("Conda dependency resolution")
+    conda.add_argument('--enable-conda',choices=["yes","no"],
+                       dest="enable_conda",default=None,
+                       help="use conda to resolve task dependencies; can "
+                       "be 'yes' or 'no' (default: %s)" %
+                       ("yes" if __settings.conda.enable_conda else "no"))
+    conda.add_argument('--conda-env-dir',action='store',
+                       dest="conda_env_dir",default=__settings.conda.env_dir,
+                       help="specify directory for conda enviroments "
+                       "(default: %s)" % ('temporary directory'
+                                          if not __settings.conda.env_dir else
+                                          __settings.conda.env_dir))
+
+def add_job_control_options(p):
+    """
+    Job control options
+    """
+    pipeline = p.add_argument_group('Job control options')
+    pipeline.add_argument('--local',action='store_true',
+                          dest='local',default=False,
+                          help="run the QC on the local system (overrides "
+                          "any runners defined in the configuration or on "
+                          "the command line)")
+    pipeline.add_argument('-c','--maxcores',metavar='N',action='store',
+                          dest='max_cores',type=int,
+                          default=__settings.general.max_cores,
+                          help="maximum number of cores available for QC "
+                          "jobs when using --local (default %s, change in "
+                          "in settings file)" %
+                          (__settings.general.max_cores
+                           if __settings.general.max_cores else 'no limit'))
+    pipeline.add_argument('-m','--maxmem',metavar='M',action='store',
+                          dest='max_mem',type=int,default=None,
+                          help="maximum total memory jobs can request at "
+                          "once when using --local (in Gbs; default: "
+                          "unlimited)")
+    pipeline.add_argument('-j','--maxjobs',metavar='N',action='store',
+                          dest='max_jobs',type=int,
+                          default=__settings.general.max_concurrent_jobs,
+                          help="explicitly specify maximum number of "
+                          "concurrent QC jobs to run (default %s, change "
+                          "in settings file; ignored when using --local)"
+                          % (__settings.general.max_concurrent_jobs
+                             if __settings.general.max_concurrent_jobs
+                             else 'no limit'))
+    pipeline.add_argument('-b','--maxbatches',type=int,action='store',
+                          dest='max_batches',metavar='NBATCHES',
+                          default=__settings.general.max_batches,
+                          help="enable dynamic batching of pipeline "
+                          "jobs with maximum number of batches set to "
+                          "NBATCHES (default: %s)"
+                          % (__settings.general.max_batches
+                             if __settings.general.max_batches
+                             else 'no batching'))
+
+def add_advanced_options(p):
+    """
+    Advanced options
+    """
+    advanced = p.add_argument_group('Advanced options')
+    advanced.add_argument('-r','--runner',metavar='RUNNER',action='store',
+                          dest="runner",default=None,
+                          help="explicitly specify runner definition for "
+                          "running QC components. RUNNER must be a valid job "
+                          "runner specification e.g. 'GEJobRunner(-j y)' "
+                          "(default: use runners set in configuration)")
+    advanced.add_argument('-s','--batch_size',metavar='N',action='store',
+                          dest='batch_size',type=int, default=None,
+                          help="batch QC commands with N commands per job "
+                          "(default: no batching)")
+    advanced.add_argument('--ignore-metadata',action="store_true",
+                          dest="ignore_metadata",default=False,
+                          help="ignore information from project metadata "
+                          "file even if one is located (default is to use "
+                          "project metadata)")
+    advanced.add_argument('--use-legacy-screen-names',choices=['yes','no'],
+                          dest="use_legacy_screen_names",default=None,
+                          help="use 'legacy' naming convention for "
+                          "FastqScreen output files; can be 'yes' or 'no' "
+                          "(default: %s)" %
+                          ("yes" if __settings.qc.use_legacy_screen_names
+                           else "no"))
+    advanced.add_argument('--no-multiqc',action="store_true",
+                          dest="no_multiqc",default=False,
+                          help="turn off generation of MultiQC report")
+
+def add_debug_options(p):
+    """
+    Debugging options
+    """
+    debugging = p.add_argument_group('Debugging options')
+    debugging.add_argument('--verbose',action="store_true",
+                           dest="verbose",default=False,
+                           help="run pipeline in 'verbose' mode")
+    debugging.add_argument('--work-dir',action="store",
+                          dest="working_dir",default=None,
+                          help="specify the working directory for the "
+                          "pipeline operations")
+    debugging.add_argument('--no-cleanup',action='store_true',
+                           dest="no_cleanup",default=False,
+                           help="don't remove the temporary project "
+                           "directory on completion (by default the "
+                           "temporary directory is deleted)")
+
+def add_deprecated_options(p):
+    """
+    Deprecated options
+    """
+    deprecated = p.add_argument_group('Deprecated/redundant options')
+    deprecated.add_argument('--force',action='store_true',
+                            help="redundant: HTML report generation will "
+                            "always be attempted (even when pipeline "
+                            "fails)")
+    deprecated.add_argument('--multiqc',action='store_true',
+                            dest='run_multiqc', default=False,
+                            help="redundant: MultiQC report is generated "
+                            "by default (use --no-multiqc to disable)")
+    deprecated.add_argument('--fastq_dir',metavar='SUBDIR',
+                            action='store',dest='fastq_dir',default=None,
+                            help="unsupported: point DIR directly to Fastq "
+                            "directory")
+    deprecated.add_argument('--10x_transcriptome',action='append',
+                            metavar='ORGANISM=REFERENCE',
+                            dest='cellranger_transcriptomes',
+                            help="deprecated: use --cellranger-reference "
+                            "to specify reference dataset for single "
+                            "library analysis")
+    deprecated.add_argument('--10x_premrna_reference',action='append',
+                            metavar='ORGANISM=REFERENCE',
+                            dest='cellranger_premrna_references',
+                            help="deprecated: use --cellranger-reference "
+                            "to specify reference dataset for single "
+                            "library analysis")
+
 def announce(title):
     """
     Print arbitrary string as a title
@@ -102,8 +371,6 @@ def main():
     p = argparse.ArgumentParser(
         description="Run the QC pipeline standalone on an arbitrary "
         "set of Fastq files.")
-    # Defaults
-    default_nthreads = __settings.qc.nprocessors
     # Build parser
     p.add_argument('--version', action='version',
                    version=("%%(prog)s %s" % __version__))
@@ -111,234 +378,17 @@ def main():
                    nargs="+",
                    help="directory or list of Fastq files to run the "
                    "QC on")
-    # Reporting options
-    reporting = p.add_argument_group('Output and reporting')
-    reporting.add_argument('-n','--name',action='store',
-                           help="name for the project (used in report "
-                           "title)")
-    reporting.add_argument('-o','--out_dir',action='store',
-                           help="top-level directory for reports and "
-                           "QC output subdirectory (default: current "
-                           "working directory)")
-    reporting.add_argument('--qc_dir',
-                           help="explicitly specify QC output directory. "
-                           "NB if a relative path is supplied then it's "
-                           "assumed to be a subdirectory of OUT_DIR "
-                           "(default: <OUT_DIR>/qc)")
-    reporting.add_argument('-f','--filename',action='store',
-                           help="file name for output QC report (default: "
-                           "<OUT_DIR>/<QC_DIR_NAME>_report.html)")
-    reporting.add_argument('-u','--update',action='store_true',
-                           help="force QC pipeline to run even if output "
-                           "QC directory already exists in <OUT_DIR> "
-                           "(default: stop if output QC directory already "
-                           "exists)")
-    # Project metadata
-    metadata = p.add_argument_group('Metadata')
-    metadata.add_argument('--organism',metavar='ORGANISM',
-                          action='store',dest='organism',default=None,
-                          help="explicitly specify organism (e.g. "
-                          "'human', 'mouse'). Multiple organisms "
-                          "should be separated by commas (e.g. "
-                          "'human,mouse')")
-    metadata.add_argument('--library-type',metavar='LIBRARY',
-                          action='store',dest='library_type',default=None,
-                          help="explicitly specify library type (e.g. "
-                          "'RNA-seq', 'ChIP-seq')")
-    metadata.add_argument('--single-cell-platform',metavar='PLATFORM',
-                          action='store',dest='single_cell_platform',
-                          default=None,
-                          help="explicitly specify the single cell "
-                          "platform (e.g. '10xGenomics Chromium 3'v3')")
-    # QC pipeline options
-    qc_options = p.add_argument_group('QC options')
-    qc_options.add_argument('-p','--protocol',metavar='PROTOCOL',
-                            action='store',dest='qc_protocol',
-                            default=None,choices=PROTOCOLS,
-                            help="explicitly specify the QC protocol to "
-                            "use; can be one of %s. If not set then "
-                            "protocol will be determined automatically "
-                            "based on directory contents and metadata." %
-                            ", ".join(["'%s'" % x for x in PROTOCOLS]))
-    qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
-                            action='store',dest='fastq_screen_subset',
-                            default=__settings.qc.fastq_subset_size,
-                            type=int,
-                            help="specify size of subset of total reads "
-                            "to use for fastq_screen (i.e. --subset "
-                            "option); (default %d, set to 0 to use all "
-                            "reads)" %
-                            __settings.qc.fastq_screen_subset)
-    qc_options.add_argument('-t','--threads',action='store',
-                            dest="nthreads",type=int,default=None,
-                            help="number of threads to use for QC script "
-                            "(default: %s)" % ('taken from job runner'
-                                               if not default_nthreads
-                                               else default_nthreads,))
-    # Reference data options
-    refdata = p.add_argument_group('Reference data')
-    refdata.add_argument('--star-index',action='store',
-                         metavar="INDEX",
-                         dest='star_index',
-                         help="specify the path to the STAR genome index "
-                         "to use when mapping reads for metrics such as "
-                         "strandedness etc (overrides the "
-                         "organism-specific indexes defined in the config "
-                         "file)")
-    refdata.add_argument('--gtf',action='store',
-                         metavar="GTF",
-                         dest='gtf_annotation',
-                         help="specify the path to the GTF annotation "
-                         "file to use for metrics such as 'qualimap "
-                         "rnaseq' (overrides the organism-specific GTF "
-                         "files defined in the config file)")
-    # Cellranger options
-    cellranger = p.add_argument_group('Cellranger/10xGenomics options')
-    cellranger.add_argument('--cellranger',action='store',
-                            metavar='CELLRANGER_EXE',
-                            dest='cellranger_exe',
-                            help="explicitly specify path to Cellranger "
-                            "executable to use for single library "
-                            "analysis")
-    cellranger.add_argument('--cellranger-reference',action='store',
-                            metavar='REFERENCE',
-                            dest='cellranger_reference_dataset',
-                            help="specify the path to the reference "
-                            "dataset to use when running single libary "
-                            "analysis (overrides the organism-specific "
-                            "references defined in the config file)")
-    cellranger.add_argument("--10x_chemistry",
-                            choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
-                            dest="cellranger_chemistry",default="auto",
-                            help="assay configuration for 10xGenomics "
-                            "scRNA-seq; if set to 'auto' (the default) then "
-                            "cellranger will attempt to determine this "
-                            "automatically")
-    cellranger.add_argument("--10x_force_cells",action='store',
-                            metavar="N_CELLS",
-                            dest="cellranger_force_cells",
-                            help="force number of cells for 10xGenomics "
-                            "scRNA-seq and scATAC-seq, overriding automatic "
-                            "cell detection algorithms (default is to use "
-                            "built-in cell detection)")
-    # Conda options
-    conda = p.add_argument_group("Conda dependency resolution")
-    conda.add_argument('--enable-conda',choices=["yes","no"],
-                       dest="enable_conda",default=None,
-                       help="use conda to resolve task dependencies; can "
-                       "be 'yes' or 'no' (default: %s)" %
-                       ("yes" if __settings.conda.enable_conda else "no"))
-    conda.add_argument('--conda-env-dir',action='store',
-                       dest="conda_env_dir",default=__settings.conda.env_dir,
-                       help="specify directory for conda enviroments "
-                       "(default: %s)" % ('temporary directory'
-                                          if not __settings.conda.env_dir else
-                                          __settings.conda.env_dir))
-    # Pipeline/job options
-    pipeline = p.add_argument_group('Job control options')
-    pipeline.add_argument('--local',action='store_true',
-                          dest='local',default=False,
-                          help="run the QC on the local system (overrides "
-                          "any runners defined in the configuration or on "
-                          "the command line)")
-    pipeline.add_argument('-c','--maxcores',metavar='N',action='store',
-                          dest='max_cores',type=int,
-                          default=__settings.general.max_cores,
-                          help="maximum number of cores available for QC "
-                          "jobs when using --local (default %s, change in "
-                          "in settings file)" %
-                          (__settings.general.max_cores
-                           if __settings.general.max_cores else 'no limit'))
-    pipeline.add_argument('-m','--maxmem',metavar='M',action='store',
-                          dest='max_mem',type=int,default=None,
-                          help="maximum total memory jobs can request at "
-                          "once when using --local (in Gbs; default: "
-                          "unlimited)")
-    pipeline.add_argument('-j','--maxjobs',metavar='N',action='store',
-                          dest='max_jobs',type=int,
-                          default=__settings.general.max_concurrent_jobs,
-                          help="explicitly specify maximum number of "
-                          "concurrent QC jobs to run (default %s, change "
-                          "in settings file; ignored when using --local)"
-                          % (__settings.general.max_concurrent_jobs
-                             if __settings.general.max_concurrent_jobs
-                             else 'no limit'))
-    pipeline.add_argument('-b','--maxbatches',type=int,action='store',
-                          dest='max_batches',metavar='NBATCHES',
-                          default=__settings.general.max_batches,
-                          help="enable dynamic batching of pipeline "
-                          "jobs with maximum number of batches set to "
-                          "NBATCHES (default: %s)"
-                          % (__settings.general.max_batches
-                             if __settings.general.max_batches
-                             else 'no batching'))
-    # Advanced options
-    advanced = p.add_argument_group('Advanced options')
-    advanced.add_argument('-r','--runner',metavar='RUNNER',action='store',
-                          dest="runner",default=None,
-                          help="explicitly specify runner definition for "
-                          "running QC components. RUNNER must be a valid job "
-                          "runner specification e.g. 'GEJobRunner(-j y)' "
-                          "(default: use runners set in configuration)")
-    advanced.add_argument('-s','--batch_size',metavar='N',action='store',
-                          dest='batch_size',type=int, default=None,
-                          help="batch QC commands with N commands per job "
-                          "(default: no batching)")
-    advanced.add_argument('--ignore-metadata',action="store_true",
-                          dest="ignore_metadata",default=False,
-                          help="ignore information from project metadata "
-                          "file even if one is located (default is to use "
-                          "project metadata)")
-    advanced.add_argument('--use-legacy-screen-names',choices=['yes','no'],
-                          dest="use_legacy_screen_names",default=None,
-                          help="use 'legacy' naming convention for "
-                          "FastqScreen output files; can be 'yes' or 'no' "
-                          "(default: %s)" %
-                          ("yes" if __settings.qc.use_legacy_screen_names
-                           else "no"))
-    advanced.add_argument('--no-multiqc',action="store_true",
-                          dest="no_multiqc",default=False,
-                          help="turn off generation of MultiQC report")
-    # Debugging options
-    debugging = p.add_argument_group('Debugging options')
-    debugging.add_argument('--verbose',action="store_true",
-                           dest="verbose",default=False,
-                           help="run pipeline in 'verbose' mode")
-    debugging.add_argument('--work-dir',action="store",
-                          dest="working_dir",default=None,
-                          help="specify the working directory for the "
-                          "pipeline operations")
-    debugging.add_argument('--no-cleanup',action='store_true',
-                           dest="no_cleanup",default=False,
-                           help="don't remove the temporary project "
-                           "directory on completion (by default the "
-                           "temporary directory is deleted)")
-    # Deprecated options
-    deprecated = p.add_argument_group('Deprecated/redundant options')
-    deprecated.add_argument('--force',action='store_true',
-                            help="redundant: HTML report generation will "
-                            "always be attempted (even when pipeline "
-                            "fails)")
-    deprecated.add_argument('--multiqc',action='store_true',
-                            dest='run_multiqc', default=False,
-                            help="redundant: MultiQC report is generated "
-                            "by default (use --no-multiqc to disable)")
-    deprecated.add_argument('--fastq_dir',metavar='SUBDIR',
-                            action='store',dest='fastq_dir',default=None,
-                            help="unsupported: point DIR directly to Fastq "
-                            "directory")
-    deprecated.add_argument('--10x_transcriptome',action='append',
-                            metavar='ORGANISM=REFERENCE',
-                            dest='cellranger_transcriptomes',
-                            help="deprecated: use --cellranger-reference "
-                            "to specify reference dataset for single "
-                            "library analysis")
-    deprecated.add_argument('--10x_premrna_reference',action='append',
-                            metavar='ORGANISM=REFERENCE',
-                            dest='cellranger_premrna_references',
-                            help="deprecated: use --cellranger-reference "
-                            "to specify reference dataset for single "
-                            "library analysis")
+    # Add option groups
+    add_reporting_options(p)
+    add_metadata_options(p)
+    add_pipeline_options(p)
+    add_reference_data_options(p)
+    add_10x_options(p)
+    add_conda_options(p)
+    add_job_control_options(p)
+    add_advanced_options(p)
+    add_debug_options(p)
+    add_deprecated_options(p)
 
     # Parse the command line
     args = p.parse_args()
