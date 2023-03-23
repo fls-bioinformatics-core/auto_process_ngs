@@ -112,14 +112,14 @@ def add_pipeline_options(p,fastq_subset_size,default_nthreads):
                             "protocol will be determined automatically "
                             "based on directory contents and metadata." %
                             ", ".join(["'%s'" % x for x in PROTOCOLS]))
-    qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
+    qc_options.add_argument('--fastq_subset',metavar='SUBSET',
                             action='store',dest='fastq_screen_subset',
                             default=fastq_subset_size,
                             type=int,
-                            help="specify size of subset of total reads "
-                            "to use for fastq_screen (i.e. --subset "
-                            "option); (default %d, set to 0 to use all "
-                            "reads)" % fastq_subset_size)
+                            help="specify size of subset of reads "
+                            "to use for FastQScreen, strandedness, "
+                            "coverage etc option); (default %d, set "
+                            "to 0 to use all reads)" % fastq_subset_size)
     qc_options.add_argument('-t','--threads',action='store',
                             dest="nthreads",type=int,default=None,
                             help="number of threads to use for QC script "
@@ -286,6 +286,10 @@ def add_deprecated_options(p):
     Deprecated options
     """
     deprecated = p.add_argument_group('Deprecated/redundant options')
+    deprecated.add_argument('--fastq_screen_subset',metavar='SUBSET',
+                            action='store',dest='fastq_screen_subset',
+                            help="redundant: use the --fastq_subset "
+                            "option instead")
     deprecated.add_argument('--force',action='store_true',
                             help="redundant: HTML report generation will "
                             "always be attempted (even when pipeline "
@@ -526,7 +530,7 @@ def main():
     add_reporting_options(p)
     add_metadata_options(p)
     add_pipeline_options(p,
-                         fastq_subset_size=settings.qc.fastq_screen_subset,
+                         fastq_subset_size=settings.qc.fastq_subset_size,
                          default_nthreads=settings.qc.nprocessors)
     add_reference_data_options(p)
     add_10x_options(p)
@@ -546,6 +550,10 @@ def main():
     args = p.parse_args()
 
     # Check for deprecated and unsupported options
+    if args.fastq_screen_subset:
+        logger.fatal("'--fastq_screen_subset' is redundant; use "
+                     "'--fastq_subset' instead")
+        sys.exit(1)
     if args.force:
         logger.warning("'--force' option is redundant; HTML report "
                        "generation will always be attempted (even "
