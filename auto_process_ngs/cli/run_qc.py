@@ -294,22 +294,6 @@ def add_deprecated_options(p):
                             dest='run_multiqc', default=False,
                             help="redundant: MultiQC report is generated "
                             "by default (use --no-multiqc to disable)")
-    deprecated.add_argument('--fastq_dir',metavar='SUBDIR',
-                            action='store',dest='fastq_dir',default=None,
-                            help="unsupported: point DIR directly to Fastq "
-                            "directory")
-    deprecated.add_argument('--10x_transcriptome',action='append',
-                            metavar='ORGANISM=REFERENCE',
-                            dest='cellranger_transcriptomes',
-                            help="deprecated: use --cellranger-reference "
-                            "to specify reference dataset for single "
-                            "library analysis")
-    deprecated.add_argument('--10x_premrna_reference',action='append',
-                            metavar='ORGANISM=REFERENCE',
-                            dest='cellranger_premrna_references',
-                            help="deprecated: use --cellranger-reference "
-                            "to specify reference dataset for single "
-                            "library analysis")
 
 def process_inputs(input_list):
     """
@@ -562,22 +546,15 @@ def main():
     args = p.parse_args()
 
     # Check for deprecated and unsupported options
+    if args.force:
+        logger.warning("'--force' option is redundant; HTML report "
+                       "generation will always be attempted (even "
+                       "if pipeline fails)")
     if args.run_multiqc:
         logger.warning("'--multiqc' option is redundant; MultiQC is "
                        "run by default")
         logger.warning("Use '--no-multiqc' to turn off MultiQC report "
                        "generation")
-    if args.cellranger_transcriptomes:
-        logger.warning("'--10x_transcriptome' option is deprecated")
-        logger.warning("Use '--cellranger-reference' instead")
-    if args.cellranger_premrna_references:
-        logger.warning("'--10x_premrna_reference' option is deprecated")
-        logger.warning("Use '--cellranger-reference' instead")
-    if args.fastq_dir:
-        logger.fatal("'--fastq_dir' option is no longer supported")
-        logger.fatal("Point 'DIR' directly to the directory with the "
-                     "Fastq files instead")
-        sys.exit(1)
 
     # Initialise
     project_metadata = AnalysisProjectInfo()
@@ -678,16 +655,6 @@ def main():
     cellranger_multiome_references = fetch_reference_data(
         settings,
         'cellranger_arc_reference')
-
-    # Add in organism-specific references supplied on the command line
-    if args.cellranger_transcriptomes:
-        for transcriptome in args.cellranger_transcriptomes:
-            organism,reference =  transcriptome.split('=')
-            cellranger_transcriptomes[organism] = reference
-    if args.cellranger_premrna_references:
-        for premrna_reference in args.cellranger_premrna_references:
-            organism,reference =  premrna_reference.split('=')
-            cellranger_premrna_references[organism] = reference
 
     # Single reference supplied on command line
     cellranger_reference_dataset = args.cellranger_reference_dataset
