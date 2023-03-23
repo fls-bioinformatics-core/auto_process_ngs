@@ -420,6 +420,32 @@ def process_inputs(input_list):
         info_file=info_file,
         extra_files=extra_files)
 
+def fetch_reference_data(s,name):
+    """
+    Fetch reference data for all organisms
+
+    Given the name of a reference data item (e.g.
+    'star_index'), extracts the relevant data
+    for all organisms from the supplied settings
+    object and returns it as a dictionary.
+
+    Arguments:
+      s (Settings): populated Settings instance
+      name (str): name of the reference data
+        items required (e.g. 'star_index')
+
+    Returns:
+      Dictionary: keys are organism names and
+        values are the corresponding reference
+        data.
+    """
+    refdata = dict()
+    for organism in s.organisms:
+        data_item = s.organisms[organism][name]
+        if data_item:
+            refdata[organism] = data_item
+    return refdata
+
 def announce(title):
     """
     Print arbitrary string as a title
@@ -571,26 +597,16 @@ def main():
         use_legacy_screen_names = (use_legacy_screen_names == "yes")
 
     # STAR indexes
-    star_indexes = dict()
-    for organism in __settings.organisms:
-        star_index = __settings.organisms[organism].star_index
-        if star_index:
-            star_indexes[organism] = star_index
+    star_indexes = fetch_reference_data(__settings,'star_index')
     force_star_index = args.star_index
     if force_star_index:
         force_star_index = os.path.abspath(force_star_index)
 
     # Annotation files
-    annotation_bed_files = dict()
-    for organism in __settings.organisms:
-        annotation_bed_file = __settings.organisms[organism].annotation_bed
-        if annotation_bed_file:
-            annotation_bed_files[organism] = annotation_bed_file
-    annotation_gtf_files = dict()
-    for organism in __settings.organisms:
-        annotation_gtf_file = __settings.organisms[organism].annotation_gtf
-        if annotation_gtf_file:
-            annotation_gtf_files[organism] = annotation_gtf_file
+    annotation_bed_files = fetch_reference_data(__settings,
+                                                'annotation_bed')
+    annotation_gtf_files = fetch_reference_data(__settings,
+                                                'annotation_gtf')
     force_gtf_annotation = args.gtf_annotation
     if force_gtf_annotation:
         force_gtf_annotation = os.path.abspath(force_gtf_annotation)
@@ -599,26 +615,18 @@ def main():
     cellranger_settings = __settings['10xgenomics']
 
     # Cellranger reference datasets
-    cellranger_transcriptomes = dict()
-    for organism in __settings.organisms:
-        if __settings.organisms[organism].cellranger_reference:
-            cellranger_transcriptomes[organism] = \
-                __settings.organisms[organism].cellranger_reference
-    cellranger_premrna_references = dict()
-    for organism in __settings.organisms:
-        if __settings.organisms[organism].cellranger_premrna_reference:
-            cellranger_premrna_references[organism] = \
-                __settings.organisms[organism].cellranger_premrna_reference
-    cellranger_atac_references = dict()
-    for organism in __settings.organisms:
-        if __settings.organisms[organism].cellranger_atac_reference:
-            cellranger_atac_references[organism] = \
-                __settings.organisms[organism].cellranger_atac_reference
-    cellranger_multiome_references = dict()
-    for organism in __settings.organisms:
-        if __settings.organisms[organism].cellranger_arc_reference:
-            cellranger_multiome_references[organism] = \
-                __settings.organisms[organism].cellranger_arc_reference
+    cellranger_transcriptomes = fetch_reference_data(
+        __settings,
+        'cellranger_reference')
+    cellranger_premrna_references = fetch_reference_data(
+        __settings,
+        'cellranger_premrna_reference')
+    cellranger_atac_references = fetch_reference_data(
+        __settings,
+        'cellranger_atac_reference')
+    cellranger_multiome_references = fetch_reference_data(
+        __settings,
+        'cellranger_arc_reference')
 
     # Add in organism-specific references supplied on the command line
     if args.cellranger_transcriptomes:
