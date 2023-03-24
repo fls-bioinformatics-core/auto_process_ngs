@@ -30,6 +30,7 @@ import logging
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import AttributeDictionary
+from .. import get_version
 from ..analysis import AnalysisProject
 from ..analysis import AnalysisFastq
 from ..analysis import locate_project_info_file
@@ -38,13 +39,14 @@ from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from ..settings import Settings
 from ..settings import fetch_reference_data
-from .. import get_version
 from ..qc.pipeline import QCPipeline
 from ..qc.utils import report_qc
-from ..tenx import CELLRANGER_ASSAY_CONFIGS
 
 # QC protocols
 from ..qc.constants import PROTOCOLS
+
+# 10x Genomics assays
+from ..tenx import CELLRANGER_ASSAY_CONFIGS
 
 # Module-specific logger
 logger = logging.getLogger("run_qc")
