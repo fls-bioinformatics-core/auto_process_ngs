@@ -742,3 +742,49 @@ no_lane_splitting = true
         self.assertEqual(s.platform['nextseq'].nprocessors,8)
         self.assertEqual(s.platform['nextseq'].no_lane_splitting,True)
         self.assertEqual(s.platform['nextseq'].create_empty_fastqs,None)
+
+class TestFetchReferenceData(unittest.TestCase):
+    """
+    Tests for the 'fetch_reference_data' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestFetchRefData')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
+
+    def test_fetch_reference_data(self):
+        """
+        fetch_reference_data: check expected data are returned
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[organism:human]
+star_index = /data/hg38/star
+bowtie_index = /data/hg38/bowtie
+
+[organism:mouse]
+star_index = /data/mm10/star
+bowtie_index = /data/mm10/bowtie
+
+[organism:fly]
+star_index = /data/dm6/star
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check reference data can be fetched
+        self.assertEqual(fetch_reference_data(s,'star_index'),
+                         {
+                             'human': '/data/hg38/star',
+                             'mouse': '/data/mm10/star',
+                             'fly': '/data/dm6/star'
+                         })
+        self.assertEqual(fetch_reference_data(s,'bowtie_index'),
+                         {
+                             'human': '/data/hg38/bowtie',
+                             'mouse': '/data/mm10/bowtie'
+                         })

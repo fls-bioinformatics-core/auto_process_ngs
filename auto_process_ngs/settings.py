@@ -820,6 +820,32 @@ def locate_settings_file(name='auto_process.ini',create_from_sample=True):
     # Finish
     return settings_file
 
+def fetch_reference_data(s,name):
+    """
+    Fetch specific reference data for all organisms
+
+    Given the name of a reference data item (e.g.
+    'star_index'), extracts the relevant data
+    for all organisms from the supplied settings
+    object and returns it as a dictionary.
+
+    Arguments:
+      s (Settings): populated Settings instance
+      name (str): name of the reference data
+        items required (e.g. 'star_index')
+
+    Returns:
+      Dictionary: keys are organism names and
+        values are the corresponding reference
+        data.
+    """
+    refdata = dict()
+    for organism in s.organisms:
+        data_item = s.organisms[organism][name]
+        if data_item:
+            refdata[organism] = data_item
+    return refdata
+
 def show_dictionary(name,d):
     """
     Print the contents of a dictionary

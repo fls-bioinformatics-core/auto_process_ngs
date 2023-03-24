@@ -37,6 +37,7 @@ from ..metadata import AnalysisProjectInfo
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from ..settings import Settings
+from ..settings import fetch_reference_data
 from .. import get_version
 from ..qc.pipeline import QCPipeline
 from ..qc.utils import report_qc
@@ -447,32 +448,6 @@ def get_execution_environment():
         max_cores=max_cores,
         max_mem=max_mem,
         mem_per_core=mem_per_core)
-
-def fetch_reference_data(s,name):
-    """
-    Fetch reference data for all organisms
-
-    Given the name of a reference data item (e.g.
-    'star_index'), extracts the relevant data
-    for all organisms from the supplied settings
-    object and returns it as a dictionary.
-
-    Arguments:
-      s (Settings): populated Settings instance
-      name (str): name of the reference data
-        items required (e.g. 'star_index')
-
-    Returns:
-      Dictionary: keys are organism names and
-        values are the corresponding reference
-        data.
-    """
-    refdata = dict()
-    for organism in s.organisms:
-        data_item = s.organisms[organism][name]
-        if data_item:
-            refdata[organism] = data_item
-    return refdata
 
 def announce(title):
     """
