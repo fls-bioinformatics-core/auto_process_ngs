@@ -116,7 +116,7 @@ def add_pipeline_options(p,fastq_subset_size,default_nthreads):
                             "based on directory contents and metadata." %
                             ", ".join(["'%s'" % x for x in PROTOCOLS]))
     qc_options.add_argument('--fastq_subset',metavar='SUBSET',
-                            action='store',dest='fastq_screen_subset',
+                            action='store',dest='fastq_subset',
                             default=fastq_subset_size,
                             type=int,
                             help="specify size of subset of reads "
@@ -854,7 +854,7 @@ def main():
                       multiqc=(not args.no_multiqc))
     status = runqc.run(nthreads=nthreads,
                        fastq_screens=fastq_screens,
-                       fastq_subset=args.fastq_screen_subset,
+                       fastq_subset=args.fastq_subset,
                        star_indexes=star_indexes,
                        annotation_bed_files=annotation_bed_files,
                        annotation_gtf_files=annotation_gtf_files,
