@@ -31,6 +31,8 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import AttributeDictionary
 from .. import get_version
+from .. import tenx
+from .. import icell8
 from ..analysis import AnalysisProject
 from ..analysis import AnalysisFastq
 from ..analysis import locate_project_info_file
@@ -40,6 +42,7 @@ from ..fastq_utils import group_fastqs_by_name
 from ..settings import Settings
 from ..settings import fetch_reference_data
 from ..qc.pipeline import QCPipeline
+from ..qc.protocols import fetch_protocol_definition
 from ..qc.utils import report_qc
 
 # QC protocols
@@ -50,6 +53,33 @@ from ..tenx import CELLRANGER_ASSAY_CONFIGS
 
 # Module-specific logger
 logger = logging.getLogger("run_qc")
+
+#######################################################################
+# Classes
+#######################################################################
+
+class InfoAction(argparse.Action):
+    """
+    Custom parser action for the --info option
+
+    Example usage:
+
+    >>> p.add_argument('--info',action=InfoAction,settings=settings)
+
+    where 'settings' should be a populated 'Settings' instance.
+
+    When invoked the action will display information on protocols,
+    organisms and other configuration settings, and then exit.
+    """
+    def __init__(self,option_strings,settings,nargs=None,*args,**kws):
+        self.settings = settings
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(InfoAction,self).__init__(option_strings=option_strings,
+                                        nargs=0,*args,**kws)
+    def __call__(self,parser,namespace,values,option_string=None):
+        display_info(self.settings)
+        sys.exit()
 
 #######################################################################
 # Functions
@@ -91,7 +121,8 @@ def add_metadata_options(p):
                           help="explicitly specify organism (e.g. "
                           "'human', 'mouse'). Multiple organisms "
                           "should be separated by commas (e.g. "
-                          "'human,mouse')")
+                          "'human,mouse'). HINT use the --info option "
+                          "to list the defined organisms")
     metadata.add_argument('--library-type',metavar='LIBRARY',
                           action='store',dest='library_type',default=None,
                           help="explicitly specify library type (e.g. "
@@ -302,6 +333,82 @@ def add_deprecated_options(p):
                             help="redundant: MultiQC report is generated "
                             "by default (use --no-multiqc to disable)")
 
+def display_info(s):
+    """
+    Displays information about the current configuration
+
+    The information includes the available QC protocols,
+    organisms and FastqScreen conf files.
+
+    Arguments:
+      s (Settings): populated Settings instance
+    """
+    # Location of config file
+    print("\nConfig file: {config_file}".format(
+        config_file=s.settings_file))
+    # QC protocols
+    print("\nAvailable QC protocols:")
+    if PROTOCOLS:
+        for name in PROTOCOLS:
+            protocol = fetch_protocol_definition(name)
+            print("\t{name:20s} {descr}".format(name=protocol.name,
+                                                descr=protocol.description))
+    else:
+        print("\tNo QC protocols defined")
+    # Single cell platforms
+    sc_platforms = [p for p in tenx.PLATFORMS]
+    sc_platforms.append('Parse Evercode')
+    sc_platforms.extend([p for p in icell8.PLATFORMS])
+    print("\nSingle cell platforms:")
+    if sc_platforms:
+        for name in sc_platforms:
+            print("\t{platform}".format(platform=name))
+    else:
+        print("\tNo single cell platforms defined")
+    # Organisms
+    print("\nOrganisms:")
+    if s.organisms:
+        for name in s.organisms:
+            organism = s.organisms[name]
+            print("\t{name}".format(name=name))
+    else:
+        print("\tNo organisms defined")
+    # Reference data
+    indexes = {
+        'star_index': 'STAR index',
+        'annotation_gtf': 'GTF file',
+        'annotation_bed': 'BED file',
+        'cellranger_reference': 'CellRanger',
+        'cellranger_premrna_reference': 'CellRanger (pre-mRNA)',
+        'cellranger_atac_reference': 'CellRanger-ATAC',
+        'cellranger_arc_reference': 'CellRanger-ARC',
+        'cellranger_probe_set': 'Flex probeset',
+    }
+    if s.organisms:
+        print("\nReference data\n==============")
+        for name in s.organisms:
+            print("\n{name}\n{underline}".format(
+                name=name.title().replace('_',' '),
+                underline='-'*len(name)))
+            no_reference_data = True
+            for index in indexes:
+                if s.organisms[name][index]:
+                    no_reference_data = False
+                    print("- {index:15s}: {value}".format(
+                        index=indexes[index],
+                        value=s.organisms[name][index]))
+            if no_reference_data:
+                print("- no reference data")
+    # Fastq screens
+    print("\nFastQScreen\n===========")
+    if s.qc.fastq_screens:
+        for name in s.qc.fastq_screens.split(','):
+            conf_file = s.screens[name].conf_file
+            print("- {name:15s}: {conf_file}".format(name=name,
+                                                    conf_file=conf_file))
+    else:
+        print("No screens defined")
+
 def process_inputs(input_list):
     """
     Process the inputs and return Fastqs etc
@@ -499,6 +606,9 @@ def main():
     # Build parser
     p.add_argument('--version', action='version',
                    version=("%%(prog)s %s" % get_version()))
+    p.add_argument('--info',action=InfoAction,settings=settings,
+                   help="display information on protocols, organisms "
+                   "and other settings (then exit)")
     p.add_argument("inputs",metavar="DIR | FASTQ [ FASTQ ... ]",
                    nargs="+",
                    help="directory or list of Fastq files to run the "
