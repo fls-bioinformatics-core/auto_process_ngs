@@ -486,6 +486,36 @@ class QCProtocol:
                 mapped_metrics.append(qc_module)
         return mapped_metrics
 
+    def __repr_reads(self,rds):
+        # Internal: get string representation of reads
+        # for __repr__
+        reads = []
+        for rd in rds:
+            rng = self.read_range[rd]
+            if rng and (rng[0] or rng[1]):
+                if not rng[0]:
+                    reads.append("%s:1-%s" % (rd,rng[1]))
+                elif not rng[1]:
+                    reads.append("%s:%s-" % (rd,rng[0]))
+                else:
+                    reads.append("%s:%s-%s" % (rd,rng[0],rng[1]))
+            else:
+                reads.append(rd)
+        return "[%s]" % ','.join(r for r in reads)
+
+    def __repr__(self):
+        # Generate string representation
+        qc_modules = "[%s]" % ','.join(m for m in self.qc_modules)
+        return \
+            "{name}:'{descr}':seq_reads={seq_reads}:"\
+            "index_reads={index_reads}:"\
+            "qc_modules={qc_modules}".format(
+                name=self.name,
+                descr=self.description,
+                seq_reads=self.__repr_reads(self.reads.seq_data),
+                index_reads=self.__repr_reads(self.reads.index),
+                qc_modules=qc_modules)
+
 #######################################################################
 # Functions
 #######################################################################
