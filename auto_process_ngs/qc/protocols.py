@@ -45,13 +45,19 @@ This module also provides the following classes and functions:
 - QCProtocol: class representing a QC protocol
 - determine_qc_protocol: get QC protocol for a project
 - fetch_protocol_definition: get the definition for a QC protocol
+- parse_protocol_repr: get a QCProtocol object from a string
 """
 
 #######################################################################
 # Imports
 #######################################################################
 
+import logging
 from bcftbx.utils import AttributeDictionary
+
+# Module specific logger
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 #######################################################################
 # Data
@@ -606,3 +612,111 @@ def fetch_protocol_definition(name):
                       seq_data_reads=protocol_defn['reads']['seq_data'],
                       index_reads=protocol_defn['reads']['index'],
                       qc_modules=protocol_defn['qc_modules'])
+
+def parse_protocol_repr(s):
+    """
+    Parse QC protocol definition string
+
+    Parses a QC protocol definition string (such as one
+    returned by the '__repr__' built-in of an existing
+    QCProtocol instance) and returns a new QCProtocol
+    instance which matches the definition.
+
+    Arguments:
+      s (string): QC protocol definition string
+
+    Returns:
+      QCProtocol: populated QCProtocol instance built
+        from the supplied definition string.
+
+    Raises:
+      Exception: if the definition string cannot be
+        parsed correctly.
+    """
+    # Initialise
+    seq_data_reads = None
+    index_reads = None
+    qc_modules = None
+    # Extract name
+    try:
+        ix = s.index(':')
+        name = s[:ix]
+        s = s[ix+1:]
+    except ValueError:
+        name = s
+        s = ""
+    logger.debug("Name: %s" % name)
+    logger.debug("(Remaining string: %s)" % s)
+    # Extract description
+    if s.startswith('"') or s.startswith("'"):
+        quote = s[0]
+        s = s[1:]
+        try:
+            ix = s.index(quote)
+            if s[ix+1] != ':':
+                raise Exception("Unable to parse description: continues "
+                                "after closing quote?")
+            description = s[:ix]
+            s = s[ix+2:]
+        except ValueError:
+            raise Exception("Unable to parse description: no closing "
+                            "quote?")
+    else:
+        try:
+            ix = s.index(':')
+            description = s[:ix]
+            s = s[ix:]
+        except ValueError:
+            description = s
+            s = ""
+    logger.debug("Description: %s" % description)
+    logger.debug("(Remaining string: %s)" % s)
+    # Break up remainder of the string
+    while s:
+        if s.startswith(':'):
+            # Strip leading colon
+            s = s[1:]
+        if s.startswith("seq_reads=["):
+            # Sequencing data reads
+            try:
+                ix = s.index(']')
+                seq_data_reads = list(
+                    filter(lambda r: r != '',
+                           s[len("seq_reads=["):ix].split(',')))
+                s = s[ix+1:]
+            except ValueError:
+                raise Exception("Unable to parse sequence data reads: no "
+                                "closing brace?")
+            logger.debug("Seq data reads: %s" % seq_data_reads)
+            logger.debug("(Remaining string: %s)" % s)
+        elif s.startswith("index_reads=["):
+            # Index reads
+            try:
+                ix = s.index(']')
+                index_reads = list(
+                    filter(lambda r: r != '',
+                           s[len("index_reads=["):ix].split(',')))
+                s = s[ix+1:]
+            except ValueError:
+                raise Exception("Unable to parse index reads: no "
+                                "closing brace?")
+            logger.debug("Index reads: %s" % index_reads)
+            logger.debug("Remaining string: %s" % s)
+        elif s.startswith("qc_modules=["):
+            # QC modules
+            try:
+                ix = s.index(']')
+                qc_modules = s[len("qc_modules=["):ix].split(',')
+                s = s[ix+1:]
+            except ValueError:
+                qc_modules = s[len("qc_modules=["):].split(',')
+                s = ""
+            qc_modules = list(filter(lambda m: m != '',qc_modules))
+            logger.debug("QC modules: %s" % qc_modules)
+            logger.debug("Remaining string: %s" % s)
+        elif s:
+            raise Exception("Unable to parse section starting '%s...'" %
+                            s[:5])
+    # Return QCProtocol instance
+    return QCProtocol(name,description,seq_data_reads,index_reads,
+                      qc_modules)
