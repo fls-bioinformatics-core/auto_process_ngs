@@ -16,6 +16,7 @@ from ..command import Command
 from ..qc.pipeline import QCPipeline
 from ..qc.fastq_strand import build_fastq_strand_conf
 from ..qc.protocols import determine_qc_protocol
+from ..settings import fetch_reference_data
 from ..utils import get_organism_list
 
 # Module specific logger
@@ -130,53 +131,37 @@ def run_qc(ap,projects=None,fastq_screens=None,
         return 1
     # Set up dictionaries for indices and reference data
     # STAR indexes
-    star_indexes = dict()
-    for organism in ap.settings.organisms:
-        star_index = ap.settings.organisms[organism].star_index
-        if star_index:
-            star_indexes[organism] = star_index
+    star_indexes = fetch_reference_data(ap.settings,'star_index')
     # Annotation BEDs
-    annotation_bed_files = dict()
-    for organism in ap.settings.organisms:
-        annotation_bed = ap.settings.organisms[organism].annotation_bed
-        if annotation_bed:
-            annotation_bed_files[organism] = annotation_bed
+    annotation_bed_files = fetch_reference_data(ap.settings,
+                                                'annotation_bed')
     # Annotation GTFs
-    annotation_gtf_files = dict()
-    for organism in ap.settings.organisms:
-        annotation_gtf = ap.settings.organisms[organism].annotation_gtf
-        if annotation_gtf:
-            annotation_gtf_files[organism] = annotation_gtf
+    annotation_gtf_files = fetch_reference_data(ap.settings,
+                                                'annotation_gtf')
     # Set 10x cellranger reference data
-    if not cellranger_transcriptomes:
-        cellranger_transcriptomes = dict()
-    if not cellranger_premrna_references:
-        cellranger_premrna_references = dict()
-    cellranger_atac_references = dict()
-    cellranger_multiome_references = dict()
-    for organism in ap.settings.organisms:
-        reference_datasets = ap.settings.organisms[organism]
-        # Transcriptomes
-        cellranger_reference = reference_datasets.cellranger_reference
-        if cellranger_reference:
-            cellranger_transcriptomes[organism] = cellranger_reference
-        # Pre-mRNA references
-        cellranger_premrna_reference = \
-            reference_datasets.cellranger_premrna_reference
-        if cellranger_premrna_reference:
-            cellranger_premrna_references[organism] = \
-                cellranger_premrna_reference
-        # ATAC
-        cellranger_atac_reference = \
-            reference_datasets.cellranger_atac_reference
-        if cellranger_atac_reference:
-            cellranger_atac_references[organism] = cellranger_atac_reference
-        # Multiome
-        cellranger_arc_reference = \
-            reference_datasets.cellranger_arc_reference
-        if cellranger_arc_reference:
-            cellranger_multiome_references[organism] = \
-                cellranger_arc_reference
+    cellranger_transcriptomes_ = fetch_reference_data(
+        ap.settings,
+        'cellranger_reference')
+    cellranger_premrna_references_ = fetch_reference_data(
+        ap.settings,
+        'cellranger_premrna_reference')
+    cellranger_atac_references = fetch_reference_data(
+        ap.settings,
+        'cellranger_atac_reference')
+    cellranger_multiome_references = fetch_reference_data(
+        ap.settings,
+        'cellranger_arc_reference')
+    # Overload 10x transcriptome and pre-mRNA references
+    if cellranger_transcriptomes:
+        for organism in cellranger_transcriptomes:
+            cellranger_transcriptomes_[organism] = \
+                cellranger_transcriptomes[organism]
+    cellranger_transcriptomes = cellranger_transcriptomes_
+    if cellranger_premrna_references:
+        for organism in cellranger_premrna_references:
+             cellranger_premrna_references_[organism] = \
+                cellranger_premrna_references_[organism]
+    cellranger_premrna_references = cellranger_premrna_references_
     # Extra cellranger projects
     if cellranger_extra_project_dirs:
         cellranger_extra_projects = [AnalysisProject(d.strip())
