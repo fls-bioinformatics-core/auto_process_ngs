@@ -22,17 +22,15 @@ import os
 import argparse
 import logging
 from bcftbx.utils import find_program
-from auto_process_ngs.analysis import AnalysisProject
-from auto_process_ngs.analysis import locate_project_info_file
-from auto_process_ngs.command import Command
-from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
-from auto_process_ngs.qc.constants import PROTOCOLS
-from auto_process_ngs.qc.protocols import determine_qc_protocol
-from auto_process_ngs.qc.reporting import report
-from auto_process_ngs.qc.verification import verify_project
-from auto_process_ngs import get_version
-
-__version__ = get_version()
+from .. import get_version
+from ..analysis import AnalysisProject
+from ..analysis import locate_project_info_file
+from ..command import Command
+from ..metadata import AnalysisProjectQCDirInfo
+from ..qc.constants import PROTOCOLS
+from ..qc.protocols import determine_qc_protocol
+from ..qc.reporting import report
+from ..qc.verification import verify_project
 
 # Module-specific logger
 logger = logging.getLogger("reportqc")
@@ -46,7 +44,7 @@ def main():
     p = argparse.ArgumentParser(description="Generate QC report for each "
                                 "directory DIR")
     p.add_argument('-v','--version',action='version',
-                   version="%(prog)s "+__version__)
+                   version="%(prog)s "+get_version())
     p.add_argument('--protocol',
                    action='store',dest='qc_protocol',default=None,
                    help="explicitly specify QC protocol (must be one of "
