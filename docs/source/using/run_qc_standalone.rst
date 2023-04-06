@@ -193,8 +193,8 @@ a single job on a Grid Engine compute cluster might look like:
 
    qsub -b y -V -pe smp.pe 16 'run_qc.py --local --maxcores=16 --maxmem=64 /data/Fastqs'
 
-Listing organisms and other information
----------------------------------------
+Listing organisms and other information: ``--info``
+---------------------------------------------------
 
 The ``--info`` option of ``run_qc.py`` displays various items
 from the current configuration, including a list of the
