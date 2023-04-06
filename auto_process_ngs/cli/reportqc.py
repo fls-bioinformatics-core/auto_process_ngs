@@ -34,6 +34,9 @@ from auto_process_ngs import get_version
 
 __version__ = get_version()
 
+# Module-specific logger
+logger = logging.getLogger("reportqc")
+
 #######################################################################
 # Main program
 #######################################################################
@@ -129,8 +132,8 @@ def main():
     # Check for MultiQC if required
     if args.multiqc:
         if find_program("multiqc") is None:
-            logging.critical("MultiQC report requested but 'multiqc' "
-                             "not available")
+            logger.critical("MultiQC report requested but 'multiqc' "
+                            "not available")
             sys.exit(1)
 
     # Get projects and QC dirs from supplied directories
@@ -164,14 +167,14 @@ def main():
                     p = AnalysisProject(project_dir)
                 else:
                     # Failed to locate Fastqs
-                    logging.fatal("Unable to locate parent project")
+                    logger.fatal("Unable to locate parent project")
                     # Exit with an error
                     sys.exit(1)
             # Issue a warning if a QC dir was explicitly
             # specified on the command line
             if args.qc_dir is not None:
-                logging.warning("--qc_dir has been ignored for this "
-                                "directory")
+                logger.warning("--qc_dir has been ignored for this "
+                               "directory")
         else:
             # Assume directory is a project
             p = AnalysisProject(os.path.abspath(d))
@@ -196,9 +199,9 @@ def main():
             fastq_dir = args.fastq_dir
             if qc_info.fastq_dir is not None:
                 if os.path.join(p.dirn,qc_info.fastq_dir) != fastq_dir:
-                    logging.warning("Stored fastq dir mismatch "
-                                    "(%s != %s)" % (fastq_dir,
-                                                    qc_info.fastq_dir))
+                    logger.warning("Stored fastq dir mismatch "
+                                   "(%s != %s)" % (fastq_dir,
+                                                   qc_info.fastq_dir))
         print("...using Fastqs dir: %s" % p.fastq_dir)
         p.use_fastq_dir(fastq_dir,strict=False)
         projects.append(p)
@@ -227,13 +230,13 @@ def main():
         print("Verifying against QC protocol '%s'" % protocol)
         # Verification step
         if len(p.fastqs) == 0:
-            logging.critical("No Fastqs!")
+            logger.critical("No Fastqs!")
             verified = False
         else:
             try:
                 verified = verify_project(p,qc_dir,protocol)
             except Exception as ex:
-                logging.critical("Error: %s" % ex)
+                logger.critical("Error: %s" % ex)
                 verified = False
         if not verified:
             print("Verification: FAILED")
