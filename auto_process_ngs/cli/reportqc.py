@@ -54,8 +54,8 @@ def main():
     p.add_argument('--qc_dir',action='store',dest='qc_dir',default='qc',
                    help="explicitly specify QC output directory (nb if "
                    "supplied then the same QC_DIR will be used for each "
-                   "DIR. Non-absolute paths are assumed to be relative to "
-                   "DIR). Default: 'qc'")
+                   "DIR. Non-absolute paths are assumed to be relative "
+                   "to DIR). Default: 'qc'")
     p.add_argument('--fastq_dir',
                    action='store',dest='fastq_dir',default=None,
                    help="explicitly specify subdirectory of DIRs with "
@@ -85,30 +85,23 @@ def main():
     data_dir_group = reporting.add_mutually_exclusive_group()
     data_dir_group.add_argument('--data-dir',action='store_true',
                                 dest='use_data_dir',
-                                help="create a data directory with copies "
-                                "of QC artefacts needed for the HTML "
-                                "report (NB data directory will always "
-                                "be created for multi-project reports, "
-                                "unless --no-data-dir is specified)")
+                                help="create a data directory with "
+                                "copies of QC artefacts needed for the "
+                                "HTML report (NB data directory will "
+                                "always be created for multi-project "
+                                "reports, unless --no-data-dir is "
+                                "specified)")
     data_dir_group.add_argument('--no-data-dir',action='store_true',
                                 dest='no_data_dir',
                                 help="don't a data directory with copies "
                                 "of QC artefacts (this is the default "
                                 "except for multi-project reports)")
     verification = p.add_argument_group('Verification options')
-    verification.add_argument('--verify',action='store_true',dest='verify',
+    verification.add_argument('--verify',action='store_true',
+                              dest='verify',
                               help="verify the QC products only (don't "
                               "write the report); returns exit code 0 "
                               "if QC is verified, 1 if not")
-    deprecated = p.add_argument_group('Deprecated options')
-    deprecated.add_argument('-l','--list-unverified',action='store_true',
-                            dest='list_unverified',default=False,
-                            help="deprecated: does nothing (Fastqs with "
-                            "missing QC outputs can no longer be listed)")
-    deprecated.add_argument('--strand_stats',action='store_true',
-                            dest='fastq_strand',default=False,
-                            help="deprecated: does nothing (strand stats "
-                            "are automatically included if present)")
     p.add_argument('dirs',metavar="DIR",nargs='+',
                    help="directory to report QC for; can be a project "
                    "directory (in which case the default QC directory "
