@@ -110,7 +110,8 @@ def main():
     args = p.parse_args()
 
     # Report name and version
-    print("%s version %s" % (os.path.basename(sys.argv[0]),__version__))
+    print("%s version %s" % (os.path.basename(sys.argv[0]),
+                             get_version()))
 
     # Report arguments
     if sys.argv[1:]:
