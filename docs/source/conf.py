@@ -266,21 +266,22 @@ ds_width = 26
 qc_protocols_tbl = os.path.join(auto_content_dir,"qc_protocols.rst")
 with open(qc_protocols_tbl,'wt') as fp:
     # Write table header
-    fp.write("%s %s\n" % ('='*pr_width,
-                          '='*ds_width))
-    fp.write("QC protocol%s Description\n" %
-             (' '*(pr_width-len("QC Protocol"))))
-    fp.write("%s %s\n" % ('='*pr_width,
-                          '='*ds_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
+    fp.write("{name: <{pr_width}} {desc}\n".format(name="QC protocol",
+                                                   desc="Description",
+                                                   pr_width=pr_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
     # Write protocol information
     for p in qc_protocols:
-        fp.write("``{name}``{padding} {description}\n".format(
-            name=p.name,
-            padding=' '*(pr_width-len(p.name)-4),
-            description=p.description))
+        fp.write("{name: <{pr_width}} {description}\n".format(
+            name="``{name}``".format(name=p.name),
+            description=p.description,
+            pr_width=pr_width))
     # Write table footer
-    fp.write("%s %s\n" % ('='*pr_width,
-                          '='*ds_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
 
 # -- Make example plot images for QC report -----------------------------------
 
