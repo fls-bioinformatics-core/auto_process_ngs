@@ -205,9 +205,11 @@ def main():
         print("\nProject: %s" % p.name)
         print("-"*(len('Project: ')+len(p.name)))
         print("%d sample%s | %d fastq%s" % (len(p.samples),
-                                            's' if len(p.samples) != 1 else '',
+                                            's' if len(p.samples) != 1
+                                            else '',
                                             len(p.fastqs),
-                                            's' if len(p.fastqs) != 1 else '',))
+                                            's' if len(p.fastqs) != 1
+                                            else '',))
         # QC metadata
         qc_dir = p.qc_dir
         qc_info = p.qc_info(qc_dir)
