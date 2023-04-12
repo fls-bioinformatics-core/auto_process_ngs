@@ -530,8 +530,8 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_Multiome_GEX")
 
-    def test_determine_qc_protocol_parse_evercode(self):
-        """determine_qc_protocol: Parse Evercode single cell RNA-seq run
+    def test_determine_qc_protocol_parse_evercode_sc_rnaseq(self):
+        """determine_qc_protocol: single-cell RNA-seq (Parse Evercode)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -544,6 +544,26 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                           "Parse Evercode",
                                           'Library type':
                                           "scRNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "ParseEvercode")
+
+    def test_determine_qc_protocol_parse_evercode_sn_rnaseq(self):
+        """determine_qc_protocol: single-nuclei RNA-seq (Parse Evercode)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",
+                                       "PJB1_S1_I1_001.fastq.gz",
+                                       "PJB1_S1_I2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "Parse Evercode",
+                                          'Library type':
+                                          "snRNA-seq"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
