@@ -20,6 +20,66 @@ class TestQCProtocol(unittest.TestCase):
     """
     Tests for the QCProtocol class
     """
+    def test_qcprotocol_eq(self):
+        """
+        QCProtocol: check equality operations
+        """
+        p = QCProtocol(name="example",
+                       description="Example protocol",
+                       seq_data_reads=['r1','r2'],
+                       index_reads=None,
+                       qc_modules=("fastqc",
+                                    "fastq_screen",
+                                    "sequence_lengths"))
+        q = QCProtocol(name="example",
+                       description="Example protocol",
+                       seq_data_reads=['r1','r3'],
+                       index_reads=None,
+                       qc_modules=("fastqc",
+                                   "fastq_screen",
+                                   "sequence_lengths"))
+        self.assertEqual(p,p)
+        self.assertEqual(q,q)
+        self.assertNotEqual(p,q)
+        self.assertNotEqual(q,p)
+        self.assertNotEqual(p,repr(p))
+
+    def test_qcprotocol_repr(self):
+        """
+        QCProtocol: check 'repr' output
+        """
+        p = QCProtocol(name="example",
+                       description="Example protocol",
+                       seq_data_reads=['r1','r2'],
+                       index_reads=None,
+                       qc_modules=("fastqc",
+                                   "fastq_screen",
+                                   "sequence_lengths"))
+        self.assertEqual(repr(p),
+                         "example:'Example protocol':"
+                         "seq_reads=[r1,r2]:"
+                         "index_reads=[]:"
+                         "qc_modules=[fastq_screen,"
+                         "fastqc,sequence_lengths]")
+
+    def test_qcprotocol_from_specification(self):
+        """
+        QCProtocol: check instantiating using 'from_specification'
+        """
+        p = QCProtocol(name="example",
+                       description="Example protocol",
+                       seq_data_reads=['r1','r2'],
+                       index_reads=None,
+                       qc_modules=("fastqc",
+                                   "fastq_screen",
+                                   "sequence_lengths"))
+        q = QCProtocol.from_specification("example:'Example protocol':"
+                                          "seq_reads=[r1,r2]:"
+                                          "index_reads=[]:"
+                                          "qc_modules=[fastq_screen,"
+                                          "fastqc,sequence_lengths]")
+        self.assertEqual(p,q)
+
     def test_qcprotocol_null_protocol(self):
         """
         QCProtocol: check 'null' protocol
@@ -45,8 +105,7 @@ class TestQCProtocol(unittest.TestCase):
         self.assertEqual(repr(p),
                          "null:'':seq_reads=[]:index_reads=[]:"
                          "qc_modules=[]")
-        self.assertEqual(repr(p),
-                         repr(QCProtocol.from_specification(repr(p))))
+        self.assertEqual(p,QCProtocol.from_specification(repr(p)))
 
     def test_qcprotocol_example_paired_end_protocol(self):
         """
@@ -81,8 +140,7 @@ class TestQCProtocol(unittest.TestCase):
                          "basicPE:'Basic paired-end QC':"
                          "seq_reads=[r1,r2]:index_reads=[]:"
                          "qc_modules=[fastq_screen,fastqc,sequence_lengths]")
-        self.assertEqual(repr(p),
-                         repr(QCProtocol.from_specification(repr(p))))
+        self.assertEqual(p,QCProtocol.from_specification(repr(p)))
 
     def test_qcprotocol_example_single_cell_protocol(self):
         """
@@ -117,8 +175,7 @@ class TestQCProtocol(unittest.TestCase):
                          "basicSC:'Basic single cell QC':"
                          "seq_reads=[r2]:index_reads=[r1]:"
                          "qc_modules=[fastq_screen,fastqc,sequence_lengths]")
-        self.assertEqual(repr(p),
-                         repr(QCProtocol.from_specification(repr(p))))
+        self.assertEqual(p,QCProtocol.from_specification(repr(p)))
 
     def test_qcprotocol_example_paired_end_protocol_with_ranges(self):
         """
@@ -155,8 +212,7 @@ class TestQCProtocol(unittest.TestCase):
                          "'Basic paired-end QC with ranges':"
                          "seq_reads=[r1,r2:1-50]:index_reads=[]:"
                          "qc_modules=[fastq_screen,fastqc,sequence_lengths]")
-        self.assertEqual(repr(p),
-                         repr(QCProtocol.from_specification(repr(p))))
+        self.assertEqual(p,QCProtocol.from_specification(repr(p)))
 
 class TestDetermineQCProtocolFunction(unittest.TestCase):
     """

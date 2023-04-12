@@ -548,6 +548,11 @@ class QCProtocol:
                 index_reads=self.__repr_reads(self.reads.index),
                 qc_modules=qc_modules)
 
+    def __eq__(self,p):
+        # Check if another object is equal to this one
+        return (isinstance(p,QCProtocol) and
+                repr(self) == repr(p))
+
 #######################################################################
 # Functions
 #######################################################################
