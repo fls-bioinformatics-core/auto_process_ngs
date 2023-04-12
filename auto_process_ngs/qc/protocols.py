@@ -619,15 +619,29 @@ def parse_protocol_spec(s):
 
     Parses a QC protocol specification string (such as
     one returned by the '__repr__' built-in of an
-    existing QCProtocol instance) and returns a new
-    QCProtocol instance which matches the specification.
+    existing QCProtocol instance) and returns an
+    AttributeDictionary with the following elements
+    extracted from the specification:
+
+    - name
+    - description
+    - seq_data_reads
+    - index_reads
+    - qc_modules
+
+    These can then be used to create a new QCProtocol
+    instance which matches the specification using
+    e.g.
+
+    >>> p = QCProtocol(**parse_protocol_spec("..."))
 
     Arguments:
       s (string): QC protocol specification string
 
     Returns:
-      QCProtocol: populated QCProtocol instance built
-        from the supplied specification string.
+      AttributeDictionary: AttributeDictionary with
+        keys mapped to values from the supplied
+        specification.
 
     Raises:
       Exception: if the specification string cannot be
@@ -717,6 +731,9 @@ def parse_protocol_spec(s):
         elif s:
             raise Exception("Unable to parse section starting '%s...'" %
                             s[:5])
-    # Return QCProtocol instance
-    return QCProtocol(name,description,seq_data_reads,index_reads,
-                      qc_modules)
+    # Return mapping of extracted components
+    return AttributeDictionary(name=name,
+                               description=description,
+                               seq_data_reads=seq_data_reads,
+                               index_reads=index_reads,
+                               qc_modules=qc_modules)
