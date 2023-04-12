@@ -11,7 +11,7 @@ from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.qc.protocols import QCProtocol
 from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
-from auto_process_ngs.qc.protocols import parse_protocol_repr
+from auto_process_ngs.qc.protocols import parse_protocol_spec
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -617,15 +617,15 @@ class TestFetchProtocolDefinition(unittest.TestCase):
                           fetch_protocol_definition,
                           "whazzdis?")
 
-class TestParseProtocolRepr(unittest.TestCase):
-    def test_parse_protocol_repr(self):
+class TestParseProtocolSpec(unittest.TestCase):
+    def test_parse_protocol_spec(self):
         """
-        parse_protocol_repr: simple protocol definition
+        parse_protocol_spec: simple protocol specification
         """
         s = "simple_pe_qc:'Simple PE QC protocol':" \
             "seq_reads=[r1,r2]:index_reads=[]:" \
             "qc_modules=[fastq_screen,fastqc]"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_pe_qc")
         self.assertEqual(p.description,"Simple PE QC protocol")
         self.assertEqual(p.reads.seq_data,('r1','r2'))
@@ -639,14 +639,14 @@ class TestParseProtocolRepr(unittest.TestCase):
         self.assertEqual(p.qc_modules,['fastq_screen','fastqc'])
         self.assertEqual(repr(p),s)
 
-    def test_parse_protocol_repr_10x(self):
+    def test_parse_protocol_spec_10x(self):
         """
-        parse_protocol_repr: 10x single cell-style protocol definition
+        parse_protocol_spec: 10x single cell-style protocol specification
         """
         s = "simple_10x_qc:'Simple 10x single cell QC protocol':" \
             "seq_reads=[r2]:index_reads=[r1]:" \
             "qc_modules=[cellranger_count,fastqc]"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_10x_qc")
         self.assertEqual(p.description,"Simple 10x single cell QC protocol")
         self.assertEqual(p.reads.seq_data,('r2',))
@@ -660,14 +660,14 @@ class TestParseProtocolRepr(unittest.TestCase):
         self.assertEqual(p.qc_modules,['cellranger_count','fastqc'])
         self.assertEqual(repr(p),s)
 
-    def test_parse_protocol_repr_simple_10x_flex(self):
+    def test_parse_protocol_spec_simple_10x_flex(self):
         """
-        parse_protocol_repr: 10x Flex-style protocol definition
+        parse_protocol_spec: 10x Flex-style protocol specification
         """
         s = "simple_flex_qc:'Simple 10x Flex QC protocol':" \
             "seq_reads=[r2:1-50]:index_reads=[r1]:" \
             "qc_modules=[cellranger_count,fastqc]"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_flex_qc")
         self.assertEqual(p.description,"Simple 10x Flex QC protocol")
         self.assertEqual(p.reads.seq_data,('r2',))
@@ -681,9 +681,9 @@ class TestParseProtocolRepr(unittest.TestCase):
         self.assertEqual(p.qc_modules,['cellranger_count','fastqc'])
         self.assertEqual(repr(p),s)
 
-    def test_parse_protocol_repr_simple_10x_gex_multiome(self):
+    def test_parse_protocol_spec_simple_10x_gex_multiome(self):
         """
-        parse_protocol_repr: 10x GEX multiome-style protocol definition
+        parse_protocol_spec: 10x GEX multiome-style protocol specification
         """
         s = "simple_multiome_gex_qc:'Simple 10x multiome GEX QC protocol':" \
             "seq_reads=[r2]:index_reads=[r1]:" \
@@ -691,7 +691,7 @@ class TestParseProtocolRepr(unittest.TestCase):
             "cellranger_count(chemistry=ARC-v1;library=snRNA-seq;" \
             "cellranger_version=*;cellranger_refdata=*;" \
             "set_cell_count=false;set_metadata=False)]"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_multiome_gex_qc")
         self.assertEqual(p.description,"Simple 10x multiome GEX QC protocol")
         self.assertEqual(p.reads.seq_data,('r2',))
@@ -709,14 +709,14 @@ class TestParseProtocolRepr(unittest.TestCase):
             'set_cell_count=false;set_metadata=False)'])
         self.assertEqual(repr(p),s)
 
-    def test_parse_protocol_repr_no_index_reads(self):
+    def test_parse_protocol_spec_no_index_reads(self):
         """
-        parse_protocol_repr: handles missing index reads definition
+        parse_protocol_spec: handles missing index reads specification
         """
         s = "simple_pe_qc:'Simple PE QC protocol':" \
             "seq_reads=[r1,r2]:" \
             "qc_modules=[fastq_screen,fastqc]"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_pe_qc")
         self.assertEqual(p.description,"Simple PE QC protocol")
         self.assertEqual(p.reads.seq_data,('r1','r2'))
@@ -734,14 +734,14 @@ class TestParseProtocolRepr(unittest.TestCase):
                          "index_reads=[]:" \
                          "qc_modules=[fastq_screen,fastqc]")
 
-    def test_parse_protocol_repr_no_seq_data_reads(self):
+    def test_parse_protocol_spec_no_seq_data_reads(self):
         """
-        parse_protocol_repr: handles missing seq data reads definition
+        parse_protocol_spec: handles missing seq data reads specification
         """
         s = "simple_pe_qc:'Simple PE QC protocol':" \
             "index_reads=[r1,r2]:" \
             "qc_modules=[fastq_screen,fastqc]"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_pe_qc")
         self.assertEqual(p.description,"Simple PE QC protocol")
         self.assertEqual(p.reads.seq_data,())
@@ -759,14 +759,14 @@ class TestParseProtocolRepr(unittest.TestCase):
                          "index_reads=[r1,r2]:" \
                          "qc_modules=[fastq_screen,fastqc]")
 
-    def test_parse_protocol_repr_no_qc_modules(self):
+    def test_parse_protocol_spec_no_qc_modules(self):
         """
-        parse_protocol_repr: handles missing QC modules definition
+        parse_protocol_spec: handles missing QC modules specification
         """
         s = "simple_pe_qc:'Simple PE QC protocol':" \
             "seq_reads=[r1,r2]:" \
             "index_reads=[]"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_pe_qc")
         self.assertEqual(p.description,"Simple PE QC protocol")
         self.assertEqual(p.reads.seq_data,('r1','r2'))
@@ -784,15 +784,15 @@ class TestParseProtocolRepr(unittest.TestCase):
                          "index_reads=[]:" \
                          "qc_modules=[]")
 
-    def test_parse_protocol_repr_empty_qc_modules(self):
+    def test_parse_protocol_spec_empty_qc_modules(self):
         """
-        parse_protocol_repr: handles trailing colon in definition
+        parse_protocol_spec: handles trailing colon in specification
         """
         s = "simple_pe_qc:'Simple PE QC protocol':" \
             "seq_reads=[r1,r2]:" \
             "index_reads=[]:" \
             "qc_modules=[fastqc]:"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_pe_qc")
         self.assertEqual(p.description,"Simple PE QC protocol")
         self.assertEqual(p.reads.seq_data,('r1','r2'))
@@ -806,15 +806,15 @@ class TestParseProtocolRepr(unittest.TestCase):
         self.assertEqual(p.qc_modules,['fastqc'])
         self.assertEqual(repr(p),s[:-1])
 
-    def test_parse_protocol_repr_trailing_colon(self):
+    def test_parse_protocol_spec_trailing_colon(self):
         """
-        parse_protocol_repr: handles empty QC modules definition
+        parse_protocol_spec: handles empty QC modules specification
         """
         s = "simple_pe_qc:'Simple PE QC protocol':" \
             "seq_reads=[r1,r2]:" \
             "index_reads=[]:" \
             "qc_modules=[]"
-        p = parse_protocol_repr(s)
+        p = parse_protocol_spec(s)
         self.assertEqual(p.name,"simple_pe_qc")
         self.assertEqual(p.description,"Simple PE QC protocol")
         self.assertEqual(p.reads.seq_data,('r1','r2'))

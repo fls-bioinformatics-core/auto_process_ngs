@@ -613,24 +613,24 @@ def fetch_protocol_definition(name):
                       index_reads=protocol_defn['reads']['index'],
                       qc_modules=protocol_defn['qc_modules'])
 
-def parse_protocol_repr(s):
+def parse_protocol_spec(s):
     """
-    Parse QC protocol definition string
+    Parse QC protocol specification string
 
-    Parses a QC protocol definition string (such as one
-    returned by the '__repr__' built-in of an existing
-    QCProtocol instance) and returns a new QCProtocol
-    instance which matches the definition.
+    Parses a QC protocol specification string (such as
+    one returned by the '__repr__' built-in of an
+    existing QCProtocol instance) and returns a new
+    QCProtocol instance which matches the specification.
 
     Arguments:
-      s (string): QC protocol definition string
+      s (string): QC protocol specification string
 
     Returns:
       QCProtocol: populated QCProtocol instance built
-        from the supplied definition string.
+        from the supplied specification string.
 
     Raises:
-      Exception: if the definition string cannot be
+      Exception: if the specification string cannot be
         parsed correctly.
     """
     # Initialise
