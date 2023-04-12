@@ -344,6 +344,13 @@ class QCProtocol:
     or a tuple '(START,END)' (where either 'START' or 'END'
     will be 'None' if no limit was supplied).
 
+    QCProtocol instances can also be created directly from
+    protocol specification strings using the
+    'from_specification' class method. (Specification
+    strings are returned from 'repr' on existing QCProtocol
+    instances, or can alternatively be constructed
+    manually.)
+
     Arguments:
       name (str): name of the protocol
       description (str): protocol description
@@ -383,6 +390,25 @@ class QCProtocol:
         for r in list(seq_data_reads) + list(index_reads):
             rd,rng = self.__parse_read_defn(r)
             self.read_range[rd] = rng
+
+    @classmethod
+    def from_specification(cls,s):
+        """
+        Create new QCProtocol instance from specification
+
+        Given a specification string (such as that
+        returned by 'repr(...)'), create a new
+        QCProtocol instance initialised from that
+        specification.
+
+        Example usage:
+
+        >>> p = QCProtocol.from_specification("custom:...")
+
+        Arguments:
+          s (str): QC protocol specification string
+        """
+        return cls(**parse_protocol_spec(s))
 
     def summarise(self):
         """
