@@ -527,7 +527,8 @@ def determine_qc_protocol(project):
                 # 10xGenomics Flex (fixed RNA profiling)
                 protocol = "10x_Flex"
         elif single_cell_platform == 'Parse Evercode':
-            if library_type == "scRNA-seq":
+            if library_type in ("scRNA-seq",
+                                "snRNA-seq"):
                 # Parse Evercode snRNAseq
                 protocol = "ParseEvercode"
         elif library_type in ("scATAC-seq",
