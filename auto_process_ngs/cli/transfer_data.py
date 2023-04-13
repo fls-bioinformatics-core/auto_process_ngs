@@ -15,6 +15,7 @@ import argparse
 import time
 from random import shuffle
 from datetime import date
+from fnmatch import fnmatch
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
@@ -120,6 +121,9 @@ def main():
                    "'cellranger count') to the final location")
     p.add_argument('--link',action='store_true',
                    help="hard link files instead of copying")
+    p.add_argument('--filter',action='store',dest='filter_pattern',
+                   default=None,
+                   help="filter Fastq file names based on PATTERN")
     p.add_argument('--runner',action='store',
                    help="specify the job runner to use for executing "
                    "the checksumming, Fastq copy and tar gzipping "
@@ -210,11 +214,24 @@ def main():
     nfastqs = 0
     fsize = 0
     for sample in project.samples:
-        samples.add(sample.name)
+        fqs = []
         for fq in sample.fastq:
-            fsize += os.lstat(fq).st_size
-            nfastqs += 1
+            if args.filter_pattern and \
+               not fnmatch(os.path.basename(fq),args.filter_pattern):
+                # Filter pattern specified but Fastq
+                # doesn't match so skip
+                continue
+            fqs.append(fq)
+        if fqs:
+            samples.add(sample.name)
+            for fq in fqs:
+                fsize += os.lstat(fq).st_size
+                nfastqs += 1
     nsamples = len(samples)
+    if nsamples == 0:
+        # No samples found
+        logging.error("No samples found")
+        return 1
     dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
                                 if project.info.single_cell_platform else '',
                                 project.info.library_type)
@@ -410,6 +427,8 @@ def main():
 
     # Build command to run manage_fastqs.py
     copy_cmd = Command("manage_fastqs.py")
+    if args.filter_pattern:
+        copy_cmd.add_args("--filter",args.filter_pattern)
     if hard_links:
         copy_cmd.add_args("--link")
     copy_cmd.add_args(analysis_dir.analysis_dir,
