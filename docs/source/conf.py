@@ -248,6 +248,41 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
 
+# -- Make table with QC protocols ---------------------------------------------
+
+from auto_process_ngs.qc import protocols
+# Directory for auto-generated content
+auto_content_dir = os.path.join("using","auto")
+if not os.path.exists(auto_content_dir):
+    os.makedirs(auto_content_dir)
+# Get list of protocol instances
+qc_protocols = []
+for p in protocols.QC_PROTOCOLS:
+    qc_protocols.append(protocols.fetch_protocol_definition(p))
+# Get width for protocol name column
+pr_width = max([len(p.name)+4 for p in qc_protocols])
+ds_width = 26
+# Generate file with table of protocol names and descriptions
+qc_protocols_tbl = os.path.join(auto_content_dir,"qc_protocols.rst")
+with open(qc_protocols_tbl,'wt') as fp:
+    # Write table header
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
+    fp.write("{name: <{pr_width}} {desc}\n".format(name="QC protocol",
+                                                   desc="Description",
+                                                   pr_width=pr_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
+    # Write protocol information
+    for p in qc_protocols:
+        fp.write("{name: <{pr_width}} {description}\n".format(
+            name="``{name}``".format(name=p.name),
+            description=p.description,
+            pr_width=pr_width))
+    # Write table footer
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
+
 # -- Make example plot images for QC report -----------------------------------
 
 from auto_process_ngs.qc import plots

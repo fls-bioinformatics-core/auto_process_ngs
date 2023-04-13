@@ -94,22 +94,6 @@ QC_PROTOCOLS = {
         ]
     },
 
-    "singlecell": {
-        "description": "ICELL8 single cell RNA-seq",
-        "reads": {
-            "seq_data": ('r2',),
-            "index": ('r1',)
-        },
-        "qc_modules": [
-            'fastqc',
-            'fastq_screen',
-            'sequence_lengths',
-            'strandedness',
-            'rseqc_genebody_coverage',
-            'qualimap_rnaseq'
-        ]
-    },
-
     "10x_scRNAseq": {
         "description": "10xGenomics single cell RNA-seq",
         "reads": {
@@ -279,6 +263,22 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'strandedness',
+            'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq'
+        ]
+    },
+
+    "singlecell": {
+        "description": "ICELL8 single cell RNA-seq",
+        "reads": {
+            "seq_data": ('r2',),
+            "index": ('r1',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
             'strandedness',
             'rseqc_genebody_coverage',
             'qualimap_rnaseq'
