@@ -51,14 +51,16 @@ The following options specify metadata for the QC which will
 determine which metrics are run:
 
 * ``--protocol``: specify the QC protocol (see :doc:`run_qc`
-  for a complete list)
+  for a complete list, or use the ``--info`` option)
 * ``--organism``: specify the organism(s) (e.g. ``human``,
-  ``mouse`` etc)
+  ``mouse`` etc; use the ``--info`` option to list the
+  organisms available in the current configuration)
 * ``--library-type``: specify the library type (e.g. ``RNA-seq``,
   ``ChIP-seq`` etc)
 * ``--single-cell-platform``: specify the name for the single
   cell platform (e.g. ``10xGenomics Chromium 3'v3``; see
-  :doc:`../control_files/projects_info` for a complete list)
+  :doc:`../control_files/projects_info` for a complete list,
+  or use the ``--info`` option)
 
 .. note::
 
@@ -111,6 +113,12 @@ options are available:
 
 Note that these options will also override the reference data
 which are set in the configuration.
+
+.. note::
+
+   The ``--info`` option can be used to see what default
+   reference data has been assigned to each configured
+   organism name.
 
 Running 10xGenomics single library analyses
 -------------------------------------------
@@ -184,3 +192,17 @@ a single job on a Grid Engine compute cluster might look like:
 ::
 
    qsub -b y -V -pe smp.pe 16 'run_qc.py --local --maxcores=16 --maxmem=64 /data/Fastqs'
+
+Listing organisms and other information: ``--info``
+---------------------------------------------------
+
+The ``--info`` option of ``run_qc.py`` displays various items
+from the current configuration, including a list of the
+available organisms and the indexes and other reference data
+assigned to each.
+
+Other information includes the available QC protocols, single
+ell platforms and FastqScreen ``.conf`` files.
+
+Once the information is displayed, ``run_qc.py`` will exit
+without performing any further action.
