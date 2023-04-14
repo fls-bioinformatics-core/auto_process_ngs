@@ -96,6 +96,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 
    reference/commands
    reference/utilities
+   reference/qc_protocol_specification
 
 .. _developers-docs:
 

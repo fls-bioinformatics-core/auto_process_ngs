@@ -8,6 +8,7 @@ auto_process.ini
 settings.ini
 docs/build
 docs/source/developers/api_docs
-docs/source/reference
+docs/source/reference/commands.rst
+docs/source/reference/utilities.rst
 docs/source/images/auto
 docs/source/using/auto

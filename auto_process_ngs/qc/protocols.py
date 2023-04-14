@@ -45,13 +45,19 @@ This module also provides the following classes and functions:
 - QCProtocol: class representing a QC protocol
 - determine_qc_protocol: get QC protocol for a project
 - fetch_protocol_definition: get the definition for a QC protocol
+- parse_protocol_repr: get a QCProtocol object from a string
 """
 
 #######################################################################
 # Imports
 #######################################################################
 
+import logging
 from bcftbx.utils import AttributeDictionary
+
+# Module specific logger
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 #######################################################################
 # Data
@@ -338,6 +344,13 @@ class QCProtocol:
     or a tuple '(START,END)' (where either 'START' or 'END'
     will be 'None' if no limit was supplied).
 
+    QCProtocol instances can also be created directly from
+    protocol specification strings using the
+    'from_specification' class method. (Specification
+    strings are returned from 'repr' on existing QCProtocol
+    instances, or can alternatively be constructed
+    manually.)
+
     Arguments:
       name (str): name of the protocol
       description (str): protocol description
@@ -377,6 +390,25 @@ class QCProtocol:
         for r in list(seq_data_reads) + list(index_reads):
             rd,rng = self.__parse_read_defn(r)
             self.read_range[rd] = rng
+
+    @classmethod
+    def from_specification(cls,s):
+        """
+        Create new QCProtocol instance from specification
+
+        Given a specification string (such as that
+        returned by 'repr(...)'), create a new
+        QCProtocol instance initialised from that
+        specification.
+
+        Example usage:
+
+        >>> p = QCProtocol.from_specification("custom:...")
+
+        Arguments:
+          s (str): QC protocol specification string
+        """
+        return cls(**parse_protocol_spec(s))
 
     def summarise(self):
         """
@@ -486,6 +518,41 @@ class QCProtocol:
                 mapped_metrics.append(qc_module)
         return mapped_metrics
 
+    def __repr_reads(self,rds):
+        # Internal: get string representation of reads
+        # for __repr__
+        reads = []
+        for rd in rds:
+            rng = self.read_range[rd]
+            if rng and (rng[0] or rng[1]):
+                if not rng[0]:
+                    reads.append("%s:1-%s" % (rd,rng[1]))
+                elif not rng[1]:
+                    reads.append("%s:%s-" % (rd,rng[0]))
+                else:
+                    reads.append("%s:%s-%s" % (rd,rng[0],rng[1]))
+            else:
+                reads.append(rd)
+        return "[%s]" % ','.join(r for r in reads)
+
+    def __repr__(self):
+        # Generate string representation
+        qc_modules = "[%s]" % ','.join(m for m in self.qc_modules)
+        return \
+            "{name}:'{descr}':seq_reads={seq_reads}:"\
+            "index_reads={index_reads}:"\
+            "qc_modules={qc_modules}".format(
+                name=self.name,
+                descr=self.description,
+                seq_reads=self.__repr_reads(self.reads.seq_data),
+                index_reads=self.__repr_reads(self.reads.index),
+                qc_modules=qc_modules)
+
+    def __eq__(self,p):
+        # Check if another object is equal to this one
+        return (isinstance(p,QCProtocol) and
+                repr(self) == repr(p))
+
 #######################################################################
 # Functions
 #######################################################################
@@ -576,3 +643,128 @@ def fetch_protocol_definition(name):
                       seq_data_reads=protocol_defn['reads']['seq_data'],
                       index_reads=protocol_defn['reads']['index'],
                       qc_modules=protocol_defn['qc_modules'])
+
+def parse_protocol_spec(s):
+    """
+    Parse QC protocol specification string
+
+    Parses a QC protocol specification string (such as
+    one returned by the '__repr__' built-in of an
+    existing QCProtocol instance) and returns an
+    AttributeDictionary with the following elements
+    extracted from the specification:
+
+    - name
+    - description
+    - seq_data_reads
+    - index_reads
+    - qc_modules
+
+    These can then be used to create a new QCProtocol
+    instance which matches the specification using
+    e.g.
+
+    >>> p = QCProtocol(**parse_protocol_spec("..."))
+
+    Arguments:
+      s (string): QC protocol specification string
+
+    Returns:
+      AttributeDictionary: AttributeDictionary with
+        keys mapped to values from the supplied
+        specification.
+
+    Raises:
+      Exception: if the specification string cannot be
+        parsed correctly.
+    """
+    # Initialise
+    seq_data_reads = None
+    index_reads = None
+    qc_modules = None
+    # Extract name
+    try:
+        ix = s.index(':')
+        name = s[:ix]
+        s = s[ix+1:]
+    except ValueError:
+        name = s
+        s = ""
+    logger.debug("Name: %s" % name)
+    logger.debug("(Remaining string: %s)" % s)
+    # Extract description
+    if s.startswith('"') or s.startswith("'"):
+        quote = s[0]
+        s = s[1:]
+        try:
+            ix = s.index(quote)
+            if s[ix+1] != ':':
+                raise Exception("Unable to parse description: continues "
+                                "after closing quote?")
+            description = s[:ix]
+            s = s[ix+2:]
+        except ValueError:
+            raise Exception("Unable to parse description: no closing "
+                            "quote?")
+    else:
+        try:
+            ix = s.index(':')
+            description = s[:ix]
+            s = s[ix:]
+        except ValueError:
+            description = s
+            s = ""
+    logger.debug("Description: %s" % description)
+    logger.debug("(Remaining string: %s)" % s)
+    # Break up remainder of the string
+    while s:
+        if s.startswith(':'):
+            # Strip leading colon
+            s = s[1:]
+        if s.startswith("seq_reads=["):
+            # Sequencing data reads
+            try:
+                ix = s.index(']')
+                seq_data_reads = list(
+                    filter(lambda r: r != '',
+                           s[len("seq_reads=["):ix].split(',')))
+                s = s[ix+1:]
+            except ValueError:
+                raise Exception("Unable to parse sequence data reads: no "
+                                "closing brace?")
+            logger.debug("Seq data reads: %s" % seq_data_reads)
+            logger.debug("(Remaining string: %s)" % s)
+        elif s.startswith("index_reads=["):
+            # Index reads
+            try:
+                ix = s.index(']')
+                index_reads = list(
+                    filter(lambda r: r != '',
+                           s[len("index_reads=["):ix].split(',')))
+                s = s[ix+1:]
+            except ValueError:
+                raise Exception("Unable to parse index reads: no "
+                                "closing brace?")
+            logger.debug("Index reads: %s" % index_reads)
+            logger.debug("Remaining string: %s" % s)
+        elif s.startswith("qc_modules=["):
+            # QC modules
+            try:
+                ix = s.index(']')
+                qc_modules = s[len("qc_modules=["):ix].split(',')
+                s = s[ix+1:]
+            except ValueError:
+                qc_modules = s[len("qc_modules=["):].split(',')
+                s = ""
+            qc_modules = list(filter(lambda m: m != '',qc_modules))
+            logger.debug("QC modules: %s" % qc_modules)
+            logger.debug("Remaining string: %s" % s)
+        elif s:
+            raise Exception("Unable to parse section starting '%s...'" %
+                            s[:5])
+    # Return mapping of extracted components
+    return AttributeDictionary(name=name,
+                               description=description,
+                               seq_data_reads=seq_data_reads,
+                               index_reads=index_reads,
+                               qc_modules=qc_modules)
