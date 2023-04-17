@@ -672,7 +672,7 @@ class QCOutputs:
         if seq_lens:
             tags.add("sequence_lengths")
             for f in seq_lens:
-                fq = self.fastq_attrs(os.path.splitext(f)[0])
+                fq = self.fastq_attrs(f[:-len("_seqlens.json")])
                 read = '%s%s' % ('i' if fq.is_index_read else 'r',
                                  fq.read_number)
                 fastqs.add(
