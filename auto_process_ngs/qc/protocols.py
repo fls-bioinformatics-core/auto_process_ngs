@@ -258,6 +258,22 @@ QC_PROTOCOLS = {
         ]
     },
 
+    "10x_Visium_FFPE": {
+        "description": "10xGenomics Visium FFPE spatial RNA-seq",
+        "reads": {
+            "seq_data": ('r2:1-50',),
+            "index": ('r1',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq'
+        ]
+    },
+
     "ParseEvercode": {
         "description": "Parse Biosciences Evercode data",
         "reads": {
@@ -609,7 +625,10 @@ def determine_qc_protocol(project):
     # Spatial RNA-seq
     if project.info.single_cell_platform == "10xGenomics Visium":
         # 10xGenomics Visium spatial transcriptomics
-        protocol = "10x_Visium"
+        if project.info.library_type == "FFPE Spatial RNA-seq":
+            protocol = "10x_Visium_FFPE"
+        else:
+            protocol = "10x_Visium"
     # Multiome ATAC+GEX
     if project.info.single_cell_platform == "10xGenomics Single Cell Multiome":
         if library_type == "ATAC":
