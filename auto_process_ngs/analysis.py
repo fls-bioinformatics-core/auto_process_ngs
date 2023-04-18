@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
 #
 ########################################################################
 #
@@ -1229,9 +1229,9 @@ class AnalysisSample:
 # Functions
 #######################################################################
 
-def run_reference_id(run_name,platform=None,facility_run_number=None):
+def run_id(run_name,platform=None,facility_run_number=None):
     """
-    Return a run reference id e.g. 'HISEQ_140701/242#22'
+    Return a run ID e.g. 'HISEQ_140701/242#22'
 
     The run reference code is a code that identifies the sequencing
     run, and has the general form:
@@ -1319,6 +1319,14 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
     if facility_run_number is not None:
         run_id += "#%s" % facility_run_number
     return run_id
+
+def run_reference_id(*args,**kws):
+    """
+    Return a run reference id e.g. 'HISEQ_140701/242#22'
+
+    Wrapper for 'run_id' function
+    """
+    return run_id(*args,**kws)
 
 def split_sample_name(s):
     """
@@ -1464,13 +1472,13 @@ def match_run_id(run,d):
         logger.debug("%s: run name = %s" % (d,analysis_dir.run_name))
         if analysis_dir.run_name == run or run == '*':
             return d
-        # Check run reference ID
-        run_id = run_reference_id(
+        # Check run ID
+        run_id_ = run_id(
             analysis_dir.run_name,
             platform=analysis_dir.metadata.platform,
             facility_run_number=analysis_dir.metadata.run_number)
-        logger.debug("%s: run ID = %s" % (d,run_id))
-        if run_id == run:
+        logger.debug("%s: run ID = %s" % (d,run_id_))
+        if run_id_ == run:
             return True
     except Exception as ex:
         # Not an analysis directory
