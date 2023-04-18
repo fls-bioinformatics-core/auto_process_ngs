@@ -86,7 +86,7 @@ from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
 from bcftbx.utils import walk
 from ..analysis import AnalysisFastq
-from ..analysis import run_reference_id
+from ..analysis import run_id
 from ..analysis import split_sample_name
 from ..analysis import split_sample_reference
 from ..docwriter import Document
@@ -1730,10 +1730,10 @@ class QCProject:
         ``None`` is returned.
         """
         try:
-            return run_reference_id(self.info['run'],
-                                    platform=self.info['platform'],
-                                    facility_run_number=
-                                    self.run_metadata['run_number'])
+            return run_id(self.info['run'],
+                          platform=self.info['platform'],
+                          facility_run_number=
+                          self.run_metadata['run_number'])
         except (AttributeError,TypeError) as ex:
             logger.warning("Run reference ID can't be "
                            "determined: %s (ignored)" % ex)
