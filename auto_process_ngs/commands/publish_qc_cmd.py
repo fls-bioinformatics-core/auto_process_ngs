@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     publish_qc_cmd.py: implement auto process publish_qc command
-#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
 #
 #########################################################################
 
@@ -492,8 +492,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             params_tbl.add_row(param=pkg.title(),
                                value="%s %s" % (package_info[1],
                                                 package_info[2]))
-    params_tbl.add_row(param="Reference",
-                       value=ap.run_reference_id)
+    params_tbl.add_row(param="Run ID",
+                       value=ap.run_id)
     general_info.add(params_tbl)
     # Processing QC reports
     if processing_qc_reports:
