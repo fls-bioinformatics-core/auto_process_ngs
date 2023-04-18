@@ -31,7 +31,7 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.FASTQFile import FastqIterator
 from . import commands
 from .analysis import AnalysisProject
-from .analysis import run_reference_id
+from .analysis import run_id
 from .decorators import add_command
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
@@ -642,11 +642,11 @@ class AutoProcess:
         return None
 
     @property
-    def run_reference_id(self):
+    def run_id(self):
         """
-        Return a run reference id (e.g. 'HISEQ_140701/242#22')
+        Return the run ID (e.g. 'HISEQ_140701/242#22')
         """
-        return run_reference_id(
+        return run_id(
             self.run_name,
             platform=self.metadata.platform,
             facility_run_number=self.metadata.run_number)
@@ -707,7 +707,7 @@ class AutoProcess:
 
         """
         values = bcf_utils.OrderedDictionary()
-        values['Run reference'] = self.run_reference_id
+        values['Run ID'] = self.run_id
         for i in data:
             values[i] = data[i]
         field_width = max([len(i) for i in values])
@@ -924,4 +924,4 @@ class AutoProcess:
     def __str__(self):
         # Implement string representation
         # as the run reference id
-        return str(self.run_reference_id)
+        return str(self.run_id)
