@@ -22,7 +22,7 @@ Classes:
 
 Functions:
 
-- run_reference_id: fetch identifier for sequencing run
+- run_id: fetch run ID for sequencing run
 - split_sample_name: split sample name into components
 - split_sample_reference: split sample reference ID into components
 - match_run_id: check if directory matches run identifier
@@ -1233,8 +1233,8 @@ def run_id(run_name,platform=None,facility_run_number=None):
     """
     Return a run ID e.g. 'HISEQ_140701/242#22'
 
-    The run reference code is a code that identifies the sequencing
-    run, and has the general form:
+    The run ID is a code that identifies the sequencing run, and has
+    the general form:
 
     ``PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER``
 
@@ -1272,7 +1272,7 @@ def run_id(run_name,platform=None,facility_run_number=None):
         run number) (optional)
 
     Returns:
-      String: run reference identifier.
+      String: run ID.
     """
     # Extract information from run name
     run_name = os.path.basename(os.path.normpath(run_name))
@@ -1301,7 +1301,7 @@ def run_id(run_name,platform=None,facility_run_number=None):
             facility_run_number = None
     else:
         facility_run_number = None
-    # Construct the reference id
+    # Construct the run id
     if platform is not None:
         run_id = platform
         if datestamp is not None:
@@ -1319,14 +1319,6 @@ def run_id(run_name,platform=None,facility_run_number=None):
     if facility_run_number is not None:
         run_id += "#%s" % facility_run_number
     return run_id
-
-def run_reference_id(*args,**kws):
-    """
-    Return a run reference id e.g. 'HISEQ_140701/242#22'
-
-    Wrapper for 'run_id' function
-    """
-    return run_id(*args,**kws)
 
 def split_sample_name(s):
     """
