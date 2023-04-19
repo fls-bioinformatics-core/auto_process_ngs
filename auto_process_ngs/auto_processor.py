@@ -652,6 +652,20 @@ class AutoProcess:
             facility_run_number=self.metadata.run_number)
 
     @property
+    def run_reference_id(self):
+        """
+        Return the run reference (e.g. 'NOVASEQ6000_230419/74#22_SP'
+
+        The run reference is the run ID plus the
+        following additional items (if defined):
+
+        - flow cell mode
+        """
+        return "%s%s" % (self.run_id,
+                         '' if not self.metadata.flow_cell_mode
+                         else "_%s" % self.metadata.flow_cell_mode)
+
+    @property
     def parameter_file(self):
         """
         Return name of parameter file ('auto_process.info')
@@ -923,5 +937,5 @@ class AutoProcess:
 
     def __str__(self):
         # Implement string representation
-        # as the run reference id
+        # as the run ID
         return str(self.run_id)
