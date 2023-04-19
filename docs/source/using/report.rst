@@ -92,6 +92,8 @@ The available fields are:
 Field name                Associated value
 ========================= ========================
 ``run_id``                Run ID (e.g. ``MISEQ_150729#88``)
+``run_reference_id``      Run reference ID (e.g.
+                          ``NOVASEQ6000_230419#73_SP``)
 ``run_number``            Facility run number (e.g. ``88``)
 ``sequencer_platform``    Sequencer platform for the run
                           (e.g. ``MISEQ``)
