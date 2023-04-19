@@ -1315,84 +1315,98 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
 
-class TestRunReferenceIdFunction(unittest.TestCase):
+class TestRunIdFunction(unittest.TestCase):
     """
-    Tests for the 'run_reference_id' function
+    Tests for the 'run_id' function
     """
-    def test_run_reference_id(self):
-        """run_reference_id: run name, platform and facility run number
+    def test_run_id(self):
         """
-        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
-                                          platform="miseq",
-                                          facility_run_number=87),
-                         "MISEQ_160621#87")
-        self.assertEqual(run_reference_id("/data/160621_M00879_0087_000000000-AGEW9/",
-                                          platform="miseq",
-                                          facility_run_number=87),
-                         "MISEQ_160621#87")
+        run_id: run name, platform and facility run number
+        """
+        self.assertEqual(
+            run_id("160621_M00879_0087_000000000-AGEW9",
+                   platform="miseq",
+                   facility_run_number=87),
+            "MISEQ_160621#87")
+        self.assertEqual(
+            run_id("/data/160621_M00879_0087_000000000-AGEW9/",
+                   platform="miseq",
+                   facility_run_number=87),
+            "MISEQ_160621#87")
 
-    def test_run_reference_id_no_platform(self):
-        """run_reference_id: run name and facility run number (no platform)
+    def test_run_id_no_platform(self):
         """
-        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
-                                          platform=None,
-                                          facility_run_number=87),
-                         "M00879_160621#87")
-        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
-                                          platform=None,
-                                          facility_run_number=88),
-                         "M00879_160621/87#88")
-        self.assertEqual(run_reference_id("/data/160621_M00879_0087_000000000-AGEW9/",
-                                          platform=None,
-                                          facility_run_number=87),
-                         "M00879_160621#87")
+        run_id: run name and facility run number (no platform)
+        """
+        self.assertEqual(
+            run_id("160621_M00879_0087_000000000-AGEW9",
+                   platform=None,
+                   facility_run_number=87),
+            "M00879_160621#87")
+        self.assertEqual(
+            run_id("160621_M00879_0087_000000000-AGEW9",
+                   platform=None,
+                   facility_run_number=88),
+            "M00879_160621/87#88")
+        self.assertEqual(
+            run_id("/data/160621_M00879_0087_000000000-AGEW9/",
+                   platform=None,
+                   facility_run_number=87),
+            "M00879_160621#87")
 
-    def test_run_reference_id_no_facility_run_number(self):
-        """run_reference_id: run name and platform (no facility run number)
+    def test_run_id_no_facility_run_number(self):
         """
-        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
-                                          platform="miseq",
-                                          facility_run_number=None),
-                         "MISEQ_160621/87")
+        run_id: run name and platform (no facility run number)
+        """
+        self.assertEqual(
+            run_id("160621_M00879_0087_000000000-AGEW9",
+                   platform="miseq",
+                   facility_run_number=None),
+            "MISEQ_160621/87")
 
-    def test_run_reference_id_facility_run_number_differs(self):
-        """run_reference_id: instrument and facility run numbers differ
+    def test_run_id_facility_run_number_differs(self):
         """
-        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
-                                          platform="miseq",
-                                          facility_run_number=90),
-                         "MISEQ_160621/87#90")
-        self.assertEqual(run_reference_id("/data/160621_M00879_0087_000000000-AGEW9/",
-                                          platform="miseq",
-                                          facility_run_number=90),
-                         "MISEQ_160621/87#90")
+        run_id: instrument and facility run numbers differ
+        """
+        self.assertEqual(
+            run_id("160621_M00879_0087_000000000-AGEW9",
+                   platform="miseq",
+                   facility_run_number=90),
+            "MISEQ_160621/87#90")
+        self.assertEqual(
+            run_id("/data/160621_M00879_0087_000000000-AGEW9/",
+                   platform="miseq",
+                   facility_run_number=90),
+            "MISEQ_160621/87#90")
 
-    def test_run_reference_id_bad_run_name(self):
-        """run_reference_id: handle 'bad' run name (cannot be split)
+    def test_run_id_bad_run_name(self):
         """
-        self.assertEqual(run_reference_id("rag_05_2017",
-                                          platform=None,
-                                          facility_run_number=None),
+        run_id: handle 'bad' run name (cannot be split)
+        """
+        self.assertEqual(run_id("rag_05_2017",
+                                platform=None,
+                                facility_run_number=None),
                          "rag_05_2017")
-        self.assertEqual(run_reference_id("rag_05_2017",
-                                          platform="miseq",
-                                          facility_run_number=None),
+        self.assertEqual(run_id("rag_05_2017",
+                                platform="miseq",
+                                facility_run_number=None),
                          "MISEQ_rag_05_2017")
-        self.assertEqual(run_reference_id("rag_05_2017",
-                                          platform=None,
-                                          facility_run_number=90),
+        self.assertEqual(run_id("rag_05_2017",
+                                platform=None,
+                                facility_run_number=90),
                          "rag_05_2017#90")
-        self.assertEqual(run_reference_id("rag_05_2017",
-                                          platform="miseq",
-                                          facility_run_number=90),
+        self.assertEqual(run_id("rag_05_2017",
+                                platform="miseq",
+                                facility_run_number=90),
                          "MISEQ_rag_05_2017#90")
 
-    def test_run_reference_id_handle_non_numeric_run_number(self):
-        """run_reference_id: handle non-numeric facility run number
+    def test_run_id_handle_non_numeric_run_number(self):
         """
-        self.assertEqual(run_reference_id("RAG_10x_BCLFiles_Download",
-                                          platform=None,
-                                          facility_run_number="BCLFiles"),
+        run_id: handle non-numeric facility run number
+        """
+        self.assertEqual(run_id("RAG_10x_BCLFiles_Download",
+                                platform=None,
+                                facility_run_number="BCLFiles"),
                          "RAG_10x_BCLFiles_Download")
 
 class TestSplitSampleNameFunction(unittest.TestCase):

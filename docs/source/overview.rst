@@ -114,6 +114,7 @@ Supported sequencer platforms
 The pipeline is currently used for output from the following
 Illumina sequencers:
 
+* NovaSeq 6000
 * HISeq 4000
 * MISeq
 * NextSeq
@@ -152,7 +153,7 @@ For example:
    181026_NB100234_0021_ABCDYHBGX7
 
 * ``181026`` is the datestamp (i.e. 26th October 2018). Some
-  sequencers now use a four-digit year in the datestamp (e.g.
+  sequencers may use a four-digit year in the datestamp (e.g.
   ``20181026``)
 * ``NB100234`` is the instrument ID, which uniquely identifies
   the sequencing instrument which produced the data
@@ -187,3 +188,72 @@ reads from all lanes the sample was run in; for example:
 ::
 
    SK1-control_S11_R1_001.fastq.gz
+
+=============================
+Run IDs and run reference IDs
+=============================
+
+Within the ``auto_process`` package runs can be identified by
+automatically generated run IDs of the general form:
+
+::
+
+   PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER
+
+where:
+
+* ``PLATFORM`` identifies the sequencer platform and is always
+  uppercased (e.g. ``NOVASEQ6000``, ``MISEQ``, etc)
+* ``DATESTAMP`` is the ``YYMMDD`` datestamp from the run name
+  (e.g. ``140701``)
+* ``INSTRUMENT_RUN_NUMBER`` is the run number that forms part of
+  the run name directory (e.g. for
+  ``140701_SN0123_0045_000000000-A1BCD`` it would be ``45``)
+* ``FACILITY_RUN_NUMBER`` is the run number that has been
+  assigned by the facility
+
+For example:
+
+::
+
+   NOVASEQ6000_230419/73#22
+
+is a NovaSeq 6000 sequencer run with datestamp ``230419``,
+instrument run number ``73`` and facility run number ``22``.
+
+Typically the instrument run number for a run is the same as
+the number assigned by the facility; in these cases
+conventionally it is omitted and only the facility run number
+is used, for example:
+
+::
+
+   NOVASEQ6000_230419#22
+
+The special cases are handled as follows:
+
+* If the platform isn't recognised supplied then the instrument
+  name is used instead (e.g. ``SN0123_140701/242#22``)
+* If the run name can't be split into components then the
+  general form will be ``[PLATFORM_]RUN_NAME[#FACILITY_RUN_NUMBER]``
+  depending on whether platform and/or facility run number have
+  been supplied (e.g. for a run called ``rag_05_2017`` the run ID
+  might look like ``rag_05_2017#90`` or ``MISEQ_rag_05_2017#90``)
+
+Run reference IDs are based on the run ID with additional
+arbitrary elements appended, i.e.:
+
+::
+
+   RUNID[_EXTRAINFO]
+
+Currently the following additional elements may appear if
+defined for the run:
+
+* Flow cell mode
+
+For example:
+
+::
+
+   NOVASEQ6000_230419#73_SP

@@ -68,7 +68,7 @@ class TestReportInfo(unittest.TestCase):
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
-        expected = """Run reference: MISEQ_170901#87
+        expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
 Unaligned dir: bcl2fastq
@@ -152,7 +152,7 @@ Summary of data in 'bcl2fastq' dir:
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
-        expected = """Run reference: MISEQ_170901#87
+        expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
 Unaligned dir: bcl2fastq
@@ -223,7 +223,7 @@ Summary of data in 'bcl2fastq' dir:
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
-        expected = """Run reference: MISEQ_170901#87
+        expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
 Unaligned dir: bcl2fastq
@@ -287,7 +287,7 @@ ABM4,CMO304,ABM4
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
-        expected = """Run reference: MISEQ_170901#87
+        expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
 Unaligned dir: bcl2fastq
@@ -358,7 +358,7 @@ Summary of data in 'bcl2fastq' dir:
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
-        expected = """Run reference: MISEQ_170901#87
+        expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
 Unaligned dir: bcl2fastq
