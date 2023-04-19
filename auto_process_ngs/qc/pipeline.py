@@ -268,7 +268,7 @@ class QCPipeline(Pipeline):
                         replace(' ','_')
 
         # Report details
-        self.report("-- Protocol   : %s" % qc_protocol)
+        self.report("-- Protocol   : %s" % protocol.name)
         self.report("-- Directory  : %s" % project.dirn)
         self.report("-- Fastqs dir : %s" % project.fastq_dir)
         self.report("-- QC dir     : %s" % qc_dir)
@@ -300,15 +300,16 @@ class QCPipeline(Pipeline):
             project,
             qc_dir,
             log_dir=log_dir,
-            qc_protocol=qc_protocol
+            protocol=protocol
         )
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
 
         # Build a dictionary of QC metadata items to
         # update
-        qc_metadata = dict(protocol=qc_protocol,
+        qc_metadata = dict(protocol=protocol.name,
                            protocol_summary=protocol.summarise(),
+                           protocol_specification=repr(protocol),
                            organism=organism,
                            fastq_dir=project.fastq_dir)
 
@@ -1238,7 +1239,7 @@ class SetupQCDirs(PipelineFunctionTask):
     """
     Set up the directories for the QC run
     """
-    def init(self,project,qc_dir,log_dir=None,qc_protocol=None):
+    def init(self,project,qc_dir,log_dir=None,protocol=None):
         """
         Initialise the SetupQCDirs task
 
@@ -1249,20 +1250,22 @@ class SetupQCDirs(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           log_dir (str): directory for log files (defaults
             to 'logs' subdirectory of the QC directory
-          qc_protocol (str): QC protocol to use
+          protocol (QCProject): QC protocol being used
         """
         pass
     def setup(self):
-        # Check the QC protocol
+        # Get the existing QC metadata
         qc_info = self.args.project.qc_info(self.args.qc_dir)
-        stored_protocol = qc_info.protocol
-        if stored_protocol is not None and \
-           stored_protocol != self.args.qc_protocol:
-            logger.warning("QC protocol mismatch for %s: "
-                           "'%s' stored, '%s' specified"
-                           % (self.args.project.name,
-                              stored_protocol,
-                              self.args.qc_protocol))
+        # Check the QC protocol
+        stored_protocol_name = qc_info.protocol
+        stored_protocol_spec = qc_info.protocol_specification
+        if (stored_protocol_spec is not None and
+            stored_protocol_spec != repr(self.args.protocol)) or \
+            (stored_protocol_name is not None and \
+             stored_protocol_name != self.args.protocol.name):
+            logger.warning("QC protocol mismatch between stored and "
+                           "supplied protocol information for %s"
+                           % self.args.project.name)
             logger.warning("Stored protocol will be ignored")
         # Set up QC dir
         if not os.path.exists(self.args.qc_dir):
