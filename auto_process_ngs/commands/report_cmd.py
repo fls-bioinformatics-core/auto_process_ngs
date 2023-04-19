@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     report_cmd.py: implement auto process 'report' command
-#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
 #
 #########################################################################
 
@@ -119,7 +119,7 @@ def report_info(ap):
       String with the report text.
     """
     report = []
-    report.append("Run reference: %s" % ap.run_reference_id)
+    report.append("Run ID       : %s" % ap.run_id)
     report.append("Directory    : %s" % ap.analysis_dir)
     report.append("Platform     : %s" % ap.metadata.platform)
     report.append("Unaligned dir: %s" % ap.params.unaligned_dir)
