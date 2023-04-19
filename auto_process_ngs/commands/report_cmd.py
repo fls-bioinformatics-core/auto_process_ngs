@@ -271,7 +271,8 @@ def report_summary(ap):
 
     - Platform
     - Run name
-    - Run reference id
+    - Run ID
+    - Run reference
     - Sequencer model
     - Processing software
 
@@ -355,6 +356,8 @@ def report_summary(ap):
         # Get the value for each item
         if item == 'Run name':
             value = run_name
+        elif item == 'Run ID':
+            value = ap.run_id
         elif item == 'Reference':
             value = ap.run_reference_id
         elif item == 'Platform':
@@ -599,6 +602,8 @@ def fetch_value(ap,project,field):
     if field == 'datestamp':
         return IlluminaData.split_run_name(ap.run_name)[0]
     elif field == 'run_id':
+        return ap.run_id
+    elif field == 'run_reference_id':
         return ap.run_reference_id
     elif field == 'run_number':
         return ('' if not ap.metadata.run_number
