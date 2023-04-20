@@ -10,6 +10,7 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import make_mock_analysis_project
 from auto_process_ngs.mockqc import make_mock_qc_dir
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
+from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.verification import QCVerifier
 from auto_process_ngs.qc.verification import parse_qc_module_spec
 from auto_process_ngs.qc.verification import filter_fastqs
@@ -783,11 +784,12 @@ class TestQCVerifier(unittest.TestCase):
                                    protocol="standardSE",
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="standardSE",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA')))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("standardSE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_single_end_no_fastqc(self):
         """
@@ -801,11 +803,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_fastqc=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardSE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("standardSE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_single_end_no_screens(self):
         """
@@ -819,11 +822,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_fastq_screen=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardSE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("standardSE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_single_end_no_seqlens(self):
         """
@@ -837,11 +841,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_seqlens=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardSE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("standardSE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_single_end_no_standedness(self):
         """
@@ -857,11 +862,12 @@ class TestQCVerifier(unittest.TestCase):
         with open(os.path.join(qc_dir,"fastq_strand.conf"),'wt') as fp:
             fp.write("fastq_strand.conf\n")
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardSE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("standardSE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_single_end_legacy_screen_naming(self):
         """
@@ -875,11 +881,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    legacy_screens=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="standardSE",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA')))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("standardSE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_paired_end(self):
         """
@@ -894,11 +901,12 @@ class TestQCVerifier(unittest.TestCase):
                                    protocol="standardPE",
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="standardPE",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA')))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("standardPE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_paired_end_no_fastqc(self):
         """
@@ -914,11 +922,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_fastqc=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardPE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("standardPE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_paired_end_no_screens(self):
         """
@@ -934,11 +943,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_fastq_screen=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardPE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("standardPE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_paired_end_no_seqlens(self):
         """
@@ -954,11 +964,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_seqlens=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="standardPE",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA')))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("standardPE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_paired_end_no_strandedness(self):
         """
@@ -974,11 +985,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_strandedness=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="standardPE",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA')))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("standardPE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_paired_end_legacy_screen_naming(self):
         """
@@ -994,11 +1006,12 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    legacy_screens=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="standardPE",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA')))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("standardPE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_paired_end_non_canonical_fastq_names(self):
         """
@@ -1013,11 +1026,12 @@ class TestQCVerifier(unittest.TestCase):
                                    protocol="standardPE",
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="standardPE",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA')))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("standardPE"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_10x_cellranger_count(self):
         """
@@ -1038,14 +1052,14 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB2',
                                    ))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_scRNAseq",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="6.1.2",
-                                           cellranger_refdata=\
-                                           "/data/refdata-cellranger-2020-A"))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_scRNAseq"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="6.1.2",
+            cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_count_different_version(self):
         """
@@ -1066,14 +1080,14 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB2',
                                    ))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="10x_scRNAseq",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA'),
-                                            cellranger_version="5.0.0",
-                                            cellranger_refdata=\
-                                            "/data/refdata-cellranger-2020-A"))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("10x_scRNAseq"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="5.0.0",
+            cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_count_legacy(self):
         """
@@ -1095,13 +1109,14 @@ class TestQCVerifier(unittest.TestCase):
                                    ),
                                    legacy_cellranger_outs=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_scRNAseq",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version=None,
-                                           cellranger_refdata=None))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_scRNAseq"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version=None,
+            cellranger_refdata=None))
 
     def test_qcverifier_10x_cellranger_atac_count(self):
         """
@@ -1124,14 +1139,14 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB2',
                                    ))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_scATAC",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="2.0.0",
-                                           cellranger_refdata=\
-                                           "/data/refdata-cellranger-atac-2020-A"))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_scATAC"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="/data/refdata-cellranger-atac-2020-A"))
 
     def test_verify_qcverifier_10x_multiome_gex(self):
         """
@@ -1155,14 +1170,14 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB2',
                                    ))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_Multiome_GEX",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="2.0.0",
-                                           cellranger_refdata=\
-                                           "refdata-cellranger-arc-2020-A"))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_GEX"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
 
     def test_verify_qcverifier_10x_multiome_gex_no_paired_samples(self):
         """
@@ -1185,14 +1200,14 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB2',
                                    ))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_Multiome_GEX",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="2.0.0",
-                                           cellranger_refdata=\
-                                           "refdata-cellranger-arc-2020-A"))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_GEX"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
 
     def test_verify_qcverifier_10x_multiome_gex_missing_paired_samples(self):
         """
@@ -1218,14 +1233,14 @@ class TestQCVerifier(unittest.TestCase):
             with open(os.path.join(qc_dir,"libraries.%s.csv" % s),'wt') as fp:
                 fp.write("Placeholder\n")
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="10x_Multiome_GEX",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA'),
-                                            cellranger_version="2.0.0",
-                                            cellranger_refdata=\
-                                            "refdata-cellranger-arc-2020-A"))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_GEX"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
 
     def test_qcverifier_10x_multiome_atac(self):
         """
@@ -1249,14 +1264,14 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB2',
                                    ))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_Multiome_ATAC",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="2.0.0",
-                                           cellranger_refdata=\
-                                           "refdata-cellranger-arc-2020-A"))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_ATAC"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
 
     def test_qcverifier_10x_multiome_atac_no_paired_samples(self):
         """
@@ -1279,14 +1294,14 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB2',
                                    ))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_Multiome_ATAC",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="2.0.0",
-                                           cellranger_refdata=\
-                                           "refdata-cellranger-arc-2020-A"))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_ATAC"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
 
     def test_qcverifier_10x_multiome_atac_missing_paired_samples(self):
         """
@@ -1312,14 +1327,14 @@ class TestQCVerifier(unittest.TestCase):
             with open(os.path.join(qc_dir,"libraries.%s.csv" % s),'wt') as fp:
                 fp.write("Placeholder\n")
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(fastqs=fastq_names,
-                                            qc_protocol="10x_Multiome_ATAC",
-                                            fastq_screens=('model_organisms',
-                                                           'other_organisms',
-                                                           'rRNA'),
-                                            cellranger_version="2.0.0",
-                                            cellranger_refdata=\
-                                            "refdata-cellranger-arc-2020-A"))
+        self.assertFalse(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_ATAC"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
 
     def test_qcverifier_verify_10x_visium(self):
         """
@@ -1334,11 +1349,12 @@ class TestQCVerifier(unittest.TestCase):
                                    protocol="10x_Visium",
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_Visium",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA')))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Visium"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
 
     def test_qcverifier_verify_10x_cellranger_multi(self):
         """
@@ -1369,8 +1385,8 @@ class TestQCVerifier(unittest.TestCase):
         verify_params = dict()
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(
-            fastqs=fastq_names,
-            qc_protocol="10x_CellPlex",
+            fetch_protocol_definition("10x_CellPlex"),
+            fastq_names,
             organism="Human",
             fastq_screens=('model_organisms',
                            'other_organisms',
@@ -1379,8 +1395,7 @@ class TestQCVerifier(unittest.TestCase):
             annotation_bed="/data/annotation/hg38.bed",
             annotation_gtf="/data/annotation/hg38.gtf",
             cellranger_version="6.1.2",
-            cellranger_refdata=\
-            "/data/refdata-cellranger-2020-A"))
+            cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_multi_no_config(self):
         """
@@ -1397,14 +1412,14 @@ class TestQCVerifier(unittest.TestCase):
                                    include_cellranger_count=False,
                                    include_cellranger_multi=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(fastqs=fastq_names,
-                                           qc_protocol="10x_CellPlex",
-                                           fastq_screens=('model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA'),
-                                           cellranger_version="6.1.2",
-                                           cellranger_refdata=\
-                                           "/data/refdata-cellranger-2020-A"))
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_CellPlex"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="6.1.2",
+            cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
 class TestParseQCModuleSpec(unittest.TestCase):
 

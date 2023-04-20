@@ -65,7 +65,7 @@ class QCVerifier(QCOutputs):
     def __init__(self,qc_dir,fastq_attrs=None):
         QCOutputs.__init__(self,qc_dir,fastq_attrs=fastq_attrs)
 
-    def verify(self,fastqs,qc_protocol,organism=None,
+    def verify(self,protocol,fastqs,organism=None,
                fastq_screens=None,star_index=None,
                annotation_bed=None,annotation_gtf=None,
                cellranger_version=None,cellranger_refdata=None,
@@ -74,8 +74,8 @@ class QCVerifier(QCOutputs):
         Verify QC outputs for Fastqs against specified protocol
 
         Arguments:
+          protocol (QCProtocol): QC protocol to verify against
           fastqs (list): list of Fastqs to verify outputs for
-          qc_protocol (str): QC protocol to verify against
           organism (str): organism associated with outputs
           fastq_screens (list): list of panel names to verify
             FastqScreen outputs against
@@ -95,9 +95,6 @@ class QCVerifier(QCOutputs):
           Boolean: True if all expected outputs are present,
             False otherwise.
         """
-        # Look up protocol definition
-        protocol = fetch_protocol_definition(qc_protocol)
-
         # Sample names
         samples = set()
         for fq in fastqs:
@@ -161,7 +158,7 @@ class QCVerifier(QCOutputs):
         # Report parameters and status of checks
         print("-"*(10+len(self.qc_dir)))
         print("QC dir  : %s" % self.qc_dir)
-        print("Protocol: %s" % qc_protocol)
+        print("Protocol: %s" % protocol.name)
         print("-"*(10+len(self.qc_dir)))
         # Report parameters
         print("Parameters:")
@@ -822,10 +819,11 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
     logger.debug("verify: cellranger reference data : %s" %
                  cellranger_refdata)
     logger.debug("verify: fastq screens : %s" % (fastq_screens,))
+    protocol = fetch_protocol_definition(qc_protocol)
     verifier = QCVerifier(qc_dir,
                           fastq_attrs=project.fastq_attrs)
-    return verifier.verify(project.fastqs,
-                           qc_protocol,
+    return verifier.verify(protocol,
+                           project.fastqs,
                            organism=organism,
                            fastq_screens=fastq_screens,
                            star_index=star_index,
