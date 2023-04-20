@@ -42,6 +42,7 @@ from ..fastq_utils import group_fastqs_by_name
 from ..settings import Settings
 from ..settings import fetch_reference_data
 from ..qc.pipeline import QCPipeline
+from ..qc.protocols import determine_qc_protocol
 from ..qc.protocols import fetch_protocol_definition
 from ..qc.utils import report_qc
 
@@ -955,6 +956,13 @@ def main():
     project = AnalysisProject(project_dir,fastq_attrs=fastq_attrs)
     print("Loaded project '%s'" % project.name)
 
+    # Fetch the QC protocol
+    if args.qc_protocol:
+        qc_protocol = args.qc_protocol
+    else:
+        qc_protocol = determine_qc_protocol(project)
+    protocol = fetch_protocol_definition(qc_protocol)
+
     # Set working directory for pipeline
     working_dir = args.working_dir
     if not working_dir:
@@ -964,8 +972,8 @@ def main():
     announce("Running QC pipeline")
     runqc = QCPipeline()
     runqc.add_project(project,
+                      protocol,
                       qc_dir=qc_dir,
-                      qc_protocol=args.qc_protocol,
                       report_html=out_file,
                       multiqc=(not args.no_multiqc))
     status = runqc.run(nthreads=nthreads,
