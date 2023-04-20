@@ -180,8 +180,8 @@ class QCPipeline(Pipeline):
         self.add_envmodules('cellranger')
         self.add_envmodules('report_qc')
 
-    def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
-                    qc_protocol=None,report_html=None,multiqc=False,
+    def add_project(self,project,protocol,qc_dir=None,organism=None,
+                    fastq_dir=None,report_html=None,multiqc=False,
                     sample_pattern=None,log_dir=None,convert_gtf=True):
         """
         Add a project to the QC pipeline
@@ -189,6 +189,7 @@ class QCPipeline(Pipeline):
         Arguments:
           project (AnalysisProject): project to run
             QC for
+          protocol (QCProtocol): QC protocol to use
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
           organism (str): organism(s) for project
@@ -196,7 +197,6 @@ class QCPipeline(Pipeline):
             metadata)
           fastq_dir (str): directory holding Fastq files
             (defaults to primary fastq_dir in project)
-          qc_protocol (str): QC protocol to use
           multiqc (bool): if True then also run MultiQC
             (default is not to run MultiQC)
           sample_pattern (str): glob-style pattern to
@@ -215,13 +215,6 @@ class QCPipeline(Pipeline):
         ###################
 
         self.report("Adding project: %s" % project.name)
-
-        # Determine QC protocol (if not set)
-        if qc_protocol is None:
-            qc_protocol = determine_qc_protocol(project)
-
-        # Fetch the QC protocol definition
-        protocol = fetch_protocol_definition(qc_protocol)
 
         # QC modules
         qc_modules = protocol.qc_modules
