@@ -614,7 +614,7 @@ no-bam,true
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB_Flex,/runs/novaseq_50/fastqs,any,PJB_Flex,[Gene Expression|Multiplexing Capture],
+PJB_Flex,/runs/novaseq_50/fastqs,any,PJB_Flex,[Gene Expression|Antibody Capture],
 
 [samples]
 sample_id,probe_barcode_ids,description
@@ -643,8 +643,8 @@ reference,/data/mm10_transcriptome
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Multiplexing Capture],
-PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Multiplexing Capture],
+PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Multiplexing Capture|Antibody Capture],
+PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Multiplexing Capture|Antibody Capture],
 
 [samples]
 sample_id,cmo_ids,description
