@@ -582,6 +582,10 @@ def make_multi_config_template(f,reference=None,probe_set=None,
         else:
             fp.write("#no-bam,true|false\n")
         fp.write("\n")
+        # Feature section
+        fp.write("#[feature]\n"
+                 "#reference,/path/to/feature/reference\n")
+        fp.write("\n")
         # Libraries section
         fp.write("[libraries]\n"
                  "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")

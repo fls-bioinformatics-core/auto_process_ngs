@@ -587,6 +587,11 @@ class TestMakeMultiConfigTemplate(unittest.TestCase):
         """
         expected_content = """[gene-expression]
 reference,/path/to/transcriptome
+#force-cells,n
+#no-bam,true|false
+
+#[feature]
+#reference,/path/to/feature/reference
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
@@ -600,7 +605,7 @@ MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             actual_content = '\n'.join([line for line in fp.read().split('\n')
-                                        if not line.startswith('#')])
+                                        if not line.startswith('##')])
         self.assertEqual(expected_content,actual_content)
 
     def test_make_multi_config_template_flex(self):
@@ -610,7 +615,11 @@ MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
         expected_content = """[gene-expression]
 reference,/data/mm10_transcriptome
 probe-set,/data/mm10_probe_set.csv
+#force-cells,n
 no-bam,true
+
+#[feature]
+#reference,/path/to/feature/reference
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
@@ -631,7 +640,7 @@ MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             actual_content = '\n'.join([line for line in fp.read().split('\n')
-                                        if not line.startswith('#')])
+                                        if not line.startswith('##')])
         self.assertEqual(expected_content,actual_content)
 
     def test_make_multi_config_template_cellplex(self):
@@ -640,6 +649,11 @@ MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
         """
         expected_content = """[gene-expression]
 reference,/data/mm10_transcriptome
+#force-cells,n
+#no-bam,true|false
+
+#[feature]
+#reference,/path/to/feature/reference
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
@@ -659,5 +673,5 @@ MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             actual_content = '\n'.join([line for line in fp.read().split('\n')
-                                        if not line.startswith('#')])
+                                        if not line.startswith('##')])
         self.assertEqual(expected_content,actual_content)
