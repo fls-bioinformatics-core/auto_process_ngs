@@ -1037,6 +1037,7 @@ class QCReport(Document):
             "Multiplexing analysis",
             name="multiplexing_analysis_%s" % sanitize_name(project.id),
             css_classes=('single_library_summary',))
+        section.add("Reported metrics are for gene expression data")
         # Generate headers for table
         tbl_headers = {
             f: "<space title=\"%s\">%s</span>" %
