@@ -582,14 +582,23 @@ def make_multi_config_template(f,reference=None,probe_set=None,
         else:
             fp.write("#no-bam,true|false\n")
         fp.write("\n")
+        # Feature section
+        fp.write("#[feature]\n"
+                 "#reference,/path/to/feature/reference\n")
+        fp.write("\n")
         # Libraries section
         fp.write("[libraries]\n"
                  "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
         if samples:
+            if library_type == "CellPlex":
+                tenx_library_type = "[Gene Expression|Multiplexing Capture|Antibody Capture]"
+            elif library_type == "Flex":
+                tenx_library_type = "[Gene Expression|Antibody Capture]"
             for sample in samples:
-                fp.write("{sample},{fastqs_dir},any,{sample},[Gene Expression|Multiplexing Capture],\n".format(
+                fp.write("{sample},{fastqs_dir},any,{sample},{tenx_library_type},\n".format(
                     sample=sample,
-                    fastqs_dir=(fastq_dir if fastq_dir else "/path/to/fastqs")))
+                    fastqs_dir=(fastq_dir if fastq_dir else "/path/to/fastqs"),
+                    tenx_library_type=tenx_library_type))
         fp.write("\n")
         # Samples section
         fp.write("[samples]\n")

@@ -37,6 +37,7 @@ class CellrangerMultiConfigCsv:
     - sample_names: list of multiplexed sample names
     - reference_data_path: path to the reference dataset
     - probe_set_path: path to the probe set
+    - feature_reference_path: path to the feature reference
     - gex_libraries: list of Fastq IDs associated
       with GEX data
 
@@ -63,6 +64,7 @@ class CellrangerMultiConfigCsv:
         self._samples = {}
         self._reference_data_path = None
         self._probe_set_path = None
+        self._feature_reference_path = None
         self._gex_libraries = {}
         self._fastq_dirs = {}
         self._read_config_csv()
@@ -81,6 +83,9 @@ class CellrangerMultiConfigCsv:
                     continue
                 elif line == "[gene-expression]":
                     current_section = "gene-expression"
+                    continue
+                elif line == "[feature]":
+                    current_section = "feature"
                     continue
                 elif line == "[libraries]":
                     current_section = "libraries"
@@ -118,6 +123,11 @@ class CellrangerMultiConfigCsv:
                     elif line.startswith('probe-set,'):
                         # Extract probe set
                         self._probe_set_path = ','.join(
+                            line.split(',')[1:]).strip()
+                elif current_section == "feature":
+                    if line.startswith('reference,'):
+                        # Extract feature reference file
+                        self._feature_reference_path = ','.join(
                             line.split(',')[1:]).strip()
                 elif current_section == "libraries":
                     if line.startswith('fastq_id,fastqs,'):
@@ -174,6 +184,13 @@ class CellrangerMultiConfigCsv:
         Return the path to the probe set file from config.csv
         """
         return self._probe_set_path
+
+    @property
+    def feature_reference_path(self):
+        """
+        Return the path to the feature reference file from config.csv
+        """
+        return self._feature_reference_path
 
     @property
     def gex_libraries(self):
