@@ -166,6 +166,7 @@ class QCPipeline(Pipeline):
         self.add_runner('fastq_screen_runner')
         self.add_runner('fastqc_runner')
         self.add_runner('star_runner')
+        self.add_runner('picard_runner')
         self.add_runner('qualimap_runner')
         self.add_runner('rseqc_runner')
         self.add_runner('cellranger_count_runner')
@@ -832,6 +833,7 @@ class QCPipeline(Pipeline):
                                  'insert_sizes.%s.tsv' % organism_name))
                 self.add_task(collate_insert_sizes,
                               requires=(insert_size_metrics,),
+                              runner=self.runners['picard_runner']
                               log_dir=log_dir)
                 verify_qc.requires(collate_insert_sizes)
 
