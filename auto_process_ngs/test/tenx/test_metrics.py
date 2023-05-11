@@ -12,6 +12,7 @@ from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_7_1_0
+from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_CSP_7_1_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY_2_0_0
 from auto_process_ngs.tenx.metrics import *
@@ -186,3 +187,18 @@ class TestMultiplexSummary(unittest.TestCase):
         self.assertEqual(m.median_genes_per_cell,2468)
         self.assertEqual(m.total_genes_detected,20942)
         self.assertEqual(m.median_umi_counts_per_cell,6685)
+
+    def test_multiplex_summary_cellranger_7_1_0_antibody_capture(self):
+        """MultiplexSummary: check metrics are extracted from CSV file (Cellranger 7.1.0, antibody capture)
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(CELLPLEX_METRICS_SUMMARY_CSP_7_1_0)
+        m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.cells,1582)
+        self.assertEqual(m.median_reads_per_cell,18376)
+        self.assertEqual(m.median_genes_per_cell,2042)
+        self.assertEqual(m.total_genes_detected,23199)
+        self.assertEqual(m.median_umi_counts_per_cell,5789)
+        self.assertEqual(m.fetch('Median UMI counts per cell',
+                                 'Antibody Capture'),2025)

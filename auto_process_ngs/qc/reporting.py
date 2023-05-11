@@ -1037,6 +1037,7 @@ class QCReport(Document):
             "Multiplexing analysis",
             name="multiplexing_analysis_%s" % sanitize_name(project.id),
             css_classes=('single_library_summary',))
+        section.add("Reported metrics are for gene expression data")
         # Generate headers for table
         tbl_headers = {
             f: "<space title=\"%s\">%s</span>" %
@@ -2144,11 +2145,20 @@ class SampleQCReporter:
             for field in fields:
                 if field == "sample":
                     continue
-                value = self.get_10x_value(field,
-                                           cellranger_multi,
-                                           metrics,
-                                           web_summary,
-                                           relpath=relpath)
+                try:
+                    value = self.get_10x_value(field,
+                                               cellranger_multi,
+                                               metrics,
+                                               web_summary,
+                                               relpath=relpath)
+                except Exception as ex:
+                    logger.error("Failed to acquire value from "
+                                 "multiplexing metrics:")
+                    logger.error("-- Sample: %s" % self.sample)
+                    logger.error("-- Field : %s" % field)
+                    logger.error("-- Metrics file: %s" % metrics.metrics_file)
+                    logger.error("-- Exception: %s" % ex)
+                    raise ex
                 multiplexing_analysis_table.set_value(idx,field,value)
         # Finished
         return True

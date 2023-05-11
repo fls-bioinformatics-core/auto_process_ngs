@@ -62,6 +62,8 @@ class MetricsSummary(TabFile):
             of data (default is to expect a single line of
             data)
         """
+        # Store file
+        self._filename = f
         # Multi-line summary?
         self._multiline = multiline
         # Read in data from the file
@@ -130,6 +132,9 @@ class MetricsSummary(TabFile):
                                       "'fetch' method for multi-line "
                                       "metrics files")
         return self[0][field]
+    @property
+    def metrics_file(self):
+        return self._filename
 
 class GexSummary(MetricsSummary):
     """
@@ -365,6 +370,15 @@ class MultiplexSummary(MetricsSummary):
     - median_genes_per_cell
     - total_genes_detected
     - median_umi_counts_per_cell
+
+    NB the returned values for these properties are all
+    from the gene expression data.
+
+    Values for other library types can be fetched
+    directly by using the 'fetch' method and specifying
+    the library type, for example:
+
+    >>> MultiplexSummary(f).fetch('Cells','Antibody Capture')
     """
     def __init__(self,f):
         """
@@ -374,14 +388,31 @@ class MultiplexSummary(MetricsSummary):
           f (str): path to the 'summary.csv' file
         """
         MetricsSummary.__init__(self,f,multiline=True)
-    def fetch(self,name):
+    def fetch(self,name,library_type='Gene Expression'):
         """
         Fetch data associated with an arbitrary field
+
+        By default data associated with 'Gene Expression'
+        are returned; data associated with other library
+        types can be fetched by specifying a different
+        value for the 'library_type' argument (either
+        'Multiplexing Capture' or 'Antibody Capture').
+
+        Arguments:
+          name (str): name of the metric
+          library_type (str): library type to fetch
+            the metric for (default: 'Gene Expression')
         """
         metric = self.lookup('Metric Name',name)
-        if len(metric) != 1:
+        if not metric:
             raise Exception("Failed to lookup metric '%s'" % name)
-        return metric[0]['Metric Value']
+        # Pick out the specific library
+        for m in metric:
+            if m['Library Type'] == library_type:
+                return m['Metric Value']
+        # No matching library
+        raise Exception("No value for metric '%s' associated with "
+                        "library type '%s'" % (name,library_type))
     @property
     def cells(self):
         """
