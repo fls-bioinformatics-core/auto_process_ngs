@@ -822,7 +822,7 @@ class QCPipeline(Pipeline):
                     project.name,
                     get_bam_files.output.bam_files,
                     os.path.join(qc_dir,'picard',organism_name))
-                self.add_task(insert_size_metrics,,
+                self.add_task(insert_size_metrics,
                               runner=self.runners['picard_runner'],
                               log_dir=log_dir)
 
