@@ -224,6 +224,7 @@ Runner name                   Used for
 ``merge_fastqs``              Merging Fastq files in Fastq generation
 ``star``                      Running pipeline tasks which use ``STAR``
                               (e.g. strandedness, alignment etc)
+``picard``                    Running ``Picard`` in the QC pipeline
 ``qualimap``                  Running ``Qualimap`` in the QC pipeline
 ``rseqc``                     Running ``RSeQC`` ``geneBody_coverage.py``
                               in the QC pipeline
