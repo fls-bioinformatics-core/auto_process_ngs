@@ -3467,6 +3467,8 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
         # Conda dependencies
         self.conda("picard=2.27.1",
                    "r-base=4")
+        self.java_gc_threads = 1
+        self.java_mem_size = '8G'
     def setup(self):
         # Set up commands to run CleanSam and
         # CollectInsertSizeMetrics for each BAM file
@@ -3485,6 +3487,7 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
             self.add_cmd("%s: collect insert size metrics" %
                          os.path.basename(bam),
                          """
+                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={java_gc_threads} -Xmx{java_mem_size}"
                          tmpdir=$(mktemp -d)
                          picard CleanSam \\
                              -I {bam} \\
@@ -3498,7 +3501,9 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                              -XX:ActiveProcessorCount={nslots}
                          """.format(bam=bam,
                                     basename=os.path.basename(bam)[:-4],
-                                    nslots=self.runner_nslots))
+                                    nslots=self.runner_nslots,
+                                    java_gc_threads=self.java_gc_threads,
+                                    java_mem_size=self.java_mem_size))
             get_version = True
         # Get version of Picard
         if get_version:
