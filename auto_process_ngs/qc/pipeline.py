@@ -3643,6 +3643,7 @@ class RunQualimapRnaseq(PipelineTask):
             what the strand-specificity is)
         """
         self.conda("qualimap=2.2")
+        self.java_gc_threads = 1
         self.java_mem_size = '8G'
     def setup(self):
         # Check for feature file
@@ -3702,7 +3703,7 @@ class RunQualimapRnaseq(PipelineTask):
             self.add_cmd("Run qualimap rnaseq on %s" %
                          os.path.basename(bam),
                          """
-                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={nthreads} -Xmx{java_mem_size}"
+                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={java_gc_threads} -Xmx{java_mem_size}"
                          if [ ! -z "$DISPLAY" ] ; then
                              echo "DISPLAY set to $DISPLAY"
                              echo "Unsetting to disable interactive window"
@@ -3723,6 +3724,7 @@ class RunQualimapRnaseq(PipelineTask):
                              paired=('-pe' if paired_end else ''),
                              out_dir=bam_name,
                              nthreads=self.runner_nslots,
+                             java_gc_threads=self.java_gc_threads,
                              java_mem_size=self.java_mem_size))
             get_version = True
         # Get version of Qualimap
