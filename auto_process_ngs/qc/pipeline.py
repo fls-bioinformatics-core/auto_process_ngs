@@ -3468,7 +3468,7 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
         self.conda("picard=2.27.1",
                    "r-base=4")
         self.java_gc_threads = 1
-        self.java_mem_size = '8G'
+        self.java_mem_size = '4G'
     def setup(self):
         # Set up commands to run CleanSam and
         # CollectInsertSizeMetrics for each BAM file
