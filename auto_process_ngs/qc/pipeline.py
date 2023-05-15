@@ -166,6 +166,7 @@ class QCPipeline(Pipeline):
         self.add_runner('fastq_screen_runner')
         self.add_runner('fastqc_runner')
         self.add_runner('star_runner')
+        self.add_runner('picard_runner')
         self.add_runner('qualimap_runner')
         self.add_runner('rseqc_runner')
         self.add_runner('cellranger_count_runner')
@@ -822,6 +823,7 @@ class QCPipeline(Pipeline):
                     get_bam_files.output.bam_files,
                     os.path.join(qc_dir,'picard',organism_name))
                 self.add_task(insert_size_metrics,
+                              runner=self.runners['picard_runner'],
                               log_dir=log_dir)
 
                 collate_insert_sizes = CollateInsertSizes(
@@ -3465,6 +3467,8 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
         # Conda dependencies
         self.conda("picard=2.27.1",
                    "r-base=4")
+        self.java_gc_threads = 1
+        self.java_mem_size = '4G'
     def setup(self):
         # Set up commands to run CleanSam and
         # CollectInsertSizeMetrics for each BAM file
@@ -3483,6 +3487,7 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
             self.add_cmd("%s: collect insert size metrics" %
                          os.path.basename(bam),
                          """
+                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={java_gc_threads} -Xmx{java_mem_size}"
                          tmpdir=$(mktemp -d)
                          picard CleanSam \\
                              -I {bam} \\
@@ -3496,7 +3501,9 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                              -XX:ActiveProcessorCount={nslots}
                          """.format(bam=bam,
                                     basename=os.path.basename(bam)[:-4],
-                                    nslots=self.runner_nslots))
+                                    nslots=self.runner_nslots,
+                                    java_gc_threads=self.java_gc_threads,
+                                    java_mem_size=self.java_mem_size))
             get_version = True
         # Get version of Picard
         if get_version:
@@ -3636,6 +3643,7 @@ class RunQualimapRnaseq(PipelineTask):
             what the strand-specificity is)
         """
         self.conda("qualimap=2.2")
+        self.java_gc_threads = 1
         self.java_mem_size = '8G'
     def setup(self):
         # Check for feature file
@@ -3695,7 +3703,7 @@ class RunQualimapRnaseq(PipelineTask):
             self.add_cmd("Run qualimap rnaseq on %s" %
                          os.path.basename(bam),
                          """
-                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={nthreads} -Xmx{java_mem_size}"
+                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={java_gc_threads} -Xmx{java_mem_size}"
                          if [ ! -z "$DISPLAY" ] ; then
                              echo "DISPLAY set to $DISPLAY"
                              echo "Unsetting to disable interactive window"
@@ -3716,6 +3724,7 @@ class RunQualimapRnaseq(PipelineTask):
                              paired=('-pe' if paired_end else ''),
                              out_dir=bam_name,
                              nthreads=self.runner_nslots,
+                             java_gc_threads=self.java_gc_threads,
                              java_mem_size=self.java_mem_size))
             get_version = True
         # Get version of Qualimap

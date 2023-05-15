@@ -372,6 +372,7 @@ class Settings:
         # Handle runners that fall back to the 'qc' runner
         for name in ('fastqc',
                      'fastq_screen',
+                     'picard',
                      'qualimap',
                      'rseqc',
                      'star',):

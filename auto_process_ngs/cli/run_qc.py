@@ -779,6 +779,8 @@ def main():
         nthreads = min(max_cores,8)
         nthreads_star = min(max_cores,
                                 int(math.ceil(32.0/mempercore)))
+        ncores_picard = min(max_cores,
+                              int(math.ceil(4.0/mempercore)*2))
         ncores_qualimap = min(max_cores,
                               int(math.ceil(4.0/mempercore)*2))
         # Override if nthreads was explicitly set
@@ -786,6 +788,7 @@ def main():
         if args.nthreads:
             nthreads = args.nthreads
             nthreads_star = args.nthreads
+            ncores_picard = args.nthreads
             ncores_qualimap = args.nthreads
         print("-- Threads for QC: %s" % nthreads)
         print("-- Threads for STAR: %s" % nthreads_star)
@@ -815,6 +818,7 @@ def main():
             SimpleJobRunner(nslots=cellranger_localcores),
             'fastqc_runner': SimpleJobRunner(nslots=nthreads),
             'fastq_screen_runner': SimpleJobRunner(nslots=nthreads),
+            'picard_runner': SimpleJobRunner(nslots=ncores_picard),
             'qualimap_runner': SimpleJobRunner(nslots=ncores_qualimap),
             'rseqc_runner': SimpleJobRunner(),
             'star_runner': SimpleJobRunner(nslots=nthreads_star),
@@ -845,6 +849,7 @@ def main():
                 'cellranger_multi_runner': default_runner,
                 'fastqc_runner': default_runner,
                 'fastq_screen_runner': default_runner,
+                'picard_runner': default_runner,
                 'qualimap_runner': default_runner,
                 'rseqc_runner': default_runner,
                 'star_runner': default_runner,
@@ -860,6 +865,7 @@ def main():
                 'cellranger_multi_runner': settings.runners.cellranger_multi,
                 'fastqc_runner': settings.runners.fastqc,
                 'fastq_screen_runner': settings.runners.fastq_screen,
+                'picard_runner': settings.runners.picard,
                 'qualimap_runner': settings.runners.qualimap,
                 'rseqc_runner': settings.runners.rseqc,
                 'star_runner': settings.runners.star,
