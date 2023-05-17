@@ -672,9 +672,28 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
 
 class TestFetchProtocolDefinition(unittest.TestCase):
 
-    def test_fetch_protocol_definition(self):
+    def test_fetch_protocol_definition_from_specification(self):
         """
-        fetch_protocol_definition: check definition is returned
+        fetch_protocol_definition: get definition from specification
+        """
+        p = fetch_protocol_definition("custom:Custom protocol:"
+                                      "seq_reads=[r1,r2]:"
+                                      "index_reads=[]:"
+                                      "qc_modules=[fastqc,"
+                                      "fastq_screen]")
+        self.assertEqual(p.name,"custom")
+        self.assertEqual(p.reads.seq_data,('r1','r2'))
+        self.assertEqual(p.reads.index,())
+        self.assertEqual(p.reads.qc,('r1','r2'))
+        self.assertEqual(p.read_numbers.seq_data,(1,2))
+        self.assertEqual(p.read_numbers.index,())
+        self.assertEqual(p.read_numbers.qc,(1,2))
+        self.assertEqual(p.qc_modules,['fastq_screen',
+                                       'fastqc'])
+
+    def test_fetch_protocol_definition_from_name(self):
+        """
+        fetch_protocol_definition: get built-in definition from name
         """
         p = fetch_protocol_definition("standardPE")
         self.assertEqual(p.name,"standardPE")
@@ -692,9 +711,9 @@ class TestFetchProtocolDefinition(unittest.TestCase):
                                        'sequence_lengths',
                                        'strandedness'])
 
-    def test_fetch_protocol_definition_unknown_protocol(self):
+    def test_fetch_protocol_definition_unknown_protocol_name(self):
         """
-        fetch_protocol_definition: raises KeyError for unknown protocol
+        fetch_protocol_definition: raises KeyError for unknown protocol name
         """
         self.assertRaises(KeyError,
                           fetch_protocol_definition,

@@ -639,25 +639,37 @@ def determine_qc_protocol(project):
             protocol = "10x_Multiome_GEX"
     return protocol
 
-def fetch_protocol_definition(name):
+def fetch_protocol_definition(p):
     """
     Return the definition for a QC protocol
 
+    Fetches a QCProtocol instance for the supplied
+    protocol, which can either be a protocol
+    definition string or the name of a built-in
+    QC protocol.
+
     Arguments:
-      name (str): name of the QC protocol
+      p (str): name or specification for the QC
+       protocol
 
     Returns:
       QCProtocol: QCProtocol object representing
-        the requested protocol
+        the requested protocol.
 
     Raises:
-      KeyError: when the requested protocol isn't
-        defined.
+      KeyError: when a QCProtocol instance can't
+        be returned for the requested protocol.
     """
-    if name not in QC_PROTOCOLS:
-        raise KeyError("%s: undefined QC protocol" % name)
-    protocol_defn = QC_PROTOCOLS[name]
-    return QCProtocol(name=name,
+    # Try protocol specification
+    try:
+        return QCProtocol.from_specification(p)
+    except QCProtocolParseSpecError:
+        pass
+    # Try looking up a built-in protocol
+    if p not in QC_PROTOCOLS:
+        raise KeyError("%s: not built-in QC protocol" % p)
+    protocol_defn = QC_PROTOCOLS[p]
+    return QCProtocol(name=p,
                       description=protocol_defn['description'],
                       seq_data_reads=protocol_defn['reads']['seq_data'],
                       index_reads=protocol_defn['reads']['index'],
