@@ -694,8 +694,8 @@ def parse_protocol_spec(s):
         specification.
 
     Raises:
-      Exception: if the specification string cannot be
-        parsed correctly.
+      QCProtocolParseSpecError: if the specification
+        string cannot be parsed correctly.
     """
     # Initialise
     seq_data_reads = None
@@ -711,6 +711,9 @@ def parse_protocol_spec(s):
         s = ""
     logger.debug("Name: %s" % name)
     logger.debug("(Remaining string: %s)" % s)
+    if not s:
+        raise QCProtocolParseSpecError("Incomplete specification: "
+                                       "nothing after 'name'?")
     # Extract description
     if s.startswith('"') or s.startswith("'"):
         quote = s[0]
@@ -718,13 +721,14 @@ def parse_protocol_spec(s):
         try:
             ix = s.index(quote)
             if s[ix+1] != ':':
-                raise Exception("Unable to parse description: continues "
-                                "after closing quote?")
+                raise QCProtocolParseSpecError("Unable to parse "
+                                               "description: continues "
+                                               "after closing quote?")
             description = s[:ix]
             s = s[ix+2:]
         except ValueError:
-            raise Exception("Unable to parse description: no closing "
-                            "quote?")
+            raise QCProtocolParseSpecError("Unable to parse description: "
+                                           "no closing quote?")
     else:
         try:
             ix = s.index(':')
@@ -735,6 +739,13 @@ def parse_protocol_spec(s):
             s = ""
     logger.debug("Description: %s" % description)
     logger.debug("(Remaining string: %s)" % s)
+    if not s:
+        raise QCProtocolParseSpecError("Incomplete specification: "
+                                       "nothing after description?")
+    # Basic checks on remainder of string
+    if s.count("[") != s.count("]"):
+        raise QCProtocolParseSpecError("Specification syntax error: "
+                                       "unmatched braces?")
     # Break up remainder of the string
     while s:
         if s.startswith(':'):
@@ -742,15 +753,11 @@ def parse_protocol_spec(s):
             s = s[1:]
         if s.startswith("seq_reads=["):
             # Sequencing data reads
-            try:
-                ix = s.index(']')
-                seq_data_reads = list(
-                    filter(lambda r: r != '',
-                           s[len("seq_reads=["):ix].split(',')))
-                s = s[ix+1:]
-            except ValueError:
-                raise Exception("Unable to parse sequence data reads: no "
-                                "closing brace?")
+            ix = s.index(']')
+            seq_data_reads = list(
+                filter(lambda r: r != '',
+                       s[len("seq_reads=["):ix].split(',')))
+            s = s[ix+1:]
             logger.debug("Seq data reads: %s" % seq_data_reads)
             logger.debug("(Remaining string: %s)" % s)
         elif s.startswith("index_reads=["):
@@ -762,8 +769,8 @@ def parse_protocol_spec(s):
                            s[len("index_reads=["):ix].split(',')))
                 s = s[ix+1:]
             except ValueError:
-                raise Exception("Unable to parse index reads: no "
-                                "closing brace?")
+                raise QCProtocolParseSpecError("Unable to parse index "
+                                               "reads: no closing brace?")
             logger.debug("Index reads: %s" % index_reads)
             logger.debug("Remaining string: %s" % s)
         elif s.startswith("qc_modules=["):
@@ -779,11 +786,39 @@ def parse_protocol_spec(s):
             logger.debug("QC modules: %s" % qc_modules)
             logger.debug("Remaining string: %s" % s)
         elif s:
-            raise Exception("Unable to parse section starting '%s...'" %
-                            s[:5])
+            # Unknown component
+            raise QCProtocolParseSpecError("Unable to parse section "
+                                           "starting '%s...': "
+                                           "unknown specification "
+                                           "element?" % s[:5])
     # Return mapping of extracted components
     return AttributeDictionary(name=name,
                                description=description,
                                seq_data_reads=seq_data_reads,
                                index_reads=index_reads,
                                qc_modules=qc_modules)
+
+######################################################################
+# Custom exceptions
+######################################################################
+
+class QCProtocolError(Exception):
+    """
+    Base class for QC protocol-specific exceptions
+    """
+
+class QCProtocolParseSpecError(QCProtocolError):
+    """
+    Exception raised when a protocol specificaion
+    can't be parsed
+
+    Arguments:
+      message (str): error message
+      protocol_spec (str): specification string being
+        parsed
+    """
+    def __init__(self,message=None):
+        if message is None:
+            message = "Error parsing QC protocol specification"
+        self.message = message
+        QCProtocolError.__init__(self,self.message)

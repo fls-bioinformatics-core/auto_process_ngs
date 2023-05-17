@@ -12,6 +12,7 @@ from auto_process_ngs.qc.protocols import QCProtocol
 from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.protocols import parse_protocol_spec
+from auto_process_ngs.qc.protocols import QCProtocolParseSpecError
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -834,3 +835,101 @@ class TestParseProtocolSpec(unittest.TestCase):
         self.assertEqual(p.seq_data_reads,['r1','r2'])
         self.assertEqual(p.index_reads,[])
         self.assertEqual(p.qc_modules,[])
+
+    def test_parse_protocol_spec_incomplete_specification(self):
+        """
+        parse_protocol_spec: raises exception for incomplete specification
+        """
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test")
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:description")
+
+    def test_parse_protocol_spec_bad_description(self):
+        """
+        parse_protocol_spec: raises exception for incorrect description
+        """
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:'Continues'after quotes:"
+                          "seq_reads=[r1,r2]:"
+                          "index_reads=[]:"
+                          "qc_modules=[]")
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:'Mismatched quotes\":"
+                          "seq_reads=[r1,r2]:"
+                          "index_reads=[]:"
+                          "qc_modules=[]")
+
+    def test_parse_protocol_spec_bad_seq_data_reads(self):
+        """
+        parse_protocol_spec: raises exception for incorrect seq data reads
+        """
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:Reads beyond closing brace:"
+                          "seq_reads=[r1,r2],r3:"
+                          "index_reads=[]:"
+                          "qc_modules=[]")
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:Closing brace missing:"
+                          "seq_reads=[r1,r2:"
+                          "index_reads=[]:"
+                          "qc_modules=[]")
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:Opening brace missing:"
+                          "seq_reads=r1,r2]:"
+                          "index_reads=[]:"
+                          "qc_modules=[]")
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:No braces:"
+                          "seq_reads=r1,r2:"
+                          "index_reads=[]:"
+                          "qc_modules=[]")
+
+    def test_parse_protocol_spec_bad_index_reads(self):
+        """
+        parse_protocol_spec: raises exception for incorrect index reads
+        """
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:Reads beyond closing brace:"
+                          "seq_reads=[]:"
+                          "index_reads=[r1,r2],r3:"
+                          "qc_modules=[]")
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:Closing brace missing:"
+                          "seq_reads=[]:"
+                          "index_reads=[r1,r2:"
+                          "qc_modules=[]")
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:Opening brace missing:"
+                          "seq_reads=[]:"
+                          "index_reads=r1,r2]:"
+                          "qc_modules=[]")
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:No braces:"
+                          "seq_reads=[]:"
+                          "index_reads=r1,r2:"
+                          "qc_modules=[]")
+
+    def test_parse_protocol_spec_unrecognised_component(self):
+        """
+        parse_protocol_spec: raises exception for unrecognised component
+        """
+        self.assertRaises(QCProtocolParseSpecError,
+                          parse_protocol_spec,
+                          "test:Unrecognised component:" \
+                          "seq_reads=[r1,r2]:" \
+                          "index_reads=[]:" \
+                          "magic_spell=True:" \
+                          "qc_modules=[fastqc]")
