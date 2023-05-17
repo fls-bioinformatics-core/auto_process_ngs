@@ -43,7 +43,7 @@ The available modifiers are the same as the parameter list for the
 This module also provides the following classes and functions:
 
 - QCProtocol: class representing a QC protocol
-- determine_qc_protocol: get QC protocol for a project
+- determine_qc_protocol: determine built-in protocol for a project
 - fetch_protocol_definition: get the definition for a QC protocol
 - parse_protocol_repr: get a QCProtocol object from a string
 """
@@ -336,7 +336,7 @@ class QCProtocol:
     - description: text description
     - reads: AttributeDictionary with elements 'seq_data',
       'index', and 'qc' (listing sequence data, index reads,
-      and all read for QC, respectively)
+      and all reads for QC, respectively)
     - read_numbers: AttributeDictionary with the same
       elements as 'reads', listing non-index read numbers
     - read_range: AttributeDictionary with normalised read
@@ -354,7 +354,7 @@ class QCProtocol:
 
     READ[:[START]-[END]]
 
-    For example: 'r1:1-50'. These can ben accessed via the
+    For example: 'r1:1-50'. These can be accessed via the
     'read_range' property as e.g. 'read_range.r1' and will
     be returned as either 'None' (if no range was supplied),
     or a tuple '(START,END)' (where either 'START' or 'END'
