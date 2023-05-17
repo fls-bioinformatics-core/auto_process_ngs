@@ -360,6 +360,9 @@ class QCProtocol:
     or a tuple '(START,END)' (where either 'START' or 'END'
     will be 'None' if no limit was supplied).
 
+    The 'seq_data_reads' and 'index_reads' properties
+    store the original read specifications.
+
     QCProtocol instances can also be created directly from
     protocol specification strings using the
     'from_specification' class method. (Specification
@@ -385,10 +388,15 @@ class QCProtocol:
                             else "")
         self.qc_modules = (sorted([m for m in qc_modules])
                            if qc_modules is not None else [])
+        # Store supplied reads
+        self.seq_data_reads = [str(r).lower() for r in seq_data_reads] \
+                              if seq_data_reads else []
+        self.index_reads = [str(r).lower() for r in index_reads] \
+                           if index_reads else []
         # Normalise and store supplied read names
         self.reads = AttributeDictionary(
-            seq_data=self.__reads(seq_data_reads),
-            index=self.__reads(index_reads))
+            seq_data=self.__reads(self.seq_data_reads),
+            index=self.__reads(self.index_reads))
         # Generate and store QC read names
         self.reads['qc'] = self.__reads(self.reads.seq_data +
                                         self.reads.index)

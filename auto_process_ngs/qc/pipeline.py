@@ -269,7 +269,10 @@ class QCPipeline(Pipeline):
         self.report("-- SC platform: %s" % project.info.single_cell_platform)
         self.report("-- Organism   : %s" % organism)
         self.report("-- Report     : %s" % report_html)
-        self.report("QC modules :")
+        self.report("Reads")
+        self.report("-- Seq data   : %s" % protocol.seq_data_reads)
+        self.report("-- Index      : %s" % protocol.index_reads)
+        self.report("QC modules")
         for qc_module in qc_modules:
             self.report("-- %s" % qc_module)
 
