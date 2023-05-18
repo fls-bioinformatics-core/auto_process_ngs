@@ -693,7 +693,7 @@ def parse_protocol_spec(s):
 
     - name
     - description
-    - seq_data_reads
+    - seq_reads
     - index_reads
     - qc_modules
 
@@ -832,8 +832,6 @@ class QCProtocolParseSpecError(QCProtocolError):
 
     Arguments:
       message (str): error message
-      protocol_spec (str): specification string being
-        parsed
     """
     def __init__(self,message=None):
         if message is None:
