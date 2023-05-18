@@ -669,10 +669,8 @@ def fetch_protocol_definition(p):
         be returned for the requested protocol.
     """
     # Try protocol specification
-    try:
+    if ':' in p:
         return QCProtocol.from_specification(p)
-    except QCProtocolParseSpecError:
-        pass
     # Try looking up a built-in protocol
     if p not in QC_PROTOCOLS:
         raise KeyError("%s: not built-in QC protocol" % p)
