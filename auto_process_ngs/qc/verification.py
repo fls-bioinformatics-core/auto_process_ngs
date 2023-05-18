@@ -757,8 +757,8 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
       qc_dir (str): path to the QC output dir; relative
         path will be treated as a subdirectory of the
         project being checked.
-      qc_protocol (str): QC protocol to verify against
-        (optional)
+      qc_protocol (str): QC protocol name or specification
+        to verify against (optional)
 
      Returns:
        Boolean: Returns True if all expected QC products
@@ -783,7 +783,10 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
     if os.path.exists(qc_info_file):
         qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
         if not qc_protocol:
-            qc_protocol = qc_info['protocol']
+            if qc_info['protocol_specification']:
+                qc_protocol = qc_info['protocol_specification']
+            else:
+                qc_protocol = qc_info['protocol']
         try:
             organism = qc_info['organism']
         except KeyError:
