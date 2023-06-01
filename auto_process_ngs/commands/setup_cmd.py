@@ -34,7 +34,8 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
-          run_number=None,extra_files=None,unaligned_dir=None):
+          run_number=None,analysis_number=None,extra_files=None,
+          unaligned_dir=None):
     """
     Set up the initial analysis directory
 
@@ -51,6 +52,11 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
         a URL (optional, will use sample sheet from the
         source data directory if present)
       run_number (str): facility run number
+      analysis_number (str): optional number assigned to the
+        analysis to distinguish it from other processing or
+        analysis attempts. If supplied then will be appended
+        to the analysis directory name (unless a name is
+        explicitly supplied via 'analysis_dir')
       extra_files (list): arbitrary additional files to copy
         into the new analysis directory; each file can be a
         local or remote file or a URL
@@ -68,6 +74,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     if analysis_dir is None:
         analysis_dir = os.path.join(
             os.getcwd(),run_name)+'_analysis'
+        if analysis_number:
+            analysis_dir += str(analysis_number)
     else:
         analysis_dir = os.path.abspath(analysis_dir)
     # Create the analysis directory structure
@@ -259,6 +267,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.metadata['sequencer_model'] = model
     ap.metadata['source'] = data_source
     ap.metadata['run_number'] = run_number
+    ap.metadata['analysis_number'] = analysis_number
     # Make a 'projects.info' metadata file
     if not ap.params.project_metadata:
         if unaligned_dir is not None:
