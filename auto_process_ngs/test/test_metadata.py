@@ -315,6 +315,7 @@ class TestAnalysisDirMetadata(unittest.TestCase):
         """
         metadata = AnalysisDirMetadata()
         self.assertEqual(metadata.run_number,None)
+        self.assertEqual(metadata.analysis_number,None)
         self.assertEqual(metadata.platform,None)
         self.assertEqual(metadata.source,None)
         self.assertEqual(metadata.processing_software,None)
