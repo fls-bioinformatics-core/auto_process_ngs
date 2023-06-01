@@ -194,11 +194,11 @@ Run IDs and run reference IDs
 =============================
 
 Within the ``auto_process`` package runs can be identified by
-automatically generated run IDs of the general form:
+automatically generated **run IDs** of the general form:
 
 ::
 
-   PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER
+   PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER[.ANALYSIS_NUMBER]
 
 where:
 
@@ -211,6 +211,8 @@ where:
   ``140701_SN0123_0045_000000000-A1BCD`` it would be ``45``)
 * ``FACILITY_RUN_NUMBER`` is the run number that has been
   assigned by the facility
+* ``ANALYSIS_NUMBER`` is an optional arbitrary number that can be
+  assigned to different analyses of the same run
 
 For example:
 
@@ -240,7 +242,14 @@ The special cases are handled as follows:
   been supplied (e.g. for a run called ``rag_05_2017`` the run ID
   might look like ``rag_05_2017#90`` or ``MISEQ_rag_05_2017#90``)
 
-Run reference IDs are based on the run ID with additional
+If an analysis number is assigned then the example run ID will
+look like:
+
+::
+
+   NOVASEQ6000_230419#22.2
+
+**Run reference IDs** are based on the run ID with additional
 arbitrary elements appended, i.e.:
 
 ::

@@ -1409,6 +1409,23 @@ class TestRunIdFunction(unittest.TestCase):
                                 facility_run_number="BCLFiles"),
                          "RAG_10x_BCLFiles_Download")
 
+    def test_run_id_with_analysis_number(self):
+        """
+        run_id: handle analysis number
+        """
+        self.assertEqual(
+            run_id("160621_M00879_0087_000000000-AGEW9",
+                   platform="miseq",
+                   facility_run_number=87,
+                   analysis_number=2),
+            "MISEQ_160621#87.2")
+        self.assertEqual(
+            run_id("160621_M00879_0087_000000000-AGEW9",
+                   platform="miseq",
+                   facility_run_number=22,
+                   analysis_number=3),
+            "MISEQ_160621/87#22.3")
+
 class TestSplitSampleNameFunction(unittest.TestCase):
     """
     Tests for the 'split_sample_name' function
