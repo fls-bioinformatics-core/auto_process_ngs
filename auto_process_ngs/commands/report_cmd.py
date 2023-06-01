@@ -306,6 +306,7 @@ def report_summary(ap):
     datestamp = None
     instrument = None
     run_number = None
+    analysis_number = None
     run_name = ap.run_name
     try:
         datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
@@ -319,6 +320,8 @@ def report_summary(ap):
         platform = 'unknown'
     if ap.metadata.run_number is not None:
         run_number = ap.metadata.run_number
+    if ap.metadata.analysis_number is not None:
+        analysis_number = ap.metadata.analysis_number
     # Processing software information
     try:
         processing_software = ast.literal_eval(
@@ -349,6 +352,8 @@ def report_summary(ap):
                                                datestamp)
     else:
         title = "%s" % os.path.basename(ap.analysis_dir)
+    if analysis_number:
+        title += "[analysis #%s]" % analysis_number
     report.append("%s\n%s" % (title,'='*len(title)))
     # General information
     field_width = max([len(i) for i in report_items])
