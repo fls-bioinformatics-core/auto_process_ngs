@@ -613,6 +613,9 @@ def fetch_value(ap,project,field):
     elif field == 'run_number':
         return ('' if not ap.metadata.run_number
                 else str(ap.metadata.run_number))
+    elif field == 'analysis_number':
+        return ('' if not ap.metadata.analysis_number
+                else str(ap.metadata.analysis_number))
     elif field == 'source' or field == 'data_source':
         return ('' if not ap.metadata.source
                 else ap.metadata.source)

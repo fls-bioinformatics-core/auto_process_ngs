@@ -1166,7 +1166,8 @@ class TestFetchValueFunction(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "sequencer_model": "MiSeq" },
+                       "sequencer_model": "MiSeq",
+                       "analysis_number": 2 },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
@@ -1190,8 +1191,9 @@ class TestFetchValueFunction(unittest.TestCase):
                                   os.path.join(mockdir.dirn,'AB'))
         # Check the returned values
         self.assertEqual(fetch_value(ap,project,'datestamp'),'170901')
-        self.assertEqual(fetch_value(ap,project,'run_id'),'MISEQ_170901#87')
+        self.assertEqual(fetch_value(ap,project,'run_id'),'MISEQ_170901#87.2')
         self.assertEqual(fetch_value(ap,project,'run_number'),'87')
+        self.assertEqual(fetch_value(ap,project,'analysis_number'),'2')
         self.assertEqual(fetch_value(ap,project,'source'),'testing')
         self.assertEqual(fetch_value(ap,project,'data_source'),'testing')
         self.assertEqual(fetch_value(ap,project,'analysis_dir'),mockdir.dirn)
