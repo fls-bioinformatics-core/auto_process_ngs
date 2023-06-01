@@ -1734,7 +1734,9 @@ class QCProject:
             return run_id(self.info['run'],
                           platform=self.info['platform'],
                           facility_run_number=
-                          self.run_metadata['run_number'])
+                          self.run_metadata['run_number'],
+                          analysis_number=
+                          self.run_metadata['analysis_number'])
         except (AttributeError,TypeError) as ex:
             logger.warning("Run reference ID can't be "
                            "determined: %s (ignored)" % ex)
