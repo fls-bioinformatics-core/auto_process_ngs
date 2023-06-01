@@ -1229,14 +1229,15 @@ class AnalysisSample:
 # Functions
 #######################################################################
 
-def run_id(run_name,platform=None,facility_run_number=None):
+def run_id(run_name,platform=None,facility_run_number=None,
+           analysis_number=None):
     """
     Return a run ID e.g. 'HISEQ_140701/242#22'
 
     The run ID is a code that identifies the sequencing run, and has
     the general form:
 
-    ``PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER``
+    ``PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER[.ANALYSIS_NUMBER]``
 
     - PLATFORM is always uppercased e.g. HISEQ, MISEQ, GA2X
     - DATESTAMP is the YYMMDD code e.g. 140701
@@ -1245,6 +1246,9 @@ def run_id(run_name,platform=None,facility_run_number=None):
       it is '45'
     - FACILITY_RUN_NUMBER is the run number that has been assigned
       by the facility
+    - ANALYSIS_NUMBER is an optional number assigned to the analysis
+      to distinguish it from other analysis attempts (for example, if
+      a run is reprocessed at a later date with updated software)
 
     Note that the instrument run number is only used if it differs
     from the facility run number.
@@ -1270,6 +1274,9 @@ def run_id(run_name,platform=None,facility_run_number=None):
       facility_run_number (int): the run number assigned by the
         local facility (can be different from the instrument
         run number) (optional)
+      analysis_number (int): number assigned to this analysis
+        to distinguish it from other analysis attempts
+        (optional)
 
     Returns:
       String: run ID.
@@ -1318,6 +1325,8 @@ def run_id(run_name,platform=None,facility_run_number=None):
             run_id += "/%s" % run_number
     if facility_run_number is not None:
         run_id += "#%s" % facility_run_number
+    if analysis_number is not None:
+        run_id += ".%s" % analysis_number
     return run_id
 
 def split_sample_name(s):

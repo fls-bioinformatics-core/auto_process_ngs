@@ -649,7 +649,8 @@ class AutoProcess:
         return run_id(
             self.run_name,
             platform=self.metadata.platform,
-            facility_run_number=self.metadata.run_number)
+            facility_run_number=self.metadata.run_number,
+            analysis_number=self.metadata.analysis_number)
 
     @property
     def run_reference_id(self):

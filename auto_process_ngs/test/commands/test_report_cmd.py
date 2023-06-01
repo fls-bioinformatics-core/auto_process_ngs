@@ -597,6 +597,56 @@ Additional notes/comments:
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_summary_with_analysis_number(self):
+        """report: report run with analysis number in 'summary' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq",
+                       "analysis_number": 2 },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "Comments": "Repeat of previous run" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate summary report
+        expected = """MISEQ run #87 datestamped 170901 [analysis #2]
+==============================================
+Run name : 170901_M00879_0087_000000000-AGEW9
+Reference: MISEQ_170901#87.2
+Platform : MISEQ
+Sequencer: MiSeq
+Directory: %s
+Endedness: Paired end
+Bcl2fastq: Unknown
+
+2 projects:
+- 'AB':  Alison Bell           Human RNA-seq  2 samples (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq 2 samples (PI Colin Delaney Eccleston)
+
+Additional notes/comments:
+- CDE: Repeat of previous run
+""" % mockdir.dirn
+        for o,e in zip(report_summary(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
     def test_report_summary_single_cell(self):
         """report: report single-cell run in 'summary' mode
         """
@@ -1166,7 +1216,8 @@ class TestFetchValueFunction(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "sequencer_model": "MiSeq" },
+                       "sequencer_model": "MiSeq",
+                       "analysis_number": 2 },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
@@ -1190,8 +1241,9 @@ class TestFetchValueFunction(unittest.TestCase):
                                   os.path.join(mockdir.dirn,'AB'))
         # Check the returned values
         self.assertEqual(fetch_value(ap,project,'datestamp'),'170901')
-        self.assertEqual(fetch_value(ap,project,'run_id'),'MISEQ_170901#87')
+        self.assertEqual(fetch_value(ap,project,'run_id'),'MISEQ_170901#87.2')
         self.assertEqual(fetch_value(ap,project,'run_number'),'87')
+        self.assertEqual(fetch_value(ap,project,'analysis_number'),'2')
         self.assertEqual(fetch_value(ap,project,'source'),'testing')
         self.assertEqual(fetch_value(ap,project,'data_source'),'testing')
         self.assertEqual(fetch_value(ap,project,'analysis_dir'),mockdir.dirn)

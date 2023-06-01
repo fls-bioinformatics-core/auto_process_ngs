@@ -337,6 +337,8 @@ class AnalysisDirMetadata(MetadataDict):
 
     run_name: name of the run
     run_number: run number assigned by local facility
+    analysis_number: arbitrary number assigned to analysis (to
+      distinguish it from other analysis attempts)
     source: source of the data (e.g. local facility)
     platform: sequencing platform e.g. 'miseq'
     processing_software: dictionary of software packages used in
@@ -379,10 +381,12 @@ class AnalysisDirMetadata(MetadataDict):
                                   'instrument_run_number': 'instrument_run_number',
                                   'sequencer_model': 'sequencer_model',
                                   'flow_cell_mode': 'flow_cell_mode',
+                                  'analysis_number': 'analysis_number',
                               },
                               order=('run_name',
                                      'platform',
                                      'run_number',
+                                     'analysis_number',
                                      'source',),
                               filen=filen)
 

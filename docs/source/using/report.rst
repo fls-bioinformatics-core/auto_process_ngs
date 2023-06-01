@@ -95,6 +95,7 @@ Field name                Associated value
 ``run_reference_id``      Run reference ID (e.g.
                           ``NOVASEQ6000_230419#73_SP``)
 ``run_number``            Facility run number (e.g. ``88``)
+``analysis_number``       Analysis number (e.g. ``2``)
 ``sequencer_platform``    Sequencer platform for the run
                           (e.g. ``MISEQ``)
 ``sequencer_model``       Sequencer model (e.g. ``MiSeq``)
