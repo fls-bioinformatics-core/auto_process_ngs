@@ -716,6 +716,18 @@ would produce ``bcl2fastq_no_trimming``, ``barcodes_no_trimming``,
    can be used to create projects which carry the same identifier,
    see :ref:`setup_analysis_dirs-add-identifier`.
 
+.. note::
+
+   A simpler alternative is to set up a completely new parallel
+   analysis directory for reprocessing, and expliciting assigning
+   a unique analysis number to distinguish it from other analysis
+   attempts.
+
+   This can be done via the ``setup`` command using the ``-n``
+   option (see :ref:`setup_specifying_analysis_run_number`), or by
+   setting the ``analysis_number`` metadata item within an existing
+   analysis directory.
+
 .. _make_fastqs-outputs:
 
 Outputs
