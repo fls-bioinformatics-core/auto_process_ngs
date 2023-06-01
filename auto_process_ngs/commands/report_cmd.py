@@ -353,7 +353,7 @@ def report_summary(ap):
     else:
         title = "%s" % os.path.basename(ap.analysis_dir)
     if analysis_number:
-        title += "[analysis #%s]" % analysis_number
+        title += " [analysis #%s]" % analysis_number
     report.append("%s\n%s" % (title,'='*len(title)))
     # General information
     field_width = max([len(i) for i in report_items])
