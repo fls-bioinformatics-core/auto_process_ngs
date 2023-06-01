@@ -450,6 +450,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                        value=ap.metadata.run_number)
     params_tbl.add_row(param="Platform",
                        value=ap.metadata.platform)
+    if ap.metadata.analysis_number:
+        params_tbl.add_row(param="Analysis number",
+                           value=ap.metadata.analysis_number)
     if ap.metadata.sequencer_model:
         params_tbl.add_row(param="Sequencer",
                            value="%s%s" %
