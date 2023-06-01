@@ -151,6 +151,21 @@ Specifying the facility run number
 The facility run number can be explicitly specified using the
 ``-r``/``--run-number`` option of the ``setup`` command.
 
+.. _setup_specifying_analysis_run_number:
+
+******************************
+Specifying the analysis number
+******************************
+
+An arbitrary number can be assigned to the analysis using the
+``-n``/``--analysis-number`` option of the ``setup`` command.
+
+.. note::
+
+   If an analysis number is assigned at setup then it will be
+   appended to the analysis directory name, unless this is
+   overridden by the ``--analysis-dir`` option.
+
 .. _setup_specifying_additional_files:
 
 ***************************

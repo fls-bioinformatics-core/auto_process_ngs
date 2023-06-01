@@ -115,6 +115,11 @@ def add_setup_command(cmdparser):
     p.add_argument('-r','--run-number',action='store',dest='run_number',
                    metavar="RUN_NUMBER",default=None,
                    help="Set facility run number")
+    p.add_argument('-n','--analysis-number',action='store',
+                   dest='analysis_number',metavar="ANALYSIS_NUMBER",
+                   help="Set analysis number (e.g. if reprocessing "
+                   "a run); will be appended to analysis directory "
+                   "name if '--analysis-dir' not supplied")
     p.add_argument('-f','--file',action='append',dest='extra_files',
                    metavar="FILE",default=None,
                    help="Additional file(s) to copy into new analysis "
@@ -129,7 +134,7 @@ def add_setup_command(cmdparser):
     p.add_argument('--analysis-dir',action='store',dest='analysis_dir',
                    default=None,
                    help="Make new directory called ANALYSIS_DIR (otherwise "
-                   "default is '<RUN_DIR>_analysis')")
+                   "default is '<RUN_DIR>_analysis[<ANALYSIS_NUMBER>]')")
     p.add_argument('run_dir',metavar="RUN_DIR",
                    help="directory with the output from an Illumina "
                    "sequencer")
@@ -1179,6 +1184,7 @@ def setup(args):
                 analysis_dir=args.analysis_dir,
                 sample_sheet=args.sample_sheet,
                 run_number=args.run_number,
+                analysis_number=args.analysis_number,
                 extra_files=args.extra_files,
                 unaligned_dir=args.unaligned_dir)
 
