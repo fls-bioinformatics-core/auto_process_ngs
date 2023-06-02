@@ -1519,6 +1519,25 @@ class TestMatchRunId(unittest.TestCase):
         self.assertFalse(
             match_run_id("UNKNOWN_201029#87",run_dir))
 
+    def test_match_run_id_with_analysis_number(self):
+        """
+        match_run_id: check run ID with analysis number
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '201029_SN00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ 'run_number': 87,
+                       'analysis_number': 2, },
+            top_dir=self.dirn)
+        mockdir.create()
+        run_dir = mockdir.dirn
+        # Run doesn't match when analysis number is missing
+        self.assertFalse(
+            match_run_id("HISEQ_201029#87",run_dir))
+        # Run matches when analysis number is included
+        self.assertTrue(
+            match_run_id("HISEQ_201029#87.2",run_dir))
+
 class TestLocateRun(unittest.TestCase):
     """
     Tests for the 'locate_run' function

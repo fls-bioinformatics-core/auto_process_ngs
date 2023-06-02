@@ -1477,7 +1477,8 @@ def match_run_id(run,d):
         run_id_ = run_id(
             analysis_dir.run_name,
             platform=analysis_dir.metadata.platform,
-            facility_run_number=analysis_dir.metadata.run_number)
+            facility_run_number=analysis_dir.metadata.run_number,
+            analysis_number=analysis_dir.metadata.analysis_number)
         logger.debug("%s: run ID = %s" % (d,run_id_))
         if run_id_ == run:
             return True
