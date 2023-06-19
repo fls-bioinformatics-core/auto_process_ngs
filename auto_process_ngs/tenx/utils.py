@@ -581,17 +581,22 @@ def make_multi_config_template(f,reference=None,probe_set=None,
             fp.write("no-bam,%s\n" % str(no_bam).lower())
         else:
             fp.write("#no-bam,true|false\n")
+        fp.write("#cmo-set,/path/to/custom/cmo/reference\n")
         fp.write("\n")
         # Feature section
         fp.write("#[feature]\n"
                  "#reference,/path/to/feature/reference\n")
+        fp.write("\n")
+        # V(D)J section
+        fp.write("#[vdj]\n"
+                 "#reference,/path/to/vdj/reference\n")
         fp.write("\n")
         # Libraries section
         fp.write("[libraries]\n"
                  "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
         if samples:
             if library_type == "CellPlex":
-                tenx_library_type = "[Gene Expression|Multiplexing Capture|Antibody Capture]"
+                tenx_library_type = "[Gene Expression|Multiplexing Capture|Antibody Capture|VDJ-B|VDJ-T]"
             elif library_type == "Flex":
                 tenx_library_type = "[Gene Expression|Antibody Capture]"
             for sample in samples:

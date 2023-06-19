@@ -589,9 +589,13 @@ class TestMakeMultiConfigTemplate(unittest.TestCase):
 reference,/path/to/transcriptome
 #force-cells,n
 #no-bam,true|false
+#cmo-set,/path/to/custom/cmo/reference
 
 #[feature]
 #reference,/path/to/feature/reference
+
+#[vdj]
+#reference,/path/to/vdj/reference
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
@@ -617,9 +621,13 @@ reference,/data/mm10_transcriptome
 probe-set,/data/mm10_probe_set.csv
 #force-cells,n
 no-bam,true
+#cmo-set,/path/to/custom/cmo/reference
 
 #[feature]
 #reference,/path/to/feature/reference
+
+#[vdj]
+#reference,/path/to/vdj/reference
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
@@ -651,14 +659,18 @@ MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
 reference,/data/mm10_transcriptome
 #force-cells,n
 #no-bam,true|false
+#cmo-set,/path/to/custom/cmo/reference
 
 #[feature]
 #reference,/path/to/feature/reference
 
+#[vdj]
+#reference,/path/to/vdj/reference
+
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Multiplexing Capture|Antibody Capture],
-PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Multiplexing Capture|Antibody Capture],
+PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Multiplexing Capture|Antibody Capture|VDJ-B|VDJ-T],
+PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Multiplexing Capture|Antibody Capture|VDJ-B|VDJ-T],
 
 [samples]
 sample_id,cmo_ids,description
