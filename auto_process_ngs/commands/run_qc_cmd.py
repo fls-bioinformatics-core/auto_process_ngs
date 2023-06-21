@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc_cmd.py: implement auto process run_qc command
-#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
 #
 #########################################################################
 
@@ -16,6 +16,7 @@ from ..command import Command
 from ..qc.pipeline import QCPipeline
 from ..qc.fastq_strand import build_fastq_strand_conf
 from ..qc.protocols import determine_qc_protocol
+from ..qc.protocols import fetch_protocol_definition
 from ..settings import fetch_reference_data
 from ..utils import get_organism_list
 
@@ -229,13 +230,14 @@ def run_qc(ap,projects=None,fastq_screens=None,
     # Set up the QC for each project
     runqc = QCPipeline()
     for project in projects:
-        # Determine the QC protocol
-        protocol = determine_qc_protocol(project)
+        # Determine and fetch the QC protocol
+        qc_protocol = determine_qc_protocol(project)
+        protocol = fetch_protocol_definition(qc_protocol)
         runqc.add_project(project,
+                          protocol,
                           qc_dir=qc_dir,
                           fastq_dir=fastq_dir,
                           organism=project.info.organism,
-                          qc_protocol=protocol,
                           sample_pattern=sample_pattern,
                           multiqc=True)
     # Collect the cellranger data and parameters

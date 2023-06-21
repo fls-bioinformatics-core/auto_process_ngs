@@ -24,6 +24,7 @@ from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.pipeline import QCPipeline
+from auto_process_ngs.qc.protocols import fetch_protocol_definition
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -110,8 +111,8 @@ class TestQCPipeline(unittest.TestCase):
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -128,6 +129,8 @@ class TestQCPipeline(unittest.TestCase):
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -187,8 +190,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(star_indexes=
                            { 'human': '/data/hg38/star_index' },
@@ -204,6 +207,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -248,8 +253,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            annotation_bed_files=
@@ -264,6 +269,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -318,8 +325,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -334,6 +341,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -388,8 +397,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -404,6 +413,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -459,8 +470,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -477,6 +488,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -523,8 +536,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=False)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -541,6 +554,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -590,8 +605,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -608,6 +623,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -653,8 +670,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -672,6 +689,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -723,8 +742,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -741,6 +760,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -787,8 +808,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -805,6 +826,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -854,8 +877,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           fastq_dir="fastqs.cells",
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
@@ -873,6 +896,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs.cells"))
@@ -917,8 +942,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           qc_dir="qc.non_default",
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
@@ -936,6 +961,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc.non_default","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -986,8 +1013,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardSE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1004,6 +1031,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardSE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardSE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1057,8 +1086,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         # Set up and run the QC
         runqc = QCPipeline()
         for p in ("AB","CD"):
-            runqc.add_project(AnalysisProject(p,
-                                              os.path.join(self.wd,p)),
+            runqc.add_project(AnalysisProject(os.path.join(self.wd,p)),
+                              fetch_protocol_definition("standardPE"),
                               multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1078,6 +1107,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"AB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"AB","fastqs"))
@@ -1093,6 +1124,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"CD","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Mouse")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"CD","fastqs"))
@@ -1141,8 +1174,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1159,6 +1192,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1205,8 +1240,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1224,6 +1259,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1272,8 +1309,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1291,6 +1328,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1340,8 +1379,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
                          "Log dir '%s' already exists" % log_dir)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True,
                           log_dir=log_dir)
         status = runqc.run(fastq_screens=self.fastq_screens,
@@ -1359,6 +1398,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1417,8 +1458,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1437,6 +1478,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1504,8 +1547,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1524,6 +1567,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1591,8 +1636,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1611,6 +1656,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1678,8 +1725,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1698,6 +1745,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1770,6 +1819,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1790,6 +1840,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1856,8 +1908,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1877,6 +1929,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -1944,8 +1998,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_snRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -1964,6 +2018,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_snRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_snRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -2041,8 +2097,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p2.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2064,6 +2120,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -2144,8 +2202,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_snRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2164,6 +2222,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_snRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_snRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -2231,8 +2291,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_snRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2251,6 +2311,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_snRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_snRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -2318,8 +2380,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_snRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2338,6 +2400,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_snRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_snRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -2406,8 +2470,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scATAC"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2427,6 +2491,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scATAC")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scATAC")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -2495,8 +2561,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scATAC"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2516,6 +2582,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scATAC")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scATAC")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -2584,8 +2652,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scATAC"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2606,6 +2674,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scATAC")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scATAC")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -2678,6 +2748,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
+                          fetch_protocol_definition("10x_Multiome_ATAC"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2700,6 +2771,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB_ATAC","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Multiome_ATAC")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Multiome_ATAC")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
@@ -2771,6 +2844,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
+                          fetch_protocol_definition("10x_Multiome_GEX"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2792,6 +2866,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB_GEX","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Multiome_GEX")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Multiome_GEX")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
@@ -2892,6 +2968,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
+                          fetch_protocol_definition("10x_Multiome_ATAC"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -2914,6 +2991,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB_ATAC","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Multiome_ATAC")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Multiome_ATAC")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
@@ -3027,6 +3106,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
+                          fetch_protocol_definition("10x_Multiome_ATAC"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3049,6 +3129,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB_ATAC","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Multiome_ATAC")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Multiome_ATAC")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
@@ -3162,6 +3244,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
+                          fetch_protocol_definition("10x_Multiome_GEX"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3183,6 +3266,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB_GEX","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Multiome_GEX")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Multiome_GEX")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
@@ -3296,6 +3381,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
+                          fetch_protocol_definition("10x_Multiome_GEX"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3317,6 +3403,8 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB_GEX","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Multiome_GEX")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Multiome_GEX")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
@@ -3418,6 +3506,7 @@ PBB,CMO302,PBB
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_CellPlex"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3437,6 +3526,8 @@ PBB,CMO302,PBB
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_CellPlex")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_CellPlex")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -3525,6 +3616,7 @@ PBB,CMO302,PBB
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_CellPlex"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3544,6 +3636,8 @@ PBB,CMO302,PBB
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_CellPlex")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_CellPlex")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -3624,6 +3718,7 @@ PB2,BC002,PB2
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_Flex"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3640,6 +3735,8 @@ PB2,BC002,PB2
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Flex")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Flex")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -3714,6 +3811,7 @@ PB2,BC002,PB2
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_Flex"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3730,6 +3828,8 @@ PB2,BC002,PB2
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Flex")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Flex")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -3785,8 +3885,8 @@ PB2,BC002,PB2
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_Visium"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3805,6 +3905,8 @@ PB2,BC002,PB2
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Visium")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Visium")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -3855,8 +3957,8 @@ PB2,BC002,PB2
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_Visium_FFPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3875,6 +3977,8 @@ PB2,BC002,PB2
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_Visium_FFPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Visium_FFPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -3924,8 +4028,8 @@ PB2,BC002,PB2
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("ParseEvercode"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -3942,6 +4046,8 @@ PB2,BC002,PB2
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"ParseEvercode")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("ParseEvercode")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -3992,10 +4098,9 @@ PB2,BC002,PB2
         os.remove(os.path.join(self.wd,"PJB","README.info"))
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True,
-                          qc_protocol="10x_scRNAseq",
                           organism="human")
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -4014,6 +4119,8 @@ PB2,BC002,PB2
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -4080,8 +4187,8 @@ PB2,BC002,PB2
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("10x_scRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -4098,6 +4205,8 @@ PB2,BC002,PB2
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_scRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
@@ -4151,9 +4260,8 @@ PB2,BC002,PB2
                 include_multiqc=True)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")),
-                          qc_protocol="standardPE",
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -4170,6 +4278,8 @@ PB2,BC002,PB2
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))

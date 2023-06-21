@@ -180,8 +180,8 @@ class QCPipeline(Pipeline):
         self.add_envmodules('cellranger')
         self.add_envmodules('report_qc')
 
-    def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
-                    qc_protocol=None,report_html=None,multiqc=False,
+    def add_project(self,project,protocol,qc_dir=None,organism=None,
+                    fastq_dir=None,report_html=None,multiqc=False,
                     sample_pattern=None,log_dir=None,convert_gtf=True):
         """
         Add a project to the QC pipeline
@@ -189,6 +189,7 @@ class QCPipeline(Pipeline):
         Arguments:
           project (AnalysisProject): project to run
             QC for
+          protocol (QCProtocol): QC protocol to use
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
           organism (str): organism(s) for project
@@ -196,7 +197,6 @@ class QCPipeline(Pipeline):
             metadata)
           fastq_dir (str): directory holding Fastq files
             (defaults to primary fastq_dir in project)
-          qc_protocol (str): QC protocol to use
           multiqc (bool): if True then also run MultiQC
             (default is not to run MultiQC)
           sample_pattern (str): glob-style pattern to
@@ -215,13 +215,6 @@ class QCPipeline(Pipeline):
         ###################
 
         self.report("Adding project: %s" % project.name)
-
-        # Determine QC protocol (if not set)
-        if qc_protocol is None:
-            qc_protocol = determine_qc_protocol(project)
-
-        # Fetch the QC protocol definition
-        protocol = fetch_protocol_definition(qc_protocol)
 
         # QC modules
         qc_modules = protocol.qc_modules
@@ -268,7 +261,7 @@ class QCPipeline(Pipeline):
                         replace(' ','_')
 
         # Report details
-        self.report("-- Protocol   : %s" % qc_protocol)
+        self.report("-- Protocol   : %s" % protocol.name)
         self.report("-- Directory  : %s" % project.dirn)
         self.report("-- Fastqs dir : %s" % project.fastq_dir)
         self.report("-- QC dir     : %s" % qc_dir)
@@ -276,7 +269,10 @@ class QCPipeline(Pipeline):
         self.report("-- SC platform: %s" % project.info.single_cell_platform)
         self.report("-- Organism   : %s" % organism)
         self.report("-- Report     : %s" % report_html)
-        self.report("QC modules :")
+        self.report("Reads")
+        self.report("-- Seq data   : %s" % protocol.seq_data_reads)
+        self.report("-- Index      : %s" % protocol.index_reads)
+        self.report("QC modules")
         for qc_module in qc_modules:
             self.report("-- %s" % qc_module)
 
@@ -300,15 +296,16 @@ class QCPipeline(Pipeline):
             project,
             qc_dir,
             log_dir=log_dir,
-            qc_protocol=qc_protocol
+            protocol=protocol
         )
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
 
         # Build a dictionary of QC metadata items to
         # update
-        qc_metadata = dict(protocol=qc_protocol,
+        qc_metadata = dict(protocol=protocol.name,
                            protocol_summary=protocol.summarise(),
+                           protocol_specification=repr(protocol),
                            organism=organism,
                            fastq_dir=project.fastq_dir)
 
@@ -1238,7 +1235,7 @@ class SetupQCDirs(PipelineFunctionTask):
     """
     Set up the directories for the QC run
     """
-    def init(self,project,qc_dir,log_dir=None,qc_protocol=None):
+    def init(self,project,qc_dir,log_dir=None,protocol=None):
         """
         Initialise the SetupQCDirs task
 
@@ -1249,20 +1246,22 @@ class SetupQCDirs(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           log_dir (str): directory for log files (defaults
             to 'logs' subdirectory of the QC directory
-          qc_protocol (str): QC protocol to use
+          protocol (QCProject): QC protocol being used
         """
         pass
     def setup(self):
-        # Check the QC protocol
+        # Get the existing QC metadata
         qc_info = self.args.project.qc_info(self.args.qc_dir)
-        stored_protocol = qc_info.protocol
-        if stored_protocol is not None and \
-           stored_protocol != self.args.qc_protocol:
-            logger.warning("QC protocol mismatch for %s: "
-                           "'%s' stored, '%s' specified"
-                           % (self.args.project.name,
-                              stored_protocol,
-                              self.args.qc_protocol))
+        # Check the QC protocol
+        stored_protocol_name = qc_info.protocol
+        stored_protocol_spec = qc_info.protocol_specification
+        if (stored_protocol_spec is not None and
+            stored_protocol_spec != repr(self.args.protocol)) or \
+            (stored_protocol_name is not None and \
+             stored_protocol_name != self.args.protocol.name):
+            logger.warning("QC protocol mismatch between stored and "
+                           "supplied protocol information for %s"
+                           % self.args.project.name)
             logger.warning("Stored protocol will be ignored")
         # Set up QC dir
         if not os.path.exists(self.args.qc_dir):

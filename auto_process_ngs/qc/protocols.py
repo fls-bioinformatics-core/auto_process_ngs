@@ -43,7 +43,7 @@ The available modifiers are the same as the parameter list for the
 This module also provides the following classes and functions:
 
 - QCProtocol: class representing a QC protocol
-- determine_qc_protocol: get QC protocol for a project
+- determine_qc_protocol: determine built-in protocol for a project
 - fetch_protocol_definition: get the definition for a QC protocol
 - parse_protocol_repr: get a QCProtocol object from a string
 """
@@ -336,7 +336,7 @@ class QCProtocol:
     - description: text description
     - reads: AttributeDictionary with elements 'seq_data',
       'index', and 'qc' (listing sequence data, index reads,
-      and all read for QC, respectively)
+      and all reads for QC, respectively)
     - read_numbers: AttributeDictionary with the same
       elements as 'reads', listing non-index read numbers
     - read_range: AttributeDictionary with normalised read
@@ -354,11 +354,14 @@ class QCProtocol:
 
     READ[:[START]-[END]]
 
-    For example: 'r1:1-50'. These can ben accessed via the
+    For example: 'r1:1-50'. These can be accessed via the
     'read_range' property as e.g. 'read_range.r1' and will
     be returned as either 'None' (if no range was supplied),
     or a tuple '(START,END)' (where either 'START' or 'END'
     will be 'None' if no limit was supplied).
+
+    The 'seq_data_reads' and 'index_reads' properties
+    store the original read specifications.
 
     QCProtocol instances can also be created directly from
     protocol specification strings using the
@@ -385,10 +388,15 @@ class QCProtocol:
                             else "")
         self.qc_modules = (sorted([m for m in qc_modules])
                            if qc_modules is not None else [])
+        # Store supplied reads
+        self.seq_data_reads = [str(r).lower() for r in seq_data_reads] \
+                              if seq_data_reads else []
+        self.index_reads = [str(r).lower() for r in index_reads] \
+                           if index_reads else []
         # Normalise and store supplied read names
         self.reads = AttributeDictionary(
-            seq_data=self.__reads(seq_data_reads),
-            index=self.__reads(index_reads))
+            seq_data=self.__reads(self.seq_data_reads),
+            index=self.__reads(self.index_reads))
         # Generate and store QC read names
         self.reads['qc'] = self.__reads(self.reads.seq_data +
                                         self.reads.index)
@@ -639,25 +647,35 @@ def determine_qc_protocol(project):
             protocol = "10x_Multiome_GEX"
     return protocol
 
-def fetch_protocol_definition(name):
+def fetch_protocol_definition(p):
     """
     Return the definition for a QC protocol
 
+    Fetches a QCProtocol instance for the supplied
+    protocol, which can either be a protocol
+    definition string or the name of a built-in
+    QC protocol.
+
     Arguments:
-      name (str): name of the QC protocol
+      p (str): name or specification for the QC
+       protocol
 
     Returns:
       QCProtocol: QCProtocol object representing
-        the requested protocol
+        the requested protocol.
 
     Raises:
-      KeyError: when the requested protocol isn't
-        defined.
+      KeyError: when a QCProtocol instance can't
+        be returned for the requested protocol.
     """
-    if name not in QC_PROTOCOLS:
-        raise KeyError("%s: undefined QC protocol" % name)
-    protocol_defn = QC_PROTOCOLS[name]
-    return QCProtocol(name=name,
+    # Try protocol specification
+    if ':' in p:
+        return QCProtocol.from_specification(p)
+    # Try looking up a built-in protocol
+    if p not in QC_PROTOCOLS:
+        raise KeyError("%s: not built-in QC protocol" % p)
+    protocol_defn = QC_PROTOCOLS[p]
+    return QCProtocol(name=p,
                       description=protocol_defn['description'],
                       seq_data_reads=protocol_defn['reads']['seq_data'],
                       index_reads=protocol_defn['reads']['index'],
@@ -675,7 +693,7 @@ def parse_protocol_spec(s):
 
     - name
     - description
-    - seq_data_reads
+    - seq_reads
     - index_reads
     - qc_modules
 
@@ -694,8 +712,8 @@ def parse_protocol_spec(s):
         specification.
 
     Raises:
-      Exception: if the specification string cannot be
-        parsed correctly.
+      QCProtocolParseSpecError: if the specification
+        string cannot be parsed correctly.
     """
     # Initialise
     seq_data_reads = None
@@ -711,6 +729,9 @@ def parse_protocol_spec(s):
         s = ""
     logger.debug("Name: %s" % name)
     logger.debug("(Remaining string: %s)" % s)
+    if not s:
+        raise QCProtocolParseSpecError("Incomplete specification: "
+                                       "nothing after 'name'?")
     # Extract description
     if s.startswith('"') or s.startswith("'"):
         quote = s[0]
@@ -718,13 +739,14 @@ def parse_protocol_spec(s):
         try:
             ix = s.index(quote)
             if s[ix+1] != ':':
-                raise Exception("Unable to parse description: continues "
-                                "after closing quote?")
+                raise QCProtocolParseSpecError("Unable to parse "
+                                               "description: continues "
+                                               "after closing quote?")
             description = s[:ix]
             s = s[ix+2:]
         except ValueError:
-            raise Exception("Unable to parse description: no closing "
-                            "quote?")
+            raise QCProtocolParseSpecError("Unable to parse description: "
+                                           "no closing quote?")
     else:
         try:
             ix = s.index(':')
@@ -735,6 +757,13 @@ def parse_protocol_spec(s):
             s = ""
     logger.debug("Description: %s" % description)
     logger.debug("(Remaining string: %s)" % s)
+    if not s:
+        raise QCProtocolParseSpecError("Incomplete specification: "
+                                       "nothing after description?")
+    # Basic checks on remainder of string
+    if s.count("[") != s.count("]"):
+        raise QCProtocolParseSpecError("Specification syntax error: "
+                                       "unmatched braces?")
     # Break up remainder of the string
     while s:
         if s.startswith(':'):
@@ -742,15 +771,11 @@ def parse_protocol_spec(s):
             s = s[1:]
         if s.startswith("seq_reads=["):
             # Sequencing data reads
-            try:
-                ix = s.index(']')
-                seq_data_reads = list(
-                    filter(lambda r: r != '',
-                           s[len("seq_reads=["):ix].split(',')))
-                s = s[ix+1:]
-            except ValueError:
-                raise Exception("Unable to parse sequence data reads: no "
-                                "closing brace?")
+            ix = s.index(']')
+            seq_data_reads = list(
+                filter(lambda r: r != '',
+                       s[len("seq_reads=["):ix].split(',')))
+            s = s[ix+1:]
             logger.debug("Seq data reads: %s" % seq_data_reads)
             logger.debug("(Remaining string: %s)" % s)
         elif s.startswith("index_reads=["):
@@ -762,8 +787,8 @@ def parse_protocol_spec(s):
                            s[len("index_reads=["):ix].split(',')))
                 s = s[ix+1:]
             except ValueError:
-                raise Exception("Unable to parse index reads: no "
-                                "closing brace?")
+                raise QCProtocolParseSpecError("Unable to parse index "
+                                               "reads: no closing brace?")
             logger.debug("Index reads: %s" % index_reads)
             logger.debug("Remaining string: %s" % s)
         elif s.startswith("qc_modules=["):
@@ -779,11 +804,37 @@ def parse_protocol_spec(s):
             logger.debug("QC modules: %s" % qc_modules)
             logger.debug("Remaining string: %s" % s)
         elif s:
-            raise Exception("Unable to parse section starting '%s...'" %
-                            s[:5])
+            # Unknown component
+            raise QCProtocolParseSpecError("Unable to parse section "
+                                           "starting '%s...': "
+                                           "unknown specification "
+                                           "element?" % s[:5])
     # Return mapping of extracted components
     return AttributeDictionary(name=name,
                                description=description,
                                seq_data_reads=seq_data_reads,
                                index_reads=index_reads,
                                qc_modules=qc_modules)
+
+######################################################################
+# Custom exceptions
+######################################################################
+
+class QCProtocolError(Exception):
+    """
+    Base class for QC protocol-specific exceptions
+    """
+
+class QCProtocolParseSpecError(QCProtocolError):
+    """
+    Exception raised when a protocol specificaion
+    can't be parsed
+
+    Arguments:
+      message (str): error message
+    """
+    def __init__(self,message=None):
+        if message is None:
+            message = "Error parsing QC protocol specification"
+        self.message = message
+        QCProtocolError.__init__(self,self.message)

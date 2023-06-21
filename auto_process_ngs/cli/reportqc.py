@@ -214,13 +214,15 @@ def main():
         # QC metadata
         qc_dir = p.qc_dir
         qc_info = p.qc_info(qc_dir)
-        # Set QC protocol for verification
-        if args.qc_protocol is None:
-            protocol = qc_info.protocol
-            if protocol is None:
+        # Fetch QC protocol for verification
+        protocol = args.qc_protocol
+        if protocol is None:
+            if qc_info.protocol_specification:
+                protocol = qc_info.protocol_specification
+            elif qc_info.protocol:
+                protocol = qc_info.protocol
+            else:
                 protocol = determine_qc_protocol(p)
-        else:
-            protocol = args.qc_protocol
         print("Verifying against QC protocol '%s'" % protocol)
         # Verification step
         if len(p.fastqs) == 0:

@@ -676,6 +676,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     annotation_bed: BED file with gene annotation
     annotation_gtf: GTF file with gene annotation
     protocol_summary: free-text summary of the QC protocol
+    protocol_specification: full QC protocol specification
     """
     def __init__(self,filen=None):
         """Create a new AnalysisProjectQCDirInfo instance
@@ -698,6 +699,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                 'annotation_bed': 'BED gene annotation file',
                 'annotation_gtf': 'GTF gene annotation file',
                 'protocol_summary': 'Protocol summary',
+                'protocol_specification': 'Protocol specification',
             },
             order = (
                 'fastq_dir',
