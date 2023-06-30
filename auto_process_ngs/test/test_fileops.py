@@ -165,6 +165,42 @@ class TestSetGroupFunction(FileopsTestCase):
             print("File: %s GID: %s"  % (f,os.stat(f).st_gid))
             self.assertEqual(os.stat(f).st_gid,new_gid)
 
+class TestSetPermissionsFunction(FileopsTestCase):
+    """Tests for the 'set_permissions' function
+    """
+    def test_local_set_permissions(self):
+        """fileops.set_permissions: set permissions on a local directory
+        """
+        # Make test directory and files with no group or world
+        # permissions
+        test_dir = os.path.join(self.test_dir,'test.dir')
+        os.mkdir(test_dir)
+        test_file1 = os.path.join(test_dir,'test1.txt')
+        test_file2 = os.path.join(test_dir,'test2.txt')
+        test_file3 = os.path.join(test_dir,'test3.txt')
+        for f in (test_file1,test_file2,test_file3):
+            with open(f,'w') as fp:
+                fp.write("This is a test file")
+            # Remove group and other read/write permissions
+            os.chmod(f,0o600)
+            # File exists and that permissions have been
+            # removed for group and others
+            self.assertTrue(os.path.isfile(f))
+            self.assertFalse(os.stat(f).st_mode & stat.S_IRGRP)
+            self.assertFalse(os.stat(f).st_mode & stat.S_IWGRP)
+            self.assertFalse(os.stat(f).st_mode & stat.S_IROTH)
+            self.assertFalse(os.stat(f).st_mode & stat.S_IWOTH)
+        # Change permissions
+        status = set_permissions("g+rw",test_dir)
+        self.assertEqual(status,0)
+        for f in (test_file1,test_file2,test_file3):
+            # Check group permissions were updated but others
+            # are still the same
+            self.assertTrue(os.stat(f).st_mode & stat.S_IRGRP)
+            self.assertTrue(os.stat(f).st_mode & stat.S_IWGRP)
+            self.assertFalse(os.stat(f).st_mode & stat.S_IROTH)
+            self.assertFalse(os.stat(f).st_mode & stat.S_IWOTH)
+
 class TestUnzip(FileopsTestCase):
     """Tests for the 'unzip' function
     """
@@ -493,6 +529,85 @@ class TestSetGroupCommand(unittest.TestCase):
                           '-exec',
                           'chgrp',
                           'adm',
+                          '{}',
+                          '+'])
+
+class TestSetPermissionsCommand(unittest.TestCase):
+    """Tests for the 'set_permissions_command' function
+    """
+    def test_set_permissions_command_local(self):
+        """fileops.set_permissions_command: set permissions on local files
+        """
+        set_permissions_cmd = set_permissions_command("g+rwX",
+                                                      "/here/files")
+        self.assertEqual(set_permissions_cmd.command_line,
+                         ['find',
+                          '/here/files',
+                          '!',
+                          '-type',
+                          'l',
+                          '-exec',
+                          'chmod',
+                          'g+rwX',
+                          '{}',
+                          '+'])
+
+    def test_set_permissions_command_local_verbose(self):
+        """fileops.set_permissions_command: set permissions on local files (verbose)
+        """
+        set_permissions_cmd = set_permissions_command("g+rwX",
+                                                      "/here/files",
+                                                      verbose=True)
+        self.assertEqual(set_permissions_cmd.command_line,
+                         ['find',
+                          '/here/files',
+                          '!',
+                          '-type',
+                          'l',
+                          '-exec',
+                          'chmod',
+                          '--verbose',
+                          'g+rwX',
+                          '{}',
+                          '+'])
+
+    def test_set_permissions_command_local_safe(self):
+        """fileops.set_permissions_command: set permissions on local files ('safe' mode)
+        """
+        set_permissions_cmd = set_permissions_command("g+rwX",
+                                                      "/here/files",
+                                                      safe=True)
+        self.assertEqual(set_permissions_cmd.command_line,
+                         ['find',
+                          '/here/files',
+                          '-user',
+                          getpass.getuser(),
+                          '!',
+                          '-type',
+                          'l',
+                          '-exec',
+                          'chmod',
+                          'g+rwX',
+                          '{}',
+                          '+'])
+
+    def test_set_permissions_command_remote(self):
+        """fileops.set_permissions_command: set permissions on remote files
+        """
+        set_permissions_cmd = set_permissions_command(
+            "g+rwX",
+            "pjx@remote.com:/there/files")
+        self.assertEqual(set_permissions_cmd.command_line,
+                         ['ssh',
+                          'pjx@remote.com',
+                          'find',
+                          '/there/files',
+                          '!',
+                          '-type',
+                          'l',
+                          '-exec',
+                          'chmod',
+                          'g+rwX',
                           '{}',
                           '+'])
 
