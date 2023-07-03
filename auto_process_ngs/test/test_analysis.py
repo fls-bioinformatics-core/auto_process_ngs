@@ -160,7 +160,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
-        self.assertEqual(fq.read_number,None)
+        self.assertEqual(fq.read_number,1)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
         self.assertEqual(fq.canonical_name,'ERR3310320')

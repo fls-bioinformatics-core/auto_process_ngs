@@ -93,10 +93,13 @@ class AnalysisFastq(BaseFastqAttrs):
     * set_number:       integer (or None if no set number)
     * is_index_read:    boolean (True if index read, False if not)
 
-    There are three additional attributes:
+    There are four additional attributes:
 
     * format: string identifying the format of the Fastq name
       ('Illumina', 'SRA', or None)
+    * implicit_read_number: flag indicating whether the read
+      number was implied (i.e. doesn't appear explicitly in the
+      name)
     * canonical_name: the 'canonical' part of the name (string,
       or None if no canonical part could be extracted)
     * extras: the 'extra' part of the name (string, or None if
@@ -114,6 +117,7 @@ class AnalysisFastq(BaseFastqAttrs):
         # Additional attributes
         self.format = None
         self.extras = None
+        self.implicit_read_number = False
         # Check for SRA format
         fq = SRA_REGEX.match(self.basename)
         if fq is not None:
@@ -122,6 +126,12 @@ class AnalysisFastq(BaseFastqAttrs):
             self.sample_name = fq_attrs['sample_name']
             if fq_attrs['read_number'] is not None:
                 self.read_number = int(fq_attrs['read_number'])
+            else:
+                # Assume that it's implicitly read 1
+                self.read_number = 1
+                # Set flag to indicate that the read number
+                # is implicit (i.e. not in the name)
+                self.implicit_read_number = True
             return
         # Try to identify a canonical component of the
         # name by removing trailing parts and testing
@@ -172,7 +182,9 @@ class AnalysisFastq(BaseFastqAttrs):
                 return str(illumina_fastq_attrs)
         elif self.format == "SRA":
             return "%s%s" % (self.sample_name,
-                             "_%s" % self.read_number if self.read_number
+                             "_%s" % self.read_number
+                             if self.read_number and
+                             not self.implicit_read_number
                              else '')
         return None
     def __repr__(self):
