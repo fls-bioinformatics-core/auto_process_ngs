@@ -69,7 +69,6 @@ from ..analysis import copy_analysis_project
 from ..bcl2fastq.pipeline import Get10xPackage
 from ..bcl2fastq.pipeline import FunctionParam
 from ..command import Command
-from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline
