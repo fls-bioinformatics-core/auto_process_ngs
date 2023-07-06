@@ -224,7 +224,8 @@ class TestGetSeqDataSamples(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
     def _make_mock_analysis_project(self,library_type,
-                                    single_cell_platform=None):
+                                    single_cell_platform=None,
+                                    bio_samples=None):
         # Create a mock AnalysisProject
         m = MockAnalysisProject('PJB',
                                 fastq_names=("PJB1_S1_L001_R1_001.fastq.gz",
@@ -233,7 +234,8 @@ class TestGetSeqDataSamples(unittest.TestCase):
                                              "PJB2_S2_L001_R2_001.fastq.gz",),
                                 metadata={'Single cell platform':
                                           single_cell_platform,
-                                          'Library type': library_type,})
+                                          'Library type': library_type,
+                                          'Biological samples': bio_samples})
         m.create(top_dir=self.wd)
         return os.path.join(self.wd,'PJB')
 
@@ -246,6 +248,17 @@ class TestGetSeqDataSamples(unittest.TestCase):
         # Check sequence data samples
         self.assertEqual(get_seq_data_samples(project_dir),
                          ["PJB1","PJB2"])
+
+    def test_get_seq_data_samples_defined_in_metadata(self):
+        """
+        get_seq_data_samples: biological samples defined in project metadata
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project("RNA-seq",
+                                                       bio_samples="PJB1")
+        # Check sequence data samples
+        self.assertEqual(get_seq_data_samples(project_dir),
+                         ["PJB1"])
 
     def test_get_seq_data_samples_10x_cellplex(self):
         """

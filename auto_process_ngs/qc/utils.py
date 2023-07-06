@@ -301,6 +301,18 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
                               fastq_attrs=fastq_attrs)
     # Initial sample list
     samples = sorted([s.name for s in project.samples])
+    # If biological samples explicitly defined in
+    # project metadata then use those
+    if project.info.biological_samples:
+        bio_samples = []
+        for s in [str(s).strip()
+                  for s in project.info.biological_samples.split(',')]:
+            if s not in samples:
+                logger.warning("Sample '%s' defined as biological data "
+                               "but no sample found with that name?" % s)
+            else:
+                bio_samples.append(s)
+        return bio_samples
     # 10x Genomics CellPlex
     single_cell_platform = project.info.single_cell_platform
     if single_cell_platform:
