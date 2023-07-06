@@ -4305,10 +4305,15 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
             for read in reads:
                 fq = "%s_S%d_R%d_001.fastq.gz" % (sname,i,read)
                 fastq_names.append(fq)
+    # Metadata
+    metadata = {}
+    if seq_data_samples:
+        metadata['Biological samples'] = ','.join(seq_data_samples)
     # Set up the analysis project
     analysis_project = MockAnalysisProject(name,
                                            fastq_names,
-                                           fastq_dir=fastq_dir)
+                                           fastq_dir=fastq_dir,
+                                           metadata=metadata)
     project_dir = analysis_project.create(top_dir=top_dir)
     # Populate with fake QC products
     make_mock_qc_dir(os.path.join(project_dir,qc_dir),
