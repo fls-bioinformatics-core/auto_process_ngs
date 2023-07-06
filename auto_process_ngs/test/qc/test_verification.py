@@ -888,6 +888,26 @@ class TestQCVerifier(unittest.TestCase):
                            'other_organisms',
                            'rRNA')))
 
+    def test_qcverifier_verify_single_end_biological_samples(self):
+        """
+	QCVerifier: verify single-end data (standardSE, biological samples defined)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardSE",
+                                   fastq_names=fastq_names,
+                                   seq_data_samples=["PJB1"])
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("standardSE"),
+            fastq_names,
+            seq_data_samples="PJB1",
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
+
     def test_qcverifier_verify_paired_end(self):
         """
 	QCVerifier: verify paired-end data (standardPE)
@@ -1009,6 +1029,28 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify(
             fetch_protocol_definition("standardPE"),
             fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
+
+    def test_qcverifier_verify_paired_end_biological_samples(self):
+        """
+	QCVerifier: verify paired-end data (standardPE, biological samples defined)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001_paired.fastq.gz',
+                     'PJB1_S1_R2_001_paired.fastq.gz',
+                     'PJB2_S2_R1_001_paired.fastq.gz',
+                     'PJB2_S2_R2_001_paired.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="standardPE",
+                                   fastq_names=fastq_names,
+                                   seq_data_samples=["PJB1"])
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("standardPE"),
+            fastq_names,
+            seq_data_samples="PJB1",
             fastq_screens=('model_organisms',
                            'other_organisms',
                            'rRNA')))
@@ -1669,6 +1711,16 @@ class TestVerifyProject(unittest.TestCase):
         verify_project: paired-end data
         """
         analysis_dir = self._make_analysis_project(protocol="standardPE")
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_with_biological_samples(self):
+        """
+        verify_project: paired-end data: biological samples defined
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol="standardPE",
+            seq_data_samples=('PJB1',))
         project = AnalysisProject(analysis_dir)
         self.assertTrue(verify_project(project))
 
