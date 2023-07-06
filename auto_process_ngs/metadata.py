@@ -673,6 +673,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     fastq_dir: the name of the associated Fastq subdirectory
     protocol: name of the QC protocol used
     organism: the organism(s) that the QC was run with
+    seq_data_samples: samples with sequence (i.e. biological) data
     cellranger_version: version of cellranger/10x software used
     cellranger_refdata: reference datasets used with cellranger
     cellranger_probeset: probe set used with cellranger
@@ -696,6 +697,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                 'fastq_dir' :'Fastq dir',
                 'protocol': 'QC protocol',
                 'organism': 'Organism',
+                'seq_data_samples': 'Sequence data samples',
                 'cellranger_version': 'Cellranger version',
                 'cellranger_refdata': 'Cellranger reference datasets',
                 'cellranger_probeset': 'Cellranger reference probe set',
