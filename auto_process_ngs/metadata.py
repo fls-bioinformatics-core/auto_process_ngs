@@ -414,6 +414,7 @@ class AnalysisProjectInfo(MetadataDict):
     paired_end: True if the data is paired end, False if not
     primary_fastq_dir: the primary subdir with FASTQ files
     samples: textual description of the samples in the project
+    biological_samples: comma-separated sample names with biological data
     comments: free-text comments
 
     """
@@ -441,6 +442,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'paired_end':'Paired_end',
                                   'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
+                                  'biological_samples': 'Biological samples',
                                   'comments':'Comments',
                               },
                               order = (
@@ -457,6 +459,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'paired_end',
                                   'primary_fastq_dir',
                                   'samples',
+                                  'biological_samples',
                                   'sequencer_model',
                                   'comments',
                               ),
