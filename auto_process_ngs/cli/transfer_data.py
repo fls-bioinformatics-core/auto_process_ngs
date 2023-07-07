@@ -28,6 +28,7 @@ from ..simple_scheduler import SchedulerReporter
 from ..fileops import exists
 from ..fileops import mkdir
 from ..fileops import copy_command
+from ..fileops import set_permissions_command
 from ..settings import Settings
 from ..settings import get_config_dir
 from ..utils import Location
@@ -516,6 +517,17 @@ def main():
 
     # Wait for scheduler jobs to complete
     sched.wait()
+
+    # Update the permissions once everything else has copied
+    print("Update permissions to read-write")
+    permissions_cmd = set_permissions_command("u+rwX,g+rwX,o=rX",
+                                              target_dir)
+    print("Running %s" % permissions_cmd)
+    permissions_job = sched.submit(permissions_cmd.command_line,
+                                   name="copy.%s.permissions" % job_id,
+                                   runner=SimpleJobRunner(),
+                                   wd=working_dir)
+    permissions_job.wait()
 
     # Check exit code for Fastq copying
     exit_code = copy_job.exit_code

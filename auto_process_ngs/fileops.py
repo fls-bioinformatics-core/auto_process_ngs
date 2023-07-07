@@ -20,6 +20,7 @@ The following functions perform specific operations directly:
 - copy: copy a file
 - copytree: recursively copy a directory
 - set_group: set the group on a file or directory
+- set_permissions: set permissions on a file or directory
 - unzip: unpack a ZIP archive
 - rename: rename (move) a file or directory
 - exists: test if a file or directory exists
@@ -36,6 +37,8 @@ via a scheduler, to perform the required operations:
   operation
 - set_group_command: generate command to perform group set
   operation
+- set_permissions_command: generate command to perform
+  permissions updating operation
 - unzip_command: generate command to unpack a ZIP archive
 """
 
@@ -179,13 +182,39 @@ def set_group(group,path):
         to change the group of, identified by a
         specifier of the form '[[USER@]HOST:]PATH'
     """
-    chmod_cmd = set_group_command(group,path)
+    chgrp_cmd = set_group_command(group,path)
     try:
-        return _run_command(chmod_cmd)
+        return _run_command(chgrp_cmd)
     except Exception as ex:
         raise Exception(
             "Exception changing group to '%s' for "
             "destination %s: %s" % (group,path,ex))
+
+def set_permissions(permissions,path):
+    """
+    Set or update the permissions for a file or directory
+
+    'path' can be a file or directory on a local
+    or remote system; if it is a directory then it
+    will operate recursively i.e. all subdirectories
+    and files will also have their permissions updated.
+
+    'permissions' must be a valid permissions string
+    as recognised by the 'chmod' command.
+
+    Arguments:
+      group (str): 'chmod' permissions string
+      path (str): path to the file or directory
+        to change the group of, identified by a
+        specifier of the form '[[USER@]HOST:]PATH'
+    """
+    chmod_cmd = set_permissions_command(permissions,path)
+    try:
+        return _run_command(chmod_cmd)
+    except Exception as ex:
+        raise Exception(
+            "Exception changing permissions to '%s' for "
+            "destination %s: %s" % (permissions,path,ex))
 
 def unzip(zip_file,dest):
     """
@@ -495,6 +524,64 @@ def set_group_command(group,path,verbose=False,safe=False):
     username = path.user
     if username is None:
         username = getpass.getuser()
+    chgrp_cmd = applications.Command('find',
+                                     path.path)
+    if safe:
+        chgrp_cmd.add_args('-user',username)
+    chgrp_cmd.add_args('!',
+                       '-type',
+                       'l',
+                       '-exec',
+                       'chgrp')
+    if verbose:
+        chgrp_cmd.add_args('--verbose')
+    chgrp_cmd.add_args(group,
+                       '{}',
+                       '+')
+    if path.is_remote:
+        # Set group for remote files
+        chgrp_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            chgrp_cmd.command_line)
+    return chgrp_cmd
+
+def set_permissions_command(permissions,path,verbose=False,safe=False):
+    """
+    Generate command to set group on file or directory
+
+    Creates a command which sets the group on a
+    file or directory.
+
+    'path' can be a file or directory on a local
+    or remote system; if it is a directory then it
+    will operate recursively i.e. all subdirectories
+    and files will also have their group changed.
+
+    'permissions' must be a valid permissions string
+    as recognised by the 'chmod' command.
+
+    Arguments:
+      permissions (str): permissions string
+      path (str): path to the file or directory
+        to change the group of, identified by a
+        specifier of the form '[[USER@]HOST:]PATH'
+      verbose (bool): if True then output a
+        diagnostic for every file processed
+        (default: don't output diagnostics)
+      safe (bool): if True then run in 'safe'
+        mode i.e. only files owned by user will
+        be have permissions updated (default: try
+        to set on all files and directories)
+
+    Returns:
+      Command: Command instance that can be used to
+        set the group.
+    """
+    path = Location(path)
+    username = path.user
+    if username is None:
+        username = getpass.getuser()
     chmod_cmd = applications.Command('find',
                                      path.path)
     if safe:
@@ -503,10 +590,10 @@ def set_group_command(group,path,verbose=False,safe=False):
                        '-type',
                        'l',
                        '-exec',
-                       'chgrp')
+                       'chmod')
     if verbose:
         chmod_cmd.add_args('--verbose')
-    chmod_cmd.add_args(group,
+    chmod_cmd.add_args(permissions,
                        '{}',
                        '+')
     if path.is_remote:
