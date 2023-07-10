@@ -338,6 +338,7 @@ if __name__ == "__main__":
             max_zip_size = None
         idx = 0
         zip_file = None
+        zz = None
         # Add Fastqs to zip file(s)
         for sample_name,fastq,fq in get_fastqs(project,
                                                pattern=options.pattern):
