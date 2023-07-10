@@ -186,7 +186,14 @@ if __name__ == "__main__":
     p.add_argument('--fastq_dir',action='store',dest='fastq_dir',
                    default=None,
                    help="explicitly specify subdirectory of DIR with "
-                   "Fastq files to run the QC on.")
+                   "Fastq files to run the QC on")
+    p.add_argument('--max_zip_size',action='store',dest='max_zip_size',
+                   default=None,
+                   help="for 'zip' command, defines the maximum size "
+                   "for the output zip file; multiple zip files will "
+                   "be created if the data exceeds this limit "
+                   "(default is create a single zip file with no size "
+                   "limit)")
     p.add_argument('--link',action='store_true',dest='link',
                    default=False,
                    help="hard link files instead of copying")
@@ -322,15 +329,38 @@ if __name__ == "__main__":
         write_checksums(project,pattern=options.pattern,filen=md5file)
         print("done")
     elif cmd == 'zip':
-        # Create a zip file
-        zip_file = "%s.zip" % project.name
-        if os.path.exists(zip_file):
-            sys.stderr.write("ERROR zip file '%s' already exists" % zip_file)
-            sys.exit(1)
-        print("Creating zip file %s" % zip_file)
-        zz = zipfile.ZipFile(zip_file,'w',allowZip64=True)
-        # Add fastqs
-        for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
+        # Create zip file(s)
+        if options.max_zip_size:
+            max_zip_size = bcf_utils.convert_size_to_bytes(options.max_zip_size)
+            print("Zip files will be batched (max %s)" %
+                  bcf_utils.format_file_size(max_zip_size))
+        else:
+            max_zip_size = None
+        idx = 0
+        zip_file = None
+        # Add Fastqs to zip file(s)
+        for sample_name,fastq,fq in get_fastqs(project,
+                                               pattern=options.pattern):
+            if zip_file and max_zip_size:
+                # Check if next Fastq will exceed limit
+                if (os.lstat(zip_file).st_size +
+                    os.lstat(fq).st_size) > max_zip_size:
+                    zz.close()
+                    zip_file = None
+                    idx += 1
+            if zip_file is None:
+                # Construct zip file name and open for writing
+                if max_zip_size:
+                    zip_file = "%s.%02d.zip" % (project.name,idx)
+                else:
+                    zip_file = "%s.zip" % project.name
+                if os.path.exists(zip_file):
+                    sys.stderr.write("ERROR zip file '%s' already exists" %
+                                     zip_file)
+                    sys.exit(1)
+                print("Creating zip file %s" % zip_file)
+                zz = zipfile.ZipFile(zip_file,'w',allowZip64=True)
+            # Add Fastq
             zz.write(fq,arcname=os.path.basename(fq))
         # Make a temporary MD5 file
         tmp = tempfile.mkdtemp()
