@@ -155,13 +155,13 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             # Look for sample sheet
             print("Acquiring sample sheet...")
             if sample_sheet is None:
-                targets = ('Data/Intensities/BaseCalls/SampleSheet.csv',
-                           'SampleSheet.csv',)
+                targets = ('SampleSheet.csv',
+                           'Data/Intensities/BaseCalls/SampleSheet.csv',)
             else:
                 targets = (sample_sheet,)
             # Try each possibility until one sticks
             for target in targets:
-                if not (Location(target).is_url or Location(target).is_remote) :
+                if not (Location(target).is_url or Location(target).is_remote):
                     target = os.path.join(data_dir,target)
                 print("Trying '%s'" % target)
                 try:
