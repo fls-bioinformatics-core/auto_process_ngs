@@ -356,6 +356,7 @@ class AnalysisDirMetadata(MetadataDict):
     sequencer_model: the model of the sequencing instrument
     flow_cell_mode: the flow cell configuration (if present in the
       run parameters)
+    default_bases_mask: default bases mask derived from RunInfo.xml
 
     """
     def __init__(self,filen=None):
@@ -381,6 +382,7 @@ class AnalysisDirMetadata(MetadataDict):
                                   'instrument_run_number': 'instrument_run_number',
                                   'sequencer_model': 'sequencer_model',
                                   'flow_cell_mode': 'flow_cell_mode',
+                                  'default_bases_mask': 'default_bases_mask',
                                   'analysis_number': 'analysis_number',
                               },
                               order=('run_name',
