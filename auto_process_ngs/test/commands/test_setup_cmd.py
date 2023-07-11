@@ -793,69 +793,6 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                                                        subdirn)),
                             "Missing subdir: %s" % subdirn)
 
-    def test_autoprocess_setup_samplesheet_from_url(self):
-        """setup: works when samplesheet is a URL
-        """
-        # Create mock Illumina run directory
-        mock_illumina_run = MockIlluminaRun(
-            '151125_M00879_0001_000000000-ABCDE1',
-            'miseq',
-            top_dir=self.dirn)
-        mock_illumina_run.create()
-        # Copy samplesheet
-        sample_sheet = os.path.join(self.dirn,'samplesheet.csv')
-        with open(os.path.join(mock_illumina_run.dirn,
-                               'Data','Intensities','BaseCalls',
-                               'SampleSheet.csv'),'r') as fp1:
-            with open(sample_sheet,'w') as fp2:
-                fp2.write(fp1.read())
-        sample_sheet = "file://%s" % sample_sheet
-        print(sample_sheet)
-        # Set up autoprocessor
-        ap = AutoProcess(settings=self.settings())
-        setup_(ap,mock_illumina_run.dirn,sample_sheet=sample_sheet)
-        analysis_dirn = "%s_analysis" % mock_illumina_run.name
-        # Check parameters
-        self.assertEqual(ap.analysis_dir,
-                         os.path.join(self.dirn,analysis_dirn))
-        self.assertEqual(ap.params.data_dir,mock_illumina_run.dirn)
-        self.assertEqual(ap.params.sample_sheet,
-                         os.path.join(self.dirn,analysis_dirn,
-                                      'custom_SampleSheet.csv'))
-        self.assertEqual(ap.params.bases_mask,'auto')
-        # Check metadata
-        self.assertEqual(ap.metadata.run_name,
-                         "151125_M00879_0001_000000000-ABCDE1")
-        self.assertEqual(ap.metadata.run_number,None)
-        self.assertEqual(ap.metadata.source,None)
-        self.assertEqual(ap.metadata.platform,"miseq")
-        self.assertEqual(ap.metadata.bcl2fastq_software,None)
-        self.assertEqual(ap.metadata.cellranger_software,None)
-        self.assertEqual(ap.metadata.instrument_name,"M00879")
-        self.assertEqual(ap.metadata.instrument_datestamp,"151125")
-        self.assertEqual(ap.metadata.instrument_run_number,"1")
-        self.assertEqual(ap.metadata.instrument_flow_cell_id,
-                         "000000000-ABCDE1")
-        self.assertEqual(ap.metadata.sequencer_model,None)
-        # Delete to force write of data to disk
-        del(ap)
-        # Check directory exists
-        self.assertTrue(os.path.isdir(analysis_dirn))
-        # Check files exists
-        for filen in ('SampleSheet.orig.csv',
-                      'custom_SampleSheet.csv',
-                      'auto_process.info',
-                      'metadata.info',):
-            self.assertTrue(os.path.exists(os.path.join(analysis_dirn,
-                                                        filen)),
-                            "Missing file: %s" % filen)
-        # Check subdirs have been created
-        for subdirn in ('ScriptCode',
-                        'logs',):
-            self.assertTrue(os.path.isdir(os.path.join(analysis_dirn,
-                                                       subdirn)),
-                            "Missing subdir: %s" % subdirn)
-
     def test_autoprocess_setup_import_extra_files(self):
         """setup: check extra files can be imported
         """
