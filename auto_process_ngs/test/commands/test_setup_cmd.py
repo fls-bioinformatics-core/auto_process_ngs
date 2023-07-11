@@ -118,7 +118,84 @@ model = {model}
         self.assertEqual(ap.metadata.instrument_run_number,"1")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y101,I8,I8,y101")
+        # Delete to force write of data to disk
+        del(ap)
+        # Check directory exists
+        self.assertTrue(os.path.isdir(analysis_dirn))
+        # Check files exists
+        for filen in ('SampleSheet.orig.csv',
+                      'custom_SampleSheet.csv',
+                      'auto_process.info',
+                      'metadata.info',):
+            self.assertTrue(os.path.exists(os.path.join(analysis_dirn,
+                                                        filen)),
+                            "Missing file: %s" % filen)
+        # Check subdirs have been created
+        for subdirn in ('ScriptCode',
+                        'logs',):
+            self.assertTrue(os.path.isdir(os.path.join(analysis_dirn,
+                                                       subdirn)),
+                            "Missing subdir: %s" % subdirn)
+
+    def test_autoprocess_setup_novaseq_run(self):
+        """setup: works for mock NovaSeq run (set flow cell mode)
+        """
+        # Create mock Illumina run directory
+        mock_illumina_run = MockIlluminaRun(
+            '230711_A00879_0089_000000000-ABCDE1',
+            'novaseq',
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        # Make a samplesheet file
+        sample_sheet = os.path.join(self.dirn,
+                                    "SampleSheet_NovaSeq_Run_89.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write("""[Header]
+IEMFileVersion,4
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGTA,Project1,
+2,Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,Project2,
+""")
+        # Set up autoprocessor
+        ap = AutoProcess(
+            settings=self.settings(
+                sequencer=dict(name="A00879",
+                               platform="novaseq",
+                               model="NovaSeq 5000")))
+        setup_(ap,mock_illumina_run.dirn,sample_sheet=sample_sheet)
+        analysis_dirn = "%s_analysis" % mock_illumina_run.name
+        # Check parameters
+        self.assertEqual(ap.analysis_dir,
+                         os.path.join(self.dirn,analysis_dirn))
+        self.assertEqual(ap.params.data_dir,mock_illumina_run.dirn)
+        self.assertEqual(ap.params.sample_sheet,
+                         os.path.join(self.dirn,analysis_dirn,
+                                      'custom_SampleSheet.csv'))
+        self.assertEqual(ap.params.bases_mask,'auto')
+        # Check metadata
+        self.assertEqual(ap.metadata.run_name,
+                         "230711_A00879_0089_000000000-ABCDE1")
+        self.assertEqual(ap.metadata.run_number,None)
+        self.assertEqual(ap.metadata.analysis_number,None)
+        self.assertEqual(ap.metadata.platform,"novaseq")
+        self.assertEqual(ap.metadata.bcl2fastq_software,None)
+        self.assertEqual(ap.metadata.cellranger_software,None)
+        self.assertEqual(ap.metadata.cellranger_software,None)
+        self.assertEqual(ap.metadata.instrument_name,"A00879")
+        self.assertEqual(ap.metadata.instrument_datestamp,"230711")
+        self.assertEqual(ap.metadata.instrument_run_number,"89")
+        self.assertEqual(ap.metadata.instrument_flow_cell_id,
+                         "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,"SP")
+        self.assertEqual(ap.metadata.sequencer_model,"NovaSeq 5000")
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y76,I0,I10,y76")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -174,7 +251,10 @@ model = {model}
         self.assertEqual(ap.metadata.instrument_run_number,"1")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y101,I8,I8,y101")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -230,7 +310,10 @@ model = {model}
         self.assertEqual(ap.metadata.instrument_run_number,"1")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y101,I8,I8,y101")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -284,7 +367,10 @@ model = {model}
         self.assertEqual(ap.metadata.instrument_datestamp,None)
         self.assertEqual(ap.metadata.instrument_run_number,None)
         self.assertEqual(ap.metadata.instrument_flow_cell_id,None)
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y101,I8,I8,y101")
 
     def test_autoprocess_setup_existing_target_dir(self):
         """setup: works when target dir exists
@@ -449,7 +535,10 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         self.assertEqual(ap.metadata.instrument_run_number,"2")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "AHGXXXX")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y76,I6,y76")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -512,7 +601,10 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         self.assertEqual(ap.metadata.instrument_run_number,"1")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y101,I8,I8,y101")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -592,7 +684,10 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(ap.metadata.instrument_run_number,"2")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "AHGXXXX")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y76,I6,y76")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -675,7 +770,10 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(ap.metadata.instrument_run_number,"2")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "AHGXXXX")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y76,I6,y76")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -802,7 +900,10 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(ap.metadata.instrument_run_number,"1")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y101,I8,I8,y101")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -876,7 +977,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(ap.metadata.instrument_run_number,"1")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,None)
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -955,7 +1058,9 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         self.assertEqual(ap.metadata.instrument_run_number,"1")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.default_bases_mask,None)
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -1067,4 +1172,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         self.assertEqual(ap.metadata.instrument_run_number,"1")
         self.assertEqual(ap.metadata.instrument_flow_cell_id,
                          "000000000-ABCDE1")
+        self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,"MiSeq")
+        self.assertEqual(ap.metadata.default_bases_mask,
+                         "y101,I8,I8,y101")

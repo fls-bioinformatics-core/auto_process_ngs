@@ -24,6 +24,7 @@ from ..utils  import Location
 from ..utils import fetch_file
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
+from bcftbx.IlluminaData import IlluminaRunParameters
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import split_run_name_full
 
@@ -225,6 +226,29 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
         else:
             # Can ignore if Fastqs already exist
             default_bases_mask = None
+    # Attempt to acquire RunParameters.xml
+    try:
+        print("Acquiring run parameters...")
+        target = os.path.join(data_dir,"RunParameters.xml")
+        run_parameters_xml = os.path.join(ap.tmp_dir,"RunParameters.xml")
+        fetch_file(target,run_parameters_xml)
+        flow_cell_mode = IlluminaRunParameters(run_parameters_xml).\
+            flowcell_mode
+        print("Flow cell mode: %s" % flow_cell_mode)
+    except Exception as ex:
+        # Failed to acquire RunParameters.xml
+        if not unaligned_dir:
+            # Fatal error
+            try:
+                # Remove temporary directory
+                shutil.rmtree(tmp_analysis_dir)
+                ap.analysis_dir = None
+            except Exception:
+                pass
+            raise Exception("Failed to acquire RunParameters.xml: %s" % ex)
+        else:
+            # Can ignore if Fastqs already exist
+            flow_cell_mode = None
     # Data source metadata
     data_source = ap.settings.metadata.default_data_source
     # Generate and print predicted outputs and warnings
@@ -284,6 +308,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.metadata['instrument_datestamp'] = datestamp
     ap.metadata['instrument_run_number'] = instrument_run_number
     ap.metadata['instrument_flow_cell_id'] = flow_cell
+    ap.metadata['flow_cell_mode'] = flow_cell_mode
     ap.metadata['default_bases_mask'] = default_bases_mask
     ap.metadata['sequencer_model'] = model
     ap.metadata['source'] = data_source
