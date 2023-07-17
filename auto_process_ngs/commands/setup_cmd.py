@@ -13,6 +13,7 @@ import os
 import uuid
 import shutil
 import logging
+from ..bcl2fastq.utils import get_bases_mask
 from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..applications import general as general_applications
@@ -23,6 +24,7 @@ from ..utils  import Location
 from ..utils import fetch_file
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
+from bcftbx.IlluminaData import IlluminaRunParameters
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import split_run_name_full
 
@@ -153,13 +155,13 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             # Look for sample sheet
             print("Acquiring sample sheet...")
             if sample_sheet is None:
-                targets = ('Data/Intensities/BaseCalls/SampleSheet.csv',
-                           'SampleSheet.csv',)
+                targets = ('SampleSheet.csv',
+                           'Data/Intensities/BaseCalls/SampleSheet.csv',)
             else:
                 targets = (sample_sheet,)
             # Try each possibility until one sticks
             for target in targets:
-                if not (Location(target).is_url or Location(target).is_remote) :
+                if not (Location(target).is_url or Location(target).is_remote):
                     target = os.path.join(data_dir,target)
                 print("Trying '%s'" % target)
                 try:
@@ -202,9 +204,51 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             # Don't need sample sheet if Fastqs already exist
             original_sample_sheet = None
             custom_sample_sheet = None
-    # Bases mask
-    print("Bases mask set to 'auto' (will be determined at run time)")
-    bases_mask = "auto"
+    # Attempt to acquire RunInfo.xml
+    try:
+        print("Acquiring run info...")
+        target = os.path.join(data_dir,"RunInfo.xml")
+        run_info_xml = os.path.join(ap.tmp_dir,"RunInfo.xml")
+        fetch_file(target,run_info_xml)
+        default_bases_mask = get_bases_mask(run_info_xml)
+        print("Default bases mask: %s" % default_bases_mask)
+    except Exception as ex:
+        # Failed to acquire RunInfo.xml
+        if not unaligned_dir:
+            # Fatal error
+            try:
+                # Remove temporary directory
+                shutil.rmtree(tmp_analysis_dir)
+                ap.analysis_dir = None
+            except Exception:
+                pass
+            raise Exception("Failed to acquire RunInfo.xml: %s" % ex)
+        else:
+            # Can ignore if Fastqs already exist
+            default_bases_mask = None
+    # Attempt to acquire RunParameters.xml
+    try:
+        print("Acquiring run parameters...")
+        target = os.path.join(data_dir,"RunParameters.xml")
+        run_parameters_xml = os.path.join(ap.tmp_dir,"RunParameters.xml")
+        fetch_file(target,run_parameters_xml)
+        flow_cell_mode = IlluminaRunParameters(run_parameters_xml).\
+            flowcell_mode
+        print("Flow cell mode: %s" % flow_cell_mode)
+    except Exception as ex:
+        # Failed to acquire RunParameters.xml
+        if not unaligned_dir:
+            # Fatal error
+            try:
+                # Remove temporary directory
+                shutil.rmtree(tmp_analysis_dir)
+                ap.analysis_dir = None
+            except Exception:
+                pass
+            raise Exception("Failed to acquire RunParameters.xml: %s" % ex)
+        else:
+            # Can ignore if Fastqs already exist
+            flow_cell_mode = None
     # Data source metadata
     data_source = ap.settings.metadata.default_data_source
     # Generate and print predicted outputs and warnings
@@ -254,7 +298,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.params['data_dir'] = data_dir
     ap.params['analysis_dir'] = ap.analysis_dir
     ap.params['sample_sheet'] = custom_sample_sheet
-    ap.params['bases_mask'] = bases_mask
+    ap.params['bases_mask'] = 'auto'
     ap.params['unaligned_dir'] = unaligned_dir
     ap.params['acquired_primary_data'] = False
     # Store the metadata
@@ -264,6 +308,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.metadata['instrument_datestamp'] = datestamp
     ap.metadata['instrument_run_number'] = instrument_run_number
     ap.metadata['instrument_flow_cell_id'] = flow_cell
+    ap.metadata['flow_cell_mode'] = flow_cell_mode
+    ap.metadata['default_bases_mask'] = default_bases_mask
     ap.metadata['sequencer_model'] = model
     ap.metadata['source'] = data_source
     ap.metadata['run_number'] = run_number
