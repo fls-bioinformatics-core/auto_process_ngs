@@ -294,6 +294,9 @@ def add_samplesheet_command(cmdparser):
     mutex.add_argument('-p','--predict',action='store_true',dest='predict',
                        default=False,
                        help="show predicted outputs from sample sheet")
+    mutex.add_argument('-s','--summarise',action='store_true',dest='summarise',
+                       default=False,
+                       help="summarise predicted outputs from sample sheet")
     advanced = p.add_argument_group("Advanced options")
     add_debug_option(advanced)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
@@ -1395,6 +1398,9 @@ def samplesheet(args):
     elif args.predict:
         # Predict the outputs
         d.samplesheet(SampleSheetOperation.PREDICT)
+    elif args.summarise:
+        # Summarise the outputs
+        d.samplesheet(SampleSheetOperation.SUMMARISE)
     elif args.import_sample_sheet:
         # Import new sample sheet file
         d.samplesheet(SampleSheetOperation.IMPORT,
