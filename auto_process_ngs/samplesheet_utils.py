@@ -17,6 +17,7 @@ Utilities for handling SampleSheet files:
 - SampleSheetLinter: core class which provides methods for checking
   sample sheet contents for potential problems
 - predict_outputs: generate expected outputs in human-readable form
+- summarise_outputs: concise human-readable summary of expected outputs
 - check_and_warn: check sample sheet for problems and issue warnings
 
 Helper functions:
@@ -36,6 +37,7 @@ import re
 import fnmatch
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
+from bcftbx.utils import pretty_print_names
 
 # Initialise logging
 import logging
@@ -333,6 +335,83 @@ def predict_outputs(sample_sheet=None,sample_sheet_file=None):
                         lanes]
                 prediction.append("%s" % '\t'.join([str(i) for i in line]))
     return '\n'.join(prediction)
+
+def summarise_outputs(sample_sheet=None,sample_sheet_file=None):
+    """
+    Generate human-readable summary of expected sample sheet outputs
+
+    Arguments:
+      sample_sheet (SampleSheet): if supplied then must be a
+        populated ``SampleSheet`` instance (if ``None`` then
+        data will be loaded from file specified by
+        ``sample_sheet_file``)
+      sample_sheet_file (str): if ``sample_sheet`` is ``None``
+        then read data from the file specified by this argument
+
+    Returns:
+      String: text summarising the expected projects, sample names,
+        lanes and index configurations.
+    """
+    # Set up linter
+    linter = SampleSheetLinter(sample_sheet=sample_sheet,
+                               sample_sheet_file=sample_sheet_file)
+    # Do checks
+    close_names = linter.close_project_names()
+    # Initialise summary content
+    summary = []
+    # Gather information
+    for project_name in linter.project_names:
+        project = linter.get_project(project_name)
+        samples_per_lane = {}
+        barcodes = set()
+        # Loop over samples in project
+        for sample_id in project.sample_ids:
+            sample = project.get_sample(sample_id)
+            for barcode in sample.barcode_seqs:
+                lanes = sample.lanes(barcode)
+                # Convert barcode to generic/masked format
+                if not barcode:
+                    barcode = ""
+                elif barcode.startswith('SI-'):
+                    barcode = "__10X__"
+                else:
+                    for c in "ACGT":
+                        barcode = barcode.replace(c,'N')
+                barcodes.add(barcode)
+                # Collect sample names against each lane
+                if not lanes:
+                    lanes = [1]
+                for lane in lanes:
+                    try:
+                        samples_per_lane[lane].append(sample_id)
+                    except KeyError:
+                        samples_per_lane[lane] = [sample_id]
+        # Generate length representations
+        barcode_lengths = []
+        for b in barcodes:
+            if b == "__10X__":
+                continue
+            barcode_lengths.append('x'.join([str(len(x))
+                                             for x in b.split('-')]))
+        # Add to summary report
+        summary.append("%s" % project_name)
+        if len(barcodes) > 1:
+            summary.append("!!! mixed barcode lengths and/or types !!!")
+        barcode_info = []
+        if "__10X__" in barcodes:
+            barcode_info.append("10x Genomics indexes")
+        if barcode_lengths:
+            barcode_info.append("%sbp indexes" %
+                                ','.join(barcode_lengths))
+        for lane in sorted(samples_per_lane.keys()):
+            samples = samples_per_lane[lane]
+            summary.append("- L%s\t%s\t%s sample%s\t%s" %
+                           (lane,
+                            pretty_print_names(samples),
+                            len(samples),
+                            's' if len(samples) != 1 else '',
+                            ','.join(barcode_info)))
+    return '\n'.join(summary)
 
 def check_and_warn(sample_sheet=None,sample_sheet_file=None):
     """
