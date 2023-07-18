@@ -103,6 +103,8 @@ def main():
                    "'PLATFORM_DATESTAMP.RUN_ID-PROJECT'. If this "
                    "option is not set then no subdirectory will be "
                    "used")
+    p.add_argument('--zip_fastqs',action='store_true',
+                   help="put Fastqs into a ZIP file")
     p.add_argument('--readme',action='store',
                    metavar='README_TEMPLATE',dest='readme_template',
                    help="template file to generate README file from; "
@@ -426,21 +428,52 @@ def main():
                             poll_interval=settings.general.poll_interval)
     sched.start()
 
-    # Build command to run manage_fastqs.py
-    copy_cmd = Command("manage_fastqs.py")
-    if args.filter_pattern:
-        copy_cmd.add_args("--filter",args.filter_pattern)
-    if hard_links:
-        copy_cmd.add_args("--link")
-    copy_cmd.add_args(analysis_dir.analysis_dir,
-                      project_name)
-    if fastq_dir is not None:
-        copy_cmd.add_args(fastq_dir)
-    copy_cmd.add_args("copy",target_dir)
-    print("Running %s" % copy_cmd)
-    copy_job = sched.submit(copy_cmd.command_line,
-                            name="copy.%s" % job_id,
-                            wd=working_dir)
+    # Build command to run manage_fastqs.py to copy Fastqs
+    if not args.zip_fastqs:
+        copy_cmd = Command("manage_fastqs.py")
+        if args.filter_pattern:
+            copy_cmd.add_args("--filter",args.filter_pattern)
+        if hard_links:
+            copy_cmd.add_args("--link")
+        copy_cmd.add_args(analysis_dir.analysis_dir,
+                          project_name)
+        if fastq_dir is not None:
+            copy_cmd.add_args(fastq_dir)
+        copy_cmd.add_args("copy",target_dir)
+        print("Running %s" % copy_cmd)
+        copy_job = sched.submit(copy_cmd.command_line,
+                                name="copy.%s" % job_id,
+                                wd=working_dir)
+
+    # Build commands to zip Fastqs and rename/move
+    if args.zip_fastqs:
+        zip_cmd = Command("manage_fastqs.py")
+        if args.filter_pattern:
+            zip_cmd.add_args("--filter",args.filter_pattern)
+        if fastq_dir is not None:
+            copy_cmd.add_args("--fastq_dir",
+                              fastq_dir)
+        zip_cmd.add_args(analysis_dir.analysis_dir,
+                          project_name,
+                         "zip")
+        print("Running %s" % zip_cmd)
+        zip_job = sched.submit(zip_cmd.command_line,
+                               name="zip.%s" % job_id,
+                               wd=working_dir)
+        final_zip = \
+            "{platform}_{datestamp}.{run_number}-{project}-fastqs.zip".\
+            format(
+                platform=analysis_dir.metadata.platform.upper(),
+                datestamp=analysis_dir.metadata.instrument_datestamp,
+                run_number=analysis_dir.metadata.run_number,
+                project=project.name)
+        copy_cmd = copy_command(
+            os.path.join(working_dir,"%s.zip" % project_name),
+            os.path.join(target_dir,final_zip))
+        copy_job = sched.submit(copy_cmd.command_line,
+                                name="copyzip.%s" % job_id,
+                                wd=working_dir,
+                                wait_for=(zip_job.job_name,))
 
     # Copy README
     if readme_file is not None:
