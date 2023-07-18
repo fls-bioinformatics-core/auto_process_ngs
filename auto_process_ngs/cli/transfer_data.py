@@ -435,11 +435,13 @@ def main():
             copy_cmd.add_args("--filter",args.filter_pattern)
         if hard_links:
             copy_cmd.add_args("--link")
-        copy_cmd.add_args(analysis_dir.analysis_dir,
-                          project_name)
         if fastq_dir is not None:
-            copy_cmd.add_args(fastq_dir)
-        copy_cmd.add_args("copy",target_dir)
+            copy_cmd.add_args("--fastq_dir",
+                              fastq_dir)
+        copy_cmd.add_args(analysis_dir.analysis_dir,
+                          project_name,
+                          "copy",
+                          target_dir)
         print("Running %s" % copy_cmd)
         copy_job = sched.submit(copy_cmd.command_line,
                                 name="copy.%s" % job_id,
@@ -451,8 +453,8 @@ def main():
         if args.filter_pattern:
             zip_cmd.add_args("--filter",args.filter_pattern)
         if fastq_dir is not None:
-            copy_cmd.add_args("--fastq_dir",
-                              fastq_dir)
+            zip_cmd.add_args("--fastq_dir",
+                             fastq_dir)
         zip_cmd.add_args(analysis_dir.analysis_dir,
                           project_name,
                          "zip")
