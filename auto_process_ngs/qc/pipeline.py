@@ -184,7 +184,8 @@ class QCPipeline(Pipeline):
 
     def add_project(self,project,protocol,qc_dir=None,organism=None,
                     fastq_dir=None,report_html=None,multiqc=False,
-                    sample_pattern=None,log_dir=None,convert_gtf=True):
+                    sample_pattern=None,log_dir=None,convert_gtf=True,
+                    verify_fastqs=True):
         """
         Add a project to the QC pipeline
 
@@ -211,6 +212,8 @@ class QCPipeline(Pipeline):
             GTF files to BED for 'infer_experiment.py'
             (default; otherwise only use the explicitly
             defined BED files)
+          verify_fastqs (bool): if True then verify
+            Fastq integrity as part of the pipeline
         """
         ###################
         # Do internal setup
@@ -324,15 +327,16 @@ class QCPipeline(Pipeline):
                            fastq_dir=project.fastq_dir)
 
         # Verify Fastqs
-        verify_fastqs = VerifyFastqs(
-            "%s: verify Fastqs" % project_name,
-            project,
-            fastq_attrs=project.fastq_attrs)
-        self.add_task(verify_fastqs,
-                      requires=(setup_qc_dirs,),
-                      runner=self.runners['fastqc_runner'],
-                      log_dir=log_dir)
-        startup_tasks.append(verify_fastqs)
+        if verify_fastqs:
+            verify_fastqs_ = VerifyFastqs(
+                "%s: verify Fastqs" % project_name,
+                project,
+                fastq_attrs=project.fastq_attrs)
+            self.add_task(verify_fastqs_,
+                          requires=(setup_qc_dirs,),
+                          runner=self.runners['fastqc_runner'],
+                          log_dir=log_dir)
+            startup_tasks.append(verify_fastqs_)
 
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
