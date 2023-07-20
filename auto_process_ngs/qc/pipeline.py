@@ -16,6 +16,8 @@ Pipeline task classes:
 - SetupQCDirs
 - GetSequenceDataSamples
 - GetSequenceDataFastqs
+- UpdateQCMetadata
+- VerifyFastqs
 - GetSeqLengthStats
 - CheckFastqScreenOutputs
 - RunFastqScreen
@@ -58,6 +60,7 @@ import tempfile
 import shutil
 import random
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
@@ -316,6 +319,16 @@ class QCPipeline(Pipeline):
                            seq_data_samples=\
                            get_seq_data.output.seq_data_samples,
                            fastq_dir=project.fastq_dir)
+
+        # Verify Fastqs
+        verify_fastqs = VerifyFastqs(
+            "%s: verify Fastqs" % project_name,
+            project,
+            fastq_attrs=project.fastq_attrs)
+        self.add_task(verify_fastqs,
+                      requires=(setup_qc_dirs,),
+                      runner=self.runners['fastqc_runner'],
+                      log_dir=log_dir)
 
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
@@ -1469,6 +1482,54 @@ class UpdateQCMetadata(PipelineTask):
             print("-- %s: %s" % (item,metadata[item]))
             qc_info[item] = metadata[item]
         qc_info.save()
+
+class VerifyFastqs(PipelineFunctionTask):
+    """
+    Check Fastqs are valid
+    """
+    def init(self,project,fastq_attrs=None):
+        """
+        Initialise the VerifyFastqs task
+
+        Arguments:
+          project (AnalysisProject): project with Fastqs
+            to check
+          fastq_attrs (BaseFastqAttrs): class to use for
+            extracting data from Fastq names
+        """
+        pass
+    def setup(self):
+        # Remove index Fastqs
+        fastqs = remove_index_fastqs(
+            self.args.project.fastqs,
+            fastq_attrs=self.args.fastq_attrs)
+        # Check each Fastq is readable
+        for fq in fastqs:
+            self.add_call(
+                "Check %s can be read" % os.path.basename(fq),
+                self.read_fastq,
+                fq)
+    def read_fastq(self,fastq):
+        # Iterate through Fastq file
+        try:
+            for r in FastqIterator(fastq_file=fastq):
+                continue
+        except Exception as ex:
+            print("%s...FAILED: '%s'" % (fastq,ex))
+            return False
+        print("%s...PASSED" % fastq)
+        return True
+    def finish(self):
+        # Report the output (will contain any errors)
+        for line in self.stdout.split('\n'):
+            if not line.startswith("#### "):
+                print(line)
+        # Check the verification status
+        verified = all(r for r in self.result())
+        if not verified:
+            self.fail(message="Failed to verify Fastq files")
+        else:
+            print("Verified Fastq files")
 
 class GetSeqLengthStats(PipelineFunctionTask):
     """
