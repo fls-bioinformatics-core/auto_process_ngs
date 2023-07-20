@@ -292,6 +292,8 @@ class QCPipeline(Pipeline):
                                  if fastq_dir is not None
                                  else '')
 
+        startup_tasks = []
+
         # Set up QC dirs
         setup_qc_dirs = SetupQCDirs(
             "%s: set up QC directories" % project_name,
@@ -302,6 +304,7 @@ class QCPipeline(Pipeline):
         )
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
+        startup_tasks.append(setup_qc_dirs)
 
         # Characterise samples
         get_seq_data = GetSequenceDataSamples(
@@ -329,6 +332,7 @@ class QCPipeline(Pipeline):
                       requires=(setup_qc_dirs,),
                       runner=self.runners['fastqc_runner'],
                       log_dir=log_dir)
+        startup_tasks.append(verify_fastqs)
 
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
@@ -347,7 +351,7 @@ class QCPipeline(Pipeline):
             project,
             qc_dir)
         self.add_task(verify_qc,
-                      requires=(update_qc_metadata,),
+                      requires=startup_tasks,
                       runner=self.runners['verify_runner'],
                       log_dir=log_dir)
 
@@ -375,6 +379,7 @@ class QCPipeline(Pipeline):
             samples=get_seq_data.output.seq_data_samples,
             fastq_attrs=project.fastq_attrs)
         self.add_task(get_seq_fastqs,
+                      requires=startup_tasks,
                       log_dir=log_dir)
 
         # Set up tasks to generate and characterise BAM files
@@ -404,7 +409,7 @@ class QCPipeline(Pipeline):
                 fastq_attrs=project.fastq_attrs,
                 verbose=self.params.VERBOSE)
             self.add_task(get_bam_files,
-                          requires=(setup_qc_dirs,),
+                          requires=startup_tasks,
                           runner=self.runners['star_runner'],
                           log_dir=log_dir)
 
@@ -443,6 +448,7 @@ class QCPipeline(Pipeline):
                     os.path.join(qc_dir,'%s.annotation.bed' %
                                  organism_name))
                 self.add_task(get_bed_annotation_from_gtf,
+                              requires=startup_tasks,
                               log_dir=log_dir)
                 reference_gene_model_file = get_bed_annotation_from_gtf.\
                                             output.bed_file
@@ -481,7 +487,7 @@ class QCPipeline(Pipeline):
                     read_numbers=read_numbers.qc,
                     fastq_attrs=project.fastq_attrs)
                 self.add_task(get_seq_lengths,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               runner=self.runners['fastqc_runner'],
                               log_dir=log_dir)
                 verify_qc.requires(get_seq_lengths)
@@ -505,7 +511,7 @@ class QCPipeline(Pipeline):
                     verbose=self.params.VERBOSE
                 )
                 self.add_task(check_fastq_screen,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               runner=self.runners['verify_runner'],
                               log_dir=log_dir)
 
@@ -544,7 +550,7 @@ class QCPipeline(Pipeline):
                     verbose=self.params.VERBOSE
                 )
                 self.add_task(check_fastqc,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               runner=self.runners['verify_runner'],
                               log_dir=log_dir)
 
@@ -576,7 +582,7 @@ class QCPipeline(Pipeline):
                     star_indexes=self.params.star_indexes
                 )
                 self.add_task(setup_fastq_strand_conf,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               log_dir=log_dir)
 
                 # Check outputs for fastq_strand.py
@@ -646,7 +652,7 @@ class QCPipeline(Pipeline):
                         qc_dir
                     )
                     self.add_task(get_cellranger_multi_config,
-                                  requires=(setup_qc_dirs,),
+                                  requires=startup_tasks,
                                   log_dir=log_dir)
                     samples = get_cellranger_multi_config.output.gex_libraries
                     fastq_dirs = get_cellranger_multi_config.output.fastq_dirs
@@ -686,7 +692,7 @@ class QCPipeline(Pipeline):
                     fastq_dirs=fastq_dirs,
                     extra_projects=self.params.cellranger_extra_projects,
                     log_dir=log_dir,
-                    required_tasks=(setup_qc_dirs,))
+                    required_tasks=startup_tasks)
                 verify_qc.requires(run_cellranger_count)
 
                 # Update metadata
@@ -748,7 +754,7 @@ class QCPipeline(Pipeline):
                     qc_dir
                 )
                 self.add_task(get_cellranger_multi_config,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               log_dir=log_dir)
                 check_cellranger_multi_requires.append(
                     get_cellranger_multi_config)
@@ -820,6 +826,7 @@ class QCPipeline(Pipeline):
                                  organism_name),
                     name=project.name)
                 self.add_task(rseqc_gene_body_coverage,
+                              requires=startup_tasks,
                               runner=self.runners['rseqc_runner'],
                               log_dir=log_dir)
                 verify_qc.requires(rseqc_gene_body_coverage)
@@ -835,6 +842,7 @@ class QCPipeline(Pipeline):
                     get_bam_files.output.bam_files,
                     os.path.join(qc_dir,'picard',organism_name))
                 self.add_task(insert_size_metrics,
+                              requires=startup_tasks,
                               runner=self.runners['picard_runner'],
                               log_dir=log_dir)
 
@@ -861,6 +869,7 @@ class QCPipeline(Pipeline):
                     os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
                     bam_properties=rseqc_infer_experiment.output.experiments)
                 self.add_task(qualimap_rnaseq,
+                              requires=startup_tasks,
                               runner=self.runners['qualimap_runner'],
                               log_dir=log_dir)
                 verify_qc.requires(qualimap_rnaseq)
