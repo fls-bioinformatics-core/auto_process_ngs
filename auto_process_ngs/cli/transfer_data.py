@@ -105,6 +105,9 @@ def main():
                    "used")
     p.add_argument('--zip_fastqs',action='store_true',
                    help="put Fastqs into a ZIP file")
+    p.add_argument('--no_fastqs',action='store_true',
+                   help="don't copy Fastqs (other artefacts will be "
+                   "copied, if specified)")
     p.add_argument('--readme',action='store',
                    metavar='README_TEMPLATE',dest='readme_template',
                    help="template file to generate README file from; "
@@ -149,6 +152,9 @@ def main():
     # Process command line
     args = p.parse_args()
 
+    # Flag for Fastq transfer
+    include_fastqs = not args.no_fastqs
+
     # Check if target is pre-defined destination
     if args.dest in destinations:
         print("Loading settings for destination '%s'" % args.dest)
@@ -182,6 +188,18 @@ def main():
         weburl = args.weburl
     if args.link:
         hard_links = args.link
+
+    # Additional artefacts
+    include_10x_outputs = bool(args.include_10x_outputs)
+
+    # Check at least one artefact is being transferred
+    if not (include_fastqs or
+            include_downloader or
+            include_qc_report or
+            include_10x_outputs or
+            readme_template):
+        logger.error("No artefacts specified for transfer")
+        return 1
 
     # Sort out project directory
     project = AnalysisProject(args.project)
@@ -296,7 +314,7 @@ def main():
         qc_zips = None
 
     # Locate 10xGenomics outputs
-    if args.include_10x_outputs:
+    if include_10x_outputs:
         print("Locating outputs from 10xGenomics pipelines for "
               "inclusion")
         cellranger_dirs = list()
@@ -428,64 +446,73 @@ def main():
                             poll_interval=settings.general.poll_interval)
     sched.start()
 
-    # Build command to run manage_fastqs.py to copy Fastqs
-    if not args.zip_fastqs:
-        copy_cmd = Command("manage_fastqs.py")
-        if args.filter_pattern:
-            copy_cmd.add_args("--filter",args.filter_pattern)
-        if hard_links:
-            copy_cmd.add_args("--link")
-        if fastq_dir is not None:
-            copy_cmd.add_args("--fastq_dir",
-                              fastq_dir)
-        copy_cmd.add_args(analysis_dir.analysis_dir,
-                          project_name,
-                          "copy",
-                          target_dir)
-        print("Running %s" % copy_cmd)
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy.%s" % job_id,
-                                wd=working_dir)
+    # List of jobs to check at the end
+    check_jobs = {}
 
-    # Build commands to zip Fastqs and rename/move
-    if args.zip_fastqs:
-        zip_cmd = Command("manage_fastqs.py")
-        if args.filter_pattern:
-            zip_cmd.add_args("--filter",args.filter_pattern)
-        if fastq_dir is not None:
-            zip_cmd.add_args("--fastq_dir",
-                             fastq_dir)
-        zip_cmd.add_args(analysis_dir.analysis_dir,
-                          project_name,
-                         "zip")
-        print("Running %s" % zip_cmd)
-        zip_job = sched.submit(zip_cmd.command_line,
-                               name="zip.%s" % job_id,
-                               wd=working_dir)
-        final_zip = \
-            "{platform}_{datestamp}.{run_number}-{project}-fastqs.zip".\
-            format(
-                platform=analysis_dir.metadata.platform.upper(),
-                datestamp=analysis_dir.metadata.instrument_datestamp,
-                run_number=analysis_dir.metadata.run_number,
-                project=project.name)
-        copy_cmd = copy_command(
-            os.path.join(working_dir,"%s.zip" % project_name),
-            os.path.join(target_dir,final_zip))
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copyzip.%s" % job_id,
-                                wd=working_dir,
-                                wait_for=(zip_job.job_name,))
+    # Transfer Fastqs
+    if include_fastqs:
+        if not args.zip_fastqs:
+            # Build command to run manage_fastqs.py to copy Fastqs
+            copy_cmd = Command("manage_fastqs.py")
+            if args.filter_pattern:
+                copy_cmd.add_args("--filter",args.filter_pattern)
+            if hard_links:
+                copy_cmd.add_args("--link")
+            if fastq_dir is not None:
+                copy_cmd.add_args("--fastq_dir",
+                                  fastq_dir)
+            copy_cmd.add_args(analysis_dir.analysis_dir,
+                              project_name,
+                              "copy",
+                              target_dir)
+            print("Running %s" % copy_cmd)
+            copy_job = sched.submit(copy_cmd.command_line,
+                                    name="copy_fastqs.%s" % job_id,
+                                    wd=working_dir)
+            check_jobs[copy_job.name] = copy_job
+        else:
+            # Build command to zip Fastqs
+            zip_cmd = Command("manage_fastqs.py")
+            if args.filter_pattern:
+                zip_cmd.add_args("--filter",args.filter_pattern)
+            if fastq_dir is not None:
+                zip_cmd.add_args("--fastq_dir",
+                                 fastq_dir)
+            zip_cmd.add_args(analysis_dir.analysis_dir,
+                             project_name,
+                             "zip")
+            print("Running %s" % zip_cmd)
+            zip_job = sched.submit(zip_cmd.command_line,
+                                   name="zip_fastqs.%s" % job_id,
+                                   wd=working_dir)
+            check_jobs[zip_job.name] = zip_job
+            # Rename ZIP file and move to final location
+            final_zip = \
+                "{platform}_{datestamp}.{run_number}-{project}-fastqs.zip".\
+                format(
+                    platform=analysis_dir.metadata.platform.upper(),
+                    datestamp=analysis_dir.metadata.instrument_datestamp,
+                    run_number=analysis_dir.metadata.run_number,
+                    project=project.name)
+            copy_cmd = copy_command(
+                os.path.join(working_dir,"%s.zip" % project_name),
+                os.path.join(target_dir,final_zip))
+            copy_job = sched.submit(copy_cmd.command_line,
+                                    name="copy_zipped_fastqs.%s" % job_id,
+                                    wd=working_dir,
+                                    wait_for=(zip_job.job_name,))
+            check_jobs[copy_job.name] = copy_job
 
     # Copy README
     if readme_file is not None:
         print("Copying README file")
         copy_cmd = copy_command(readme_file,
                                 os.path.join(target_dir,"README"))
-        sched.submit(copy_cmd.command_line,
-                     name="copy.%s.readme" % job_id,
-                     runner=SimpleJobRunner(),
-                     wd=working_dir)
+        copy_job = sched.submit(copy_cmd.command_line,
+                                name="copy_readme.%s" % job_id,
+                                runner=SimpleJobRunner(),
+                                wd=working_dir)
+        check_jobs[copy_job.name] = copy_job
 
     # Copy download_fastqs.py
     if downloader:
@@ -494,10 +521,11 @@ def main():
                                 os.path.join(
                                     target_dir,
                                     os.path.basename(downloader)))
-        sched.submit(copy_cmd.command_line,
-                     name="copy.%s.downloader" % job_id,
-                     runner=SimpleJobRunner(),
-                     wd=working_dir)
+        copy_job = sched.submit(copy_cmd.command_line,
+                                name="copy_downloader.%s" % job_id,
+                                runner=SimpleJobRunner(),
+                                wd=working_dir)
+        check_jobs[copy_job.name] = copy_job
 
     # Copy QC reports
     if qc_zips:
@@ -507,11 +535,13 @@ def main():
                 qc_zip,
                 os.path.join(target_dir,os.path.basename(qc_zip)),
                 link=hard_links)
-            sched.submit(copy_cmd.command_line,
-                         name="copy.%s.%s" % (job_id,
-                                                os.path.basename(qc_zip)),
-                         runner=SimpleJobRunner(),
-                         wd=working_dir)
+            copy_job = sched.submit(copy_cmd.command_line,
+                                    name="copy_qc_zip.%s.%s" %
+                                    (job_id,
+                                     os.path.basename(qc_zip)),
+                                    runner=SimpleJobRunner(),
+                                    wd=working_dir)
+            check_jobs[copy_job.name] = copy_job
 
     # Tar and copy 10xGenomics outputs
     if cellranger_dirs:
@@ -533,22 +563,24 @@ def main():
                                 os.path.basename(cellranger_dir))
             print("Running %s" % targz_cmd)
             targz_job = sched.submit(targz_cmd.command_line,
-                                     name="targz.%s.%s" % (
+                                     name="targz_10x_output.%s.%s" % (
                                          job_id,
                                          os.path.basename(cellranger_dir)),
                                      wd=working_dir)
+            check_jobs[targz_job.name] = targz_job
             # Copy the targz file
             copy_cmd = copy_command(targz,
                                     os.path.join(target_dir,
                                                  os.path.basename(targz)))
             print("Running %s" % copy_cmd)
             copy_job = sched.submit(copy_cmd.command_line,
-                                    name="copytgz.%s.%s" % (
+                                    name="copy_10x_tgz.%s.%s" % (
                                         job_id,
                                         os.path.basename(cellranger_dir)),
                                     runner=SimpleJobRunner(),
                                     wd=working_dir,
                                     wait_for=(targz_job.job_name,))
+            check_jobs[copy_job.name] = copy_job
 
     # Wait for scheduler jobs to complete
     sched.wait()
@@ -559,16 +591,22 @@ def main():
                                               target_dir)
     print("Running %s" % permissions_cmd)
     permissions_job = sched.submit(permissions_cmd.command_line,
-                                   name="copy.%s.permissions" % job_id,
+                                   name="set_permissions.%s" % job_id,
                                    runner=SimpleJobRunner(),
                                    wd=working_dir)
     permissions_job.wait()
+    check_jobs[copy_job.name] = copy_job
 
-    # Check exit code for Fastq copying
-    exit_code = copy_job.exit_code
-    if exit_code != 0:
-        logger.error("File copy exited with an error")
-        return exit_code
+    # Check all jobs completed successfully
+    status = 0
+    for name in check_jobs:
+        if check_jobs[name].exit_code != 0:
+            logger.warning("'%s': operation failed" % name)
+            status = 1
+    if status != 0:
+        logger.error("some transfer operations did not complete "
+                     "successfully (see warnings above)")
+        return 1
     else:
         print("Files now at %s" % target_dir)
         if weburl:
