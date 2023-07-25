@@ -84,6 +84,7 @@ from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
+from bcftbx.utils import pretty_print_names
 from bcftbx.utils import walk
 from ..analysis import AnalysisFastq
 from ..analysis import run_id
@@ -570,6 +571,16 @@ class QCReport(Document):
             # Protocol summary
             if project.qc_info.protocol_summary:
                 project_notes.add(project.qc_info.protocol_summary)
+            # Biological (seq data) samples
+            if project.seq_data_samples:
+                # Only add a note if these are a subset of the
+                # full set of samples
+                if sorted(project.samples) != \
+                   sorted(project.seq_data_samples):
+                    project_notes.add("Subset of samples considered to "
+                                      "contain biological data: %s" %
+                                      pretty_print_names(
+                                          project.seq_data_samples))
             # Create a new summary table
             summary_table = self.add_summary_table(project,
                                                    summary_fields_,
