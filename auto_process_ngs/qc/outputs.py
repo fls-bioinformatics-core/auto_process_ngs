@@ -1240,8 +1240,9 @@ class QCOutputs:
                             cellranger_name = cellranger_multi.pipeline_name
                             if cellranger_name is None:
                                 cellranger_name = 'cellranger'
-                            cellranger_references.add(
-                                cellranger_multi.reference_data)
+                            if cellranger_multi.reference_data:
+                                cellranger_references.add(
+                                    cellranger_multi.reference_data)
                             if cellranger_multi.probe_set:
                                 cellranger_probe_sets.add(
                                     cellranger_multi.probe_set)
