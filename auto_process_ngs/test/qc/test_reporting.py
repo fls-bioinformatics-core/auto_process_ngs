@@ -596,13 +596,36 @@ class TestReportFunction(unittest.TestCase):
             include_cellranger_multi=False)
         project = AnalysisProject(analysis_dir)
         # Todo Remove 10x_config.csv?
-        # Todo Add external 'cellranger multi'-style outputs
+        # Add external 'cellranger multi'-style outputs
         multi_dir = os.path.join("cellranger_multi",
                                  "7.1.0",
                                  "external")
         MockQCOutputs.cellranger_multi(("EX1",),
                                        project.qc_dir,
                                        prefix=multi_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
+
+    def test_report_paired_end_multiple_external_cellranger_multi_outputs(self):
+        """
+        report: paired-end data with multiple external cellranger 'multi' outputs
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            include_cellranger_multi=False)
+        project = AnalysisProject(analysis_dir)
+        # Todo Remove 10x_config.csv?
+        # Add multiple external 'cellranger multi'-style outputs
+        # corresponding to different samples
+        for s in ("EX1","EX2",):
+            multi_dir = os.path.join("cellranger_multi",
+                                     "7.1.0",
+                                     s)
+            MockQCOutputs.cellranger_multi((s,),
+                                           project.qc_dir,
+                                           prefix=multi_dir)
         report((project,),filename=os.path.join(self.top_dir,
                                                 'report.PE.html'))
         self.assertTrue(os.path.exists(
