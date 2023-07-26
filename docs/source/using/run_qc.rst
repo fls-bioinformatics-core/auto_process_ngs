@@ -109,20 +109,37 @@ reports can be copied there for sharing using the
    pipeline by using the ``run_qc.py`` utility; see the
    section on :doc:`running the QC standalone <run_qc_standalone>`.
 
---------------------------------
-Samples with non-biological data
---------------------------------
+---------------------------------------------
+Biological versus non-biological data samples
+---------------------------------------------
 
 For some types of dataset (e.g. 10x Genomics CellPlex data), not
 all samples in the dataset contain biological data (for example,
 CellPlex datasets also have "multiplexing capture" samples which
 contain feature barcodes).
 
-Where these types of samples can be identified by the pipeline
-(for example, information in the ``10x_multi_config.csv`` file
-for CellPlex) only metrics that are appropriate for non-biological
-samples will be generated (e.g. screens, strandedness etc) and
-reported.
+Biological and non-biological data samples may be identified
+implicitly (for example, by using the library type information
+in the ``10x_multi_config.csv`` file for CellPlex datasets).
+Alternatively samples with biological data can be explicitly
+defined in the ``Biological samples`` field of the ``README.info``
+metadata file in the analysis project directory, as a
+comma-separated list of sample names. For example:
+
+::
+
+   Biological samples    SMPL1,SMPL2
+
+Samples in the project which are not in this list are treated as
+containing non-biological data; if no samples are listed then all
+samples are assumed to contain biological data.
+
+When biological and non-biological samples are differentiated,
+the pipeline will only run and report "mapped" metrics (for
+example screens, strandedness, gene body coverage etc) for the
+biological samples; these metrics will be omitted for non-biological
+samples (even if they have been specified as part of the QC
+protocol).
 
 -------------------------------------
 QC metric using subsequences in reads

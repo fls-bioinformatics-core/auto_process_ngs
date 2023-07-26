@@ -490,6 +490,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
     qc_info['protocol'] = protocol
     if organisms:
         qc_info['organism'] = ','.join(organisms)
+    if seq_data_samples:
+        qc_info['seq_data_samples'] = ','.join(seq_data_samples)
     # Normalise organism names
     organisms_ = [normalise_organism_name(x) for x in organisms]
     # Populate with fake QC products

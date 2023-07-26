@@ -300,12 +300,21 @@ class QCPipeline(Pipeline):
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
 
+        # Characterise samples
+        get_seq_data = GetSequenceDataSamples(
+            "%s: identify sequence data samples" % project.name,
+            project,
+            fastq_attrs=project.fastq_attrs)
+        self.add_task(get_seq_data)
+
         # Build a dictionary of QC metadata items to
         # update
         qc_metadata = dict(protocol=protocol.name,
                            protocol_summary=protocol.summarise(),
                            protocol_specification=repr(protocol),
                            organism=organism,
+                           seq_data_samples=\
+                           get_seq_data.output.seq_data_samples,
                            fastq_dir=project.fastq_dir)
 
         # Update QC metadata
@@ -316,7 +325,8 @@ class QCPipeline(Pipeline):
             qc_metadata,
             legacy_screens=self.params.legacy_screens)
         self.add_task(update_qc_metadata,
-                      requires=(setup_qc_dirs,))
+                      requires=(setup_qc_dirs,
+                                get_seq_data))
 
         # Verify QC
         verify_qc = VerifyQC(
@@ -342,13 +352,6 @@ class QCPipeline(Pipeline):
                       runner=self.runners['report_runner'],
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
-
-        # Characterise samples
-        get_seq_data = GetSequenceDataSamples(
-            "%s: identify sequence data samples" % project.name,
-            project,
-            fastq_attrs=project.fastq_attrs)
-        self.add_task(get_seq_data)
 
         # Get sequence data Fastqs
         get_seq_fastqs = GetSequenceDataFastqs(
@@ -1442,6 +1445,15 @@ class UpdateQCMetadata(PipelineTask):
             except AttributeError:
                 value = self.args.metadata[item]
             metadata[item] = value
+        # Deal with sequence data (biological) samples
+        seq_data_samples = (metadata['seq_data_samples']
+                            if 'seq_data_samples' in metadata else None)
+        if seq_data_samples:
+            # Collapse list into a string
+            metadata['seq_data_samples'] = ','.join([s for s
+                                                     in seq_data_samples])
+        else:
+            metadata['seq_data_samples'] = None
         # Deal with FastqScreen metadata
         fastq_screens = (metadata['fastq_screens']
                          if 'fastq_screens' in metadata else None)

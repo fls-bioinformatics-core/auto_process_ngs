@@ -128,7 +128,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                 if key in self.__attributes:
                     self.__key_order.append(key)
                 else:
-                    raise KeyError("Key '%s' not defined in attributes")
+                    raise KeyError("Key '%s' not defined in attributes" % key)
             # Append keys not explicitly listed in the order
             extra_keys = []
             for key in self.__attributes:
@@ -414,6 +414,7 @@ class AnalysisProjectInfo(MetadataDict):
     paired_end: True if the data is paired end, False if not
     primary_fastq_dir: the primary subdir with FASTQ files
     samples: textual description of the samples in the project
+    biological_samples: comma-separated sample names with biological data
     comments: free-text comments
 
     """
@@ -441,6 +442,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'paired_end':'Paired_end',
                                   'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
+                                  'biological_samples': 'Biological samples',
                                   'comments':'Comments',
                               },
                               order = (
@@ -457,6 +459,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'paired_end',
                                   'primary_fastq_dir',
                                   'samples',
+                                  'biological_samples',
                                   'sequencer_model',
                                   'comments',
                               ),
@@ -670,6 +673,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     fastq_dir: the name of the associated Fastq subdirectory
     protocol: name of the QC protocol used
     organism: the organism(s) that the QC was run with
+    seq_data_samples: samples with sequence (i.e. biological) data
     cellranger_version: version of cellranger/10x software used
     cellranger_refdata: reference datasets used with cellranger
     cellranger_probeset: probe set used with cellranger
@@ -693,6 +697,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                 'fastq_dir' :'Fastq dir',
                 'protocol': 'QC protocol',
                 'organism': 'Organism',
+                'seq_data_samples': 'Sequence data samples',
                 'cellranger_version': 'Cellranger version',
                 'cellranger_refdata': 'Cellranger reference datasets',
                 'cellranger_probeset': 'Cellranger reference probe set',

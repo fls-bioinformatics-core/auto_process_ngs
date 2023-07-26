@@ -69,7 +69,8 @@ class QCVerifier(QCOutputs):
                fastq_screens=None,star_index=None,
                annotation_bed=None,annotation_gtf=None,
                cellranger_version=None,cellranger_refdata=None,
-               cellranger_use_multi_config=None):
+               cellranger_use_multi_config=None,
+               seq_data_samples=None):
         """
         Verify QC outputs for Fastqs against specified protocol
 
@@ -90,6 +91,8 @@ class QCVerifier(QCOutputs):
             cellranger count verification will attempt to
             use data (GEX samples and reference dataset) from
             the '10x_multi_config.csv' file
+          seq_data_samples (list): list of sample names with
+            sequence (i.e. biological) data
 
         Returns:
           Boolean: True if all expected outputs are present,
@@ -103,7 +106,9 @@ class QCVerifier(QCOutputs):
 
         # Subsets of samples and Fastqs with sequence data
         # (i.e. biological data rather than feature barcodes etc)
-        seq_data_samples = self.identify_seq_data(samples)
+        if not seq_data_samples:
+            # No explicit list supplied so try to guess
+            seq_data_samples = self.identify_seq_data(samples)
         seq_data_fastqs = [fq for fq in fastqs
                            if self.fastq_attrs(fq).sample_name
                            in seq_data_samples]
@@ -778,6 +783,7 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
     annotation_bed=None
     annotation_gtf=None
     organism = None
+    seq_data_samples = None
     fastq_screens = None
     qc_info_file = os.path.join(qc_dir,"qc.info")
     if os.path.exists(qc_info_file):
@@ -789,6 +795,12 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
                 qc_protocol = qc_info['protocol']
         try:
             organism = qc_info['organism']
+        except KeyError:
+            pass
+        try:
+            seq_data_samples = qc_info['seq_data_samples']
+            if seq_data_samples:
+                seq_data_samples = seq_data_samples.split(',')
         except KeyError:
             pass
         try:
@@ -828,6 +840,7 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
     return verifier.verify(protocol,
                            project.fastqs,
                            organism=organism,
+                           seq_data_samples=seq_data_samples,
                            fastq_screens=fastq_screens,
                            star_index=star_index,
                            annotation_bed=annotation_bed,

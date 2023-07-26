@@ -48,6 +48,7 @@ class TestQCOutputs(unittest.TestCase):
                      cellranger_pipelines=('cellranger',),
                      cellranger_samples=None,
                      cellranger_multi_samples=None,
+                     seq_data_samples=None,
                      include_fastqc=True,
                      include_fastq_screen=True,
                      include_strandedness=True,
@@ -73,6 +74,7 @@ class TestQCOutputs(unittest.TestCase):
             cellranger_pipelines=cellranger_pipelines,
             cellranger_samples=cellranger_samples,
             cellranger_multi_samples=cellranger_multi_samples,
+            seq_data_samples=seq_data_samples,
             include_fastqc=include_fastqc,
             include_fastq_screen=include_fastq_screen,
             include_strandedness=include_strandedness,
@@ -1018,6 +1020,64 @@ class TestQCOutputs(unittest.TestCase):
                          ['PJB1','PJB2'])
         self.assertEqual(qc_outputs.seq_data_samples,
                          ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_paired_end_explicit_biological_samples(self):
+        """
+	QCOutputs: paired-end data (biological samples explicitly specified)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   seq_data_samples=('PJB2',))
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB2'])
         self.assertEqual(qc_outputs.bams,[])
         self.assertEqual(qc_outputs.organisms,[])
         self.assertEqual(qc_outputs.fastq_screens,

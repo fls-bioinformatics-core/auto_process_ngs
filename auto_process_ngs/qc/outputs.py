@@ -45,6 +45,7 @@ from ..analysis import AnalysisFastq
 from ..analysis import split_sample_name
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
+from ..metadata import AnalysisProjectQCDirInfo
 from ..tenx.cellplex import CellrangerMultiConfigCsv
 from .constants import FASTQ_SCREENS
 from .fastqc import Fastqc
@@ -138,6 +139,11 @@ class QCOutputs:
             self.fastq_attrs = fastq_attrs
         else:
             self.fastq_attrs = AnalysisFastq
+        # QC metadata
+        self.qc_info = None
+        qc_info_file = os.path.join(self.qc_dir,"qc.info")
+        if os.path.exists(qc_info_file):
+            self.qc_info = AnalysisProjectQCDirInfo(qc_info_file)
         # Properties
         self.fastqs = set()
         self.samples = []
@@ -290,13 +296,21 @@ class QCOutputs:
         self.samples = sorted(list(samples),
                               key=lambda s: split_sample_name(s))
         # Samples with biological sequence data
+        if self.qc_info is not None and self.qc_info.seq_data_samples:
+            # Explicitly defined in QC metadata
+            self.seq_data_samples.extend(
+                [s for s in self.qc_info.seq_data_samples.split(',')
+                 if s in samples])
         if os.path.exists(os.path.join(self.qc_dir,'10x_multi_config.csv')):
+            # Implicitly defined in 10x multi config file
             cf = CellrangerMultiConfigCsv(os.path.join(self.qc_dir,
                                                        '10x_multi_config.csv'))
             self.seq_data_samples.extend([s for s in cf.gex_libraries
                                           if s in samples])
-        else:
+        if not self.seq_data_samples:
+            # Nothing defined - assume all samples are biological data
             self.seq_data_samples = [s for s in self.samples]
+        self.seq_data_samples = sorted(list(set(self.seq_data_samples)))
         # Determine reads
         reads = set()
         for fastq in self.fastqs:
