@@ -931,13 +931,11 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.cellranger_refdata,None)
         self.assertEqual(qc_info.cellranger_probeset,None)
         # Check output and reports
-        for f in ("qc",
-                  "qc_report.html",
-                  "qc_report.PJB.zip"):
-            self.assertTrue(os.path.exists(os.path.join(self.wd,
-                                                        "PJB",f)),
-                            "Missing %s" % f)
-        for f in ("multiqc_report.html",):
+        self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
+                             "Missing 'qc'")
+        for f in ("qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                              "Found %s, shouldn't be present" % f)
