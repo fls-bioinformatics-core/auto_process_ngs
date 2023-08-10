@@ -61,6 +61,10 @@ div.footer { font-style: italic;
              font-size: 70%; }
 """
 
+# Name of placeholder file to indicate a directory is
+# a publication dir
+PLACEHOLDER_FILE = ".publish_qc"
+
 #######################################################################
 # Classes
 #######################################################################
@@ -418,12 +422,21 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     dirn = os.path.join(dirn,os.path.basename(ap.analysis_dir))
     # Remove existing publication directory
     if fileops.exists(dirn):
+        # Check for placeholder file to flag this is a publication dir
+        if not fileops.exists(os.path.join(dirn,PLACEHOLDER_FILE)):
+            raise Exception("%s: directory exists but is not a "
+                            "QC publication directory" % dirn)
         print("Found existing publication directory, removing")
         fileops.remove_dir(dirn)
     # (Re)create the publication directory
     fileops.mkdir(dirn,recursive=True)
     if not fileops.exists(dirn):
         raise Exception("Failed to create directory: %s" % dirn)
+    # Add placeholder file to indicate a publication dir
+    flag_file = os.path.join(ap.tmp_dir,PLACEHOLDER_FILE)
+    with open(flag_file,'wt') as fp:
+        fp.write("")
+    fileops.copy(flag_file,dirn)
     # Do file transfer and unpacking
     if projects:
         # Make log directory and set up scheduler
