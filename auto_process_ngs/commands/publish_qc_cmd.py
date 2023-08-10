@@ -224,6 +224,22 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if not fileops.exists(str(location)):
         raise Exception("Target directory '%s' doesn't exist" %
                         location)
+    # Set location of the final destination
+    if use_hierarchy:
+        dirn = os.path.join(str(location),year,platform)
+    else:
+        dirn = str(location)
+    dirn = os.path.join(dirn,os.path.basename(ap.analysis_dir))
+    # If final destination exists and/or already contains
+    # published QC
+    if fileops.exists(dirn):
+        # Check for placeholder file to flag this is a publication dir
+        if not fileops.exists(os.path.join(dirn,PLACEHOLDER_FILE)):
+            raise Exception("%s: directory exists but is not a "
+                            "QC publication directory" % dirn)
+        remove_dir = True
+    else:
+        remove_dir = False
     # Collect processing statistics
     print("Checking for processing QC reports")
     processing_qc_reports = sorted([f for
@@ -414,19 +430,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         projects.remove(project)
     if not projects:
         logging.warning("No projects with QC results to publish")
-    # Set up the final destination
-    if use_hierarchy:
-        dirn = os.path.join(str(location),year,platform)
-    else:
-        dirn = str(location)
-    dirn = os.path.join(dirn,os.path.basename(ap.analysis_dir))
     # Remove existing publication directory
-    if fileops.exists(dirn):
-        # Check for placeholder file to flag this is a publication dir
-        if not fileops.exists(os.path.join(dirn,PLACEHOLDER_FILE)):
-            raise Exception("%s: directory exists but is not a "
-                            "QC publication directory" % dirn)
-        print("Found existing publication directory, removing")
+    if remove_dir:
+        print("Removing existing publication directory")
         fileops.remove_dir(dirn)
     # (Re)create the publication directory
     fileops.mkdir(dirn,recursive=True)
