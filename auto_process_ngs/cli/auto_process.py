@@ -1557,6 +1557,12 @@ def archive(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
+    # Handle job runner specification
+    if args.runner is not None:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = None
+    # Do the archive step
     retcode = d.archive(archive_dir=args.archive_dir,
                         platform=args.platform,
                         year=args.year,
