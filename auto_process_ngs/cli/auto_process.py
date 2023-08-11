@@ -900,6 +900,7 @@ def add_archive_command(cmdparser):
                    help="attempt to complete archiving operations ignoring "
                    "any errors (e.g. key metadata items not set, unable to "
                    "set group etc)")
+    add_runner_option(p)
     add_dry_run_option(p)
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
@@ -1556,6 +1557,12 @@ def archive(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
+    # Handle job runner specification
+    if args.runner is not None:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = None
+    # Do the archive step
     retcode = d.archive(archive_dir=args.archive_dir,
                         platform=args.platform,
                         year=args.year,
@@ -1563,7 +1570,8 @@ def archive(args):
                         perms=args.permissions,
                         final=args.final,
                         force=args.force,
-                        dry_run=args.dry_run)
+                        dry_run=args.dry_run,
+                        runner=runner)
     sys.exit(retcode)
 
 def report(args):
