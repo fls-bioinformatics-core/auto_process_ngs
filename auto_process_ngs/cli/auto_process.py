@@ -1571,7 +1571,7 @@ def archive(args):
                         final=args.final,
                         force=args.force,
                         dry_run=args.dry_run,
-                        runner=args.runner)
+                        runner=runner)
     sys.exit(retcode)
 
 def report(args):
