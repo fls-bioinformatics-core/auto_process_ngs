@@ -900,6 +900,7 @@ def add_archive_command(cmdparser):
                    help="attempt to complete archiving operations ignoring "
                    "any errors (e.g. key metadata items not set, unable to "
                    "set group etc)")
+    add_runner_option(p)
     add_dry_run_option(p)
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
@@ -1563,7 +1564,8 @@ def archive(args):
                         perms=args.permissions,
                         final=args.final,
                         force=args.force,
-                        dry_run=args.dry_run)
+                        dry_run=args.dry_run,
+                        runner=args.runner)
     sys.exit(retcode)
 
 def report(args):
