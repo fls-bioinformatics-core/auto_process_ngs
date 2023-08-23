@@ -616,7 +616,7 @@ def main():
                                    runner=SimpleJobRunner(),
                                    wd=working_dir)
     permissions_job.wait()
-    check_jobs[copy_job.name] = copy_job
+    check_jobs[permissions_job.name] = permissions_job
 
     # Check all jobs completed successfully
     status = 0
