@@ -27,6 +27,7 @@ from ..simple_scheduler import SimpleScheduler
 from ..simple_scheduler import SchedulerReporter
 from ..fileops import exists
 from ..fileops import mkdir
+from ..fileops import listdir
 from ..fileops import copy_command
 from ..fileops import set_permissions_command
 from ..settings import Settings
@@ -105,6 +106,13 @@ def main():
                    "used")
     p.add_argument('--zip_fastqs',action='store_true',
                    help="put Fastqs into a ZIP file")
+    p.add_argument('--max_zip_size',action='store',dest='max_zip_size',
+                   default=None,
+                   help="when using '--zip_fastqs' option, defines the "
+                   "maximum size for the output zip file; multiple zip "
+                   "files will be created if the data exceeds this "
+                   "limit (default is create a single zip file with no "
+                   "size limit)")
     p.add_argument('--no_fastqs',action='store_true',
                    help="don't copy Fastqs (other artefacts will be "
                    "copied, if specified)")
@@ -475,6 +483,8 @@ def main():
             zip_cmd = Command("manage_fastqs.py")
             if args.filter_pattern:
                 zip_cmd.add_args("--filter",args.filter_pattern)
+            if args.max_zip_size:
+                zip_cmd.add_args("--max_zip_size",args.max_zip_size)
             if fastq_dir is not None:
                 zip_cmd.add_args("--fastq_dir",
                                  fastq_dir)
@@ -485,23 +495,34 @@ def main():
             zip_job = sched.submit(zip_cmd.command_line,
                                    name="zip_fastqs.%s" % job_id,
                                    wd=working_dir)
+            zip_job.wait()
             check_jobs[zip_job.name] = zip_job
-            # Rename ZIP file and move to final location
-            final_zip = \
-                "{platform}_{datestamp}.{run_number}-{project}-fastqs.zip".\
+            # Rename ZIP file(s) and move to final location
+            final_zip_basename = \
+                "{platform}_{datestamp}.{run_number}-{project}-fastqs".\
                 format(
                     platform=analysis_dir.metadata.platform.upper(),
                     datestamp=analysis_dir.metadata.instrument_datestamp,
                     run_number=analysis_dir.metadata.run_number,
                     project=project.name)
-            copy_cmd = copy_command(
-                os.path.join(working_dir,"%s.zip" % project_name),
-                os.path.join(target_dir,final_zip))
-            copy_job = sched.submit(copy_cmd.command_line,
-                                    name="copy_zipped_fastqs.%s" % job_id,
-                                    wd=working_dir,
-                                    wait_for=(zip_job.job_name,))
-            check_jobs[copy_job.name] = copy_job
+            job_ix = 0
+            for f in listdir(working_dir):
+                if f.endswith(".zip") and \
+                   f.startswith("%s." % project_name):
+                    # Assume it's ZIP output from packaging process
+                    final_zip = "%s%s" % (final_zip_basename,
+                                          f[len(project_name):])
+                    # Copy to final location
+                    copy_cmd = copy_command(
+                        os.path.join(working_dir,f),
+                        os.path.join(target_dir,final_zip))
+                    job_ix += 1
+                    copy_job = sched.submit(
+                        copy_cmd.command_line,
+                        name="copy_zipped_fastqs.%s.%s" % (job_ix,job_id),
+                        wd=working_dir,
+                        wait_for=(zip_job.job_name,))
+                    check_jobs[copy_job.name] = copy_job
 
     # Copy README
     if readme_file is not None:
