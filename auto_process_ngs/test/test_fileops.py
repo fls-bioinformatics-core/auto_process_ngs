@@ -253,6 +253,44 @@ class TestRename(FileopsTestCase):
         self.assertFalse(os.path.exists(old_dir))
         self.assertTrue(os.path.exists(new_dir))
 
+class TestListdir(FileopsTestCase):
+    """Tests for the 'listdir' function
+    """
+    def test_local_listdir(self):
+        """
+        fileops.listdir: test for a local directory
+        """
+        expected = ['.','..']
+        test_files = ("test1.txt","test2.txt")
+        for f in test_files:
+            expected.append(f)
+            f = os.path.join(self.test_dir,f)
+            with open(f,'w') as fp:
+                fp.write("This is a test file")
+        test_dirs = ("dir1",)
+        for d in test_dirs:
+            expected.append(d)
+            os.mkdir(os.path.join(self.test_dir,d))
+        self.assertEqual(listdir(self.test_dir),
+                         sorted(expected))
+    def test_local_listdir_hidden_files(self):
+        """
+        fileops.listdir: test for a local directory with hidden files
+        """
+        expected = ['.','..']
+        test_files = ("test1.txt","test2.txt",".hidden1.txt")
+        for f in test_files:
+            expected.append(f)
+            f = os.path.join(self.test_dir,f)
+            with open(f,'w') as fp:
+                fp.write("This is a test file")
+        test_dirs = ("dir1",".hidden1")
+        for d in test_dirs:
+            expected.append(d)
+            os.mkdir(os.path.join(self.test_dir,d))
+        self.assertEqual(sorted(listdir(self.test_dir)),
+                         sorted(expected))
+
 class TestExists(FileopsTestCase):
     """Tests for the 'exists' function
     """
