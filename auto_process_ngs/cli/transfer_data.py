@@ -170,6 +170,8 @@ def main():
         target_dir = dest.directory
         readme_template = dest.readme_template
         subdir = dest.subdir
+        zip_fastqs = dest.zip_fastqs
+        max_zip_size = dest.max_zip_size
         include_downloader = dest.include_downloader
         include_qc_report = dest.include_qc_report
         hard_links = dest.hard_links
@@ -178,6 +180,8 @@ def main():
         target_dir = args.dest
         readme_template = None
         subdir = None
+        zip_fastqs = False
+        max_zip_size = None
         include_downloader = False
         include_qc_report = False
         hard_links = False
@@ -188,6 +192,10 @@ def main():
         readme_template = args.readme_template
     if args.subdir:
         subdir = args.subdir
+    if args.zip_fastqs:
+        zip_fastqs = True
+    if args.max_zip_size:
+        max_zip_size = args.max_zip_size
     if args.include_downloader:
         include_downloader = True
     if args.include_qc_report:
@@ -459,7 +467,7 @@ def main():
 
     # Transfer Fastqs
     if include_fastqs:
-        if not args.zip_fastqs:
+        if not zip_fastqs:
             # Build command to run manage_fastqs.py to copy Fastqs
             copy_cmd = Command("manage_fastqs.py")
             if args.filter_pattern:
@@ -483,8 +491,8 @@ def main():
             zip_cmd = Command("manage_fastqs.py")
             if args.filter_pattern:
                 zip_cmd.add_args("--filter",args.filter_pattern)
-            if args.max_zip_size:
-                zip_cmd.add_args("--max_zip_size",args.max_zip_size)
+            if max_zip_size:
+                zip_cmd.add_args("--max_zip_size",max_zip_size)
             if fastq_dir is not None:
                 zip_cmd.add_args("--fastq_dir",
                                  fastq_dir)
