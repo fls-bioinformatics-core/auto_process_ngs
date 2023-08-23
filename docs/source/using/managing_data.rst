@@ -188,6 +188,23 @@ option (or setting the ``hard_links`` parameter).
 Linking Fastqs is quicker than copying and saves space as hard links
 reference the same copy of the file's data on the file system.
 
+Bundling Fastqs into ZIP archives
+---------------------------------
+
+For datasets with contain very large numbers of Fastq files it may
+be undesirable to share the individual Fastqs (for example when
+downloading from a web server, or uploading to a file transfer
+service such as ZendTo).
+
+In these cases the following options can be used:
+
+ * ``--zip_fastqs`` will bundle the Fastqs into one or more ZIP
+   archives (instead of copying each Fastq individually)
+ * If specified then the ``--max_zip_size`` option additionally
+   sets the maximum size for each ZIP archive, resulting in multiple
+   ZIPs if the dataset cannot be put into a single archive of this
+   size.
+
 .. _download_fastqs:
 
 ``download_fastqs.py``: fetch Fastqs from a webserver in batch
