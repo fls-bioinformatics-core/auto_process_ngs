@@ -169,6 +169,50 @@ star_index = /data/hg38/star_index
         self.assertFalse("organism:missing" in s)
         self.assertFalse("organism:human.missing" in s)
 
+    def test_add_section(self):
+        """Settings: add_section creates new section
+        """
+        # Empty file
+        empty_settings_file = os.path.join(self.dirn,
+                                           "auto_process.ini")
+        with open(empty_settings_file,'wt') as s:
+            s.write("")
+        s = Settings(empty_settings_file)
+        # Arbitrary section name
+        self.assertFalse("new_section" in s)
+        s.add_section("new_section")
+        self.assertTrue("new_section" in s)
+        # Arbitrary section and subsection
+        self.assertFalse("new_section2" in s)
+        self.assertFalse("new_section2:subsection" in s)
+        s.add_section("new_section2:subsection")
+        self.assertTrue("new_section2" in s)
+        self.assertTrue("new_section2:subsection" in s)
+        # Special case: organism
+        self.assertFalse("organism:human" in s)
+        s.add_section("organism:human")
+        self.assertTrue("organism:human" in s)
+
+    def test_set_item(self):
+        """Settings: 'set' updates a value
+        """
+        # Partial file
+        partial_settings_file = os.path.join(self.dirn,
+                                             "auto_process.ini")
+        with open(partial_settings_file,'wt') as s:
+            s.write("""[general]
+max_concurrent_jobs = None
+
+[organism:human]
+""")
+        # Load settings
+        s = Settings(partial_settings_file)
+        s.set("general.max_concurrent_jobs",8)
+        self.assertEqual(s['general'].max_concurrent_jobs,8)
+        s.set("organism:human.star_index","/data/hg38/star_index")
+        self.assertEqual(s['organisms']['human']['star_index'],
+                         "/data/hg38/star_index")
+
     def test_preserve_option_case(self):
         """Settings: case of option names is preserved
         """
