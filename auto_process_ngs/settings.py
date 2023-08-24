@@ -78,6 +78,15 @@ class Settings:
     'auto_process.ini' file.
 
     """
+    # Look up table mapping names of sections used internally
+    # within the Settings class to the names that appear in
+    # the config file, when these differ
+    __SECTIONS_INTERNAL_TO_CONFIG_NAMES = {
+        "sequencers": "sequencer",
+        "organisms": "organism",
+        "screens": "screen"
+    }
+
     def __init__(self,settings_file=None):
         """
         Create new Settings instance
@@ -607,6 +616,7 @@ class Settings:
         section,attr = param.split('.')
         try:
             section,subsection = section.split(':')
+            section = self._section_internal_name(section)
             getattr(self,section)[subsection][attr] = value
         except ValueError:
             getattr(self,section)[attr] = value
@@ -623,6 +633,7 @@ class Settings:
         """
         try:
             section,subsection = section.split(':')
+            section = self._section_internal_name(section)
             if section not in self._sections:
                 self.add_section(section)
             getattr(self,section)[subsection] = AttributeDictionary()
@@ -662,14 +673,15 @@ class Settings:
         if self.settings_file:
             for section in self._sections:
                 if not self.has_subsections(section):
-                    name = section
+                    name = self._section_config_name(section)
                     values = getattr(self,section)
                     config.add_section(name)
                     for attr in values:
                         config.set(name,attr,str(values[attr]))
                 else:
                     for subsection in getattr(self,section):
-                        name = "%s:%s" % (section,subsection)
+                        name = "%s:%s" % (self._section_config_name(section),
+                                          subsection)
                         values = getattr(self,section)[subsection]
                         config.add_section(name)
                         for attr in values:
@@ -689,14 +701,7 @@ class Settings:
             logger.warning("No settings file found, reporting built-in "
                            "defaults")
         for section in self._sections:
-            if section == 'sequencers':
-                display_name = 'sequencer'
-            elif section == 'organisms':
-                display_name = 'organism'
-            elif section == 'screens':
-                display_name = 'screen'
-            else:
-                display_name = section
+            display_name = self._section_config_name(section)
             if self.has_subsections(section):
                 for subsection in getattr(self,section):
                     text.append(
@@ -706,6 +711,34 @@ class Settings:
                 text.append(show_dictionary(display_name,
                                             getattr(self,section)))
         return '\n'.join(text)
+
+    def _section_config_name(self,internal_name):
+        """
+        Internal: look up section name used in config file
+
+        Given the internal name for a section (e.g. 'sequencers')
+        returns the name used for that section in the config file
+        (e.g. 'sequencer').
+        """
+        try:
+            return self.__SECTIONS_INTERNAL_TO_CONFIG_NAMES[internal_name]
+        except KeyError:
+            return internal_name
+
+    def _section_internal_name(self,config_name):
+        """
+        Internal: look up section name for 'Settings' class
+
+        Given the name for a section as it appears in the config
+        file (e.g. 'sequencer'), returns the name used internally
+        for that section within the 'Settings' class (e.g.
+        'sequencers').
+        """
+        for name in self.__SECTIONS_INTERNAL_TO_CONFIG_NAMES:
+            if self.__SECTIONS_INTERNAL_TO_CONFIG_NAMES[name] == \
+               config_name:
+                return name
+        return config_name
 
 #######################################################################
 # Functions
