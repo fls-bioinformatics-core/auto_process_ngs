@@ -647,6 +647,39 @@ class Settings:
         """
         return getattr(self,section)
 
+    def __contains__(self,item):
+        """
+        Implement __contains__ to enable 'SECTION[:SUBSECTION][.ATTR] in s'
+        """
+        # Break up item into section, subsection and attr
+        try:
+            section,attr = item.split('.')
+        except ValueError:
+            section = item
+            attr = None
+        try:
+            section,subsection = section.split(':')
+        except ValueError:
+            subsection = None
+        # Get the internal name for the section
+        section = self._section_internal_name(section)
+        # Check for existence of item components
+        if section not in self._sections:
+            # Section not found
+            return False
+        s = getattr(self,section)
+        if subsection is not None:
+            if subsection not in getattr(self,section):
+                # Subsection not found
+                return False
+            s = getattr(self,section)[subsection]
+        if attr is not None:
+            # Return existence or otherwise of attr
+            return attr in s
+        else:
+            # All checks passed
+            return True
+
     def has_subsections(self,section):
         """
         Check if section contains subsections

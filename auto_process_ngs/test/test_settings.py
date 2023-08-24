@@ -140,6 +140,35 @@ nprocessors = 8
         self.assertEqual(s['general'].max_concurrent_jobs,
                          max_concurrent_jobs)
 
+    def test_contains(self):
+        """Settings: 'in' works for checking if section is defined
+        """
+        # Partial file
+        partial_settings_file = os.path.join(self.dirn,
+                                             "auto_process.ini")
+        with open(partial_settings_file,'w') as s:
+            s.write("""[general]
+max_concurrent_jobs = 12
+
+[organism:human]
+star_index = /data/hg38/star_index
+""")
+        # Load settings
+        s = Settings(partial_settings_file)
+        # Check that sections are located
+        self.assertTrue("general" in s)
+        self.assertTrue("organisms" in s)
+        # Check that section with subsection is located
+        self.assertTrue("organism:human" in s)
+        # Check that parameters can be located
+        self.assertTrue("general.max_concurrent_jobs" in s)
+        self.assertTrue("organism:human.star_index" in s)
+        # Check that missing sections, subsections and parameters
+        # are not located
+        self.assertFalse("missing" in s)
+        self.assertFalse("organism:missing" in s)
+        self.assertFalse("organism:human.missing" in s)
+
     def test_preserve_option_case(self):
         """Settings: case of option names is preserved
         """
