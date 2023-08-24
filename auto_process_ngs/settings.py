@@ -666,14 +666,14 @@ class Settings:
                     values = getattr(self,section)
                     config.add_section(name)
                     for attr in values:
-                        config.set(name,attr,values[attr])
+                        config.set(name,attr,str(values[attr]))
                 else:
                     for subsection in getattr(self,section):
                         name = "%s:%s" % (section,subsection)
                         values = getattr(self,section)[subsection]
                         config.add_section(name)
                         for attr in values:
-                            config.set(name,attr,values[attr])
+                            config.set(name,attr,str(values[attr]))
             config.write(open(self.settings_file,'w'))
         else:
             logger.warning("No settings file found, nothing saved")
