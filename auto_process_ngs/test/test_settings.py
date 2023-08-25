@@ -213,6 +213,56 @@ max_concurrent_jobs = None
         self.assertEqual(s['organisms']['human']['star_index'],
                          "/data/hg38/star_index")
 
+    def test_save_raw(self):
+        """
+        Settings: test saving "raw" settings file
+        """
+        # Settings content
+        content = """[general]
+default_runner = SimpleJobRunner(join_logs=True)
+max_concurrent_jobs = 12
+poll_interval = 5.0
+
+[modulefiles]
+bcl2fastq = apps/bcl2fastq/2.20.0.422
+cellranger = apps/cellranger/6.1.2
+
+[conda]
+enable_conda = True
+env_dir = $HOME/qc_conda_envs
+
+[organism:human]
+star_index = /data/indexes/hg38
+
+[organism:mouse]
+star_index = /data/indexes/mm10
+
+[sequencer:A01234]
+platform = novaseq6000
+model = NovaSeq 6000
+
+[sequencer:NB543201]
+platform = nextseq
+model = NextSeq 500
+
+[runners]
+bcl2fastq = SimpleJobRunner(nslots=8 join_logs=True)
+star = SimpleJobRunner(nslots=18 join_logs=True)
+"""
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'wt') as s:
+            s.write(content)
+        # Load settings
+        s = Settings(settings_file,resolve_undefined=False)
+        # Save to new file
+        saved_settings_file = os.path.join(self.dirn,"auto_process.ini.bak")
+        s.save(out_file=saved_settings_file)
+        # Compare with original
+        self.assertTrue(os.path.exists(saved_settings_file))
+        self.assertEqual(open(settings_file,'rt').read().rstrip(),
+                         open(saved_settings_file,'rt').read().rstrip())
+
     def test_preserve_option_case(self):
         """Settings: case of option names is preserved
         """

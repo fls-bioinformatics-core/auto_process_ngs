@@ -56,8 +56,9 @@ To update the configuration file use the save method e.g.
 
 import os
 import sys
-import bcftbx.JobRunner as JobRunner
+from bcftbx.JobRunner import fetch_runner
 from bcftbx.utils import AttributeDictionary
+from fnmatch import fnmatch
 from .config import Config
 from .config import NoSectionError
 
@@ -87,7 +88,115 @@ class Settings:
         "screens": "screen"
     }
 
-    def __init__(self,settings_file=None):
+    # Runners
+    __RUNNERS = (
+        'barcode_analysis',
+        'bcl2fastq',
+        'bcl_convert',
+        'cellranger',
+        'cellranger_count',
+        'cellranger_mkfastq',
+        'cellranger_multi',
+        'fastqc',
+        'fastq_screen',
+        'icell8',
+        'icell8_contaminant_filter',
+        'icell8_statistics',
+        'icell8_report',
+        'merge_fastqs',
+        'picard',
+        'publish_qc',
+        'qc',
+        'qualimap',
+        'rseqc',
+        'rsync',
+        'star',
+        'stats',
+    )
+
+    # Environment modules
+    __ENVIRONMENT_MODULES = (
+        'make_fastqs',
+        'bcl2fastq',
+        'bcl_convert',
+        'cellranger_mkfastq',
+        'cellranger_atac_mkfastq',
+        'cellranger_arc_mkfastq',
+        'spaceranger_mkfastq',
+        'run_qc',
+        'publish_qc',
+        'process_icell8',
+        'fastqc',
+        'fastq_screen',
+        'fastq_strand',
+        'cellranger',
+        'report_qc',
+        'cutadapt',
+        'illumina_qc',
+    )
+
+    # Default values
+    # These will be used if the parameter was not
+    # explicitly defined in the config file and
+    # there is no fallback (or the fallback was
+    # also not defined)
+    __DEFAULTS = {
+        "general.default_runner": fetch_runner("SimpleJobRunner"),
+        "general.max_concurrent_jobs": 12,
+        "general.poll_interval": 5,
+        "conda.enable_conda": False,
+        "qc.fastq_subset_size": 100000,
+        "qc.use_legacy_screen_names": False,
+        "10xgenomics.cellranger_jobmode": "local",
+        "10xgenomics.cellranger_maxjobs": 24,
+        "10xgenomics.cellranger_mempercore": 5,
+        "10xgenomics.cellranger_jobinterval": 100,
+        "10xgenomics.cellranger_localmem": 5,
+        "10xgenomics.cellranger_localcores": 1,
+        "destination:*.include_zip_fastqs": False,
+        "destination:*.include_downloader": False,
+        "destination:*.include_qc_report": False,
+        "destination:*.hard_links": False,
+        "icell8.batch_size": 5000000,
+    }
+
+    # Parameters where variables can be expanded
+    # e.g. $HOME/auto_process -> /home/user/auto_process
+    __EXPAND_VARS = (
+        "conda.env_dir",
+    )
+
+    # Fallback parameters
+    # These will be used if the parameter was not
+    # explicitly defined in the config file but the
+    # fallback parameter was
+    __FALLBACKS = {
+        "qc.fastq_subset_size": "qc.fastq_screen_subset",
+        "modulefiles.fastqc": "modulefiles.illumina_qc",
+        "modulefiles.fastq_screen": "modulefiles.illumina_qc",
+        "runners.cellranger_mkfastq": "runners.cellranger",
+        "runners.cellranger_count": "runners.cellranger",
+        "runners.cellranger_multi": "runners.cellranger_count",
+        "runners.fastqc": "runners.qc",
+        "runners.fastq_screen": "runners.qc",
+        "runners.picard": "runners.qc",
+        "runners.qualimap": "runners.qc",
+        "runners.rseqc": "runners.qc",
+        "runners.star": "runners.qc",
+    }
+
+    # Deprecated parameters
+    __DEPRECATED = (
+        "bcl2fastq",
+        "modulefiles.illumina_qc",
+        "fastq_strand_indexes",
+        "10xgenomics_transcriptomes",
+        "10xgenomics_premrna_references",
+        "10xgenomics_atac_genome_references",
+        "10xgenomics_multiome_references",
+    )
+
+    def __init__(self,settings_file=None,resolve_undefined=True):
         """
         Create new Settings instance
 
@@ -101,7 +210,12 @@ class Settings:
         function; if no file with this name can be found then
         the class will fallback to looking for a file with the
         older 'settings.ini' file name.
-        
+
+        Arguments:
+          settings_file (str): path to file to read config from
+          resolve_undefined (bool): if True then resolve values
+            of undefined parameters from fallbacks and defaults
+            (default)
         """
         # Initialise list of sections
         self._sections = []
@@ -118,6 +232,7 @@ class Settings:
             self.settings_file = os.path.abspath(settings_file)
         # Import site-specific settings from local version
         config = Config()
+        self.nullvalue = config.nullvalue
         if self.settings_file:
             config.read(self.settings_file)
         else:
@@ -126,65 +241,25 @@ class Settings:
                                      'auto_process.ini.sample'))
         # General parameters
         self.add_section('general')
-        default_runner = config.get('general','default_runner',
-                                    'SimpleJobRunner')
+        default_runner = config.get('general','default_runner')
         self.general['default_runner'] = config.getrunner('general',
-                                                          'default_runner',
-                                                          'SimpleJobRunner')
+                                                          'default_runner')
         self.general['max_concurrent_jobs'] = config.getint('general',
-                                                            'max_concurrent_jobs',12)
+                                                            'max_concurrent_jobs')
         self.general['max_cores'] = config.getint('general','max_cores')
         self.general['max_batches'] = config.getint('general','max_batches')
         self.general['poll_interval'] = config.getfloat('general',
-                                                        'poll_interval',5)
-        # modulefiles
+                                                        'poll_interval')
+        # Environment modulefiles
         self.add_section('modulefiles')
-        self.modulefiles['make_fastqs'] = config.get('modulefiles',
-                                                     'make_fastqs')
-        self.modulefiles['bcl2fastq'] = config.get('modulefiles','bcl2fastq')
-        self.modulefiles['bcl_convert'] = config.get('modulefiles',
-                                                     'bcl_convert')
-        self.modulefiles['cellranger_mkfastq'] = config.get('modulefiles',
-                                                    'cellranger_mkfastq')
-        self.modulefiles['cellranger_atac_mkfastq'] = config.get('modulefiles',
-                                                    'cellranger_atac_mkfastq')
-        self.modulefiles['cellranger_arc_mkfastq'] = config.get('modulefiles',
-                                                    'cellranger_arc_mkfastq')
-        self.modulefiles['spaceranger_mkfastq'] = config.get('modulefiles',
-                                                    'spaceranger_mkfastq')
-        self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
-        self.modulefiles['publish_qc'] = config.get('modulefiles','publish_qc')
-        self.modulefiles['process_icell8'] = config.get('modulefiles',
-                                                        'process_icell8')
-        self.modulefiles['fastqc'] = config.get('modulefiles','fastqc')
-        self.modulefiles['fastq_screen'] = config.get('modulefiles',
-                                                      'fastq_screen')
-        self.modulefiles['fastq_strand'] = config.get('modulefiles',
-                                                      'fastq_strand')
-        self.modulefiles['cellranger'] = config.get('modulefiles','cellranger')
-        self.modulefiles['report_qc'] = config.get('modulefiles','report_qc')
-        self.modulefiles['cutadapt'] = config.get('modulefiles','cutadapt')
-        # Handle legacy 'illumina_qc' modulefile
-        legacy_illumina_qc_modulefiles = config.get('modulefiles',
-                                                    'illumina_qc')
-        if legacy_illumina_qc_modulefiles:
-            if not self.modulefiles['fastqc']:
-                logger.warning("Setting 'fastqc' modulefile parameter "
-                               "using deprecated 'illumina_qc' parameter")
-                self.modulefiles['fastqc'] = legacy_illumina_qc_modulefiles
-            if not self.modulefiles['fastq_screen']:
-                logger.warning("Setting 'fastq_screen' modulefile parameter "
-                               "using deprecated 'illumina_qc' parameter")
-                self.modulefiles['fastq_screen'] = \
-                                legacy_illumina_qc_modulefiles
+        for module_file in self.__ENVIRONMENT_MODULES:
+            self.modulefiles[module_file] = config.get('modulefiles',
+                                                       module_file)
         # conda
         self.add_section('conda')
         self.conda['enable_conda'] = config.getboolean('conda',
-                                                       'enable_conda',
-                                                       False)
-        self.conda['env_dir'] = config.get('conda','env_dir',None)
-        if self.conda['env_dir']:
-            self.conda['env_dir'] = os.path.expandvars(self.conda.env_dir)
+                                                       'enable_conda')
+        self.conda['env_dir'] = config.get('conda','env_dir')
         # bcl_conversion
         self.add_section('bcl_conversion')
         # Add settings from legacy bcl2fastq section first
@@ -196,19 +271,16 @@ class Settings:
                                       self.bcl_conversion)
         # qc
         self.add_section('qc')
-        self.qc['nprocessors'] = config.getint('qc','nprocessors',None)
-        self.qc['fastq_screens'] = config.get('qc','fastq_screens',None)
+        self.qc['nprocessors'] = config.getint('qc','nprocessors')
+        self.qc['fastq_screens'] = config.get('qc','fastq_screens')
         self.qc['fastq_screen_subset'] = config.getint('qc',
-                                                       'fastq_screen_subset',
-                                                       100000)
+                                                       'fastq_screen_subset')
         self.qc['fastq_subset_size'] = config.getint(
             'qc',
-            'fastq_subset_size',
-            self.qc.fastq_screen_subset)
+            'fastq_subset_size')
         self.qc['use_legacy_screen_names'] = config.getboolean(
             'qc',
-            'use_legacy_screen_names',
-            False)
+            'use_legacy_screen_names')
         # Fastq screens
         self.add_section('screens')
         for section in filter(lambda x: x.startswith('screen:'),
@@ -216,8 +288,7 @@ class Settings:
             screen = section.split(':')[1]
             self.screens[screen] = AttributeDictionary(conf_file=None)
             self.screens[screen]['conf_file'] = config.get(section,
-                                                           'conf_file',
-                                                           None)
+                                                           'conf_file')
         # Organisms
         self.add_section('organisms')
         for section in filter(lambda x: x.startswith('organism:'),
@@ -318,7 +389,7 @@ class Settings:
                 bcl2fastq = self.platform[platform]['bcl2fastq']
             except KeyError:
                 bcl2fastq = config.get('bcl2fastq',platform)
-                if bcl2fastq is None:
+                if bcl2fastq is None or bcl2fastq is self.nullvalue:
                     continue
                 logger.warning("Setting 'bcl2fastq' in '[platform:%s]' to '%s'"
                                 % (platform,bcl2fastq))
@@ -332,73 +403,48 @@ class Settings:
         # icell8
         self.add_section('icell8')
         self.icell8['aligner'] = config.get('icell8','aligner')
-        self.icell8['batch_size'] = config.getint('icell8','batch_size',5000000)
+        self.icell8['batch_size'] = config.getint('icell8','batch_size')
         self.icell8['mammalian_conf_file'] = config.get('icell8',
                                                         'mammalian_conf_file')
         self.icell8['contaminants_conf_file'] = config.get('icell8',
                                                            'contaminants_conf_file')
-        self.icell8['nprocessors_contaminant_filter'] = config.getint('icell8','nprocessors_contaminant_filter',None)
-        self.icell8['nprocessors_statistics'] = config.getint('icell8','nprocessors_statistics',None)
+        self.icell8['nprocessors_contaminant_filter'] = config.getint('icell8','nprocessors_contaminant_filter')
+        self.icell8['nprocessors_statistics'] = config.getint('icell8','nprocessors_statistics')
         # 10xgenomics
         self.add_section('10xgenomics')
-        self['10xgenomics']['cellranger_jobmode'] = config.get('10xgenomics',
-                                                               'cellranger_jobmode',
-                                                               'local')
-        self['10xgenomics']['cellranger_maxjobs'] = config.getint('10xgenomics','cellranger_maxjobs',24)
-        self['10xgenomics']['cellranger_mempercore'] = config.getint('10xgenomics','cellranger_mempercore',5)
-        self['10xgenomics']['cellranger_jobinterval'] = config.getint('10xgenomics','cellranger_jobinterval',100)
-        self['10xgenomics']['cellranger_localmem'] = config.getint('10xgenomics','cellranger_localmem',5)
-        self['10xgenomics']['cellranger_localcores'] = config.getint('10xgenomics','cellranger_localcores',None)
+        tenx = self['10xgenomics']
+        tenx['cellranger_jobmode'] = config.get('10xgenomics',
+                                                'cellranger_jobmode')
+        tenx['cellranger_maxjobs'] = config.getint('10xgenomics',
+                                                   'cellranger_maxjobs')
+        tenx['cellranger_mempercore'] = config.getint('10xgenomics',
+                                                      'cellranger_mempercore')
+        tenx['cellranger_jobinterval'] = config.getint('10xgenomics',
+                                                       'cellranger_jobinterval')
+        tenx['cellranger_localmem'] = config.getint('10xgenomics',
+                                                    'cellranger_localmem')
+        tenx['cellranger_localcores'] = config.getint('10xgenomics',
+                                                      'cellranger_localcores')
         # fastq_stats
         self.add_section('fastq_stats')
-        self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',None)
+        self.fastq_stats['nprocessors'] = config.getint('fastq_stats',
+                                                        'nprocessors')
         # Define runners for specific jobs
         self.add_section('runners')
-        for name in ('barcode_analysis',
-                     'bcl2fastq',
-                     'bcl_convert',
-                     'merge_fastqs',
-                     'qc',
-                     'stats',
-                     'publish_qc',
-                     'rsync',
-                     'icell8',
-                     'icell8_contaminant_filter',
-                     'icell8_statistics',
-                     'icell8_report',
-                     'cellranger',):
-            self.runners[name] = config.getrunner('runners',name,
-                                                  default_runner)
-        # Handle runners that fall back to the 'cellranger' runner
-        for name in ('cellranger_count',
-                     'cellranger_mkfastq',):
-            self.runners[name] = config.getrunner('runners',name,
-                                                  self.runners.cellranger)
-        # Handle runners that fall back to the 'cellranger_count' runner
-        for name in ('cellranger_multi',):
-            self.runners[name] = config.getrunner('runners',name,
-                                                  self.runners.cellranger_count)
-        # Handle runners that fall back to the 'qc' runner
-        for name in ('fastqc',
-                     'fastq_screen',
-                     'picard',
-                     'qualimap',
-                     'rseqc',
-                     'star',):
-            self.runners[name] = config.getrunner('runners',name,
-                                                  self.runners.qc)
+        for name in self.__RUNNERS:
+            self.runners[name] = config.getrunner('runners',name)
         # Information for archiving analyses
         # dirn should be a directory in the form [[user@]host:]path]
         self.add_section('archive')
-        self.archive['dirn'] = config.get('archive','dirn',None)
-        self.archive['log'] = config.get('archive','log',None)
-        self.archive['group'] = config.get('archive','group',None)
-        self.archive['chmod'] = config.get('archive','chmod',None)
+        self.archive['dirn'] = config.get('archive','dirn')
+        self.archive['log'] = config.get('archive','log')
+        self.archive['group'] = config.get('archive','group')
+        self.archive['chmod'] = config.get('archive','chmod')
         # Information for uploading QC reports
         # dirn should be a directory in the form [[user@]host:]path]
         self.add_section('qc_web_server')
-        self.qc_web_server['dirn'] = config.get('qc_web_server','dirn',None)
-        self.qc_web_server['url'] = config.get('qc_web_server','url',None)
+        self.qc_web_server['dirn'] = config.get('qc_web_server','dirn')
+        self.qc_web_server['url'] = config.get('qc_web_server','url')
         self.qc_web_server['use_hierarchy'] = config.getboolean(
             'qc_web_server','use_hierarchy')
         self.qc_web_server['exclude_zip_files'] = config.getboolean(
@@ -417,6 +463,9 @@ class Settings:
             dest = section.split(':')[1]
             self.destination[dest] = self.get_destination_config(
                 section,config)
+        # Set defaults
+        if resolve_undefined:
+            self.resolve_undefined_params()
 
     def get_bcl_converter_config(self,section,config,attr_dict=None):
         """
@@ -455,28 +504,28 @@ class Settings:
             values = AttributeDictionary()
         if section == 'bcl2fastq':
             # Deprecated [bcl2fastq] section
-            value = config.get(section,'default_version',None)
+            value = config.get(section,'default_version')
             if value:
                 values['bcl_converter'] = "bcl2fastq%s" % value
         else:
             # [bcl_conversion] and [platform:...] sections
-            bcl2fastq = config.get(section,'bcl2fastq',None)
-            value = config.get(section,'bcl_converter',None)
+            bcl2fastq = config.get(section,'bcl2fastq')
+            value = config.get(section,'bcl_converter')
             if value:
                 values['bcl_converter'] = value
-            elif bcl2fastq is not None:
+            elif bcl2fastq:
                 values['bcl_converter'] = "bcl2fastq%s" % bcl2fastq
             elif 'bcl_converter' not in values:
-                values['bcl_converter'] = None
+                values['bcl_converter'] = self.nullvalue
         # Common settings
-        value = config.getint(section,'nprocessors',None)
+        value = config.getint(section,'nprocessors')
         if value or 'nprocessors' not in values:
             values['nprocessors'] = value
-        value = config.getboolean(section,'no_lane_splitting',None)
-        if value is not None or 'no_lane_splitting' not in values:
+        value = config.getboolean(section,'no_lane_splitting')
+        if value is not self.nullvalue or 'no_lane_splitting' not in values:
             values['no_lane_splitting'] = value
-        value = config.getboolean(section,'create_empty_fastqs',None)
-        if value is not None or 'create_empty_fastqs' not in values:
+        value = config.getboolean(section,'create_empty_fastqs')
+        if value is not self.nullvalue or 'create_empty_fastqs' not in values:
             values['create_empty_fastqs'] = value
         return values
 
@@ -510,17 +559,17 @@ class Settings:
 
         """
         values = AttributeDictionary()
-        values['directory'] = config.get(section,'directory',None)
-        values['subdir'] = config.get(section,'subdir',None)
-        values['zip_fastqs'] = config.getboolean(section,'zip_fastqs',False)
-        values['max_zip_size'] = config.get(section,'max_zip_size',None)
-        values['readme_template'] = config.get(section,'readme_template',None)
-        values['url'] = config.get(section,'url',None)
-        values['include_downloader'] = config.getboolean(
-            section,'include_downloader',False)
-        values['include_qc_report'] = config.getboolean(
-            section,'include_qc_report',False)
-        values['hard_links'] = config.getboolean(section,'hard_links',False)
+        values['directory'] = config.get(section,'directory')
+        values['subdir'] = config.get(section,'subdir')
+        values['zip_fastqs'] = config.getboolean(section,'zip_fastqs')
+        values['max_zip_size'] = config.get(section,'max_zip_size')
+        values['readme_template'] = config.get(section,'readme_template')
+        values['url'] = config.get(section,'url')
+        values['include_downloader'] = config.getboolean(section,
+                                                         'include_downloader')
+        values['include_qc_report'] = config.getboolean(section,
+                                                        'include_qc_report')
+        values['hard_links'] = config.getboolean(section,'hard_links')
         return values
 
     def get_organism_config(self,section=None,config=None):
@@ -563,9 +612,9 @@ class Settings:
                 'cellranger_arc_reference',
                 'cellranger_probe_set'):
             if section and config:
-                values[param] = config.get(section,param,None)
+                values[param] = config.get(section,param)
             else:
-                values[param] = None
+                values[param] = self.nullvalue
         return values
 
     def get_sequencer_config(self,section,config):
@@ -590,9 +639,9 @@ class Settings:
           AttributeDictionary: dictionary of option:value pairs.
         """
         values = AttributeDictionary()
-        values['platform'] = config.get(section,'platform',None)
-        values['model'] = config.get(section,'model',None)
-        if values['platform'] is None:
+        values['platform'] = config.get(section,'platform')
+        values['model'] = config.get(section,'model')
+        if values['platform'] is None or values['platform'] is self.nullvalue:
             raise Exception("%s: missing required 'platform'" % section)
         if values['model']:
             # Strip quotes
@@ -606,20 +655,31 @@ class Settings:
         """
         Update a configuration parameter value
 
+        NB parameters are referenced by the names that
+        appear in the config file (rather than the
+        internal representation within the Settings
+        instance).
+
         Arguments:
           param (str): an identifier of the form
             SECTION[:SUBSECTION].ATTR which specifies the
             parameter to update
           value (str): the new value of the parameter
-
         """
         section,attr = param.split('.')
         try:
             section,subsection = section.split(':')
             section = self._section_internal_name(section)
             getattr(self,section)[subsection][attr] = value
+            ##print("set: %s:%s.%s -> %r" % (section,
+            ##                               subsection,
+            ##                               attr,
+            ##                               value))
         except ValueError:
             getattr(self,section)[attr] = value
+            ##print("set: %s.%s -> %r" % (section,
+            ##                            attr,
+            ##                            value))
 
     def add_section(self,section):
         """
@@ -629,7 +689,6 @@ class Settings:
           section (str): an identifier of the form
             SECTION[:SUBSECTION] which specifies the
             section to add
-
         """
         try:
             section,subsection = section.split(':')
@@ -694,39 +753,208 @@ class Settings:
                 return False
         return True
 
-    def save(self):
+    def fetch_value(self,param):
+        """
+        Return the value stored against a parameter
+
+        NB parameters are referenced by the names that
+        appear in the config file (rather than the
+        internal representation within the Settings
+        instance).
+
+        Arguments:
+          param (str): parameter name of the form
+            SECTION[:SUBSECTION][.ATTR]
+        """
+        # Break up param into section, subsection and attr
+        try:
+            section,attr = param.split('.')
+        except ValueError:
+            section = param
+            attr = None
+        try:
+            section,subsection = section.split(':')
+        except ValueError:
+            subsection = None
+        # Get the internal name for the section
+        section = self._section_internal_name(section)
+        if subsection is None:
+            s = getattr(self,section)
+        else:
+            s = getattr(self,section)[subsection]
+        return s[attr]
+
+    def list_params(self,pattern=None,exclude_undefined=False):
+        """
+        Return (yield) all the stored parameters
+
+        NB parameters are referenced by the names that
+        appear in the config file (rather than the
+        internal representation within the Settings
+        instance).
+
+        Arguments:
+          pattern (str): optional glob-style pattern;
+            if supplied then only parameters matching
+            the pattern will be returned
+          exclude_undefined (bool): if True then only
+            undefined parameters (i.e. those with null
+            values) will be returned
+
+        Yields:
+          String: parameter names of the form
+            SECTION[:SUBSECTION][.ATTR]
+        """
+        if pattern:
+            if '.' not in pattern:
+                pattern += '.*'
+        for section in self._sections:
+            if not self.has_subsections(section):
+                name = self._section_config_name(section)
+                values = getattr(self,section)
+                for attr in values:
+                    param = "%s.%s" % (name,attr)
+                    if pattern and not fnmatch(param,pattern):
+                        continue
+                    if exclude_undefined and \
+                       self.fetch_value(param) is self.nullvalue:
+                        continue
+                    else:
+                        yield param
+            else:
+                for subsection in getattr(self,section):
+                    name = "%s:%s" % (self._section_config_name(section),
+                                      subsection)
+                    values = getattr(self,section)[subsection]
+                    for attr in values:
+                        param = "%s.%s" % (name,attr)
+                        if pattern and not fnmatch(param,pattern):
+                            continue
+                        if exclude_undefined and \
+                           self.fetch_value(param) is self.nullvalue:
+                            continue
+                        else:
+                            yield param
+
+    def resolve_undefined_params(self):
+        """
+        Set non-null values for all parameters which are null
+
+        Resolution has three stages:
+
+        - Fallback parameters: if a parameter is undefined and
+          has a defined fallback that value is assigned
+        - Default paramaters: if a parameter is undefined after
+          fallbacks are exhausted and has a defined default then
+          that value is assigned
+        - Default runner: any undefined runner parameters are
+          assigned the value of the default runner, if set
+
+        Any parameters that are still undefined at this point
+        are then assigned the value of 'None'.
+        """
+        # Fallbacks
+        for param in self.__FALLBACKS:
+            if param not in self or self.fetch_value(param) is self.nullvalue:
+                tried_params = set()
+                fallback_param = self.__FALLBACKS[param]
+                while fallback_param and fallback_param not in tried_params:
+                    value = self.fetch_value(fallback_param)
+                    if value is not self.nullvalue:
+                        if fallback_param in self.__DEPRECATED:
+                            logger.warning("Setting '%s' parameter "
+                                           "using value from deprecated "
+                                           "'%s' parameter" %
+                                           (param,fallback_param))
+                        else:
+                            print("fallback: setting '%s' to value of '%s' "
+                                  "(%r)" % (param,fallback_param,value))
+                        self.set(param,value)
+                        fallback_param = None
+                    elif fallback_param in self.__FALLBACKS:
+                        tried_params.add(fallback_param)
+                        fallback_param = self.__FALLBACKS[fallback_param]
+                    else:
+                        fallback_param = None
+        # Defaults
+        for param in self.__DEFAULTS:
+            for p in self.list_params(pattern=param):
+                if self.fetch_value(p) is self.nullvalue:
+                    print("updating '%s' with default value %r" %
+                          (p,self.__DEFAULTS[param]))
+                    self.set(p,self.__DEFAULTS[param])
+        # Set default runners
+        default_runner = self.fetch_value("general.default_runner")
+        if default_runner:
+            for param in self.list_params(pattern="runners"):
+                if self.fetch_value(param) is self.nullvalue:
+                    print("Updating '%s' to default runner" % param)
+                    self.set(param,default_runner)
+        # Set remaining undefined parameters to 'None'
+        for param in self.list_params():
+            if self.fetch_value(param) is self.nullvalue:
+                print("Updating undefined parameter '%s' to None" % param)
+                self.set(param,None)
+        # Expand variables
+        for param in self.__EXPAND_VARS:
+            value = self.fetch_value(param)
+            if value:
+                self.set(param,os.path.expandvars(value))
+
+    def save(self,out_file=None,exclude_undefined=True):
         """
         Save the current configuration to the config file
 
         If no config file was specified on initialisation then
         this method doesn't do anything.
 
+        Arguments:
+          out_file (str): specify output file (default:
+            overwrite initial config file)
+          exclude_undefined (bool): if True then parameters
+            with null values will not be written to the
+            output config file (default)
         """
-        config = Config()
-        if self.settings_file:
-            for section in self._sections:
-                if not self.has_subsections(section):
-                    name = self._section_config_name(section)
-                    values = getattr(self,section)
-                    config.add_section(name)
-                    for attr in values:
-                        config.set(name,attr,str(values[attr]))
+        if not out_file:
+            out_file = self.settings_file
+        if out_file:
+            out_file = os.path.abspath(out_file)
+            config = Config()
+            for param in self.list_params(exclude_undefined=exclude_undefined):
+                name,attr = param.split('.')
+                if ':' in name:
+                    name = "%s:%s" % (
+                        self._section_config_name(name.split(':')[0]),
+                        name.split(':')[1])
                 else:
-                    for subsection in getattr(self,section):
-                        name = "%s:%s" % (self._section_config_name(section),
-                                          subsection)
-                        values = getattr(self,section)[subsection]
-                        config.add_section(name)
-                        for attr in values:
-                            config.set(name,attr,str(values[attr]))
-            config.write(open(self.settings_file,'w'))
+                    name = self._section_config_name(name)
+                if not config.has_section(name):
+                    config.add_section(name)
+                value = self.fetch_value(param)
+                if exclude_undefined and value is self.nullvalue:
+                    continue
+                config.set(name,attr,str(value))
+            with open(out_file,'wt') as fp:
+                config.write(fp)
         else:
             logger.warning("No settings file found, nothing saved")
     
-    def report_settings(self):
+    def report_settings(self,exclude_undefined=False):
         """
         Report the settings read from the config file
+
+        Arguments:
+          exclude_undefined (bool): if True then parameters
+            with null values will not be shown (default: show
+            all parameters)
+
+        Returns:
+          String: report of the settings.
         """
+        if exclude_undefined:
+            exclude_value = self.nullvalue
+        else:
+            exclude_value = None
         text = []
         if self.settings_file:
             text.append("Settings from %s" % self.settings_file)
@@ -739,10 +967,12 @@ class Settings:
                 for subsection in getattr(self,section):
                     text.append(
                         show_dictionary('%s:%s' % (display_name,subsection),
-                                        getattr(self,section)[subsection]))
+                                        getattr(self,section)[subsection],
+                                        exclude_value=exclude_value))
             else:
                 text.append(show_dictionary(display_name,
-                                            getattr(self,section)))
+                                            getattr(self,section),
+                                            exclude_value=exclude_value))
         return '\n'.join(text)
 
     def _section_config_name(self,internal_name):
@@ -820,7 +1050,7 @@ def get_config_dir():
     else:
         return None
 
-def locate_settings_file(name='auto_process.ini',create_from_sample=True):
+def locate_settings_file(name='auto_process.ini',create_from_sample=False):
     """
     Locate configuration settings file
 
@@ -917,12 +1147,21 @@ def fetch_reference_data(s,name):
             refdata[organism] = data_item
     return refdata
 
-def show_dictionary(name,d):
+def show_dictionary(name,d,exclude_value=None):
     """
     Print the contents of a dictionary
+
+    Arguments:
+      name (str): name of dictionary
+      d (str): dictionary instance to show
+      exclude_value (object): optional, if not 'None'
+        then don't include entries which match this
+        value
     """
     text = ["[%s]" % name]
     for key in d:
+        if exclude_value is not None and d[key] is exclude_value:
+            continue
         text.append("\t%s = %s" % (key,(d[key] if d[key] is not None
                                         else '<Not set>')))
     return '\n'.join(text)
