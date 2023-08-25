@@ -180,3 +180,27 @@ class TestConfig(unittest.TestCase):
         """
         self.assertEqual(self.config.get('names','Name1'),'Peter')
         self.assertEqual(self.config.get('names','name1'),'John')
+
+class TestNullValue(unittest.TestCase):
+    """
+    Tests for the NullValue class
+    """
+    def test_nullvalue_repr(self):
+        """
+        NullValue: check __repr__
+        """
+        self.assertEqual(repr(NullValue()),"<NullValue>")
+
+    def test_nullvalue_eq(self):
+        """
+        NullValue: check __eq__
+        """
+        nullvalue1 = NullValue()
+        nullvalue2 = NullValue()
+        self.assertTrue(nullvalue1 == nullvalue2)
+
+    def test_nullvalue_bool(self):
+        """
+        NullValue: check __bool__
+        """
+        self.assertFalse(bool(NullValue()))
