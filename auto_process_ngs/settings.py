@@ -676,15 +676,15 @@ class Settings:
             section,subsection = section.split(':')
             section = self._section_internal_name(section)
             getattr(self,section)[subsection][attr] = value
-            ##print("set: %s:%s.%s -> %r" % (section,
-            ##                               subsection,
-            ##                               attr,
-            ##                               value))
+            logger.debug("set: %s:%s.%s -> %r" % (section,
+                                                  subsection,
+                                                  attr,
+                                                  value))
         except ValueError:
             getattr(self,section)[attr] = value
-            ##print("set: %s.%s -> %r" % (section,
-            ##                            attr,
-            ##                            value))
+            logger.debug("set: %s.%s -> %r" % (section,
+                                               attr,
+                                               value))
 
     def add_section(self,section):
         """
@@ -872,8 +872,9 @@ class Settings:
                                            "'%s' parameter" %
                                            (param,fallback_param))
                         else:
-                            print("fallback: setting '%s' to value of '%s' "
-                                  "(%r)" % (param,fallback_param,value))
+                            logger.debug("fallback: setting '%s' to value "
+                                         "of '%s' (%r)" %
+                                         (param,fallback_param,value))
                         self.set(param,value)
                         fallback_param = None
                     elif fallback_param in self.__FALLBACKS:
@@ -885,20 +886,21 @@ class Settings:
         for param in self.__DEFAULTS:
             for p in self.list_params(pattern=param):
                 if self.fetch_value(p) is self.nullvalue:
-                    print("updating '%s' with default value %r" %
-                          (p,self.__DEFAULTS[param]))
+                    logger.debug("updating '%s' with default value %r" %
+                                 (p,self.__DEFAULTS[param]))
                     self.set(p,self.__DEFAULTS[param])
         # Set default runners
         default_runner = self.fetch_value("general.default_runner")
         if default_runner:
             for param in self.list_params(pattern="runners"):
                 if self.fetch_value(param) is self.nullvalue:
-                    print("Updating '%s' to default runner" % param)
+                    logger.debug("Updating '%s' to default runner" % param)
                     self.set(param,default_runner)
         # Set remaining undefined parameters to 'None'
         for param in self.list_params():
             if self.fetch_value(param) is self.nullvalue:
-                print("Updating undefined parameter '%s' to None" % param)
+                logger.debug("Updating undefined parameter '%s' to None" %
+                             param)
                 self.set(param,None)
         # Expand variables
         for param in self.__EXPAND_VARS:
