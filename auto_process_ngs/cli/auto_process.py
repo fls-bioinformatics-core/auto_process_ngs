@@ -148,16 +148,23 @@ def add_config_command(cmdparser):
                               help="Query and change global configuration",
                               description="Query and change global "
                               "configuration.")
-    p.add_argument('--init',action='store_true',dest='init',default=False,
-                   help="Create a new configuration file from the sample.")
-    p.add_argument('--set',action='append',dest='key_value',default=None,
-                   help="Set the value of a parameter. KEY_VALUE should be "
-                   "of the form '<param>=<value>'. Multiple --set options "
-                   "can be specified.")
-    p.add_argument('--add',action='append',dest='new_section',default=None,
-                   help="Add a new section called NEW_SECTION to the config. "
-                   "To add a new platform, use 'platform:NAME'. Multiple "
-                   "--add options can be specified.")
+    mutex = p.add_mutually_exclusive_group()
+    mutex.add_argument('--init',action='store_true',
+                       dest='init',default=False,
+                       help="Create a new configuration file from the "
+                       "sample.")
+    mutex.add_argument('--set',action='append',
+                       dest='key_value',default=None,
+                       help="Set the value of a parameter. KEY_VALUE should "
+                       "be of the form '<param>=<value>' (<param> should be "
+                       "of the form 'SECTION[:SUBSECTION].NAME'). Multiple "
+                       "--set options can be specified.")
+    mutex.add_argument('--add',action='append',
+                       dest='new_section',default=None,
+                       help="Add a new section called NEW_SECTION to the "
+                       "config (to add e.g. a new platform, use "
+                       "'platform:NAME'). Multiple --add options can be "
+                       "specified.")
     add_debug_option(p)
     # Deprecated options
     deprecated = p.add_argument_group('Deprecated/defunct options')
@@ -1159,10 +1166,14 @@ def config(args):
     if args.init:
         # Create new settings file and reload
         settings_file = locate_settings_file(create_from_sample=True)
-        settings = Settings(settings_file=settings_file)
-    else:
-        settings = __settings
-    if args.key_value or args.new_section:
+    elif args.key_value or args.new_section:
+        # Use an existing file, if present
+        settings_file = locate_settings_file()
+        if settings_file is None:
+            raise Exception("Unable to locate a settings file; use "
+                            "--init to create one")
+        settings = Settings(settings_file=settings_file,
+                            resolve_undefined=False)
         if args.new_section is not None:
             # Add new sections
             for new_section in args.new_section:
@@ -1185,9 +1196,9 @@ def config(args):
                     logging.error("Can't process '%s'" % args.key_value)
         # Save the updated settings to file
         settings.save()
-    elif not args.init:
+    else:
         # Report the current configuration settings
-        paginate(settings.report_settings())
+        paginate(__settings.report_settings())
 
 def setup(args):
     """
