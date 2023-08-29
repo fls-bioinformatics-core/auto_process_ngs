@@ -56,6 +56,7 @@ To update the configuration file use the save method e.g.
 
 import os
 import sys
+from bcftbx.JobRunner import BaseJobRunner
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.utils import AttributeDictionary
 from fnmatch import fnmatch
@@ -141,7 +142,7 @@ class Settings:
     # there is no fallback (or the fallback was
     # also not defined)
     __DEFAULTS = {
-        "general.default_runner": fetch_runner("SimpleJobRunner"),
+        "general.default_runner": "SimpleJobRunner",
         "general.max_concurrent_jobs": 12,
         "general.poll_interval": 5,
         "conda.enable_conda": False,
@@ -246,7 +247,6 @@ class Settings:
                                      'auto_process.ini.sample'))
         # General parameters
         self.add_section('general')
-        default_runner = config.get('general','default_runner')
         self.general['default_runner'] = config.getrunner('general',
                                                           'default_runner')
         self.general['max_concurrent_jobs'] = config.getint('general',
@@ -892,6 +892,13 @@ class Settings:
         # Set default runners
         default_runner = self.fetch_value("general.default_runner")
         if default_runner:
+            # Check the default runner
+            if not isinstance(default_runner,BaseJobRunner):
+                # Update default runner if it's not already a
+                # JobRunner instance
+                default_runner = fetch_runner(default_runner)
+                self.set("general.default_runner",default_runner)
+            # Other runners
             for param in self.list_params(pattern="runners"):
                 if self.fetch_value(param) is self.nullvalue:
                     logger.debug("Updating '%s' to default runner" % param)
