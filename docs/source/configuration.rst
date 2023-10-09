@@ -632,6 +632,9 @@ Parameter              Function
                        to copy files to; can be an arbitrary location
                        of the form ``[[USER@]HOST:]DIR``
 ``subdir``             Subdirectory naming scheme
+``zip_fastqs``         Whether to bundle Fastqs into ZIP archives
+``max_zip_size``       Maximum size for each ZIP archive (if Fastqs
+                       are bundled)
 ``readme_template``    Template file to generate ``README`` from
 ``url``                Base URL to access copied data at
 ``include_downloader`` Whether to include ``download_fastqs.py``

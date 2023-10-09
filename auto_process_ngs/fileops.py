@@ -23,6 +23,7 @@ The following functions perform specific operations directly:
 - set_permissions: set permissions on a file or directory
 - unzip: unpack a ZIP archive
 - rename: rename (move) a file or directory
+- listdir: list the contents of a directory
 - exists: test if a file or directory exists
 - isdir: test if a path is a directory
 - remove_file: remove (delete) a file
@@ -265,6 +266,24 @@ def rename(src,dst):
     # Run command and return
     retval,output = rename_cmd.subprocess_check_output()
     return retval
+
+def listdir(path):
+    """
+    List contents of a directory (including hidden files)
+    """
+    path = Location(path)
+    list_cmd = applications.Command('ls',
+                                    '-1',
+                                    '-a',
+                                    path.path)
+    if path.is_remote:
+        # Run test on remote system
+        list_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            list_cmd.command_line)
+    retval,output = list_cmd.subprocess_check_output()
+    return output.rstrip('\n').split('\n')
 
 def exists(path):
     """

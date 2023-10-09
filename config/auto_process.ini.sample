@@ -192,6 +192,8 @@ exclude_zip_files = False
 #   according to this scheme:
 #   * 'random_bin': used a random pre-existing empty subdir
 #   * 'run_id': creates new subdir 'PLATFORM_DATESTAMP.RUN_ID-PROJECT'
+# - zip_fastqs: whether to bundle Fastqs into ZIP archives
+# - max_zip_size: maximum size for each ZIP archive
 # - readme_template: template file to generate README file from
 #   (either full path or the name of a file in the 'templates'
 #   directory of the installation
@@ -206,8 +208,10 @@ exclude_zip_files = False
 #[destination:webserver]
 #directory = /mnt/hosted/web
 #subdir = random_bin
+#zip_fastqs = true
+#max_zip_size = 5G
 #readme_template = README.webserver.txt
 #url = http://awesome.com/data
-#include_downloader = true
+#include_downloader = false
 #include_qc_report = true
 #hard_links = false

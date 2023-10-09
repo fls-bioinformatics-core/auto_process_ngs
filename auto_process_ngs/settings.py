@@ -483,6 +483,8 @@ class Settings:
 
         - directory (compulsory, str)
         - subdir (optional, str, default 'None')
+        - zip_fastqs (optional, boolean, default 'False')
+        - max_zip_size (option, str, default 'None')
         - readme_template (optional, str, default 'None')
         - url (optional, str, default 'None')
         - include_downloader (optional, boolean, default 'False')
@@ -501,6 +503,8 @@ class Settings:
         values = AttributeDictionary()
         values['directory'] = config.get(section,'directory',None)
         values['subdir'] = config.get(section,'subdir',None)
+        values['zip_fastqs'] = config.getboolean(section,'zip_fastqs',False)
+        values['max_zip_size'] = config.get(section,'max_zip_size',None)
         values['readme_template'] = config.get(section,'readme_template',None)
         values['url'] = config.get(section,'url',None)
         values['include_downloader'] = config.getboolean(

@@ -208,6 +208,12 @@ hard_links = true
 [destination:local]
 directory = /mnt/shared
 subdir = run_id
+
+[destination:zips]
+directory = /mnt/www/zipped
+subdir = run_id
+zip_fastqs = true
+max_zip_size = 5G
 """)
         # Load settings
         s = Settings(settings_file)
@@ -216,6 +222,8 @@ subdir = run_id
         self.assertEqual(s.destination['webserver']['directory'],
                          '/mnt/www/data')
         self.assertEqual(s.destination['webserver']['subdir'],'random_bin')
+        self.assertEqual(s.destination['webserver']['zip_fastqs'],False)
+        self.assertEqual(s.destination['webserver']['max_zip_size'],None)
         self.assertEqual(s.destination['webserver']['readme_template'],
                          'README.webserver.template')
         self.assertEqual(s.destination['webserver']['url'],
@@ -228,11 +236,23 @@ subdir = run_id
         self.assertTrue('local' in s.destination)
         self.assertEqual(s.destination['local']['directory'],'/mnt/shared')
         self.assertEqual(s.destination['local']['subdir'],'run_id')
+        self.assertEqual(s.destination['local']['zip_fastqs'],False)
+        self.assertEqual(s.destination['local']['max_zip_size'],None)
         self.assertEqual(s.destination['local']['readme_template'],None)
         self.assertEqual(s.destination['local']['url'],None)
         self.assertEqual(s.destination['local']['include_downloader'],False)
         self.assertEqual(s.destination['local']['include_qc_report'],False)
         self.assertEqual(s.destination['local']['hard_links'],False)
+        self.assertTrue('zips' in s.destination)
+        self.assertEqual(s.destination['zips']['directory'],'/mnt/www/zipped')
+        self.assertEqual(s.destination['zips']['subdir'],'run_id')
+        self.assertEqual(s.destination['zips']['zip_fastqs'],True)
+        self.assertEqual(s.destination['zips']['max_zip_size'],'5G')
+        self.assertEqual(s.destination['zips']['readme_template'],None)
+        self.assertEqual(s.destination['zips']['url'],None)
+        self.assertEqual(s.destination['zips']['include_downloader'],False)
+        self.assertEqual(s.destination['zips']['include_qc_report'],False)
+        self.assertEqual(s.destination['zips']['hard_links'],False)
 
     def test_sequencer_definitions(self):
         """Settings: handle 'sequencer:...' sections
