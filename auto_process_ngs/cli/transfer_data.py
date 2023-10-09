@@ -290,6 +290,19 @@ def main():
     else:
         print("Target directory %s" % target_dir)
 
+    # Check hard links are possible
+    if hard_links:
+        if Location(target_dir).is_remote:
+            print("'%s': hard links requested but target directory "
+                  "is on a remote filesystem" % target_dir)
+            return
+        else:
+            if os.lstat(project.fastq_dir).st_dev != \
+               os.lstat(target_dir).st_dev:
+                print("'%s': hard links requested but target directory "
+                  "is on a different filesystem" % target_dir)
+                return
+
     # Locate downloader
     if include_downloader:
         print("Locating downloader for inclusion")

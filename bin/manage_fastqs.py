@@ -129,11 +129,23 @@ def copy_to_dest(f,dirn,chksum=None,link=False):
         raise Exception("'%s': not found" % f)
     if not exists(dirn):
         raise Exception("'%s': destination not found" % dirn)
+    # Characterise destination
+    user,host,dest = utils.split_user_host_dir(dirn)
+    remote = (host is not None)
+    # If linking then check source and destination
+    # are on the same device
+    if link:
+        if remote:
+            raise Exception("'%s': hard linking requested but "
+                            "destination is on a remote system" % dirn)
+        else:
+            if os.lstat(f).st_dev != os.lstat(dirn).st_dev:
+                raise Exception("'%s': hard linking requested but "
+                                "destination is on a different "
+                                "filesystem" % dirn)
     # Copy the file
     copy(f,dirn,link=link)
     if chksum is not None:
-        user,host,dest = utils.split_user_host_dir(dirn)
-        remote = (host is not None)
         if not remote:
             # Check local copy
             if chksum is not None:
