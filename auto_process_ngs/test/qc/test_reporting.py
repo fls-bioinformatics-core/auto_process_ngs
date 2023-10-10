@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import zipfile
 from auto_process_ngs.mock import make_mock_analysis_project
+from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.reporting import report
 from auto_process_ngs.qc.reporting import pretty_print_reads
@@ -585,6 +586,50 @@ class TestReportFunction(unittest.TestCase):
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB2_S2_R1_001_screen_rRNA.txt')
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
+
+    def test_report_paired_end_external_cellranger_multi_outputs(self):
+        """
+        report: paired-end data with external cellranger 'multi' outputs
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            include_cellranger_multi=False)
+        project = AnalysisProject(analysis_dir)
+        # Todo Remove 10x_config.csv?
+        # Add external 'cellranger multi'-style outputs
+        multi_dir = os.path.join("cellranger_multi",
+                                 "7.1.0",
+                                 "external")
+        MockQCOutputs.cellranger_multi(("EX1",),
+                                       project.qc_dir,
+                                       prefix=multi_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
+
+    def test_report_paired_end_multiple_external_cellranger_multi_outputs(self):
+        """
+        report: paired-end data with multiple external cellranger 'multi' outputs
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            include_cellranger_multi=False)
+        project = AnalysisProject(analysis_dir)
+        # Todo Remove 10x_config.csv?
+        # Add multiple external 'cellranger multi'-style outputs
+        # corresponding to different samples
+        for s in ("EX1","EX2",):
+            multi_dir = os.path.join("cellranger_multi",
+                                     "7.1.0",
+                                     s)
+            MockQCOutputs.cellranger_multi((s,),
+                                           project.qc_dir,
+                                           prefix=multi_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
 
 class TestPrettyPrintReadsFunction(unittest.TestCase):
 

@@ -9,6 +9,7 @@ import os
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.mockqc import make_mock_qc_dir
+from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import fastq_screen_output
@@ -1665,6 +1666,83 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.config_files,
                          ['10x_multi_config.csv',
                           'fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_external_multi_outputs(self):
+        """
+        QCOutputs: data with external 'cellranger multi' outputs
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
+                                   fastq_names=(
+                                       'PJB1_GEX_S1_R1_001',
+                                       'PJB1_GEX_S1_R2_001',
+                                       'PJB2_MC_S2_R1_001',
+                                       'PJB2_MC_S2_R2_001',
+                                   ),
+                                   include_cellranger_multi=False,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_GEX',
+                                       'PJB2_MC',
+                                   ),
+                                   cellranger_multi_samples=(
+                                       'PJB_CML1',
+                                       'PJB_CML2',
+                                   ))
+        external_multi_dir = os.path.join("cellranger_multi",
+                                          "7.1.0",
+                                          "external")
+        MockQCOutputs.cellranger_multi(("EX1",),
+                                       qc_dir,
+                                       prefix=external_multi_dir)
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_multi',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_GEX_S1_R1_001',
+                          'PJB1_GEX_S1_R2_001',
+                          'PJB2_MC_S2_R1_001',
+                          'PJB2_MC_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_GEX','PJB2_MC'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1_GEX','PJB2_MC'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,
+                         ['EX1'])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '7.1.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
 
     def test_qcoutputs_with_non_standard_qc_dir(self):
         """

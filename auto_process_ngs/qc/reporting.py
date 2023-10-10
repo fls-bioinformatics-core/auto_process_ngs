@@ -2143,6 +2143,12 @@ class SampleQCReporter:
         first_line = True
         # Report each multiplexing analysis
         for cellranger_multi in self.cellranger_multi:
+            if self.sample not in cellranger_multi.sample_names:
+                logger.warning("Sample '%s' not found in multiplexing "
+                               "outputs under %s" % (self.sample,
+                                                     cellranger_multi.dir))
+                # Ignore missing multiplexed sample
+                continue
             # Shortcut to metrics
             metrics = cellranger_multi.metrics(self.sample)
             web_summary = cellranger_multi.web_summary(self.sample)
