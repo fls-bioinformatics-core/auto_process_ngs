@@ -38,6 +38,7 @@ class CellrangerMultiConfigCsv:
     - reference_data_path: path to the reference dataset
     - probe_set_path: path to the probe set
     - feature_reference_path: path to the feature reference
+    - vdj_reference_path: path to the V(D)J-compatible reference
     - gex_libraries: list of Fastq IDs associated
       with GEX data
 
@@ -65,6 +66,7 @@ class CellrangerMultiConfigCsv:
         self._reference_data_path = None
         self._probe_set_path = None
         self._feature_reference_path = None
+        self._vdj_reference_path = None
         self._gex_libraries = {}
         self._fastq_dirs = {}
         self._read_config_csv()
@@ -86,6 +88,9 @@ class CellrangerMultiConfigCsv:
                     continue
                 elif line == "[feature]":
                     current_section = "feature"
+                    continue
+                elif line == "[vdj]":
+                    current_section = "vdj"
                     continue
                 elif line == "[libraries]":
                     current_section = "libraries"
@@ -128,6 +133,11 @@ class CellrangerMultiConfigCsv:
                     if line.startswith('reference,'):
                         # Extract feature reference file
                         self._feature_reference_path = ','.join(
+                            line.split(',')[1:]).strip()
+                elif current_section == "vdj":
+                    if line.startswith('reference,'):
+                        # Extract feature reference file
+                        self._vdj_reference_path = ','.join(
                             line.split(',')[1:]).strip()
                 elif current_section == "libraries":
                     if line.startswith('fastq_id,fastqs,'):
@@ -191,6 +201,13 @@ class CellrangerMultiConfigCsv:
         Return the path to the feature reference file from config.csv
         """
         return self._feature_reference_path
+
+    @property
+    def vdj_reference_path(self):
+        """
+        Return the path to the V(D)J reference file from config.csv
+        """
+        return self._vdj_reference_path
 
     @property
     def gex_libraries(self):

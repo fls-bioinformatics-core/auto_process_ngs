@@ -49,6 +49,7 @@ PBB,CMO302,PBB
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
         self.assertEqual(config_csv.probe_set_path,None)
         self.assertEqual(config_csv.feature_reference_path,None)
+        self.assertEqual(config_csv.vdj_reference_path,None)
         self.assertEqual(config_csv.gex_libraries,
                          ['PJB1_GEX',])
         self.assertEqual(config_csv.gex_library('PJB1_GEX'),
@@ -93,6 +94,7 @@ PB2,BC002,PB2
         self.assertEqual(config_csv.probe_set_path,
                          "/data/Probe_Set_v1.0_GRCh38-2020-A.csv")
         self.assertEqual(config_csv.feature_reference_path,None)
+        self.assertEqual(config_csv.vdj_reference_path,None)
         self.assertEqual(config_csv.gex_libraries,
                          ['PJB1_Flex',])
         self.assertEqual(config_csv.gex_library('PJB1_Flex'),
@@ -139,6 +141,54 @@ PBB,CMO302,PBB
         self.assertEqual(config_csv.probe_set_path,None)
         self.assertEqual(config_csv.feature_reference_path,
                          "/data/feature_ref.csv")
+        self.assertEqual(config_csv.vdj_reference_path,None)
+        self.assertEqual(config_csv.gex_libraries,
+                         ['PJB1_GEX',])
+        self.assertEqual(config_csv.gex_library('PJB1_GEX'),
+                         { 'fastqs': '/data/runs/fastqs_gex',
+                           'lanes': 'any',
+                           'library_id': 'PJB1',
+                           'feature_type': 'Gene Expression',
+                           'subsample_rate': ''
+                         })
+        self.assertEqual(config_csv.fastq_dirs,
+                         { 'PJB1_GEX': '/data/runs/fastqs_gex',
+                           'PJB2_MC': '/data/runs/fastqs_mc'
+                         })
+        self.assertEqual(config_csv.pretty_print_samples(),
+                         "PBA, PBB")
+
+    def test_cellranger_multi_config_csv_vdj_ref(self):
+        """
+        CellrangerMultiConfigCsv: check V(D)J reference is extracted from config.csv
+        """
+        with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/vdj_ref.csv
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
+PJB2_MC,/data/runs/fastqs_mc,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""")
+        config_csv = CellrangerMultiConfigCsv(
+            os.path.join(self.wd,
+                         "10x_multi_config.csv"))
+        self.assertEqual(config_csv.sample_names,['PBA','PBB'])
+        self.assertEqual(config_csv.reference_data_path,
+                         "/data/refdata-cellranger-gex-GRCh38-2020-A")
+        self.assertEqual(config_csv.probe_set_path,None)
+        self.assertEqual(config_csv.feature_reference_path,None)
+        self.assertEqual(config_csv.vdj_reference_path,
+                         "/data/vdj_ref.csv")
         self.assertEqual(config_csv.gex_libraries,
                          ['PJB1_GEX',])
         self.assertEqual(config_csv.gex_library('PJB1_GEX'),
@@ -181,6 +231,7 @@ PBB,CMO302
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
         self.assertEqual(config_csv.probe_set_path,None)
         self.assertEqual(config_csv.feature_reference_path,None)
+        self.assertEqual(config_csv.vdj_reference_path,None)
         self.assertEqual(config_csv.gex_libraries,
                          ['PJB1_GEX',])
         self.assertEqual(config_csv.gex_library('PJB1_GEX'),
