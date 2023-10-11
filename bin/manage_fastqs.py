@@ -348,6 +348,7 @@ if __name__ == "__main__":
                   bcf_utils.format_file_size(max_zip_size))
         else:
             max_zip_size = None
+        include_checksums_in_zip = False
         idx = 0
         zip_file = None
         zz = None
@@ -375,15 +376,20 @@ if __name__ == "__main__":
                 zz = zipfile.ZipFile(zip_file,'w',allowZip64=True)
             # Add Fastq
             zz.write(fq,arcname=os.path.basename(fq))
-        # Make a temporary MD5 file
+        # Make an MD5 file
         tmp = tempfile.mkdtemp()
         try:
             md5file = os.path.join(tmp,"%s.chksums" % project.name)
             sys.stdout.write("Creating checksum file %s..." % md5file)
             write_checksums(project,filen=md5file)
             print("done")
-            print("Adding to %s" % zip_file)
-            zz.write(md5file,arcname=os.path.basename(md5file))
+            if include_checksums_in_zip:
+                # Put checksum file into ZIP archive
+                print("Adding to %s" % zip_file)
+                zz.write(md5file,arcname=os.path.basename(md5file))
+            else:
+                # Keep checksum file separate
+                copy_to_dest(md5file,os.getcwd())
         finally:
             shutil.rmtree(tmp)
         zz.close()
