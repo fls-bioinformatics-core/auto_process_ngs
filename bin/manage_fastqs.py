@@ -381,7 +381,7 @@ if __name__ == "__main__":
         try:
             md5file = os.path.join(tmp,"%s.chksums" % project.name)
             sys.stdout.write("Creating checksum file %s..." % md5file)
-            write_checksums(project,filen=md5file)
+            write_checksums(project,pattern=options.pattern,filen=md5file)
             print("done")
             if include_checksums_in_zip:
                 # Put checksum file into ZIP archive
