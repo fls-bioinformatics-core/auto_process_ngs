@@ -528,7 +528,19 @@ def main():
                     project=project.name)
             job_ix = 0
             for f in listdir(working_dir):
-                if f.endswith(".zip") and \
+                if f == "%s.chksums" % project_name:
+                    # Assume it's the checksum file
+                    # Copy to final location
+                    copy_cmd = copy_command(os.path.join(working_dir,f),
+                                            os.path.join(target_dir,
+                                                         "%s.checksums" %
+                                                         final_zip_basename))
+                    copy_job = sched.submit(copy_cmd.command_line,
+                                            name="copy_checksums.%s" % job_id,
+                                            runner=SimpleJobRunner(),
+                                            wd=working_dir)
+                    check_jobs[copy_job.name] = copy_job
+                elif f.endswith(".zip") and \
                    f.startswith("%s." % project_name):
                     # Assume it's ZIP output from packaging process
                     final_zip = "%s%s" % (final_zip_basename,
