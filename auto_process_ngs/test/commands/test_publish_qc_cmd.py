@@ -1357,6 +1357,47 @@ poll_interval = 0.1
         # Check additional content was removed
         self.assertFalse(os.path.exists(extra_file))
 
+    def test_publish_qc_doesnt_erase_non_qc_data(self):
+        """publish_qc: doesn't erase non-QC report data
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Try to publish to same location as analysis dir
+        self.assertRaises(Exception,
+                          publish_qc,
+                          ap,
+                          location=self.dirn)
+        # Check analysis dir is unmolested
+        self.assertTrue(os.path.exists(os.path.join(ap.analysis_dir,
+                                                    "metadata.info")))
+        # Make a directory with non-QC content
+        target_dir = os.path.join(self.dirn,
+                                  "data",
+                                  os.path.basename(ap.analysis_dir))
+        os.makedirs(target_dir)
+        with open(os.path.join(target_dir,"stuff"),'wt') as fp:
+            fp.write("Some arbitrary content")
+        # Try to publish to location with non-QC content
+        self.assertRaises(Exception,
+                          publish_qc,
+                          ap,
+                          location=os.path.dirname(target_dir))
+        # Check non-QC content is unmolested
+        self.assertTrue(os.path.exists(os.path.join(target_dir,"stuff")))
+
     def test_publish_qc_with_backup_project(self):
         """publish_qc: handle 'backup' copy of project
         """
