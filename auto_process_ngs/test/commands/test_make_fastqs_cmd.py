@@ -773,7 +773,7 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
-                                 assert_rc_i2_override='true')
+                                 assert_rc_i2_override='false')
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
@@ -787,7 +787,7 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
         self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,
                     protocol="10x_visium",
-                    spaceranger_rc_i2_override=True)
+                    spaceranger_rc_i2_override=False)
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
@@ -845,7 +845,7 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
-                                 assert_rc_i2_override='false')
+                                 assert_rc_i2_override='true')
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
@@ -859,7 +859,7 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
         self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,
                     protocol="10x_visium",
-                    spaceranger_rc_i2_override=False)
+                    spaceranger_rc_i2_override=True)
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,

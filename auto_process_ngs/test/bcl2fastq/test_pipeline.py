@@ -6543,7 +6543,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
-                                 assert_rc_i2_override='true')
+                                 assert_rc_i2_override='false')
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -6552,7 +6552,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         p = MakeFastqs(run_dir,
                        sample_sheet,
                        protocol="10x_visium",
-                       spaceranger_rc_i2_override=True)
+                       spaceranger_rc_i2_override=False)
         status = p.run(analysis_dir,
                        poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
@@ -6640,7 +6640,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
-                                 assert_rc_i2_override='false')
+                                 assert_rc_i2_override='true')
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -6649,7 +6649,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         p = MakeFastqs(run_dir,
                        sample_sheet,
                        protocol="10x_visium",
-                       spaceranger_rc_i2_override=False)
+                       spaceranger_rc_i2_override=True)
         status = p.run(analysis_dir,
                        poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)

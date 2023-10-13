@@ -251,8 +251,9 @@ class MakeFastqs(Pipeline):
             (overrides sequence set in the sample sheet file)
           spaceranger_rc_i2_override (bool): if set then used as
             the value for Spaceranger's --rc-i2-override option
-            (to specify whether the workflow used was forward or
-            reverse strand) (overrides automatic detection)
+            (False specifies forward strand workflow A was used,
+            True that it was reverse complement workflow B)
+            (overrides automatic detection)
           icell8_atac_swap_i1_and_i2 (bool): if True then
             swap the I1 and I2 indexes when demultiplexing ICELL8
             ATAC data

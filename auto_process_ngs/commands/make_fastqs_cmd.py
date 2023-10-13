@@ -186,9 +186,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
          sample, ignore it (10xGenomics Chromium SC data only)
       spaceranger_rc_i2_override (bool): (optional) if set then value
          is passed to Spaceranger's '--rc-i2-override' option (True for
-         workflow B/ NovaSeq reagent kit v1.5+, False for workflow B/
-         older NovaSeq reagent kits). If not set then Spaceranger will
-         be left to determine the correct workflow automatically
+         reverse complement workflow B, False for forward complement
+         workflow A). If not set then Spaceranger will be left to
+         determine the workflow automatically
       max_jobs (int): maximum number of concurrent jobs allowed
       max_cores (int): maximum number of cores available
       batch_limit (int): if set then run commands in each task in
