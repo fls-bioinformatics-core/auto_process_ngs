@@ -525,14 +525,20 @@ class TestSpacerangerInfo(unittest.TestCase):
             fp.write("#!/bin/bash\necho -n spaceranger 1.1.0")
         os.chmod(spaceranger_110,0o775)
         return spaceranger_110
-
     def _make_mock_spaceranger_131(self):
         # Make a fake spaceranger 1.3.1 executable
-        spaceranger_110 = os.path.join(self.wd,"spaceranger")
-        with open(spaceranger_110,'w') as fp:
+        spaceranger_131 = os.path.join(self.wd,"spaceranger")
+        with open(spaceranger_131,'w') as fp:
             fp.write("#!/bin/bash\necho -n spaceranger spaceranger-1.3.1")
-        os.chmod(spaceranger_110,0o775)
-        return spaceranger_110
+        os.chmod(spaceranger_131,0o775)
+        return spaceranger_131
+    def _make_mock_spaceranger_211(self):
+        # Make a fake spaceranger 2.1.1 executable
+        spaceranger_211 = os.path.join(self.wd,"spaceranger")
+        with open(spaceranger_211,'w') as fp:
+            fp.write("#!/bin/bash\necho -n spaceranger spaceranger-2.1.1")
+        os.chmod(spaceranger_211,0o775)
+        return spaceranger_211
 
     def test_spaceranger_110(self):
         """spaceranger_info: collect info for spaceranger 1.1.0
@@ -567,6 +573,23 @@ class TestSpacerangerInfo(unittest.TestCase):
         spaceranger = self._make_mock_spaceranger_131()
         self.assertEqual(spaceranger_info(name='spaceranger'),
                          (spaceranger,'spaceranger','1.3.1'))
+
+    def test_spaceranger_211(self):
+        """spaceranger_info: collect info for spaceranger 2.1.1
+        """
+        spaceranger = self._make_mock_spaceranger_211()
+        self.assertEqual(spaceranger_info(path=spaceranger),
+                         (spaceranger,'spaceranger','2.1.1'))
+
+    def test_spaceranger_211_on_path(self):
+        """spaceranger_info: collect info for spaceranger 2.1.1 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        spaceranger = self._make_mock_spaceranger_211()
+        self.assertEqual(spaceranger_info(name='spaceranger'),
+                         (spaceranger,'spaceranger','2.1.1'))
 
 class TestMakeMultiConfigTemplate(unittest.TestCase):
     """
