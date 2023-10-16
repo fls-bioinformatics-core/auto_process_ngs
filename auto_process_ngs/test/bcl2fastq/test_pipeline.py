@@ -6569,7 +6569,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(p.output.spaceranger_info,
                          (os.path.join(self.bin,"spaceranger"),
                           "spaceranger",
-                          "1.3.1"))
+                          "2.1.1"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -6666,7 +6666,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         self.assertEqual(p.output.spaceranger_info,
                          (os.path.join(self.bin,"spaceranger"),
                           "spaceranger",
-                          "1.3.1"))
+                          "2.1.1"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
