@@ -461,13 +461,13 @@ def add_make_fastqs_command(cmdparser):
                         help="can be 'i1','i2', or 'both'; reverse complement "
                         "the specified indices from the well list when "
                         "matching ATAC barcodes against well list")
-    # Cellranger (10xgenomics Chromium SC 3') options
+    # 10x Genomics options
     default_cellranger_localcores = __settings['10xgenomics'].\
                                     cellranger_localcores
     if not default_cellranger_localcores:
         default_cellranger_localcores = 1
-    cellranger = p.add_argument_group('Cellranger* options (10xGenomics '
-                                      'data only)')
+    cellranger = p.add_argument_group('10x Genomics data options '
+                                      '(Cellranger*/Spaceranger)')
     cellranger.add_argument("--10x_jobmode",
                             dest="cellranger_jobmode",
                             default=__settings['10xgenomics'].\
@@ -521,6 +521,20 @@ def add_make_fastqs_command(cmdparser):
                             help="on a dual-indexed flowcell where the "
                             "second index was not used for the 10x sample, "
                             "ignore it")
+    # 10x Genomics Spaceranger-specific options
+    spaceranger = p.add_argument_group('10x Genomics Spaceranger options')
+    spaceranger.add_argument("--rc-i2-override",
+                             action="store",
+                             dest="rc_i2_override",
+                             help="(Spaceranger only) explicitly indicate "
+                             "whether bases in I2 read were emitted as reverse "
+                             "complement by the sequencing workflow: set to "
+                             "'true' for the Reverse Complement Workflow "
+                             "(Workflow B)/ NovaSeq Reagent Kit v1.5 or "
+                             "greater, 'false' for the Forward Strand Workflow "
+                             "(Workflow A) / older NovaSeq Reagent Kits. "
+                             "If unset then workflow will be determined "
+                             "automatically (recommended)")
     # Statistics
     statistics = p.add_argument_group('Statistics generation')
     statistics.add_argument('--stats-file',action='store',
@@ -1343,6 +1357,17 @@ def make_fastqs(args):
             raise Exception("Deprecated option --require-bcl2fastq-version "
                             "can't be used if BCL converter is not "
                             "'bcl2fastq'")
+    # Spaceranger options
+    spaceranger_rc_i2_override = None
+    if args.rc_i2_override is not None:
+        if str(args.rc_i2_override).lower() == 'true':
+            spaceranger_rc_i2_override = True
+        elif str(args.rc_i2_override).lower() == 'false':
+            spaceranger_rc_i2_override = False
+        else:
+            raise Exception("'%s': bad value for Spaceranger --rc-i2-override "
+                            "option; must be either 'true' or 'false'" %
+                            args.rc_i2_override)
     # Deal with --lanes
     if args.lanes:
         # Build subsets
@@ -1383,6 +1408,8 @@ def make_fastqs(args):
                 elif key in ('swap_i1_and_i2',
                              'reverse_complement'):
                     key = "icell8_atac_%s" % key
+                elif key == 'rc_i2_override':
+                    key = 'spaceranger_rc_i2_override'
                 # Deal with True/False values
                 # Ignore case and also allow 'yes' and 'no'
                 if value.lower() in ('true','yes'):
@@ -1441,6 +1468,7 @@ def make_fastqs(args):
         cellranger_localcores=args.cellranger_localcores,
         cellranger_localmem=args.cellranger_localmem,
         cellranger_ignore_dual_index=args.ignore_dual_index,
+        spaceranger_rc_i2_override=spaceranger_rc_i2_override,
         max_jobs=args.max_jobs,
         max_cores=args.max_cores,
         batch_limit=args.max_batches,
