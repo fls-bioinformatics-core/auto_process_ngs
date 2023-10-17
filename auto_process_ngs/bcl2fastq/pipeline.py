@@ -140,6 +140,7 @@ LANE_SUBSET_ATTRS = (
     'no_lane_splitting',
     'tenx_filter_single_index',
     'tenx_filter_dual_index',
+    'spaceranger_rc_i2_override',
     'icell8_well_list',
     'icell8_atac_swap_i1_and_i2',
     'icell8_atac_reverse_complement',
@@ -208,6 +209,7 @@ class MakeFastqs(Pipeline):
                  minimum_trimmed_read_length=None,
                  mask_short_adapter_reads=None,
                  adapter_sequence=None,adapter_sequence_read2=None,
+                 spaceranger_rc_i2_override=None,
                  icell8_atac_swap_i1_and_i2=None,
                  icell8_atac_reverse_complement=None,
                  lanes=None,trim_adapters=True,fastq_statistics=True,
@@ -247,6 +249,11 @@ class MakeFastqs(Pipeline):
           adapter_sequence_read2 (str): optionally specify the
             'read2' adapter sequence to use for trimming
             (overrides sequence set in the sample sheet file)
+          spaceranger_rc_i2_override (bool): if set then used as
+            the value for Spaceranger's --rc-i2-override option
+            (False specifies forward strand workflow A was used,
+            True that it was reverse complement workflow B)
+            (overrides automatic detection)
           icell8_atac_swap_i1_and_i2 (bool): if True then
             swap the I1 and I2 indexes when demultiplexing ICELL8
             ATAC data
@@ -333,6 +340,7 @@ class MakeFastqs(Pipeline):
         self._adapter_sequence_read2 = adapter_sequence_read2
         self._minimum_trimmed_read_length = minimum_trimmed_read_length
         self._mask_short_adapter_reads = mask_short_adapter_reads
+        self._spaceranger_rc_i2_override = spaceranger_rc_i2_override
         self._icell8_well_list = icell8_well_list
         self._icell8_atac_swap_i1_and_i2 = icell8_atac_swap_i1_and_i2
         self._icell8_atac_reverse_complement = \
@@ -482,6 +490,8 @@ class MakeFastqs(Pipeline):
                 self.params.find_adapters_with_sliding_window,
                 tenx_filter_single_index=None,
                 tenx_filter_dual_index=None,
+                spaceranger_rc_i2_override=\
+                self._spaceranger_rc_i2_override,
                 icell8_well_list=self._icell8_well_list,
                 icell8_atac_swap_i1_and_i2=\
                 self._icell8_atac_swap_i1_and_i2,
@@ -1093,6 +1103,8 @@ class MakeFastqs(Pipeline):
             ##############
             filter_single_index = subset['tenx_filter_single_index']
             filter_dual_index = subset['tenx_filter_dual_index']
+            spaceranger_rc_i2_override = \
+                subset['spaceranger_rc_i2_override']
 
             #########
             # ICELL8
@@ -1594,7 +1606,7 @@ class MakeFastqs(Pipeline):
                     self.add_task(get_spaceranger,
                                   envmodules=\
                                   self.envmodules['spaceranger_mkfastq'])
-                # Run cellranger mkfastq
+                # Run spaceranger mkfastq
                 make_fastqs = Run10xMkfastq(
                     "Run spaceranger mkfastq%s" %
                     (" for lanes %s" % ','.join([str(x) for x in lanes])
@@ -1608,6 +1620,7 @@ class MakeFastqs(Pipeline):
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
                     mask_short_adapter_reads,
+                    rc_i2_override=spaceranger_rc_i2_override,
                     jobmode=self.params.cellranger_jobmode,
                     mempercore=self.params.cellranger_mempercore,
                     maxjobs=self.params.cellranger_maxjobs,
@@ -3194,7 +3207,7 @@ class Run10xMkfastq(PipelineTask):
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
              filter_single_index=None,filter_dual_index=None,
-             jobmode='local',maxjobs=None,
+             rc_i2_override=None,jobmode='local',maxjobs=None,
              mempercore=None,jobinterval=None,
              localcores=None,localmem=None,
              create_empty_fastqs=False,platform=None,
@@ -3225,6 +3238,9 @@ class Run10xMkfastq(PipelineTask):
             (e.g., SI-TT-A6), ignoring single-index samples
             (which will not be demultiplexed) (i.e. use
             --filter-dual-index option)
+          rc_i2_override (bool): for spaceranger, set the value
+            of the --rc-i2-override option (default is not to
+            pass this option to spaceranger)
           jobmode (str): jobmode to use for
             running cellranger
           maxjobs (int): maximum number of concurrent
@@ -3422,6 +3438,11 @@ class Run10xMkfastq(PipelineTask):
                 mkfastq_cmd.add_args('--filter-single-index')
             if self.args.filter_dual_index:
                 mkfastq_cmd.add_args('--filter-dual-index')
+        if self.pkg == "spaceranger":
+            if self.args.rc_i2_override is True:
+                mkfastq_cmd.add_args('--rc-i2-override=true')
+            elif self.args.rc_i2_override is False:
+                mkfastq_cmd.add_args('--rc-i2-override=false')
         add_cellranger_args(
             mkfastq_cmd,
             jobmode=self.args.jobmode,

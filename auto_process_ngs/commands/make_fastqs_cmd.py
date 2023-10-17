@@ -63,6 +63,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_localcores=None,
                 cellranger_localmem=None,
                 cellranger_ignore_dual_index=False,
+                spaceranger_rc_i2_override=None,
                 max_jobs=None,max_cores=None,batch_limit=None,
                 verbose=False,working_dir=None):
     """
@@ -183,6 +184,11 @@ def make_fastqs(ap,protocol='standard',platform=None,
       cellranger_ignore_dual_index (bool): (optional) on a dual-indexed
          flowcell where the second index was not used for the 10x
          sample, ignore it (10xGenomics Chromium SC data only)
+      spaceranger_rc_i2_override (bool): (optional) if set then value
+         is passed to Spaceranger's '--rc-i2-override' option (True for
+         reverse complement workflow B, False for forward complement
+         workflow A). If not set then Spaceranger will be left to
+         determine the workflow automatically
       max_jobs (int): maximum number of concurrent jobs allowed
       max_cores (int): maximum number of cores available
       batch_limit (int): if set then run commands in each task in
@@ -383,6 +389,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              adapter_sequence=adapter_sequence,
                              adapter_sequence_read2=\
                              adapter_sequence_read2,
+                             spaceranger_rc_i2_override=\
+                             spaceranger_rc_i2_override,
                              icell8_atac_swap_i1_and_i2=\
                              icell8_swap_i1_and_i2,
                              icell8_atac_reverse_complement=\

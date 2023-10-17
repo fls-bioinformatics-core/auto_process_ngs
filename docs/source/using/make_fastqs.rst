@@ -590,6 +590,9 @@ Option                                Description
                                       option for ``cellranger-arc``
 ``tenx_filter_dual_index=yes|no``     Set ``--filter-dual-index``
                                       option for ``cellranger-arc``
+``spaceranger_rc_i2_override=BOOL``   Set ``--rc-i2-override`` option
+                                      for ``spaceranger`` (can be
+                                      either ``true`` or ``false``)
 ``icell8_well_list=FILE``             Well list file (``icell8`` and
                                       ``icell8_atac`` protocols only)
 ``icell8_atac_swap_i1_and_i2=yes|no`` Turn I1/I2 swapping on or off

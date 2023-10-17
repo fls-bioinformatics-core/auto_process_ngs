@@ -1791,6 +1791,7 @@ class Mock10xPackageExe:
                assert_force_cells=None,
                assert_filter_single_index=None,
                assert_filter_dual_index=None,
+               assert_rc_i2_override=None,
                reads=None,multiome_data=None,
                multi_outputs=None,version=None):
         """
@@ -1832,6 +1833,10 @@ class Mock10xPackageExe:
             the '--filter-dual-index' option
             was/n't supplied (ignored if set to
             None)
+          assert_rc_i2_override (str): check
+            that the '--rc-i2-override' option
+            was supplied and set to the supplied
+            value (ignore if set to None)
           reads (list): list of 'reads' that
             will be created
           multiome_data (str): either 'GEX' or
@@ -1859,6 +1864,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            assert_force_cells=%s,
                            assert_filter_single_index=%s,
                            assert_filter_dual_index=%s,
+                           assert_rc_i2_override=%r,
                            reads=%s,
                            multiome_data=%s,
                            multi_outputs=%r,
@@ -1877,6 +1883,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                    assert_force_cells,
                    assert_filter_single_index,
                    assert_filter_dual_index,
+                   assert_rc_i2_override,
                    reads,
                    ("\"%s\"" % multiome_data
                     if multiome_data is not None
@@ -1900,6 +1907,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                  assert_force_cells=None,
                  assert_filter_single_index=None,
                  assert_filter_dual_index=None,
+                 assert_rc_i2_override=None,
                  reads=None,
                  multiome_data=None,
                  multi_outputs=None,
@@ -1928,6 +1936,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._assert_force_cells = assert_force_cells
         self._assert_filter_single_index = assert_filter_single_index
         self._assert_filter_dual_index = assert_filter_dual_index
+        self._assert_rc_i2_override = assert_rc_i2_override
         self._multiome_data = str(multiome_data).upper()
         self._multi_outputs = str(multi_outputs).lower()
         if self._package_name == 'cellranger-arc':
@@ -2112,6 +2121,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         mkfastq.add_argument("--maxjobs",action="store")
         mkfastq.add_argument("--jobinterval",action="store")
         mkfastq.add_argument("--disable-ui",action="store_true")
+        if self._package_name == "spaceranger":
+            mkfastq.add_argument("--rc-i2-override",action="store")
         include_qc_arg = True
         if self._package_name == "cellranger" and version[0] >= 6:
             # --qc removed in cellranger 6.0.0
@@ -2215,6 +2226,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                   args.filter_dual_index)
             assert(args.filter_dual_index ==
                    self._assert_filter_dual_index)
+        # Check --rc-i2-override
+        if self._assert_rc_i2_override is not None:
+             print("Checking --rc-i2-override: %s" %
+                  args.rc_i2_override)
+             assert(args.rc_i2_override == self._assert_rc_i2_override)
         # Handle commands
         if args.command == "mkfastq":
             ##################
