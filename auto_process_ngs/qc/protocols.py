@@ -631,7 +631,8 @@ def determine_qc_protocol(project):
                 # ICELL8 scATAC-seq
                 protocol = "ICELL8_scATAC"
     # Spatial RNA-seq
-    if project.info.single_cell_platform == "10xGenomics Visium":
+    if project.info.single_cell_platform in ("10xGenomics Visium",
+                                             "10xGenomics CytAssist Visium"):
         # 10xGenomics Visium spatial transcriptomics
         if project.info.library_type == "FFPE Spatial RNA-seq":
             protocol = "10x_Visium_FFPE"
