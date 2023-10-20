@@ -1161,21 +1161,22 @@ def fetch_reference_data(s,name):
             refdata[organism] = data_item
     return refdata
 
-def show_dictionary(name,d,exclude_value=None):
+def show_dictionary(d,indent='   ',exclude_value=None):
     """
     Print the contents of a dictionary
 
     Arguments:
-      name (str): name of dictionary
       d (str): dictionary instance to show
       exclude_value (object): optional, if not 'None'
         then don't include entries which match this
         value
     """
-    text = ["[%s]" % name]
+    text = []
     for key in d:
         if exclude_value is not None and d[key] is exclude_value:
             continue
-        text.append("\t%s = %s" % (key,(d[key] if d[key] is not None
-                                        else '<Not set>')))
+        text.append("%s%s = %s" % (indent,
+                                   key,
+                                   (d[key] if d[key] is not None
+                                    else '<Not set>')))
     return '\n'.join(text)
