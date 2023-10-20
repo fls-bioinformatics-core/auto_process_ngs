@@ -346,8 +346,7 @@ class AutoProcess:
             (default: 'projects.info')
         """
         # Check metadata file doesn't already exist
-        filen = os.path.join(self.params.analysis_dir,
-                             project_metadata_file)
+        filen = os.path.join(self.analysis_dir,project_metadata_file)
         if os.path.exists(filen):
             raise Exception("%s: file already exists" % filen)
         # Populate project metadata file from bcl2fastq output dir
@@ -390,8 +389,7 @@ class AutoProcess:
         """
         if project_metadata_file is None:
             project_metadata_file='projects.info'
-        filen = os.path.join(self.params.analysis_dir,
-                             project_metadata_file)
+        filen = os.path.join(self.analysis_dir,project_metadata_file)
         logging.debug("Project metadata file: %s" % filen)
         if os.path.exists(filen):
             # Load existing file and check for consistency
