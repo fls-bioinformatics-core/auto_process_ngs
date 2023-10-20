@@ -29,6 +29,7 @@ from auto_process_ngs.barcodes.analysis import Reporter
 from auto_process_ngs.barcodes.analysis import report_barcodes
 from auto_process_ngs.bcl2fastq.utils import make_custom_sample_sheet
 from auto_process_ngs.bcl2fastq.utils import check_barcode_collisions
+from auto_process_ngs.fastq_utils import group_fastqs_by_name
 from auto_process_ngs.tenx.utils import has_10x_indices
 
 from auto_process_ngs import get_version
@@ -190,7 +191,17 @@ if __name__ == '__main__':
         counts = count_barcodes_bcl2fastq(extra_args[0])
     else:
         # Generate counts from fastq files
-        counts = count_barcodes(extra_args)
+        print("Fastqs supplied on command line")
+        fq_groups = group_fastqs_by_name(extra_args)
+        fastqs = []
+        for grp in fq_groups:
+            # Select one Fastq from each group (to
+            # avoid multiple counts)
+            fq = grp[0]
+            if len(grp) > 1:
+                print("Keeping %s from group of %d" % (fq,len(grp)))
+            fastqs.append(fq)
+        counts = count_barcodes(fastqs)
     # Determine subset of lanes to examine
     if args.lanes is not None:
         print("Lanes supplied on command line: %s" % args.lanes)
