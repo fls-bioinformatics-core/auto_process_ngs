@@ -51,6 +51,7 @@ from .metadata import ProjectMetadataFile
 from .metadata import AnalysisProjectQCDirInfo
 from .fastq_utils import BaseFastqAttrs
 from .fastq_utils import IlluminaFastqAttrs
+from .utils import sort_sample_names
 from functools import reduce
 
 # Module specific logger
@@ -986,7 +987,7 @@ class AnalysisProject:
                 multiple_fastqs = True
             samples[sample_name] = reduced_fastqs
         # Generate description
-        sample_names = sorted(samples.keys())
+        sample_names = sort_sample_names(samples.keys())
         n_samples = len(sample_names)
         if n_samples == 0:
             samples_description = "No samples"
