@@ -34,6 +34,7 @@ Functions:
 - parse_version:
 - parse_samplesheet_spec:
 - pretty_print_rows:
+- sort_sample_names:
 - write_script_file:
 - edit_file:
 - paginate:
@@ -1189,6 +1190,16 @@ def pretty_print_rows(data,prepend=False):
                 line.append(item + padding)
         output.append(' '.join(line))
     return '\n'.join(output)
+
+def sort_sample_names(samples):
+    """
+    Given a list of sample names, sort into human-friendly order
+    """
+    # Code based on sorting in genomics/bcftbx/utils 'pretty_print_samples'
+    return [str(x) for x in sorted(
+        samples,
+        key=lambda n: (bcf_utils.extract_prefix(n),
+                       bcf_utils.extract_index(n)))]
 
 def write_script_file(script_file,contents,append=False,shell=None):
     """Write command to file
