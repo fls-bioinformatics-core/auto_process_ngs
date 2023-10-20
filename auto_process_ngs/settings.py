@@ -157,7 +157,7 @@ class Settings:
         "10xgenomics.cellranger_jobinterval": 100,
         "10xgenomics.cellranger_localmem": 5,
         "10xgenomics.cellranger_localcores": 1,
-        "destination:*.include_zip_fastqs": False,
+        "destination:*.zip_fastqs": False,
         "destination:*.include_downloader": False,
         "qc_web_server.use_hierarchy": False,
         "qc_web_server.exclude_zip_files": False,
