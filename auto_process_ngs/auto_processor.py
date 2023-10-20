@@ -121,7 +121,6 @@ class AutoProcess:
                 logging.error("Failed to load parameters: %s" % ex)
                 logging.error("Stopping")
                 sys.exit(1)
-            self.params['analysis_dir'] = self.analysis_dir
             # Load metadata
             try:
                 self.load_metadata(allow_save=allow_save_params)
