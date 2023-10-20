@@ -614,10 +614,7 @@ class AnalysisProject:
         for sample in self.samples:
             logger.debug("* %s: %s" % (sample.name,sample.fastq))
         # Set paired_end flag for project
-        paired_end = True
-        for sample in self.samples:
-            paired_end = (paired_end and sample.paired_end)
-        self.info['paired_end'] = paired_end
+        self.info['paired_end'] = self.determine_paired_end()
         # Set the QC output dir, if not already set
         if self.qc_dir is None:
             self.use_qc_dir('qc')
@@ -1127,6 +1124,15 @@ class AnalysisProject:
           String: pretty description of sample names.
         """
         return bcf_utils.pretty_print_names(self.samples)
+
+    def determine_paired_end(self):
+        """
+        Return whether or not project has paired end samples
+        """
+        paired_end = True
+        for sample in self.samples:
+            paired_end = (paired_end and sample.paired_end)
+        return paired_end
 
     def __repr__(self):
         return "AnalysisProject(%s)" % self.name
