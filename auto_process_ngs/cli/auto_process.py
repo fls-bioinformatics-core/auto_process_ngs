@@ -34,6 +34,7 @@ each project.
 The following commands enable the querying and setting of configuration
 settings and project metadata:
 
+    info
     config
     params
     metadata
@@ -196,6 +197,20 @@ def add_params_command(cmdparser):
                    help="Set the value of a parameter. KEY_VALUE should be "
                    "of the form '<param>=<value>'. Multiple --set options "
                    "can be specified.")
+    add_debug_option(p)
+    p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
+                   help="auto_process analysis directory (optional: defaults "
+                   "to the current directory)")
+
+def add_info_command(cmdparser):
+    """
+    Create a parser for the 'info' command
+    """
+    p = cmdparser.add_command('info',
+                              help="Information about the analysis "
+                              "directory",
+                              description="Print information about the "
+                              "analysis associated with ANALYSIS_DIR.")
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
@@ -1272,6 +1287,19 @@ def params(args):
     else:
         d.print_params()
 
+def info(args):
+    """
+    Implement functionality for the 'info' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir,allow_save_params=False)
+    # Run ID
+    print("Run ID      : %s" % d.run_id)
+    print("Platform    : %s" % d.metadata.platform)
+    print("Sample sheet: %s" % d.params.sample_sheet)
+
 def metadata(args):
     """
     Implement functionality for 'metadata' command
@@ -1837,6 +1865,7 @@ def main():
 
     # Add commands
     add_config_command(p)
+    add_info_command(p)
     add_setup_command(p)
     add_params_command(p)
     add_metadata_command(p)
@@ -1858,6 +1887,7 @@ def main():
     # Map commands to functions
     commands = {
         'config': config,
+        'info': info,
         'setup': setup,
         'params': params,
         'metadata': metadata,
