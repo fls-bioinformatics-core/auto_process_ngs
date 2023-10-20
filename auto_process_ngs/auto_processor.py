@@ -38,6 +38,7 @@ from .metadata import AnalysisDirMetadata
 from .metadata import ProjectMetadataFile
 from .utils import edit_file
 from .utils import get_numbered_subdir
+from .utils import sort_sample_names
 from .bcl2fastq.utils import get_sequencer_platform
 from .samplesheet_utils import check_and_warn
 from .settings import Settings
@@ -361,7 +362,7 @@ class AutoProcess:
                     sample_name = sample.name
                     for fastq in sample.fastq:
                         sample_names.add(sample_name)
-                sample_names = sorted(list(sample_names))
+                sample_names = sort_sample_names(list(sample_names))
                 project_metadata.add_project(project_name,sample_names)
         except IlluminaData.IlluminaDataError as ex:
             logging.warning("Unable to get project data from bcl2fastq "
@@ -443,7 +444,8 @@ class AutoProcess:
         # Get projects and samples
         projects = {}
         for project in illumina_data.projects:
-            projects[project.name] = sorted([s.name for s in project.samples])
+            projects[project.name] = sort_sample_names(
+                [s.name for s in project.samples])
         # Add data from metadata file
         for line in project_metadata:
             project_name = line['Project']
