@@ -588,6 +588,42 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_Visium_FFPE")
 
+    def test_determine_qc_protocol_10x_cytassist_visium(self):
+        """determine_qc_protocol: spatial RNA-seq run (10xGenomics CytAssist Visium)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics CytAssist Visium",
+                                          'Library type':
+                                          "spatial RNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_Visium")
+
+    def test_determine_qc_protocol_10x_visium_cytassist_ffpe(self):
+        """determine_qc_protocol: FFPE spatial RNA-seq run (10xGenomics CytAssist Visium)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics CytAssist Visium",
+                                          'Library type':
+                                          "FFPE Spatial RNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_Visium_FFPE")
+
     def test_determine_qc_protocol_10x_multiome_atac(self):
         """determine_qc_protocol: single cell multiome ATAC run (10xGenomics Multiome ATAC)
         """
