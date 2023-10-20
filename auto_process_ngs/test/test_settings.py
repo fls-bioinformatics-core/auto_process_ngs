@@ -57,15 +57,12 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.conda.env_dir,None)
         # BCL conversion software
         self.assertEqual(s.bcl_conversion.bcl_converter,
-                         'bcl2fastq>=1.8.4')
+                         'bcl2fastq>=2.20')
         self.assertEqual(s.bcl_conversion.nprocessors,None)
         self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
         self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
-        # NextSeq-specific
-        self.assertEqual(s.platform.nextseq.bcl_converter,'bcl2fastq>=2.0')
-        self.assertEqual(s.platform.nextseq.no_lane_splitting,True)
         # Fastq_stats
-        self.assertEqual(s.fastq_stats.nprocessors,1)
+        self.assertEqual(s.fastq_stats.nprocessors,None)
         # Job-specific runners
         self.assertTrue(isinstance(s.runners.bcl2fastq,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.bcl_convert,SimpleJobRunner))
@@ -139,6 +136,129 @@ nprocessors = 8
         max_concurrent_jobs = s.general.max_concurrent_jobs
         self.assertEqual(s['general'].max_concurrent_jobs,
                          max_concurrent_jobs)
+
+    def test_contains(self):
+        """Settings: 'in' works for checking if section is defined
+        """
+        # Partial file
+        partial_settings_file = os.path.join(self.dirn,
+                                             "auto_process.ini")
+        with open(partial_settings_file,'w') as s:
+            s.write("""[general]
+max_concurrent_jobs = 12
+
+[organism:human]
+star_index = /data/hg38/star_index
+""")
+        # Load settings
+        s = Settings(partial_settings_file)
+        # Check that sections are located
+        self.assertTrue("general" in s)
+        self.assertTrue("organisms" in s)
+        # Check that section with subsection is located
+        self.assertTrue("organism:human" in s)
+        # Check that parameters can be located
+        self.assertTrue("general.max_concurrent_jobs" in s)
+        self.assertTrue("organism:human.star_index" in s)
+        # Check that missing sections, subsections and parameters
+        # are not located
+        self.assertFalse("missing" in s)
+        self.assertFalse("organism:missing" in s)
+        self.assertFalse("organism:human.missing" in s)
+
+    def test_add_section(self):
+        """Settings: add_section creates new section
+        """
+        # Empty file
+        empty_settings_file = os.path.join(self.dirn,
+                                           "auto_process.ini")
+        with open(empty_settings_file,'wt') as s:
+            s.write("")
+        s = Settings(empty_settings_file)
+        # Arbitrary section name
+        self.assertFalse("new_section" in s)
+        s.add_section("new_section")
+        self.assertTrue("new_section" in s)
+        # Arbitrary section and subsection
+        self.assertFalse("new_section2" in s)
+        self.assertFalse("new_section2:subsection" in s)
+        s.add_section("new_section2:subsection")
+        self.assertTrue("new_section2" in s)
+        self.assertTrue("new_section2:subsection" in s)
+        # Special case: organism
+        self.assertFalse("organism:human" in s)
+        s.add_section("organism:human")
+        self.assertTrue("organism:human" in s)
+
+    def test_set_item(self):
+        """Settings: 'set' updates a value
+        """
+        # Partial file
+        partial_settings_file = os.path.join(self.dirn,
+                                             "auto_process.ini")
+        with open(partial_settings_file,'wt') as s:
+            s.write("""[general]
+max_concurrent_jobs = None
+
+[organism:human]
+""")
+        # Load settings
+        s = Settings(partial_settings_file)
+        s.set("general.max_concurrent_jobs",8)
+        self.assertEqual(s['general'].max_concurrent_jobs,8)
+        s.set("organism:human.star_index","/data/hg38/star_index")
+        self.assertEqual(s['organisms']['human']['star_index'],
+                         "/data/hg38/star_index")
+
+    def test_save_raw(self):
+        """
+        Settings: test saving "raw" settings file
+        """
+        # Settings content
+        content = """[general]
+default_runner = SimpleJobRunner(join_logs=True)
+max_concurrent_jobs = 12
+poll_interval = 5.0
+
+[modulefiles]
+bcl2fastq = apps/bcl2fastq/2.20.0.422
+cellranger = apps/cellranger/6.1.2
+
+[conda]
+enable_conda = True
+env_dir = $HOME/qc_conda_envs
+
+[organism:human]
+star_index = /data/indexes/hg38
+
+[organism:mouse]
+star_index = /data/indexes/mm10
+
+[sequencer:A01234]
+platform = novaseq6000
+model = NovaSeq 6000
+
+[sequencer:NB543201]
+platform = nextseq
+model = NextSeq 500
+
+[runners]
+bcl2fastq = SimpleJobRunner(nslots=8 join_logs=True)
+star = SimpleJobRunner(nslots=18 join_logs=True)
+"""
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'wt') as s:
+            s.write(content)
+        # Load settings
+        s = Settings(settings_file,resolve_undefined=False)
+        # Save to new file
+        saved_settings_file = os.path.join(self.dirn,"auto_process.ini.bak")
+        s.save(out_file=saved_settings_file)
+        # Compare with original
+        self.assertTrue(os.path.exists(saved_settings_file))
+        self.assertEqual(open(settings_file,'rt').read().rstrip(),
+                         open(saved_settings_file,'rt').read().rstrip())
 
     def test_preserve_option_case(self):
         """Settings: case of option names is preserved
@@ -720,19 +840,20 @@ create_empty_fastqs = false
         with open(settings_file,'w') as s:
             s.write("""[platform:nextseq]
 bcl2fastq = >=2.20
-nprocessors = 1
+nprocessors = 8
 """)
         # Load settings
         s = Settings(settings_file)
         # Check bcl_conversion settings (should be defaults)
-        self.assertEqual(s.bcl_conversion.bcl_converter,None)
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl2fastq>=2.20')
         self.assertEqual(s.bcl_conversion.nprocessors,None)
-        self.assertEqual(s.bcl_conversion.no_lane_splitting,None)
-        self.assertEqual(s.bcl_conversion.create_empty_fastqs,None)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
         # Check platform-specific options
         self.assertEqual(s.platform['nextseq'].bcl_converter,
                          'bcl2fastq>=2.20')
-        self.assertEqual(s.platform['nextseq'].nprocessors,1)
+        self.assertEqual(s.platform['nextseq'].nprocessors,8)
 
     def test_platform_settings_override_bcl_conversion_section(self):
         """Settings: 'platform:...' section overrides 'bcl_conversion' settings
@@ -755,8 +876,8 @@ no_lane_splitting = true
         self.assertEqual(s.bcl_conversion.bcl_converter,
                          'bcl-convert=3.7.5')
         self.assertEqual(s.bcl_conversion.nprocessors,16)
-        self.assertEqual(s.bcl_conversion.no_lane_splitting,None)
-        self.assertEqual(s.bcl_conversion.create_empty_fastqs,None)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
         # Check platform-specific options
         self.assertEqual(s.platform['nextseq'].bcl_converter,
                          'bcl2fastq>=2.20')

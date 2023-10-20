@@ -147,22 +147,37 @@ def add_config_command(cmdparser):
     p = cmdparser.add_command('config',
                               help="Query and change global configuration",
                               description="Query and change global "
-                              "configuration.")
-    p.add_argument('--init',action='store_true',dest='init',default=False,
-                   help="Create a new configuration file from the sample.")
-    p.add_argument('--set',action='append',dest='key_value',default=None,
-                   help="Set the value of a parameter. KEY_VALUE should be "
-                   "of the form '<param>=<value>'. Multiple --set options "
-                   "can be specified.")
-    p.add_argument('--add',action='append',dest='new_section',default=None,
-                   help="Add a new section called NEW_SECTION to the config. "
-                   "To add a new platform, use 'platform:NAME'. Multiple "
-                   "--add options can be specified.")
+                              "configuration. Run without options arguments "
+                              "to displays configuration settings.")
     add_debug_option(p)
+    editing = p.add_argument_group("Creation and edit options")
+    mutex = editing.add_mutually_exclusive_group()
+    mutex.add_argument('--init',action='store_true',
+                       dest='init',default=False,
+                       help="Create a new default configuration file based "
+                       "on the sample template.")
+    mutex.add_argument('--set',action='append',
+                       dest='key_value',default=None,
+                       help="Set the value of a parameter. KEY_VALUE should "
+                       "be of the form '<param>=<value>' (<param> should be "
+                       "of the form 'SECTION[:SUBSECTION].NAME'). Multiple "
+                       "--set options can be specified.")
+    mutex.add_argument('--add',action='append',
+                       dest='new_section',default=None,
+                       help="Add a new section called NEW_SECTION to the "
+                       "config (to add e.g. a new platform, use "
+                       "'platform:NAME'). Multiple --add options can be "
+                       "specified.")
+    # Display options
+    display = p.add_argument_group('Display options')
+    display.add_argument('--raw',action='store_true',dest='show_raw',
+                         default=False,
+                         help="Show the 'raw' configuration (i.e. only "
+                         "parameters and values explicitly defined in the "
+                         "config before defaults are loaded)")
     # Deprecated options
     deprecated = p.add_argument_group('Deprecated/defunct options')
     deprecated.add_argument('--show',action='store_true',dest='show',
-                            default=False,
                             help="Show the values of parameters and settings "
                             "(does nothing; use 'config' with no options to "
                             "display settings)")
@@ -1159,10 +1174,14 @@ def config(args):
     if args.init:
         # Create new settings file and reload
         settings_file = locate_settings_file(create_from_sample=True)
-        settings = Settings(settings_file=settings_file)
-    else:
-        settings = __settings
-    if args.key_value or args.new_section:
+    elif args.key_value or args.new_section:
+        # Use an existing file, if present
+        settings_file = locate_settings_file()
+        if settings_file is None:
+            raise Exception("Unable to locate a settings file; use "
+                            "--init to create one")
+        settings = Settings(settings_file=settings_file,
+                            resolve_undefined=False)
         if args.new_section is not None:
             # Add new sections
             for new_section in args.new_section:
@@ -1185,9 +1204,20 @@ def config(args):
                     logging.error("Can't process '%s'" % args.key_value)
         # Save the updated settings to file
         settings.save()
-    elif not args.init:
+    else:
         # Report the current configuration settings
-        paginate(settings.report_settings())
+        if args.show_raw:
+            # "Raw" settings: turn off resolution of undefined
+            # parameters and exclude any that are undefined
+            resolve_undefined = False
+            exclude_undefined = True
+        else:
+            # Show settings once undefined parameters are
+            # resolved, and include undefined parameters in display
+            resolve_undefined = True
+            exclude_undefined = False
+        paginate(Settings(resolve_undefined=resolve_undefined).\
+                 report_settings(exclude_undefined=exclude_undefined))
 
 def setup(args):
     """
