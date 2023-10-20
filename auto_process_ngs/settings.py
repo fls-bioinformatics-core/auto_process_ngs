@@ -978,15 +978,22 @@ class Settings:
         for section in self._sections:
             display_name = self._section_config_name(section)
             if self.has_subsections(section):
+                # Handle sections of the form '[section:name]'
                 for subsection in getattr(self,section):
-                    text.append(
-                        show_dictionary('%s:%s' % (display_name,subsection),
-                                        getattr(self,section)[subsection],
-                                        exclude_value=exclude_value))
+                    content = show_dictionary(
+                        getattr(self,section)[subsection],
+                        exclude_value=exclude_value)
+                    if content:
+                        text.append('[%s:%s]' % (display_name,subsection))
+                        text.append(content)
             else:
-                text.append(show_dictionary(display_name,
-                                            getattr(self,section),
-                                            exclude_value=exclude_value))
+                # Handle sections of the form '[section]'
+                content = show_dictionary(
+                    getattr(self,section),
+                    exclude_value=exclude_value)
+                if content:
+                    text.append('[%s]' % display_name)
+                    text.append(content)
         return '\n'.join(text)
 
     def _section_config_name(self,internal_name):
