@@ -934,6 +934,7 @@ class Settings:
         if out_file:
             out_file = os.path.abspath(out_file)
             config = Config()
+            # Output sections with defined parameters
             for param in self.list_params(exclude_undefined=exclude_undefined):
                 name,attr = param.split('.')
                 if ':' in name:
@@ -948,10 +949,21 @@ class Settings:
                 if exclude_undefined and value is self.nullvalue:
                     continue
                 config.set(name,attr,str(value))
+            # Ensure user-defined sections (i.e. '[section:name]')
+            # are output, even if they don't contain any defined
+            # parameters
+            for section in self._sections:
+                if self.has_subsections(section):
+                    for subsection in getattr(self,section):
+                        name = "%s:%s" % (
+                            self._section_config_name(section),
+                            subsection)
+                        if not config.has_section(name):
+                            config.add_section(name)
             with open(out_file,'wt') as fp:
                 config.write(fp)
         else:
-            logger.warning("No settings file found, nothing saved")
+            logger.warning("No output file, nothing saved")
     
     def report_settings(self,exclude_undefined=False):
         """
