@@ -166,10 +166,16 @@ def add_config_command(cmdparser):
                        "'platform:NAME'). Multiple --add options can be "
                        "specified.")
     add_debug_option(p)
+    # Display options
+    display = p.add_argument_group('Display options')
+    display.add_argument('--raw',action='store_true',dest='show_raw',
+                         default=False,
+                         help="Show the 'raw' configuration (i.e. only "
+                         "parameters and values explicitly defined in the "
+                         "config before defaults are loaded)")
     # Deprecated options
     deprecated = p.add_argument_group('Deprecated/defunct options')
     deprecated.add_argument('--show',action='store_true',dest='show',
-                            default=False,
                             help="Show the values of parameters and settings "
                             "(does nothing; use 'config' with no options to "
                             "display settings)")
@@ -1198,7 +1204,18 @@ def config(args):
         settings.save()
     else:
         # Report the current configuration settings
-        paginate(__settings.report_settings())
+        if args.show_raw:
+            # "Raw" settings: turn off resolution of undefined
+            # parameters and exclude any that are undefined
+            resolve_undefined = False
+            exclude_undefined = True
+        else:
+            # Show settings once undefined parameters are
+            # resolved, and include undefined parameters in display
+            resolve_undefined = True
+            exclude_undefined = False
+        paginate(Settings(resolve_undefined=resolve_undefined).\
+                 report_settings(exclude_undefined=exclude_undefined))
 
 def setup(args):
     """
