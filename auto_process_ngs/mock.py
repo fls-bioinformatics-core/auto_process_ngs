@@ -421,7 +421,8 @@ class MockAnalysisProject:
             self.fastq_dir = 'fastqs'
         else:
             self.fastq_dir = fastq_dir
-        self.metadata = metadata
+        # Make a local copy of the supplied metadata
+        self.metadata = { x:metadata[x] for x in metadata }
 
     def add_fastq(self,fq):
         """
@@ -453,6 +454,8 @@ class MockAnalysisProject:
         if not os.path.exists(fqs_dir):
             os.mkdir(fqs_dir)
         # Add Fastq files
+        samples = set()
+        read_numbers = set()
         for fq in self.fastq_names:
             fq = os.path.basename(fq)
             if populate_fastqs:
@@ -470,6 +473,19 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
                 open_func = open
             with open_func(os.path.join(fqs_dir,fq),'wt') as fp:
                 fp.write(read)
+            samples.add(AnalysisFastq(fq).sample_name)
+            read_numbers.add(read_number)
+        # Update sample list and paired end info in metadata
+        samples = sorted(list(samples))
+        self.metadata['Samples'] = "%s sample%s (%s)" % (
+            len(samples),
+            's' if len(samples) != 1 else '',
+            ', '.join(samples))
+        if len(read_numbers) < 2:
+            paired_end = 'N'
+        else:
+            paired_end = 'Y'
+        self.metadata['Paired_end'] = paired_end
         # Add README.info
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:
