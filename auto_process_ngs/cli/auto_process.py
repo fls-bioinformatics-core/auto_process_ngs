@@ -1266,7 +1266,7 @@ def metadata(args):
     # Update the metadata associated with the analysis
     if args.update:
         d.update_metadata()
-    if args.key_value is not None:
+    elif args.key_value is not None:
         for key_value in args.key_value:
             try:
                 i = key_value.index('=')
@@ -1275,7 +1275,6 @@ def metadata(args):
                 d.set_metadata(key,value)
             except ValueError:
                 logging.error("Can't process '%s'" % args.key_value)
-    if args.key_value or args.update:
         # Save updates to file
         d.save_metadata(force=True)
     else:
