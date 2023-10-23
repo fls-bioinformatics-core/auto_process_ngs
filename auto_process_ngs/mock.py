@@ -275,7 +275,7 @@ class MockAnalysisDir(MockIlluminaData):
                 fp.write('')
         # Add auto_process.info file
         default_params = {
-            'analysis_dir': os.path.basename(self.dirn),
+            'analysis_dir': self.dirn,
             'bases_mask': self.bases_mask,
             'data_dir': "/mnt/data/%s" % self.run_name,
             'primary_data_dir': "%s/primary_data" % self.dirn,
