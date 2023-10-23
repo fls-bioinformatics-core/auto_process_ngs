@@ -228,8 +228,10 @@ class MockAnalysisDir(MockIlluminaData):
         self.project_metadata = dict()
         if project_metadata is not None:
             for project in project_metadata:
+                # Make a local copy
                 self.project_metadata[project] = \
-                            project_metadata[project]
+                            { x: project_metadata[project][x]
+                              for x in project_metadata[project] }
         name = "%s_analysis" % run_name
         if top_dir is None:
             top_dir = os.getcwd()
@@ -324,6 +326,7 @@ class MockAnalysisDir(MockIlluminaData):
                                                      'Samples',
                                                      'User',
                                                      'Library',
+                                                     'SC_Platform',
                                                      'Organism',
                                                      'PI',
                                                      'Comments')))
@@ -336,10 +339,22 @@ class MockAnalysisDir(MockIlluminaData):
                                      'Platform': self.platform }
                 try:
                     for item in self.project_metadata[project_name]:
-                        project_metadata[item] = \
+                        if item == "Library":
+                            project_item = "Library type"
+                        else:
+                            project_item = item
+                        project_metadata[project_item] = \
                             self.project_metadata[project_name][item]
                 except KeyError:
                     pass
+                for project_item in ("User",
+                                     "PI",
+                                     "Library type",
+                                     "Single cell platform",
+                                     "Organism",
+                                     "Comments"):
+                    if project_item not in project_metadata:
+                        project_metadata[project_item] = '.'
                 project_dir = MockAnalysisProject(project_name,
                                                   metadata=project_metadata)
                 sample_names = []
@@ -349,14 +364,27 @@ class MockAnalysisDir(MockIlluminaData):
                         project_dir.add_fastq(fq)
                 # Add line to projects.info
                 if project_name != 'undetermined':
+                    try:
+                        metadata = self.project_metadata[project]
+                    except KeyError:
+                        metadata = {}
+                    for item in ('User',
+                                 'Library',
+                                 'SC_Platform',
+                                 'Organism',
+                                 'PI',
+                                 'Comments'):
+                        if item not in metadata:
+                            metadata[item] = '.'
                     projects_info.write('%s\n' % '\t'.join(
                         (project,
                          ','.join(sample_names),
-                         '.',
-                         '.',
-                         '.',
-                         '.',
-                         '.')))
+                         metadata['User'],
+                         metadata['Library'],
+                         metadata['SC_Platform'],
+                         metadata['Organism'],
+                         metadata['PI'],
+                         metadata['Comments'])))
                     # Add lines to custom_SampleSheet
                     with open(os.path.join(self.dirn,
                                            'custom_SampleSheet.csv'),
