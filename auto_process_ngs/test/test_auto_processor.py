@@ -184,7 +184,8 @@ class TestAutoProcessUpdateMetadata(unittest.TestCase):
                          os.path.join(original_path,"primary_data"))
         # Update the metadata
         ap.update_metadata()
-        # Check metadata items post-update
+        # Reload and check metadata items post-update
+        ap = AutoProcess(new_path)
         self.assertEqual(ap.analysis_dir,new_path)
         self.assertEqual(ap.params.analysis_dir,new_path)
         self.assertEqual(ap.params.sample_sheet,
@@ -320,7 +321,8 @@ AB\tAB1,AB2\tAlan Bailey\tRNA-seq\t.\tMouse\tArchie Ballard\t1% PhiX spiked in
 CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX spiked in
 """)
         ap.update_metadata()
-        # Confirm the updates in projects.info
+        # Reload and confirm the updates in projects.info
+        ap = AutoProcess(mockdir.dirn)
         ap_project_metadata = ap.load_project_metadata()
         for pname in project_metadata:
             for item in project_metadata[pname]:
@@ -395,7 +397,8 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
         }
         # Update sample lists in metadata
         ap.update_metadata()
-        # Check updated sample lists in projects.info
+        # Reload and check updated sample lists in projects.info
+        ap = AutoProcess(mockdir.dirn)
         ap_project_metadata = ap.load_project_metadata()
         for pname in expected_samples:
             self.assertEqual(ap_project_metadata.lookup(pname)["Samples"],
@@ -440,7 +443,8 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
         # Set up AutoProcess instance and update metadata
         ap = AutoProcess(mockdir.dirn)
         ap.update_metadata()
-        # Check update paired-end metadata in projects
+        # Reload and check update paired-end metadata in projects
+        ap = AutoProcess(mockdir.dirn)
         expected_paired_end = {
             "AB": False,
             "CDE": True

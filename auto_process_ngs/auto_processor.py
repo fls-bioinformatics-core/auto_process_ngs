@@ -244,6 +244,7 @@ class AutoProcess:
         from other files (for older runs); setting the run name
         """
         # Migrate missing values from parameter file
+        metadata_updated = False
         if self.has_parameter_file:
             # Migrate relevant values across
             print("Migrating metadata values from parameter file")
@@ -255,10 +256,12 @@ class AutoProcess:
                               "'%s'" % (param,self.params[param]))
                     print("Importing metadata item '%s'" % param)
                     self.metadata[param] = self.params[param]
+                    metadata_updated = True
         # Run name
         if self.metadata.run_name is None:
             print("Attempting to set missing 'run_name' metadata item")
             self.metadata['run_name'] = self.run_name
+            metadata_updated = True
         # Instrument-related metadata
         if self.metadata.instrument_name is None or \
            self.metadata.instrument_datestamp is None or \
@@ -271,13 +274,17 @@ class AutoProcess:
                     IlluminaData.split_run_name_full(self.run_name)
                 if self.metadata.instrument_name is None:
                     self.metadata['instrument_name'] = instrument
+                    metadata_updated = True
                 if self.metadata.instrument_datestamp is None:
                     self.metadata['instrument_datestamp'] = datestamp
+                    metadata_updated = True
                 if self.metadata.instrument_run_number is None:
                     self.metadata['instrument_run_number'] = run_number
+                    metadata_updated = True
                 if self.metadata.instrument_flow_cell_id is None:
                     self.metadata['instrument_flow_cell_id'] = \
                         flow_cell_prefix + flow_cell_id
+                    metadata_updated = True
             except Exception as ex:
                 logging.warning("Unable to extract missing instrument metadata "
                                 "from run name")
@@ -292,6 +299,7 @@ class AutoProcess:
                 print("Setting 'platform' metadata item to %s" %
                       platform)
                 self.metadata['platform'] = platform
+                metadata_updated = True
         # Sequencer model
         if self.metadata.sequencer_model is None:
             instrument_name = self.metadata.instrument_name
@@ -301,9 +309,14 @@ class AutoProcess:
                         self.settings.sequencers[instrument_name].model
                     print("Setting 'sequencer_model' metadata item to "
                           "'%s'" % self.metadata.sequencer_model)
+                    metadata_updated = True
                 except KeyError:
                     print("Unable to get sequencer model for "
                           "instrument '%s'" % instrument_name)
+        # Save updated metadata
+        if metadata_updated:
+            print("Saving updated metadata")
+            self.save_metadata(force=True)
         # Update paths in the top-level parameter file
         # (if analysis dir has been moved or copied)
         if self.params.analysis_dir != self.analysis_dir:
