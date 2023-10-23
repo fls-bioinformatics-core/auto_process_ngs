@@ -10,8 +10,10 @@ from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.metadata import AnalysisProjectInfo
+from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import UpdateAnalysisProject
 
 # Unit tests
 
@@ -190,6 +192,78 @@ class TestAutoProcessUpdateMetadata(unittest.TestCase):
                                       "custom_SampleSheet.csv"))
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(new_path,"primary_data"))
+
+    def test_update_metadata_project_relocated_analysis_dir_with_qc(self):
+        """
+        AutoProcess.update_metadata: handle relocated analysis dir with QC
+        """
+        # List of projects
+        project_list = ("AB","CDE","undetermined")
+        # Make an auto-process directory with projects
+        top_dir1 = os.path.join(self.dirn,"original")
+        os.mkdir(top_dir1)
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=top_dir1)
+        mockdir.create()
+        original_path = mockdir.dirn
+        # Add mock QC outputs to projects
+        for project_name in project_list:
+            p = AnalysisProject(os.path.join(mockdir.dirn,project_name))
+            UpdateAnalysisProject(p).add_qc_outputs()
+        # Relocate
+        top_dir2 = os.path.join(self.dirn,"new")
+        os.mkdir(top_dir2)
+        new_path = os.path.join(top_dir2,os.path.basename(mockdir.dirn))
+        os.rename(original_path,new_path)
+        # Set up AutoProcess instance
+        ap = AutoProcess(new_path)
+        # Check metadata items items pre-update
+        self.assertEqual(ap.analysis_dir,new_path)
+        self.assertEqual(ap.params.analysis_dir,original_path)
+        self.assertEqual(ap.params.sample_sheet,
+                         os.path.join(original_path,
+                                      "custom_SampleSheet.csv"))
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(original_path,"primary_data"))
+        # Check QC paths in projects pre-update
+        for proj in ap.get_analysis_projects():
+            qc_dirs = proj.qc_dirs
+            self.assertTrue(len(qc_dirs) == 1)
+            qc_info = AnalysisProjectQCDirInfo(os.path.join(new_path,
+                                                            proj.name,
+                                                            qc_dirs[0],
+                                                            "qc.info"))
+            self.assertEqual(qc_info.fastq_dir,
+                             os.path.join(original_path,
+                                          proj.name,
+                                          "fastqs"))
+        # Update the metadata
+        ap.update_metadata()
+        # Reload and check metadata items post-update
+        ap = AutoProcess(new_path)
+        self.assertEqual(ap.analysis_dir,new_path)
+        self.assertEqual(ap.params.analysis_dir,new_path)
+        self.assertEqual(ap.params.sample_sheet,
+                         os.path.join(new_path,
+                                      "custom_SampleSheet.csv"))
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(new_path,"primary_data"))
+        # Check QC paths in projects post-update
+        for proj in ap.get_analysis_projects():
+            qc_dirs = proj.qc_dirs
+            self.assertTrue(len(qc_dirs) == 1)
+            qc_info = AnalysisProjectQCDirInfo(os.path.join(new_path,
+                                                            proj.name,
+                                                            qc_dirs[0],
+                                                            "qc.info"))
+            self.assertEqual(qc_info.fastq_dir,
+                             os.path.join(new_path,
+                                          proj.name,
+                                          "fastqs"))
 
     def test_update_metadata_project_metadata_changed(self):
         """

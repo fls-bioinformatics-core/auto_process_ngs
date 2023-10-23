@@ -36,6 +36,7 @@ from .decorators import add_command
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
 from .metadata import ProjectMetadataFile
+from .metadata import AnalysisProjectQCDirInfo
 from .utils import edit_file
 from .utils import get_numbered_subdir
 from .utils import sort_sample_names
@@ -317,6 +318,20 @@ class AutoProcess:
                 self.params[p] = os.path.normpath(
                     os.path.join(self.analysis_dir,
                                  os.path.relpath(self.params[p],old_dir)))
+            # Update paths in QC metadata in projects
+            for project in self.get_analysis_projects_from_dirs():
+                for qc_dir in project.qc_dirs:
+                    qc_info = AnalysisProjectQCDirInfo(
+                        os.path.join(project.dirn,qc_dir,"qc.info"))
+                    print("...updating QC info for %s/%s" % (project.name,
+                                                             qc_dir))
+                    qc_info['fastq_dir'] = os.path.normpath(
+                        os.path.join(self.analysis_dir,
+                                     os.path.relpath(qc_info.fastq_dir,
+                                                     old_dir)))
+                    qc_info.save()
+            # Save the updated parameter data
+            self.save_parameters(force=True)
         # Update project metadata
         project_metadata = self.load_project_metadata(
             self.params.project_metadata)
