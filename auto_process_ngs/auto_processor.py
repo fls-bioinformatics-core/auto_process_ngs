@@ -38,6 +38,7 @@ from .metadata import AnalysisDirMetadata
 from .metadata import ProjectMetadataFile
 from .utils import edit_file
 from .utils import get_numbered_subdir
+from .utils import sort_sample_names
 from .bcl2fastq.utils import get_sequencer_platform
 from .samplesheet_utils import check_and_warn
 from .settings import Settings
@@ -57,6 +58,7 @@ from . import get_version
 @add_command("run_qc",commands.run_qc)
 @add_command("publish_qc",commands.publish_qc)
 @add_command("archive",commands.archive)
+@add_command("update",commands.update)
 @add_command("report",commands.report)
 @add_command("update_fastq_stats",commands.update_fastq_stats)
 @add_command("import_project",commands.import_project)
@@ -121,7 +123,6 @@ class AutoProcess:
                 logging.error("Failed to load parameters: %s" % ex)
                 logging.error("Stopping")
                 sys.exit(1)
-            self.params['analysis_dir'] = self.analysis_dir
             # Load metadata
             try:
                 self.load_metadata(allow_save=allow_save_params)
@@ -237,8 +238,10 @@ class AutoProcess:
 
     def update_metadata(self):
         """
-        Migrates and updates metadata values
+        Updates and synchronises metadata in the analysis dir
 
+        The updates include: migrating relevant values across
+        from other files (for older runs); setting the run name
         """
         # Migrate missing values from parameter file
         if self.has_parameter_file:
@@ -252,10 +255,12 @@ class AutoProcess:
                               "'%s'" % (param,self.params[param]))
                     print("Importing metadata item '%s'" % param)
                     self.metadata[param] = self.params[param]
+                    metadata_updated = True
         # Run name
         if self.metadata.run_name is None:
             print("Attempting to set missing 'run_name' metadata item")
             self.metadata['run_name'] = self.run_name
+            metadata_updated = True
         # Instrument-related metadata
         if self.metadata.instrument_name is None or \
            self.metadata.instrument_datestamp is None or \
@@ -268,13 +273,17 @@ class AutoProcess:
                     IlluminaData.split_run_name_full(self.run_name)
                 if self.metadata.instrument_name is None:
                     self.metadata['instrument_name'] = instrument
+                    metadata_updated = True
                 if self.metadata.instrument_datestamp is None:
                     self.metadata['instrument_datestamp'] = datestamp
+                    metadata_updated = True
                 if self.metadata.instrument_run_number is None:
                     self.metadata['instrument_run_number'] = run_number
+                    metadata_updated = True
                 if self.metadata.instrument_flow_cell_id is None:
                     self.metadata['instrument_flow_cell_id'] = \
                         flow_cell_prefix + flow_cell_id
+                    metadata_updated = True
             except Exception as ex:
                 logging.warning("Unable to extract missing instrument metadata "
                                 "from run name")
@@ -289,6 +298,7 @@ class AutoProcess:
                 print("Setting 'platform' metadata item to %s" %
                       platform)
                 self.metadata['platform'] = platform
+                metadata_updated = True
         # Sequencer model
         if self.metadata.sequencer_model is None:
             instrument_name = self.metadata.instrument_name
@@ -298,6 +308,7 @@ class AutoProcess:
                         self.settings.sequencers[instrument_name].model
                     print("Setting 'sequencer_model' metadata item to "
                           "'%s'" % self.metadata.sequencer_model)
+                    metadata_updated = True
                 except KeyError:
                     print("Unable to get sequencer model for "
                           "instrument '%s'" % instrument_name)
@@ -346,8 +357,7 @@ class AutoProcess:
             (default: 'projects.info')
         """
         # Check metadata file doesn't already exist
-        filen = os.path.join(self.params.analysis_dir,
-                             project_metadata_file)
+        filen = os.path.join(self.analysis_dir,project_metadata_file)
         if os.path.exists(filen):
             raise Exception("%s: file already exists" % filen)
         # Populate project metadata file from bcl2fastq output dir
@@ -363,7 +373,7 @@ class AutoProcess:
                     sample_name = sample.name
                     for fastq in sample.fastq:
                         sample_names.add(sample_name)
-                sample_names = sorted(list(sample_names))
+                sample_names = sort_sample_names(list(sample_names))
                 project_metadata.add_project(project_name,sample_names)
         except IlluminaData.IlluminaDataError as ex:
             logging.warning("Unable to get project data from bcl2fastq "
@@ -390,8 +400,7 @@ class AutoProcess:
         """
         if project_metadata_file is None:
             project_metadata_file='projects.info'
-        filen = os.path.join(self.params.analysis_dir,
-                             project_metadata_file)
+        filen = os.path.join(self.analysis_dir,project_metadata_file)
         logging.debug("Project metadata file: %s" % filen)
         if os.path.exists(filen):
             # Load existing file and check for consistency
@@ -446,7 +455,8 @@ class AutoProcess:
         # Get projects and samples
         projects = {}
         for project in illumina_data.projects:
-            projects[project.name] = sorted([s.name for s in project.samples])
+            projects[project.name] = sort_sample_names(
+                [s.name for s in project.samples])
         # Add data from metadata file
         for line in project_metadata:
             project_name = line['Project']

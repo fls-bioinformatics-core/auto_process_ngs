@@ -40,6 +40,7 @@ settings and project metadata:
 
 Additional commands are available:
 
+    update
     clone
     samplesheet
     analyse_barcodes
@@ -994,6 +995,21 @@ def add_readme_command(cmdparser):
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
 
+def add_update_command(cmdparser):
+    """
+    Create a parser for the 'update' command
+    """
+    p = cmdparser.add_command('update',
+                              help="Update paths and project metadata",
+                              description="Update paths and metadata across "
+                              "ANALYSIS_DIR and its projects and QC outputs "
+                              "when directory has been moved or copied, "
+                              "or project metadata has been updated.")
+    add_debug_option(p)
+    p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs='?',
+                   help="existing auto_process analysis directory to "
+                   "update (optional: defaults to the current directory)")
+
 def add_clone_command(cmdparser):
     """
     Create a parser for the 'clone' command
@@ -1265,8 +1281,12 @@ def metadata(args):
     d = AutoProcess(analysis_dir,allow_save_params=False)
     # Update the metadata associated with the analysis
     if args.update:
+        # Migrate and update
         d.update_metadata()
-    if args.key_value is not None:
+        # Save updates to file
+        d.save_metadata(force=True)
+    elif args.key_value is not None:
+        # Set specific metadata items
         for key_value in args.key_value:
             try:
                 i = key_value.index('=')
@@ -1275,7 +1295,6 @@ def metadata(args):
                 d.set_metadata(key,value)
             except ValueError:
                 logging.error("Can't process '%s'" % args.key_value)
-    if args.key_value or args.update:
         # Save updates to file
         d.save_metadata(force=True)
     else:
@@ -1668,6 +1687,16 @@ def report(args):
         fields = None
     d.report(mode=mode,fields=fields,out_file=args.out_file)
 
+def update(args):
+    """
+    Implement functionality for 'update' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    d.update()
+
 def readme(args):
     """
     Implement functionality for 'readme' command
@@ -1817,6 +1846,7 @@ def main():
     add_publish_qc_command(p)
     add_archive_command(p)
     add_report_command(p)
+    add_update_command(p)
     add_readme_command(p)
     add_clone_command(p)
     add_analyse_barcodes_command(p)
@@ -1837,6 +1867,7 @@ def main():
         'publish_qc': publish_qc,
         'archive': archive,
         'report': report,
+        'update': update,
         'readme': readme,
         'clone': clone,
         'analyse_barcodes': analyse_barcodes,

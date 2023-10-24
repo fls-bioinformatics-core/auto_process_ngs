@@ -228,8 +228,10 @@ class MockAnalysisDir(MockIlluminaData):
         self.project_metadata = dict()
         if project_metadata is not None:
             for project in project_metadata:
+                # Make a local copy
                 self.project_metadata[project] = \
-                            project_metadata[project]
+                            { x: project_metadata[project][x]
+                              for x in project_metadata[project] }
         name = "%s_analysis" % run_name
         if top_dir is None:
             top_dir = os.getcwd()
@@ -275,7 +277,7 @@ class MockAnalysisDir(MockIlluminaData):
                 fp.write('')
         # Add auto_process.info file
         default_params = {
-            'analysis_dir': os.path.basename(self.dirn),
+            'analysis_dir': self.dirn,
             'bases_mask': self.bases_mask,
             'data_dir': "/mnt/data/%s" % self.run_name,
             'primary_data_dir': "%s/primary_data" % self.dirn,
@@ -324,6 +326,7 @@ class MockAnalysisDir(MockIlluminaData):
                                                      'Samples',
                                                      'User',
                                                      'Library',
+                                                     'SC_Platform',
                                                      'Organism',
                                                      'PI',
                                                      'Comments')))
@@ -336,10 +339,22 @@ class MockAnalysisDir(MockIlluminaData):
                                      'Platform': self.platform }
                 try:
                     for item in self.project_metadata[project_name]:
-                        project_metadata[item] = \
+                        if item == "Library":
+                            project_item = "Library type"
+                        else:
+                            project_item = item
+                        project_metadata[project_item] = \
                             self.project_metadata[project_name][item]
                 except KeyError:
                     pass
+                for project_item in ("User",
+                                     "PI",
+                                     "Library type",
+                                     "Single cell platform",
+                                     "Organism",
+                                     "Comments"):
+                    if project_item not in project_metadata:
+                        project_metadata[project_item] = '.'
                 project_dir = MockAnalysisProject(project_name,
                                                   metadata=project_metadata)
                 sample_names = []
@@ -349,14 +364,27 @@ class MockAnalysisDir(MockIlluminaData):
                         project_dir.add_fastq(fq)
                 # Add line to projects.info
                 if project_name != 'undetermined':
+                    try:
+                        metadata = self.project_metadata[project]
+                    except KeyError:
+                        metadata = {}
+                    for item in ('User',
+                                 'Library',
+                                 'SC_Platform',
+                                 'Organism',
+                                 'PI',
+                                 'Comments'):
+                        if item not in metadata:
+                            metadata[item] = '.'
                     projects_info.write('%s\n' % '\t'.join(
                         (project,
                          ','.join(sample_names),
-                         '.',
-                         '.',
-                         '.',
-                         '.',
-                         '.')))
+                         metadata['User'],
+                         metadata['Library'],
+                         metadata['SC_Platform'],
+                         metadata['Organism'],
+                         metadata['PI'],
+                         metadata['Comments'])))
                     # Add lines to custom_SampleSheet
                     with open(os.path.join(self.dirn,
                                            'custom_SampleSheet.csv'),
@@ -393,7 +421,8 @@ class MockAnalysisProject:
             self.fastq_dir = 'fastqs'
         else:
             self.fastq_dir = fastq_dir
-        self.metadata = metadata
+        # Make a local copy of the supplied metadata
+        self.metadata = { x:metadata[x] for x in metadata }
 
     def add_fastq(self,fq):
         """
@@ -425,6 +454,8 @@ class MockAnalysisProject:
         if not os.path.exists(fqs_dir):
             os.mkdir(fqs_dir)
         # Add Fastq files
+        samples = set()
+        read_numbers = set()
         for fq in self.fastq_names:
             fq = os.path.basename(fq)
             if populate_fastqs:
@@ -442,6 +473,19 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
                 open_func = open
             with open_func(os.path.join(fqs_dir,fq),'wt') as fp:
                 fp.write(read)
+            samples.add(AnalysisFastq(fq).sample_name)
+            read_numbers.add(read_number)
+        # Update sample list and paired end info in metadata
+        samples = sorted(list(samples))
+        self.metadata['Samples'] = "%s sample%s (%s)" % (
+            len(samples),
+            's' if len(samples) != 1 else '',
+            ', '.join(samples))
+        if len(read_numbers) < 2:
+            paired_end = 'N'
+        else:
+            paired_end = 'Y'
+        self.metadata['Paired_end'] = paired_end
         # Add README.info
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:

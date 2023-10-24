@@ -1083,6 +1083,21 @@ class TestParseSampleSheetSpec(unittest.TestCase):
             "1-2,3,4:SAMPLE_ID=*:Value"),
                          ("Value",[1,2,3,4],"SAMPLE_ID","*"))
 
+class TestSortSampleNames(unittest.TestCase):
+    """
+    Tests for the 'sort_sample_names' function
+    """
+    def test_sort_sample_names(self):
+        """
+        sort_sample_names: names are sorted into human-friendly order
+        """
+        self.assertEqual(sort_sample_names(['PB4','PB2','PB1','PB3']),
+                                           ['PB1','PB2','PB3','PB4'])
+        self.assertEqual(sort_sample_names(['PB100','PB1','PB10']),
+                                           ['PB1','PB10','PB100'])
+        self.assertEqual(sort_sample_names(['PB11','PB1','PB10','PB2']),
+                                           ['PB1','PB2','PB10','PB11'])
+
 class TestPrettyPrintRows(unittest.TestCase):
     """Tests for the pretty_print_rows function
 
