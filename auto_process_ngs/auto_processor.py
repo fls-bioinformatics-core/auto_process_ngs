@@ -60,6 +60,7 @@ from . import get_version
 @add_command("run_qc",commands.run_qc)
 @add_command("publish_qc",commands.publish_qc)
 @add_command("archive",commands.archive)
+@add_command("update",commands.update)
 @add_command("report",commands.report)
 @add_command("update_fastq_stats",commands.update_fastq_stats)
 @add_command("import_project",commands.import_project)

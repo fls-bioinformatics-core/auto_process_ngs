@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     commands/__init__.py: core functions for autoprocess commands
-#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
 #
 #######################################################################
 # Imports
@@ -15,6 +15,7 @@ from .run_qc_cmd import run_qc
 from .publish_qc_cmd import publish_qc
 from .archive_cmd import archive
 from .report_cmd import report
+from .update_cmd import update
 from .merge_fastq_dirs_cmd import merge_fastq_dirs
 from .update_fastq_stats_cmd import update_fastq_stats
 from .import_project_cmd import import_project
