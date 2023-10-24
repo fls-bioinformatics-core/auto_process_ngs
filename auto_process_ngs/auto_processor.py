@@ -36,6 +36,7 @@ from .decorators import add_command
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
 from .metadata import ProjectMetadataFile
+from .metadata import AnalysisProjectInfo
 from .metadata import AnalysisProjectQCDirInfo
 from .utils import edit_file
 from .utils import get_numbered_subdir
@@ -333,6 +334,7 @@ class AutoProcess:
                                  os.path.relpath(self.params[p],old_dir)))
             # Update paths in QC metadata in projects
             for project in self.get_analysis_projects_from_dirs():
+                # Iterate through all project directories
                 for qc_dir in project.qc_dirs:
                     qc_info = AnalysisProjectQCDirInfo(
                         os.path.join(project.dirn,qc_dir,"qc.info"))
@@ -371,17 +373,23 @@ class AutoProcess:
                     samples=project.sample_summary()
                 )
                 # Only update items where values differ
+                project_metadata_updated = False
                 for item in metadata_items:
                     new_value = (metadata_items[item]
                                  if metadata_items[item] != '.' else None)
                     if project.info[item] != new_value:
                         print("...updating '%s' => %r" % (item,new_value))
                         project.info[item] = new_value
-                # Save the updated project metadata
-                # (always save to also store implicitly updated metadata
-                # items e.g. paired-endedness flag)
-                print("...saving project metadata")
-                project.info.save()
+                        project_metadata_updated = True
+                # Check paired-end info
+                project_info = AnalysisProjectInfo(project.info_file)
+                if project_info.paired_end != project.info.paired_end:
+                    print("...updating paired-end info")
+                    project_metadata_updated = True
+                # Save the updated project metadata if required
+                if project_metadata_updated:
+                    print("...saving project metadata")
+                    project.info.save()
                 # Update list of sample names in projects.info
                 sample_list = ','.join(sort_sample_names(
                     [s.name for s in project.samples]))
