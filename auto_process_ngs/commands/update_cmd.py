@@ -14,6 +14,7 @@ import logging
 from ..analysis import AnalysisProject
 from ..metadata import AnalysisProjectInfo
 from ..metadata import AnalysisProjectQCDirInfo
+from ..qc.utils import report_qc
 from ..utils import sort_sample_names
 
 # Module specific logger
@@ -33,6 +34,8 @@ def update(ap):
     """
     update_paths = True
     update_projects = True
+    update_qc_reports = True
+
     if update_paths:
         # Update paths in the top-level parameter file
         # (if analysis dir has been moved or copied)
@@ -63,6 +66,7 @@ def update(ap):
                     qc_info.save()
             # Save the updated parameter data
             ap.save_parameters(force=True)
+
     if update_projects:
         # Update project metadata
         project_metadata = ap.load_project_metadata(
@@ -118,4 +122,28 @@ def update(ap):
         if save_required:
             print("Saving projects.info")
             project_metadata.save()
-    # TBA: regenerate QC reports if metadata has changed
+
+    if update_qc_reports:
+        # Update QC reports that are older than project metadata
+        for project in ap.get_analysis_projects():
+            metadata_mtime = os.path.getmtime(project.info_file)
+            for qc_dir in project.qc_dirs:
+                qc_report = os.path.join(project.dirn,
+                                         "%s_report.html" % qc_dir)
+                if not os.path.exists(qc_report):
+                    continue
+                qc_report_mtime = os.path.getmtime(qc_report)
+                if metadata_mtime > qc_report_mtime:
+                    print("...regenerating QC report for '%s/%s'" %
+                          (project.name,qc_dir))
+                    report_status = report_qc(
+                        project,
+                        qc_dir=qc_dir,
+                        multiqc=True,
+                        force=True,
+                        runner=ap.settings.runners.publish_qc,
+                        log_dir=ap.tmp_dir)
+                    if report_status == 0:
+                        print("...ok")
+                    else:
+                        print("...failed")

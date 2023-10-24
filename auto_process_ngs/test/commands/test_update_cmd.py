@@ -345,3 +345,58 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
                 os.path.join(mockdir.dirn,pname,"README.info"))
             self.assertEqual(project_metadata.paired_end,
                              expected_paired_end[pname])
+
+    def test_update_regenerate_qc_reports(self):
+        """
+        update: regenerate QC reports with stale metadata
+        """
+        # List of projects
+        project_list = ("AB","CDE","undetermined")
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add mock QC outputs to projects
+        for project_name in project_list:
+            p = AnalysisProject(os.path.join(mockdir.dirn,project_name))
+            UpdateAnalysisProject(p).add_qc_outputs()
+        # Get modification times for QC reports
+        qc_report_mtimes = {}
+        for project_name in project_list:
+            qc_report_mtimes[project_name] = os.path.getmtime(
+                os.path.join(mockdir.dirn,
+                             project_name,
+                             "qc_report.html"))
+        # Set up AutoProcess instance and update (should do nothing)
+        ap = AutoProcess(mockdir.dirn)
+        # Check modification times (should be unchanged)
+        for project_name in project_list:
+            self.assertEqual(qc_report_mtimes[project_name],
+                             os.path.getmtime(
+                                 os.path.join(mockdir.dirn,
+                                              project_name,
+                                              "qc_report.html")))
+        # Update timestamp on project metadata files
+        for project_name in project_list:
+            metadata_file = os.path.join(mockdir.dirn,
+                                         project_name,
+                                         "README.info")
+            metadata_mtime = os.path.getmtime(metadata_file)
+            with open(metadata_file,'rt') as fp:
+                content = fp.read()
+            with open(metadata_file,'wt') as fp:
+                fp.write(content)
+            self.assertTrue(metadata_mtime <
+                            os.path.getmtime(metadata_file))
+        # Re-do update and check modification times
+        update(ap)
+        for project_name in project_list:
+            self.assertTrue(qc_report_mtimes[project_name] <
+                            os.path.getmtime(
+                                os.path.join(mockdir.dirn,
+                                             project_name,
+                                             "qc_report.html")))
