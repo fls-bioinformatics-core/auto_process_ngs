@@ -12,6 +12,7 @@ from auto_process_ngs.metadata import AnalysisProjectInfo
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import UpdateAnalysisProject
+from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.commands.update_cmd import update
 
 # Unit tests
@@ -34,6 +35,9 @@ class TestUpdate(unittest.TestCase):
         self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
         # Store original location
         self.pwd = os.getcwd()
+        # Bin dir for any mock executables
+        self.bin = os.path.join(self.dirn,"bin")
+        os.mkdir(self.bin)
         # Move to working directory
         os.chdir(self.dirn)
 
@@ -352,6 +356,9 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
         """
         # List of projects
         project_list = ("AB","CDE","undetermined")
+        # Make mock MultiQC executable for report regeneration
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,os.environ['PATH'])
         # Make an auto-process directory with projects
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '231021_A00879_0087_000000000-AGEW9',
