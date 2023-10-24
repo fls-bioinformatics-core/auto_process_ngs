@@ -1281,8 +1281,12 @@ def metadata(args):
     d = AutoProcess(analysis_dir,allow_save_params=False)
     # Update the metadata associated with the analysis
     if args.update:
+        # Migrate and update
         d.update_metadata()
+        # Save updates to file
+        d.save_metadata(force=True)
     elif args.key_value is not None:
+        # Set specific metadata items
         for key_value in args.key_value:
             try:
                 i = key_value.index('=')
