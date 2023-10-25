@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
 #
 #########################################################################
 
@@ -10,7 +10,6 @@
 #######################################################################
 
 import os
-import time
 import shutil
 import gzip
 import ast
