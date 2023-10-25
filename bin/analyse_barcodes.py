@@ -79,6 +79,30 @@ def count_barcodes(fastqs):
             counts.count_barcode(seq,lane)
     return counts
 
+def count_sequences(fastqs,start=None,end=None):
+    """
+    Count sequences (instead of barcodes) from multiple fastqs
+    """
+    print("Reading in %s fastq%s" % (len(fastqs),
+                                     ('' if len(fastqs) == 1
+                                      else 's')))
+    print("Counting sequences instead of barcodes")
+    if start:
+        print("Start position: %d" % start)
+        # Correct for Python's zero-based counting
+        # i.e. first base is actually zero
+        start -= 1
+    if end:
+        print("End position: %d" % end)
+    counts = BarcodeCounter()
+    for fq in fastqs:
+        print("%s" % os.path.basename(fq))
+        for r in FastqIterator(fq):
+            seq = r.sequence[start:end]
+            lane = int(r.seqid.flowcell_lane)
+            counts.count_barcode(seq,lane)
+    return counts
+
 # Main program
 if __name__ == '__main__':
     p = argparse.ArgumentParser(usage=
@@ -161,6 +185,22 @@ if __name__ == '__main__':
         help="suppress reporting (overrides --report)")
     advanced = p.add_argument_group("Advanced options")
     advanced.add_argument(
+        '--sequences',
+        action='store_true',dest='count_seqs',default=False,
+        help="count sequences instead of barcodes")
+    advanced.add_argument(
+        '--seq-start',
+        action='store',dest='seq_start',type=int,default=None,
+        help="specify first base of sequence to analyse (for "
+        "--sequences option; default is start at the first "
+        "base position)")
+    advanced.add_argument(
+        '--seq-end',
+        action='store',dest='seq_end',type=int,default=None,
+        help="specify last base of sequence to analyse (for "
+        "--sequences option; default is start at the first "
+        "base position)")
+    advanced.add_argument(
         '--minimum_read_fraction',
         action='store',dest='minimum_read_fraction',
         metavar='FRACTION',default=0.000001,type=float,
@@ -189,6 +229,11 @@ if __name__ == '__main__':
     elif len(extra_args) == 1 and os.path.isdir(extra_args[0]):
         # Generate counts from bcl2fastq output
         counts = count_barcodes_bcl2fastq(extra_args[0])
+    elif args.count_seqs:
+        # Count sequences from fastq files
+        counts = count_sequences(extra_args,
+                                 start=args.seq_start,
+                                 end=args.seq_end)
     else:
         # Generate counts from fastq files
         print("Fastqs supplied on command line")
