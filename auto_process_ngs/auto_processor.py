@@ -397,6 +397,10 @@ class AutoProcess:
           project_metadata_file (str): name of the metadata file
             relative to the analysis directory (default:
             'projects.info')
+
+        Returns:
+          ProjectMetadataFile: project metadata loaded from the
+            file in the analysis directory.
         """
         if project_metadata_file is None:
             project_metadata_file='projects.info'
