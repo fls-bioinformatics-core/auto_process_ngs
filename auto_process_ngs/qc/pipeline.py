@@ -185,7 +185,7 @@ class QCPipeline(Pipeline):
     def add_project(self,project,protocol,qc_dir=None,organism=None,
                     fastq_dir=None,report_html=None,multiqc=False,
                     sample_pattern=None,log_dir=None,convert_gtf=True,
-                    verify_fastqs=True):
+                    verify_fastqs=False):
         """
         Add a project to the QC pipeline
 
@@ -214,6 +214,7 @@ class QCPipeline(Pipeline):
             defined BED files)
           verify_fastqs (bool): if True then verify
             Fastq integrity as part of the pipeline
+            (default: False, skip verification)
         """
         ###################
         # Do internal setup
