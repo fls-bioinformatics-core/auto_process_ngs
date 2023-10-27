@@ -33,6 +33,9 @@ from auto_process_ngs.pipeliner import FunctionParam
 from auto_process_ngs.pipeliner import PipelineError
 from auto_process_ngs.pipeliner import report_text
 from auto_process_ngs.pipeliner import resolve_parameter
+from auto_process_ngs.pipeliner import make_conda_env
+from auto_process_ngs.utils import FileLock
+from auto_process_ngs.utils import FileLockError
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.Pipeline import Job
 
@@ -2886,67 +2889,6 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.conda_env_name,
                          "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3")
 
-    def test_pipelinetask_setup_conda_env(self):
-        """
-        PipelineTask: set up conda environment for dependencies
-        """
-        # Define a task with conda dependencies
-        class WithCondaDeps(PipelineTask):
-            def init(self,fq):
-                self.conda("fastqc=0.11.3")
-                self.conda("fastq-screen=0.14.0",
-                           "bowtie=1.2.3")
-            def setup(self):
-                self.add_cmd(
-                    PipelineCommandWrapper(
-                        "Run FastQC","fastqc",self.args.fq))
-        # Create a mock conda installation
-        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
-        conda_ = os.path.join(conda_dir,"bin","conda")
-        # Make a task instance
-        task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
-        # Setup conda environment
-        conda_env = task.setup_conda_env(conda_)
-        # Check conda environment
-        self.assertEqual(
-            conda_env,
-            os.path.join(conda_dir,
-                         "envs",
-                         "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3"))
-        self.assertTrue(os.path.exists(conda_env))
-
-    def test_pipelinetask_setup_conda_env_custom_location(self):
-        """
-        PipelineTask: set up conda environment for dependencies in custom location
-        """
-        # Define a task with conda dependencies
-        class WithCondaDeps(PipelineTask):
-            def init(self,fq):
-                self.conda("fastqc=0.11.3")
-                self.conda("fastq-screen=0.14.0",
-                           "bowtie=1.2.3")
-            def setup(self):
-                self.add_cmd(
-                    PipelineCommandWrapper(
-                        "Run FastQC","fastqc",self.args.fq))
-        # Create a mock conda installation
-        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
-        conda_ = os.path.join(conda_dir,"bin","conda")
-        alternative_env_dir = os.path.join(self.working_dir,
-                                           '__my_conda_envs')
-        os.makedirs(alternative_env_dir)
-        # Make a task instance
-        task = WithCondaDeps("Test","Sample1_S1_R1_001.fastq.gz")
-        # Setup conda environment
-        conda_env = task.setup_conda_env(conda_,
-                                         env_dir=alternative_env_dir)
-        # Check conda environment
-        self.assertEqual(
-            conda_env,
-            os.path.join(alternative_env_dir,
-                         "bowtie@1.2.3+fastq-screen@0.14.0+fastqc@0.11.3"))
-        self.assertTrue(os.path.exists(conda_env))
-
     def test_pipelinetask_run_with_conda_dependencies_enabled(self):
         """
         PipelineTask: run task with conda dependencies enabled
@@ -4176,3 +4118,126 @@ class TestResolveParameter(unittest.TestCase):
         """
         self.assertEqual(resolve_parameter("this is the value"),
                          "this is the value")
+
+class TestMakeCondaEnv(unittest.TestCase):
+
+    def setUp(self):
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(suffix='TestPipeliner')
+        # Store PATH
+        self.path = os.environ['PATH']
+
+    def tearDown(self):
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+        # Restore PATH
+        os.environ['PATH'] = self.path
+
+    def test_make_conda_env(self):
+        """
+        make_conda_env: create new conda environment
+        """
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Setup conda environment
+        conda_env = make_conda_env(conda_,
+                                   "test_env",
+                                   ("fastqc=0.11.3",
+                                    "fastq-screen=0.14.0",
+                                    "bowtie=1.2.3"))
+        # Check conda environment
+        self.assertEqual(conda_env,os.path.join(conda_dir,
+                                                "envs",
+                                                "test_env"))
+        self.assertTrue(os.path.exists(conda_env))
+
+    def test_make_conda_env_custom_location(self):
+        """
+        make_conda_env: create new conda environment in custom location
+        """
+        # Define a task with conda dependencies
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        alternative_env_dir = os.path.join(self.working_dir,
+                                           '__my_conda_envs')
+        os.makedirs(alternative_env_dir)
+        # Setup conda environment
+        conda_env = make_conda_env(conda_,
+                                   "test_env",
+                                   ("fastqc=0.11.3",
+                                    "fastq-screen=0.14.0",
+                                    "bowtie=1.2.3"),
+                                   env_dir=alternative_env_dir)
+        # Check conda environment
+        self.assertEqual(conda_env,
+                         os.path.join(alternative_env_dir,"test_env"))
+        self.assertTrue(os.path.exists(conda_env))
+
+    def test_make_conda_env_already_exists(self):
+        """
+        make_conda_env: handle existing conda environment
+        """
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Make a placeholder directory to stand in for the environment
+        os.mkdir(os.path.join(conda_dir,"envs","test_env"))
+        # Setup conda environment
+        conda_env = make_conda_env(conda_,
+                                   "test_env",
+                                   ("fastqc=0.11.3",
+                                    "fastq-screen=0.14.0",
+                                    "bowtie=1.2.3"))
+        # Check conda environment
+        self.assertEqual(conda_env,os.path.join(conda_dir,
+                                                "envs",
+                                                "test_env"))
+        self.assertTrue(os.path.exists(conda_env))
+
+    def test_make_conda_env_handle_create_failure(self):
+        """
+        make_conda_env: handle failure to create conda environment
+        """
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"),
+                                     create_fails=True)
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Setup conda environment
+        conda_env = make_conda_env(conda_,
+                                   "test_env",
+                                   ("fastqc=0.11.3",
+                                    "fastq-screen=0.14.0",
+                                    "bowtie=1.2.3"))
+        # Check conda environment
+        self.assertEqual(conda_env,None)
+        self.assertFalse(os.path.exists(os.path.join(conda_dir,
+                                                     "envs",
+                                                     "test_env")))
+
+    def test_make_conda_env_handle_lock_on_envs_dir(self):
+        """
+        make_conda_env: fails when conda environments dir is locked
+        """
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        lock = FileLock(os.path.join(conda_dir,"envs"))
+        lock.acquire()
+        # Attempt to set up conda environment under locked dir
+        # should time out without creating the env
+        self.assertRaises(FileLockError,
+                          make_conda_env,
+                          conda_,
+                          "test_env",
+                          ("fastqc=0.11.3",
+                           "fastq-screen=0.14.0",
+                           "bowtie=1.2.3"),
+                          timeout=1)
+        self.assertFalse(os.path.exists(os.path.join(conda_dir,
+                                                     "envs",
+                                                     "test_env")))
+        # Release lock
+        lock.release()

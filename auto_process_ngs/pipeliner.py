@@ -3061,74 +3061,16 @@ class PipelineTask:
         else:
             return None
 
-    def setup_conda_env(self,conda,env_dir=None,channels=None):
-        """
-        Fetch or create a conda environment with required packages
-
-        Arguments:
-          conda (str): path to conda executable
-          env_dir (str): path to conda environments directory
-            (defaults to environments directory belonging to the
-            supplied conda installation)
-          channels (list): optional list of channel names to use
-            with conda operations (overrides defaults)
-
-        Returns:
-          String: path to Conda environment.
-        """
-        # Set up conda wrapper
-        conda = CondaWrapper(conda=conda,
-                             env_dir=env_dir,
-                             channels=channels)
-        # Make a name for the environment
-        env_name = self.conda_env_name
-        # Fetch the environment
-        conda_env = None
-        with FileLock(conda.env_dir,timeout=600):
-            if env_name in conda.list_envs:
-                # Use existing environment
-                self.report("using existing conda environment "
-                            "'%s'" % env_name)
-                conda_env = os.path.join(conda.env_dir,
-                                         env_name)
-                # Check that environment can be activated
-                if conda_env:
-                    if not conda.verify_env(conda_env):
-                        # Can't activate the environment
-                        self.report("WARNING the task may fail as the "
-                                    "required conda environment '%s' "
-                                    "cannot be activated successfully"
-                                    % env_name)
-            else:
-                # Create new environment
-                self.report("attempting to create new conda "
-                            "environment '%s'" % env_name)
-                try:
-                    conda_env = conda.create_env(
-                        env_name,
-                        *self.conda_dependencies)
-                    self.report("created conda environment "
-                                "'%s'" % env_name)
-                except CondaWrapperError as ex:
-                    # Failed to create the environment
-                    self.report("failed to create conda environment '%s': %s" %
-                                (env_name,ex))
-                    # Diagnostics
-                    self.report(
-                        "\n**** CONDA DIAGNOSTICS ****\n")
-                    self.report("Command: %s\n" % ex.cmdline)
-                    self.report("Status : %s\n" % ex.status)
-                    self.report("Output:\n\n%s" % ex.output)
-                    self.report(
-                        "\n**** END OF DIAGNOSTICS ****\n")
-                    self.report("WARNING the task may fail "
-                                "as the required environment "
-                                "couldn't be created")
-        return conda_env
-
     def resolve_dependencies(self,enable_conda,conda,conda_env_dir):
         """
-        Peform dependency resolution
+        Peform dependency resolution for the task
+
+        Arguments:
+          enable_conda (bool): if True then enable conda dependency
+            resolution
+          conda (str): path to conda executable
+          conda_env_dir (str): path to directory holding conda
+            environments
         """
         # Set up conda environment
         enable_conda = bool(enable_conda and self.conda_dependencies)
@@ -3136,12 +3078,28 @@ class PipelineTask:
             self.report("resolving conda resolve dependencies:")
             for dep in self.conda_dependencies:
                 self.report("- %s" % dep)
-            conda_env_dir = CondaWrapper(conda=conda,
-                                         env_dir=conda_env_dir).env_dir
+            conda_wrapper = CondaWrapper(conda=conda,
+                                         env_dir=conda_env_dir)
+            conda_env_dir = conda_wrapper.env_dir
+            env_name = self.conda_env_name
+            conda_env = os.path.join(conda_env_dir,env_name)
             try:
-                self._conda_env = self.setup_conda_env(
-                    conda,
-                    env_dir=conda_env_dir)
+                # Check if the environment exists
+                with FileLock(conda_env_dir,timeout=600):
+                    new_env = env_name not in conda_wrapper.list_envs
+                if new_env:
+                    # Try and create the environment
+                    make_conda_env(conda,env_name,self.conda_dependencies,
+                                   env_dir=conda_env_dir)
+                # Check that environment can be activated
+                with FileLock(conda_env_dir,timeout=600):
+                    if not conda_wrapper.verify_env(conda_env):
+                        self.report("WARNING the task may fail as the "
+                                    "required conda environment '%s' "
+                                    "cannot be activated successfully"
+                                    % env_name)
+                    else:
+                        self._conda_env = conda_env
             except Exception as ex:
                 # Failure attempting to acquire conda env
                 self.report("ERROR failed to acquire conda "
@@ -4396,3 +4354,60 @@ def resolve_parameter(p):
         return p.value
     except AttributeError:
         return p
+
+def make_conda_env(conda,env_name,package_list,env_dir=None,
+                   channels=None,timeout=600):
+    """
+    Create a conda environment
+
+    If the named environment doesn't already exist in the
+    environments directory then a new environment will be
+    created with the specified packages.
+
+    Arguments:
+      conda (str): path to conda executable
+        env_name (str): name for the environment to create
+        package_list (list): list of packages to install
+      env_dir (str): path to conda environments directory
+        (defaults to environments directory belonging to the
+        supplied conda installation)
+      channels (list): optional list of channel names to use
+         with conda operations (overrides defaults)
+      timeout (int): number of seconds to wait to acquire
+         lock on environments directory before giving up
+         (default: 600)
+
+    Returns:
+      String: path to Conda environment.
+    """
+    # Set up conda wrapper
+    conda_wrapper = CondaWrapper(conda=conda,
+                                 env_dir=env_dir,
+                                 channels=channels)
+    # Create the environment
+    conda_env = os.path.join(conda_wrapper.env_dir,env_name)
+    with FileLock(conda_wrapper.env_dir,timeout=timeout):
+        if env_name in conda_wrapper.list_envs:
+            # Enviroment exists
+            print("'%s': conda environment already exists" % env_name)
+            return conda_env
+        else:
+            # Create new environment
+            print("Creating new conda environment '%s'" % env_name)
+            try:
+                conda_env = conda_wrapper.create_env(env_name,*package_list)
+                print("Created conda environment '%s'" % env_name)
+                return conda_env
+            except CondaWrapperError as ex:
+                # Failed to create the environment
+                print("failed to create conda environment '%s': %s" %
+                      (env_name,ex))
+                # Diagnostics
+                print("\n**** CONDA DIAGNOSTICS ****\n")
+                print("Command: %s\n" % ex.cmdline)
+                print("Status : %s\n" % ex.status)
+                print("Output:\n\n%s" % ex.output)
+                print("\n**** END OF DIAGNOSTICS ****\n")
+                print("WARNING the task may fail as the required environment "
+                      "couldn't be created")
+                return None
