@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
 #
 """
 Module providing utility classes and functions for building simple
@@ -2491,6 +2491,7 @@ class PipelineTask:
         self._groups = []
         # Conda dependencies
         self._conda_pkgs = []
+        self._conda_env = None
         # Monitoring
         self._ncompleted = 0
         # Logging
@@ -3083,46 +3084,74 @@ class PipelineTask:
         env_name = self.conda_env_name
         # Fetch the environment
         conda_env = None
-        if env_name in conda.list_envs:
-            # Use existing environment
-            self.report("using existing conda environment "
-                        "'%s'" % env_name)
-            conda_env = os.path.join(conda.env_dir,
-                                     env_name)
-            # Check that environment can be activated
-            if conda_env:
-                if not conda.verify_env(conda_env):
-                    # Can't activate the environment
-                    self.report("WARNING the task may fail as the "
-                                "required conda environment '%s' "
-                                "cannot be activated successfully"
-                                % env_name)
-        else:
-            # Create new environment
-            self.report("attempting to create new conda "
-                        "environment '%s'" % env_name)
-            try:
-                conda_env = conda.create_env(
-                    env_name,
-                    *self.conda_dependencies)
-                self.report("created conda environment "
+        with FileLock(conda.env_dir,timeout=600):
+            if env_name in conda.list_envs:
+                # Use existing environment
+                self.report("using existing conda environment "
                             "'%s'" % env_name)
-            except CondaWrapperError as ex:
-                # Failed to create the environment
-                self.report("failed to create conda environment '%s': %s" %
-                            (env_name,ex))
-                # Diagnostics
-                self.report(
-                    "\n**** CONDA DIAGNOSTICS ****\n")
-                self.report("Command: %s\n" % ex.cmdline)
-                self.report("Status : %s\n" % ex.status)
-                self.report("Output:\n\n%s" % ex.output)
-                self.report(
-                    "\n**** END OF DIAGNOSTICS ****\n")
-                self.report("WARNING the task may fail "
-                            "as the required environment "
-                            "couldn't be created")
+                conda_env = os.path.join(conda.env_dir,
+                                         env_name)
+                # Check that environment can be activated
+                if conda_env:
+                    if not conda.verify_env(conda_env):
+                        # Can't activate the environment
+                        self.report("WARNING the task may fail as the "
+                                    "required conda environment '%s' "
+                                    "cannot be activated successfully"
+                                    % env_name)
+            else:
+                # Create new environment
+                self.report("attempting to create new conda "
+                            "environment '%s'" % env_name)
+                try:
+                    conda_env = conda.create_env(
+                        env_name,
+                        *self.conda_dependencies)
+                    self.report("created conda environment "
+                                "'%s'" % env_name)
+                except CondaWrapperError as ex:
+                    # Failed to create the environment
+                    self.report("failed to create conda environment '%s': %s" %
+                                (env_name,ex))
+                    # Diagnostics
+                    self.report(
+                        "\n**** CONDA DIAGNOSTICS ****\n")
+                    self.report("Command: %s\n" % ex.cmdline)
+                    self.report("Status : %s\n" % ex.status)
+                    self.report("Output:\n\n%s" % ex.output)
+                    self.report(
+                        "\n**** END OF DIAGNOSTICS ****\n")
+                    self.report("WARNING the task may fail "
+                                "as the required environment "
+                                "couldn't be created")
         return conda_env
+
+    def resolve_dependencies(self,enable_conda,conda,conda_env_dir):
+        """
+        Peform dependency resolution
+        """
+        # Set up conda environment
+        enable_conda = bool(enable_conda and self.conda_dependencies)
+        if enable_conda:
+            self.report("resolving conda resolve dependencies:")
+            for dep in self.conda_dependencies:
+                self.report("- %s" % dep)
+            conda_env_dir = CondaWrapper(conda=conda,
+                                         env_dir=conda_env_dir).env_dir
+            try:
+                self._conda_env = self.setup_conda_env(
+                    conda,
+                    env_dir=conda_env_dir)
+            except Exception as ex:
+                # Failure attempting to acquire conda env
+                self.report("ERROR failed to acquire conda "
+                            "environment: %s" % ex)
+                # Force premature exit with failure
+                self._exit_code = 1
+                self.finish_task()
+                return
+        else:
+            self._conda_env = None
 
     def run(self,sched=None,runner=None,envmodules=None,enable_conda=False,
             conda=None,conda_env_dir=None,working_dir=None,log_dir=None,
@@ -3204,31 +3233,12 @@ class PipelineTask:
         if not runner:
             runner = sched.default_runner
         self._runner_nslots = runner.nslots
+        # Resolve dependencies
+        self.resolve_dependencies(enable_conda,
+                                  conda,
+                                  conda_env_dir)
         # Do setup
         self.invoke(self.setup)
-        # Set up conda environment
-        enable_conda = bool(enable_conda and self.conda_dependencies)
-        if enable_conda and self._commands:
-            self.report("using conda to resolve dependencies:")
-            for dep in self.conda_dependencies:
-                self.report("- %s" % dep)
-            conda_env_dir = CondaWrapper(conda=conda,
-                                         env_dir=conda_env_dir).env_dir
-            try:
-                with FileLock(conda_env_dir,timeout=600):
-                    conda_env = self.setup_conda_env(
-                        conda,
-                        env_dir=conda_env_dir)
-            except Exception as ex:
-                # Failure attempting to acquire conda env
-                self.report("ERROR failed to acquire conda "
-                            "environment: %s" % ex)
-                # Force premature exit with failure
-                self._exit_code = 1
-                self.finish_task()
-                return
-        else:
-            conda_env = None
         # Handle command batching
         if batch_limit and not batch_size:
             if len(self._commands) > batch_limit:
@@ -3246,7 +3256,7 @@ class PipelineTask:
                     scripts_dir=scripts_dir,
                     envmodules=envmodules,
                     conda=conda,
-                    conda_env=conda_env,
+                    conda_env=self._conda_env,
                     working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:
@@ -3279,7 +3289,7 @@ class PipelineTask:
                     scripts_dir=scripts_dir,
                     envmodules=envmodules,
                     conda=conda,
-                    conda_env=conda_env,
+                    conda_env=self._conda_env,
                     batch_number=batch_number,
                     working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
