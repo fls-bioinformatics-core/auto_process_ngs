@@ -4411,3 +4411,41 @@ def make_conda_env(conda,env_name,package_list,env_dir=None,
                 print("WARNING the task may fail as the required environment "
                       "couldn't be created")
                 return None
+
+def check_conda_env(conda,env_name,env_dir=None,timeout=600):
+    """
+    Check a conda environment
+
+    Verifies whether the named environment exists and can
+    be activated.
+
+    Arguments:
+      conda (str): path to conda executable
+        env_name (str): name for the environment to create
+        package_list (list): list of packages to install
+      env_dir (str): path to conda environments directory
+        (defaults to environments directory belonging to the
+        supplied conda installation)
+      timeout (int): number of seconds to wait to acquire
+         lock on environments directory before giving up
+         (default: 600)
+
+    Returns:
+      String: path to Conda environment (or None if the
+        environment failed the checks).
+    """
+    # Set up conda wrapper
+    conda_wrapper = CondaWrapper(conda=conda,
+                                 env_dir=env_dir)
+    # Check that the environment exists and can be activated
+    conda_env = os.path.join(conda_wrapper.env_dir,env_name)
+    with FileLock(conda_wrapper.env_dir,timeout=timeout):
+        if env_name not in conda_wrapper.list_envs:
+            print("'%s': conda environment not found" % env_name)
+            return None
+        if not conda_wrapper.verify_env(conda_env):
+            print("'%s': conda environment cannot be activated "
+                  "successfully" % env_name)
+            return None
+    # Environment passed the checks
+    return conda_env

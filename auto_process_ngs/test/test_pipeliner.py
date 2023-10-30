@@ -34,6 +34,7 @@ from auto_process_ngs.pipeliner import PipelineError
 from auto_process_ngs.pipeliner import report_text
 from auto_process_ngs.pipeliner import resolve_parameter
 from auto_process_ngs.pipeliner import make_conda_env
+from auto_process_ngs.pipeliner import check_conda_env
 from auto_process_ngs.utils import FileLock
 from auto_process_ngs.utils import FileLockError
 from bcftbx.JobRunner import SimpleJobRunner
@@ -4239,5 +4240,90 @@ class TestMakeCondaEnv(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(conda_dir,
                                                      "envs",
                                                      "test_env")))
+        # Release lock
+        lock.release()
+
+class TestCheckCondaEnv(unittest.TestCase):
+
+    def setUp(self):
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(suffix='TestPipeliner')
+        # Store PATH
+        self.path = os.environ['PATH']
+
+    def tearDown(self):
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+        # Restore PATH
+        os.environ['PATH'] = self.path
+
+    def test_check_conda_env(self):
+        """
+        check_conda_env: verify existing conda environment
+        """
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Mock an existing conda environment
+        env_path = os.path.join(self.working_dir,
+                                "__conda",
+                                "envs",
+                                "test_env")
+        os.makedirs(env_path)
+        # Check conda environment
+        conda_env = check_conda_env(conda_,"test_env")
+        self.assertEqual(conda_env,os.path.join(conda_dir,"envs","test_env"))
+
+    def test_check_conda_env_missing_environment(self):
+        """
+        check_conda_env: verification fails for missing environment
+        """
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Check conda environment
+        conda_env = check_conda_env(conda_,"test_env")
+        self.assertEqual(conda_env,None)
+
+    def test_check_conda_env_activation_fails(self):
+        """
+        check_conda_env: verification fails when environment can't be activated
+        """
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"),
+                                     activate_fails=True)
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        # Mock an existing conda environment with no content
+        env_path = os.path.join(self.working_dir,
+                                "__conda",
+                                "envs",
+                                "test_env")
+        os.makedirs(env_path)
+        # Check conda environment
+        conda_env = check_conda_env(conda_,"test_env")
+        self.assertEqual(conda_env,None)
+
+    def test_check_conda_env_handle_lock_on_envs_dir(self):
+        """
+        check_conda_env: exception on timeout when conda envs dir is locked
+        """
+        # Create a mock conda installation
+        conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
+        conda_ = os.path.join(conda_dir,"bin","conda")
+        lock = FileLock(os.path.join(conda_dir,"envs"))
+        lock.acquire()
+        # Mock an existing conda environment
+        env_path = os.path.join(self.working_dir,
+                                "__conda",
+                                "envs",
+                                "test_env")
+        os.makedirs(env_path)
+        # Attempt to check conda environment under locked dir
+        self.assertRaises(FileLockError,
+                          check_conda_env,
+                          conda_,
+                          "test_env",
+                          timeout=1)
         # Release lock
         lock.release()
