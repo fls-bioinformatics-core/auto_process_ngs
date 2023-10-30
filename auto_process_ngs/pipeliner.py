@@ -4518,7 +4518,8 @@ def make_conda_env(conda,env_name,package_list,env_dir=None,
          (default: 600)
 
     Returns:
-      String: path to Conda environment.
+      String: path to Conda environment (or None if the
+        environment couldn't be created).
     """
     # Set up conda wrapper
     conda_wrapper = CondaWrapper(conda=conda,

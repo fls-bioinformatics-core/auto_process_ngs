@@ -4220,7 +4220,7 @@ class TestMakeCondaEnv(unittest.TestCase):
 
     def test_make_conda_env_handle_lock_on_envs_dir(self):
         """
-        make_conda_env: fails when conda environments dir is locked
+        make_conda_env: exception on timeout when conda envs dir is locked
         """
         # Create a mock conda installation
         conda_dir = MockConda.create(os.path.join(self.working_dir,"__conda"))
