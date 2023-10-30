@@ -2341,10 +2341,11 @@ class Pipeline:
                 else:
                     # Still running
                     running.append(task)
-                    # Report if status has changed
+                    # Report if status has changed for multi-job
+                    # task (and at least job has completed)
                     if task.updated:
                         njobs,ncompleted = task.njobs()
-                        if njobs > 1:
+                        if njobs > 1 and ncompleted > 1:
                             self.report("'%s' updated (%d/%d)" %
                                         (task.name(),
                                          ncompleted,
@@ -2389,19 +2390,25 @@ class Pipeline:
             # Report the current running and pending tasks
             if update:
                 if self._running:
-                    self.report("%d running tasks:"
-                                % len(self._running))
+                    self.report("%d running task%s:"
+                                % (len(self._running),
+                                   's' if len(self._running) != 1 else ''))
                     for t in self._running:
-                        njobs,ncompleted = t.njobs()
-                        if njobs > 1:
-                            self.report("- %s (%d/%d)" % (t.name(),
-                                                          ncompleted,
-                                                          njobs))
+                        if t.resolving_dependencies:
+                            self.report("- %s: resolving dependencies" %
+                                        t.name())
                         else:
-                            self.report("- %s" % t.name())
+                            njobs,ncompleted = t.njobs()
+                            if njobs > 1:
+                                self.report("- %s (%d/%d)" % (t.name(),
+                                                              ncompleted,
+                                                              njobs))
+                            else:
+                                self.report("- %s" % t.name())
                 if self._pending:
-                    self.report("%d pending tasks:"
-                                % len(self._pending))
+                    self.report("%d pending task%s:"
+                                % (len(self._pending),
+                                   's' if len(self._pending) != 1 else ''))
                     for t in self._pending:
                         self.report("- %s" % t[0].name())
                 update = False
