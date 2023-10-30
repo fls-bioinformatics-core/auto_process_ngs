@@ -2496,6 +2496,7 @@ class PipelineTask:
         self._conda_pkgs = []
         self._conda_env = None
         # Monitoring
+        self._resolving_dependencies = False
         self._ncompleted = 0
         # Logging
         self._log_file = None
@@ -2571,9 +2572,17 @@ class PipelineTask:
           Boolean: True if task has been updated, False
             if not.
         """
+        updated = False
+        # Check if dependency resolution status changed
+        resolving_dependencies = self.resolving_dependencies
+        if self._resolving_dependencies != resolving_dependencies:
+            updated = True
+            self._resolving_dependencies = resolving_dependencies
+        # Check if number of completed jobs changed
         njobs,ncompleted = self.njobs()
-        updated = ncompleted > self._ncompleted
-        self._ncompleted = ncompleted
+        if ncompleted > self._ncompleted:
+            updated = True
+            self._ncompleted = ncompleted
         return updated
 
     @property
@@ -3424,6 +3433,19 @@ class PipelineTask:
             # No commands to execute
             self.finish_task()
         return self
+
+    @property
+    def resolving_dependencies(self):
+        """
+        Check if task is currently resolving dependencies
+
+        Returns True if dependency resolution is in progress,
+        False otherwise
+        """
+        for job in self._resolver_jobs:
+            if not job.completed:
+                return True
+        return False
 
     def njobs(self):
         """
