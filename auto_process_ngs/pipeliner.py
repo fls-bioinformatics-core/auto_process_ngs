@@ -2936,10 +2936,10 @@ class PipelineTask:
                         self._exit_code += 1
                     self._stdout_files.append(job.log)
                     try:
-                        # Older versions of Job object
-                        # don't have 'err' property?
                         self._stderr_files.append(job.err)
                     except AttributeError:
+                        # Older versions of Job object
+                        # don't have 'err' property?
                         self._stderr_files.append(None)
                 except AttributeError:
                     # Assume it's a group
@@ -2948,10 +2948,10 @@ class PipelineTask:
                             self._exit_code += 1
                         self._stdout_files.append(j.log)
                         try:
-                            # Older versions of Job object
-                            # don't have 'err' property?
                             self._stderr_files.append(j.err)
                         except AttributeError:
+                            # Older versions of Job object
+                            # don't have 'err' property?
                             self._stderr_files.append(None)
         except Exception as ex:
             # General
