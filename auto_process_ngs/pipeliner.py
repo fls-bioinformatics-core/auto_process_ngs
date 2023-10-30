@@ -3223,7 +3223,7 @@ class PipelineTask:
         else:
             self._conda_env = None
 
-    def run(self,sched=None,runner=None,envmodules=None,enable_conda=False,
+    def run(self,sched,runner=None,envmodules=None,enable_conda=False,
             conda=None,conda_env_dir=None,working_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,wait_for=(),asynchronous=True,
             poll_interval=5,batch_size=None,batch_limit=None,
