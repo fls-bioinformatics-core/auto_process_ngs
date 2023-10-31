@@ -329,15 +329,15 @@ class QCPipeline(Pipeline):
 
         # Verify Fastqs
         if verify_fastqs:
-            verify_fastqs_ = VerifyFastqs(
+            verify_fqs = VerifyFastqs(
                 "%s: verify Fastqs" % project_name,
                 project,
                 fastq_attrs=project.fastq_attrs)
-            self.add_task(verify_fastqs_,
+            self.add_task(verify_fqs,
                           requires=(setup_qc_dirs,),
-                          runner=self.runners['fastqc_runner'],
+                          runner=self.runners['verify_runner'],
                           log_dir=log_dir)
-            startup_tasks.append(verify_fastqs_)
+            startup_tasks.append(verify_fqs)
 
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
