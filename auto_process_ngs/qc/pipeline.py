@@ -40,6 +40,7 @@ Pipeline task classes:
 - ConvertGTFToBed
 - RunRSeQCInferExperiment
 - RunQualimapRnaseq
+- RunMultiQC
 - ReportQC
 
 Also imports the following pipeline tasks:
@@ -344,7 +345,6 @@ class QCPipeline(Pipeline):
             project,
             qc_dir,
             report_html=report_html,
-            multiqc=multiqc,
             force=True
         )
         self.add_task(report_qc,
@@ -352,6 +352,20 @@ class QCPipeline(Pipeline):
                       runner=self.runners['report_runner'],
                       envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
+
+        # Run MultiQC
+        if multiqc:
+            run_multiqc = RunMultiQC(
+                "%s: run MultiQC" % project_name,
+                project,
+                qc_dir
+            )
+            self.add_task(run_multiqc,
+                          requires=(verify_qc,),
+                          runner=self.runners['report_runner'],
+                          envmodules=self.envmodules['report_qc'],
+                          log_dir=log_dir)
+            report_qc.requires(run_multiqc)
 
         # Get sequence data Fastqs
         get_seq_fastqs = GetSequenceDataFastqs(
@@ -3819,12 +3833,63 @@ class VerifyQC(PipelineFunctionTask):
             self.fail(message="Failed to verify QC outputs")
         print("Verified QC outputs")
 
+class RunMultiQC(PipelineTask):
+    """
+    Run MultiQC
+    """
+    def init(self,project,qc_dir,fastq_dir=None):
+        """
+        Initialise the RunMultiQC task.
+
+        Arguments:
+          project (AnalysisProject): project to generate
+            QC report for
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          fastq_dir (str): directory holding Fastq files
+            (defaults to current fastq_dir in project)
+        """
+        self.conda("multiqc=1.8",
+                   "pillow")
+        # Specify Python version to use to avoid similar
+        # issue as reported here:
+        # https://github.com/ewels/MultiQC/issues/1413
+        self.conda("python=3.8")
+    def setup(self):
+        # MultiQC report file
+        project = self.args.project
+        qc_base = os.path.basename(self.args.qc_dir)
+        self.multiqc_report = os.path.join(project.dirn,
+                                           "multi%s_report.html" %
+                                           qc_base)
+        # Report title
+        if project.info.run is None:
+            title = "%s" % project.name
+        else:
+            title = "%s/%s" % (project.info.run,
+                               project.name)
+        if self.args.fastq_dir is not None:
+            title = "%s (%s)" % (title,self.args.fastq_dir)
+        # Add the command
+        self.add_cmd(PipelineCommandWrapper(
+            "Run MultiQC",
+            "multiqc",
+            "--title",title,
+            "--filename",self.multiqc_report,
+            "--force",
+            self.args.qc_dir))
+    def finish(self):
+        # Check report was generated
+        if not os.path.exists(self.multiqc_report):
+            self.fail(message="Failed to create MultiQC report: %s" %
+                      self.multiqc_report)
+
 class ReportQC(PipelineTask):
     """
     Generate the QC report
     """
     def init(self,project,qc_dir,report_html=None,fastq_dir=None,
-             multiqc=False,force=False,zip_outputs=True):
+             force=False,zip_outputs=True):
         """
         Initialise the ReportQC task.
 
@@ -3837,20 +3902,13 @@ class ReportQC(PipelineTask):
             HTML file for the report
           fastq_dir (str): directory holding Fastq files
             (defaults to current fastq_dir in project)
-          multiqc (bool): if True then also generate
-            MultiQC report (default: don't run MultiQC)
           force (bool): if True then force HTML report to
             be generated even if QC outputs fail
             verification (default: don't write report)
           zip_outputs (bool): if True then also generate
             a ZIP archive of the QC reports
         """
-        self.conda("multiqc=1.8",
-                   "pillow")
-        # Specify Python version to use to avoid similar
-        # issue as reported here:
-        # https://github.com/ewels/MultiQC/issues/1413
-        self.conda("python=3.8")
+        pass
     def setup(self):
         # Check for 10x multiome libraries file with linked projects
         libraries_file = os.path.join(self.args.project.dirn,
@@ -3893,8 +3951,6 @@ class ReportQC(PipelineTask):
                 cmd.add_args("--qc_dir",self.args.qc_dir)
         if fastq_dir is not None:
             cmd.add_args("--fastq_dir",fastq_dir)
-        if self.args.multiqc:
-            cmd.add_args("--multiqc")
         if self.args.zip_outputs:
             cmd.add_args("--zip")
         # Add the primary project/QC directory
