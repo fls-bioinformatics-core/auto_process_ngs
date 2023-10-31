@@ -3851,6 +3851,9 @@ class ReportQC(PipelineTask):
         # issue as reported here:
         # https://github.com/ewels/MultiQC/issues/1413
         self.conda("python=3.8")
+        # Now also seem to need to specify numpy version to
+        # get a working version (fails with latest numpy)
+        self.conda("numpy=1.20.3")
     def setup(self):
         # Check for 10x multiome libraries file with linked projects
         libraries_file = os.path.join(self.args.project.dirn,
