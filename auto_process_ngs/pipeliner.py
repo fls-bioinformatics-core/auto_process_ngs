@@ -3175,6 +3175,8 @@ class PipelineTask:
                                                   self.conda_dependencies,
                                                   env_dir=conda_env_dir,
                                                   timeout=timeout)
+                    # Use default runner
+                    runner = None
                 else:
                     # Validate existing environment
                     self.report("checking existing conda environment '%s'..." %
@@ -3185,6 +3187,8 @@ class PipelineTask:
                                                   env_name,
                                                   env_dir=conda_env_dir,
                                                   timeout=timeout)
+                    # Always run as local job
+                    runner = SimpleJobRunner()
                 # Look for conda resolution jobs that have already been scheduled
                 # and haven't completed yet
                 # Append this resolution job to only run after these have
@@ -3205,6 +3209,7 @@ class PipelineTask:
                                    wd=working_dir,
                                    name="resolve_conda_deps.%s" % self.id(),
                                    wait_for=wait_for,
+                                   runner=runner,
                                    log_dir=log_dir)
                 sched.callback("%s.resolve_conda_deps" % self._name,
                                self.conda_dependency_resolution_completed,
