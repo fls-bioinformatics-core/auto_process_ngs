@@ -820,6 +820,61 @@ No projects found; 'bcl2fastq' directory contains the following data:
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_summary_stored_path_differs_from_actual_path(self):
+        """report: report run in 'summary' mode (stored path is wrong)
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "Comments": "Repeat of previous run" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Relocate (so stored paths will be wrong)
+        new_dir = os.path.join(self.dirn,"elsewhere")
+        os.mkdir(new_dir)
+        analysis_dir_path = os.path.join(new_dir,
+                                         os.path.basename(mockdir.dirn))
+        os.rename(mockdir.dirn,analysis_dir_path)
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=analysis_dir_path)
+        # Generate summary report
+        expected = """MISEQ run #87 datestamped 170901
+================================
+Run name : 170901_M00879_0087_000000000-AGEW9
+Reference: MISEQ_170901#87
+Platform : MISEQ
+Sequencer: MiSeq
+Directory: %s
+Endedness: Paired end
+Bcl2fastq: Unknown
+
+2 projects:
+- 'AB':  Alison Bell           Human RNA-seq  2 samples (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq 2 samples (PI Colin Delaney Eccleston)
+
+Additional notes/comments:
+- CDE: Repeat of previous run
+""" % analysis_dir_path
+        for o,e in zip(report_summary(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
 class TestReportProjects(unittest.TestCase):
     """
     Tests for the 'report' command ('projects' mode)
@@ -1115,6 +1170,48 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
         # Generate projects report
         expected = ""
         for o,e in zip(report_projects(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_projects_stored_path_differs_from_actual_path(self):
+        """report: report run in 'projects' mode (stored path is wrong)
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Relocate (so stored paths will be wrong)
+        new_dir = os.path.join(self.dirn,"elsewhere")
+        os.mkdir(new_dir)
+        analysis_dir_path = os.path.join(new_dir,
+                                         os.path.basename(mockdir.dirn))
+        os.rename(mockdir.dirn,analysis_dir_path)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=analysis_dir_path)
+        # Custom fields (including path)
+        custom_fields = ("run_id","project","path")
+        # Generate projects report
+        expected = """MISEQ_170901#87\tAB\t{path}
+MISEQ_170901#87\tCDE\t{path}
+""".format(path=analysis_dir_path)
+        for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
                        expected.split('\n')):
             self.assertEqual(o,e)
 
