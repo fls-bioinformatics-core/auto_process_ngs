@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
-#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
 #
 #########################################################################
 
@@ -13,6 +13,7 @@ import os
 import time
 import logging
 from ..analysis import AnalysisDir
+from ..metadata import AnalysisDirParameters
 from .. import applications
 from .. import fileops
 from .. import simple_scheduler
@@ -335,62 +336,106 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         if retval != 0:
             logger.warning("One or more archiving jobs failed "
                            "(non-zero exit code returned)")
-        else:
-            if final:
-                # Update the final stored Fastq paths for QC
-                staged_analysis_dir = os.path.join(
-                    archive_dir,
-                    staging)
-                archived_analysis_dir = os.path.abspath(
-                    os.path.join(
-                        archive_dir,
-                        final_dest))
-                for project in AnalysisDir(staged_analysis_dir).get_projects():
-                    qc_info = project.qc_info(project.qc_dir)
-                    if qc_info.fastq_dir:
-                        print("%s: updating stored Fastq directory for QC" %
-                              project.name)
-                        new_fastq_dir = os.path.join(archived_analysis_dir,
-                                                     os.path.relpath(
-                                                         qc_info.fastq_dir,
-                                                         ap.analysis_dir))
-                        print("-- updated Fastq directory: %s" % new_fastq_dir)
-                        qc_info['fastq_dir'] = new_fastq_dir
-                        qc_info.save()
-            # Set the group
-            if group is not None:
-                print("Setting group of archived files to '%s'" % group)
-                if not dry_run:
-                    set_group = fileops.set_group_command(
-                        group,
-                        os.path.join(archive_dir,staging),
-                        safe=force,
-                        verbose=True)
-                    print("Running %s" % set_group)
-                    set_group_job = sched.submit(
-                        set_group,
-                        name="set_group.archive")
-                    set_group_job.wait()
-                    # Check exit status
-                    exit_code = set_group_job.exit_code
-                    print("%s completed: exit code %s" % (
-                        set_group_job.name,
-                        exit_code))
-                    if exit_code != 0:
-                        logger.warning("Setting group failed (non-zero "
-                                       "exit status code returned)")
-                    retval = retval + exit_code
         # Finish with scheduler
         sched.wait()
         sched.stop()
         # Bail out if there was a problem
         if retval != 0:
             if not force:
-                raise Exception("Staging to archive failed")
+                raise Exception("Staging to archive area failed")
             else:
-                logger.warning("Staging to archive failed (ignored)")
-    # Move to final location
+                logger.warning("Staging to archive area failed (ignored)")
+    # Set the group
+    if group is not None:
+        print("Setting group of archived files to '%s'" % group)
+        if not dry_run:
+            # Setup a scheduler for file operations
+            sched = simple_scheduler.SimpleScheduler(
+                runner=default_runner,
+                max_concurrent=ap.settings.general.max_concurrent_jobs,
+                poll_interval=ap.settings.general.poll_interval)
+            sched.start()
+            # Set the group
+            set_group = fileops.set_group_command(
+                group,
+                os.path.join(archive_dir,staging),
+                safe=force,
+                verbose=True)
+            print("Running %s" % set_group)
+            set_group_job = sched.submit(
+                set_group,
+                name="set_group.archive")
+            set_group_job.wait()
+            # Check exit status
+            exit_code = set_group_job.exit_code
+            print("%s completed: exit code %s" % (
+                set_group_job.name,
+                exit_code))
+            if exit_code != 0:
+                logger.warning("Setting group failed (non-zero "
+                               "exit status code returned)")
+                retval = retval + exit_code
+            # Finish with scheduler
+            sched.wait()
+            sched.stop()
+    # Perform final archiving operations
     if final:
+        # Update the final stored Fastq paths and metadata
+        # FIXME this is essentially duplicating functionality
+        # FIXME in the 'update' command
+        # FIXME (Also probably shouldn't update metadata for
+        # FIXME 'dry_run' mode?)
+        print("Updating stored paths and metadata")
+        staged_analysis_dir = os.path.join(archive_dir,staging)
+        archived_analysis_dir = os.path.join(archive_dir,final_dest)
+        parameter_file = os.path.join(staged_analysis_dir,
+                                      "auto_process.info")
+        if os.path.exists(parameter_file):
+            params = AnalysisDirParameters()
+            params.load(parameter_file,strict=False)
+            base_path = params.analysis_dir
+            print("Stored base path: %s" % base_path)
+            for p in ('analysis_dir',
+                      'primary_data_dir',
+                      'sample_sheet'):
+                if not params[p]:
+                    continue
+                params[p] = os.path.normpath(
+                    os.path.join(archived_analysis_dir,
+                                 os.path.relpath(params[p],
+                                                 base_path)))
+                print("...updated '%s' (set to '%s')" % (p,params[p]))
+            params.save()
+        else:
+            base_path = ap.analysis_dir
+            logger.warning("Unable to get old base path from parameters")
+            logger.warning("Using base path: %s (may be incorrect)" %
+                           base_path)
+        # Paths in QC info
+        analysis_dir =  AnalysisDir(staged_analysis_dir)
+        # FIXME AnalysisDir.get_projects method might not get all
+        # FIXME the projects?
+        for project in analysis_dir.get_projects():
+            # FIXME should do all QC dirs (not just the primary one)
+            qc_info = project.qc_info(project.qc_dir)
+            if qc_info.fastq_dir:
+                print("%s: updating stored Fastq directory for QC" %
+                      project.name)
+                new_fastq_dir = os.path.join(archived_analysis_dir,
+                                             os.path.relpath(
+                                                 qc_info.fastq_dir,
+                                                 base_path))
+                print("-- updated Fastq directory: %s" % new_fastq_dir)
+                qc_info['fastq_dir'] = new_fastq_dir
+                if not dry_run:
+                    qc_info.save()
+                # Bail out if there was a problem
+                if retval != 0:
+                    if not force:
+                        raise Exception("Finalising archive failed")
+                    else:
+                        logger.warning("Finalising archive failed (ignored)")
+        # Complete archiving
         print("Moving to final location: %s" % final_dest)
         if not dry_run:
             fileops.rename(os.path.join(archive_dir,staging),
