@@ -370,7 +370,7 @@ def report_summary(ap):
         elif item == 'Sequencer':
             value = ap.metadata.sequencer_model
         elif item == 'Directory':
-            value = ap.params.analysis_dir
+            value = ap.analysis_dir
         elif item == 'Endedness':
             value = ('Paired end' if analysis_dir.paired_end else
                      'Single end')
@@ -620,7 +620,7 @@ def fetch_value(ap,project,field):
         return ('' if not ap.metadata.source
                 else ap.metadata.source)
     elif field == 'analysis_dir' or field == 'path':
-        return ap.params.analysis_dir
+        return ap.analysis_dir
     elif field == 'project' or field == 'project_name':
         return project.name
     elif field == 'user':
