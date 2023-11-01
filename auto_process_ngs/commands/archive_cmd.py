@@ -419,13 +419,14 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             # FIXME should do all QC dirs (not just the primary one)
             qc_info = project.qc_info(project.qc_dir)
             if qc_info.fastq_dir:
-                print("%s: updating stored Fastq directory for QC" %
+                print("Project '%s': updating stored Fastq directory for QC" %
                       project.name)
-                new_fastq_dir = os.path.join(archived_analysis_dir,
-                                             os.path.relpath(
-                                                 qc_info.fastq_dir,
-                                                 base_path))
-                print("-- updated Fastq directory: %s" % new_fastq_dir)
+                # FIXME could we just set it to the current Fastq path?
+                new_fastq_dir = os.path.normpath(
+                    os.path.join(archived_analysis_dir,
+                                 os.path.relpath(qc_info.fastq_dir,
+                                                 base_path)))
+                print("...updated Fastq directory: %s" % new_fastq_dir)
                 qc_info['fastq_dir'] = new_fastq_dir
                 if not dry_run:
                     qc_info.save()
