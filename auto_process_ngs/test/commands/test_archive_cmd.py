@@ -229,6 +229,11 @@ poll_interval = 0.5
         for f in files:
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
+        # Check paths are updated
+        archived_ap = AutoProcess(analysis_dir=final_archive_dir,
+                                  settings=self.settings)
+        self.assertEqual(archived_ap.params.analysis_dir,
+                         final_archive_dir)
         # Check that Fastqs are not writable
         for project in ("AB","CDE","undetermined"):
             fq_dir = os.path.join(final_archive_dir,
@@ -291,6 +296,11 @@ poll_interval = 0.5
         for f in files:
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
+        # Check paths are updated
+        archived_ap = AutoProcess(analysis_dir=final_archive_dir,
+                                  settings=self.settings)
+        self.assertEqual(archived_ap.params.analysis_dir,
+                         final_archive_dir)
         # Check that Fastqs are not writable
         for project in ("AB","CDE","undetermined"):
             fq_dir = os.path.join(final_archive_dir,
@@ -358,6 +368,11 @@ poll_interval = 0.5
         for f in files:
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
+        # Check paths are updated
+        archived_ap = AutoProcess(analysis_dir=final_archive_dir,
+                                  settings=self.settings)
+        self.assertEqual(archived_ap.params.analysis_dir,
+                         final_archive_dir)
         # Check that Fastqs are not writable
         for project in ("AB","CDE","undetermined"):
             fq_dir = os.path.join(final_archive_dir,
@@ -445,6 +460,11 @@ poll_interval = 0.5
         for f in files:
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
+        # Check paths are updated
+        archived_ap = AutoProcess(analysis_dir=final_archive_dir,
+                                  settings=self.settings)
+        self.assertEqual(archived_ap.params.analysis_dir,
+                         final_archive_dir)
 
     def test_archive_staging_to_final(self):
         """archive: test archiving directly from staging dir
@@ -523,6 +543,11 @@ poll_interval = 0.5
         for f in files:
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
+        # Check paths are updated
+        archived_ap = AutoProcess(analysis_dir=final_archive_dir,
+                                  settings=self.settings)
+        self.assertEqual(archived_ap.params.analysis_dir,
+                         final_archive_dir)
 
     def test_archive_automatically_sets_correct_year(self):
         """archive: test archiving sets the year correctly if not specified
@@ -1042,6 +1067,11 @@ poll_interval = 0.5
         for f in files:
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
+        # Check paths are updated
+        archived_ap = AutoProcess(analysis_dir=final_archive_dir,
+                                  settings=self.settings)
+        self.assertEqual(archived_ap.params.analysis_dir,
+                         final_archive_dir)
 
     def test_archive_force_fails_for_no_data(self):
         """archive: force archiving fails if run has no data
