@@ -1525,13 +1525,14 @@ class VerifyFastqs(PipelineFunctionTask):
                 fq)
     def read_fastq(self,fastq):
         # Iterate through Fastq file
+        fq = os.path.basename(fastq)
         try:
             for r in FastqIterator(fastq_file=fastq):
                 continue
         except Exception as ex:
-            print("%s...FAILED: '%s'" % (fastq,ex))
+            print("%s...FAILED: '%s'" % (q,ex))
             return False
-        print("%s...PASSED" % fastq)
+        print("%s...PASSED" % fq)
         return True
     def finish(self):
         # Report the output (will contain any errors)
