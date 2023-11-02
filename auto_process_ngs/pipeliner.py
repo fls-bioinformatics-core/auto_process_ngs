@@ -3126,8 +3126,8 @@ class PipelineTask:
 
     def resolve_dependencies(self,enable_conda=False,conda=None,
                              conda_env_dir=None,sched=None,
-                             working_dir=None,log_dir=None,
-                             timeout=600,verbose=False):
+                             scripts_dir=None,working_dir=None,
+                             log_dir=None,timeout=600,verbose=False):
         """
         Peform dependency resolution for the task
 
@@ -3138,6 +3138,7 @@ class PipelineTask:
           conda_env_dir (str): path to directory holding conda
             environments
           sched (SimpleScheduler); scheduler to submit jobs to
+          scripts_dir (str): path to write scripts to
           log_dir (str): path to directory to write log files to
           timeout (int): number of seconds to wait to acquire
             lock on environments directory before giving up
@@ -3203,10 +3204,19 @@ class PipelineTask:
                 # Sort out directories
                 if working_dir is None:
                     working_dir = os.getcwd()
+                if scripts_dir is None:
+                    scripts_dir = working_dir
                 if log_dir is None:
                     log_dir = working_dir
+                # Generate script file to execute the resolver job
+                cmd = PipelineCommandWrapper("Resolve conda dependencies",
+                                             *cmd.command_line)
+                script_file = cmd.make_wrapper_script(
+                    scripts_dir=scripts_dir,
+                    working_dir=working_dir)
+                self._scripts.append(script_file)
                 # Submit the resolver job
-                job = sched.submit(cmd,
+                job = sched.submit(Command('/bin/bash',script_file),
                                    wd=working_dir,
                                    name="resolve_conda_deps.%s" % self.id(),
                                    wait_for=wait_for,
@@ -3316,8 +3326,10 @@ class PipelineTask:
             self.resolve_dependencies(enable_conda,
                                       conda,
                                       conda_env_dir,
-                                      sched,
-                                      log_dir)
+                                      sched=sched,
+                                      scripts_dir=scripts_dir,
+                                      working_dir=working_dir,
+                                      log_dir=log_dir)
         # Handle command batching
         if batch_limit and not batch_size:
             if len(self._commands) > batch_limit:
