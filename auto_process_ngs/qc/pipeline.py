@@ -721,7 +721,8 @@ class QCPipeline(Pipeline):
                     required_cellranger.output.require_cellranger)
                 self.add_task(get_cellranger,
                               requires=(required_cellranger,),
-                              envmodules=self.envmodules['cellranger'])
+                              envmodules=self.envmodules['cellranger'],
+                              log_dir=log_dir)
                 check_cellranger_multi_requires.append(get_cellranger)
                 qc_metadata['cellranger_version'] = \
                         get_cellranger.output.package_version
