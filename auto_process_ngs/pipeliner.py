@@ -2887,14 +2887,15 @@ class PipelineTask:
           sched (SimpleScheduler): scheduler instance
         """
         # Check whether dependency resolution job worked
+        conda_env = None
         try:
             job = jobs[0]
             exit_code = job.exit_code
             d = self._resolver_dispatchers[job.name]
             conda_env = d.get_result()
-            if conda_env is None:
-                exit_code = 1
         except Exception as ex:
+            exit_code = 1
+        if conda_env is None:
             exit_code = 1
         status = ('ok' if exit_code == 0 else 'failed')
         self.report("conda dependency resolution completed: %s" % status)
