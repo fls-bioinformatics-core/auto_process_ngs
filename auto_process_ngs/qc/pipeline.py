@@ -713,7 +713,8 @@ class QCPipeline(Pipeline):
                     project_name,
                     qc_module_name,
                     self.params.cellranger_exe)
-                self.add_task(required_cellranger)
+                self.add_task(required_cellranger,
+                              log_dir=log_dir)
 
                 get_cellranger = Get10xPackage(
                     "%s: get information on cellranger" % project_name,
@@ -906,7 +907,8 @@ class QCPipeline(Pipeline):
             (project_name,qc_module_name),
             qc_module_name,
             self.params.cellranger_exe)
-        self.add_task(required_cellranger)
+        self.add_task(required_cellranger,
+                      log_dir=log_dir)
 
         get_cellranger = Get10xPackage(
             "%s: get information on 10x pipeline package (%s)" %
@@ -915,7 +917,8 @@ class QCPipeline(Pipeline):
             required_cellranger.output.require_cellranger)
         self.add_task(get_cellranger,
                       requires=(required_cellranger,),
-                      envmodules=self.envmodules['cellranger'])
+                      envmodules=self.envmodules['cellranger'],
+                      log_dir=log_dir)
         check_cellranger_count_requires.append(get_cellranger)
 
         # Get reference data for cellranger
