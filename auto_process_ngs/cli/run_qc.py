@@ -975,7 +975,8 @@ def main():
                       protocol,
                       qc_dir=qc_dir,
                       report_html=out_file,
-                      multiqc=(not args.no_multiqc))
+                      multiqc=(not args.no_multiqc),
+                      verify_fastqs=True)
     status = runqc.run(nthreads=nthreads,
                        fastq_screens=fastq_screens,
                        fastq_subset=args.fastq_subset,

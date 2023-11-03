@@ -16,6 +16,8 @@ Pipeline task classes:
 - SetupQCDirs
 - GetSequenceDataSamples
 - GetSequenceDataFastqs
+- UpdateQCMetadata
+- VerifyFastqs
 - GetSeqLengthStats
 - CheckFastqScreenOutputs
 - RunFastqScreen
@@ -58,6 +60,7 @@ import tempfile
 import shutil
 import random
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
@@ -181,7 +184,8 @@ class QCPipeline(Pipeline):
 
     def add_project(self,project,protocol,qc_dir=None,organism=None,
                     fastq_dir=None,report_html=None,multiqc=False,
-                    sample_pattern=None,log_dir=None,convert_gtf=True):
+                    sample_pattern=None,log_dir=None,convert_gtf=True,
+                    verify_fastqs=False):
         """
         Add a project to the QC pipeline
 
@@ -208,6 +212,9 @@ class QCPipeline(Pipeline):
             GTF files to BED for 'infer_experiment.py'
             (default; otherwise only use the explicitly
             defined BED files)
+          verify_fastqs (bool): if True then verify
+            Fastq integrity as part of the pipeline
+            (default: False, skip verification)
         """
         ###################
         # Do internal setup
@@ -289,6 +296,8 @@ class QCPipeline(Pipeline):
                                  if fastq_dir is not None
                                  else '')
 
+        startup_tasks = []
+
         # Set up QC dirs
         setup_qc_dirs = SetupQCDirs(
             "%s: set up QC directories" % project_name,
@@ -299,6 +308,7 @@ class QCPipeline(Pipeline):
         )
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
+        startup_tasks.append(setup_qc_dirs)
 
         # Characterise samples
         get_seq_data = GetSequenceDataSamples(
@@ -317,6 +327,18 @@ class QCPipeline(Pipeline):
                            get_seq_data.output.seq_data_samples,
                            fastq_dir=project.fastq_dir)
 
+        # Verify Fastqs
+        if verify_fastqs:
+            verify_fqs = VerifyFastqs(
+                "%s: verify Fastqs" % project_name,
+                project,
+                fastq_attrs=project.fastq_attrs)
+            self.add_task(verify_fqs,
+                          requires=(setup_qc_dirs,),
+                          runner=self.runners['verify_runner'],
+                          log_dir=log_dir)
+            startup_tasks.append(verify_fqs)
+
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
             "%s: update QC metadata" % project_name,
@@ -334,7 +356,7 @@ class QCPipeline(Pipeline):
             project,
             qc_dir)
         self.add_task(verify_qc,
-                      requires=(update_qc_metadata,),
+                      requires=startup_tasks,
                       runner=self.runners['verify_runner'],
                       log_dir=log_dir)
 
@@ -362,6 +384,7 @@ class QCPipeline(Pipeline):
             samples=get_seq_data.output.seq_data_samples,
             fastq_attrs=project.fastq_attrs)
         self.add_task(get_seq_fastqs,
+                      requires=startup_tasks,
                       log_dir=log_dir)
 
         # Set up tasks to generate and characterise BAM files
@@ -391,7 +414,7 @@ class QCPipeline(Pipeline):
                 fastq_attrs=project.fastq_attrs,
                 verbose=self.params.VERBOSE)
             self.add_task(get_bam_files,
-                          requires=(setup_qc_dirs,),
+                          requires=startup_tasks,
                           runner=self.runners['star_runner'],
                           log_dir=log_dir)
 
@@ -430,6 +453,7 @@ class QCPipeline(Pipeline):
                     os.path.join(qc_dir,'%s.annotation.bed' %
                                  organism_name))
                 self.add_task(get_bed_annotation_from_gtf,
+                              requires=startup_tasks,
                               log_dir=log_dir)
                 reference_gene_model_file = get_bed_annotation_from_gtf.\
                                             output.bed_file
@@ -468,7 +492,7 @@ class QCPipeline(Pipeline):
                     read_numbers=read_numbers.qc,
                     fastq_attrs=project.fastq_attrs)
                 self.add_task(get_seq_lengths,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               runner=self.runners['fastqc_runner'],
                               log_dir=log_dir)
                 verify_qc.requires(get_seq_lengths)
@@ -492,7 +516,7 @@ class QCPipeline(Pipeline):
                     verbose=self.params.VERBOSE
                 )
                 self.add_task(check_fastq_screen,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               runner=self.runners['verify_runner'],
                               log_dir=log_dir)
 
@@ -531,7 +555,7 @@ class QCPipeline(Pipeline):
                     verbose=self.params.VERBOSE
                 )
                 self.add_task(check_fastqc,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               runner=self.runners['verify_runner'],
                               log_dir=log_dir)
 
@@ -563,7 +587,7 @@ class QCPipeline(Pipeline):
                     star_indexes=self.params.star_indexes
                 )
                 self.add_task(setup_fastq_strand_conf,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               log_dir=log_dir)
 
                 # Check outputs for fastq_strand.py
@@ -633,7 +657,7 @@ class QCPipeline(Pipeline):
                         qc_dir
                     )
                     self.add_task(get_cellranger_multi_config,
-                                  requires=(setup_qc_dirs,),
+                                  requires=startup_tasks,
                                   log_dir=log_dir)
                     samples = get_cellranger_multi_config.output.gex_libraries
                     fastq_dirs = get_cellranger_multi_config.output.fastq_dirs
@@ -673,7 +697,7 @@ class QCPipeline(Pipeline):
                     fastq_dirs=fastq_dirs,
                     extra_projects=self.params.cellranger_extra_projects,
                     log_dir=log_dir,
-                    required_tasks=(setup_qc_dirs,))
+                    required_tasks=startup_tasks)
                 verify_qc.requires(run_cellranger_count)
 
                 # Update metadata
@@ -735,7 +759,7 @@ class QCPipeline(Pipeline):
                     qc_dir
                 )
                 self.add_task(get_cellranger_multi_config,
-                              requires=(setup_qc_dirs,),
+                              requires=startup_tasks,
                               log_dir=log_dir)
                 check_cellranger_multi_requires.append(
                     get_cellranger_multi_config)
@@ -807,6 +831,7 @@ class QCPipeline(Pipeline):
                                  organism_name),
                     name=project.name)
                 self.add_task(rseqc_gene_body_coverage,
+                              requires=startup_tasks,
                               runner=self.runners['rseqc_runner'],
                               log_dir=log_dir)
                 verify_qc.requires(rseqc_gene_body_coverage)
@@ -822,6 +847,7 @@ class QCPipeline(Pipeline):
                     get_bam_files.output.bam_files,
                     os.path.join(qc_dir,'picard',organism_name))
                 self.add_task(insert_size_metrics,
+                              requires=startup_tasks,
                               runner=self.runners['picard_runner'],
                               log_dir=log_dir)
 
@@ -848,6 +874,7 @@ class QCPipeline(Pipeline):
                     os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
                     bam_properties=rseqc_infer_experiment.output.experiments)
                 self.add_task(qualimap_rnaseq,
+                              requires=startup_tasks,
                               runner=self.runners['qualimap_runner'],
                               log_dir=log_dir)
                 verify_qc.requires(qualimap_rnaseq)
@@ -1469,6 +1496,55 @@ class UpdateQCMetadata(PipelineTask):
             print("-- %s: %s" % (item,metadata[item]))
             qc_info[item] = metadata[item]
         qc_info.save()
+
+class VerifyFastqs(PipelineFunctionTask):
+    """
+    Check Fastqs are valid
+    """
+    def init(self,project,fastq_attrs=None):
+        """
+        Initialise the VerifyFastqs task
+
+        Arguments:
+          project (AnalysisProject): project with Fastqs
+            to check
+          fastq_attrs (BaseFastqAttrs): class to use for
+            extracting data from Fastq names
+        """
+        pass
+    def setup(self):
+        # Remove index Fastqs
+        fastqs = remove_index_fastqs(
+            self.args.project.fastqs,
+            fastq_attrs=self.args.fastq_attrs)
+        # Check each Fastq is readable
+        for fq in fastqs:
+            self.add_call(
+                "Check %s can be read" % os.path.basename(fq),
+                self.read_fastq,
+                fq)
+    def read_fastq(self,fastq):
+        # Iterate through Fastq file
+        fq = os.path.basename(fastq)
+        try:
+            for r in FastqIterator(fastq_file=fastq):
+                continue
+        except Exception as ex:
+            print("%s...FAILED: '%s'" % (fq,ex))
+            return False
+        print("%s...PASSED" % fq)
+        return True
+    def finish(self):
+        # Report the output (will contain any errors)
+        for line in self.stdout.split('\n'):
+            if not line.startswith("#### "):
+                print(line)
+        # Check the verification status
+        verified = all(r for r in self.result())
+        if not verified:
+            self.fail(message="Failed to verify Fastq files")
+        else:
+            print("Verified Fastq files")
 
 class GetSeqLengthStats(PipelineFunctionTask):
     """
