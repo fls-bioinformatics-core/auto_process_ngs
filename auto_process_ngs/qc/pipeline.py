@@ -3295,6 +3295,10 @@ class ConvertGTFToBed(PipelineTask):
         # Outputs
         self.add_output('bed_file',Param())
     def setup(self):
+        # Check for output BED
+        if os.path.exists(self.args.bed_out):
+            print("Output BED file aleady exists")
+            return
         # Check for input GTF
         if self.args.gtf_in:
             print("Input GTF file: %s" % self.args.gtf_in)
@@ -3317,14 +3321,16 @@ class ConvertGTFToBed(PipelineTask):
         # No output expected
         if not self.args.gtf_in:
             return
-        # Copy BED file to final location
-        bed_out = os.path.join(self._working_dir,"out.bed")
-        if os.path.exists(bed_out):
-            print("Copy BED file to %s" % self.args.bed_out)
-            shutil.copy(bed_out,self.args.bed_out)
-            self.output.bed_file.set(self.args.bed_out)
-        else:
-            raise Exception("failed to generate BED file")
+        if not os.path.exists(self.args.bed_out):
+            # Copy converted BED file to final location
+            bed_out = os.path.join(self._working_dir,"out.bed")
+            if os.path.exists(bed_out):
+                print("Copy BED file to %s" % self.args.bed_out)
+                shutil.copy(bed_out,self.args.bed_out)
+            else:
+                raise Exception("failed to generate BED file")
+        # Set output
+        self.output.bed_file.set(self.args.bed_out)
 
 class RunRSeQCInferExperiment(PipelineTask):
     """
