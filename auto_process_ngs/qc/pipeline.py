@@ -1530,7 +1530,7 @@ class VerifyFastqs(PipelineFunctionTask):
             for r in FastqIterator(fastq_file=fastq):
                 continue
         except Exception as ex:
-            print("%s...FAILED: '%s'" % (q,ex))
+            print("%s...FAILED: '%s'" % (fq,ex))
             return False
         print("%s...PASSED" % fq)
         return True
