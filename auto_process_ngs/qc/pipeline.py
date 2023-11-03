@@ -137,6 +137,9 @@ class QCPipeline(Pipeline):
         # Initialise the pipeline superclass
         Pipeline.__init__(self,name="QC")
 
+        # Default log directory
+        self._default_log_dir = None
+
         # Define parameters
         self.add_param('nthreads',type=int)
         self.add_param('annotation_bed_files',type=dict)
@@ -182,6 +185,33 @@ class QCPipeline(Pipeline):
         self.add_envmodules('fastq_strand')
         self.add_envmodules('cellranger')
         self.add_envmodules('report_qc')
+
+    def add_task(self,task,requires=(),**kws):
+        """
+        Override base class method
+
+        Automatically set log dir when tasks are added
+        """
+        updated_kws = { x: kws[x] for x in kws }
+        if 'log_dir' not in updated_kws and self.default_log_dir:
+            kws['log_dir'] = self.default_log_dir
+        return Pipeline.add_task(self,
+                                 task,
+                                 requires=requires,
+                                 **kws)
+
+    def set_default_log_dir(self,log_dir):
+        """
+        Set the default log directory for tasks
+        """
+        self._default_log_dir = log_dir
+
+    @property
+    def default_log_dir(self):
+        """
+        Return current value of default log dir
+        """
+        return self._default_log_dir
 
     def add_project(self,project,protocol,qc_dir=None,organism=None,
                     fastq_dir=None,report_html=None,multiqc=False,
@@ -287,14 +317,19 @@ class QCPipeline(Pipeline):
         for qc_module in qc_modules:
             self.report("-- %s" % qc_module)
 
-        ####################
-        # Build the pipeline
-        ####################
-
+        # Sort out the log directory for this project
         if log_dir is None:
             log_dir = os.path.join(qc_dir,'logs')
         else:
             log_dir = os.path.abspath(log_dir)
+
+        # Set as pipeline default (will be changed for
+        # each project that is added)
+        self.set_default_log_dir(log_dir)
+
+        ####################
+        # Build the pipeline
+        ####################
 
         project_name = "%s%s" % (project.name,
                                  ":%s" % os.path.basename(fastq_dir)
@@ -311,8 +346,7 @@ class QCPipeline(Pipeline):
             log_dir=log_dir,
             protocol=protocol
         )
-        self.add_task(setup_qc_dirs,
-                      log_dir=log_dir)
+        self.add_task(setup_qc_dirs)
         startup_tasks.append(setup_qc_dirs)
 
         # Characterise samples
@@ -382,8 +416,7 @@ class QCPipeline(Pipeline):
             fastqs=fastqs_in)
         self.add_task(verify_qc,
                       requires=startup_tasks,
-                      runner=self.runners['verify_runner'],
-                      log_dir=log_dir)
+                      runner=self.runners['verify_runner'])
 
         # Make QC report
         report_qc = ReportQC(
@@ -397,8 +430,7 @@ class QCPipeline(Pipeline):
         self.add_task(report_qc,
                       requires=(verify_qc,),
                       runner=self.runners['report_runner'],
-                      envmodules=self.envmodules['report_qc'],
-                      log_dir=log_dir)
+                      envmodules=self.envmodules['report_qc'])
 
         # Get sequence data Fastqs
         get_seq_fastqs = GetSequenceDataFastqs(
@@ -410,8 +442,7 @@ class QCPipeline(Pipeline):
             fastq_attrs=project.fastq_attrs,
             fastqs=fastqs_in)
         self.add_task(get_seq_fastqs,
-                      requires=startup_tasks,
-                      log_dir=log_dir)
+                      requires=startup_tasks)
 
         # Set up tasks to generate and characterise BAM files
         if require_bam_files:
@@ -441,8 +472,7 @@ class QCPipeline(Pipeline):
                 verbose=self.params.VERBOSE)
             self.add_task(get_bam_files,
                           requires=startup_tasks,
-                          runner=self.runners['star_runner'],
-                          log_dir=log_dir)
+                          runner=self.runners['star_runner'])
 
             # Get reference gene model for RSeQC
             get_reference_gene_model = GetReferenceDataset(
@@ -451,8 +481,7 @@ class QCPipeline(Pipeline):
                  organism),
                 organism,
                 self.params.annotation_bed_files)
-            self.add_task(get_reference_gene_model,
-                          log_dir=log_dir)
+            self.add_task(get_reference_gene_model)
             qc_metadata['annotation_bed'] = \
                 get_reference_gene_model.output.reference_dataset
 
@@ -463,8 +492,7 @@ class QCPipeline(Pipeline):
                 organism,
                 self.params.annotation_gtf_files,
                 force_reference=self.params.force_gtf_annotation)
-            self.add_task(get_annotation_gtf,
-                          log_dir=log_dir)
+            self.add_task(get_annotation_gtf)
             qc_metadata['annotation_gtf'] = \
                 get_annotation_gtf.output.reference_dataset
 
@@ -479,8 +507,7 @@ class QCPipeline(Pipeline):
                     os.path.join(qc_dir,'%s.annotation.bed' %
                                  organism_name))
                 self.add_task(get_bed_annotation_from_gtf,
-                              requires=startup_tasks,
-                              log_dir=log_dir)
+                              requires=startup_tasks)
                 reference_gene_model_file = get_bed_annotation_from_gtf.\
                                             output.bed_file
             else:
@@ -495,8 +522,7 @@ class QCPipeline(Pipeline):
                 get_bam_files.output.bam_files,
                 reference_gene_model_file,
                 os.path.join(qc_dir,'rseqc_infer_experiment',organism_name))
-            self.add_task(rseqc_infer_experiment,
-                          log_dir=log_dir)
+            self.add_task(rseqc_infer_experiment)
 
         ################
         # Add QC modules
@@ -520,8 +546,7 @@ class QCPipeline(Pipeline):
                     fastq_attrs=project.fastq_attrs)
                 self.add_task(get_seq_lengths,
                               requires=startup_tasks,
-                              runner=self.runners['fastqc_runner'],
-                              log_dir=log_dir)
+                              runner=self.runners['fastqc_runner'])
                 verify_qc.requires(get_seq_lengths)
 
             #############
@@ -544,8 +569,7 @@ class QCPipeline(Pipeline):
                 )
                 self.add_task(check_fastq_screen,
                               requires=startup_tasks,
-                              runner=self.runners['verify_runner'],
-                              log_dir=log_dir)
+                              runner=self.runners['verify_runner'])
 
                 # Run FastqScreen
                 run_fastq_screen = RunFastqScreen(
@@ -562,8 +586,7 @@ class QCPipeline(Pipeline):
                 self.add_task(run_fastq_screen,
                               requires=(check_fastq_screen,),
                               runner=self.runners['fastq_screen_runner'],
-                              envmodules=self.envmodules['fastq_screen'],
-                              log_dir=log_dir)
+                              envmodules=self.envmodules['fastq_screen'])
                 qc_metadata['fastq_screens'] = self.params.fastq_screens
                 qc_metadata['legacy_screens'] = self.params.legacy_screens
                 verify_qc.requires(run_fastq_screen)
@@ -584,8 +607,7 @@ class QCPipeline(Pipeline):
                 )
                 self.add_task(check_fastqc,
                               requires=startup_tasks,
-                              runner=self.runners['verify_runner'],
-                              log_dir=log_dir)
+                              runner=self.runners['verify_runner'])
 
                 # Run FastqQC
                 run_fastqc = RunFastQC(
@@ -597,8 +619,7 @@ class QCPipeline(Pipeline):
                 self.add_task(run_fastqc,
                               requires=(check_fastqc,),
                               runner=self.runners['fastqc_runner'],
-                              envmodules=self.envmodules['fastqc'],
-                              log_dir=log_dir)
+                              envmodules=self.envmodules['fastqc'])
                 verify_qc.requires(run_fastqc)
 
             ##############
@@ -615,8 +636,7 @@ class QCPipeline(Pipeline):
                     star_indexes=self.params.star_indexes
                 )
                 self.add_task(setup_fastq_strand_conf,
-                              requires=startup_tasks,
-                              log_dir=log_dir)
+                              requires=startup_tasks)
 
                 # Check outputs for fastq_strand.py
                 check_fastq_strand = CheckFastqStrandOutputs(
@@ -632,8 +652,7 @@ class QCPipeline(Pipeline):
                 )
                 self.add_task(check_fastq_strand,
                               requires=(setup_fastq_strand_conf,),
-                              runner=self.runners['verify_runner'],
-                              log_dir=log_dir)
+                              runner=self.runners['verify_runner'])
 
                 # Run fastq_strand.py
                 run_fastq_strand = RunFastqStrand(
@@ -648,8 +667,7 @@ class QCPipeline(Pipeline):
                 self.add_task(run_fastq_strand,
                               requires=(check_fastq_strand,),
                               runner=self.runners['star_runner'],
-                              envmodules=self.envmodules['fastq_strand'],
-                              log_dir=log_dir)
+                              envmodules=self.envmodules['fastq_strand'])
                 verify_qc.requires(run_fastq_strand)
 
             #############################
@@ -685,8 +703,7 @@ class QCPipeline(Pipeline):
                         qc_dir
                     )
                     self.add_task(get_cellranger_multi_config,
-                                  requires=startup_tasks,
-                                  log_dir=log_dir)
+                                  requires=startup_tasks)
                     samples = get_cellranger_multi_config.output.gex_libraries
                     fastq_dirs = get_cellranger_multi_config.output.fastq_dirs
                     reference_dataset = \
@@ -724,7 +741,6 @@ class QCPipeline(Pipeline):
                     samples=samples,
                     fastq_dirs=fastq_dirs,
                     extra_projects=self.params.cellranger_extra_projects,
-                    log_dir=log_dir,
                     required_tasks=startup_tasks)
                 verify_qc.requires(run_cellranger_count)
 
@@ -765,8 +781,7 @@ class QCPipeline(Pipeline):
                     project_name,
                     qc_module_name,
                     self.params.cellranger_exe)
-                self.add_task(required_cellranger,
-                              log_dir=log_dir)
+                self.add_task(required_cellranger)
 
                 get_cellranger = Get10xPackage(
                     "%s: get information on cellranger" % project_name,
@@ -774,8 +789,7 @@ class QCPipeline(Pipeline):
                     required_cellranger.output.require_cellranger)
                 self.add_task(get_cellranger,
                               requires=(required_cellranger,),
-                              envmodules=self.envmodules['cellranger'],
-                              log_dir=log_dir)
+                              envmodules=self.envmodules['cellranger'])
                 check_cellranger_multi_requires.append(get_cellranger)
                 qc_metadata['cellranger_version'] = \
                         get_cellranger.output.package_version
@@ -789,8 +803,7 @@ class QCPipeline(Pipeline):
                     qc_dir
                 )
                 self.add_task(get_cellranger_multi_config,
-                              requires=startup_tasks,
-                              log_dir=log_dir)
+                              requires=startup_tasks)
                 check_cellranger_multi_requires.append(
                     get_cellranger_multi_config)
                 qc_metadata['cellranger_refdata'] = \
@@ -832,8 +845,7 @@ class QCPipeline(Pipeline):
                               requires=(get_cellranger,
                                         get_cellranger_multi_config,),
                               runner=self.runners['cellranger_multi_runner'],
-                              envmodules=self.envmodules['cellranger'],
-                              log_dir=log_dir)
+                              envmodules=self.envmodules['cellranger'])
 
                 # Set cell count
                 set_cellranger_cell_count = SetCellCountFromCellranger(
@@ -862,8 +874,7 @@ class QCPipeline(Pipeline):
                     name=project.name)
                 self.add_task(rseqc_gene_body_coverage,
                               requires=startup_tasks,
-                              runner=self.runners['rseqc_runner'],
-                              log_dir=log_dir)
+                              runner=self.runners['rseqc_runner'])
                 verify_qc.requires(rseqc_gene_body_coverage)
 
             ##########################
@@ -878,8 +889,7 @@ class QCPipeline(Pipeline):
                     os.path.join(qc_dir,'picard',organism_name))
                 self.add_task(insert_size_metrics,
                               requires=startup_tasks,
-                              runner=self.runners['picard_runner'],
-                              log_dir=log_dir)
+                              runner=self.runners['picard_runner'])
 
                 collate_insert_sizes = CollateInsertSizes(
                     "%s: collate insert size data" % project.name,
@@ -888,8 +898,7 @@ class QCPipeline(Pipeline):
                     os.path.join(qc_dir,
                                  'insert_sizes.%s.tsv' % organism_name))
                 self.add_task(collate_insert_sizes,
-                              requires=(insert_size_metrics,),
-                              log_dir=log_dir)
+                              requires=(insert_size_metrics,))
                 verify_qc.requires(collate_insert_sizes)
 
             #################
@@ -905,14 +914,13 @@ class QCPipeline(Pipeline):
                     bam_properties=rseqc_infer_experiment.output.experiments)
                 self.add_task(qualimap_rnaseq,
                               requires=startup_tasks,
-                              runner=self.runners['qualimap_runner'],
-                              log_dir=log_dir)
+                              runner=self.runners['qualimap_runner'])
                 verify_qc.requires(qualimap_rnaseq)
 
     def add_cellranger_count(self,project_name,project,qc_dir,
                              organism,fastq_dir,qc_module_name,
                              library_type,chemistry,
-                             force_cells,log_dir,samples=None,
+                             force_cells,samples=None,
                              fastq_dirs=None,reference_dataset=None,
                              extra_projects=None,required_tasks=None):
         """
@@ -936,7 +944,6 @@ class QCPipeline(Pipeline):
             the cell detection algorithm in 'cellranger'
             and 'cellranger-atac' using the '--force-cells'
             option (does nothing for 'cellranger-arc')
-          log_dir (str): directory to write log files to
           samples (list): optional, list of samples to
             restrict single library analyses to (or None
             to use all samples in project)
@@ -962,8 +969,7 @@ class QCPipeline(Pipeline):
             (project_name,qc_module_name),
             qc_module_name,
             self.params.cellranger_exe)
-        self.add_task(required_cellranger,
-                      log_dir=log_dir)
+        self.add_task(required_cellranger)
 
         get_cellranger = Get10xPackage(
             "%s: get information on 10x pipeline package (%s)" %
@@ -972,8 +978,7 @@ class QCPipeline(Pipeline):
             required_cellranger.output.require_cellranger)
         self.add_task(get_cellranger,
                       requires=(required_cellranger,),
-                      envmodules=self.envmodules['cellranger'],
-                      log_dir=log_dir)
+                      envmodules=self.envmodules['cellranger'])
         check_cellranger_count_requires.append(get_cellranger)
 
         # Get reference data for cellranger
@@ -992,8 +997,7 @@ class QCPipeline(Pipeline):
         )
         self.add_task(get_cellranger_reference_data,
                       requires=(get_cellranger,),
-                      runner=self.runners['verify_runner'],
-                      log_dir=log_dir)
+                      runner=self.runners['verify_runner'])
         check_cellranger_count_requires.append(get_cellranger_reference_data)
 
         # Make libraries.csv files (cellranger-arc only)
@@ -1005,8 +1009,7 @@ class QCPipeline(Pipeline):
                 qc_dir
             )
             self.add_task(make_cellranger_libraries,
-                          requires=required_tasks,
-                          log_dir=log_dir)
+                          requires=required_tasks)
             check_cellranger_count_requires.append(
                 make_cellranger_libraries)
 
@@ -1027,8 +1030,7 @@ class QCPipeline(Pipeline):
         )
         self.add_task(check_cellranger_count,
                       requires=check_cellranger_count_requires,
-                      runner=self.runners['verify_runner'],
-                      log_dir=log_dir)
+                      runner=self.runners['verify_runner'])
 
         # Parent directory for cellranger count outputs
         # Set to project directory unless the 'cellranger_out_dir'
@@ -1066,8 +1068,7 @@ class QCPipeline(Pipeline):
                                 get_cellranger_reference_data,
                                 check_cellranger_count,),
                       runner=self.runners['cellranger_count_runner'],
-                      envmodules=self.envmodules['cellranger'],
-                      log_dir=log_dir)
+                      envmodules=self.envmodules['cellranger'])
 
         # Return the 'cellranger count' task
         return run_cellranger_count
