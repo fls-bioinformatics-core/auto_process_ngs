@@ -3191,16 +3191,6 @@ class PipelineTask:
                                                   timeout=timeout)
                     # Always run as local job
                     runner = SimpleJobRunner()
-                # Look for conda resolution jobs that have already been scheduled
-                # and haven't completed yet
-                # Append this resolution job to only run after these have
-                # have finished
-                wait_for = [j.name for j in sched.find("resolve_conda_deps.*")
-                            if not j.completed]
-                if wait_for and verbose:
-                    self.report("Conda resolution jobs already queued or running:")
-                    for job_name in wait_for:
-                        self.report("- %s" % job_name)
                 # Sort out directories
                 if working_dir is None:
                     working_dir = os.getcwd()
@@ -3208,6 +3198,17 @@ class PipelineTask:
                     scripts_dir = working_dir
                 if log_dir is None:
                     log_dir = working_dir
+                # Look for conda resolution jobs that have already been
+                # scheduled and haven't completed yet
+                # Append this resolution job to only run after these have
+                # have finished
+                wait_for = [j.name for j in sched.find("resolve_conda_deps.*")
+                            if not j.completed]
+                if wait_for and verbose:
+                    self.report("Conda resolution jobs already queued or "
+                                "running:")
+                    for job_name in wait_for:
+                        self.report("- %s" % job_name)
                 # Generate script file to execute the resolver job
                 cmd = PipelineCommandWrapper("Resolve conda dependencies",
                                              *cmd.command_line)
