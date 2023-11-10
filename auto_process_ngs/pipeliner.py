@@ -2722,6 +2722,10 @@ class PipelineTask:
         """
         Internal: invoke arbitrary method on the task
 
+        If the working directory is defined then calling
+        'invoke' changes to this directory before the
+        specified function is called.
+
         Arguments:
           f (function): method to invoke (e.g. 'self.init')
           args (list): arguments to invoke function with
