@@ -3157,6 +3157,15 @@ class PipelineTask:
             conda_env_dir = conda_wrapper.env_dir
             env_name = self.conda_env_name
             conda_env = os.path.join(conda_env_dir,env_name)
+            # Set up dispatcher to run function calls
+            dispatcher_working_dir = "dispatcher.resolve_deps.%s" % \
+                                     env_name
+            if working_dir:
+                working_dir = os.path.join(working_dir,
+                                           dispatcher_working_dir)
+            else:
+                working_dir = dispatcher_working_dir
+            d = Dispatcher(working_dir=working_dir)
             try:
                 # Quick check if the environment exists
                 # NB don't lock the conda env dir for this check to
@@ -3170,7 +3179,6 @@ class PipelineTask:
                     # Try and create the environment
                     self.report("acquiring new conda environment '%s'..." %
                                 env_name)
-                    d = Dispatcher()
                     cmd = d.dispatch_function_cmd(make_conda_env,
                                                   conda,
                                                   env_name,
@@ -3183,7 +3191,6 @@ class PipelineTask:
                     # Validate existing environment
                     self.report("checking existing conda environment '%s'..." %
                                 env_name)
-                    d = Dispatcher()
                     cmd = d.dispatch_function_cmd(check_conda_env,
                                                   conda,
                                                   env_name,
@@ -3191,9 +3198,7 @@ class PipelineTask:
                                                   timeout=timeout)
                     # Always run as local job
                     runner = SimpleJobRunner()
-                # Sort out directories
-                if working_dir is None:
-                    working_dir = os.getcwd()
+                # Sort out scripts and log directories
                 if scripts_dir is None:
                     scripts_dir = working_dir
                 if log_dir is None:
