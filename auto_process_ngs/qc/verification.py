@@ -753,7 +753,8 @@ def filter_10x_pipelines(p,pipelines):
         matching_pipelines.append(pipeline)
     return matching_pipelines
 
-def verify_project(project,qc_dir=None,qc_protocol=None):
+def verify_project(project,qc_dir=None,qc_protocol=None,
+                   fastqs=None):
     """
     Check the QC outputs are correct for a project
 
@@ -764,6 +765,8 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
         project being checked.
       qc_protocol (str): QC protocol name or specification
         to verify against (optional)
+      fastqs (list): list of Fastqs to include (optional,
+        defaults to Fastqs in the project)
 
      Returns:
        Boolean: Returns True if all expected QC products
@@ -777,6 +780,10 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
             qc_dir = os.path.join(project.dirn,
                                   qc_dir)
     logger.debug("verify: qc_dir (final)  : %s" % qc_dir)
+    if fastqs:
+        fastqs_in = fastqs
+    else:
+        fastqs_in = project.fastqs
     cellranger_version = None
     cellranger_refdata = None
     star_index = None
@@ -838,7 +845,7 @@ def verify_project(project,qc_dir=None,qc_protocol=None):
     verifier = QCVerifier(qc_dir,
                           fastq_attrs=project.fastq_attrs)
     return verifier.verify(protocol,
-                           project.fastqs,
+                           fastqs_in,
                            organism=organism,
                            seq_data_samples=seq_data_samples,
                            fastq_screens=fastq_screens,

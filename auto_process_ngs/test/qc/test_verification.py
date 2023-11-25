@@ -1864,3 +1864,31 @@ class TestVerifyProject(unittest.TestCase):
                                                    legacy_screens=True)
         project = AnalysisProject(analysis_dir)
         self.assertTrue(verify_project(project))
+
+    def test_verify_project_using_fastq_list(self):
+        """
+        verify_project: paired-end data with legacy screen names
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol="standardPE",
+            fastq_names=
+            ("PJB1_S1_R1_001_paired.fastq.gz",
+             "PJB1_S1_R2_001_paired.fastq.gz",
+             "PJB2_S2_R1_001_paired.fastq.gz",
+             "PJB2_S2_R2_001_paired.fastq.gz",))
+        project = AnalysisProject(analysis_dir)
+        # Remove some QC outputs from sample 'PJB1'
+        qc_dir = os.path.join(analysis_dir,"qc")
+        for f in os.listdir(qc_dir):
+            if f.startswith("PJB1_"):
+                ff = os.path.join(qc_dir,f)
+                print("Removing %s" % ff)
+                if os.path.isfile(ff):
+                    os.remove(ff)
+        # Fails for default (all Fastqs in project)
+        self.assertFalse(verify_project(project))
+        # OK for subset specified explicitly
+        self.assertTrue(verify_project(project,
+                                       fastqs=
+                                       ["PJB2_S2_R1_001_paired.fastq.gz",
+                                        "PJB2_S2_R2_001_paired.fastq.gz",]))
