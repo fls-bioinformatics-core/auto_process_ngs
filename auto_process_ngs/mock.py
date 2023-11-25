@@ -461,6 +461,8 @@ class MockAnalysisProject:
             if populate_fastqs:
                 read_number = AnalysisFastq(fq).read_number
                 lane = AnalysisFastq(fq).lane_number
+                if lane is None:
+                    lane = 1
                 read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
