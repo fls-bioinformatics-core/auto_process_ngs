@@ -288,6 +288,11 @@ def add_advanced_options(p,use_legacy_screen_names):
                           help="ignore information from project metadata "
                           "file even if one is located (default is to use "
                           "project metadata)")
+    advanced.add_argument('--split-fastqs-by-lane',action="store_true",
+                          dest="split_fastqs_by_lane",default=True,
+                          help="run QC on copies of input Fastqs where "
+                          "reads have been split according to lane "
+                          "(default is to run QC on original Fastqs)")
     advanced.add_argument('--use-legacy-screen-names',choices=['yes','no'],
                           dest="use_legacy_screen_names",default=None,
                           help="use 'legacy' naming convention for "
@@ -976,7 +981,8 @@ def main():
                       qc_dir=qc_dir,
                       report_html=out_file,
                       multiqc=(not args.no_multiqc),
-                      verify_fastqs=True)
+                      verify_fastqs=True,
+                      split_fastqs_by_lane=args.split_fastqs_by_lane)
     status = runqc.run(nthreads=nthreads,
                        fastq_screens=fastq_screens,
                        fastq_subset=args.fastq_subset,
