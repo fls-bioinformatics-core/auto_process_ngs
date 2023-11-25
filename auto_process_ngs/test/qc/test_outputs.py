@@ -2746,6 +2746,92 @@ class TestCheckFastQCOutputs(unittest.TestCase):
                          [os.path.join(project.fastq_dir,
                                        "PJB1_S1_R1_001.fastq.gz")])
 
+    def test_check_fastqc_outputs_from_fastq_list_all_missing(self):
+        """
+        check_fastqc_outputs: all FastQC outputs missing (Fastq list)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # List of Fastqs (subset of all Fastqs)
+        fastqs = ["PJB2_S2_R1_001.fastq.gz",
+                  "PJB2_S2_R2_001.fastq.gz"]
+        # Get the outputs
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              fastqs=fastqs,
+                                              read_numbers=(1,2,)),
+                         fastqs)
+
+    def test_check_fastqc_outputs_from_fastq_list_all_present(self):
+        """
+        check_fastqc_outputs: all FastQC outputs present (Fastq list)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # List of Fastqs (subset of all Fastqs)
+        fastqs = ["PJB2_S2_R1_001.fastq.gz",
+                  "PJB2_S2_R2_001.fastq.gz"]
+        # Remove FastQC outputs for Fastqs not in the list
+        for f in ("PJB1_S1_R1_001_fastqc.html",
+                  "PJB1_S1_R2_001_fastqc.html"):
+            os.remove(os.path.join(project.qc_dir,f))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              fastqs=fastqs,
+                                              read_numbers=(1,2,)),
+                         [])
+
+    def test_check_fastqc_outputs_from_fastq_list_some_missing(self):
+        """
+        check_fastqc_outputs: some FastQC outputs missing (Fastq list)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add QC artefacts
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # List of Fastqs (subset of all Fastqs)
+        fastqs = ["PJB2_S2_R1_001.fastq.gz",
+                  "PJB2_S2_R2_001.fastq.gz"]
+        # Remove FastQC outputs for Fastqs not in the list
+        for f in ("PJB1_S1_R1_001_fastqc.html",
+                  "PJB1_S1_R2_001_fastqc.html"):
+            os.remove(os.path.join(project.qc_dir,f))
+        # Remove a FastQC output from the list
+        os.remove(os.path.join(project.qc_dir,
+                               "PJB2_S2_R1_001_fastqc.html"))
+        # Check
+        self.assertEqual(check_fastqc_outputs(project,
+                                              qc_dir="qc",
+                                              fastqs=fastqs,
+                                              read_numbers=(1,2,)),
+                         ["PJB2_S2_R1_001.fastq.gz"])
+
 class TestCheckFastqStrandOutputs(unittest.TestCase):
     """
     Tests for the 'fastq_strand_outputs' function
