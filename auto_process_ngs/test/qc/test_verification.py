@@ -1865,9 +1865,52 @@ class TestVerifyProject(unittest.TestCase):
         project = AnalysisProject(analysis_dir)
         self.assertTrue(verify_project(project))
 
+    def test_verify_project_using_fastq_list_from_metadata(self):
+        """
+        verify_project: use implicit Fastq list from QC metadata
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol="standardPE",
+            fastq_names=
+            ("PJB1_S1_R1_001_paired.fastq.gz",
+             "PJB1_S1_R2_001_paired.fastq.gz",
+             "PJB2_S2_R1_001_paired.fastq.gz",
+             "PJB2_S2_R2_001_paired.fastq.gz",))
+        project = AnalysisProject(analysis_dir)
+        # Remove some QC outputs from sample 'PJB1'
+        qc_dir = os.path.join(analysis_dir,"qc")
+        for f in os.listdir(qc_dir):
+            if f.startswith("PJB1_"):
+                ff = os.path.join(qc_dir,f)
+                print("Removing %s" % ff)
+                if os.path.isfile(ff):
+                    os.remove(ff)
+        # Rewrite the QC info to update the stored Fastqs list
+        qc_info_file = os.path.join(analysis_dir,"qc","qc.info")
+        with open(qc_info_file,'rt') as fp:
+            qc_info = fp.read()
+        with open(qc_info_file,'wt') as fp:
+            for line in qc_info.split('\n'):
+                # Update the "Fastqs" data item
+                if line.startswith("Fastqs\t"):
+                    line = "Fastqs\t"\
+                           "PJB2_S2_R1_001_paired.fastq.gz,"\
+                           "PJB2_S2_R2_001_paired.fastq.gz"
+                if line:
+                    fp.write("%s\n" % line)
+        # Fails if full set of Fastqs is explcitly specified
+        self.assertFalse(verify_project(project,
+                                        fastqs=
+                                        ["PJB1_S1_R1_001_paired.fastq.gz",
+                                         "PJB1_S1_R2_001_paired.fastq.gz",
+                                         "PJB2_S2_R1_001_paired.fastq.gz",
+                                         "PJB2_S2_R2_001_paired.fastq.gz",]))
+        # OK when using implicit Fastq list
+        self.assertTrue(verify_project(project))
+
     def test_verify_project_using_fastq_list(self):
         """
-        verify_project: paired-end data with legacy screen names
+        verify_project: use explicit Fastq list
         """
         analysis_dir = self._make_analysis_project(
             protocol="standardPE",

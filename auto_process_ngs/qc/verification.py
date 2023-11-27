@@ -780,10 +780,6 @@ def verify_project(project,qc_dir=None,qc_protocol=None,
             qc_dir = os.path.join(project.dirn,
                                   qc_dir)
     logger.debug("verify: qc_dir (final)  : %s" % qc_dir)
-    if fastqs:
-        fastqs_in = fastqs
-    else:
-        fastqs_in = project.fastqs
     cellranger_version = None
     cellranger_refdata = None
     star_index = None
@@ -794,22 +790,34 @@ def verify_project(project,qc_dir=None,qc_protocol=None,
     fastq_screens = None
     qc_info_file = os.path.join(qc_dir,"qc.info")
     if os.path.exists(qc_info_file):
+        # Get QC parameters from metadata file
         qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+        # QC protocol
         if not qc_protocol:
             if qc_info['protocol_specification']:
                 qc_protocol = qc_info['protocol_specification']
             else:
                 qc_protocol = qc_info['protocol']
+        # Organism
         try:
             organism = qc_info['organism']
         except KeyError:
             pass
+        # Fastqs
+        try:
+            if not fastqs:
+                if qc_info['fastqs']:
+                    fastqs = qc_info['fastqs'].split(',')
+        except KeyError:
+            pass
+        # Samples with biological data
         try:
             seq_data_samples = qc_info['seq_data_samples']
             if seq_data_samples:
                 seq_data_samples = seq_data_samples.split(',')
         except KeyError:
             pass
+        # Cellranger reference data and version
         try:
             cellranger_refdata = qc_info['cellranger_refdata']
         except KeyError:
@@ -818,10 +826,12 @@ def verify_project(project,qc_dir=None,qc_protocol=None,
             cellranger_version = qc_info['cellranger_version']
         except KeyError:
             pass
+        # STAR index
         try:
             star_index = qc_info['star_index']
         except KeyError:
             pass
+        # Reference annotation
         try:
             annotation_bed = qc_info['annotation_bed']
         except KeyError:
@@ -830,6 +840,7 @@ def verify_project(project,qc_dir=None,qc_protocol=None,
             annotation_gtf = qc_info['annotation_gtf']
         except KeyError:
             pass
+        # Fastq screens
         try:
             fastq_screens = qc_info['fastq_screens']
             if fastq_screens:
@@ -842,6 +853,10 @@ def verify_project(project,qc_dir=None,qc_protocol=None,
                  cellranger_refdata)
     logger.debug("verify: fastq screens : %s" % (fastq_screens,))
     protocol = fetch_protocol_definition(qc_protocol)
+    if fastqs:
+        fastqs_in = fastqs
+    else:
+        fastqs_in = project.fastqs
     verifier = QCVerifier(qc_dir,
                           fastq_attrs=project.fastq_attrs)
     return verifier.verify(protocol,
