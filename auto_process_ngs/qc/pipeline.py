@@ -344,19 +344,6 @@ class QCPipeline(Pipeline):
                           log_dir=log_dir)
             startup_tasks.append(verify_fqs)
 
-        # Split Fastqs by lane for QC?
-        if split_fastqs_by_lane:
-            split_fastqs = SplitFastqsByLane(
-                "%s: split Fastqs by lane" % project_name,
-                project,
-                os.path.join(qc_dir,'__fastqs.split'))
-            self.add_task(split_fastqs,
-                          requires=(setup_qc_dirs,))
-            startup_tasks.append(split_fastqs)
-            fastqs_in = split_fastqs.output.fastqs
-        else:
-            fastqs_in = project.fastqs
-
         # Update QC metadata
         update_qc_metadata = UpdateQCMetadata(
             "%s: update QC metadata" % project_name,
@@ -367,6 +354,23 @@ class QCPipeline(Pipeline):
         self.add_task(update_qc_metadata,
                       requires=(setup_qc_dirs,
                                 get_seq_data))
+
+        # Split Fastqs by lane for QC?
+        if split_fastqs_by_lane:
+            split_fastqs = SplitFastqsByLane(
+                "%s: split Fastqs by lane" % project_name,
+                project,
+                os.path.join(qc_dir,'__fastqs.split'))
+            self.add_task(split_fastqs,
+                          requires=(setup_qc_dirs,))
+            # Subsequent start-up tasks should wait on this task
+            startup_tasks.append(split_fastqs)
+            # Ensure QC metadata also waits for this task
+            update_qc_metadata.requires(split_fastqs)
+            fastqs_in = split_fastqs.output.fastqs
+        else:
+            fastqs_in = project.fastqs
+        qc_metadata['fastqs'] = fastqs_in
 
         # Verify QC
         verify_qc = VerifyQC(
@@ -1388,9 +1392,9 @@ class SplitFastqsByLane(PipelineTask):
     def finish(self):
         # Collect split files
         self.output.fastqs.extend(
-            [os.path.join(self.args.out_dir,fq)
-             for fq in os.listdir(self.args.out_dir)
-             if fq.endswith(".fastq.gz")])
+            sorted([os.path.join(self.args.out_dir,fq)
+                    for fq in os.listdir(self.args.out_dir)
+                    if fq.endswith(".fastq.gz")]))
 
 class GetSequenceDataSamples(PipelineTask):
     """
@@ -1568,6 +1572,14 @@ class UpdateQCMetadata(PipelineTask):
             except AttributeError:
                 value = self.args.metadata[item]
             metadata[item] = value
+        # Strip leading paths from Fastqs
+        fastqs = ([os.path.basename(fq) for fq in metadata['fastqs']]
+                   if 'fastqs' in metadata else None)
+        if fastqs:
+            # Collapse list into a string
+            metadata['fastqs'] = ','.join(fastqs)
+        else:
+            metadata['fastqs'] = None
         # Deal with sequence data (biological) samples
         seq_data_samples = (metadata['seq_data_samples']
                             if 'seq_data_samples' in metadata else None)

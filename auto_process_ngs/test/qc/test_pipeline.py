@@ -135,6 +135,11 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -214,6 +219,11 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,None)
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
         self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
@@ -277,6 +287,11 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,None)
@@ -350,6 +365,11 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -423,6 +443,11 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -499,6 +524,11 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -566,6 +596,11 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -637,6 +672,11 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -716,6 +756,9 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -783,6 +826,9 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,None)
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
         self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
@@ -855,6 +901,9 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -922,6 +971,9 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -993,6 +1045,9 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs.cells"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1059,6 +1114,9 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1132,6 +1190,11 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1197,6 +1260,11 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1257,6 +1325,11 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_L001_R1_001.fastq.gz,"
+                         "PJB1_S1_L001_R2_001.fastq.gz,"
+                         "PJB2_S2_L001_R1_001.fastq.gz,"
+                         "PJB2_S2_L001_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1335,6 +1408,9 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1412,6 +1488,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"AB1,AB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"AB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "AB1_S1_R1_001.fastq.gz,"
+                         "AB1_S1_R2_001.fastq.gz,"
+                         "AB2_S2_R1_001.fastq.gz,"
+                         "AB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1430,6 +1511,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"CD3,CD4")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"CD","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "CD3_S3_R1_001.fastq.gz,"
+                         "CD3_S3_R2_001.fastq.gz,"
+                         "CD4_S4_R1_001.fastq.gz,"
+                         "CD4_S4_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/mm10/star_index")
@@ -1499,6 +1585,13 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_I1_001.fastq.gz,"
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_I1_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1567,6 +1660,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1637,6 +1735,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1708,6 +1811,9 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1789,6 +1895,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1879,6 +1990,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -1969,6 +2085,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2059,6 +2180,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2155,6 +2281,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2245,6 +2376,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2335,6 +2471,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2438,6 +2579,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2541,6 +2687,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2631,6 +2782,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2721,6 +2877,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2813,6 +2974,13 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB1_S1_R3_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz,"
+                         "PJB2_S2_R3_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2905,6 +3073,13 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB1_S1_R3_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz,"
+                         "PJB2_S2_R3_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -2998,6 +3173,13 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB1_S1_R3_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz,"
+                         "PJB2_S2_R3_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -3096,6 +3278,13 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1_ATAC,PJB2_ATAC")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_ATAC_S1_R1_001.fastq.gz,"
+                         "PJB1_ATAC_S1_R2_001.fastq.gz,"
+                         "PJB1_ATAC_S1_R3_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R1_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R2_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R3_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -3192,6 +3381,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX,PJB2_GEX")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_GEX_S1_R1_001.fastq.gz,"
+                         "PJB1_GEX_S1_R2_001.fastq.gz,"
+                         "PJB2_GEX_S2_R1_001.fastq.gz,"
+                         "PJB2_GEX_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -3318,6 +3512,13 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1_ATAC,PJB2_ATAC")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_ATAC_S1_R1_001.fastq.gz,"
+                         "PJB1_ATAC_S1_R2_001.fastq.gz,"
+                         "PJB1_ATAC_S1_R3_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R1_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R2_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R3_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -3457,6 +3658,13 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1_ATAC,PJB2_ATAC")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_ATAC","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_ATAC_S1_R1_001.fastq.gz,"
+                         "PJB1_ATAC_S1_R2_001.fastq.gz,"
+                         "PJB1_ATAC_S1_R3_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R1_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R2_001.fastq.gz,"
+                         "PJB2_ATAC_S2_R3_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -3595,6 +3803,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX,PJB2_GEX")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_GEX_S1_R1_001.fastq.gz,"
+                         "PJB1_GEX_S1_R2_001.fastq.gz,"
+                         "PJB2_GEX_S2_R1_001.fastq.gz,"
+                         "PJB2_GEX_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -3733,6 +3946,11 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX,PJB2_GEX")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB_GEX","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_GEX_S1_R1_001.fastq.gz,"
+                         "PJB1_GEX_S1_R2_001.fastq.gz,"
+                         "PJB2_GEX_S2_R1_001.fastq.gz,"
+                         "PJB2_GEX_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -3857,6 +4075,11 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_GEX_S1_R1_001.fastq.gz,"
+                         "PJB1_GEX_S1_R2_001.fastq.gz,"
+                         "PJB2_MC_S2_R1_001.fastq.gz,"
+                         "PJB2_MC_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -3968,6 +4191,11 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX,PJB2_MC")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_GEX_S1_R1_001.fastq.gz,"
+                         "PJB1_GEX_S1_R2_001.fastq.gz,"
+                         "PJB2_MC_S2_R1_001.fastq.gz,"
+                         "PJB2_MC_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4068,6 +4296,9 @@ PB2,BC002,PB2
         self.assertEqual(qc_info.seq_data_samples,"PJB1_Flex")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_Flex_S1_R1_001.fastq.gz,"
+                         "PJB1_Flex_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4162,6 +4393,9 @@ PB2,BC002,PB2
         self.assertEqual(qc_info.seq_data_samples,"PJB1_Flex")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_Flex_S1_R1_001.fastq.gz,"
+                         "PJB1_Flex_S1_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4240,6 +4474,11 @@ PB2,BC002,PB2
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4313,6 +4552,11 @@ PB2,BC002,PB2
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4383,6 +4627,11 @@ PB2,BC002,PB2
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4457,6 +4706,11 @@ PB2,BC002,PB2
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4544,6 +4798,11 @@ PB2,BC002,PB2
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4613,6 +4872,11 @@ PB2,BC002,PB2
                          "SRR7089001,SRR7089002")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"SRA","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "SRR7089001_1.fastq.gz,"
+                         "SRR7089001_2.fastq.gz,"
+                         "SRR7089002_1.fastq.gz,"
+                         "SRR7089002_2.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4693,6 +4957,9 @@ SRR7089002.bam	153.754829	69.675347	139	37
                          "SRR7089001,SRR7089002")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"SRA","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "SRR7089001.fastq.gz,"
+                         "SRR7089002.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
@@ -4767,6 +5034,11 @@ SRR7089002.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
         self.assertEqual(qc_info.fastq_screens,
                          "model_organisms,other_organisms,rRNA")
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
