@@ -73,6 +73,7 @@
 ;fastq_screens = model_organisms,other_organisms,rRNA
 ;fastq_subset_size = 100000
 ;nprocessors = None
+;split_undetermined_fastqs = True
 ;use_legacy_screen_names = False
 
 # Fastq screen panels

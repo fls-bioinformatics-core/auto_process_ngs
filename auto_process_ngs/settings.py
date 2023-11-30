@@ -150,6 +150,7 @@ class Settings:
         "bcl_conversion.no_lane_splitting": False,
         "bcl_conversion.create_empty_fastqs": False,
         "qc.fastq_subset_size": 100000,
+        "qc.split_undetermined_fastqs": True,
         "qc.use_legacy_screen_names": False,
         "10xgenomics.cellranger_jobmode": "local",
         "10xgenomics.cellranger_maxjobs": 24,
@@ -283,6 +284,9 @@ class Settings:
         self.qc['fastq_subset_size'] = config.getint(
             'qc',
             'fastq_subset_size')
+        self.qc['split_undetermined_fastqs'] = config.getboolean(
+            'qc',
+            'split_undetermined_fastqs')
         self.qc['use_legacy_screen_names'] = config.getboolean(
             'qc',
             'use_legacy_screen_names')
