@@ -1361,7 +1361,7 @@ class SplitFastqsByLane(PipelineTask):
             os.makedirs(self.args.out_dir)
         else:
             # Identify Fastqs that have already been split
-            for fq in os.path.listdir(self.args.out_dir):
+            for fq in os.listdir(self.args.out_dir):
                 print("Checking existing Fastq: %s" %
                       os.path.basename(fq))
                 fqname = self.args.project.fastq_attrs(fq)
