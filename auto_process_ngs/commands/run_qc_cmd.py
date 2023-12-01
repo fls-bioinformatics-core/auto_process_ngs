@@ -170,6 +170,9 @@ def run_qc(ap,projects=None,fastq_screens=None,
                                      cellranger_extra_project_dirs.split(',')]
     else:
         cellranger_extra_projects = None
+    # Split Fastqs by lane for 'undetermined'
+    split_undetermined_fastqs = \
+            bool(ap.settings.qc.split_undetermined_fastqs)
     # Legacy FastqScreen naming convention
     legacy_screens = bool(ap.settings.qc.use_legacy_screen_names)
     # Set up runners
@@ -233,12 +236,21 @@ def run_qc(ap,projects=None,fastq_screens=None,
         # Determine and fetch the QC protocol
         qc_protocol = determine_qc_protocol(project)
         protocol = fetch_protocol_definition(qc_protocol)
+        # Set up splitting of Fastqs by lane
+        split_lanes = False
+        if split_undetermined_fastqs and project.name == "undetermined":
+            # Lanes will be split if at least one Fastq doesn't
+            # have an explicit lane number in its name
+            split_lanes = any([project.fastq_attrs(fq).lane_number is None
+                               for fq in project.fastqs])
+        # Add the project to the QC
         runqc.add_project(project,
                           protocol,
                           qc_dir=qc_dir,
                           fastq_dir=fastq_dir,
                           organism=project.info.organism,
                           sample_pattern=sample_pattern,
+                          split_fastqs_by_lane=split_lanes,
                           multiqc=True)
     # Collect the cellranger data and parameters
     cellranger_settings = ap.settings['10xgenomics']

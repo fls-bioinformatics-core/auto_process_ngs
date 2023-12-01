@@ -14,6 +14,7 @@ Pipeline classes:
 Pipeline task classes:
 
 - SetupQCDirs
+- SplitFastqsByLane
 - GetSequenceDataSamples
 - GetSequenceDataFastqs
 - UpdateQCMetadata
@@ -185,7 +186,7 @@ class QCPipeline(Pipeline):
     def add_project(self,project,protocol,qc_dir=None,organism=None,
                     fastq_dir=None,report_html=None,multiqc=False,
                     sample_pattern=None,log_dir=None,convert_gtf=True,
-                    verify_fastqs=False):
+                    verify_fastqs=False,split_fastqs_by_lane=False):
         """
         Add a project to the QC pipeline
 
@@ -215,6 +216,10 @@ class QCPipeline(Pipeline):
           verify_fastqs (bool): if True then verify
             Fastq integrity as part of the pipeline
             (default: False, skip verification)
+          split_fastqs_by_lanes (bool): if True then
+            split input Fastqs into lanes and run QC
+            as per-lane (default: False, don't split
+            QC by lanes)
         """
         ###################
         # Do internal setup
@@ -325,7 +330,8 @@ class QCPipeline(Pipeline):
                            organism=organism,
                            seq_data_samples=\
                            get_seq_data.output.seq_data_samples,
-                           fastq_dir=project.fastq_dir)
+                           fastq_dir=project.fastq_dir,
+                           fastqs_split_by_lane=split_fastqs_by_lane)
 
         # Verify Fastqs
         if verify_fastqs:
@@ -350,11 +356,30 @@ class QCPipeline(Pipeline):
                       requires=(setup_qc_dirs,
                                 get_seq_data))
 
+        # Split Fastqs by lane for QC?
+        if split_fastqs_by_lane:
+            split_fastqs = SplitFastqsByLane(
+                "%s: split Fastqs by lane" % project_name,
+                project,
+                os.path.join(qc_dir,'__fastqs.split'))
+            self.add_task(split_fastqs,
+                          requires=(setup_qc_dirs,))
+            # Subsequent start-up tasks should wait on this task
+            startup_tasks.append(split_fastqs)
+            # Ensure QC metadata also waits for this task
+            update_qc_metadata.requires(split_fastqs)
+            fastqs_in = split_fastqs.output.fastqs
+        else:
+            fastqs_in = project.fastqs
+        qc_metadata['fastqs'] = fastqs_in
+
         # Verify QC
         verify_qc = VerifyQC(
             "%s: verify QC outputs" % project_name,
             project,
-            qc_dir)
+            qc_dir,
+            str(protocol),
+            fastqs=fastqs_in)
         self.add_task(verify_qc,
                       requires=startup_tasks,
                       runner=self.runners['verify_runner'],
@@ -382,7 +407,8 @@ class QCPipeline(Pipeline):
             os.path.join(qc_dir,'__fastqs'),
             read_range=protocol.read_range,
             samples=get_seq_data.output.seq_data_samples,
-            fastq_attrs=project.fastq_attrs)
+            fastq_attrs=project.fastq_attrs,
+            fastqs=fastqs_in)
         self.add_task(get_seq_fastqs,
                       requires=startup_tasks,
                       log_dir=log_dir)
@@ -490,6 +516,7 @@ class QCPipeline(Pipeline):
                     project,
                     qc_dir,
                     read_numbers=read_numbers.qc,
+                    fastqs=fastqs_in,
                     fastq_attrs=project.fastq_attrs)
                 self.add_task(get_seq_lengths,
                               requires=startup_tasks,
@@ -552,6 +579,7 @@ class QCPipeline(Pipeline):
                     project,
                     qc_dir,
                     read_numbers=read_numbers.qc,
+                    fastqs=fastqs_in,
                     verbose=self.params.VERBOSE
                 )
                 self.add_task(check_fastqc,
@@ -1307,6 +1335,68 @@ class SetupQCDirs(PipelineFunctionTask):
         if not os.path.exists(log_dir):
             mkdir(log_dir)
 
+class SplitFastqsByLane(PipelineTask):
+    """
+    Split reads into multiple Fastqs according to lane
+    """
+    def init(self,project,out_dir):
+        """
+        Initialise the SplitFastqsByLane task
+
+        Arguments:
+          project (AnalysisProject): project with source
+            Fastqs to split by lane
+          out_dir (str): path to directory where split
+            Fastqs will be written
+
+        Outputs:
+          fastqs (list): list of paths to output Fastqs
+            split by lanes
+        """
+        self.add_output('fastqs',list())
+    def setup(self):
+        pre_split_fastqs = set()
+        # Make output directory
+        if not os.path.exists(self.args.out_dir):
+            print("Making output dir: %s" % self.args.out_dir)
+            os.makedirs(self.args.out_dir)
+        else:
+            # Identify Fastqs that have already been split
+            for fq in os.listdir(self.args.out_dir):
+                print("Checking existing Fastq: %s" %
+                      os.path.basename(fq))
+                fqname = self.args.project.fastq_attrs(fq)
+                fqname.lane_number = None
+                pre_split_fastqs.add(str(fqname))
+        print("Pre-split Fastqs: %s" % pre_split_fastqs)
+        # Make copies of Fastqs split by lane (if not already
+        # present)
+        for fq in self.args.project.fastqs:
+            if self.args.project.fastq_attrs(fq) in pre_split_fastqs:
+                print("%s: already split" % os.path.basename(fq))
+                continue
+            self.add_cmd("Split %s by lane" % os.path.basename(fq),
+                         """
+                         echo "Making temp dir"
+                         tmp_dir=$(mktemp -d --tmpdir=.)
+                         cd $tmp_dir
+                         echo "Moved to $(pwd)"
+                         split_fastq.py {fastq}
+                         for f in $(ls *.fastq) ; do
+                            echo "Compressing $f"
+                            gzip $f
+                         done
+                         echo "Moving .fastq.gz files to final dir"
+                         mv -f *.fastq.gz {out_dir}
+                         """.format(fastq=fq,
+                                    out_dir=self.args.out_dir))
+    def finish(self):
+        # Collect split files
+        self.output.fastqs.extend(
+            sorted([os.path.join(self.args.out_dir,fq)
+                    for fq in os.listdir(self.args.out_dir)
+                    if fq.endswith(".fastq.gz")]))
+
 class GetSequenceDataSamples(PipelineTask):
     """
     Identify samples with sequence (i.e. biological) data
@@ -1342,7 +1432,7 @@ class GetSequenceDataFastqs(PipelineTask):
     Set up Fastqs with sequence (i.e. biological) data
     """
     def init(self,project,out_dir,read_range,samples,
-             fastq_attrs):
+             fastq_attrs,fastqs=None):
         """
         Initialise the GetSequenceDataFastqs task
 
@@ -1357,6 +1447,8 @@ class GetSequenceDataFastqs(PipelineTask):
             data
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
+          fastqs (list): optional, list of Fastq files
+            (overrides Fastqs in project)
 
         Outputs:
           fastqs (list): list of Fastqs with biological
@@ -1375,12 +1467,17 @@ class GetSequenceDataFastqs(PipelineTask):
                 rng = "%s-%s" % (rng[0] if rng[0] else "",
                                  rng[1] if rng[1] else "")
             print("- %s: %s" % (rd.upper(),rng))
+        # Get input Fastqs
+        if self.args.fastqs:
+            fastqs = self.args.fastqs
+        else:
+            fastqs = self.args.project.fastqs
         # Remove Fastqs not in listed sample names
         if self.args.fastq_attrs:
             fastq_attrs = self.args.fastq_attrs
         else:
             fastq_attrs = AnalysisFastq
-        fastqs = [fq for fq in self.args.project.fastqs
+        fastqs = [fq for fq in fastqs
                       if fastq_attrs(fq).sample_name in
                       self.args.samples]
         # Check for output directory
@@ -1476,6 +1573,14 @@ class UpdateQCMetadata(PipelineTask):
             except AttributeError:
                 value = self.args.metadata[item]
             metadata[item] = value
+        # Strip leading paths from Fastqs
+        fastqs = ([os.path.basename(fq) for fq in metadata['fastqs']]
+                   if 'fastqs' in metadata else None)
+        if fastqs:
+            # Collapse list into a string
+            metadata['fastqs'] = ','.join(fastqs)
+        else:
+            metadata['fastqs'] = None
         # Deal with sequence data (biological) samples
         seq_data_samples = (metadata['seq_data_samples']
                             if 'seq_data_samples' in metadata else None)
@@ -1556,7 +1661,8 @@ class GetSeqLengthStats(PipelineFunctionTask):
     for Fastqs in a project, and write the data to
     JSON files.
     """
-    def init(self,project,qc_dir,read_numbers=None,fastq_attrs=None):
+    def init(self,project,qc_dir,read_numbers=None,fastqs=None,
+             fastq_attrs=None):
         """
         Initialise the GetSeqLengthStats task
 
@@ -1567,14 +1673,21 @@ class GetSeqLengthStats(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           read_numbers (sequence): list of read numbers to
             include (or None to include all reads)
+          fastqs (list): optional, list of Fastq files
+            (overrides Fastqs in project)
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
         """
         self._fastqs = list()
     def setup(self):
+        # Input Fastqs
+        if self.args.fastqs:
+            fastqs_in = self.args.fastqs
+        else:
+            fastqs_in = self.args.project.fastqs
         # Remove index Fastqs
         self._fastqs = remove_index_fastqs(
-            self.args.project.fastqs,
+            fastqs_in,
             fastq_attrs=self.args.fastq_attrs)
         # Get sequence length data for Fastqs
         for fastq in self._fastqs:
@@ -1798,7 +1911,8 @@ class CheckFastQCOutputs(PipelineFunctionTask):
     """
     Check the outputs from FastQC
     """
-    def init(self,project,qc_dir,read_numbers,verbose=False):
+    def init(self,project,qc_dir,read_numbers,fastqs=None,
+             verbose=False):
         """
         Initialise the CheckFastQCOutputs task.
 
@@ -1809,6 +1923,8 @@ class CheckFastQCOutputs(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           read_numbers (list): list of read numbers to
             include
+          fastqs (list): optional, list of Fastq files
+            (overrides Fastqs in project)
           verbose (bool): if True then print additional
             information from the task
 
@@ -1824,7 +1940,8 @@ class CheckFastQCOutputs(PipelineFunctionTask):
                       check_fastqc_outputs,
                       self.args.project,
                       self.args.qc_dir,
-                      self.args.read_numbers)
+                      fastqs=self.args.fastqs,
+                      read_numbers=self.args.read_numbers)
     def finish(self):
         fastqs = set()
         for result in self.result():
@@ -3876,7 +3993,7 @@ class VerifyQC(PipelineFunctionTask):
     """
     Verify outputs from the QC pipeline
     """
-    def init(self,project,qc_dir):
+    def init(self,project,qc_dir,protocol,fastqs):
         """
         Initialise the VerifyQC task.
 
@@ -3885,15 +4002,20 @@ class VerifyQC(PipelineFunctionTask):
             number of cells for
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
+          protocol (QCProtocl): QC protocol to verify against
+          fastqs (list): Fastqs to include in the
+            verification
         """
         pass
     def setup(self):
-        # Run the 'verify_project' function
+        # Call the verification function
         self.add_call(
             "Verify QC outputs for %s" % self.args.project.name,
             verify_project,
             self.args.project,
-            self.args.qc_dir)
+            self.args.qc_dir,
+            qc_protocol=self.args.protocol,
+            fastqs=self.args.fastqs)
     def finish(self):
         # Report the verification output
         for line in self.stdout.split('\n'):

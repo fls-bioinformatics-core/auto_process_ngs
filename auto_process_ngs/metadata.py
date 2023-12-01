@@ -671,6 +671,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     The data items are:
 
     fastq_dir: the name of the associated Fastq subdirectory
+    fastqs: list of the Fastq files (without leading paths)
     protocol: name of the QC protocol used
     organism: the organism(s) that the QC was run with
     seq_data_samples: samples with sequence (i.e. biological) data
@@ -695,6 +696,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
             self,
             attributes = {
                 'fastq_dir' :'Fastq dir',
+                'fastqs': 'Fastqs',
                 'protocol': 'QC protocol',
                 'organism': 'Organism',
                 'seq_data_samples': 'Sequence data samples',
@@ -707,10 +709,12 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                 'annotation_gtf': 'GTF gene annotation file',
                 'protocol_summary': 'Protocol summary',
                 'protocol_specification': 'Protocol specification',
+                'fastqs_split_by_lane': 'Fastqs split by lane',
             },
             order = (
                 'fastq_dir',
                 'protocol',
                 'organism',
+                'fastqs',
             ),
             filen=filen)

@@ -581,6 +581,11 @@ class QCReport(Document):
                                       "contain biological data: %s" %
                                       pretty_print_names(
                                           project.seq_data_samples))
+            # Fastq lane splitting used
+            if project.qc_info.fastqs_split_by_lane:
+                project_notes.add("Input Fastqs were split by lane "
+                                  "within the QC pipeline to generate "
+                                  "per-lane metrics")
             # Create a new summary table
             summary_table = self.add_summary_table(project,
                                                    summary_fields_,

@@ -560,6 +560,9 @@ defined as described in the section
 Additionally the ``[qc]`` section allows other aspects of the
 QC pipeline operation to be explicitly specified.
 
+Setting size of Fastq read subsets
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 The default size of the subset of reads used by FastqScreen
 when generating the screens, generating BAM files and so on
 can be set using the ``fastq_subset_size`` parameter, e.g.:
@@ -570,7 +573,7 @@ can be set using the ``fastq_subset_size`` parameter, e.g.:
    fastq_subset_size = 10000
    ...
 
-Setting this to 0 will force all reads to be used for the
+Setting this to zero will force all reads to be used for the
 appropriate QC stages (note that this can result in extended
 run time for the QC pipeline, and larger intermediate and
 final output files).
@@ -580,6 +583,27 @@ final output files).
    ``fastq_subset_size`` replaces the deprecated legacy
    ``fastq_screen_subset`` parameter (which will however be
    used as a fallback if ``subset_size`` is not present).
+
+Per-lane QC for undetermined Fastqs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default the QC pipeline will split Fastqs from the
+``undetermined`` project into separate lanes, in order to
+generate per-lane metrics.
+
+This is controlled by the ``split_undetermined_fastqs``
+parameter, which by default is implicitly set as:
+
+::
+
+    [qc]
+    split_undetermined_fastqs = True
+    ...
+
+To disable the lane splitting, set this parameter to ``False``.
+
+FastqScreen output file naming conventions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 By default the QC pipeline creates FastqScreen outputs using
 the following naming convention:

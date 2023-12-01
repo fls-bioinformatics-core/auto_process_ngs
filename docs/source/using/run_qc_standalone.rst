@@ -206,3 +206,16 @@ ell platforms and FastqScreen ``.conf`` files.
 
 Once the information is displayed, ``run_qc.py`` will exit
 without performing any further action.
+
+Per-lane QC: ``--split-fastqs-by-lane``
+---------------------------------------
+
+The ``--split-fastqs-by-lane`` forces the pipeline to generate
+copies of the input Fastqs for each lane that appears in the
+read headers of each Fastq, and then run the QC on those
+per-lane Fastqs (rather the originals, which are not changed).
+
+This results in per-lane QC metrics, which can be useful for
+diagnostic purposes when handling Fastqs which have been merged
+across multiple lanes (for example, to determine whether
+contanimation is confined to a single lane).
