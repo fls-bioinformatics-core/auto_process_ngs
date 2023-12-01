@@ -330,7 +330,8 @@ class QCPipeline(Pipeline):
                            organism=organism,
                            seq_data_samples=\
                            get_seq_data.output.seq_data_samples,
-                           fastq_dir=project.fastq_dir)
+                           fastq_dir=project.fastq_dir,
+                           fastqs_split_by_lane=split_fastqs_by_lane)
 
         # Verify Fastqs
         if verify_fastqs:
