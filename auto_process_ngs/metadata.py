@@ -709,6 +709,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                 'annotation_gtf': 'GTF gene annotation file',
                 'protocol_summary': 'Protocol summary',
                 'protocol_specification': 'Protocol specification',
+                'fastqs_split_by_lane': 'Fastqs split by lane',
             },
             order = (
                 'fastq_dir',
