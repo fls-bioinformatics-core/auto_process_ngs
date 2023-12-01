@@ -141,9 +141,9 @@ biological samples; these metrics will be omitted for non-biological
 samples (even if they have been specified as part of the QC
 protocol).
 
--------------------------------------
-QC metric using subsequences in reads
--------------------------------------
+--------------------------------------
+QC metrics using subsequences in reads
+--------------------------------------
 
 Some metrics can be applied to subsequences within reads (rather
 than the whole sequence), if a range of bases is defined within
@@ -153,6 +153,28 @@ Specifically, where subsequences are specified for sequence data
 reads (i.e. reads containing biological data) then the "mapped"
 QC modules (for example, FastqScreen or strandedness) will only
 use those subsequences.
+
+(See the :doc:`QC protocol specification <../reference/qc_protocol_specification.rst>`
+documentation for the subsequence specification syntax.)
+
+-------------------------------------------
+Per-lane QC metrics for undetermined Fastqs
+-------------------------------------------
+
+By default when handling Fastqs for the ``undetermined``
+project, the pipeline runs in mode whereby it generates
+copies of the input Fastqs for each lane that appears in the
+read headers of each Fastq, and then run the QC on those
+per-lane Fastqs (rather the originals, which are not changed).
+
+This results in per-lane QC metrics, which can be useful for
+diagnostic purposes when handling Fastqs which have been merged
+across multiple lanes (for example, to determine whether
+contanimation is confined to a single lane).
+
+The behaviour is controlled by the ``split_undetermined_fastqs``
+setting in the ``qc`` section of the configuration file (see
+:ref:`qc_pipeline_configuration`).
 
 ------------------
 Additional options
