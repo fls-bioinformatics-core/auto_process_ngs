@@ -239,7 +239,10 @@ def run_qc(ap,projects=None,fastq_screens=None,
         # Set up splitting of Fastqs by lane
         split_lanes = False
         if split_undetermined_fastqs and project.name == "undetermined":
-            split_lanes = True
+            # Lanes will be split if at least one Fastq doesn't
+            # have an explicit lane number in its name
+            split_lanes = any([project.fastq_attrs(fq).lane_number is None
+                               for fq in project.fastqs])
         # Add the project to the QC
         runqc.add_project(project,
                           protocol,
