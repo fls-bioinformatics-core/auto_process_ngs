@@ -375,8 +375,7 @@ class QCPipeline(Pipeline):
                 fastq_attrs=project.fastq_attrs)
             self.add_task(verify_fqs,
                           requires=(setup_qc_dirs,),
-                          runner=self.runners['verify_runner'],
-                          log_dir=log_dir)
+                          runner=self.runners['verify_runner'])
             startup_tasks.append(verify_fqs)
 
         # Update QC metadata
