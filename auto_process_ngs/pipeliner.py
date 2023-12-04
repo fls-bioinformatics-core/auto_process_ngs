@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
 #
 """
 Module providing utility classes and functions for building simple
@@ -2341,10 +2341,11 @@ class Pipeline:
                 else:
                     # Still running
                     running.append(task)
-                    # Report if status has changed
+                    # Report if status has changed for multi-job
+                    # task (and at least job has completed)
                     if task.updated:
                         njobs,ncompleted = task.njobs()
-                        if njobs > 1:
+                        if njobs > 1 and ncompleted > 1:
                             self.report("'%s' updated (%d/%d)" %
                                         (task.name(),
                                          ncompleted,
@@ -2389,19 +2390,25 @@ class Pipeline:
             # Report the current running and pending tasks
             if update:
                 if self._running:
-                    self.report("%d running tasks:"
-                                % len(self._running))
+                    self.report("%d running task%s:"
+                                % (len(self._running),
+                                   's' if len(self._running) != 1 else ''))
                     for t in self._running:
-                        njobs,ncompleted = t.njobs()
-                        if njobs > 1:
-                            self.report("- %s (%d/%d)" % (t.name(),
-                                                          ncompleted,
-                                                          njobs))
+                        if t.resolving_dependencies:
+                            self.report("- %s: resolving dependencies" %
+                                        t.name())
                         else:
-                            self.report("- %s" % t.name())
+                            njobs,ncompleted = t.njobs()
+                            if njobs > 1:
+                                self.report("- %s (%d/%d)" % (t.name(),
+                                                              ncompleted,
+                                                              njobs))
+                            else:
+                                self.report("- %s" % t.name())
                 if self._pending:
-                    self.report("%d pending tasks:"
-                                % len(self._pending))
+                    self.report("%d pending task%s:"
+                                % (len(self._pending),
+                                   's' if len(self._pending) != 1 else ''))
                     for t in self._pending:
                         self.report("- %s" % t[0].name())
                 update = False
@@ -2489,9 +2496,14 @@ class PipelineTask:
         self._runner_nslots = None
         self._jobs = []
         self._groups = []
+        # Dependency resolution
+        self._resolver_jobs = []
+        self._resolver_dispatchers = {}
         # Conda dependencies
         self._conda_pkgs = []
+        self._conda_env = None
         # Monitoring
+        self._resolving_dependencies = False
         self._ncompleted = 0
         # Logging
         self._log_file = None
@@ -2567,9 +2579,17 @@ class PipelineTask:
           Boolean: True if task has been updated, False
             if not.
         """
+        updated = False
+        # Check if dependency resolution status changed
+        resolving_dependencies = self.resolving_dependencies
+        if self._resolving_dependencies != resolving_dependencies:
+            updated = True
+            self._resolving_dependencies = resolving_dependencies
+        # Check if number of completed jobs changed
         njobs,ncompleted = self.njobs()
-        updated = ncompleted > self._ncompleted
-        self._ncompleted = ncompleted
+        if ncompleted > self._ncompleted:
+            updated = True
+            self._ncompleted = ncompleted
         return updated
 
     @property
@@ -2701,6 +2721,10 @@ class PipelineTask:
     def invoke(self,f,args=None,kws=None):
         """
         Internal: invoke arbitrary method on the task
+
+        If the working directory is defined then calling
+        'invoke' changes to this directory before the
+        specified function is called.
 
         Arguments:
           f (function): method to invoke (e.g. 'self.init')
@@ -2854,6 +2878,50 @@ class PipelineTask:
                 reportf("\nNo stderr from task scripts")
         reportf("\n**** END OF DIAGNOSTICS ****")
 
+    def conda_dependency_resolution_completed(self,name,jobs,sched):
+        """
+        Internal: callback method
+
+        Invoked when a conda dependency resolution job
+        completes
+
+        Arguments:
+          name (str): name for the callback
+          jobs (list): list of SchedulerJob instances
+          sched (SimpleScheduler): scheduler instance
+        """
+        # Check whether dependency resolution job worked
+        conda_env = None
+        try:
+            job = jobs[0]
+            exit_code = job.exit_code
+            d = self._resolver_dispatchers[job.name]
+            conda_env = d.get_result()
+        except Exception as ex:
+            exit_code = 1
+        if conda_env is None:
+            exit_code = 1
+        status = ('ok' if exit_code == 0 else 'failed')
+        self.report("conda dependency resolution completed: %s" % status)
+        # Report the conda environment
+        if conda_env:
+            self.report("using conda environment '%s'" % conda_env)
+        # Diagnostics on failure
+        if exit_code:
+            self.report("WARNING conda dependency resolution did not "
+                        "complete successfully")
+            with open(job.log,'rt') as fp:
+                for line in fp:
+                    self.report("STDOUT: %s" % line.rstrip())
+            try:
+                with open(job.err,'rt') as fp:
+                    for line in fp:
+                        self.report("STDERR: %s" % line.rstrip())
+            except AttributeError:
+                # Older versions of Job object
+                # don't have 'err' property
+                pass
+
     def task_completed(self,name,jobs,sched):
         """
         Internal: callback method
@@ -2873,10 +2941,10 @@ class PipelineTask:
                         self._exit_code += 1
                     self._stdout_files.append(job.log)
                     try:
-                        # Older versions of Job object
-                        # don't have 'err' property?
                         self._stderr_files.append(job.err)
                     except AttributeError:
+                        # Older versions of Job object
+                        # don't have 'err' property?
                         self._stderr_files.append(None)
                 except AttributeError:
                     # Assume it's a group
@@ -2885,10 +2953,10 @@ class PipelineTask:
                             self._exit_code += 1
                         self._stdout_files.append(j.log)
                         try:
-                            # Older versions of Job object
-                            # don't have 'err' property?
                             self._stderr_files.append(j.err)
                         except AttributeError:
+                            # Older versions of Job object
+                            # don't have 'err' property?
                             self._stderr_files.append(None)
         except Exception as ex:
             # General
@@ -3060,71 +3128,128 @@ class PipelineTask:
         else:
             return None
 
-    def setup_conda_env(self,conda,env_dir=None,channels=None):
+    def resolve_dependencies(self,enable_conda=False,conda=None,
+                             conda_env_dir=None,sched=None,
+                             scripts_dir=None,working_dir=None,
+                             log_dir=None,timeout=600,verbose=False):
         """
-        Fetch or create a conda environment with required packages
+        Peform dependency resolution for the task
 
         Arguments:
+          enable_conda (bool): if True then enable conda dependency
+            resolution
           conda (str): path to conda executable
-          env_dir (str): path to conda environments directory
-            (defaults to environments directory belonging to the
-            supplied conda installation)
-          channels (list): optional list of channel names to use
-            with conda operations (overrides defaults)
-
-        Returns:
-          String: path to Conda environment.
+          conda_env_dir (str): path to directory holding conda
+            environments
+          sched (SimpleScheduler); scheduler to submit jobs to
+          scripts_dir (str): path to write scripts to
+          log_dir (str): path to directory to write log files to
+          timeout (int): number of seconds to wait to acquire
+            lock on environments directory before giving up
+            (default: 600)
+          verbose (bool): if True then report additional
+            information for diagnostics
         """
-        # Set up conda wrapper
-        conda = CondaWrapper(conda=conda,
-                             env_dir=env_dir,
-                             channels=channels)
-        # Make a name for the environment
-        env_name = self.conda_env_name
-        # Fetch the environment
-        conda_env = None
-        if env_name in conda.list_envs:
-            # Use existing environment
-            self.report("using existing conda environment "
-                        "'%s'" % env_name)
-            conda_env = os.path.join(conda.env_dir,
-                                     env_name)
-            # Check that environment can be activated
-            if conda_env:
-                if not conda.verify_env(conda_env):
-                    # Can't activate the environment
-                    self.report("WARNING the task may fail as the "
-                                "required conda environment '%s' "
-                                "cannot be activated successfully"
-                                % env_name)
-        else:
-            # Create new environment
-            self.report("attempting to create new conda "
-                        "environment '%s'" % env_name)
+        # Set up conda environment
+        enable_conda = bool(enable_conda and self.conda_dependencies)
+        if enable_conda:
+            self.report("resolving conda dependencies:")
+            for dep in self.conda_dependencies:
+                self.report("- %s" % dep)
+            conda_wrapper = CondaWrapper(conda=conda,
+                                         env_dir=conda_env_dir)
+            conda_env_dir = conda_wrapper.env_dir
+            env_name = self.conda_env_name
+            conda_env = os.path.join(conda_env_dir,env_name)
+            # Set up dispatcher to run function calls
+            dispatcher_working_dir = "dispatcher.resolve_deps.%s" % \
+                                     env_name
+            if working_dir:
+                working_dir = os.path.join(working_dir,
+                                           dispatcher_working_dir)
+            else:
+                working_dir = dispatcher_working_dir
+            d = Dispatcher(working_dir=working_dir)
             try:
-                conda_env = conda.create_env(
-                    env_name,
-                    *self.conda_dependencies)
-                self.report("created conda environment "
-                            "'%s'" % env_name)
-            except CondaWrapperError as ex:
-                # Failed to create the environment
-                self.report("failed to create conda environment '%s': %s" %
-                            (env_name,ex))
-                # Diagnostics
-                self.report(
-                    "\n**** CONDA DIAGNOSTICS ****\n")
-                self.report("Command: %s\n" % ex.cmdline)
-                self.report("Status : %s\n" % ex.status)
-                self.report("Output:\n\n%s" % ex.output)
-                self.report(
-                    "\n**** END OF DIAGNOSTICS ****\n")
-                self.report("WARNING the task may fail "
-                            "as the required environment "
-                            "couldn't be created")
-        return conda_env
+                # Quick check if the environment exists
+                # NB don't lock the conda env dir for this check to
+                # avoiding blocking the pipeline
+                # The env creation function can handle situations
+                # when it turns out we don't need to build the
+                # environment here after all (e.g. because another
+                # task or pipeline has done it in the meantime)
+                new_env = env_name not in conda_wrapper.list_envs
+                if new_env:
+                    # Try and create the environment
+                    self.report("acquiring new conda environment '%s'..." %
+                                env_name)
+                    cmd = d.dispatch_function_cmd(make_conda_env,
+                                                  conda,
+                                                  env_name,
+                                                  self.conda_dependencies,
+                                                  env_dir=conda_env_dir,
+                                                  timeout=timeout)
+                    # Use default runner
+                    runner = None
+                else:
+                    # Validate existing environment
+                    self.report("checking existing conda environment '%s'..." %
+                                env_name)
+                    cmd = d.dispatch_function_cmd(check_conda_env,
+                                                  conda,
+                                                  env_name,
+                                                  env_dir=conda_env_dir,
+                                                  timeout=timeout)
+                    # Always run as local job
+                    runner = SimpleJobRunner()
+                # Sort out scripts and log directories
+                if scripts_dir is None:
+                    scripts_dir = working_dir
+                if log_dir is None:
+                    log_dir = working_dir
+                # Look for conda resolution jobs that have already been
+                # scheduled and haven't completed yet
+                # Append this resolution job to only run after these have
+                # have finished
+                wait_for = [j.name for j in sched.find("resolve_conda_deps.*")
+                            if not j.completed]
+                if wait_for and verbose:
+                    self.report("Conda resolution jobs already queued or "
+                                "running:")
+                    for job_name in wait_for:
+                        self.report("- %s" % job_name)
+                # Generate script file to execute the resolver job
+                cmd = PipelineCommandWrapper("Resolve conda dependencies",
+                                             *cmd.command_line)
+                script_file = cmd.make_wrapper_script(
+                    scripts_dir=scripts_dir,
+                    working_dir=working_dir)
+                self._scripts.append(script_file)
+                # Submit the resolver job
+                job = sched.submit(Command('/bin/bash',script_file),
+                                   wd=working_dir,
+                                   name="resolve_conda_deps.%s" % self.id(),
+                                   wait_for=wait_for,
+                                   runner=runner,
+                                   log_dir=log_dir)
+                sched.callback("%s.resolve_conda_deps" % self._name,
+                               self.conda_dependency_resolution_completed,
+                               wait_for=(job.name,))
+                self._resolver_jobs.append(job)
+                self._resolver_dispatchers[job.name] = d
+                self._conda_env = conda_env
+            except Exception as ex:
+                # Failure attempting to acquire conda env
+                self.report("ERROR failed to acquire conda "
+                            "environment: %s" % ex)
+                # Force premature exit with failure
+                self._exit_code = 1
+                self.finish_task()
+                return
+        else:
+            self._conda_env = None
 
-    def run(self,sched=None,runner=None,envmodules=None,enable_conda=False,
+    def run(self,sched,runner=None,envmodules=None,enable_conda=False,
             conda=None,conda_env_dir=None,working_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,wait_for=(),asynchronous=True,
             poll_interval=5,batch_size=None,batch_limit=None,
@@ -3206,29 +3331,15 @@ class PipelineTask:
         self._runner_nslots = runner.nslots
         # Do setup
         self.invoke(self.setup)
-        # Set up conda environment
-        enable_conda = bool(enable_conda and self.conda_dependencies)
-        if enable_conda and self._commands:
-            self.report("using conda to resolve dependencies:")
-            for dep in self.conda_dependencies:
-                self.report("- %s" % dep)
-            conda_env_dir = CondaWrapper(conda=conda,
-                                         env_dir=conda_env_dir).env_dir
-            try:
-                with FileLock(conda_env_dir,timeout=600):
-                    conda_env = self.setup_conda_env(
-                        conda,
-                        env_dir=conda_env_dir)
-            except Exception as ex:
-                # Failure attempting to acquire conda env
-                self.report("ERROR failed to acquire conda "
-                            "environment: %s" % ex)
-                # Force premature exit with failure
-                self._exit_code = 1
-                self.finish_task()
-                return
-        else:
-            conda_env = None
+        # Resolve dependencies
+        if self._commands:
+            self.resolve_dependencies(enable_conda,
+                                      conda,
+                                      conda_env_dir,
+                                      sched=sched,
+                                      scripts_dir=scripts_dir,
+                                      working_dir=working_dir,
+                                      log_dir=log_dir)
         # Handle command batching
         if batch_limit and not batch_size:
             if len(self._commands) > batch_limit:
@@ -3246,7 +3357,7 @@ class PipelineTask:
                     scripts_dir=scripts_dir,
                     envmodules=envmodules,
                     conda=conda,
-                    conda_env=conda_env,
+                    conda_env=self._conda_env,
                     working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:
@@ -3279,7 +3390,7 @@ class PipelineTask:
                     scripts_dir=scripts_dir,
                     envmodules=envmodules,
                     conda=conda,
-                    conda_env=conda_env,
+                    conda_env=self._conda_env,
                     batch_number=batch_number,
                     working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
@@ -3303,6 +3414,18 @@ class PipelineTask:
                                 (runner,
                                  '' if runner.nslots == 1
                                  else ' [nslots=%s]' % runner.nslots))
+            # Sort out required job list
+            if wait_for:
+                wait_for = [j for j in wait_for]
+            else:
+                wait_for = []
+            # Add dependency resolution jobs to the wait list
+            for j in self._resolver_jobs:
+                wait_for.append(j.name)
+                if verbose:
+                    self.report("Added dependency resolution job '%s' "
+                                "to wait list" % j.name)
+            # Submit commands to the scheduler
             use_group = (len(cmds)!=1)
             if use_group:
                 # Run as a group
@@ -3345,6 +3468,19 @@ class PipelineTask:
             # No commands to execute
             self.finish_task()
         return self
+
+    @property
+    def resolving_dependencies(self):
+        """
+        Check if task is currently resolving dependencies
+
+        Returns True if dependency resolution is in progress,
+        False otherwise
+        """
+        for job in self._resolver_jobs:
+            if not job.completed:
+                return True
+        return False
 
     def njobs(self):
         """
@@ -4386,3 +4522,99 @@ def resolve_parameter(p):
         return p.value
     except AttributeError:
         return p
+
+def make_conda_env(conda,env_name,package_list,env_dir=None,
+                   channels=None,timeout=600):
+    """
+    Create a conda environment
+
+    If the named environment doesn't already exist in the
+    environments directory then a new environment will be
+    created with the specified packages.
+
+    Arguments:
+      conda (str): path to conda executable
+        env_name (str): name for the environment to create
+        package_list (list): list of packages to install
+      env_dir (str): path to conda environments directory
+        (defaults to environments directory belonging to the
+        supplied conda installation)
+      channels (list): optional list of channel names to use
+         with conda operations (overrides defaults)
+      timeout (int): number of seconds to wait to acquire
+         lock on environments directory before giving up
+         (default: 600)
+
+    Returns:
+      String: path to Conda environment (or None if the
+        environment couldn't be created).
+    """
+    # Set up conda wrapper
+    conda_wrapper = CondaWrapper(conda=conda,
+                                 env_dir=env_dir,
+                                 channels=channels)
+    # Create the environment
+    conda_env = os.path.join(conda_wrapper.env_dir,env_name)
+    with FileLock(conda_wrapper.env_dir,timeout=timeout):
+        if env_name in conda_wrapper.list_envs:
+            # Enviroment exists
+            print("'%s': conda environment already exists" % env_name)
+            return conda_env
+        else:
+            # Create new environment
+            print("Creating new conda environment '%s'" % env_name)
+            try:
+                conda_env = conda_wrapper.create_env(env_name,*package_list)
+                print("Created conda environment '%s'" % env_name)
+                return conda_env
+            except CondaWrapperError as ex:
+                # Failed to create the environment
+                print("failed to create conda environment '%s': %s" %
+                      (env_name,ex))
+                # Diagnostics
+                print("\n**** CONDA DIAGNOSTICS ****\n")
+                print("Command: %s\n" % ex.cmdline)
+                print("Status : %s\n" % ex.status)
+                print("Output:\n\n%s" % ex.output)
+                print("\n**** END OF DIAGNOSTICS ****\n")
+                print("WARNING the task may fail as the required environment "
+                      "couldn't be created")
+                return None
+
+def check_conda_env(conda,env_name,env_dir=None,timeout=600):
+    """
+    Check a conda environment
+
+    Verifies whether the named environment exists and can
+    be activated.
+
+    Arguments:
+      conda (str): path to conda executable
+        env_name (str): name for the environment to create
+        package_list (list): list of packages to install
+      env_dir (str): path to conda environments directory
+        (defaults to environments directory belonging to the
+        supplied conda installation)
+      timeout (int): number of seconds to wait to acquire
+         lock on environments directory before giving up
+         (default: 600)
+
+    Returns:
+      String: path to Conda environment (or None if the
+        environment failed the checks).
+    """
+    # Set up conda wrapper
+    conda_wrapper = CondaWrapper(conda=conda,
+                                 env_dir=env_dir)
+    # Check that the environment exists and can be activated
+    conda_env = os.path.join(conda_wrapper.env_dir,env_name)
+    with FileLock(conda_wrapper.env_dir,timeout=timeout):
+        if env_name not in conda_wrapper.list_envs:
+            print("'%s': conda environment not found" % env_name)
+            return None
+        if not conda_wrapper.verify_env(conda_env):
+            print("'%s': conda environment cannot be activated "
+                  "successfully" % env_name)
+            return None
+    # Environment passed the checks
+    return conda_env
