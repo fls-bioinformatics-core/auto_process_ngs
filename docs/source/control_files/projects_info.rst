@@ -74,16 +74,22 @@ or organism names, however:
    to ``mouse``, ``D. Melanogaster`` is converted to
    ``d_melanogaster``)
 
-The following values are valid options for the single cell platform
+Single cell platforms and library types
+---------------------------------------
+
+The following values are the valid options for the single cell platform
 and corresponding associated library types; use ``.`` if the project
 doesn't have single cell data:
 
 ===================================== ==============================
 Single cell platform                  Library types
 ===================================== ==============================
-``10xGenomics Chromium 3'``           ``scRNA-seq``, ``snRNA-seq``
+``10xGenomics Chromium 3'``           ``scRNA-seq``, ``snRNA-seq``,
+                                      ``CellPlex``, ``Flex``
 ``10xGenomics Chromium 3'v3``         ``scRNA-seq``, ``snRNA-seq``
+                                      ``CellPlex``, ``Flex``
 ``10xGenomics Chromium 3'v2``         ``scRNA-seq``, ``snRNA-seq``
+                                      ``CellPlex``, ``Flex``
 ``10xGenomics Single Cell ATAC``      ``scATAC-seq``, ``snATAC-seq``
 ``10xGenomics Single Cell Multiome``  ``ATAC``, ``GEX``
 ``Parse Evercode``                    ``scRNA-seq``
@@ -91,7 +97,22 @@ Single cell platform                  Library types
 ``ICELL8 ATAC``                       ``scATAC-seq``
 ===================================== ==============================
 
+Spatial data platforms and library types
+----------------------------------------
+
+The following values are valid options for spatial data:
+
+===================================== ==============================
+Single cell platform                  Library types
+===================================== ==============================
+``10xGenomics Visium``                ``Spatial RNA-seq``,
+                                      ``FFPE Spatial RNA-seq``,
+                                      ``Fresh Frozen RNA-seq``
+``10xGenomics CytAssist Visium``      ``FFPE Spatial RNA-seq``
+===================================== ==============================
+
 .. note::
 
-   For 10xGenomics Visium spatial RNA-seq data, set this to
-   ``10xGenomics Visium``.
+   Although 10xGenomics Visium data are not single cell data,
+   currently the platform information is being stored in the
+   single cell platform metadata field.
