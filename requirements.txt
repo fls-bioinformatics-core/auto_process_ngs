@@ -4,6 +4,4 @@ matplotlib
 pandas
 pillow
 psutil
-sphinx
-sphinx_rtd_theme
 git+https://github.com/fls-bioinformatics-core/genomics.git#egg=genomics-bcftbx
