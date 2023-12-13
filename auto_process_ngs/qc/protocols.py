@@ -259,7 +259,7 @@ QC_PROTOCOLS = {
     },
 
     "10x_Visium_FFPE": {
-        "description": "10xGenomics Visium FFPE spatial RNA-seq",
+        "description": "10xGenomics Visium FFPE spatial data",
         "reads": {
             "seq_data": ('r2:1-50',),
             "index": ('r1',)
