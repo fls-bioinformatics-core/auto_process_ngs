@@ -634,7 +634,9 @@ def determine_qc_protocol(project):
     if project.info.single_cell_platform in ("10xGenomics Visium",
                                              "10xGenomics CytAssist Visium"):
         # 10xGenomics Visium spatial transcriptomics
-        if project.info.library_type == "FFPE Spatial RNA-seq":
+        if project.info.library_type in ("FFPE Spatial RNA-seq",
+                                         "FFPE Spatial GEX",
+                                         "FFPE Spatial PEX"):
             protocol = "10x_Visium_FFPE"
         else:
             protocol = "10x_Visium"

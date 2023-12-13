@@ -570,7 +570,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_Visium")
 
-    def test_determine_qc_protocol_10x_visium_ffpe(self):
+    def test_determine_qc_protocol_10x_visium_ffpe_rnaseq(self):
         """determine_qc_protocol: FFPE spatial RNA-seq run (10xGenomics Visium)
         """
         # Make mock analysis project
@@ -606,7 +606,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_Visium")
 
-    def test_determine_qc_protocol_10x_visium_cytassist_ffpe(self):
+    def test_determine_qc_protocol_10x_visium_cytassist_ffpe_rnaseq(self):
         """determine_qc_protocol: FFPE spatial RNA-seq run (10xGenomics CytAssist Visium)
         """
         # Make mock analysis project
@@ -618,6 +618,42 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                           "10xGenomics CytAssist Visium",
                                           'Library type':
                                           "FFPE Spatial RNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_Visium_FFPE")
+
+    def test_determine_qc_protocol_10x_visium_cytassist_ffpe_gex(self):
+        """determine_qc_protocol: FFPE spatial GEX run (10xGenomics CytAssist Visium)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics CytAssist Visium",
+                                          'Library type':
+                                          "FFPE Spatial GEX"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_Visium_FFPE")
+
+    def test_determine_qc_protocol_10x_visium_cytassist_ffpe_pex(self):
+        """determine_qc_protocol: FFPE spatial PEX run (10xGenomics CytAssist Visium)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics CytAssist Visium",
+                                          'Library type':
+                                          "FFPE Spatial PEX"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
