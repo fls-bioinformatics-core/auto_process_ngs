@@ -289,7 +289,7 @@ def add_advanced_options(p,use_legacy_screen_names):
                           "file even if one is located (default is to use "
                           "project metadata)")
     advanced.add_argument('--split-fastqs-by-lane',action="store_true",
-                          dest="split_fastqs_by_lane",default=True,
+                          dest="split_fastqs_by_lane",default=False,
                           help="run QC on copies of input Fastqs where "
                           "reads have been split according to lane "
                           "(default is to run QC on original Fastqs)")
