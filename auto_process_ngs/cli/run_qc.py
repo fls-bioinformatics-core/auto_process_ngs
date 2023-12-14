@@ -289,7 +289,7 @@ def add_advanced_options(p,use_legacy_screen_names):
                           "file even if one is located (default is to use "
                           "project metadata)")
     advanced.add_argument('--split-fastqs-by-lane',action="store_true",
-                          dest="split_fastqs_by_lane",default=True,
+                          dest="split_fastqs_by_lane",default=False,
                           help="run QC on copies of input Fastqs where "
                           "reads have been split according to lane "
                           "(default is to run QC on original Fastqs)")
@@ -673,6 +673,16 @@ def main():
     if not inputs.fastqs:
         logger.fatal("No Fastqs found")
         sys.exit(1)
+
+    # Check Fastq names are compatible with lane splitting
+    if args.split_fastqs_by_lane:
+        for fq in inputs.fastqs:
+            fq = AnalysisFastq(fq)
+            if fq.format != "Illumina" or fq.extras:
+                logger.fatal("Can only split Fastqs by lane for "
+                             "Fastqs with canonical Illumina-style "
+                             "names")
+                sys.exit(1)
 
     # Report what was found
     for fqs in group_fastqs_by_name(inputs.fastqs,fastq_attrs=fastq_attrs):
