@@ -3386,8 +3386,8 @@ class GetBAMFiles(PipelineFunctionTask):
             raise Exception("samtools index returned non-zero exit code: %s" %
                             status)
         # Move the BAM and BAI files to final location
-        os.rename(sorted_bam_file,bam_file)
-        os.rename(sorted_bam_file_index,"%s.bai" % bam_file)
+        shutil.move(sorted_bam_file,bam_file)
+        shutil.move(sorted_bam_file_index,"%s.bai" % bam_file)
         # Remove the temporary working directories
         for dirn in (fastqs_dir,star_dir,sort_dir):
             print("Removing %s" % dirn)
