@@ -674,6 +674,16 @@ def main():
         logger.fatal("No Fastqs found")
         sys.exit(1)
 
+    # Check Fastq names are compatible with lane splitting
+    if args.split_fastqs_by_lane:
+        for fq in inputs.fastqs:
+            fq = AnalysisFastq(fq)
+            if fq.format != "Illumina" or fq.extras:
+                logger.fatal("Can only split Fastqs by lane for "
+                             "Fastqs with canonical Illumina-style "
+                             "names")
+                sys.exit(1)
+
     # Report what was found
     for fqs in group_fastqs_by_name(inputs.fastqs,fastq_attrs=fastq_attrs):
         print("%s:" % fastq_attrs(fqs[0]).sample_name)
