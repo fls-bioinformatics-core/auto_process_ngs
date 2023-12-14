@@ -658,7 +658,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_Visium_FFPE")
+                         "10x_Visium_FFPE_PEX")
 
     def test_determine_qc_protocol_10x_multiome_atac(self):
         """determine_qc_protocol: single cell multiome ATAC run (10xGenomics Multiome ATAC)

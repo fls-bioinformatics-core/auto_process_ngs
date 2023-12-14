@@ -259,7 +259,7 @@ QC_PROTOCOLS = {
     },
 
     "10x_Visium_FFPE": {
-        "description": "10xGenomics Visium FFPE spatial data",
+        "description": "10xGenomics Visium FFPE spatial RNA-seq/GEX",
         "reads": {
             "seq_data": ('r2:1-50',),
             "index": ('r1',)
@@ -271,6 +271,18 @@ QC_PROTOCOLS = {
             'strandedness',
             'rseqc_genebody_coverage',
             'qualimap_rnaseq'
+        ]
+    },
+
+    "10x_Visium_FFPE_PEX": {
+        "description": "10xGenomics Visium FFPE spatial PEX",
+        "reads": {
+            "seq_data": ('r2:1-50',),
+            "index": ('r1',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'sequence_lengths'
         ]
     },
 
@@ -635,9 +647,10 @@ def determine_qc_protocol(project):
                                              "10xGenomics CytAssist Visium"):
         # 10xGenomics Visium spatial transcriptomics
         if project.info.library_type in ("FFPE Spatial RNA-seq",
-                                         "FFPE Spatial GEX",
-                                         "FFPE Spatial PEX"):
+                                         "FFPE Spatial GEX"):
             protocol = "10x_Visium_FFPE"
+        elif project.info.library_type == "FFPE Spatial PEX":
+            protocol = "10x_Visium_FFPE_PEX"
         else:
             protocol = "10x_Visium"
     # Multiome ATAC+GEX
