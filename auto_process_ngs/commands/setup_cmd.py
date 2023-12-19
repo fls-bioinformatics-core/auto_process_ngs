@@ -14,6 +14,7 @@ import uuid
 import shutil
 import logging
 from ..bcl2fastq.utils import get_bases_mask
+from ..bcl2fastq.utils import get_run_config
 from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..applications import general as general_applications
@@ -210,6 +211,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
         target = os.path.join(data_dir,"RunInfo.xml")
         run_info_xml = os.path.join(ap.tmp_dir,"RunInfo.xml")
         fetch_file(target,run_info_xml)
+        run_config = get_run_config(run_info_xml)
+        print("Run configuration: %s" % run_config)
         default_bases_mask = get_bases_mask(run_info_xml)
         print("Default bases mask: %s" % default_bases_mask)
     except Exception as ex:
@@ -225,6 +228,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             raise Exception("Failed to acquire RunInfo.xml: %s" % ex)
         else:
             # Can ignore if Fastqs already exist
+            run_config = None
             default_bases_mask = None
     # Attempt to acquire RunParameters.xml
     try:
@@ -309,6 +313,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.metadata['instrument_run_number'] = instrument_run_number
     ap.metadata['instrument_flow_cell_id'] = flow_cell
     ap.metadata['flow_cell_mode'] = flow_cell_mode
+    ap.metadata['run_configuration'] = run_config
     ap.metadata['default_bases_mask'] = default_bases_mask
     ap.metadata['sequencer_model'] = model
     ap.metadata['source'] = data_source
