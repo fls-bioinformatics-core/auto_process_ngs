@@ -1300,11 +1300,12 @@ def info(args):
         logger.fatal("Missing metadata and/or parameters")
         sys.exit(1)
     # Report information
-    print("Run ID        : %s" % d.run_id)
-    print("Platform      : %s" % d.metadata.platform)
-    print("Flow cell mode: %s" % d.metadata.flow_cell_mode)
-    print("Bases mask    : %s" % d.metadata.default_bases_mask)
-    print("Sample sheet  : %s" % d.params.sample_sheet)
+    print("Run ID            : %s" % d.run_id)
+    print("Platform          : %s" % d.metadata.platform)
+    print("Flow cell mode    : %s" % d.metadata.flow_cell_mode)
+    print("Run configuration : %s" % d.metadata.run_configuration)
+    print("Default bases mask: %s" % d.metadata.default_bases_mask)
+    print("Sample sheet      : %s" % d.params.sample_sheet)
 
 def metadata(args):
     """
