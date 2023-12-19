@@ -1372,7 +1372,10 @@ class SplitFastqsByLane(PipelineTask):
         # Make copies of Fastqs split by lane (if not already
         # present)
         for fq in self.args.project.fastqs:
-            if self.args.project.fastq_attrs(fq) in pre_split_fastqs:
+            fqname = self.args.project.fastq_attrs(fq)
+            fqname.lane_number = None
+            fqname = str(fqname)
+            if fqname in pre_split_fastqs:
                 print("%s: already split" % os.path.basename(fq))
                 continue
             self.add_cmd("Split %s by lane" % os.path.basename(fq),
