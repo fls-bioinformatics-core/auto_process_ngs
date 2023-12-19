@@ -1295,10 +1295,16 @@ def info(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir,allow_save_params=False)
-    # Run ID
-    print("Run ID      : %s" % d.run_id)
-    print("Platform    : %s" % d.metadata.platform)
-    print("Sample sheet: %s" % d.params.sample_sheet)
+    # Check metadata and params were loaded
+    if not (d.metadata and d.params):
+        logger.fatal("Missing metadata and/or parameters")
+        sys.exit(1)
+    # Report information
+    print("Run ID        : %s" % d.run_id)
+    print("Platform      : %s" % d.metadata.platform)
+    print("Flow cell mode: %s" % d.metadata.flow_cell_mode)
+    print("Bases mask    : %s" % d.metadata.default_bases_mask)
+    print("Sample sheet  : %s" % d.params.sample_sheet)
 
 def metadata(args):
     """
