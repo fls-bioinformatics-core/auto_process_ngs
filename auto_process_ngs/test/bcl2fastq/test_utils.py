@@ -380,6 +380,41 @@ FS10000171 = iseq
             instrument="BLEURGH",
             settings=settings),None)
 
+class TestGetRunConfig(unittest.TestCase):
+    """Tests for the get_run_config function
+    """
+    def setUp(self):
+        # Create a temporary working dir
+        self.wd = tempfile.mkdtemp()
+
+    def tearDown(self):
+        # Remove working dir
+        if self.wd is not None:
+            shutil.rmtree(self.wd)
+
+    def test_get_run_config_single_index(self):
+        """
+        get_run_config: handle single index
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.nextseq("171020_NB500968_00002_AHGXXXX"))
+        # Check the run config
+        self.assertEqual(get_run_config(run_info_xml),
+                         "R1:76bp, I1:6bp, R2:76bp")
+
+    def test_get_run_config_dual_index(self):
+        """get_run_config: handle dual index
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Check the run config
+        self.assertEqual(get_run_config(run_info_xml),
+                         "R1:101bp, I1:8bp, I2:8bp, R2:101bp")
+
 class TestAvailableBcl2fastqVersions(unittest.TestCase):
     """
     Tests for the available_bcl2fastq_versions function

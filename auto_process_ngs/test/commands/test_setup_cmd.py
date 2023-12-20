@@ -120,6 +120,8 @@ model = {model}
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:101bp, I1:8bp, I2:8bp, R2:101bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y101,I8,I8,y101")
         # Delete to force write of data to disk
@@ -194,6 +196,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,"SP")
         self.assertEqual(ap.metadata.sequencer_model,"NovaSeq 5000")
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:76bp, I1:10bp, I2:10bp, R2:76bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y76,I10,I10,y76")
         # Delete to force write of data to disk
@@ -253,6 +257,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:101bp, I1:8bp, I2:8bp, R2:101bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y101,I8,I8,y101")
         # Delete to force write of data to disk
@@ -312,6 +318,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:101bp, I1:8bp, I2:8bp, R2:101bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y101,I8,I8,y101")
         # Delete to force write of data to disk
@@ -369,6 +377,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(ap.metadata.instrument_flow_cell_id,None)
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:101bp, I1:8bp, I2:8bp, R2:101bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y101,I8,I8,y101")
 
@@ -537,6 +547,8 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                          "AHGXXXX")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:76bp, I1:6bp, R2:76bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y76,I6,y76")
         # Delete to force write of data to disk
@@ -603,6 +615,8 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:101bp, I1:8bp, I2:8bp, R2:101bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y101,I8,I8,y101")
         # Delete to force write of data to disk
@@ -686,6 +700,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                          "AHGXXXX")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:76bp, I1:6bp, R2:76bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y76,I6,y76")
         # Delete to force write of data to disk
@@ -772,6 +788,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                          "AHGXXXX")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:76bp, I1:6bp, R2:76bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y76,I6,y76")
         # Delete to force write of data to disk
@@ -839,6 +857,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:101bp, I1:8bp, I2:8bp, R2:101bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y101,I8,I8,y101")
         # Delete to force write of data to disk
@@ -916,6 +936,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,None)
         self.assertEqual(ap.metadata.default_bases_mask,None)
         # Delete to force write of data to disk
         del(ap)
@@ -997,6 +1018,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,None)
+        self.assertEqual(ap.metadata.run_configuration,None)
         self.assertEqual(ap.metadata.default_bases_mask,None)
         # Delete to force write of data to disk
         del(ap)
@@ -1111,5 +1133,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
                          "000000000-ABCDE1")
         self.assertEqual(ap.metadata.flow_cell_mode,None)
         self.assertEqual(ap.metadata.sequencer_model,"MiSeq")
+        self.assertEqual(ap.metadata.run_configuration,
+                         "R1:101bp, I1:8bp, I2:8bp, R2:101bp")
         self.assertEqual(ap.metadata.default_bases_mask,
                          "y101,I8,I8,y101")

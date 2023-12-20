@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq/utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2021 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
 #
 ########################################################################
 #
@@ -15,6 +15,7 @@ bcl2fastq/utils.py
 Utility functions for bcl to fastq conversion operations:
 
 - get_sequencer_platform: get sequencing instrument platform
+- get_run_config: report configuration of reads in the run
 - available_bcl2fastq_versions: list available bcl2fastq converters
 - bcl_to_fastq_info: retrieve information on the bcl2fastq software
 - bclconvert_info: retrieve information on the BCL Convert software
@@ -103,6 +104,40 @@ def get_sequencer_platform(dirn,instrument=None,settings=None):
         logger.warning("Unable to identify platform from "
                        "directory name")
     return platform
+
+def get_run_config(run_info_xml):
+    """
+    Get string describing run configuration
+
+    Generates a run configuration string based on data in RunInfo.xml
+    (which says how many reads there are, how many cycles in each read,
+    and which are index reads).
+
+    An example run configuration string might look like
+    'R1:59bp,I1:10bp,I2:10bp,R2:59bp'.
+
+    Arguments:
+      run_info_xml: name and path of RunInfo.xml file from the
+        sequencing run
+
+    Returns:
+      String: run configuration string.
+    """
+    run_config = []
+    read_idx = 0
+    index_idx = 0
+    for read in IlluminaData.IlluminaRunInfo(run_info_xml).reads:
+        num_cycles = int(read['num_cycles'])
+        if read['is_indexed_read'] == 'N':
+            read_idx += 1
+            run_config.append("R%d:%dbp" % (read_idx,num_cycles))
+        elif read['is_indexed_read'] == 'Y':
+            index_idx += 1
+            run_config.append("I%d:%dbp" % (index_idx,num_cycles))
+        else:
+            raise Exception("Unrecognised value for is_indexed_read: '%s'"
+                            % read['is_indexed_read'])
+    return ', '.join(run_config)
 
 def available_bcl2fastq_versions(reqs=None,paths=None):
     """
@@ -417,7 +452,7 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None):
       sample_sheet_file: (optional) path to sample sheet file
 
     Returns:
-      Bases mask string e.g. 'y101,I6'. 
+      Bases mask string e.g. 'y101,I6'.
     """
     # Get initial bases mask
     bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask

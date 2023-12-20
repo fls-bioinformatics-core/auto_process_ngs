@@ -589,7 +589,8 @@ with open(commandref,'w') as commands:
 """)
 
 import subprocess
-for subcmd in ("setup",
+for subcmd in ("info",
+               "setup",
                "make_fastqs",
                "analyse_barcodes",
                "setup_analysis_dirs",
