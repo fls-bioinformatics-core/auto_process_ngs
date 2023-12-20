@@ -195,7 +195,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(ap.metadata.flow_cell_mode,"SP")
         self.assertEqual(ap.metadata.sequencer_model,"NovaSeq 5000")
         self.assertEqual(ap.metadata.default_bases_mask,
-                         "y76,I0,I10,y76")
+                         "y76,I10,I10,y76")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
