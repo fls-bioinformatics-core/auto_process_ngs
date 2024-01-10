@@ -16,6 +16,31 @@ PLATFORMS = (
     "10xGenomics Single Cell Multiome",
 )
 
+# List of known library types for 10xGenomics
+LIBRARIES = {
+    "10xGenomics Chromium*": (
+        "scRNA-seq",
+        "snRNA-seq",
+        "CellPlex",
+        "Flex",
+    ),
+    "10xGenomics Single Cell ATAC": (
+        "scATAC-seq",
+        "snATAC-seq",
+    ),
+    "10xGenomics * Visium": (
+        "FFPE Spatial RNA-seq",
+        "Fresh Frozen RNA-seq",
+        "GEX",
+        "PEX",
+        "Spatial RNA-seq",
+    ),
+    "10xGenomics Single Cell Multiome": (
+        "ATAC",
+        "GEX",
+    ),
+}
+
 # Permissible values for cellranger count --chemistry option
 # See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
 CELLRANGER_ASSAY_CONFIGS = {
