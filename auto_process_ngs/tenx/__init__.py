@@ -9,6 +9,7 @@ PLATFORMS = (
     "10xGenomics Chromium 3'v2",
     "10xGenomics Chromium 3'v3",
     "10xGenomics Chromium 3'v3.1",
+    "10xGenomics Chromium 5'",
     "10xGenomics Single Cell ATAC",
     "10xGenomics Visium",
     "10xGenomics CytAssist Visium",
