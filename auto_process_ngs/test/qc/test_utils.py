@@ -288,6 +288,32 @@ PBB,CMO302,PBB
         self.assertEqual(get_seq_data_samples(project_dir),
                          ["PJB1"])
 
+    def test_get_seq_data_samples_10x_immune_profiling(self):
+        """
+        get_seq_data_samples: 10x Single Cell Immune Profiling project
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "Single Cell Immune Profiling",
+            single_cell_platform="10xGenomics Chromium 5'")
+        # Make 10x_multi_config.csv file
+        with open(os.path.join(project_dir,"10x_multi_config.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1,{fastq_dir},any,PJB1,gene expression,
+PJB2,{fastq_dir},any,PJB2,VDJ-T,
+""".format(fastq_dir=os.path.join(project_dir,'fastqs')))
+        # Check sequence data samples
+        self.assertEqual(get_seq_data_samples(project_dir),
+                         ["PJB1"])
+
 class TestSetCellCountForProject(unittest.TestCase):
     """
     Tests for the 'set_cell_count_for_project' function

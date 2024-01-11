@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes and functions for QC
-#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 """
 Provides utility classes and functions for analysis project QC.
@@ -317,8 +317,9 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
     # 10x Genomics CellPlex
     single_cell_platform = project.info.single_cell_platform
     if single_cell_platform:
-        if single_cell_platform.startswith("10xGenomics Chromium 3'") and \
-           project.info.library_type == "CellPlex":
+        if single_cell_platform.startswith("10xGenomics Chromium") and \
+           project.info.library_type in ("CellPlex",
+                                         "Single Cell Immune Profiling",):
             # Check for config file
             config_file = os.path.join(project.dirn,
                                        "10x_multi_config.csv")
