@@ -22,7 +22,9 @@ LIBRARIES = {
         "scRNA-seq",
         "snRNA-seq",
         "CellPlex",
+        "CellPlex scRNA-seq",
         "Flex",
+        "Single Cell Immune Profiling",
     ),
     "10xGenomics Single Cell ATAC": (
         "scATAC-seq",
