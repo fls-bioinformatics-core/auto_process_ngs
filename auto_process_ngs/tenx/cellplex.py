@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx/cellplex.py: utilities for handling 10xGenomics Cellplex data
-#     Copyright (C) University of Manchester 2023 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2024 Peter Briggs
 #
 
 """
@@ -35,6 +35,7 @@ class CellrangerMultiConfigCsv:
     Provides the following properties:
 
     - sample_names: list of multiplexed sample names
+    - sections: list of the sections in the config
     - reference_data_path: path to the reference dataset
     - probe_set_path: path to the probe set
     - feature_reference_path: path to the feature reference
@@ -62,6 +63,7 @@ class CellrangerMultiConfigCsv:
             file
         """
         self._filen = os.path.abspath(filen)
+        self._sections = []
         self._samples = {}
         self._reference_data_path = None
         self._probe_set_path = None
@@ -76,9 +78,12 @@ class CellrangerMultiConfigCsv:
         Internal: read in data from a multiplex 'config.csv' file
         """
         logger.debug("Reading data from '%s'" % self._filen)
+        sections = set()
         with open(self._filen,'rt') as config_csv:
             current_section = None
             for line in config_csv:
+                if current_section:
+                    sections.add(current_section)
                 line = line.rstrip('\n')
                 if line == "[samples]":
                     current_section = "samples"
@@ -171,6 +176,7 @@ class CellrangerMultiConfigCsv:
                             'feature_type': feature_type,
                             'subsample_rate': subsample_rate
                         }
+        self._sections = sorted(list(sections))
 
     @property
     def sample_names(self):
@@ -180,6 +186,13 @@ class CellrangerMultiConfigCsv:
         Samples are listed in the '[samples]' section.
         """
         return sorted(list(self._samples.keys()))
+
+    @property
+    def sections(self):
+        """
+        Return the list of sections in the config.csv file
+        """
+        return self._sections
 
     @property
     def reference_data_path(self):

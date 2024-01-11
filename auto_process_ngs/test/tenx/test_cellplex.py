@@ -45,6 +45,9 @@ PBB,CMO302,PBB
             os.path.join(self.wd,
                          "10x_multi_config.csv"))
         self.assertEqual(config_csv.sample_names,['PBA','PBB'])
+        self.assertEqual(config_csv.sections,['gene-expression',
+                                              'libraries',
+                                              'samples'])
         self.assertEqual(config_csv.reference_data_path,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
         self.assertEqual(config_csv.probe_set_path,None)
@@ -89,6 +92,9 @@ PB2,BC002,PB2
             os.path.join(self.wd,
                          "10x_multi_config.csv"))
         self.assertEqual(config_csv.sample_names,['PB1','PB2'])
+        self.assertEqual(config_csv.sections,['gene-expression',
+                                              'libraries',
+                                              'samples'])
         self.assertEqual(config_csv.reference_data_path,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
         self.assertEqual(config_csv.probe_set_path,
@@ -136,6 +142,10 @@ PBB,CMO302,PBB
             os.path.join(self.wd,
                          "10x_multi_config.csv"))
         self.assertEqual(config_csv.sample_names,['PBA','PBB'])
+        self.assertEqual(config_csv.sections,['feature',
+                                              'gene-expression',
+                                              'libraries',
+                                              'samples'])
         self.assertEqual(config_csv.reference_data_path,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
         self.assertEqual(config_csv.probe_set_path,None)
@@ -183,6 +193,10 @@ PBB,CMO302,PBB
             os.path.join(self.wd,
                          "10x_multi_config.csv"))
         self.assertEqual(config_csv.sample_names,['PBA','PBB'])
+        self.assertEqual(config_csv.sections,['gene-expression',
+                                              'libraries',
+                                              'samples',
+                                              'vdj'])
         self.assertEqual(config_csv.reference_data_path,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
         self.assertEqual(config_csv.probe_set_path,None)
@@ -227,6 +241,9 @@ PBB,CMO302
             os.path.join(self.wd,
                          "10x_multi_config.csv"))
         self.assertEqual(config_csv.sample_names,['PBA','PBB'])
+        self.assertEqual(config_csv.sections,['gene-expression',
+                                              'libraries',
+                                              'samples'])
         self.assertEqual(config_csv.reference_data_path,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
         self.assertEqual(config_csv.probe_set_path,None)
