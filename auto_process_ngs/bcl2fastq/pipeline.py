@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq.pipeline.py: pipelines for Fastq generation
-#     Copyright (C) University of Manchester 2020-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2020-2024 Peter Briggs
 #
 
 """
@@ -1513,6 +1513,8 @@ class MakeFastqs(Pipeline):
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
                     mask_short_adapter_reads,
+                    filter_single_index=filter_single_index,
+                    filter_dual_index=filter_dual_index,
                     jobmode=self.params.cellranger_jobmode,
                     mempercore=self.params.cellranger_mempercore,
                     maxjobs=self.params.cellranger_maxjobs,
@@ -3228,12 +3230,12 @@ class Run10xMkfastq(PipelineTask):
             to cellranger via --minimum-trimmed-read-length
           mask_short_adapter_reads (int): if set then supply to
             cellranger via --mask-short-adapter-reads
-          filter_single_index (bool): for cellranger-arc, only
+          filter_single_index (bool): for cellranger[-arc], only
             demultiplex samples identified by an i7-only sample
             index, ignoring dual-indexed samples (which will
             not be demultiplexed) (i.e. use --filter-single-index
             option)
-          filter_dual_index (bool): for cellranger-arc, only
+          filter_dual_index (bool): for cellranger[-arc], only
             demultiplex samples identified by i7/i5 dual-indices
             (e.g., SI-TT-A6), ignoring single-index samples
             (which will not be demultiplexed) (i.e. use
@@ -3433,7 +3435,8 @@ class Run10xMkfastq(PipelineTask):
         if self.args.mask_short_adapter_reads:
             mkfastq_cmd.add_args('--mask-short-adapter-reads',
                                  self.args.mask_short_adapter_reads)
-        if self.pkg == "cellranger-arc":
+        if self.pkg in ("cellranger",
+                        "cellranger-arc"):
             if self.args.filter_single_index:
                 mkfastq_cmd.add_args('--filter-single-index')
             if self.args.filter_dual_index:
