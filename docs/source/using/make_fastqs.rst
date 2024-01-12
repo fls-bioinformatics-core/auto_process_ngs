@@ -587,9 +587,11 @@ Option                                Description
 ``mask_short_adapter_reads=N``        Set minimum read length below
                                       which sequences are masked
 ``tenx_filter_single_index=yes|no``   Set ``--filter-single-index``
-                                      option for ``cellranger-arc``
+                                      option for ``cellranger``
+                                      or ``cellranger-arc``
 ``tenx_filter_dual_index=yes|no``     Set ``--filter-dual-index``
-                                      option for ``cellranger-arc``
+                                      option for ``cellranger``
+                                      or ``cellranger-arc``
 ``spaceranger_rc_i2_override=BOOL``   Set ``--rc-i2-override`` option
                                       for ``spaceranger`` (can be
                                       either ``true`` or ``false``)
