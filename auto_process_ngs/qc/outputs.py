@@ -1364,6 +1364,10 @@ class QCOutputs:
         extra_outputs_tsv = os.path.join(qc_dir,"extra_outputs.tsv")
         for output in ExtraOutputs(extra_outputs_tsv).outputs:
             output_files.add(os.path.join(qc_dir,output.file_path))
+            if output.additional_files:
+                # Add in any additional files or dirs
+                for f in output.additional_files:
+                    output_files.add(os.path.join(qc_dir,f))
         if output_files:
             tags.add("extra_outputs")
         # Return collected information
@@ -1418,9 +1422,9 @@ class ExtraOutputs:
 
     - file or directory (relative to the qc dir)
     - text description (used in HTML)
-    - optionally, list of additional files or directories
-      to include in the final ZIP archive (relative to the
-      qc dir)
+    - optionally, comma-separated list of additional files
+      or directories to include in the final ZIP archive
+      (relative to the qc dir)
 
     Blank lines and lines starting with the '#' comment
     character are ignored.

@@ -1121,7 +1121,7 @@ class TestQCOutputs(unittest.TestCase):
                                    ))
         extra_outputs_tsv = os.path.join(qc_dir,"extra_outputs.tsv")
         with open(extra_outputs_tsv,'wt') as fp:
-            fp.write("# Extra files to include in QC reporting\nanalyser/index.html\tReport from 'analyser'")
+            fp.write("# Extra files to include in QC reporting\nanalyser/index.html\tReport from 'analyser'\nfinal_result/main.html\tFinal result\tfinal_result/files")
         qc_outputs = QCOutputs(qc_dir)
         self.assertEqual(qc_outputs.outputs,
                          ['extra_outputs',
@@ -1168,6 +1168,11 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
         self.assertEqual(qc_outputs.config_files,
                          ['fastq_strand.conf'])
+        for f in ("analyser/index.html",
+                  "final_result/main.html",
+                  "final_result/files"):
+            self.assertTrue(os.path.join(qc_dir,f)
+                            in qc_outputs.output_files)
 
     def test_qcoutputs_10x_cellranger_count(self):
         """
