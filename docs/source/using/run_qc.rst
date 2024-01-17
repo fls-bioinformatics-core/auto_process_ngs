@@ -200,13 +200,37 @@ include, with the minimal specification being:
 
 ::
 
-   FILE     DESCRIPTION
+   FILE_PATH     DESCRIPTION
 
 For example:
 
 ::
 
    extra_metrics/metrics.html    Manually generated QC metrics
+
+If the output has additional associated files or directories
+(for example, the main output is an index file that then
+links to other files) then these can be included as a
+comma-separated list via an optional third field in the TSV
+file:
+
+::
+
+   FILE_PATH     DESCRIPTION     PATH1[,PATH2[,...]]
+
+For example:
+
+::
+
+   more_metrics/index.html    More QC metrics    more_metrics/results
+
+The additional files will then be included in the ZIP archive.
+
+.. note::
+
+   If any additional "files" are actually subdirectories
+   then the contents of those directories will also be
+   included automatically.
 
 ------------------
 Additional options
