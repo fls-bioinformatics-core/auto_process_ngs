@@ -638,9 +638,10 @@ class TestReportFunction(unittest.TestCase):
         analysis_dir = self._make_analysis_project(paired_end=False)
         # Add extra outputs to QC dir
         os.makedirs(os.path.join(self.top_dir,
-                                  "PJB",
-                                  "qc",
-                                  "external_outs"))
+                                 "PJB",
+                                 "qc",
+                                 "external_outs",
+                                 "results"))
         index_file = os.path.join(self.top_dir,
                                   "PJB",
                                   "qc",
@@ -648,6 +649,15 @@ class TestReportFunction(unittest.TestCase):
                                   "index.html")
         with open(index_file,'wt') as fp:
             fp.write("placeholder")
+        for f in ("result1.txt","result2.txt"):
+            ff = os.path.join(self.top_dir,
+                              "PJB",
+                              "qc",
+                              "external_outs",
+                              "results",
+                              f)
+            with open(ff,'wt') as fp:
+                fp.write("placeholder")
         # Add extra_outputs.tsv
         tsv_file = os.path.join(self.top_dir,
                                 "PJB",
@@ -655,7 +665,7 @@ class TestReportFunction(unittest.TestCase):
                                 "extra_outputs.tsv")
         with open(tsv_file,'wt') as fp:
             fp.write("""# External files to include in QC report
-external_outs/index.html\tExternal outputs
+external_outs/index.html\tExternal outputs\texternal_outs/results
 """)
         # Generate report and ZIP archive
         project = AnalysisProject('PJB',analysis_dir)
@@ -694,7 +704,9 @@ external_outs/index.html\tExternal outputs
             'report.SE.PJB/qc/PJB2_S2_R1_001_screen_other_organisms.txt',
             'report.SE.PJB/qc/PJB2_S2_R1_001_screen_rRNA.png',
             'report.SE.PJB/qc/PJB2_S2_R1_001_screen_rRNA.txt',
-            'report.SE.PJB/qc/external_outs/index.html')
+            'report.SE.PJB/qc/external_outs/index.html',
+            'report.SE.PJB/qc/external_outs/results/result1.txt',
+            'report.SE.PJB/qc/external_outs/results/result2.txt')
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
 
