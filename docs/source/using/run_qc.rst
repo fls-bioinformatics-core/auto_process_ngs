@@ -176,6 +176,62 @@ The behaviour is controlled by the ``split_undetermined_fastqs``
 setting in the ``qc`` section of the configuration file (see
 :ref:`qc_pipeline_configuration`).
 
+-----------------------------------------
+Including external (non-pipeline) outputs
+-----------------------------------------
+
+It is possible to include links within the QC reports to
+additional output files produced outside of the pipeline,
+by specifying them within an ``extra_outputs.tsv`` file.
+
+If this file is present in the QC directory being reported
+then any additional external files which it specifies
+will be linked from the "Extra outputs" section in the
+report. The specified files will also be included in the
+ZIP archive.
+
+.. note::
+
+   The additional files must also be within the QC
+   directory.
+
+Each line in the TSV file specifies an output file to
+include, with the minimal specification being:
+
+::
+
+   FILE_PATH     DESCRIPTION
+
+For example:
+
+::
+
+   extra_metrics/metrics.html    Manually generated QC metrics
+
+If the output has additional associated files or directories
+(for example, the main output is an index file that then
+links to other files) then these can be included as a
+comma-separated list via an optional third field in the TSV
+file:
+
+::
+
+   FILE_PATH     DESCRIPTION     PATH1[,PATH2[,...]]
+
+For example:
+
+::
+
+   more_metrics/index.html    More QC metrics    more_metrics/results
+
+The additional files will then be included in the ZIP archive.
+
+.. note::
+
+   If any additional "files" are actually subdirectories
+   then the contents of those directories will also be
+   included automatically.
+
 ------------------
 Additional options
 ------------------

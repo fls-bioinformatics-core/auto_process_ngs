@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 
 """
@@ -114,6 +114,7 @@ from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
 from .outputs import QCOutputs
+from .outputs import ExtraOutputs
 from .picard import CollectInsertSizeMetrics
 from .plots import RGB_COLORS
 from .plots import Plot
@@ -710,6 +711,13 @@ class QCReport(Document):
                 # Add an empty section to clear HTML floats
                 clear = project_summary.add_subsection(
                     css_classes=("clear",))
+            # Extra/external outputs
+            if 'extra_outputs' in project.outputs:
+                extra_outputs = project_summary.add_subsection(
+                    "Extra Outputs",
+                    name="extra_outputs_%s" % sanitize_name(project.id))
+                self.report_extra_outputs(project,
+                                          section=extra_outputs)
             # Report additional metrics in a separate table
             additional_metrics = self._add_toggle_section(
                 project_summary,
@@ -1372,6 +1380,35 @@ class QCReport(Document):
             # Update flag to indicate problems with the
             # report
             self.status = False
+
+    def report_extra_outputs(self,project,section):
+        """
+        Report extra/external outputs
+
+        Populates the specified section with a list of
+        links to the extra/external outputs referenced
+        in the 'extra_outputs.tsv' file in the QC
+        directory of the project.
+
+        Arguments:
+          project (QCProject): project to report
+          section (Section): document section to add
+            the extra outputs to
+        """
+        # Fetch the QC dir
+        qc_dir = self.fetch_qc_dir(project)
+        # Locate the extra_outputs.tsv file
+        extra_outputs_tsv = os.path.join(qc_dir,
+                                         "extra_outputs.tsv")
+        # Add data to the report
+        outputs = List()
+        for output in ExtraOutputs(extra_outputs_tsv).outputs:
+            file_path = os.path.join(qc_dir,output.file_path)
+            if self.relpath:
+                file_path = os.path.relpath(file_path,self.relpath)
+            outputs.add_item("<a href=\"%s\">%s</a>" % (file_path,
+                                                        output.description))
+        section.add(outputs)
 
     def report_additional_metrics(self,project,section):
         """

@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 #
 #     qc/outputs: utilities to predict and check QC pipeline outputs
-#     Copyright (C) University of Manchester 2019-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
 #
 """
 Provides utility classes and functions for QC outputs.
 
-Provides the following class:
+Provides the following classes:
 
 - QCOutputs: detect and characterise QC outputs
+- ExtraOutputs: helper class for reading 'extra_outputs.tsv' file
 
 Provides the following functions:
 
@@ -118,6 +119,7 @@ class QCOutputs:
     - 'cellranger-atac_count'
     - 'cellranger-arc_count'
     - 'multiqc'
+    - 'extra_outputs'
 
     The following are valid values for the 'config_files'
     property:
@@ -240,7 +242,8 @@ class QCOutputs:
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(self.qc_dir),
                 self._collect_cellranger_multi(self.qc_dir),
-                self._collect_multiqc(self.qc_dir),):
+                self._collect_multiqc(self.qc_dir),
+                self._collect_extra_outputs(self.qc_dir)):
             self._add_qc_outputs(qc_data)
         # Collect QC config files
         self.config_files = self._collect_qc_config_files(files)
@@ -1287,7 +1290,7 @@ class QCOutputs:
 
     def _collect_multiqc(self,qc_dir):
         """
-        Collect information on MultQC reports
+        Collect information on MultiQC reports
 
         Returns an AttributeDictionary with the following
         attributes:
@@ -1338,6 +1341,44 @@ class QCOutputs:
             tags=sorted(list(tags))
         )
 
+    def _collect_extra_outputs(self,qc_dir):
+        """
+        Collect information on additional outputs
+
+        Returns an AttributeDictionary with the following
+        attributes:
+
+        - name: set to 'extra_outputs'
+        - software: dictionary of software and versions
+        - output_files: list of associated output files
+        - tags: list of associated output classes
+
+        Arguments:
+          qc_dir (str): top-level directory to look under.
+        """
+        version = None
+        software = dict()
+        output_files = set()
+        tags = set()
+        # Look for extra_outputs.tsv
+        extra_outputs_tsv = os.path.join(qc_dir,"extra_outputs.tsv")
+        for output in ExtraOutputs(extra_outputs_tsv).outputs:
+            output_files.add(os.path.join(qc_dir,output.file_path))
+            if output.additional_files:
+                # Add in any additional files or dirs
+                for f in output.additional_files:
+                    output_files.add(os.path.join(qc_dir,f))
+        if output_files:
+            tags.add("extra_outputs")
+        # Return collected information
+        return AttributeDictionary(
+            name='extra_outputs',
+            software=software,
+            fastqs=[],
+            output_files=sorted(list(output_files)),
+            tags=sorted(list(tags))
+        )
+
     def _collect_qc_config_files(self,files):
         """
         Collect information on QC config files
@@ -1368,6 +1409,72 @@ class QCOutputs:
                              files)):
             config_files.add(os.path.basename(f))
         return sorted(list(config_files))
+
+class ExtraOutputs:
+    """
+    Class for handling files specifying external QC outputs
+
+    Reads data from the supplied tab-delimited (TSV) file
+    specifying one or more external QC output files.
+
+    Each line in the file should have up to three items
+    separated by tabs:
+
+    - file or directory (relative to the qc dir)
+    - text description (used in HTML)
+    - optionally, comma-separated list of additional files
+      or directories to include in the final ZIP archive
+      (relative to the qc dir)
+
+    Blank lines and lines starting with the '#' comment
+    character are ignored.
+
+    The data from each line of the file is then available
+    via the 'outputs' attribute, which provides a list
+    of 'AttributeDictionary' objects with the following
+    properties:
+
+    - 'file_path': relative path to the output file
+    - 'description': associated description
+    - 'additional_files': list of the associated files
+
+    Arguments:
+      tsv_file (str): path to the input TSV file
+    """
+    def __init__(self,tsv_file):
+        self.tsv_file = os.path.abspath(tsv_file)
+        self.outputs = list()
+        self.__load()
+
+    def __load(self):
+        """
+        Internal: loads data from the supplied TSV file
+        """
+        if not os.path.exists(self.tsv_file):
+            return
+        with open(self.tsv_file,'rt') as fp:
+            for line in fp:
+                line = line.strip()
+                if line.startswith('#') or not line:
+                    continue
+                items = line.split('\t')
+                if len(items) > 3:
+                    raise IndexError("Bad line (too many items): '%s'" %
+                                     line)
+                try:
+                    file_path = items[0]
+                    description = items[1]
+                except IndexError:
+                    raise IndexError("Bad line (not enough items): '%s'" %
+                                     line)
+                try:
+                    additional_files = items[2].split(',')
+                except IndexError:
+                    additional_files = None
+                self.outputs.append(
+                    AttributeDictionary(file_path=file_path,
+                                        description=description,
+                                        additional_files=additional_files))
 
 #######################################################################
 # Functions

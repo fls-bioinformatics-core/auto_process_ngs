@@ -12,6 +12,7 @@ from auto_process_ngs.mockqc import make_mock_qc_dir
 from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import QCOutputs
+from auto_process_ngs.qc.outputs import ExtraOutputs
 from auto_process_ngs.qc.outputs import fastq_screen_output
 from auto_process_ngs.qc.outputs import fastqc_output
 from auto_process_ngs.qc.outputs import fastq_strand_output
@@ -1107,6 +1108,72 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.config_files,
                          ['fastq_strand.conf'])
 
+    def test_qcoutputs_paired_end_extra_outputs_tsv(self):
+        """
+        QCOutputs: paired-end data with 'extra_outputs.tsv'
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ))
+        extra_outputs_tsv = os.path.join(qc_dir,"extra_outputs.tsv")
+        with open(extra_outputs_tsv,'wt') as fp:
+            fp.write("# Extra files to include in QC reporting\nanalyser/index.html\tReport from 'analyser'\nfinal_result/main.html\tFinal result\tfinal_result/files")
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['extra_outputs',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+        for f in ("analyser/index.html",
+                  "final_result/main.html",
+                  "final_result/files"):
+            self.assertTrue(os.path.join(qc_dir,f)
+                            in qc_outputs.output_files)
+
     def test_qcoutputs_10x_cellranger_count(self):
         """
         QCOutputs: 10xGenomics data with cellranger 'count'
@@ -1857,6 +1924,45 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
         self.assertEqual(qc_outputs.config_files,
                          ['fastq_strand.conf'])
+
+class TestExtraOutputs(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_ExtraOutputs')
+    def tearDown(self):
+        # Remove temporary working dir
+        if not REMOVE_TEST_OUTPUTS:
+            return
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
+    def test_extra_outputs(self):
+        """
+        ExtraOutputs: load data from TSV file
+        """
+        tsv_file = os.path.join(self.wd,"example.tsv")
+        with open(tsv_file,'wt') as fp:
+            fp.write("""# Example TSV file with external files
+stuff.html\tSome random output
+#more_stuff.html\tMore random output
+external_stuff/index.html\tBunch of external stuff\texternal_stuff/results,external_stuff/more_results
+
+""")
+        extra_outputs = ExtraOutputs(tsv_file)
+        self.assertEqual(len(extra_outputs.outputs),2)
+        self.assertEqual(extra_outputs.outputs[0].file_path,
+                         "stuff.html")
+        self.assertEqual(extra_outputs.outputs[0].description,
+                         "Some random output")
+        self.assertEqual(extra_outputs.outputs[0].additional_files,
+                         None)
+        self.assertEqual(extra_outputs.outputs[1].file_path,
+                         "external_stuff/index.html")
+        self.assertEqual(extra_outputs.outputs[1].description,
+                         "Bunch of external stuff")
+        self.assertEqual(extra_outputs.outputs[1].additional_files,
+                         ["external_stuff/results",
+                          "external_stuff/more_results"])
 
 class TestFastqScreenOutputFunction(unittest.TestCase):
     def test_fastq_screen_output(self):
