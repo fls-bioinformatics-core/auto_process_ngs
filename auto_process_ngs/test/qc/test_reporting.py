@@ -631,6 +631,73 @@ class TestReportFunction(unittest.TestCase):
         self.assertTrue(os.path.exists(
             os.path.join(self.top_dir,'report.PE.html')))
 
+    def test_report_single_end_extra_outputs(self):
+        """
+        report: single-end data: include extra outputs from TSV
+        """
+        analysis_dir = self._make_analysis_project(paired_end=False)
+        # Add extra outputs to QC dir
+        os.makedirs(os.path.join(self.top_dir,
+                                  "PJB",
+                                  "qc",
+                                  "external_outs"))
+        index_file = os.path.join(self.top_dir,
+                                  "PJB",
+                                  "qc",
+                                  "external_outs",
+                                  "index.html")
+        with open(index_file,'wt') as fp:
+            fp.write("placeholder")
+        # Add extra_outputs.tsv
+        tsv_file = os.path.join(self.top_dir,
+                                "PJB",
+                                "qc",
+                                "extra_outputs.tsv")
+        with open(tsv_file,'wt') as fp:
+            fp.write("""# External files to include in QC report
+external_outs/index.html\tExternal outputs
+""")
+        # Generate report and ZIP archive
+        project = AnalysisProject('PJB',analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'PJB',
+                                                'report.SE.html'),
+               make_zip=True)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'PJB','report.SE.html')))
+        with open(os.path.join(self.top_dir,'PJB','report.SE.html'),'rt') \
+             as fp:
+            # Check external content is linked in HTML report
+            report_content = fp.read()
+            self.assertTrue(report_content.find(
+                '<li><a href="%s/external_outs/index.html">External outputs</a></li>' % project.qc_dir) > -1)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'PJB','report.SE.PJB.zip')))
+        contents = zipfile.ZipFile(
+            os.path.join(self.top_dir,'PJB',
+                         'report.SE.PJB.zip')).namelist()
+        print(contents)
+        expected = (
+            'report.SE.PJB/report.SE.html',
+            'report.SE.PJB/multiqc_report.html',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_fastqc.html',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_rRNA.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_screen_rRNA.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_fastqc.html',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_rRNA.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_screen_rRNA.txt',
+            'report.SE.PJB/qc/external_outs/index.html')
+        for f in expected:
+            self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
+
 class TestPrettyPrintReadsFunction(unittest.TestCase):
 
     def test_pretty_print_reads(self):
