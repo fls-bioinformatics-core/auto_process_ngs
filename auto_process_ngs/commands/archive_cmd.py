@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
-#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2024 Peter Briggs
 #
 #########################################################################
 
@@ -203,6 +203,18 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             logging.warning("Error trying to fetch analysis projects: "
                             "%s" % ex)
             projects = []
+        # Check projects for empty 'Visium_images' subdirs
+        # when doing final archiving
+        if final and not force:
+            for project in projects:
+                visium_images = os.path.join(project.dirn,"Visium_images")
+                if os.path.isdir(visium_images):
+                    if not os.listdir(visium_images):
+                        raise Exception("'%s': project contains "
+                                        "'Visium_images' directory which "
+                                        "is empty; either populate or "
+                                        "remove (or use --force)" %
+                                        project.name)
         if not projects:
             if not force:
                 raise Exception("No project directories found, nothing "
