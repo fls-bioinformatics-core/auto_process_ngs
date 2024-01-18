@@ -258,7 +258,7 @@ QC_PROTOCOLS = {
             'cellranger_count(cellranger_use_multi_config=True;'
                              'set_cell_count=false;'
                              'set_metadata=False)',
-            'cellranger_multi'
+            #'cellranger_multi'
         ]
     },
 
