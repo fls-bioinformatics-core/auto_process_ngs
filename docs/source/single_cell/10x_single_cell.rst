@@ -29,6 +29,7 @@ and available to ``auto_process.py``:
 Single cell/single nuclei RNA-seq CellRanger
 Single cell ATAC-seq              CellRanger-ATAC
 Single cell multiome              CellRanger-ARC
+Single cell immune profiling      Cellranger
 CellPlex (cell multiplexing)      CellRanger
 Flex (fixed RNA profiling)        CellRanger
 ================================= =================
@@ -58,6 +59,7 @@ Single cell ATAC-seq                                ``10x_atac``
 Single cell multiome (unpooled GEX or ATAC)         ``10x_multiome``
 Single cell multiome GEX (pooled GEX and ATAC)      ``10x_multiome_gex``
 Single cell multiome ATAC (pooled GEX and ATAC)     ``10x_multiome_atac``
+Single cell immune profiling                        ``10x_chromium_sc``
 CellPlex (cell multiplexing)                        ``10x_chromium_sc``
 Flex (fixed RNA profiling)                          ``10x_chromium_sc``
 =================================================== =====================
@@ -126,6 +128,7 @@ Single cell platform                  Library types
                                       ``CellPlex``, ``Flex``
 ``10xGenomics Chromium 3'v2``         ``scRNA-seq``, ``snRNA-seq``
                                       ``CellPlex``, ``Flex``
+``10xGenomics Chromium 5'``           ``Single Cell Immune Profiling``
 ``10xGenomics Single Cell ATAC``      ``scATAC-seq``, ``snATAC-seq``
 ``10xGenomics Single Cell Multiome``  ``ATAC``, ``GEX``
 ===================================== ==============================
