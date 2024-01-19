@@ -203,18 +203,24 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             logging.warning("Error trying to fetch analysis projects: "
                             "%s" % ex)
             projects = []
-        # Check projects for empty 'Visium_images' subdirs
-        # when doing final archiving
-        if final and not force:
-            for project in projects:
-                visium_images = os.path.join(project.dirn,"Visium_images")
-                if os.path.isdir(visium_images):
-                    if not os.listdir(visium_images):
-                        raise Exception("'%s': project contains "
-                                        "'Visium_images' directory which "
-                                        "is empty; either populate or "
-                                        "remove (or use --force)" %
-                                        project.name)
+        # Check projects
+        empty_visium_dirs = False
+        for project in projects:
+            # Check for empty 'Visium_images' subdirs
+            visium_images = os.path.join(project.dirn,"Visium_images")
+            if os.path.isdir(visium_images):
+                if not os.listdir(visium_images):
+                    logger.warning("'%s': project contains an empty "
+                                   "'Visium_images' subdirectory" %
+                                   project.name)
+                    empty_visium_dirs = True
+        # Check for problems before final archiving
+        if final and empty_visium_dirs:
+            if not force:
+                raise Exception("Empty 'Visium_images' subdirectories "
+                                "detected in one or more projects; "
+                                "either populate or remove (or use "
+                                "--force)")
         if not projects:
             if not force:
                 raise Exception("No project directories found, nothing "
