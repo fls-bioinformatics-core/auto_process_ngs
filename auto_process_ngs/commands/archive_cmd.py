@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
-#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2024 Peter Briggs
 #
 #########################################################################
 
@@ -200,9 +200,27 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         try:
             projects = ap.get_analysis_projects()
         except Exception as ex:
-            logging.warning("Error trying to fetch analysis projects: "
-                            "%s" % ex)
+            logger.warning("Error trying to fetch analysis projects: "
+                           "%s" % ex)
             projects = []
+        # Check projects
+        empty_visium_dirs = False
+        for project in projects:
+            # Check for empty 'Visium_images' subdirs
+            visium_images = os.path.join(project.dirn,"Visium_images")
+            if os.path.isdir(visium_images):
+                if not os.listdir(visium_images):
+                    logger.warning("'%s': project contains an empty "
+                                   "'Visium_images' subdirectory" %
+                                   project.name)
+                    empty_visium_dirs = True
+        # Check for problems before final archiving
+        if final and empty_visium_dirs:
+            if not force:
+                raise Exception("Empty 'Visium_images' subdirectories "
+                                "detected in one or more projects; "
+                                "either populate or remove (or use "
+                                "--force)")
         if not projects:
             if not force:
                 raise Exception("No project directories found, nothing "
@@ -213,9 +231,9 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 unaligned_dir = os.path.join(ap.analysis_dir,
                                              unaligned_dir)
             if os.path.exists(unaligned_dir):
-                logging.warning("No project directories found, forcing "
-                                "archiving of bcl2fastq output directory "
-                                "'%s' instead" % ap.params.unaligned_dir)
+                logger.warning("No project directories found, forcing "
+                               "archiving of bcl2fastq output directory "
+                               "'%s' instead" % ap.params.unaligned_dir)
                 include_bcl2fastq = True
             else:
                 raise Exception("No project directories or bcl2fastq "
