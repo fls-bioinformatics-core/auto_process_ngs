@@ -10,6 +10,7 @@
 #######################################################################
 
 import os
+import fnmatch
 import shutil
 import json
 import logging
@@ -113,6 +114,17 @@ def setup_analysis_dirs(ap,
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")
+            if sc_platform in tenx.PLATFORMS:
+                library_type = line['Library']
+                for pltfrm in tenx.LIBRARIES:
+                    if fnmatch.fnmatch(sc_platform,pltfrm):
+                        if not library_type in tenx.LIBRARIES[pltfrm]:
+                            # Warn if library is not recognised but carry on
+                            logger.warning("Unrecognised platform/library "
+                                           "combination for '%s': '%s/%s'"
+                                           % (line['Project'],
+                                              sc_platform,
+                                              library_type))
     # Create the projects
     n_projects = 0
     for line in project_metadata:
