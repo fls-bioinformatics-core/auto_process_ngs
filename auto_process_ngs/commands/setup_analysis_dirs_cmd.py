@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     setup_analysis_dirs_cmd.py: implement 'setup_analysis_dirs' command
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 #########################################################################
 
@@ -182,7 +182,8 @@ def setup_analysis_dirs(ap,
                 logger.warning("Failed to create '%s': %s" % (f,ex))
         elif single_cell_platform.startswith("10xGenomics Chromium") and \
            (library_type.startswith("CellPlex") or
-            library_type == "Flex"):
+            library_type == "Flex" or
+            library_type == "Single Cell Immune Profiling"):
             # Set library type for config
             library = library_type.split()[0]
             print("-- setting up 'multi' config file for '%s'" % library)
