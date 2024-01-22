@@ -23,6 +23,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 #######################################################################
+# Data
+#######################################################################
+
+# Internal representation of known feature types that can
+# appear in library definitions
+KNOWN_FEATURE_TYPES = (
+    "gene_expression",
+    "multiplexing_capture",
+    "antibody_capture",
+    "vdj_b",
+    "vdj_t",
+)
+
+#######################################################################
 # Classes
 #######################################################################
 
@@ -69,7 +83,7 @@ class CellrangerMultiConfigCsv:
         self._probe_set_path = None
         self._feature_reference_path = None
         self._vdj_reference_path = None
-        self._gex_libraries = {}
+        self._libraries = {}
         self._fastq_dirs = {}
         self._read_config_csv()
 
@@ -165,11 +179,13 @@ class CellrangerMultiConfigCsv:
                                                               line))
                         # Store Fastq dir
                         self._fastq_dirs[name] = fastqs
-                        # Store GEX libraries
-                        if feature_type.lower() != "gene expression":
-                            # Ignore
-                            continue
-                        self._gex_libraries[name] = {
+                        # Store library
+                        feature_name = self._feature_name(feature_type)
+                        if feature_name not in KNOWN_FEATURE_TYPES:
+                            raise Exception("'%s': unrecognised feature type "
+                                            "in multi config file" %
+                                            feature_type)
+                        self._libraries[name] = {
                             'fastqs': fastqs,
                             'lanes': lanes,
                             'library_id': library_id,
@@ -229,7 +245,7 @@ class CellrangerMultiConfigCsv:
 
         Libraries are listed in the '[libraries]' section
         """
-        return sorted(list(self._gex_libraries.keys()))
+        return self.libraries("gene_expression")
 
     @property
     def fastq_dirs(self):
@@ -251,7 +267,63 @@ class CellrangerMultiConfigCsv:
         """
         return self._samples[sample_name]
 
-    def gex_library(self,name):
+    @property
+    def feature_types(self):
+        """
+        Return list of feature types defined in config file
+
+        Feature type names are returned converted to lower case.
+        """
+        return sorted(list(set([self._libraries[n]['feature_type'].lower()
+                                for n in self._libraries])))
+
+    def libraries(self,feature_type):
+        """
+        Return library names associated with specified feature type
+        """
+        return sorted(list(self._libraries_for_feature_type(feature_type)))
+
+    def _feature_name(self,feature_type):
+        """
+        Convert feature type to internal feature name
+
+        Converts the feature type as it appears in the config
+        file (e.g. 'Gene Expression', 'VDJ-T') to an internal
+        version, by converting to lower case and replacing
+        spaces and hyphens with underscores (e.g.
+        'gene_expression', 'vdj_t')
+        """
+        return str(feature_type).lower().replace(' ','_').replace('-','_')
+
+    def _libraries_for_feature_type(self,feature_type):
+        """
+        Return subset of libraries matching specified feature type
+
+        Subset is returned as a dictionary.
+
+        Arguments:
+          feature_type (str): feature to return list of (e.g.
+            'Gene expression', 'VDJ-T')
+
+        Returns:
+          Dictionary: keys are library names with the matching
+            feature type.
+
+        Raises:
+          KeyError: if the feature type is not found.
+        """
+        feature_name = self._feature_name(feature_type)
+        try:
+            return {
+                n: self._libraries[n]
+                for n in self._libraries
+                if self._feature_name(self._libraries[n]['feature_type'])
+                == feature_name
+            }
+        except KeyError:
+            raise KeyError("'%s': feature type not found" % feature_type)
+
+    def library(self,feature_type,name):
         """
         Return dictionary of values associated with library
 
@@ -260,13 +332,24 @@ class CellrangerMultiConfigCsv:
         - 'fastqs' (path to Fastqs)
         - 'lanes' (associated lanes)
         - 'library_id' (physical library ID)
-        - 'feature_type' (will be 'gene expression')
+        - 'feature_type' (e.g. 'Gene Expression')
         - 'subsample_rate' (the associated subsampling rate)
 
         Arguments:
-          sample_name (str): name of the sample of interest
+          feature_type (str): feature type of the library of
+            interest (e.g. 'Gene Expression')
+          name (str): name of the library of interest
         """
-        return self._gex_libraries[name]
+        return self._libraries_for_feature_type(feature_type)[name]
+
+    def gex_library(self,name):
+        """
+        Return dictionary of values associated with GEX library
+
+        Arguments:
+          name (str): name of the sample of interest
+        """
+        return self.library("gene expression",name)
 
     def pretty_print_samples(self):
         """
