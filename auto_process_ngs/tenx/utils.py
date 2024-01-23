@@ -552,27 +552,39 @@ def make_multi_config_template(f,reference=None,probe_set=None,
       samples (list): list of sample names
       no_bam (bool): if set then will be the value of the
         'no-bam' setting
-      library_type (str): specify the type of data that the
-        configuration file will be used with, either
-        'CellPlex' (the default) or 'Flex'
+      library_type (str): specify the library type of data
+        that the configuration file will be used with;
+        should be one of 'CellPlex[...]' (the default),
+        'Flex' or 'Single Cell Immune Profiling'
     """
+    # Normalise supplied library type
+    if library_type.startswith("CellPlex"):
+        library_type == "cellplex"
+    library_type = library_type.lower()
+    # Write template file
     with open(f,'wt') as fp:
+        # Header
         fp.write("## 10x_multi_config.csv\n"
                  "## See:\n")
-        if library_type == "CellPlex":
+        if library_type == "cellplex":
                  fp.write("## * CellPlex: https://support.10xgenomics.com/"
                           "single-cell-gene-expression/software/pipelines/"
                           "latest/using/multi#cellranger-multi\n")
-        elif library_type == "Flex":
-            fp.write("## * Flex:https://support.10xgenomics.com/"
+        elif library_type == "flex":
+            fp.write("## * Flex: https://support.10xgenomics.com/"
                      "single-cell-gene-expression/software/pipelines/"
                      "latest/using/multi-frp#cellranger-multi\n")
+        elif library_type == "single cell immune profiling":
+            fp.write("## * Single Cell Immune Profiling: "
+                     "https://support.10xgenomics.com/"
+                     "single-cell-vdj/software/pipelines/latest/using/"
+                     "multi\n")
         # Gene expression section
         fp.write("[gene-expression]\n")
         fp.write("reference,%s\n" %
                  (reference if reference
                   else "/path/to/transcriptome"))
-        if library_type == "Flex":
+        if library_type == "flex":
             fp.write("probe-set,%s\n" %
                      (probe_set if probe_set
                       else "/path/to/probe/set"))
@@ -588,28 +600,31 @@ def make_multi_config_template(f,reference=None,probe_set=None,
                  "#reference,/path/to/feature/reference\n")
         fp.write("\n")
         # V(D)J section
-        fp.write("#[vdj]\n"
-                 "#reference,/path/to/vdj/reference\n")
-        fp.write("\n")
+        if library_type == "single cell immune profiling":
+            fp.write("#[vdj]\n"
+                     "#reference,/path/to/vdj/reference\n")
+            fp.write("\n")
         # Libraries section
         fp.write("[libraries]\n"
                  "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
         if samples:
-            if library_type == "CellPlex":
-                tenx_library_type = "[Gene Expression|Multiplexing Capture|Antibody Capture|VDJ-B|VDJ-T]"
-            elif library_type == "Flex":
+            if library_type == "cellplex":
+                tenx_library_type = "[Gene Expression|Multiplexing Capture]"
+            elif library_type == "flex":
                 tenx_library_type = "[Gene Expression|Antibody Capture]"
+            elif library_type == "single cell immune profiling":
+                tenx_library_type = "[Gene Expression|Antibody Capture|VDJ-B|VDJ-T]"
             for sample in samples:
                 fp.write("{sample},{fastqs_dir},any,{sample},{tenx_library_type},\n".format(
                     sample=sample,
                     fastqs_dir=(fastq_dir if fastq_dir else "/path/to/fastqs"),
                     tenx_library_type=tenx_library_type))
-        fp.write("\n")
-        # Samples section
-        fp.write("[samples]\n")
-        if library_type == "CellPlex":
+        # Multiplexed samples section
+        if library_type == "cellplex":
+            fp.write("\n[samples]\n")
             fp.write("sample_id,cmo_ids,description\n"
                      "MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION\n")
-        elif library_type == "Flex":
+        elif library_type == "flex":
+            fp.write("\n[samples]\n")
             fp.write("sample_id,probe_barcode_ids,description\n"
                      "MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION\n")
