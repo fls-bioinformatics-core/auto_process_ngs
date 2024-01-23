@@ -196,9 +196,7 @@ def setup_analysis_dirs(ap,
            (library_type.startswith("CellPlex") or
             library_type == "Flex" or
             library_type == "Single Cell Immune Profiling"):
-            # Set library type for config
-            library = library_type.split()[0]
-            print("-- setting up 'multi' config file for '%s'" % library)
+            print("-- setting up 'multi' config file for '%s'" % library_type)
             # Acquire reference transcriptome dataset
             print("-- looking up transcriptome for '%s'" % organism)
             try:
@@ -213,7 +211,7 @@ def setup_analysis_dirs(ap,
                                (project_name,ex))
                 reference_dataset = None
             # Acquire probe set
-            if library == "Flex":
+            if library_type == "Flex":
                 print("-- looking up probe set for '%s'" % organism)
                 try:
                     organism_id = normalise_organism_name(organism)
@@ -239,7 +237,7 @@ def setup_analysis_dirs(ap,
                     probe_set=probe_set,
                     fastq_dir=project.fastq_dir,
                     samples=[s.name for s in project.samples],
-                    library_type=library)
+                    library_type=library_type)
             except Exception as ex:
                 logger.warning("Failed to create '%s': %s" % (f,ex))
         # Additional subdir for Visium images

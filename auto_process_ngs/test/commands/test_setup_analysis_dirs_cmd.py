@@ -588,7 +588,7 @@ AB\tAB1\tAlan Brown\tFlex\t10xGenomics Chromium 3'v3\tHuman\tAudrey Benson\t1% P
 
     def test_setup_analysis_dirs_10x_immune_profiling(self):
         """
-        setup_analysis_dirs: create new analysis dir for 10x single cell immune profiling
+        setup_analysis_dirs: create new analysis dir for 10x Single Cell Immune Profiling
         """
         # Make a mock auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
