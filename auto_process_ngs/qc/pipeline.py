@@ -822,8 +822,9 @@ class QCPipeline(Pipeline):
 
                 # Run cellranger multi
                 run_cellranger_multi = RunCellrangerMulti(
-                    "%s: analyse cell multiplexing data (cellranger multi)" %
-                    project_name,
+                    "%s: run cellranger multi (%s)" %
+                    (project_name,
+                     project.info.library_type),
                     project,
                     get_cellranger_multi_config.output.config_csv,
                     get_cellranger_multi_config.output.samples,
