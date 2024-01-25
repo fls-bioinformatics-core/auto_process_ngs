@@ -3911,12 +3911,28 @@ class RunQualimapRnaseq(PipelineTask):
                              -outdir {out_dir} \\
                              -outformat HTML \\
                              --java-mem-size={java_mem_size}
+                         if [ $? -ne 0 ] ; then
+                           echo "{bam}: qualimap rnaseq failed"
+                           exit 1
+                         fi
+                         # Check expected outputs
+                         for f in {outputs} ; do
+                           if [ ! -e {out_dir}/$f ] ; then
+                             echo "{bam}: missing output file $f"
+                             exit 1
+                           fi
+                         done
+                         # Copy outputs to final location
+                         mkdir -p {final_dir}
+                         cp -r {out_dir}/* {final_dir}
                          """.format(
                              bam=bam,
                              feature_file=self.args.feature_file,
+                             final_dir=os.path.join(self.args.out_dir,bam_name),
                              sequencing_protocol=seq_protocol,
                              paired=('-pe' if paired_end else ''),
                              out_dir=bam_name,
+                             outputs=' '.join(qualimap_rnaseq_output()),
                              nthreads=self.runner_nslots,
                              java_gc_threads=self.java_gc_threads,
                              java_mem_size=self.java_mem_size))
@@ -3933,26 +3949,6 @@ class RunQualimapRnaseq(PipelineTask):
             return
         if not self.args.bam_properties:
             return
-        for bam in self.args.bam_files:
-            # Check outputs for each BAM
-            bam_name = os.path.basename(bam)[:-4]
-            out_dir = os.path.join(self.args.out_dir,bam_name)
-            outputs_exist = True
-            for f in qualimap_rnaseq_output(out_dir):
-                outputs_exist = (outputs_exist and os.path.exists(f))
-            if outputs_exist:
-                print("outputs already exist for %s" % bam_name)
-            else:
-                if not os.path.exists(bam_name):
-                    print("*** %s: outputs not found ***" % bam_name)
-                    missing_outputs = True
-                else:
-                    os.makedirs(self.args.out_dir,exist_ok=True)
-                    print("copying outputs for %s" % bam_name)
-                    if os.path.exists(out_dir):
-                        # Remove existing (incomplete) outputs
-                        shutil.rmtree(out_dir)
-                    shutil.copytree(bam_name,out_dir)
         # Qualimap version
         if os.path.exists("_versions"):
             qualimap_version = None
