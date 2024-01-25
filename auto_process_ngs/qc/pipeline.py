@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
 #
 
 """
@@ -2652,20 +2652,20 @@ class RunCellrangerCount(PipelineTask):
         for sample in self.args.samples:
             # Check final outputs
             run_cellranger_count = False
-            counts_dir = os.path.abspath(
+            count_dir = os.path.abspath(
                 os.path.join(self.args.out_dir,
                              "cellranger_count",
                              cellranger_version,
                              os.path.basename(self.args.reference_data_path),
                              sample))
-            outs_dir = os.path.join(counts_dir,"outs")
+            outs_dir = os.path.join(count_dir,"outs")
             for f in self._outs_files:
                 path = os.path.join(outs_dir,f)
                 if not os.path.exists(path):
                     run_cellranger_count = True
                     break
             for f in self._top_level_files:
-                path = os.path.join(counts_dir,f)
+                path = os.path.join(count_dir,f)
                 if not os.path.exists(path):
                     run_cellranger_count = True
                     break
@@ -2756,13 +2756,39 @@ class RunCellrangerCount(PipelineTask):
                                 localmem=self.args.cellranger_localmem)
             # Append to command in task
             print("Running %s" % cmd)
-            self.add_cmd(PipelineCommandWrapper(
-                "Run %s count for %s" % (cellranger_exe,sample),
-                "mkdir","-p",work_dir,
-                "&&",
-                "cd",work_dir,
-                "&&",
-                *cmd.command_line))
+            self.add_cmd("Run %s count for %s" % (cellranger_exe,sample),
+                         """
+                         # Create working dir
+                         mkdir -p {work_dir} && cd {work_dir}
+                         # Run single library analysis
+                         {cellranger_count}
+                         if [ $? -ne 0 ] ; then
+                           echo "{sample}: single library analysis failed"
+                           exit 1
+                         fi
+                         # Check expected outputs
+                         for f in {top_level_files} ; do
+                           if [ ! -e {sample}/$f ] ; then
+                             echo "{sample}: missing top-level file $f"
+                             exit 1
+                           fi
+                         done
+                         for f in {outs_files} ; do
+                           if [ ! -e {sample}/outs/$f ] ; then
+                             echo "{sample}: missing outs file $f"
+                             exit 1
+                           fi
+                         done
+                         # Move outputs to final location
+                         mkdir -p {dest_dir}
+                         mv {sample} {dest_dir}
+                         """.format(cellranger_count=str(cmd),
+                                    outs_files=' '.join(self._outs_files),
+                                    top_level_files=' '.join(
+                                        self._top_level_files),
+                                    sample=sample,
+                                    work_dir=work_dir,
+                                    dest_dir=os.path.dirname(count_dir)))
     def finish(self):
         # If no reference data then ignore and return
         if not self.args.reference_data_path:
@@ -2773,47 +2799,7 @@ class RunCellrangerCount(PipelineTask):
         self.output.cellranger_exe.set(self.args.cellranger_exe)
         self.output.cellranger_refdata.set(self.args.reference_data_path)
         self.output.cellranger_version.set(self.args.cellranger_version)
-        # Handle outputs from cellranger count
-        has_errors = False
-        for sample in self.args.samples:
-            # Check outputs
-            top_dir = os.path.join("tmp.count.%s" % sample,
-                                   sample)
-            print("Sample: %s" % sample)
-            if not os.path.exists(top_dir):
-                # Cellranger count wasn't run for this sample
-                print("'cellranger count' not run for this sample?")
-                continue
-            outs_dir = os.path.join(top_dir,"outs")
-            missing_files = []
-            for f in self._outs_files:
-                path = os.path.join(outs_dir,f)
-                if not os.path.exists(path):
-                    print("Missing: %s" % path)
-                    missing_files.append(path)
-            for f in self._top_level_files:
-                path = os.path.join(top_dir,f)
-                if not os.path.exists(path):
-                    print("Missing: %s" % path)
-                    missing_files.append(path)
-            if missing_files:
-                # Skip this sample
-                print("Some files missing for this sample, skipping")
-                has_errors = True
-            else:
-                # Move count outputs to final destination
-                count_dir = os.path.abspath(
-                    os.path.join(self.args.out_dir,
-                                 "cellranger_count",
-                                 self.args.cellranger_version,
-                                 os.path.basename(
-                                     self.args.reference_data_path)
-                                 ))
-                print("Moving %s to %s" % (top_dir,count_dir))
-                if not os.path.exists(count_dir):
-                    mkdirs(count_dir)
-                shutil.move(top_dir,count_dir)
-        # Also copy outputs to QC directory
+        # Copy outputs to QC directory
         if self.args.qc_dir and self.args.samples:
             print("Copying outputs to QC directory")
             # Top level output directory
@@ -2851,11 +2837,6 @@ class RunCellrangerCount(PipelineTask):
                                                         top_dir,
                                                         qc_dir))
                     shutil.copy(path,qc_dir)
-        # Delayed task failure from earlier errors
-        if has_errors:
-            self.fail(message="Some outputs missing from cellranger "
-                      "count")
-            return
 
 class RunCellrangerMulti(PipelineTask):
     """
