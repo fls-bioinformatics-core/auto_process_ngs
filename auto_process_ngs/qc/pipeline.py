@@ -2965,40 +2965,48 @@ class RunCellrangerMulti(PipelineTask):
                             localmem=self.args.cellranger_localmem)
         # Add command to task
         print("Running %s" % cmd)
-        self.add_cmd(PipelineCommandWrapper(
+        self.add_cmd(
             "Run %s multi" % cellranger_exe,
-            "mkdir","-p",work_dir,
-            "&&",
-            "cd",work_dir,
-            "&&",
-            *cmd.command_line))
+            """
+            # Create working dir
+            mkdir -p {work_dir} && cd {work_dir}
+            # Run multi analysis
+            {cellranger_multi}
+            if [ $? -ne 0 ] ; then
+              echo "Multi library analysis failed"
+              exit 1
+            fi
+            # Check expected outputs
+            ls -ltrh
+            for f in {top_level_files} ; do
+              if [ ! -e {project}/$f ] ; then
+                echo "Missing top-level file $f"
+                exit 1
+              fi
+            done
+            for s in {samples} ; do
+              for f in web_summary.html metrics_summary.csv ; do
+                if [ ! -e {project}/outs/per_sample_outs/$s/$f ] ; then
+                  echo "$s: missing outs file $f"
+                  exit 1
+                fi
+              done
+            done
+            # Move outputs to final location
+            mkdir -p {dest_dir}
+            mv {project}/* {dest_dir}
+            """.format(work_dir=work_dir,
+                       cellranger_multi=str(cmd),
+                       project=self.args.project.name,
+                       samples=' '.join(self.args.samples),
+                       top_level_files=' '.join(self._expected_files),
+                       dest_dir=multi_dir))
     def finish(self):
         # If no config.csv then ignore and return
         if not self.args.config_csv:
             print("No config file: cell multiplexing analysis was skipped")
             return
-        # Handle outputs from cellranger multi
-        has_errors = False
-        # Check outputs
-        if self.run_cellranger_multi:
-            top_dir = os.path.join(self._working_dir,
-                                   "tmp.cellranger_multi.%s" %
-                                   self.args.project.name,
-                                   self.args.project.name)
-        else:
-            top_dir = os.path.abspath(
-                os.path.join(self.args.out_dir,
-                             "cellranger_multi",
-                             self.args.cellranger_version,
-                             os.path.basename(
-                                 self.args.reference_data_path)
-                ))
-        for path in self._expected_files:
-            if not os.path.exists(os.path.join(top_dir,path)):
-                # At least one expected file is missing
-                has_errors = True
-                break
-        # Destination for final outputs
+        # Location of final outputs
         multi_dir = os.path.abspath(
             os.path.join(self.args.out_dir,
                          "cellranger_multi",
@@ -3006,17 +3014,6 @@ class RunCellrangerMulti(PipelineTask):
                          os.path.basename(
                              self.args.reference_data_path)
             ))
-        if has_errors:
-            self.fail(message="Some outputs missing from cellranger multi")
-            return
-        elif self.run_cellranger_multi:
-            # Move multi outputs to final destination
-            print("Moving contents of %s to %s" % (top_dir,multi_dir))
-            if not os.path.exists(multi_dir):
-                mkdirs(multi_dir)
-            for d in os.listdir(top_dir):
-                shutil.move(os.path.join(top_dir,d),
-                            multi_dir)
         # Copy subset of outputs to QC directory
         if self.args.qc_dir:
             print("Copying outputs to QC directory")
