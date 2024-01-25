@@ -5,6 +5,7 @@
 # Permissible values for 10xGenomics platforms
 PLATFORMS = (
     "10xGenomics Chromium",
+    "10xGenomics Chromium 3'",
     "10xGenomics Chromium 3'v2",
     "10xGenomics Chromium 3'v3",
     "10xGenomics Chromium 3'v3.1",
