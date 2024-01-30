@@ -319,14 +319,29 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
     if single_cell_platform:
         if single_cell_platform.startswith("10xGenomics Chromium") and \
            project.info.library_type in ("CellPlex",
-                                         "Single Cell Immune Profiling",):
-            # Check for config file
+                                         "Flex"):
+            # CellPlex/Flex
+            # Check for a single config file
             config_file = os.path.join(project.dirn,
                                        "10x_multi_config.csv")
             if os.path.exists(config_file):
                 config_csv = CellrangerMultiConfigCsv(config_file)
                 samples = sorted([s for s in config_csv.gex_libraries
                                   if s in samples])
+        elif single_cell_platform.startswith("10xGenomics Chromium") and \
+             project.info.library_type == "Single Cell Immune Profiling":
+            # Single Cell Immune Profiling
+            # Check for multiple config files
+            config_files = [os.path.join(project.dirn,f)
+                            for f in os.listdir(project.dirn)
+                            if (f.startswith("10x_multi_config.") and
+                                f.endswith(".csv"))]
+            samples_ = []
+            for config_file in config_files:
+                config_csv = CellrangerMultiConfigCsv(config_file)
+                samples_.extend([s for s in config_csv.gex_libraries
+                                 if s in samples])
+            samples = sorted(samples_)
     return samples
 
 def set_cell_count_for_project(project_dir,qc_dir=None,
