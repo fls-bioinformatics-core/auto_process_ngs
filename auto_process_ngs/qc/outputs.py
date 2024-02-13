@@ -126,6 +126,7 @@ class QCOutputs:
 
     - fastq_strand.conf
     - 10x_multi_config.csv
+    - 10x_multi_config.<SAMPLE>.csv
     - libraries.<SAMPLE>.csv
 
     Arguments:
@@ -304,12 +305,12 @@ class QCOutputs:
             self.seq_data_samples.extend(
                 [s for s in self.qc_info.seq_data_samples.split(',')
                  if s in samples])
-        if os.path.exists(os.path.join(self.qc_dir,'10x_multi_config.csv')):
-            # Implicitly defined in 10x multi config file
-            cf = CellrangerMultiConfigCsv(os.path.join(self.qc_dir,
-                                                       '10x_multi_config.csv'))
-            self.seq_data_samples.extend([s for s in cf.gex_libraries
-                                          if s in samples])
+        for cf in self.config_files:
+            # Implicitly defined in 10x multi config file(s) as GEX data
+            if cf.startswith('10x_multi_config.'):
+                cf = CellrangerMultiConfigCsv(os.path.join(self.qc_dir,cf))
+                self.seq_data_samples.extend([s for s in cf.gex_libraries
+                                              if s in samples])
         if not self.seq_data_samples:
             # Nothing defined - assume all samples are biological data
             self.seq_data_samples = [s for s in self.samples]
@@ -1391,6 +1392,7 @@ class QCOutputs:
 
         - fastq_strand.conf
         - 10x_multi_config.csv
+        - 10x_multi_config.<SAMPLE>.csv
         - libraries.<SAMPLE>.csv
 
         Arguments:
@@ -1402,11 +1404,14 @@ class QCOutputs:
                   "10x_multi_config.csv",):
             if os.path.join(self.qc_dir,f) in files:
                 config_files.add(f)
-        # Cellranger-arc configs ('libraries.SAMPLE.csv')
-        for f in list(filter(lambda f:
-                             f.endswith(".csv") and
-                             os.path.basename(f).startswith("libraries."),
-                             files)):
+        # Cellranger-arc configs ('libraries.SAMPLE.csv') and per-sample
+        # cellranger multi configs ('10x_multi_config.SAMPLE.csv')
+        for f in list(
+                filter(lambda f:
+                       f.endswith(".csv") and
+                       (os.path.basename(f).startswith("libraries.") or
+                        os.path.basename(f).startswith("10x_multi_config.")),
+                       files)):
             config_files.add(os.path.basename(f))
         return sorted(list(config_files))
 
