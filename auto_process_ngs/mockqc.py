@@ -1,5 +1,5 @@
 #     mockqc.py: module providing mock Illumina QC data for testing
-#     Copyright (C) University of Manchester 2016-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2024 Peter Briggs
 #
 ########################################################################
 
@@ -513,6 +513,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                             '10x_Multiome_GEX',
                             '10x_CellPlex',
                             '10x_Flex',
+                            '10x_ImmuneProfiling',
                             '10x_Visium',) and \
             (AnalysisFastq(fq).read_number == 1):
                 # Skip for R1 reads
@@ -527,6 +528,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                         '10x_Multiome_GEX',
                         '10x_CellPlex',
                         '10x_Flex',
+                        '10x_ImmuneProfiling',
                         '10x_Visium',):
             fq = fq_group[1]
         else:
