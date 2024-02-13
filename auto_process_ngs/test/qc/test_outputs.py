@@ -1687,7 +1687,8 @@ class TestQCOutputs(unittest.TestCase):
                                    ))
         qc_outputs = QCOutputs(qc_dir)
         self.assertEqual(qc_outputs.outputs,
-                         ['cellranger_multi',
+                         ['cellranger_count',
+                          'cellranger_multi',
                           'fastqc_r1',
                           'fastqc_r2',
                           'multiqc',
