@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     report_cmd.py: implement auto process 'report' command
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 #########################################################################
 
@@ -148,17 +148,17 @@ def report_info(ap):
         report.append("\nNo analysis projects found")
     for project in projects:
         info = project.info
-        cellplex_config = None
-        if project.info.library_type == "CellPlex":
+        multi_config = None
+        if project.info.library_type in ("CellPlex",
+                                         "Flex"):
             try:
-                cellplex_config = CellrangerMultiConfigCsv(
-                    os.path.join(project.dirn,
-                                 "10x_multi_config.csv"))
+                multi_config = CellrangerMultiConfigCsv(
+                    os.path.join(project.dirn,"10x_multi_config.csv"))
                 number_of_samples = "%s multiplexed (%s physical)" % \
-                                    (len(cellplex_config.sample_names),
+                                    (len(multi_config.sample_names),
                                      len(project.samples))
                 sample_names = "%s (%s)" % \
-                               (cellplex_config.pretty_print_samples(),
+                               (multi_config.pretty_print_samples(),
                                 project.prettyPrintSamples())
             except FileNotFoundError:
                 number_of_samples = "%s (physical)" % len(project.samples)
@@ -207,13 +207,14 @@ def report_concise(ap):
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     if analysis_dir.projects:
         for p in analysis_dir.projects:
-            if p.info.library_type == "CellPlex":
+            if p.info.library_type in ("CellPlex",
+                                       "Flex"):
                 # Multiplexed samples
                 try:
-                    cellplex_config = CellrangerMultiConfigCsv(
+                    multi_config = CellrangerMultiConfigCsv(
                         os.path.join(p.dirn,
                                      "10x_multi_config.csv"))
-                    number_of_samples = len(cellplex_config.sample_names)
+                    number_of_samples = len(multi_config.sample_names)
                 except FileNotFoundError:
                     number_of_samples = len(p.samples)
             else:
@@ -421,13 +422,14 @@ def report_summary(ap):
             library = project_data['library_type']
             if project_data['single_cell_platform'] is not None:
                 library += " (%s)" % project_data['single_cell_platform']
-            if project.info.library_type == "CellPlex":
+            if project.info.library_type in ("CellPlex",
+                                             "Flex"):
                 # Multiplexed samples
                 try:
-                    cellplex_config = CellrangerMultiConfigCsv(
+                    multi_config = CellrangerMultiConfigCsv(
                         os.path.join(project.dirn,
                                      "10x_multi_config.csv"))
-                    number_of_samples = len(cellplex_config.sample_names)
+                    number_of_samples = len(multi_config.sample_names)
                 except FileNotFoundError:
                     number_of_samples = len(project.samples)
             else:
@@ -593,16 +595,15 @@ def fetch_value(ap,project,field):
         info = project.info
     except AttributeError:
         info = None
-    # 10x CellPlex data
-    if project.info.library_type == "CellPlex":
+    # 10x CellPlex and Flex data
+    multi_config = None
+    if project.info.library_type in ("CellPlex",
+                                     "Flex"):
         try:
-            cellplex_config = CellrangerMultiConfigCsv(
-                os.path.join(project.dirn,
-                             "10x_multi_config.csv"))
+            multi_config = CellrangerMultiConfigCsv(
+                os.path.join(project.dirn,"10x_multi_config.csv"))
         except FileNotFoundError:
-            cellplex_config = None
-    else:
-        cellplex_config = None
+            pass
     # Generate value for supplied field name
     if field == 'datestamp':
         return IlluminaData.split_run_name(ap.run_name)[0]
@@ -645,9 +646,9 @@ def fetch_value(ap,project,field):
         return ('' if not ap.metadata.flow_cell_mode
                 else ap.metadata.flow_cell_mode)
     elif field == 'no_of_samples' or field == '#samples':
-        if cellplex_config:
+        if multi_config:
             # Number of multiplexed samples
-            return str(len(cellplex_config.sample_names))
+            return str(len(multi_config.sample_names))
         else:
             # Number of "physical" samples
             return str(len(project.samples))
@@ -657,9 +658,9 @@ def fetch_value(ap,project,field):
     elif field == 'paired_end':
         return ('yes' if ap.paired_end else 'no')
     elif field == 'sample_names' or field == 'samples':
-        if cellplex_config:
+        if multi_config:
             # Names of multiplexed samples
-            return cellplex_config.pretty_print_samples()
+            return multi_config.pretty_print_samples()
         else:
             # Names of "physical" samples
             return project.prettyPrintSamples()
