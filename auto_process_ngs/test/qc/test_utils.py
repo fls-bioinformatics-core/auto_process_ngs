@@ -335,7 +335,7 @@ PBB,BC002,PBB
                          "PJB1_TCR_S2_L001_R2_001.fastq.gz",
                          "PJB2_GEX_S3_L001_R1_001.fastq.gz",
                          "PJB2_GEX_S3_L001_R2_001.fastq.gz",
-                         "PJB2_TRC_S4_L001_R1_001.fastq.gz",
+                         "PJB2_TCC_S4_L001_R1_001.fastq.gz",
                          "PJB2_TCR_S4_L001_R2_001.fastq.gz",))
         # Make 10x_multi_config.csv files
         with open(os.path.join(project_dir,"10x_multi_config.PJB1.csv"),
@@ -366,7 +366,7 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
 """.format(fastq_dir=os.path.join(project_dir,'fastqs')))
         # Check sequence data samples
         self.assertEqual(get_seq_data_samples(project_dir),
-                         ["PJB1_GEX","PJB2_GEX"])
+                         ["PJB1_GEX","PJB1_TCR","PJB2_GEX","PJB2_TCR"])
 
 class TestSetCellCountForProject(unittest.TestCase):
     """

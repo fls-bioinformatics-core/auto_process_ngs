@@ -83,7 +83,7 @@ PJB1_TCR,%s,any,PJB1,VDJ-T,
         self.assertEqual(qc_info.protocol_specification,
                          str(fetch_protocol_definition("10x_ImmuneProfiling")))
         self.assertEqual(qc_info.organism,"Human")
-        self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX")
+        self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX,PJB1_TCR")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastqs,
@@ -116,17 +116,16 @@ PJB1_TCR,%s,any,PJB1,VDJ-T,
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
-        # Verify missing outputs for VDJ-T samples
-        for f in ("PJB1_TCR_S2_R2_001_fastq_strand.txt",
-                  "PJB1_TCR_S2_R2_001_screen_model_organisms.txt",
-                  "PJB1_TCR_S2_R2_001_screen_other_organisms.txt",
-                  "PJB1_TCR_S2_R2_001_screen_rRNA.txt",
-                  "qualimap-rnaseq/human/PJB2_TCR_S2_001",):
+        # Verify no cellranger counts outputs for VDJ-T samples
+        for f in ("qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/_cmdline",
+                  "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/web_summary.html",
+                  "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/metrics_summary.csv",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/_cmdline",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/web_summary.html",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/metrics_summary.csv"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
-                                                         "PJB",
-                                                         "qc",
-                                                         f)),
-                             "Found %s (shouldn't exist)" % f)
+                                                        "PJB",f)),
+                            "Found %s (shouldn't exist)" % f)
 
     #@unittest.skip("Skipped")
     def test_qcpipeline_immune_profiling_multiple_samples(self):
@@ -223,7 +222,8 @@ PJB2_TCR,%s,any,PJB2,VDJ-T,
         self.assertEqual(qc_info.protocol_specification,
                          str(fetch_protocol_definition("10x_ImmuneProfiling")))
         self.assertEqual(qc_info.organism,"Human")
-        self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX,PJB2_GEX")
+        self.assertEqual(qc_info.seq_data_samples,
+                         "PJB1_GEX,PJB1_TCR,PJB2_GEX,PJB2_TCR")
         self.assertEqual(qc_info.fastq_dir,
                          os.path.join(self.wd,"PJB","fastqs"))
         self.assertEqual(qc_info.fastqs,
@@ -266,19 +266,19 @@ PJB2_TCR,%s,any,PJB2,VDJ-T,
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
-        # Verify missing outputs for VDJ-T samples
-        for f in ("PJB1_TCR_S2_R2_001_fastq_strand.txt",
-                  "PJB1_TCR_S2_R2_001_screen_model_organisms.txt",
-                  "PJB1_TCR_S2_R2_001_screen_other_organisms.txt",
-                  "PJB1_TCR_S2_R2_001_screen_rRNA.txt",
-                  "qualimap-rnaseq/human/PJB2_TCR_S2_001",
-                  "PJB2_TCR_S4_R2_001_fastq_strand.txt",
-                  "PJB2_TCR_S4_R2_001_screen_model_organisms.txt",
-                  "PJB2_TCR_S4_R2_001_screen_other_organisms.txt",
-                  "PJB2_TCR_S4_R2_001_screen_rRNA.txt",
-                  "qualimap-rnaseq/human/PJB4_TCR_S2_001",):
+        # Verify no cellranger counts outputs for VDJ-T samples
+        for f in ("qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/_cmdline",
+                  "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/web_summary.html",
+                  "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/metrics_summary.csv",
+                  "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB2_TCR/_cmdline",
+                  "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB2_TCR/outs/web_summary.html",
+                  "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB2_TCR/outs/metrics_summary.csv",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/_cmdline",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/web_summary.html",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/metrics_summary.csv",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB2_TCR/_cmdline",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB2_TCR/outs/web_summary.html",
+                  "cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB2_TCR/outs/metrics_summary.csv"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
-                                                         "PJB",
-                                                         "qc",
-                                                         f)),
-                             "Found %s (shouldn't exist)" % f)
+                                                        "PJB",f)),
+                            "Found %s (shouldn't exist)" % f)

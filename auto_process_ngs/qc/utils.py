@@ -339,8 +339,12 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
             samples_ = []
             for config_file in config_files:
                 config_csv = CellrangerMultiConfigCsv(config_file)
-                samples_.extend([s for s in config_csv.gex_libraries
-                                 if s in samples])
+                for feature_type in ("gene_expression",
+                                     "vdj_b",
+                                     "vdj_t"):
+                    samples_.extend([s for s in
+                                     config_csv.libraries(feature_type)
+                                     if s in samples])
             samples = sorted(samples_)
     return samples
 
