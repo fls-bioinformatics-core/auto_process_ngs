@@ -615,6 +615,133 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(task3_1.exit_code,None)
         self.assertEqual(task3_2.exit_code,None)
 
+    def test_pipeline_force_always_run_task_on_explicit_req_failure(self):
+        """
+        Pipeline: 'always_run' task executes on failure of explicit requirement
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Define a version of the 'append' task that
+        # always fails
+        class Failure(Append):
+            def setup(self):
+                self.fail(message="Automatic fail")
+        # Build a failing pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"1")
+        task2 = Append("Append 2",(),"2")
+        task3 = Failure("Failing append 3",(),"3")
+        task2_1 = Append("Append 2_1",task2.output.list,"2_1")
+        task2_2 = Append("Append 2_2",task2_1.output.list,"2_2")
+        task3_1 = Append("Append 3_1",task3.output.list,"3_1")
+        task3_2 = Append("Append 3_2",task3_1.output.list,"3_2")
+        task3_3 = Append("Append 3_3",task3.output.list,"3_3")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task2_1,requires=(task2,))
+        ppl.add_task(task2_2,requires=(task2_1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task3_1,requires=(task3,),always_run=True)
+        ppl.add_task(task3_2,requires=(task3_1,))
+        ppl.add_task(task3_3,requires=(task3,))
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              exit_on_failure=PipelineFailure.DEFERRED)
+        # Check the outputs
+        self.assertEqual(exit_status,1)
+        self.assertEqual(task1.output.list,["1"])
+        self.assertEqual(task2.output.list,["2"])
+        self.assertEqual(task2_1.output.list,["2","2_1"])
+        self.assertEqual(task2_2.output.list,["2","2_1","2_2"])
+        self.assertEqual(task3_1.output.list,["3_1"])
+        self.assertEqual(task3_2.output.list,["3_1","3_2"])
+        self.assertEqual(task3_3.output.list,[])
+        # Check the exit codes
+        self.assertEqual(task1.exit_code,0)
+        self.assertEqual(task2.exit_code,0)
+        self.assertEqual(task3.exit_code,1)
+        self.assertEqual(task2_1.exit_code,0)
+        self.assertEqual(task2_2.exit_code,0)
+        self.assertEqual(task3_1.exit_code,0)
+        self.assertEqual(task3_2.exit_code,0)
+        self.assertEqual(task3_3.exit_code,None)
+
+    def test_pipeline_force_always_run_task_on_implicit_req_failure(self):
+        """
+        Pipeline: 'always_run' task executes on failure of implicit requirement
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Define a version of the 'append' task that
+        # always fails
+        class Failure(Append):
+            def setup(self):
+                self.fail(message="Automatic fail")
+        # Define a final task
+        class Final(PipelineTask):
+            def init(self,s):
+                self.add_output('message',PipelineParam(type=str))
+            def setup(self):
+                self.output.message.set(self.args.s)
+        # Build a failing pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"1")
+        task2 = Append("Append 2",(),"2")
+        task3 = Failure("Failing append 3",(),"3")
+        task2_1 = Append("Append 2_1",task2.output.list,"2_1")
+        task2_2 = Append("Append 2_2",task2_1.output.list,"2_2")
+        task3_1 = Append("Append 3_1",task3.output.list,"3_1")
+        task3_2 = Append("Append 3_2",task3_1.output.list,"3_2")
+        task3_3 = Append("Append 3_3",task3.output.list,"3_3")
+        task4 = Final("Final","Final task")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task2_1,requires=(task2,))
+        ppl.add_task(task2_2,requires=(task2_1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task3_1,requires=(task3,))
+        ppl.add_task(task3_2,requires=(task3_1,))
+        ppl.add_task(task3_3,requires=(task3,))
+        ppl.add_task(task4,requires=(task3_1,task3_2,task3_3),
+                     always_run=True)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              exit_on_failure=PipelineFailure.DEFERRED)
+        # Check the outputs
+        self.assertEqual(exit_status,1)
+        self.assertEqual(task1.output.list,["1"])
+        self.assertEqual(task2.output.list,["2"])
+        self.assertEqual(task2_1.output.list,["2","2_1"])
+        self.assertEqual(task2_2.output.list,["2","2_1","2_2"])
+        self.assertEqual(task3_1.output.list,[])
+        self.assertEqual(task3_2.output.list,[])
+        self.assertEqual(task3_3.output.list,[])
+        self.assertEqual(task4.output.message.value,"Final task")
+        # Check the exit codes
+        self.assertEqual(task1.exit_code,0)
+        self.assertEqual(task2.exit_code,0)
+        self.assertEqual(task3.exit_code,1)
+        self.assertEqual(task2_1.exit_code,0)
+        self.assertEqual(task2_2.exit_code,0)
+        self.assertEqual(task3_1.exit_code,None)
+        self.assertEqual(task3_2.exit_code,None)
+        self.assertEqual(task3_3.exit_code,None)
+        self.assertEqual(task4.exit_code,0)
+
     def test_pipeline_built_in_parameters(self):
         """
         Pipeline: test the built-in parameters are set
@@ -1820,6 +1947,25 @@ class TestPipelineTask(unittest.TestCase):
         self.assertRaises(PipelineError,
                           t1.requires,
                           "not_a_task")
+
+    def test_pipelinetask_always_run(self):
+        """
+        PipelineTask: check set and get 'always_run' flag
+        """
+        # Define task for testing
+        class AppendTask(PipelineTask):
+            def init(self,*inputs):
+                self.add_output('result',list())
+            def setup(self):
+                for x in self.args.inputs:
+                    self.output.results.append(x)
+        # Instantiate task
+        t = AppendTask("Task",1,2)
+        # Check initial value of 'always_run' flag
+        self.assertFalse(t.always_run())
+        # Set 'always_run'
+        t.always_run(True)
+        self.assertTrue(t.always_run())
 
     def test_pipelinetask_no_commands(self):
         """
