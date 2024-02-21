@@ -3136,6 +3136,18 @@ class PipelineTask:
             self._required_task_ids.append(task_id)
         self._required_task_ids = sorted(self._required_task_ids)
 
+    def drop_required_task(self,task_id):
+        """
+        Remove task ID from list of requirements
+
+        Arguments:
+          task_id (str): UUID of the task to be added
+            as a requirement
+        """
+        if task_id in self._required_task_ids:
+            self._required_task_ids.remove(task_id)
+        self._required_task_ids = sorted(self._required_task_ids)
+
     @property
     def required_task_ids(self):
         """
