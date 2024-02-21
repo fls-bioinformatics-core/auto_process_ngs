@@ -2293,7 +2293,7 @@ class Pipeline:
                     # Check requirements
                     run_task = reduce(lambda x,y: x and
                                       (y not in self._running) and
-                                      (y.completed or not y.active) and
+                                      y.completed and
                                       (y.exit_code == 0 or task.always_run()),
                                       requirements,True)
                 if run_task:
@@ -2421,16 +2421,20 @@ class Pipeline:
                         # the removal operations
                         pending = []
                         for t in self._pending:
-                            task = t[0]
+                            task,requires,kws = t
                             if task.id() in remove_ids:
-                                task.disable()
-                                msg = "-- disabling dependent task '%s'" \
+                                msg = "-- removing dependent task '%s'" \
                                       % task.name()
                                 if verbose:
                                     msg += " (%s)" % task.id()
                                 self.report(msg)
                             else:
-                                pending.append(t)
+                                # Update the requirements for the
+                                # task and add back into 'pending'
+                                for req in requires:
+                                    if req.id() in remove_ids:
+                                        task.drop_required_task(req.id())
+                                pending.append(self.get_task(task.id()))
                         self._pending = pending
                     self._failed.extend(failed)
                     self.report("There are failed tasks but pipeline exit "
@@ -2536,7 +2540,6 @@ class PipelineTask:
         self._task_name = "%s.%s" % (sanitize_name(self._name),
                                      uuid.uuid4())
         self._completed = False
-        self._active = True
         self._stdout_files = []
         self._stderr_files = []
         self._exit_code = 0
@@ -2619,17 +2622,6 @@ class PipelineTask:
             if not.
         """
         return self._completed
-
-    @property
-    def active(self):
-        """
-        Check if the task is marked as active
-
-        Returns:
-          Boolean: True if task is marked as active,
-            False if not
-        """
-        return self._active
 
     @property
     def updated(self):
@@ -2761,12 +2753,6 @@ class PipelineTask:
         self.report("failed: exit code set to %s" % exit_code)
         self._exit_code = exit_code
         self._completed = True
-
-    def disable(self):
-        """
-        Register the task as disabled
-        """
-        self._active = False
 
     def report(self,s):
         """
