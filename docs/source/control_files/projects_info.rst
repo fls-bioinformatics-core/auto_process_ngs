@@ -64,7 +64,7 @@ or organism names, however:
 * Some combinations of single cell platform and library type are used
   to determine the appropriate :doc:`QC protocol <run_qc>` for the
   data, in which case the single cell platform and library values
-  must be a valid combination; see the table below.
+  must be a valid combination; :ref:`single_cell_and_spatial` below.
 
 .. note::
 
@@ -74,47 +74,24 @@ or organism names, however:
    to ``mouse``, ``D. Melanogaster`` is converted to
    ``d_melanogaster``)
 
-Single cell platforms and library types
----------------------------------------
+.. _single_cell_and_spatial:
 
-The following values are the valid options for the single cell platform
-and corresponding associated library types; use ``.`` if the project
-doesn't have single cell data:
+Single cell and spatial data
+----------------------------
 
-===================================== ==============================
-Single cell platform                  Library types
-===================================== ==============================
-``10xGenomics Chromium 3'``           ``scRNA-seq``, ``snRNA-seq``,
-                                      ``CellPlex``, ``Flex``
-``10xGenomics Chromium 3'v3``         ``scRNA-seq``, ``snRNA-seq``
-                                      ``CellPlex``, ``Flex``
-``10xGenomics Chromium 3'v2``         ``scRNA-seq``, ``snRNA-seq``
-                                      ``CellPlex``, ``Flex``
-``10xGenomics Single Cell ATAC``      ``scATAC-seq``, ``snATAC-seq``
-``10xGenomics Single Cell Multiome``  ``ATAC``, ``GEX``
-``Parse Evercode``                    ``scRNA-seq``
-``ICELL8``                            ``scRNA-seq``
-``ICELL8 ATAC``                       ``scATAC-seq``
-===================================== ==============================
+For single cell and spatial data values in the library type
+(``Library``) and single cell platform (``SC_platform``) fields have
+special significance.
 
-Spatial data platforms and library types
-----------------------------------------
+For more information on the valid options for specific types of data
+see:
 
-The following values are valid options for spatial data:
-
-===================================== ==============================
-Single cell platform                  Library types
-===================================== ==============================
-``10xGenomics Visium``                ``Spatial RNA-seq``,
-                                      ``FFPE Spatial RNA-seq``,
-                                      ``Fresh Frozen RNA-seq``
-``10xGenomics CytAssist Visium``      ``FFPE Spatial RNA-seq``
-                                      ``FFPE Spatial GEX``,
-                                      ``FFPE Spatial PEX``
-===================================== ==============================
+ * :doc:`../single_cell/10x_single_cell`
+ * :doc:`../single_cell/parse`
+ * :doc:`../single_cell/icell8`
+ * :doc:`../spatial/10x_visium`
 
 .. note::
 
-   Although 10xGenomics Visium data are not single cell data,
-   currently the platform information is being stored in the
-   single cell platform metadata field.
+   Use ``.`` for the single cell platform for projects that don't have
+   single cell or spatial data.

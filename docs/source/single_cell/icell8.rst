@@ -1,6 +1,20 @@
 Processing Takara Bio ICELL8 single-cell data
 =============================================
 
+.. warning::
+
+   The ICELL8 platform is no longer actively supported within the
+   ``auto-process-ngs`` package; the relevant parts of the
+   software are deprecated and are likely to be removed in a
+   future version.
+
+   As the code has not been maintained or updated, there is no
+   guarantee that the software will run correctly (or at all), and
+   the documentation may also be inaccurate.
+
+   **Use of the software for this platform is therefore strongly
+   discouraged and is done at your own risk.**
+
 Background
 ----------
 
@@ -39,25 +53,60 @@ corresponding to the cell and UMI referenced by its R1 partner.
 .. _icell8_scRNA-seq_processing_protocol:
 
 Processing protocol for ICELL8 scRNA-seq data
-*********************************************
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The recommended steps are:
+Initial Fastqs can be generated from ICELL8 single-cell8
+RNA-seq data using the ``--protocol=icell8`` option of the
+``make_fastqs`` command:
 
-1. Generate initial Fastqs as described in
-   :ref:`make_fastqs-icell8-protocol`
-2. Set up analysis directories and run initial QC as per the standard
-   protocol
-3. Perform ICELL8-specific filtering and additional QC on the reads
+::
+
+    auto_process.py make_fastqs --protocol=icell8 ...
+
+.. note::
+
+   ``--protocol=icell8`` runs the standard ``bcl2fastq`` commands with
+   with the following settings:
+
+   * Disable adapter trimming and masking by setting
+     ``--minimum-trimmed-read-length=21`` and
+     ``--mask-short-adapter-reads=0`` (recommended by Wafergen
+     specifically for NextSeq data)
+   * Updating the bases mask setting so that only the first 21 bases
+     of the R1 read are kept.
+
+   This is recommended to stop unintentional trimming of UMI sequences
+   (which are mostly random) from the R1, should they happen to match
+   part of an adapter sequence.
+
+Once Fastqs have been generated the ``projects.info`` file should be
+updated with the following values for ``SC_platform`` and ``Library``
+fields:
+
+==================== =============
+Single cell platform Library types
+==================== =============
+``ICELL8``           ``scRNA-seq``
+==================== =============
+
+Running the ``setup_analysis_dirs`` command will automatically
+transfer these values into the ICELL8 project metadata on creation.
+
+Subsequently the following steps are required:
+
+1. Run initial QC using the ``run_qc`` command (the ``singlecell``
+   QC protocol will be used automatically)
+2. Perform ICELL8-specific filtering and additional QC on the reads
    by running the ``process_icell8.py`` utility, as described in
    :ref:`icell8_scRNA-seq_qc_and_filtering_protocol`
-4. Manually update the sample name information in the ``project.info``
+3. Manually update the sample name information in the ``project.info``
    and ``README.info`` files as described in
    :ref:`icell8_scRNA-seq_updating_sample_lists`
 
 ..  _icell8_scRNA-seq_qc_and_filtering_protocol:
 
 ICELL8 QC and filtering protocol
-********************************
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``process_icell8.py`` utility script performs initial filtering
 and QC according to the protocol described below. The utility also splits
@@ -123,7 +172,7 @@ The following steps are performed:
    data from a non-mammalian organism.
 
 Reorganisation by barcode and sample
-************************************
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 At the end of the QC and filter pipeline the read pairs are
 reorganised in two different ways:
@@ -151,7 +200,7 @@ The standard QC procedure is run on each set of FastqS (barcodes and
 samples) and QC reports are generated for each.
 
 Outputs and reports
-*******************
+~~~~~~~~~~~~~~~~~~~
 
 The pipeline directory will contain the following output
 directories:
@@ -202,14 +251,42 @@ The final report summarises information on the following:
 ICELL8 single cell ATAC-seq
 ---------------------------
 
-Initial processing of the sequencing data produces a set of R1/R2
-and I1/I2 Fastq file pairs for each sample defined in the
-:ref:`icell8_well_list_file`. The R1 and R2 reads are the actual
-data for each sample, and the I1 and I2 reads correspond to barcodes
-in the well list file.
+.. warning::
 
-There is currently no subsequent processing pipeline or QC for these
-data.
+   This protocol should be considered to be in an "beta" state.
+
+Initial Fastqs can be generated from ICELL8 single-cell8 ATAC-seq data
+using the ``--protocol=icell8_atac`` option and specifying a
+:ref:`icell8_well_list_file` (via the mandatory ``--well-list`` argument):
+
+::
+
+    auto_process.py make_fastqs --protocol=icell8_atac --well-list=WELL_LIST_FILE...
+
+This runs ``bcl2fastq`` to perform initial standard demultiplexing based on
+the samples defined in the sample sheet, followed by a second round of
+demultiplexing into ICELL8 samples based on the contents of the well list
+file.
+
+Fastq generation produces a set of R1/R2 and I1/I2 Fastq file pairs for
+each sample defined in the well list file. The R1 and R2 reads are the
+actual data for each sample, and the I1 and I2 reads correspond to
+barcodes in the well list file.
+
+Once Fastqs have been generated the ``projects.info`` file should be
+updated with the following values for ``SC_platform`` and ``Library``
+fields:
+
+==================== ==============
+Single cell platform Library types
+==================== ==============
+``ICELL8_ATAC``      ``scATAC-seq``
+==================== ==============
+
+Running the ``setup_analysis_dirs`` command will automatically
+transfer these values into the ICELL8 project metadata on creation
+and the ``run_qc`` command can be used to generate the QC (the
+``ICELL8_scATAC`` QC  protocol will be used automatically).
 
 .. _icell8_well_list_file:
 
@@ -233,7 +310,7 @@ or by setting the appropriate parameters options in the
 ``auto_process.ini`` configuration file.
 
 Reference data and quality filtering
-************************************
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  * **Mammalian genome panel**: ``fastq_screen`` conf file with the
    indices for "mammalian" genomes, to use in the contamination
@@ -261,7 +338,7 @@ Reference data and quality filtering
    parameter in the configuration file).
 
 Runtime environment
-*******************
+~~~~~~~~~~~~~~~~~~~
 
  * **Environment modules**: specify a list of environment modules
    (separated with commas) to load before running the pipeline.
@@ -283,7 +360,7 @@ Runtime environment
    environment.)
 
 Fastq batching
-**************
+~~~~~~~~~~~~~~
 
  * **Read batch size**: number of reads to assign to each "batch"
    when splitting Fastqs for processing.
@@ -296,7 +373,7 @@ Fastq batching
    ``[icell8] batch_size``.
 
 Job control
-***********
+~~~~~~~~~~~
 
  * **Maximum number of concurrent jobs**: limits the number of
    processes that the pipeline will attempt to run at any one
@@ -309,7 +386,7 @@ Job control
 ..  _job_runners_and_processors:
 
 Job runners and processors
-**************************
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Job runners and numbers of processors can be explicitly defined
 for different "stages" of the pipeline, where a stage is
