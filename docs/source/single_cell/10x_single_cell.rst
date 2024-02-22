@@ -45,10 +45,10 @@ Fastq generation
 General
 ~~~~~~~
 
-The :doc:`make_fastqs <../using/make_fastqs>` command can be used
-to generate Fastqs from sequencing data generated from 10xGenomics
-samples, by specifying the appropriate protocol via the
-``--protocol`` option:
+If a sample sheet with the appropriate 10x Genomics indexes is provided
+then all 10x Genomics single cell data should be processed using the
+:doc:`make_fastqs <../using/make_fastqs>` command, with the appropriate
+``10x_*`` specified via the ``--protocol`` option:
 
 =================================================== =====================
 10x Genomics data                                   Protocol
@@ -62,8 +62,18 @@ CellPlex (cell multiplexing)                        ``10x_chromium_sc``
 Flex (fixed RNA profiling)                          ``10x_chromium_sc``
 =================================================== =====================
 
-By default adapter trimming is automatically disabled by removing
-the adapter sequences in the sample sheet.
+.. note::
+
+   By default adapter trimming is automatically disabled for all
+   ``10x_*`` protocols, by removing any adapter sequences specified
+   in the sample sheet.
+
+.. note::
+
+   If the sample sheet contains Illumina index sequences then the
+   ``standard`` protocol should be used instead (note that in this case
+   the defaults used for masking and trimming compared to the defaults
+   may differ from those used by the 10x Genomics pipeline).
 
 Choosing Fastq generation protocol for single cell multiome data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,8 +103,8 @@ configuration of the sequencing run:
       --lanes=1:10x_multiome_atac \
       --lanes=2:10x_multiome_gex
 
-   See :ref:`10x_multiome-pooled-data` for more details on how the
-   multiome protocols are implemented and used.
+   See :ref:`10x_multiome-pooled-data` for more information on
+   how the multiome protocols are implemented and used.
 
 Analysis project setup and QC
 -----------------------------
