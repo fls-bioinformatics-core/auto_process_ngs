@@ -86,7 +86,8 @@ Protocol option          Used for
 ======================== =====================================
 
 Typically the ``standard`` protocol is sufficient for most types of
-data (RNA-seq, ATAC-seq, ChIP-seq, metagenomics etc).
+data (RNA-seq, ATAC-seq, ChIP-seq, metagenomics etc) where
+the sample sheet contains Illumina index sequences.
 
 .. note::
 
@@ -95,9 +96,10 @@ data (RNA-seq, ATAC-seq, ChIP-seq, metagenomics etc).
    this is the same as the ``standard`` protocol but adjusts the
    adapter trimming and masking options as follows:
 
-   * Sets the minimum trimmed read length to 10 bases
+   * Sets the minimum trimmed read length to 10 bases (default is
+     35 bases in ``standard`` mode)
    * Turns off short read masking by setting the threshold length
-     to zero
+     to zero (default is 22 in ``standard`` mode)
 
    More details about adapter trimming and short read masking can be
    found in the section :ref:`make_fastqs-adapter-trimming-and-masking`.
