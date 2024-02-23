@@ -116,7 +116,7 @@ PJB1_TCR,%s,any,PJB1,VDJ-T,
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
-        # Verify no cellranger counts outputs for VDJ-T samples
+        # Verify no cellranger count outputs for VDJ-T samples
         for f in ("qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/_cmdline",
                   "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/web_summary.html",
                   "qc/cellranger_count/7.1.0/refdata-cellranger-gex-GRCh38-2020-A/PJB1_TCR/outs/metrics_summary.csv",
