@@ -1259,6 +1259,7 @@ class QCReport(Document):
             for each sample in the summary table
         """
         # Create a unique name and title
+        print("=> Reporting sample '%s' <=" % sample)
         if self.multi_project:
             sample_name = "sample_%s_%s" % (sanitize_name(project.id),
                                             sample)
