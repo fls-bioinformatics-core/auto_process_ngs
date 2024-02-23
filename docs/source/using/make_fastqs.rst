@@ -15,49 +15,20 @@ The general invocation of the command is:
 
    auto_process.py make_fastqs [--protocol=PROTOCOL] *options* [ANALYSIS_DIR]
 
-The ``--protocol`` option should be chosen according to the type
-of data that is being processed:
-
-======================== =====================================
-Protocol option          Used for
-======================== =====================================
-``standard``             Standard Illumina sequencing data
-                         (default)
-``mirna``                miRNA-seq data
-``icell8``               ICELL8 single-cell RNA-seq data
-``icell8_atac``          ICELL8 single-cell ATAC-seq data
-``10x_chromium_sc``      10xGenomics Chromium single cell
-                         RNA-seq, CellPlex and Flex data
-``10x_atac``             10xGenomics Chromium single cell
-                         ATAC-seq data
-``10x_visium``           10xGenomics Visium spatial RNA-seq
-                         data
-``10x_multiome``         10xGenomics Multiome single cell
-                         ATAC + GEX data (determined
-                         automatically)
-``10x_multiome_atac``    10xGenomics Multiome single cell
-                         ATAC data only
-``10x_multiome_gex``     10xGenomics Multiome single cell
-                         GEX data only
-======================== =====================================
-
-The protocols are described in the section :ref:`make_fastqs-protocols`;
-information on most useful options can be found in
-:ref:`make_fastqs-commonly-used-options`.
-
 By default ``make_fastqs`` performs the following steps:
 
 * Fetches the BCL data and copies it to the ``primary_data`` subdirectory
   of the analysis directory
 * Checks the sample sheet for errors and possible barcode collisions
 * Runs BCL to Fastq conversion (either ``bcl2fastq`` or ``bcl-convert``,
-  or ``cellranger`` for 10xGenomics Chromium data) and verifies that the
-  outputs match what was expected from the input sample sheet
+  or the appropriate pipeline for  for 10x Genomics single cell or spatial
+  data e.g. ``cellranger``) and verifies that the outputs match what was
+  expected from the input sample sheet
 * Generates statistics for the Fastq data and produces a report on the
   analysing the numbers of reads assigned to each sample, lane and
   project (``processing_qc.html``)
-* Analyses the barcode index sequences to look for issues with
-  demultiplexing (``standard`` protocol only)
+* Analyses the barcode index sequences to identify possible demultiplexing
+  issues
 
 Various options are available to skip or control each of these stages;
 more detail on the different usage modes can be found in the
@@ -65,15 +36,17 @@ subsequent sections:
 
 * :ref:`make_fastqs-adapter-trimming-and-masking`
 * :ref:`make_fastqs-mixed-protocols`
-* :ref:`make_fastqs-pooled-10x-multiome-atac-and-gex`
+* :ref:`make_fastqs-bcl-converter`
+
+Information on the different Fastq generation protocols can be found in
+:ref:`make_fastqs-protocols`, and some of the other useful options can be
+for the found in :ref:`make_fastqs-commonly-used-options`.
 
 The outputs produced on successful completion are described below
-in the section :ref:`make_fastqs-outputs`.
-
-.. note::
-
-   Advice on handling unusual cases and problems can be found
-   in the section :doc:`troubleshooting`.
+in the section :ref:`make_fastqs-outputs`; it is recommended to check
+the :doc:`processing QC <../output/processing_qc>` and
+:doc:`barcode analysis <../output/barcode_analysis>` reports which
+will highlight issues with the demultiplexing.
 
 Once the Fastqs have been generated, the next step is to set up the
 project directories - see
@@ -84,315 +57,61 @@ project directories - see
 Fastq generation protocols
 --------------------------
 
-The pre-defined protocols for Fastq generation are described in
-the sections below:
+The ``--protocol`` option should be set according to the type of data
+that are being processed:
 
-* :ref:`make_fastqs-standard-protocol`
-* :ref:`make_fastqs-mirna-protocol`
-* :ref:`make_fastqs-icell8-protocol`
-* :ref:`make_fastqs-icell8-atac-protocol`
-* :ref:`make_fastqs-10x_chromium_sc-protocol`
-* :ref:`make_fastqs-10x_atac-protocol`
-* :ref:`make_fastqs-10x_visium-protocol`
-* :ref:`make_fastqs-10x_multiome-protocol`
-* :ref:`make_fastqs-10x_multiome-atac-protocol`
-* :ref:`make_fastqs-10x_multiome-gex-protocol`
+======================== =====================================
+Protocol option          Used for
+======================== =====================================
+``standard``             Standard Illumina sequencing data
+                         (default)
+``mirna``                miRNA-seq data
+``10x_chromium_sc``      10xGenomics Chromium single cell
+                         RNA-seq, CellPlex and Flex data
+``10x_atac``             10xGenomics Chromium single cell
+                         ATAC-seq data
+``10x_visium``           10xGenomics Visium spatial RNA-seq
+                         data
+``10x_multiome``         10xGenomics Multiome single cell
+                         ATAC or GEX data only in single
+                         run
+``10x_multiome_atac``    10xGenomics Multiome single cell
+                         ATAC data (run with pooled GEX
+                         and ATAC data)
+``10x_multiome_gex``     10xGenomics Multiome single cell
+                         GEX data only (run with pooled GEX
+                         and ATAC data)
+``icell8``               ICELL8 single-cell RNA-seq data
+``icell8_atac``          ICELL8 single-cell ATAC-seq data
+======================== =====================================
 
-.. _make_fastqs-standard-protocol:
-
-Standard data (``--protocol=standard``)
-***************************************
-
-The Fastq generation for standard data is performed using a command
-of the form:
-
-::
-
-   auto_process.py make_fastqs ...
-
-The outputs produced on successful completion are described below
-in the section :ref:`make_fastqs-outputs`; it is recommended to check
-the :doc:`processing QC <../output/processing_qc>` and
-:doc:`barcode analysis <../output/barcode_analysis>` reports which
-will highlight issues with the demultiplexing.
-
-.. _make_fastqs-mirna-protocol:
-
-miRNA-seq data (``--protocol=mirna``)
-*************************************
-
-Initial Fastqs can be generated from miRNA-seq data using the
-``--protocol=mirna`` option:
-
-::
-
-    auto_process.py make_fastqs --protocol=mirna ...
-
-This adjusts the adapter trimming and masking options as follows:
-
- * Sets the minimum trimmed read length to 10 bases
- * Turn off short read masking by setting the threshold length
-   to zero
-
-Subsequently the Fastq generation is the same as the standard
-protocol described in :ref:`make_fastqs-standard-protocol`.
-
-More details about adapter trimming and short read masking can be
-found in the section :ref:`make_fastqs-adapter-trimming-and-masking`.
-
-.. _make_fastqs-icell8-protocol:
-
-ICELL8 single-cell RNA-seq data (``--protocol=icell8``)
-*******************************************************
-
-Initial Fastqs can be generated from ICELL8 single-cell8 RNA-seq data
-using the ``--protocol=icell8`` option:
-
-::
-
-    auto_process.py make_fastqs --protocol=icell8 ...
-
-Subsequently the read pairs must be processed using the
-``process_icell8.py`` utility described in the
-:ref:`icell8_scRNA-seq_qc_and_filtering_protocol` section, to post-process
-the Fastqs.
+Typically the ``standard`` protocol is sufficient for most types of
+data (RNA-seq, ATAC-seq, ChIP-seq, metagenomics etc) where
+the sample sheet contains Illumina index sequences.
 
 .. note::
 
-   ``--protocol=icell8`` runs the standard ``bcl2fastq`` commands with
-   with the following settings:
-
-   * Disable adapter trimming and masking by setting
-     ``--minimum-trimmed-read-length=21`` and
-     ``--mask-short-adapter-reads=0`` (recommended by Wafergen
-     specifically for NextSeq data)
-   * Updating the bases mask setting so that only the first 21 bases
-     of the R1 read are kept.
-
-   This is recommended to stop unintentional trimming of UMI sequences
-   (which are mostly random) from the R1, should they happen to match
-   part of an adapter sequence.
-
-.. _make_fastqs-icell8-atac-protocol:
-
-ICELL8 single-cell ATAC-seq data (``--protocol=icell8_atac``)
-*************************************************************
-
-Initial Fastqs can be generated from ICELL8 single-cell8 ATAC-seq data
-using the ``--protocol=icell8_atac`` option:
-
-::
-
-    auto_process.py make_fastqs --protocol=icell8_atac --well-list=WELL_LIST_FILE...
-
-This runs ``bcl2fastq`` to perform initial standard demultiplexing based on
-the samples defined in the sample sheet, followed by a second round of
-demultiplexing into ICELL8 samples based on the contents of the well list
-file which must be supplied via the mandatory ``--well-list`` argument.
-
-.. warning::
-
-   This protocol is still under development.
-
-.. _make_fastqs-10x_chromium_sc-protocol:
-
-10xGenomics Chromium single-cell RNA-seq data (``--protocol=10x_chromium_sc``)
-******************************************************************************
-
-Fastq generation can be performed for 10xGenomics Chromium
-single-cell RNA-seq data by using the ``--protocol=10x_chromium_sc``
-option:
-
-::
-
-    auto_process.py make_fastqs --protocol=10x_chromium_sc ...
-
-which fetches the data and runs ``cellranger mkfastq``.
-
-.. note::
-
-   This protocol should also be used for 10xGenomics CellPlex
-   (cell multiplexing) and Flex (fixed RNA profiling datasets).
-
-This will generate the Fastqs in the specified output directory
-(e.g. ``bcl2fastq``) along with an HTML report derived from the
-``cellranger`` JSON QC summary file, statistics for the Fastqs.
-
-.. note::
-
-   ``make_fastqs`` offers various options for controlling the
-   behaviour of ``cellranger mkfastqs``, for example setting the
-   jobmode (see :ref:`10xgenomics-additional-options`).
-
-.. _make_fastqs-10x_atac-protocol:
-
-10xGenomics single-cell ATAC-seq data (``--protocol=10x_atac``)
-***************************************************************
-
-Fastq generation can be performed for 10xGenomics single-cell
-ATAC-seq data by using the ``--protocol=10x_atac`` option:
-
-::
-
-    auto_process.py make_fastqs --protocol=10x_atac ...
-
-which fetches the data and runs ``cellranger-atac mkfastq``.
-
-This will generate the Fastqs in the specified output directory
-(e.g. ``bcl2fastq``) along with an HTML report derived from the
-``cellranger-atac`` JSON QC summary file, statistics for the Fastqs.
-
-.. note::
-
-   ``make_fastqs`` offers various options for controlling the
-   behaviour of ``cellranger-atac mkfastqs``, for example setting the
-   jobmode (see :ref:`10xgenomics-additional-options`).
-
-.. _make_fastqs-10x_multiome-protocol:
-
-10xGenomics single cell Multiome ATAC + GEX data (``--protocol=10x_multiome``)
-******************************************************************************
-
-Fastq generation can be performed for 10xGenomics single cell
-multiome ATAC and gene expression (GEX) data by using the
-``--protocol=10x_multiome`` option:
-
-::
-
-    auto_process.py make_fastqs --protocol=10x_multiome ...
-
-which fetches the data and runs ``cellranger-arc mkfastq``.
-
-This will generate the Fastqs in the specified output directory
-(e.g. ``bcl2fastq``) along with an HTML report derived from the
-``cellranger-arc`` JSON QC summary file, statistics for the Fastqs.
-
-By default adapter trimming is automatically disabled by removing
-the adapter sequences in the sample sheet.
-
-.. note::
-
-   ``make_fastqs`` offers various options for controlling the
-   behaviour of ``cellranger-arc mkfastqs``, for example setting the
-   jobmode (see :ref:`10xgenomics-additional-options`).
-
-.. _make_fastqs-10x_multiome-atac-protocol:
-
-10xGenomics single cell Multiome ATAC data (``--protocol=10x_multiome_atac``)
-*****************************************************************************
-
-Fastq generation can be performed for 10xGenomics single cell
-multiome ATAC data by using the ``--protocol=10x_multiome_atac``
-option:
-
-::
-
-    auto_process.py make_fastqs --protocol=10x_multiome_atac ...
-
-which fetches the data and runs ``cellranger-arc mkfastq`` with
-the following custom options:
-
- 1. ``--use-bases-mask`` with a bases mask string that has been
-    adjusted appropriately to match the template
-    ``Y*,I8n*,Y24,Y*``
- 2. ``--filter-single-index`` will be explicitly specified
-
-as outlined in the 10x Genomics knowledge base article at:
-
-   https://kb.10xgenomics.com/hc/en-us/articles/360049373331-Can-Multiome-ATAC-and-Multiome-GEX-libraries-be-sequenced-together-
-
-for single cell multiome ATAC data.
-
-This will generate the Fastqs in the specified output directory
-(e.g. ``bcl2fastq``) along with an HTML report derived from the
-``cellranger-arc`` JSON QC summary file, and statistics for the
-Fastqs.
-
-By default adapter trimming is also automatically disabled by removing
-the adapter sequences in the sample sheet.
-
-.. note::
-
-   This protocol should only be used when the single cell
-   multiome data has been pooled with other types of data;
-   in these cases it should specified within using the
-   ``--lanes`` option
-   (see :ref:`make_fastqs-pooled-10x-multiome-atac-and-gex`).
-
-   When the single cell multiome data comprises the whole
-   sequencing run then the ``10x_multiome`` protocol
-   should be used instead.
-
-.. _make_fastqs-10x_multiome-gex-protocol:
-
-10xGenomics single cell Multiome GEX data (``--protocol=10x_multiome_gex``)
-***************************************************************************
-
-Fastq generation can be performed for 10xGenomics single cell
-multiome gene expression (GEX) data by using the
-``--protocol=10x_multiome_gex`` option:
-
-::
-
-    auto_process.py make_fastqs --protocol=10x_multiome_gex ...
-
-which fetches the data and runs ``cellranger-arc mkfastq`` with
-the following custom options:
-
- 1. ``--use-bases-mask`` with a bases mask string that has been
-    adjusted appropriately to match the template
-    ``Y28n*,I10,I10n*,Y*``
- 2. ``--filter-dual-index`` will be explicitly specified
-
-as outlined in the 10x Genomics knowledge base article at:
-
-   https://kb.10xgenomics.com/hc/en-us/articles/360049373331-Can-Multiome-ATAC-and-Multiome-GEX-libraries-be-sequenced-together-
-
-for single cell multiome gene expression data.
-
-This will generate the Fastqs in the specified output directory
-(e.g. ``bcl2fastq``) along with an HTML report derived from the
-``cellranger-arc`` JSON QC summary file, and statistics for the
-Fastqs.
-
-By default adapter trimming is also automatically disabled by removing
-the adapter sequences in the sample sheet.
-
-.. note::
-
-   This protocol should only be used when the single cell
-   multiome data has been pooled with other types of data;
-   in these cases it should specified within using the
-   ``--lanes`` option
-   (see :ref:`make_fastqs-pooled-10x-multiome-atac-and-gex`).
-
-   When the single cell multiome data comprises the whole
-   sequencing run then the ``10x_multiome`` protocol
-   should be used instead.
-
-.. _make_fastqs-10x_visium-protocol:
-
-10xGenomics spatial RNA-seq data (``--protocol=10x_visium``)
-************************************************************
-
-Fastq generation can be performed for 10xGenomics spatial RNA-seq
-ata by using the ``--protocol=10x_visium`` option:
-
-::
-
-    auto_process.py make_fastqs --protocol=10x_visium ...
-
-which fetches the data and runs ``spaceranger mkfastq``.
-
-This will generate the Fastqs in the specified output directory
-(e.g. ``bcl2fastq``) along with an HTML report derived from the
-``spaceranger`` JSON QC summary file, statistics for the Fastqs.
-
-.. note::
-
-   ``make_fastqs`` offers various options for controlling the
-   behaviour of ``spaceranger mkfastqs``, for example setting the
-   jobmode (see :ref:`10xgenomics-additional-options`).
+   For data where the sequences are expected to be very short (such
+   as miRNA-seq data), the ``mirna`` protocol should be used instead -
+   this is the same as the ``standard`` protocol but adjusts the
+   adapter trimming and masking options as follows:
+
+   * Sets the minimum trimmed read length to 10 bases (default is
+     35 bases in ``standard`` mode)
+   * Turns off short read masking by setting the threshold length
+     to zero (default is 22 in ``standard`` mode)
+
+   More details about adapter trimming and short read masking can be
+   found in the section :ref:`make_fastqs-adapter-trimming-and-masking`.
+
+For other types of data (typically single cell and spatial), refer to
+the appropriate section of the documentation for more details of which
+Fastq generation protocols should be used:
+
+* :doc:`10x Genomics single cell data <../single_cell/10x_single_cell>`
+* :doc:`10x Genomics spatial data <../spatial/10x_visium>`
+* :doc:`Parse Evercode single cell data <../single_cell/parse>`
+* :doc:`ICELL single cell data <../single_cell/icell8>`
 
 .. _make_fastqs-commonly-used-options:
 
@@ -430,28 +149,8 @@ Some of the most commonly used options are:
   QC reporting
 
 The full set of options can be found in the
-:ref:`'make_fastqs' section of the command reference <commands_make_fastqs>`.
-
-.. _make_fastqs-bcl-converter:
-
-Specifying Illumina BCL conversion software
--------------------------------------------
-
-For the ``standard`` and ``mirna`` Fastq generation protocols,
-it is possible to use either the ``bcl2fastq`` or ``bcl-convert``
-software packages to convert raw BCL data into Fastq files.
-
-The ``--bcl-converter`` command line option can be used to
-specify both the BCL converter software and optionally also
-restrict to a range (or single version), for example:
-
-::
-
-   auto_process.py make_fastqs --bcl-converter 'bcl-convert>=3.7'
-
-Default BCL conversion software can be specified in the config
-file, both generally and on a per-platform basis (see
-:ref:`specifying_bcl_conversion_software`).
+:ref:`'make_fastqs' <commands_make_fastqs>` section of the command
+reference.
 
 .. _make_fastqs-adapter-trimming-and-masking:
 
@@ -652,43 +351,6 @@ the full set of available options:
 * :ref:`commands_update_fastq_stats`
 * :ref:`commands_analyse_barcodes`
 
-.. _make_fastqs-pooled-10x-multiome-atac-and-gex:
-
-Processing a run with pooled 10x Genomics single cell ATAC and GEX data
------------------------------------------------------------------------
-
-If 10x Genomics single cell multiome ATAC and multiome GEX libraries
-are sequenced together in the same run then the standard ``10x_multiome``
-protocol of the ``make_fastqs`` command is unable to correctly process
-the data.
-
-Pooling the ATAC and GEX components of a single cell multiome experiment
-is not officially supported by 10x Genomics, and this limitation is due
-to this configuration not being supported by the ``cellranger-arc``
-pipeline. However they do provide information on how to handle this
-situation in this knowledge base article:
-
-https://kb.10xgenomics.com/hc/en-us/articles/360049373331-Can-Multiome-ATAC-and-Multiome-GEX-libraries-be-sequenced-together-
-
-and the two sub-protocols outlined in this article have been implemented
-within ``make_fastqs`` as the ``10x_multiome_atac`` and ``10_multiome_gex``
-protocols, which should be used as follows:
-
- 1. Ensure that ATAC and GEX data are assigned to separate projects
-    in the input sample sheet
- 2. Use the ``--lanes`` option to explicitly specify the appropriate
-    sub-protocol for the lanes with the ATAC and GEX samples
-
-For example:
-
-::
-
-   auto_process.py make_fastqs \
-      --lanes=1:10x_multiome_atac \
-      --lanes=2:10x_multiome_gex
-
-assuming that the ATAC data are in lane 1 and the GEX data in lane 2.
-
 .. _make_fastqs-processing-same-run-multiple-times:
 
 Processing a single run multiple times
@@ -732,6 +394,27 @@ would produce ``bcl2fastq_no_trimming``, ``barcodes_no_trimming``,
    option (see :ref:`setup_specifying_analysis_run_number`), or by
    setting the ``analysis_number`` metadata item within an existing
    analysis directory.
+
+.. _make_fastqs-bcl-converter:
+
+Specifying Illumina BCL conversion software
+-------------------------------------------
+
+For the ``standard`` and ``mirna`` Fastq generation protocols,
+it is possible to use either the ``bcl2fastq`` or ``bcl-convert``
+software packages to convert raw BCL data into Fastq files.
+
+The ``--bcl-converter`` command line option can be used to
+specify both the BCL converter software and optionally also
+restrict to a range (or single version), for example:
+
+::
+
+   auto_process.py make_fastqs --bcl-converter 'bcl-convert>=3.7'
+
+Default BCL conversion software can be specified in the config
+file, both generally and on a per-platform basis (see
+:ref:`specifying_bcl_conversion_software`).
 
 .. _make_fastqs-outputs:
 

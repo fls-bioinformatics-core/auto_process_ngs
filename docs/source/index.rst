@@ -54,6 +54,24 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    Importing projects </using/import_project>
    Running QC stand-alone <using/run_qc_standalone>
 
+.. _single-cell-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Single cell data
+
+   10x Genomics single cell data <single_cell/10x_single_cell>
+   Parse Evercode data <single_cell/parse>
+   Takara Bio ICELL8 data <single_cell/icell8>
+
+.. _spatial-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Spatial data
+
+   10x Genomics Visium data <spatial/10x_visium>
+
 .. toctree::
    :maxdepth: 2
    :caption: Helpers
@@ -69,15 +87,6 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    projects.info <control_files/projects_info>
    10x_multiome_libraries.info <control_files/10x_multiome_libraries_info>
    10x_multi_config.csv <control_files/10x_multi_config_csv>
-
-.. _single-cell-docs:
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Single-cell data
-
-   Takara Bio ICELL8 data <single_cell/icell8>
-   10xGenomics Chromium data  <single_cell/10xgenomics>
 
 .. toctree::
    :maxdepth: 2
