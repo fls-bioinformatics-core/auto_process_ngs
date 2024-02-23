@@ -153,6 +153,29 @@ class TestReportFunction(unittest.TestCase):
         self.assertTrue(os.path.exists(
             os.path.join(self.top_dir,'report.PE.html')))
 
+    def test_report_paired_end_bad_cellranger_multi(self):
+        """
+        report: paired-end data with 'bad' 'cellranger_multi' subdir
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
+        # Make a "bad" 'cellranger_multi' dir
+        # i.e. doesn't conform to expected format
+        bad_cellranger_multi_dir = os.path.join(analysis_dir,
+                                                "qc",
+                                                "cellranger_multi",
+                                                "PJB")
+        os.makedirs(bad_cellranger_multi_dir)
+        with open(os.path.join(bad_cellranger_multi_dir,"web_summary.html"),
+                  "wt") as fp:
+            fp.write("Placeholder")
+        project = AnalysisProject(analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
+
     def test_report_paired_end_cellranger_count_and_multi(self):
         """
         report: paired-end data with cellranger 'count' and 'multi'

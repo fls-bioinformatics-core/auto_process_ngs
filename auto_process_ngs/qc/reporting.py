@@ -1982,12 +1982,17 @@ class SampleQCReporter:
                 for reference in os.listdir(
                         os.path.join(cellranger_multi_dir,version)):
                     # Add the cellranger multi information
-                    self.cellranger_multi.append(
-                        CellrangerMulti(os.path.join(cellranger_multi_dir,
-                                                     version,
-                                                     reference),
-                                        version=version,
-                                        reference_data=reference))
+                    try:
+                        self.cellranger_multi.append(
+                            CellrangerMulti(os.path.join(cellranger_multi_dir,
+                                                         version,
+                                                         reference),
+                                            version=version,
+                                            reference_data=reference))
+                    except Exception as ex:
+                        logger.warning("exception reading 'cellranger multi' "
+                                       "output from %s (ignored): %s" %
+                                       (cellranger_multi_dir,ex))
         # 10x multiome libraries
         multiome_libraries_file = os.path.join(
             project.dirn,
