@@ -898,7 +898,6 @@ class QCOutputs:
                         lambda ff:
                         ff.endswith(".infer_experiment.log"),
                         os.listdir(os.path.join(infer_experiment_dir,d))):
-                    print("- %s" % f)
                     name = f[:-len(".infer_experiment.log")]
                     organisms.add(d)
                     bam_files.add(name)
