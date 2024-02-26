@@ -498,6 +498,24 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_Flex")
 
+    def test_determine_qc_protocol_10xchromium5_immune_profiling(self):
+        """determine_qc_protocol: single cell immune profiling (10xGenomics Chromium 5')
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Chromium 5'",
+                                          'Library type':
+                                          "Single Cell Immune Profiling"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_ImmuneProfiling")
+
     def test_determine_qc_protocol_10x_single_cell_atac_seq(self):
         """determine_qc_protocol: single-cell ATAC-seq (10xGenomics Single Cell ATAC)
         """

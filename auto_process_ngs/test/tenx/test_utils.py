@@ -617,9 +617,6 @@ reference,/path/to/transcriptome
 #[feature]
 #reference,/path/to/feature/reference
 
-#[vdj]
-#reference,/path/to/vdj/reference
-
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 
@@ -629,6 +626,40 @@ MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
 """
         out_file = os.path.join(self.wd,"10x_multi_config.csv")
         make_multi_config_template(out_file)
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            actual_content = '\n'.join([line for line in fp.read().split('\n')
+                                        if not line.startswith('##')])
+        self.assertEqual(expected_content,actual_content)
+
+    def test_make_multi_config_template_cellplex(self):
+        """
+        make_multi_config_template: check CellPlex template
+        """
+        expected_content = """[gene-expression]
+reference,/data/mm10_transcriptome
+#force-cells,n
+#no-bam,true|false
+#cmo-set,/path/to/custom/cmo/reference
+
+#[feature]
+#reference,/path/to/feature/reference
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Multiplexing Capture],
+PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Multiplexing Capture],
+
+[samples]
+sample_id,cmo_ids,description
+MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
+"""
+        out_file = os.path.join(self.wd,"10x_multi_config.csv")
+        make_multi_config_template(out_file,
+                                   reference="/data/mm10_transcriptome",
+                                   fastq_dir="/runs/novaseq_50/fastqs",
+                                   samples=("PJB_CML","PJB_GEX"),
+                                   library_type="CellPlex")
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             actual_content = '\n'.join([line for line in fp.read().split('\n')
@@ -648,9 +679,6 @@ no-bam,true
 
 #[feature]
 #reference,/path/to/feature/reference
-
-#[vdj]
-#reference,/path/to/vdj/reference
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
@@ -674,9 +702,9 @@ MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
                                         if not line.startswith('##')])
         self.assertEqual(expected_content,actual_content)
 
-    def test_make_multi_config_template_cellplex(self):
+    def test_make_multi_config_template_immune_profiling(self):
         """
-        make_multi_config_template: check CellPlex template
+        make_multi_config_template: check Single Cell Immune Profiling template
         """
         expected_content = """[gene-expression]
 reference,/data/mm10_transcriptome
@@ -692,19 +720,15 @@ reference,/data/mm10_transcriptome
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Multiplexing Capture|Antibody Capture|VDJ-B|VDJ-T],
-PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Multiplexing Capture|Antibody Capture|VDJ-B|VDJ-T],
-
-[samples]
-sample_id,cmo_ids,description
-MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
+PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Antibody Capture|VDJ-B|VDJ-T],
+PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Antibody Capture|VDJ-B|VDJ-T],
 """
         out_file = os.path.join(self.wd,"10x_multi_config.csv")
         make_multi_config_template(out_file,
                                    reference="/data/mm10_transcriptome",
                                    fastq_dir="/runs/novaseq_50/fastqs",
                                    samples=("PJB_CML","PJB_GEX"),
-                                   library_type="CellPlex")
+                                   library_type="Single Cell Immune Profiling")
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             actual_content = '\n'.join([line for line in fp.read().split('\n')

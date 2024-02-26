@@ -224,14 +224,18 @@ class TestGetSeqDataSamples(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
     def _make_mock_analysis_project(self,library_type,
+                                    fastq_names=None,
                                     single_cell_platform=None,
                                     bio_samples=None):
+        # Default Fastqs
+        if not fastq_names:
+            fastq_names = ("PJB1_S1_L001_R1_001.fastq.gz",
+                           "PJB1_S1_L001_R2_001.fastq.gz",
+                           "PJB2_S2_L001_R1_001.fastq.gz",
+                           "PJB2_S2_L001_R2_001.fastq.gz",)
         # Create a mock AnalysisProject
         m = MockAnalysisProject('PJB',
-                                fastq_names=("PJB1_S1_L001_R1_001.fastq.gz",
-                                             "PJB1_S1_L001_R2_001.fastq.gz",
-                                             "PJB2_S2_L001_R1_001.fastq.gz",
-                                             "PJB2_S2_L001_R2_001.fastq.gz",),
+                                fastq_names=fastq_names,
                                 metadata={'Single cell platform':
                                           single_cell_platform,
                                           'Library type': library_type,
@@ -287,6 +291,82 @@ PBB,CMO302,PBB
         # Check sequence data samples
         self.assertEqual(get_seq_data_samples(project_dir),
                          ["PJB1"])
+
+    def test_get_seq_data_samples_10x_flex(self):
+        """
+        get_seq_data_samples: 10x Flex project
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "Flex",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            fastq_names=("PJB1_S1_L001_R1_001.fastq.gz",
+                         "PJB1_S1_L001_R2_001.fastq.gz",))
+        # Make 10x_multi_config.csv file
+        with open(os.path.join(project_dir,"10x_multi_config.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1,{fastq_dir},any,PJB1,gene expression,
+
+[samples]
+sample_id,probe_barcode_ids,description
+PBA,BC001,PBA
+PBB,BC002,PBB
+""".format(fastq_dir=os.path.join(project_dir,'fastqs')))
+        # Check sequence data samples
+        self.assertEqual(get_seq_data_samples(project_dir),
+                         ["PJB1"])
+
+    def test_get_seq_data_samples_10x_immune_profiling(self):
+        """
+        get_seq_data_samples: 10x Single Cell Immune Profiling project
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "Single Cell Immune Profiling",
+            single_cell_platform="10xGenomics Chromium 5'",
+            fastq_names=("PJB1_GEX_S1_L001_R1_001.fastq.gz",
+                         "PJB1_GEX_S1_L001_R2_001.fastq.gz",
+                         "PJB1_TCR_S2_L001_R1_001.fastq.gz",
+                         "PJB1_TCR_S2_L001_R2_001.fastq.gz",
+                         "PJB2_GEX_S3_L001_R1_001.fastq.gz",
+                         "PJB2_GEX_S3_L001_R2_001.fastq.gz",
+                         "PJB2_TCC_S4_L001_R1_001.fastq.gz",
+                         "PJB2_TCR_S4_L001_R2_001.fastq.gz",))
+        # Make 10x_multi_config.csv files
+        with open(os.path.join(project_dir,"10x_multi_config.PJB1.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,{fastq_dir},any,PJB1,gene expression,
+PJB1_TCR,{fastq_dir},any,PJB1,VDJ-T,
+""".format(fastq_dir=os.path.join(project_dir,'fastqs')))
+        with open(os.path.join(project_dir,"10x_multi_config.PJB2.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB2_GEX,{fastq_dir},any,PJB2,gene expression,
+PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
+""".format(fastq_dir=os.path.join(project_dir,'fastqs')))
+        # Check sequence data samples
+        self.assertEqual(get_seq_data_samples(project_dir),
+                         ["PJB1_GEX","PJB1_TCR","PJB2_GEX","PJB2_TCR"])
 
 class TestSetCellCountForProject(unittest.TestCase):
     """

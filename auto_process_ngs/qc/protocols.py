@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     protocols: define and handle QC protocols
-#     Copyright (C) University of Manchester 2022-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2022-2024 Peter Briggs
 #
 
 """
@@ -239,6 +239,26 @@ QC_PROTOCOLS = {
             'rseqc_genebody_coverage',
             'qualimap_rnaseq',
             'cellranger_multi'
+        ]
+    },
+
+    "10x_ImmuneProfiling": {
+        "description": "10xGenomics single cell immune profiling data",
+        "reads": {
+            "seq_data": ('r2',),
+            "index": ('r1',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'strandedness',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq',
+            'cellranger_count(cellranger_use_multi_config=True;'
+                             'set_cell_count=false;'
+                             'set_metadata=False)',
+            #'cellranger_multi'
         ]
     },
 
@@ -629,6 +649,10 @@ def determine_qc_protocol(project):
             elif library_type == "Flex":
                 # 10xGenomics Flex (fixed RNA profiling)
                 protocol = "10x_Flex"
+        elif single_cell_platform.startswith('10xGenomics Chromium 5\''):
+            if library_type == "Single Cell Immune Profiling":
+                # 10xGenomics single cell immune profiling
+                protocol = "10x_ImmuneProfiling"
         elif single_cell_platform == 'Parse Evercode':
             if library_type in ("scRNA-seq",
                                 "snRNA-seq"):

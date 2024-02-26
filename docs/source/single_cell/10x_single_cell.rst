@@ -10,6 +10,7 @@ cell samples including:
 * Single cell and single nuclei RNA-seq
 * Single cell ATAC-seq
 * Single cell multiome gene expression and ATAC data
+* Single cell immune profiling data
 * Cellplex (cell multiplexing)
 * Flex (fixed RNA profiling)
 
@@ -29,6 +30,7 @@ and available to ``auto_process.py``:
 Single cell/single nuclei RNA-seq CellRanger
 Single cell ATAC-seq              CellRanger-ATAC
 Single cell multiome              CellRanger-ARC
+Single cell immune profiling      Cellranger
 CellPlex (cell multiplexing)      CellRanger
 Flex (fixed RNA profiling)        CellRanger
 ================================= =================
@@ -58,6 +60,7 @@ Single cell ATAC-seq                                ``10x_atac``
 Single cell multiome (unpooled GEX or ATAC)         ``10x_multiome``
 Single cell multiome GEX (pooled GEX and ATAC)      ``10x_multiome_gex``
 Single cell multiome ATAC (pooled GEX and ATAC)     ``10x_multiome_atac``
+Single cell immune profiling                        ``10x_chromium_sc``
 CellPlex (cell multiplexing)                        ``10x_chromium_sc``
 Flex (fixed RNA profiling)                          ``10x_chromium_sc``
 =================================================== =====================
@@ -126,6 +129,7 @@ Single cell platform                  Library types
                                       ``CellPlex``, ``Flex``
 ``10xGenomics Chromium 3'v2``         ``scRNA-seq``, ``snRNA-seq``
                                       ``CellPlex``, ``Flex``
+``10xGenomics Chromium 5'``           ``Single Cell Immune Profiling``
 ``10xGenomics Single Cell ATAC``      ``scATAC-seq``, ``snATAC-seq``
 ``10xGenomics Single Cell Multiome``  ``ATAC``, ``GEX``
 ===================================== ==============================
@@ -147,9 +151,23 @@ also create template control files for use in subsequent QC runs:
    file, which should be renamed and populated with information on
    the feature types, multiplexed samples etc.
 
+ * **Single Cell immune profiling**: a template
+   :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`,
+   which should be copied for each sample in the project with the
+   name `10x_multi_config.<SAMPLE>.csv`. Each one should then be
+   populated with information on the Fastqs, feature types etc for
+   that sample.
+
 The :doc:`run_qc <../using/run_qc>` command
 will then determine the appropriate QC protocol to use based on the
 metadata values.
+
+.. note::
+
+   Currently a full QC pipeline is not implemented for single cell
+   immune profiling data: see :ref:`10x_sc-immune-profiling-data`
+   for additional manual steps that can be performed for these types
+   of data.
 
 Troubleshooting
 ---------------
@@ -189,6 +207,58 @@ https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/l
 
 Appendices
 ----------
+
+.. _10x_sc-immune-profiling-data:
+
+Manual QC steps for single cell immune profiling data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Currently a full automated QC protocol is not available for Chromium
+5' single cell immune profiling: specifically, there is no provision
+for running Cellranger's ``multi`` pipeline for each sample, or for
+automatically integrating the resulting outputs into the QC report.
+
+It is possible to run the ``multi`` pipeline manually for each sample,
+using the sample-specific ``10x_multi_config.<SAMPLE>.csv`` files.
+
+For example, a script of the form:
+
+::
+
+   #!/usr/bin/bash
+   #$ -N cellranger_multi_PJB01
+   #$ -V
+   #$ -cwd
+   #$ -j y
+   #$ -pe smp.pe 16
+   #$ -l mem256
+   mkdir -p cellranger_multi && cd cellranger_multi
+   /PATH/TO/cellranger multi \
+   --id PJB01 --csv PATH/TO/10x_multi_config.PJB01.csv \
+   --jobmode=local \
+   --localcores=16 \
+   --localmem=128 \
+   --maxjobs=24 \
+   --jobinterval=100
+
+could be used to submit a Cellranger ``multi`` job for the ``PJB01``
+sample, with the outputs being created in a subdirectory
+``cellranger_multi/PJB01`` in the current directory.
+
+To include the outputs in the QC report, copy the relevant files
+(specifically the ``web_summary.html`` files for each sample) into
+the QC directory and then create an ``extra_outputs.tsv`` which
+references these (as described in
+:ref:`run_qc_including_external_outputs`).
+
+For example:
+
+::
+
+   cellranger_multi/PJB01/web_summary.html    CellRanger multi output for PJB01
+
+Rerunning ``run_qc`` will force update of the QC report which should
+then also link in these additional reports.
 
 .. _10x_multiome-pooled-data:
 

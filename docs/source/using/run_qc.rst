@@ -176,6 +176,8 @@ The behaviour is controlled by the ``split_undetermined_fastqs``
 setting in the ``qc`` section of the configuration file (see
 :ref:`qc_pipeline_configuration`).
 
+.. _run_qc_including_external_outputs:
+
 -----------------------------------------
 Including external (non-pipeline) outputs
 -----------------------------------------

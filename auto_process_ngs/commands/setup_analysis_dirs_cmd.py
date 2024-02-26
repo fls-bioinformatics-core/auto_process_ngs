@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     setup_analysis_dirs_cmd.py: implement 'setup_analysis_dirs' command
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 #########################################################################
 
@@ -10,6 +10,7 @@
 #######################################################################
 
 import os
+import fnmatch
 import shutil
 import json
 import logging
@@ -113,6 +114,17 @@ def setup_analysis_dirs(ap,
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")
+            if sc_platform in tenx.PLATFORMS:
+                library_type = line['Library']
+                for pltfrm in tenx.LIBRARIES:
+                    if fnmatch.fnmatch(sc_platform,pltfrm):
+                        if not library_type in tenx.LIBRARIES[pltfrm]:
+                            # Warn if library is not recognised but carry on
+                            logger.warning("Unrecognised platform/library "
+                                           "combination for '%s': '%s/%s'"
+                                           % (line['Project'],
+                                              sc_platform,
+                                              library_type))
     # Create the projects
     n_projects = 0
     for line in project_metadata:
@@ -182,10 +194,9 @@ def setup_analysis_dirs(ap,
                 logger.warning("Failed to create '%s': %s" % (f,ex))
         elif single_cell_platform.startswith("10xGenomics Chromium") and \
            (library_type.startswith("CellPlex") or
-            library_type == "Flex"):
-            # Set library type for config
-            library = library_type.split()[0]
-            print("-- setting up 'multi' config file for '%s'" % library)
+            library_type == "Flex" or
+            library_type == "Single Cell Immune Profiling"):
+            print("-- setting up 'multi' config file for '%s'" % library_type)
             # Acquire reference transcriptome dataset
             print("-- looking up transcriptome for '%s'" % organism)
             try:
@@ -200,7 +211,7 @@ def setup_analysis_dirs(ap,
                                (project_name,ex))
                 reference_dataset = None
             # Acquire probe set
-            if library == "Flex":
+            if library_type == "Flex":
                 print("-- looking up probe set for '%s'" % organism)
                 try:
                     organism_id = normalise_organism_name(organism)
@@ -226,7 +237,7 @@ def setup_analysis_dirs(ap,
                     probe_set=probe_set,
                     fastq_dir=project.fastq_dir,
                     samples=[s.name for s in project.samples],
-                    library_type=library)
+                    library_type=library_type)
             except Exception as ex:
                 logger.warning("Failed to create '%s': %s" % (f,ex))
         # Additional subdir for Visium images

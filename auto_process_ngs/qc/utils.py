@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes and functions for QC
-#     Copyright (C) University of Manchester 2018-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 """
 Provides utility classes and functions for analysis project QC.
@@ -317,15 +317,35 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
     # 10x Genomics CellPlex
     single_cell_platform = project.info.single_cell_platform
     if single_cell_platform:
-        if single_cell_platform.startswith("10xGenomics Chromium 3'") and \
-           project.info.library_type == "CellPlex":
-            # Check for config file
+        if single_cell_platform.startswith("10xGenomics Chromium") and \
+           project.info.library_type in ("CellPlex",
+                                         "Flex"):
+            # CellPlex/Flex
+            # Check for a single config file
             config_file = os.path.join(project.dirn,
                                        "10x_multi_config.csv")
             if os.path.exists(config_file):
                 config_csv = CellrangerMultiConfigCsv(config_file)
                 samples = sorted([s for s in config_csv.gex_libraries
                                   if s in samples])
+        elif single_cell_platform.startswith("10xGenomics Chromium") and \
+             project.info.library_type == "Single Cell Immune Profiling":
+            # Single Cell Immune Profiling
+            # Check for multiple config files
+            config_files = [os.path.join(project.dirn,f)
+                            for f in os.listdir(project.dirn)
+                            if (f.startswith("10x_multi_config.") and
+                                f.endswith(".csv"))]
+            samples_ = []
+            for config_file in config_files:
+                config_csv = CellrangerMultiConfigCsv(config_file)
+                for feature_type in ("gene_expression",
+                                     "vdj_b",
+                                     "vdj_t"):
+                    samples_.extend([s for s in
+                                     config_csv.libraries(feature_type)
+                                     if s in samples])
+            samples = sorted(samples_)
     return samples
 
 def set_cell_count_for_project(project_dir,qc_dir=None,

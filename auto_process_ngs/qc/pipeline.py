@@ -822,10 +822,11 @@ class QCPipeline(Pipeline):
 
                 # Run cellranger multi
                 run_cellranger_multi = RunCellrangerMulti(
-                    "%s: analyse cell multiplexing data (cellranger multi)" %
-                    project_name,
+                    "%s: run cellranger multi (%s)" %
+                    (project_name,
+                     project.info.library_type),
                     project,
-                    get_cellranger_multi_config.output.config_csv,
+                    get_cellranger_multi_config.output.config_csvs,
                     get_cellranger_multi_config.output.samples,
                     get_cellranger_multi_config.output.reference_data_path,
                     cellranger_out_dir,
@@ -2397,7 +2398,7 @@ class MakeCellrangerArcCountLibraries(PipelineFunctionTask):
 
 class GetCellrangerMultiConfig(PipelineFunctionTask):
     """
-    Locate 'config.csv' file for cellranger multi
+    Locate 'config.csv' files for cellranger multi
     """
     def init(self,project,qc_dir):
         """
@@ -2409,29 +2410,35 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
           qc_dir (str): top-level QC directory to put
             'config.csv' files
         """
-        self.add_output('config_csv',Param(type=str))
+        self.add_output('config_csvs',ListParam())
         self.add_output('samples',ListParam())
         self.add_output('gex_libraries',ListParam())
         self.add_output('fastq_dirs',dict())
         self.add_output('reference_data_path',Param(type=str))
         self.add_output('probe_set_path',Param(type=str))
     def setup(self):
-        # Check for top-level libraries file
-        config_file = os.path.join(self.args.project.dirn,
-                                   "10x_multi_config.csv")
-        if not os.path.exists(config_file):
-            # Nothing to do
-            print("No 10x multi config file '%s': nothing to do" %
-                  config_file)
+        # Check for top-level multi config files
+        config_files = [os.path.join(self.args.project.dirn,f)
+                        for f in os.listdir(self.args.project.dirn)
+                        if f.startswith("10x_multi_config.")
+                        and f.endswith(".csv")]
+        if not config_files:
+            # No configs found
+            print("No 10x multi config files found: nothing to do")
             return
-        # Extract information from config.csv file
-        print("Reading config.csv file")
-        config_csv = CellrangerMultiConfigCsv(config_file)
-        samples = config_csv.sample_names
-        gex_libraries = config_csv.gex_libraries
-        reference_data_path = config_csv.reference_data_path
-        probe_set_path = config_csv.probe_set_path
-        fastq_dirs = config_csv.fastq_dirs
+        samples = list()
+        gex_libraries = list()
+        fastq_dirs = dict()
+        for config_file in config_files:
+            # Extract information from each config.csv file
+            print("Reading '%s'" % os.path.basename(config_file))
+            config_csv = CellrangerMultiConfigCsv(config_file)
+            reference_data_path = config_csv.reference_data_path
+            probe_set_path = config_csv.probe_set_path
+            samples.extend(config_csv.sample_names)
+            gex_libraries.extend(config_csv.gex_libraries)
+            for sample in config_csv.fastq_dirs:
+                fastq_dirs[sample] = config_csv.fastq_dirs[sample]
         print("Samples:")
         for sample in samples:
             print("- %s" % sample)
@@ -2439,12 +2446,15 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         for library in gex_libraries:
             print("- %s" % library)
         print("Reference dataset: %s" % reference_data_path)
-        # Copy config file to QC dir
-        print("Copy '%s' into %s" % (config_file,self.args.qc_dir))
-        shutil.copy(config_file,self.args.qc_dir)
+        print("Probe set        : %s" % probe_set_path)
+        # Copy config files to QC dir
+        for config_file in config_files:
+            print("Copy '%s' into %s" % (config_file,self.args.qc_dir))
+            shutil.copy(config_file,self.args.qc_dir)
         # Set outputs
-        self.output.config_csv.set(os.path.join(self.args.qc_dir,
-                                                os.path.basename(config_file)))
+        self.output.config_csvs.extend(
+            [os.path.join(self.args.qc_dir,os.path.basename(cf))
+             for cf in config_files])
         self.output.samples.extend(samples)
         self.output.gex_libraries.extend(gex_libraries)
         self.output.reference_data_path.set(reference_data_path)
@@ -2842,7 +2852,7 @@ class RunCellrangerMulti(PipelineTask):
     """
     Run 'cellranger multi'
     """
-    def init(self,project,config_csv,samples,reference_data_path,out_dir,
+    def init(self,project,config_csvs,samples,reference_data_path,out_dir,
              qc_dir=None,cellranger_exe=None,cellranger_version=None,
              cellranger_jobmode='local',cellranger_maxjobs=None,
              cellranger_mempercore=None,cellranger_jobinterval=None,
@@ -2854,8 +2864,8 @@ class RunCellrangerMulti(PipelineTask):
         Arguments:
           project (AnalysisProject): project to run
             QC for
-          config_csv (str): path to 'cellranger multi'
-            configuration file
+          config_csvs (list): list of paths to
+            'cellranger multi' configuration files
           samples (list): list of sample names from the
             config.csv file
           reference_data_path (str): path to the cellranger
@@ -2898,8 +2908,11 @@ class RunCellrangerMulti(PipelineTask):
         self.run_cellranger_multi = False
     def setup(self):
         # Check if there's anything to do
-        if not self.args.config_csv:
+        if not self.args.config_csvs:
             print("No config file: nothing to do")
+            return
+        if len(self.args.config_csvs) > 1:
+            print("Too many config files: skipping multi analysis")
             return
         if not self.args.cellranger_exe:
             raise Exception("No cellranger executable provided")
@@ -2946,7 +2959,7 @@ class RunCellrangerMulti(PipelineTask):
         cmd = Command(cellranger_exe,
                       "multi",
                       "--id",self.args.project.name,
-                      "--csv",self.args.config_csv)
+                      "--csv",self.args.config_csvs[0])
         # Set number of local cores
         if self.args.cellranger_localcores:
             localcores = self.args.cellranger_localcores
@@ -3003,8 +3016,12 @@ class RunCellrangerMulti(PipelineTask):
                        dest_dir=multi_dir))
     def finish(self):
         # If no config.csv then ignore and return
-        if not self.args.config_csv:
-            print("No config file: cell multiplexing analysis was skipped")
+        if not self.args.config_csvs:
+            print("No config file: cellranger multi analysis was skipped")
+            return
+        elif len(self.args.config_csvs) > 1:
+            print("Too many config files: cellranger multi analysis was "
+                  "skipped")
             return
         # Location of final outputs
         multi_dir = os.path.abspath(

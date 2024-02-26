@@ -48,9 +48,9 @@ field.
 Once the project directories have been created, the next step is to
 run the QC pipeline - see :doc:`Running the QC <run_qc>`.
 
-----------------
-Additional files
-----------------
+--------------------------------
+Additional files and directories
+--------------------------------
 
 For certain types of data there are additional files that should
 be added to the project directory manually after running
@@ -65,6 +65,9 @@ generate partially-populated template versions, with the
 
 These can be edited and renamed before use in downstream processing
 stages (e.g. the QC pipeline).
+
+For 10x Genomics Visium data an empty ``Visium_images`` subdirectory
+will also be created (see :doc:`../spatial/10x_visium`).
 
 .. _setup_analysis_dirs-add-identifier:
 
