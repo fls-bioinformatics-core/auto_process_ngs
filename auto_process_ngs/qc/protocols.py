@@ -655,6 +655,8 @@ def determine_qc_protocol(project):
                 protocol = "10x_ImmuneProfiling"
         elif single_cell_platform == 'Parse Evercode':
             if library_type in ("scRNA-seq",
+                                "TCR scRNA-seq",
+                                "WT scRNA-seq",
                                 "snRNA-seq"):
                 # Parse Evercode snRNAseq
                 protocol = "ParseEvercode"
