@@ -81,6 +81,7 @@ Protocol option          Used for
 ``10x_multiome_gex``     10xGenomics Multiome single cell
                          GEX data only (run with pooled GEX
                          and ATAC data)
+``parse_evercode``       Parse Evercode single cell data
 ``icell8``               ICELL8 single-cell RNA-seq data
 ``icell8_atac``          ICELL8 single-cell ATAC-seq data
 ======================== =====================================

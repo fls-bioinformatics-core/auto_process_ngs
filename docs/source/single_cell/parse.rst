@@ -17,7 +17,7 @@ or QC.
 Fastq generation
 ----------------
 
-Currently the (default) standard Fastq generation protocol is used
+The ``parse_evercode`` Fastq generation protocol should be used
 for Parse Evercode samples when running the
 :doc:`make_fastqs <../using/make_fastqs>` command.
 
