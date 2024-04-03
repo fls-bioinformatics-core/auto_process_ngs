@@ -115,7 +115,8 @@ PROTOCOLS = ('standard',
              '10x_visium',
              '10x_multiome',
              '10x_multiome_atac',
-             '10x_multiome_gex')
+             '10x_multiome_gex',
+             'parse_evercode',)
 
 # 10xGenomics protocols
 PROTOCOLS_10X = ('10x_chromium_sc',
@@ -615,7 +616,11 @@ class MakeFastqs(Pipeline):
                 self._update_subset(s,
                                     tenx_filter_dual_index=True,
                                     trim_adapters=False)
-            
+            elif protocol == 'parse_evercode':
+                # Parse Evercode
+                # Disable adapter trimming
+                self._update_subset(s,
+                                    trim_adapters=False)
         # Finally update parameters for user-defined
         # lane subsets (overriding both pipeline and
         # protocol defaults)
@@ -1166,7 +1171,9 @@ class MakeFastqs(Pipeline):
             self.add_task(restore_backup)
 
             # Standard protocols
-            if protocol in ("standard","mirna"):
+            if protocol in ("standard",
+                            "mirna",
+                            "parse_evercode"):
 
                 if converter == "bcl2fastq":
                     # Get bcl2fastq information
