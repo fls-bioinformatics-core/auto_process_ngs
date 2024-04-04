@@ -367,6 +367,13 @@ class TestCellrangerInfo(unittest.TestCase):
             fp.write("#!/bin/bash\necho cellranger cellranger-7.1.0")
         os.chmod(cellranger_710,0o775)
         return cellranger_710
+    def _make_mock_cellranger_800(self):
+        # Make a fake cellranger 8.0.0 executable
+        cellranger_800 = os.path.join(self.wd,"cellranger")
+        with open(cellranger_800,'w') as fp:
+            fp.write("#!/bin/bash\necho cellranger cellranger-8.0.0")
+        os.chmod(cellranger_800,0o775)
+        return cellranger_800
     def _make_mock_cellranger_atac_101(self):
         # Make a fake cellranger-atac 1.0.1 executable
         cellranger_atac_101 = os.path.join(self.wd,"cellranger-atac")
@@ -434,6 +441,13 @@ class TestCellrangerInfo(unittest.TestCase):
         cellranger = self._make_mock_cellranger_710()
         self.assertEqual(cellranger_info(path=cellranger),
                          (cellranger,'cellranger','7.1.0'))
+
+    def test_cellranger_800(self):
+        """cellranger_info: collect info for cellranger 8.0.0
+        """
+        cellranger = self._make_mock_cellranger_800()
+        self.assertEqual(cellranger_info(path=cellranger),
+                         (cellranger,'cellranger','8.0.0'))
 
     def test_cellranger_atac_101(self):
         """cellranger_info: collect info for cellranger-atac 1.0.1
