@@ -2188,8 +2188,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         # count subparser
         count = sp.add_parser("count")
         count.add_argument("--id",action="store",required=True)
-        count.add_argument("--fastqs",action="store",required=True)
-        count.add_argument("--sample",action="store",required=True)
+        count.add_argument("--fastqs",action="store")
+        count.add_argument("--sample",action="store")
         if self._package_name == "cellranger":
             count.add_argument("--transcriptome",action="store",
                                required=True)
