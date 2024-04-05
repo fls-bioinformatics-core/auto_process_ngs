@@ -2717,6 +2717,11 @@ class RunCellrangerCount(PipelineTask):
                                          "true")
                         else:
                             cmd.add_args("--include-introns")
+                # Additional options for cellranger 8.0+
+                if cellranger_major_version >= 8:
+                    # --create-bam is compulsory
+                    # Recommended to set to 'true'
+                    cmd.add_args("--create-bam","true")
             elif cellranger_package == "cellranger-atac":
                 # Cellranger-ATAC
                 cmd.add_args("--fastqs",fastq_dir,
