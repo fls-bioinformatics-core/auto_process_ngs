@@ -2194,7 +2194,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             count.add_argument("--transcriptome",action="store")
             count.add_argument("--chemistry",action="store")
             count.add_argument("--force-cells",action="store",type=int)
-            if version[0] == 7:
+            if version[0] in (7,8):
                 # Cellranger 7: include introns on by default
                 count.add_argument("--include-introns",
                                    choices=['true','false'],
