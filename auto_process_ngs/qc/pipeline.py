@@ -2712,7 +2712,7 @@ class RunCellrangerCount(PipelineTask):
                     if self.args.library_type == "snRNA-seq":
                         # For single nuclei RNA-seq specify the
                         # --include-introns for cellranger 5.0+
-                        if cellranger_major_version == 7:
+                        if cellranger_major_version in (7,8):
                             cmd.add_args("--include-introns",
                                          "true")
                         else:
