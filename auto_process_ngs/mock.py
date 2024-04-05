@@ -2187,15 +2187,16 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             mkfastq.add_argument("--qc",action="store_true")
         # count subparser
         count = sp.add_parser("count")
-        count.add_argument("--id",action="store")
-        count.add_argument("--fastqs",action="store")
-        count.add_argument("--sample",action="store")
+        count.add_argument("--id",action="store",required=True)
+        count.add_argument("--fastqs",action="store",required=True)
+        count.add_argument("--sample",action="store",required=True)
         if self._package_name == "cellranger":
-            count.add_argument("--transcriptome",action="store")
+            count.add_argument("--transcriptome",action="store",
+                               required=True)
             count.add_argument("--chemistry",action="store")
             count.add_argument("--force-cells",action="store",type=int)
             if version[0] in (7,8):
-                # Cellranger 7: include introns on by default
+                # Cellranger 7,8: include introns on by default
                 count.add_argument("--include-introns",
                                    choices=['true','false'],
                                    default='true')
@@ -2206,6 +2207,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if version[0] >= 5:
                 count.add_argument("--r1-length",action="store")
                 count.add_argument("--r2-length",action="store")
+            if version[0] == 8:
+                # Cellranger 8: explicitly specify BAM creation
+                count.add_argument("--create-bam",
+                                   choices=['true','false'],
+                                   required=True)
         elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
             if version[0] >= 2:
