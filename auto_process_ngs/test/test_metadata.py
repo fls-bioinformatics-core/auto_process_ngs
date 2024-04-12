@@ -707,5 +707,6 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.primary_fastq_dir,None)
         self.assertEqual(info.samples,None)
         self.assertEqual(info.biological_samples,None)
+        self.assertEqual(info.multiplexed_samples,None)
         self.assertEqual(info.sequencer_model,None)
         self.assertEqual(info.comments,None)
