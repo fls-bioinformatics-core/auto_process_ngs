@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 ########################################################################
 #
@@ -23,6 +23,7 @@ Classes:
 Functions:
 
 - run_id: fetch run ID for sequencing run
+- run_reference_id: fetch run reference ID for sequencing run
 - split_sample_name: split sample name into components
 - split_sample_reference: split sample reference ID into components
 - match_run_id: check if directory matches run identifier
@@ -213,6 +214,8 @@ class AnalysisDir:
 
     * analysis_dir: full path to the directory
     * run_name: the name of the parent sequencing run
+    * run_id: the ID assigned to the run
+    * run_reference_id: the reference ID assigned to the run
     * metadata: metadata items associated with the run
     * projects: list of AnalysisProject objects
     * undetermined: AnalysisProject object for 'undetermined'
@@ -295,6 +298,26 @@ class AnalysisDir:
             self.instrument_name,\
             self.instrument_run_number = IlluminaData.split_run_name(
                 self.run_name)
+        # Run ID
+        try:
+            self.run_id = self.metadata.run_id
+        except AttributeError:
+            self.run_id = None
+        if self.run_id is None:
+            self.run_id = run_id(
+                self.run_name,
+                platform=self.metadata.platform,
+                facility_run_number=self.metadata.run_number,
+                analysis_number=self.metadata.analysis_number)
+        # Run reference ID
+        try:
+            self.run_reference_id = self.metadata.run_reference_id
+        except AttributeError:
+            self.run_reference_id = None
+        if self.run_reference_id is None:
+            self.run_reference_id = run_reference_id(
+                self.run_id,
+                flow_cell_mode=self.metadata.flow_cell_mode)
         # Look for outputs from bclToFastq and analysis projects
         logger.debug("Examining subdirectories of %s" % self._analysis_dir)
         for dirn in bcf_utils.list_dirs(self._analysis_dir):
@@ -1347,6 +1370,19 @@ def run_id(run_name,platform=None,facility_run_number=None,
     if analysis_number is not None:
         run_id += ".%s" % analysis_number
     return run_id
+
+def run_reference_id(run_id,flow_cell_mode=None):
+    """
+    Return a run reference ID (e.g. 'NOVASEQ6000_230419/74#22_SP')
+
+    The reference is constructed from the run ID
+    pluse the following additional items, if defined:
+
+    - flow cell mode
+    """
+    return "%s%s" % (run_id,
+                     '' if not flow_cell_mode
+                     else "_%s" % flow_cell_mode)
 
 def split_sample_name(s):
     """
