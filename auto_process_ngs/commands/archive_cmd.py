@@ -17,6 +17,7 @@ from ..metadata import AnalysisDirParameters
 from .. import applications
 from .. import fileops
 from .. import simple_scheduler
+from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..tenx.utils import flow_cell_id
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.utils import format_file_size
@@ -429,11 +430,34 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             logger.warning("Unable to get old base path from parameters")
             logger.warning("Using base path: %s (may be incorrect)" %
                            base_path)
-        # Paths in QC info
+        # Metadata and QC info
         analysis_dir =  AnalysisDir(staged_analysis_dir)
         # FIXME AnalysisDir.get_projects method might not get all
         # FIXME the projects?
         for project in analysis_dir.get_projects():
+            # Project metadata
+            project_info_updated = False
+            # Update multiplexed sample information
+            if project.info.multiplexed_samples is None:
+                if project.info.library_type in ("CellPlex",
+                                                 "Flex"):
+                    # Fetch implicit multiplexed sample info
+                    # from cellranger multi config
+                    try:
+                        multi_config = CellrangerMultiConfigCsv(
+                            os.path.join(project.dirn,
+                                         "10x_multi_config.csv"))
+                        project.info['multiplexed_samples'] = \
+                                        ','.join(multi_config.sample_names)
+                        project_info_updated = True
+                        print("Project '%s': updated multiplexed sample info" %
+                              project.name)
+                    except FileNotFoundError:
+                        pass
+            # Save the updated information
+            if project_info_updated:
+                project.info.save()
+            # QC metadata
             # FIXME should do all QC dirs (not just the primary one)
             qc_info = project.qc_info(project.qc_dir)
             if qc_info.fastq_dir:
