@@ -172,8 +172,10 @@ The most commonly used metadata items are listed in the table below:
    ======================== =========================================
    **Item**                 **Description**
    ------------------------ -----------------------------------------
+   ``Name``                 Project name
    ``Run``                  Parent run name
-   ``Platform``             Sequencing platform (e.g. ``miseq``)
+   ``Platform``             Sequencing platform (e.g. ``novaseq600``)
+   ``Sequencer model``      Model of sequencer used (e.g. ``NovaSeq 6000``)
    ``User``                 Name of the user(s)
    ``PI``                   Name of PI(s)
    ``Organism``             Organism name(s)
@@ -185,7 +187,18 @@ The most commonly used metadata items are listed in the table below:
                             end
    ``Primary fastqs``       Subdirectory holding the 'primary' set of
                             Fastq files for the project
-   ``Samples``              Number and list of sample names
+   ``Samples``              Number and list of sample names for
+                            physical samples
+   ``Biological samples``   List of subset of physical samples with
+                            biological data (if not set then all
+                            samples assumed to contain biological
+                            information)
+   ``Multiplexed samples``  List of sample names for multiplexed
+                            for 10x Genomics CellPlex and Flex data
+                            and Parse Evercode data (if not set then
+                            there are no multiplexed samples; if set
+                            to ``?`` then there are multiplexed
+                            samples but the names are not known)
    ``Comments``             Any additional comments about the project
    ======================== =========================================
 
