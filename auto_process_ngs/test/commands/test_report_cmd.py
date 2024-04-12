@@ -451,6 +451,199 @@ Summary of data in 'bcl2fastq' dir:
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_info_explicit_multiplexed_samples(self):
+        """report: report run with multiplexed samples in 'info' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87, },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Multiplexed samples": "M1,M2,M3,M4" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate concise report
+        expected = """Run ID       : MISEQ_170901#87
+Directory    : %s
+Platform     : miseq
+Unaligned dir: bcl2fastq
+
+Summary of data in 'bcl2fastq' dir:
+
+- AB: AB1-2 (2 paired end samples)
+- CDE: CDE3-4 (2 paired end samples)
+
+3 analysis projects:
+
+- AB
+  --
+  User    : Alison Bell
+  PI      : Audrey Bower
+  Library : RNA-seq
+  SC Plat.: None
+  Organism: Human
+  Dir     : AB
+  #samples: 4 multiplexed (2 physical)
+  #cells  : 
+  Samples : M1-4 (AB1-2)
+  QC      : not verified
+  Comments: None
+
+- CDE
+  ---
+  User    : Charles David Edwards
+  PI      : Colin Delaney Eccleston
+  Library : ChIP-seq
+  SC Plat.: None
+  Organism: Mouse
+  Dir     : CDE
+  #samples: 2
+  #cells  : 
+  Samples : CDE3-4
+  QC      : not verified
+  Comments: None
+
+- undetermined
+  ------------
+  User    : None
+  PI      : None
+  Library : None
+  SC Plat.: None
+  Organism: None
+  Dir     : undetermined
+  #samples: 1
+  #cells  : 
+  Samples : Undetermined
+  QC      : not verified
+  Comments: None""" % mockdir.dirn
+        for o,e in zip(report_info(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_info_no_projects(self):
+        """report: report run with no projects in 'info' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87, },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate concise report
+        expected = """Run ID       : MISEQ_170901#87
+Directory    : %s
+Platform     : miseq
+Unaligned dir: bcl2fastq
+
+Summary of data in 'bcl2fastq' dir:
+
+- AB: AB1-2 (2 paired end samples)
+- CDE: CDE3-4 (2 paired end samples)
+
+No analysis projects found""" % mockdir.dirn
+        for o,e in zip(report_info(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_info_explicit_unknown_multiplexed_samples(self):
+        """report: report run with "unknown" multiplexed samples in 'info' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87, },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Multiplexed samples": "?" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate concise report
+        expected = """Run ID       : MISEQ_170901#87
+Directory    : %s
+Platform     : miseq
+Unaligned dir: bcl2fastq
+
+Summary of data in 'bcl2fastq' dir:
+
+- AB: AB1-2 (2 paired end samples)
+- CDE: CDE3-4 (2 paired end samples)
+
+3 analysis projects:
+
+- AB
+  --
+  User    : Alison Bell
+  PI      : Audrey Bower
+  Library : RNA-seq
+  SC Plat.: None
+  Organism: Human
+  Dir     : AB
+  #samples: ? multiplexed (2 physical)
+  #cells  : 
+  Samples : ? (AB1-2)
+  QC      : not verified
+  Comments: None
+
+- CDE
+  ---
+  User    : Charles David Edwards
+  PI      : Colin Delaney Eccleston
+  Library : ChIP-seq
+  SC Plat.: None
+  Organism: Mouse
+  Dir     : CDE
+  #samples: 2
+  #cells  : 
+  Samples : CDE3-4
+  QC      : not verified
+  Comments: None
+
+- undetermined
+  ------------
+  User    : None
+  PI      : None
+  Library : None
+  SC Plat.: None
+  Organism: None
+  Dir     : undetermined
+  #samples: 1
+  #cells  : 
+  Samples : Undetermined
+  QC      : not verified
+  Comments: None""" % mockdir.dirn
+        for o,e in zip(report_info(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
     def test_report_info_no_projects(self):
         """report: report run with no projects in 'info' mode
         """
@@ -612,7 +805,7 @@ ABM4,CMO304,ABM4
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
         self.assertEqual(report_concise(ap),
-                         "Paired end: 'AB': Alison Bell, Human 10xGenomics Chromium 3'v3 CellPlex (PI: Audrey Bower) (4 samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
+                         "Paired end: 'AB': Alison Bell, Human 10xGenomics Chromium 3'v3 CellPlex (PI: Audrey Bower) (4 multiplexed samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
 
     def test_report_concise_10x_flex(self):
         """report: report 10xGenomics Flex run in 'concise' mode
@@ -664,7 +857,69 @@ ABF4,BC004,ABF4
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
         self.assertEqual(report_concise(ap),
-                         "Paired end: 'AB': Alison Bell, Human 10xGenomics Chromium 3'v3 Flex (PI: Audrey Bower) (4 samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
+                         "Paired end: 'AB': Alison Bell, Human 10xGenomics Chromium 3'v3 Flex (PI: Audrey Bower) (4 multiplexed samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
+
+    def test_report_concise_multiplexed_samples(self):
+        """report: report run with multiplexed samples in 'concise' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Multiplexed samples": "M1,M2,M3,M4" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate concise report
+        self.assertEqual(report_concise(ap),
+                         "Paired end: 'AB': Alison Bell, Human RNA-seq (PI: Audrey Bower) (4 multiplexed samples); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
+
+    def test_report_concise_unknown_multiplexed_samples(self):
+        """report: report run with "unknown" multiplexed samples in 'concise' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Multiplexed samples": "?" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate concise report
+        self.assertEqual(report_concise(ap),
+                         "Paired end: 'AB': Alison Bell, Human RNA-seq (PI: Audrey Bower) (? multiplexed samples); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
 
     def test_report_concise_no_projects(self):
         """report: report run with no projects in 'concise' mode
@@ -926,8 +1181,8 @@ Bcl2fastq : bcl2fastq 2.17.1.14
 Cellranger: cellranger 3.0.1
 
 2 projects:
-- 'AB':  Alison Bell           Human CellPlex (10xGenomics Chromium 3'v3) 4 samples/1311 cells (PI Audrey Bower)           
-- 'CDE': Charles David Edwards Mouse ChIP-seq                             2 samples            (PI Colin Delaney Eccleston)
+- 'AB':  Alison Bell           Human CellPlex (10xGenomics Chromium 3'v3) 4 multiplexed samples/1311 cells (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq                             2 samples                        (PI Colin Delaney Eccleston)
 
 Additional notes/comments:
 - CDE: Repeat of previous run
@@ -1003,8 +1258,108 @@ Bcl2fastq : bcl2fastq 2.17.1.14
 Cellranger: cellranger 3.0.1
 
 2 projects:
-- 'AB':  Alison Bell           Human Flex (10xGenomics Chromium 3'v3) 4 samples/1311 cells (PI Audrey Bower)           
-- 'CDE': Charles David Edwards Mouse ChIP-seq                         2 samples            (PI Colin Delaney Eccleston)
+- 'AB':  Alison Bell           Human Flex (10xGenomics Chromium 3'v3) 4 multiplexed samples/1311 cells (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq                         2 samples                        (PI Colin Delaney Eccleston)
+
+Additional notes/comments:
+- CDE: Repeat of previous run
+""" % mockdir.dirn
+        for o,e in zip(report_summary(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_summary_multiplexed_samples(self):
+        """report: report run with multiplexed samples in 'summary' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Multiplexed samples": "M1,M2,M3,M4" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "Comments": "Repeat of previous run" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate summary report
+        expected = """MISEQ run #87 datestamped 170901
+================================
+Run name : 170901_M00879_0087_000000000-AGEW9
+Reference: MISEQ_170901#87
+Platform : MISEQ
+Sequencer: MiSeq
+Directory: %s
+Endedness: Paired end
+Bcl2fastq: Unknown
+
+2 projects:
+- 'AB':  Alison Bell           Human RNA-seq  4 multiplexed samples (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq 2 samples             (PI Colin Delaney Eccleston)
+
+Additional notes/comments:
+- CDE: Repeat of previous run
+""" % mockdir.dirn
+        for o,e in zip(report_summary(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_summary_unknown_multiplexed_samples(self):
+        """report: report run with "unknown" multiplexed samples in 'summary' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Multiplexed samples": "?" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "Comments": "Repeat of previous run" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate summary report
+        expected = """MISEQ run #87 datestamped 170901
+================================
+Run name : 170901_M00879_0087_000000000-AGEW9
+Reference: MISEQ_170901#87
+Platform : MISEQ
+Sequencer: MiSeq
+Directory: %s
+Endedness: Paired end
+Bcl2fastq: Unknown
+
+2 projects:
+- 'AB':  Alison Bell           Human RNA-seq  ? multiplexed samples (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq 2 samples             (PI Colin Delaney Eccleston)
 
 Additional notes/comments:
 - CDE: Repeat of previous run
@@ -1443,6 +1798,76 @@ ABF4,BC004,ABF4
         # Generate projects report
         expected = """NOVASEQ_240213#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tFlex\t10xGenomics Chromium 3'v3\tHuman\tNOVASEQ\t4\t1311\tyes\tABF1-4
 NOVASEQ_240213#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tNOVASEQ\t2\t\tyes\tCDE3-4
+"""
+        for o,e in zip(report_projects(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_projects_multiplexed_samples(self):
+        """report: report run with multiplexed samples in 'projects' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Multiplexed samples": "M1,M2,M3,M4" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        expected = """MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t4\t\tyes\tM1-4
+MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
+"""
+        for o,e in zip(report_projects(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_projects_unknown_multiplexed_samples(self):
+        """report: report run with "unknown" multiplexed samples in 'projects' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Multiplexed samples": "?" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        expected = """MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t?\t\tyes\t?
+MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
 """
         for o,e in zip(report_projects(ap).split('\n'),
                        expected.split('\n')):
