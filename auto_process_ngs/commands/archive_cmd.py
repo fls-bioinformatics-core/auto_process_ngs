@@ -454,6 +454,12 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                               project.name)
                     except FileNotFoundError:
                         pass
+                elif project.info.single_cell_platform == "Parse Evercode":
+                    # Set to unknown for Parse data
+                    project.info['multiplexed_samples'] = '?'
+                    project_info_updated = True
+                    print("Project '%s': updated multiplexed sample info" %
+                          project.name)
             # Save the updated information
             if project_info_updated:
                 project.info.save()
