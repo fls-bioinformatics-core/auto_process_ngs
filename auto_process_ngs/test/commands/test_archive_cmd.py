@@ -234,6 +234,11 @@ poll_interval = 0.5
                                   settings=self.settings)
         self.assertEqual(archived_ap.params.analysis_dir,
                          final_archive_dir)
+        # Check run ID and reference
+        self.assertEqual(archived_ap.metadata.run_id,
+                         "MISEQ_170901#87")
+        self.assertEqual(archived_ap.metadata.run_reference_id,
+                         "MISEQ_170901#87")
         # Check that Fastqs are not writable
         for project in ("AB","CDE","undetermined"):
             fq_dir = os.path.join(final_archive_dir,
@@ -301,6 +306,11 @@ poll_interval = 0.5
                                   settings=self.settings)
         self.assertEqual(archived_ap.params.analysis_dir,
                          final_archive_dir)
+        # Check run ID and reference
+        self.assertEqual(archived_ap.metadata.run_id,
+                         "MISEQ_170901#87")
+        self.assertEqual(archived_ap.metadata.run_reference_id,
+                         "MISEQ_170901#87")
         # Check that Fastqs are not writable
         for project in ("AB","CDE","undetermined"):
             fq_dir = os.path.join(final_archive_dir,
@@ -373,6 +383,11 @@ poll_interval = 0.5
                                   settings=self.settings)
         self.assertEqual(archived_ap.params.analysis_dir,
                          final_archive_dir)
+        # Check run ID and reference
+        self.assertEqual(archived_ap.metadata.run_id,
+                         "MISEQ_170901#87")
+        self.assertEqual(archived_ap.metadata.run_reference_id,
+                         "MISEQ_170901#87")
         # Check that Fastqs are not writable
         for project in ("AB","CDE","undetermined"):
             fq_dir = os.path.join(final_archive_dir,
@@ -465,6 +480,11 @@ poll_interval = 0.5
                                   settings=self.settings)
         self.assertEqual(archived_ap.params.analysis_dir,
                          final_archive_dir)
+        # Check run ID and reference
+        self.assertEqual(archived_ap.metadata.run_id,
+                         "MISEQ_170901#87")
+        self.assertEqual(archived_ap.metadata.run_reference_id,
+                         "MISEQ_170901#87")
 
     def test_archive_staging_to_final(self):
         """archive: test archiving directly from staging dir
@@ -548,6 +568,11 @@ poll_interval = 0.5
                                   settings=self.settings)
         self.assertEqual(archived_ap.params.analysis_dir,
                          final_archive_dir)
+        # Check run ID and reference
+        self.assertEqual(archived_ap.metadata.run_id,
+                         "MISEQ_170901#87")
+        self.assertEqual(archived_ap.metadata.run_reference_id,
+                         "MISEQ_170901#87")
 
     def test_archive_automatically_sets_correct_year(self):
         """archive: test archiving sets the year correctly if not specified
@@ -1269,6 +1294,11 @@ ABM4,CMO304,ABM4
                                   settings=self.settings)
         self.assertEqual(archived_ap.params.analysis_dir,
                          final_archive_dir)
+        # Check run ID and reference
+        self.assertEqual(archived_ap.metadata.run_id,
+                         "MISEQ_170901#87")
+        self.assertEqual(archived_ap.metadata.run_reference_id,
+                         "MISEQ_170901#87")
 
     def test_archive_force_fails_for_no_data(self):
         """archive: force archiving fails if run has no data
