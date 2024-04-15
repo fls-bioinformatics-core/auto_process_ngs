@@ -677,6 +677,203 @@ poll_interval = 0.5
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
 
+    def test_archive_updates_cellplex_multiplexed_sample_metadata(self):
+        """archive: archiving updates multiplexed sample metadata for 10x Cellplex
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "CellPlex",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Single cell platform": "10xGenomics Chromium 3'v3",
+                        "Multiplexed samples": ".",
+                        "Number of cells": 1311 },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Multiplexed samples": "." }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add a cellranger multi config.csv file
+        with open(os.path.join(mockdir.dirn,
+                               "AB",
+                               "10x_multi_config.csv"),'wt') as fp:
+            fastq_dir = os.path.join(mockdir.dirn,
+                                     "AB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+AB1,%s,any,AB1,gene expression,
+AB2,%s,any,AB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+ABM1,CMO301,ABM1
+ABM2,CMO302,ABM2
+ABM3,CMO303,ABM3
+ABM4,CMO304,ABM4
+""" % (fastq_dir,fastq_dir))
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        os.makedirs(final_dir)
+        self.assertTrue(os.path.isdir(final_dir))
+        self.assertEqual(len(os.listdir(final_dir)),0)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        # Add QC outputs to projects
+        for p in ap.get_analysis_projects():
+            UpdateAnalysisProject(p).add_qc_outputs()
+        # Do archiving op
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=False,
+                         final=True)
+        self.assertEqual(status,0)
+        # Check that final dir exists
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.exists(final_archive_dir))
+        self.assertEqual(len(os.listdir(final_dir)),1)
+        # Check the multiplexed sample information
+        dirs = ("AB","CDE")
+        for d in dirs:
+            metadata_file = os.path.join(final_archive_dir,
+                                         d,
+                                         "README.info")
+            got_multiplexed_samples = False
+            with open(metadata_file,'rt') as fp:
+                for line in fp:
+                    if line.startswith("Multiplexed samples"):
+                        got_multiplexed_samples = True
+                        line = line.rstrip('\n')
+                        if d == "AB":
+                            self.assertEqual(
+                                line,
+                                "Multiplexed samples\tABM1,ABM2,ABM3,ABM4")
+                        else:
+                            self.assertEqual(
+                                line,
+                                "Multiplexed samples\t.")
+                        break
+            self.assertTrue(got_multiplexed_samples,
+                            "No multiplexed sample info for '%s'" % d)
+
+    def test_archive_updates_parse_multiplexed_sample_metadata(self):
+        """archive: archiving updates multiplexed sample metadata for Parse Evercode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "scRNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Single cell platform": "Parse Evercode",
+                        "Multiplexed samples": "." },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Multiplexed samples": "." }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add a cellranger multi config.csv file
+        with open(os.path.join(mockdir.dirn,
+                               "AB",
+                               "10x_multi_config.csv"),'wt') as fp:
+            fastq_dir = os.path.join(mockdir.dirn,
+                                     "AB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+AB1,%s,any,AB1,gene expression,
+AB2,%s,any,AB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+ABM1,CMO301,ABM1
+ABM2,CMO302,ABM2
+ABM3,CMO303,ABM3
+ABM4,CMO304,ABM4
+""" % (fastq_dir,fastq_dir))
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        os.makedirs(final_dir)
+        self.assertTrue(os.path.isdir(final_dir))
+        self.assertEqual(len(os.listdir(final_dir)),0)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        # Add QC outputs to projects
+        for p in ap.get_analysis_projects():
+            UpdateAnalysisProject(p).add_qc_outputs()
+        # Do archiving op
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=False,
+                         final=True)
+        self.assertEqual(status,0)
+        # Check that final dir exists
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.exists(final_archive_dir))
+        self.assertEqual(len(os.listdir(final_dir)),1)
+        # Check the multiplexed sample information
+        dirs = ("AB","CDE")
+        for d in dirs:
+            metadata_file = os.path.join(final_archive_dir,
+                                         d,
+                                         "README.info")
+            got_multiplexed_samples = False
+            with open(metadata_file,'rt') as fp:
+                for line in fp:
+                    if line.startswith("Multiplexed samples"):
+                        got_multiplexed_samples = True
+                        line = line.rstrip('\n')
+                        if d == "AB":
+                            self.assertEqual(
+                                line,
+                                "Multiplexed samples\t?")
+                        else:
+                            self.assertEqual(
+                                line,
+                                "Multiplexed samples\t.")
+                        break
+            self.assertTrue(got_multiplexed_samples,
+                            "No multiplexed sample info for '%s'" % d)
+
     def test_archive_rewrites_qc_info_fastq_dir(self):
         """archive: test archiving rewrites the Fastq dir in 'qc.info'
         """

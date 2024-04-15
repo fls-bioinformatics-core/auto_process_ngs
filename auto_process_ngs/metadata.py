@@ -417,6 +417,7 @@ class AnalysisProjectInfo(MetadataDict):
     primary_fastq_dir: the primary subdir with FASTQ files
     samples: textual description of the samples in the project
     biological_samples: comma-separated sample names with biological data
+    multiplexed_samples: comma-separated names of multiplexed samples
     comments: free-text comments
 
     """
@@ -445,6 +446,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
                                   'biological_samples': 'Biological samples',
+                                  'multiplexed_samples': 'Multiplexed samples',
                                   'comments':'Comments',
                               },
                               order = (
