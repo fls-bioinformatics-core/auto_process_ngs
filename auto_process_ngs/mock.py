@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2024 Peter Briggs
 #
 ########################################################################
 
@@ -2456,8 +2456,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             # Per sample outs
             if version[0] < 7:
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY
-            else:
+            elif version[0] == 7:
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_7_1_0
+            elif version[0] == 8:
+                metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_8_0_0
+            else:
+                raise Exception("%s: unsupported version" % self._version)
             for sample in config.sample_names:
                 sample_dir = os.path.join(outs_dir,
                                           "per_sample_outs",
