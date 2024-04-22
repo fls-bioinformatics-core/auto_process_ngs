@@ -4307,6 +4307,7 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
                                cellranger_pipelines=('cellranger',),
                                cellranger_samples=None,
                                cellranger_multi_samples=None,
+                               cellranger_version=None,
                                legacy_screens=False,
                                legacy_cellranger_outs=False):
     """
@@ -4355,6 +4356,8 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
         produce 'cellranger count' outputs for
       cellranger_multi_samples (list): list of sample names to
         produce 'cellranger multi' outputs for
+      cellranger_version (str): if set then specifies version of
+        Cellranger to mimick
       legacy_screens (bool): if True then use legacy naming
         convention for FastqScreen outputs
       legacy_cellranger_outs (bool): if True then use legacy
@@ -4412,6 +4415,7 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
                      include_multiqc=include_multiqc,
                      include_cellranger_count=include_cellranger_count,
                      include_cellranger_multi=include_cellranger_multi,
+                     cellranger_version=cellranger_version,
                      legacy_screens=legacy_screens,
                      legacy_cellranger_outs=legacy_cellranger_outs)
     return project_dir
