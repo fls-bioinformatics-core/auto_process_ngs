@@ -39,12 +39,13 @@ from .tenx.cellplex import CellrangerMultiConfigCsv
 from .utils import normalise_organism_name
 from . import mockqcdata
 from . import mock10xdata
+from . import tenx
 
 #######################################################################
 # Constants
 #######################################################################
 
-_DEFAULT_CELLRANGER_VERSION = "6.1.2"
+_DEFAULT_CELLRANGER_VERSION = tenx.DEFAULT_CELLRANGER_VERSION
 
 #######################################################################
 # Class definitions

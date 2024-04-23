@@ -57,3 +57,5 @@ CELLRANGER_ASSAY_CONFIGS = {
     'ARC-v1': 'Single Cell Multiome (ATAC+GEX) v1', # Not documented?
 }
 
+# Default Cellranger version
+DEFAULT_CELLRANGER_VERSION = "7.1.0"
