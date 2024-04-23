@@ -10,6 +10,7 @@
 #######################################################################
 
 import os
+import ast
 import fnmatch
 import shutil
 import json
@@ -197,6 +198,18 @@ def setup_analysis_dirs(ap,
             library_type == "Flex" or
             library_type == "Single Cell Immune Profiling"):
             print("-- setting up 'multi' config file for '%s'" % library_type)
+            # Determine target Cellranger version
+            try:
+                processing_software = ast.literal_eval(
+                    ap.metadata.processing_software)
+                cellranger_version = processing_software['cellranger'][2]
+            except Exception as ex:
+                print("-- unable to determine Cellranger version used "
+                      "for processing: %s" % ex)
+                cellranger_version = None
+            if not cellranger_version:
+                cellranger_version = tenx.DEFAULT_CELLRANGER_VERSION
+            print("-- target Cellranger version: %s" % cellranger_version)
             # Acquire reference transcriptome dataset
             print("-- looking up transcriptome for '%s'" % organism)
             try:
@@ -237,7 +250,8 @@ def setup_analysis_dirs(ap,
                     probe_set=probe_set,
                     fastq_dir=project.fastq_dir,
                     samples=[s.name for s in project.samples],
-                    library_type=library_type)
+                    library_type=library_type,
+                    cellranger_version=cellranger_version)
             except Exception as ex:
                 logger.warning("Failed to create '%s': %s" % (f,ex))
         # Additional subdir for Visium images
