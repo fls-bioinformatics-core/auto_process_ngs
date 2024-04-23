@@ -62,6 +62,7 @@ class TestQCOutputs(unittest.TestCase):
                      include_multiqc=True,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
+                     cellranger_version=None,
                      legacy_screens=False,
                      legacy_cellranger_outs=False,
                      protocol=None):
@@ -89,6 +90,7 @@ class TestQCOutputs(unittest.TestCase):
             include_multiqc=include_multiqc,
             include_cellranger_count=include_cellranger_count,
             include_cellranger_multi=include_cellranger_multi,
+            cellranger_version=cellranger_version,
             legacy_screens=legacy_screens,
             legacy_cellranger_outs=legacy_cellranger_outs)
 
@@ -1174,9 +1176,9 @@ class TestQCOutputs(unittest.TestCase):
             self.assertTrue(os.path.join(qc_dir,f)
                             in qc_outputs.output_files)
 
-    def test_qcoutputs_10x_cellranger_count(self):
+    def test_qcoutputs_10x_cellranger_count_612(self):
         """
-        QCOutputs: 10xGenomics data with cellranger 'count'
+        QCOutputs: 10xGenomics data with cellranger 'count' (6.1.2)
         """
         qc_dir = self._make_qc_dir('qc',
                                    fastq_names=(
@@ -1190,7 +1192,8 @@ class TestQCOutputs(unittest.TestCase):
                                    cellranger_samples=(
                                        'PJB1',
                                        'PJB2',
-                                   ))
+                                   ),
+                                   cellranger_version='6.1.2')
         qc_outputs = QCOutputs(qc_dir)
         self.assertEqual(qc_outputs.outputs,
                          ['cellranger_count',
@@ -1222,6 +1225,140 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '6.1.2' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_count_710(self):
+        """
+        QCOutputs: 10xGenomics data with cellranger 'count' (7.1.2)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   cellranger_version='7.1.0')
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_count',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '7.1.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_count_800(self):
+        """
+        QCOutputs: 10xGenomics data with cellranger 'count' (8.0.0)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=(
+                                       'PJB1_S1_R1_001',
+                                       'PJB1_S1_R2_001',
+                                       'PJB2_S2_R1_001',
+                                       'PJB2_S2_R2_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   cellranger_version='8.0.0')
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_count',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r1',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_S1_R1_001',
+                          'PJB1_S1_R2_001',
+                          'PJB2_S2_R1_001',
+                          'PJB2_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1','PJB2'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '8.0.0' ],
                            'fastqc': [ '0.11.3' ],
                            'fastq_screen': [ '0.9.2' ],
                            'fastq_strand': [ '0.0.4' ],
@@ -1423,7 +1560,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.multiplexed_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
-                         { 'cellranger': [ '6.1.2' ],
+                         { 'cellranger': [ '7.1.0' ],
                            'cellranger-arc': [ '2.0.0' ],
                            'fastqc': [ '0.11.3' ],
                            'fastq_screen': [ '0.9.2' ],
@@ -1517,9 +1654,9 @@ class TestQCOutputs(unittest.TestCase):
                           'libraries.PJB1.csv',
                           'libraries.PJB2.csv'])
 
-    def test_qcoutputs_10x_cellranger_multi_cellplex(self):
+    def test_qcoutputs_10x_cellranger_multi_cellplex_612(self):
         """
-        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi'
+        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' (6.1.2)
         """
         qc_dir = self._make_qc_dir('qc',
                                    protocol="10x_CellPlex",
@@ -1538,7 +1675,8 @@ class TestQCOutputs(unittest.TestCase):
                                    cellranger_multi_samples=(
                                        'PJB_CML1',
                                        'PJB_CML2',
-                                   ))
+                                   ),
+                                   cellranger_version="6.1.2")
         qc_outputs = QCOutputs(qc_dir)
         self.assertEqual(qc_outputs.outputs,
                          ['cellranger_multi',
@@ -1590,9 +1728,157 @@ class TestQCOutputs(unittest.TestCase):
                          ['10x_multi_config.csv',
                           'fastq_strand.conf'])
 
-    def test_qcoutputs_10x_cellranger_multi_and_count_cellplex(self):
+    def test_qcoutputs_10x_cellranger_multi_cellplex_710(self):
         """
-        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' and 'count'
+        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' (7.1.0)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
+                                   fastq_names=(
+                                       'PJB1_GEX_S1_R1_001',
+                                       'PJB1_GEX_S1_R2_001',
+                                       'PJB2_MC_S2_R1_001',
+                                       'PJB2_MC_S2_R2_001',
+                                   ),
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_GEX',
+                                       'PJB2_MC',
+                                   ),
+                                   cellranger_multi_samples=(
+                                       'PJB_CML1',
+                                       'PJB_CML2',
+                                   ),
+                                   cellranger_version="7.1.0")
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_multi',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_GEX_S1_R1_001',
+                          'PJB1_GEX_S1_R2_001',
+                          'PJB2_MC_S2_R1_001',
+                          'PJB2_MC_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_GEX','PJB2_MC'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1_GEX'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,
+                         ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '7.1.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_multi_cellplex_800(self):
+        """
+        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' (8.0.0)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
+                                   fastq_names=(
+                                       'PJB1_GEX_S1_R1_001',
+                                       'PJB1_GEX_S1_R2_001',
+                                       'PJB2_MC_S2_R1_001',
+                                       'PJB2_MC_S2_R2_001',
+                                   ),
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_GEX',
+                                       'PJB2_MC',
+                                   ),
+                                   cellranger_multi_samples=(
+                                       'PJB_CML1',
+                                       'PJB_CML2',
+                                   ),
+                                   cellranger_version="8.0.0")
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_multi',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_GEX_S1_R1_001',
+                          'PJB1_GEX_S1_R2_001',
+                          'PJB2_MC_S2_R1_001',
+                          'PJB2_MC_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_GEX','PJB2_MC'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1_GEX'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,
+                         ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '8.0.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_multi_and_count_cellplex_612(self):
+        """
+        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' and 'count' (6.1.2)
         """
         qc_dir = self._make_qc_dir('qc',
                                    protocol="10x_CellPlex",
@@ -1612,7 +1898,8 @@ class TestQCOutputs(unittest.TestCase):
                                    cellranger_multi_samples=(
                                        'PJB_CML1',
                                        'PJB_CML2',
-                                   ))
+                                   ),
+                                   cellranger_version="6.1.2")
         qc_outputs = QCOutputs(qc_dir)
         self.assertEqual(qc_outputs.outputs,
                          ['cellranger_count',
@@ -1665,9 +1952,161 @@ class TestQCOutputs(unittest.TestCase):
                          ['10x_multi_config.csv',
                           'fastq_strand.conf'])
 
-    def test_qcoutputs_10x_cellranger_multi_flex(self):
+    def test_qcoutputs_10x_cellranger_multi_and_count_cellplex_710(self):
         """
-        QCOutputs: 10xGenomics Flex data with 'cellranger multi'
+        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' and 'count' (7.1.0)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
+                                   fastq_names=(
+                                       'PJB1_GEX_S1_R1_001',
+                                       'PJB1_GEX_S1_R2_001',
+                                       'PJB2_MC_S2_R1_001',
+                                       'PJB2_MC_S2_R2_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_GEX',
+                                       'PJB2_MC',
+                                   ),
+                                   cellranger_multi_samples=(
+                                       'PJB_CML1',
+                                       'PJB_CML2',
+                                   ),
+                                   cellranger_version="7.1.0")
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_count',
+                          'cellranger_multi',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_GEX_S1_R1_001',
+                          'PJB1_GEX_S1_R2_001',
+                          'PJB2_MC_S2_R1_001',
+                          'PJB2_MC_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_GEX','PJB2_MC'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1_GEX'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,
+                         ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '7.1.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_multi_and_count_cellplex_800(self):
+        """
+        QCOutputs: 10xGenomics CellPlex data with 'cellranger multi' and 'count' (8.0.0)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
+                                   fastq_names=(
+                                       'PJB1_GEX_S1_R1_001',
+                                       'PJB1_GEX_S1_R2_001',
+                                       'PJB2_MC_S2_R1_001',
+                                       'PJB2_MC_S2_R2_001',
+                                   ),
+                                   include_cellranger_count=True,
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_GEX',
+                                       'PJB2_MC',
+                                   ),
+                                   cellranger_multi_samples=(
+                                       'PJB_CML1',
+                                       'PJB_CML2',
+                                   ),
+                                   cellranger_version="8.0.0")
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_count',
+                          'cellranger_multi',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_GEX_S1_R1_001',
+                          'PJB1_GEX_S1_R2_001',
+                          'PJB2_MC_S2_R1_001',
+                          'PJB2_MC_S2_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_GEX','PJB2_MC'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1_GEX'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,
+                         ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '8.0.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.csv',
+                          'fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_multi_flex_612(self):
+        """
+        QCOutputs: 10xGenomics Flex data with 'cellranger multi' (6.1.2)
         """
         qc_dir = self._make_qc_dir('qc',
                                    protocol="10x_Flex",
@@ -1684,7 +2123,8 @@ class TestQCOutputs(unittest.TestCase):
                                    cellranger_multi_samples=(
                                        'PJB_BC1',
                                        'PJB_BC2',
-                                   ))
+                                   ),
+                                   cellranger_version="6.1.2")
         qc_outputs = QCOutputs(qc_dir)
         self.assertEqual(qc_outputs.outputs,
                          ['cellranger_count',
@@ -1736,9 +2176,9 @@ class TestQCOutputs(unittest.TestCase):
                          ['10x_multi_config.csv',
                           'fastq_strand.conf'])
 
-    def test_qcoutputs_10x_cellranger_single_cell_immune_profiling(self):
+    def test_qcoutputs_10x_cellranger_single_cell_immune_profiling_710(self):
         """
-        QCOutputs: 10xGenomics single cell immune profiling
+        QCOutputs: 10xGenomics single cell immune profiling (7.1.0)
         """
         qc_dir = self._make_qc_dir('qc',
                                    protocol="10x_ImmuneProfiling",
@@ -1758,7 +2198,8 @@ class TestQCOutputs(unittest.TestCase):
                                    cellranger_samples=(
                                        'PJB1_GEX',
                                        'PJB2_GEX',
-                                   ))
+                                   ),
+                                   cellranger_version="7.1.0")
         # Make 10x_multi_config.csv files (one for each physical
         # sample)
         fastq_dir = os.path.join(os.path.dirname(qc_dir),'fastqs')
@@ -1827,7 +2268,121 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
         self.assertEqual(qc_outputs.multiplexed_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
-                         { 'cellranger': [ '6.1.2' ],
+                         { 'cellranger': [ '7.1.0' ],
+                           'fastqc': [ '0.11.3' ],
+                           'fastq_screen': [ '0.9.2' ],
+                           'fastq_strand': [ '0.0.4' ],
+                           'multiqc': [ '1.8' ],
+                         })
+        self.assertEqual(qc_outputs.stats.max_seqs,37285443)
+        self.assertEqual(qc_outputs.stats.min_sequence_length,65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length,76)
+        self.assertEqual(sorted(
+            list(qc_outputs.stats.min_sequence_length_read.keys())),
+                         ['r1','r2'])
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r1'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r1'],76)
+        self.assertEqual(qc_outputs.stats.min_sequence_length_read['r2'],65)
+        self.assertEqual(qc_outputs.stats.max_sequence_length_read['r2'],76)
+        self.assertEqual(qc_outputs.config_files,
+                         ['10x_multi_config.PJB1.csv',
+                          '10x_multi_config.PJB2.csv',
+                          'fastq_strand.conf'])
+
+    def test_qcoutputs_10x_cellranger_single_cell_immune_profiling_800(self):
+        """
+        QCOutputs: 10xGenomics single cell immune profiling (8.0.0)
+        """
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_ImmuneProfiling",
+                                   fastq_names=(
+                                       'PJB1_GEX_S1_R1_001',
+                                       'PJB1_GEX_S1_R2_001',
+                                       'PJB1_TCR_S2_R1_001',
+                                       'PJB1_TCR_S2_R2_001',
+                                       'PJB2_GEX_S3_R1_001',
+                                       'PJB2_GEX_S3_R2_001',
+                                       'PJB2_TCR_S4_R1_001',
+                                       'PJB2_TCR_S4_R2_001',
+                                   ),
+                                   include_cellranger_multi=False,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_samples=(
+                                       'PJB1_GEX',
+                                       'PJB2_GEX',
+                                   ),
+                                   cellranger_version="8.0.0")
+        # Make 10x_multi_config.csv files (one for each physical
+        # sample)
+        fastq_dir = os.path.join(os.path.dirname(qc_dir),'fastqs')
+        with open(os.path.join(qc_dir,"10x_multi_config.PJB1.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+create-bam,true
+
+[vdj]
+reference,/data/refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,{fastq_dir},any,PJB1,gene expression,
+PJB1_TCR,{fastq_dir},any,PJB1,VDJ-T,
+""".format(fastq_dir=fastq_dir))
+        with open(os.path.join(qc_dir,"10x_multi_config.PJB2.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB2_GEX,{fastq_dir},any,PJB2,gene expression,
+PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
+""".format(fastq_dir=fastq_dir))
+        # Collect and checkout outputs
+        qc_outputs = QCOutputs(qc_dir)
+        self.assertEqual(qc_outputs.outputs,
+                         ['cellranger_count',
+                          'fastqc_r1',
+                          'fastqc_r2',
+                          'multiqc',
+                          'screens_r2',
+                          'sequence_lengths',
+                          'strandedness'])
+        self.assertEqual(qc_outputs.fastqs,
+                         ['PJB1_GEX_S1_R1_001',
+                          'PJB1_GEX_S1_R2_001',
+                          'PJB1_TCR_S2_R1_001',
+                          'PJB1_TCR_S2_R2_001',
+                          'PJB2_GEX_S3_R1_001',
+                          'PJB2_GEX_S3_R2_001',
+                          'PJB2_TCR_S4_R1_001',
+                          'PJB2_TCR_S4_R2_001'])
+        self.assertEqual(qc_outputs.samples,
+                         ['PJB1_GEX',
+                          'PJB1_TCR',
+                          'PJB2_GEX',
+                          'PJB2_TCR'])
+        self.assertEqual(qc_outputs.seq_data_samples,
+                         ['PJB1_GEX',
+                          'PJB2_GEX'])
+        self.assertEqual(qc_outputs.bams,[])
+        self.assertEqual(qc_outputs.organisms,[])
+        self.assertEqual(qc_outputs.fastq_screens,
+                         ['model_organisms',
+                          'other_organisms',
+                          'rRNA'])
+        self.assertEqual(qc_outputs.cellranger_references,
+                         ['/data/refdata-cellranger-2020-A'])
+        self.assertEqual(qc_outputs.cellranger_probe_sets,[])
+        self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.reads,['r1','r2'])
+        self.assertEqual(qc_outputs.software,
+                         { 'cellranger': [ '8.0.0' ],
                            'fastqc': [ '0.11.3' ],
                            'fastq_screen': [ '0.9.2' ],
                            'fastq_strand': [ '0.0.4' ],
