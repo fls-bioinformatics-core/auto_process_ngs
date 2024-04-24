@@ -90,7 +90,6 @@ class MockQCOutputs:
                                 ('Per base sequence quality','FAIL'),
                                 ('Per tile sequence quality','PASS'),
                                 ('Per sequence quality scores','PASS'),
-                                ('Per sequence quality scores','PASS'),
                                 ('Per base sequence content','FAIL'),
                                 ('Per sequence GC content','FAIL'),
                                 ('Per base N content','WARN'),
