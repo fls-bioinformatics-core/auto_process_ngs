@@ -98,8 +98,6 @@ SpR6	89393	89393	100.00	0	0.00	0	0.00	0	0.00	0	0.00
                                            'SpR6'])
         self.assertEqual(screen.no_hits,99.73)
 
-
-
 class TestFastqscreen_v0_5_2(unittest.TestCase):
     def setUp(self):
         screen_text = """#Fastq_screen version: 0.5.2	#Reads in subset: 1000000
@@ -135,3 +133,39 @@ SpR6	597781	597781	100.00	0	0.00	0	0.00	0	0.00	0	0.00
                                            'ecoli','saccer','PhiX','Vectors',
                                            'SpR6'])
         self.assertEqual(screen.no_hits,19.80)
+
+class TestFastqscreen_v0_15_3(unittest.TestCase):
+    def setUp(self):
+        screen_text = """#Fastq_screen version: 0.15.3	#Aligner: bowtie	#Reads in subset: 100000
+Genome	#Reads_processed	#Unmapped	%Unmapped	#One_hit_one_genome	%One_hit_one_genome	#Multiple_hits_one_genome	%Multiple_hits_one_genome	#One_hit_multiple_genomes	%One_hit_multiple_genomes	Multiple_hits_multiple_genomes	%Multiple_hits_multiple_genomes
+hg19	94997	43983	46.30	6630	6.98	14774	15.55	3648	3.84	25962	27.33
+mm9	94997	72416	76.24	4	0.00	1	0.00	5767	6.07	16809	17.69
+rn4	94997	65932	69.41	1	0.00	0	0.00	2501	2.63	26563	27.96
+dm3	94997	55447	58.37	26266	27.65	11117	11.70	95	0.10	2072	2.18
+ws200	94997	93187	98.09	0	0.00	0	0.00	634	0.67	1176	1.24
+ecoli	94997	94993	100.00	0	0.00	4	0.00	0	0.00	0	0.00
+saccer	94997	92724	97.60	7	0.01	5	0.01	0	0.00	2261	2.38
+PhiX	94997	94997	100.00	0	0.00	0	0.00	0	0.00	0	0.00
+Vectors	94997	94990	100.00	1	0.00	4	0.00	2	0.00	0	0.00
+SpR6	94997	94994	100.00	0	0.00	3	0.00	0	0.00	0	0.00
+
+%Hit_no_genomes: 6.90
+"""
+        with tempfile.NamedTemporaryFile(mode='wt',delete=False) as fp:
+            self.fastq_screen_txt = fp.name
+            fp.write(screen_text)
+    def tearDown(self):
+        try:
+            os.remove(self.fastq_screen_txt)
+        except Exception:
+            pass
+    def test_handle_fastq_screen_v0_15_32(self):
+        """FastqScreen handles output from v0.15.3
+        """
+        screen = Fastqscreen(self.fastq_screen_txt)
+        self.assertEqual(screen.version,'0.15.3')
+        self.assertEqual(screen.txt,self.fastq_screen_txt)
+        self.assertEqual(screen.libraries,['hg19','mm9','rn4','dm3','ws200',
+                                           'ecoli','saccer','PhiX','Vectors',
+                                           'SpR6'])
+        self.assertEqual(screen.no_hits,6.90)
