@@ -14,6 +14,8 @@ from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY
+from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_7_1_0
+from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_8_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
@@ -670,6 +672,100 @@ Cellranger version\t6.0.0
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          10350)
+
+    def test_set_cell_count_for_cellplex_project_710(self):
+        """
+        set_cell_count_for_project: test for multiplexed data (CellPlex 7.1.0)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "CellPlex")
+        # Build mock cellranger multi output directory
+        multi_dir = os.path.join(project_dir,
+                                 "qc",
+                                 "cellranger_multi",
+                                 "7.1.0",
+                                 "refdata-cellranger-gex-GRCh38-2020-A",
+                                 "outs")
+        mkdirs(multi_dir)
+        for sample in ("PBA","PBB",):
+            sample_dir = os.path.join(multi_dir,
+                                      "per_sample_outs",
+                                      sample)
+            mkdirs(sample_dir)
+            summary_file = os.path.join(sample_dir,
+                                        "metrics_summary.csv")
+            with open(summary_file,'wt') as fp:
+                fp.write(CELLPLEX_METRICS_SUMMARY_7_1_0)
+            web_summary = os.path.join(sample_dir,
+                                       "web_summary.html")
+            with open(web_summary,'wt') as fp:
+                fp.write("Placeholder for web_summary.html\n")
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
+Cellranger version\t7.1.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir,source="multi")
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         3138)
+
+    def test_set_cell_count_for_cellplex_project_800(self):
+        """
+        set_cell_count_for_project: test for multiplexed data (CellPlex 8.0.0)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "CellPlex")
+        # Build mock cellranger multi output directory
+        multi_dir = os.path.join(project_dir,
+                                 "qc",
+                                 "cellranger_multi",
+                                 "8.0.0",
+                                 "refdata-cellranger-gex-GRCh38-2020-A",
+                                 "outs")
+        mkdirs(multi_dir)
+        for sample in ("PBA","PBB",):
+            sample_dir = os.path.join(multi_dir,
+                                      "per_sample_outs",
+                                      sample)
+            mkdirs(sample_dir)
+            summary_file = os.path.join(sample_dir,
+                                        "metrics_summary.csv")
+            with open(summary_file,'wt') as fp:
+                fp.write(CELLPLEX_METRICS_SUMMARY_8_0_0)
+            web_summary = os.path.join(sample_dir,
+                                       "web_summary.html")
+            with open(web_summary,'wt') as fp:
+                fp.write("Placeholder for web_summary.html\n")
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
+Cellranger version\t8.0.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir,source="multi")
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         3164)
 
     def test_set_cell_count_for_cellplex_project_with_count(self):
         """
