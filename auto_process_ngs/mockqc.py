@@ -135,6 +135,70 @@ class MockQCOutputs:
                 fp.write(base64.b64decode(mockqcdata.BASE64_PNG_DATA))
 
     @classmethod
+    def fastqc_v0_12_1(self,fastq,qc_dir):
+        """
+        Create mock outputs from FastQC v0.12.1
+        """
+        # Basename for FastQC products
+        basename = self.fastq_basename(fastq)
+        # FastQC output directory:
+        # - <basename>_fastqc
+        fastqc_dir = os.path.join(qc_dir,basename+'_fastqc')
+        os.mkdir(fastqc_dir)
+        # Make fake HTML and zip files:
+        # - <basename>_fastqc.html
+        # - <basename>_fastqc.zip
+        for ext in ('.html','.zip'):
+            with open(fastqc_dir+ext,'w') as fp:
+                fp.write('')
+        # Make summary.txt file
+        with open(os.path.join(fastqc_dir,'summary.txt'),'w') as fp:
+            for name,status in (('Basic Statistics','PASS'),
+                                ('Per base sequence quality','FAIL'),
+                                ('Per tile sequence quality','PASS'),
+                                ('Per sequence quality scores','PASS'),
+                                ('Per base sequence content','FAIL'),
+                                ('Per sequence GC content','FAIL'),
+                                ('Per base N content','WARN'),
+                                ('Sequence Length Distribution','PASS'),
+                                ('Sequence Duplication Levels','PASS'),
+                                ('Overrepresented sequences','FAIL'),
+                                ('Adapter Content','FAIL')):
+                fp.write("%s\t%s\t%s.fastq\n" % (status,name,basename))
+        # Make fastqc_data.txt file
+        with open(os.path.join(fastqc_dir,'fastqc_data.txt'),'w') as fp:
+            fp.write(mockqcdata.FASTQC_0_12_1['fastqc_data.txt'] %
+                     { 'fastq': ('%s.fastq' % basename) })
+        # Make fake files:
+        for f in ('fastqc.fo',
+                  'fastqc_report.html'):
+            with open(os.path.join(fastqc_dir,f),'w') as fp:
+                fp.write('')
+        # Make and populate fake subdirectories
+        icons_dir = os.path.join(fastqc_dir,'Icons')
+        os.mkdir(icons_dir)
+        for f in ('error.png',
+                  'fastqc_icon.png',
+                  'tick.png',
+                  'warning.png'):
+            with open(os.path.join(icons_dir,f),'w') as fp:
+                fp.write('')
+        # Write fake PNG images
+        images_dir = os.path.join(fastqc_dir,'Images')
+        os.mkdir(images_dir)
+        for f in ('adapter_content.png',
+                  'duplication_levels.png',
+                  'per_base_n_content.png',
+                  'per_base_quality.png',
+                  'per_base_sequence_content.png',
+                  'per_sequence_gc_content.png',
+                  'per_sequence_quality.png',
+                  'per_tile_quality.png',
+                  'sequence_length_distribution.png'):
+            with open(os.path.join(images_dir,f),'wb') as fp:
+                fp.write(base64.b64decode(mockqcdata.BASE64_PNG_DATA))
+
+    @classmethod
     def fastq_screen_v0_9_2(self,fastq,qc_dir,screen_name=None,
                             legacy=False):
         """
@@ -154,6 +218,30 @@ class MockQCOutputs:
         # Raw data
         with open(screen_basename+'txt','w') as fp:
             fp.write(mockqcdata.FASTQ_SCREEN_V0_9_2['screen.txt'])
+        # Fake PNG
+        with open(screen_basename+'png','wb') as fp:
+            fp.write(base64.b64decode(mockqcdata.BASE64_PNG_DATA))
+
+    @classmethod
+    def fastq_screen_v0_15_3(self,fastq,qc_dir,screen_name=None,
+                            legacy=False):
+        """
+        Create mock outputs from Fastq_screen v0.15.3
+        """
+        # Basename for FastQC products
+        basename = self.fastq_basename(fastq)
+        if screen_name is not None:
+            screen = "_%s" % screen_name
+        else:
+            screen = ''
+        if not legacy:
+            screen_basename = "%s_screen%s." % (basename,screen)
+        else:
+            screen_basename = "%s%s_screen." % (basename,screen)
+        screen_basename = os.path.join(qc_dir,screen_basename)
+        # Raw data
+        with open(screen_basename+'txt','w') as fp:
+            fp.write(mockqcdata.FASTQ_SCREEN_V0_15_3['screen.txt'])
         # Fake PNG
         with open(screen_basename+'png','wb') as fp:
             fp.write(base64.b64decode(mockqcdata.BASE64_PNG_DATA))
