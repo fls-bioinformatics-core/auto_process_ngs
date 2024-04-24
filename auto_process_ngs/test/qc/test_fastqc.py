@@ -97,8 +97,7 @@ centile
 >>Overrepresented sequences	pass
 >>END_MODULE
 >>Adapter Content	pass
-#Position	Illumina Universal Adapter	Illumina Small RNA Adapter	
-Nextera Transposase Sequence	SOLID Small RNA Adapter
+#Position	Illumina Universal Adapter	Illumina Small RNA Adapter	Nextera Transposase Sequence	SOLID Small RNA Adapter
 1	0.0	0.0	0.0	0.0
 2	0.0	0.0	0.0	0.0
 3	0.0	0.0	0.0	0.0
@@ -209,6 +208,12 @@ FAIL	Kmer Content	PJB_S1_L001_R1_001.fastq.gz
         self.assertRaises(Exception,
                           data.basic_statistics,
                           "unknown_thing")
+        # Adapters
+        self.assertEqual(list(data.adapter_content_summary().keys()),
+                         ["Illumina Universal Adapter",
+                          "Illumina Small RNA Adapter",
+                          "Nextera Transposase Sequence",
+                          "SOLID Small RNA Adapter"])
 
 class TestFastqc_v0_12_1(unittest.TestCase):
     def setUp(self):
@@ -510,3 +515,11 @@ PASS	Adapter Content	PJB_S1_L001_R1_001.fastq.gz
         self.assertRaises(Exception,
                           data.basic_statistics,
                           "unknown_thing")
+        # Adapters
+        self.assertEqual(list(data.adapter_content_summary().keys()),
+                         ["Illumina Universal Adapter",
+                          "Illumina Small RNA 3' Adapter",
+                          "Illumina Small RNA 5' Adapter",
+                          "Nextera Transposase Sequence",
+                          "PolyA",
+                          "PolyG"])
