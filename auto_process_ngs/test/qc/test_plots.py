@@ -8,11 +8,13 @@ import os
 import base64
 import tempfile
 
+from collections import OrderedDict
 from auto_process_ngs.qc.plots import Plot
 from auto_process_ngs.qc.plots import encode_png
-from auto_process_ngs.qc.plots import uscreenplot
+from auto_process_ngs.qc.plots import uadapterplot
 from auto_process_ngs.qc.plots import uboxplot
 from auto_process_ngs.qc.plots import ufastqcplot
+from auto_process_ngs.qc.plots import uscreenplot
 from auto_process_ngs.qc.plots import ustackedbar
 from auto_process_ngs.qc.plots import ustrandplot
 
@@ -585,6 +587,65 @@ class TestUStackedBar(unittest.TestCase):
                                              (100,149,237),
                                              (255,255,255))),
                          self.png_base64_data)
+
+class TestUAdapterPlot(unittest.TestCase):
+    """
+    Tests for the uadapterplot function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestUAdapterPlot')
+        # Adapter data
+        d = OrderedDict()
+        d["Illumina Universal Adapter"] = 0.2
+        d["Illumina Small RNA 3' Adapter"] = 0.2
+        d["Illumina Small RNA 5' Adapter"] = 0.1
+        d["Nextera Transposase Sequence"] = 0.1
+        d["PolyA"] = 0.1
+        d["PolyG"] = 0.1
+        self.fastqc_adapter_data = d
+        # Adapter data (legacy)
+        d = OrderedDict()
+        d["Illumina Universal Adapter"] = 0.5
+        d["Illumina Small RNA Adapter"] = 0.25
+        d["Nextera Transposase Sequence"] = 0.1
+        d["SOLID Small RNA Adapter"] = 0.1
+        self.fastqc_adapter_data_legacy = d
+        # Reference data
+        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAoCAIAAABB31ytAAAAbUlEQVR4nGP8//8/A3GAiUh1pCllYWBguHLlCn5FOjo6NHPAqFLaRez1wmP4Fenspl3EsjAwMMxKI6AolFRTSXTATKV7VDaVRAeYrN6DX9E7Y9o5YCgpZWFgYFBaHUpAVQdtHRDKcJbKpg5TpQBX5hHyTw6e2QAAAABJRU5ErkJggg=="
+        self.png_base64_data_legacy_colours = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAoCAIAAABB31ytAAAAVElEQVR4nO3TwQnAMAxDUblkHA+ZIb3P76H3xIH6ELDPDyEENkC5e5LujA5JEbFG7l5WQJkFAKBuAc2/Uw+oAWYb9I1UU6Bp05vokIR2HyPKCjR9AY5VFsNpfA2/AAAAAElFTkSuQmCC"
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_uadapterplot_to_file(self):
+        """uadapterplot: write PNG to file
+        """
+        outfile = os.path.join(self.wd,"uadapterplot.png")
+        self.assertEqual(uadapterplot(self.fastqc_adapter_data,
+                                      outfile=outfile),
+                         outfile)
+        self.assertEqual(encode_png(outfile),self.png_base64_data)
+
+    def test_uadapterplot_to_base64(self):
+        """uadapterplot: write PNG as Base64 encoded string
+        """
+        self.assertEqual(uadapterplot(self.fastqc_adapter_data,
+                                      inline=True),
+                         self.png_base64_data)
+
+    def test_uadapterplot_to_file_legacy_colours(self):
+        """uadapterplot: write PNG to file (legacy colours)
+        """
+        outfile = os.path.join(self.wd,"uadapterplot.png")
+        self.assertEqual(uadapterplot(self.fastqc_adapter_data_legacy,
+                                      outfile=outfile,
+                                      use_legacy_colours=True),
+                         outfile)
+        self.assertEqual(encode_png(outfile),
+                         self.png_base64_data_legacy_colours)
 
 class TestUStrandPlot(unittest.TestCase):
     """

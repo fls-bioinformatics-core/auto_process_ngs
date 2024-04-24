@@ -1234,7 +1234,7 @@ def uduplicationplot(total_deduplicated_percentage,height=None,
 
 def uadapterplot(adapter_content,adapter_names=None,outfile=None,
                  inline=False,height=40,bar_width=10,spacing=2,
-                 multi_bar=False):
+                 multi_bar=False,use_legacy_colours=False):
     """
     Make a 'micro' plot summarising adapter content
 
@@ -1268,11 +1268,32 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
         plot (one bar per adapter class); otherwise
         make a single bar plot (all adapter data in a
         single bar)
+      use_legacy_colours (boolean): if True then use the
+        original colour palette from FastQC adapter plot
+        (default: False, use mimick the current colour
+        palette)
     """
     # Width of plot required for each bar
     width = bar_width + spacing*2
     # Colours for each adapter
-    fg_colors = ('red','blue','green','black')
+    if use_legacy_colours:
+        fg_colors = (RGB_COLORS['red'],
+                     RGB_COLORS['blue'],
+                     RGB_COLORS['green'],
+                     RGB_COLORS['black'])
+    else:
+        # Based on Tol colour scheme from
+        # https://davidmathlogic.com/colorblind/
+        fg_colors = ((136,34,85),
+                     (51,34,136),
+                     (17,119,51),
+                     (221,204,119),
+                     (68,170,153),
+                     (170,68,153),
+                     (204,102,119),
+                     (136,204,238))
+    # Number of colours
+    ncolors = len(fg_colors)
     # Get adapter names
     if not adapter_names:
         adapter_names = sorted(adapter_content.keys())
@@ -1293,7 +1314,7 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
         # Plot a bar for each adapter
         for ii,adapter in enumerate(adapter_names):
             # Set colour based on adapter content
-            fg_color = fg_colors[ii%4]
+            fg_color = fg_colors[ii%ncolors]
             # Length of bar represents adapter content
             bar_length = int(adapter_content[adapter]*(height-4))
             # Draw the coloured part of the bar
@@ -1301,7 +1322,7 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
                 start = int(ii*float(width)/nbars) + spacing
                 end = start + bar_width
                 for j in range(start,end):
-                    pixels[j,height-i] = RGB_COLORS[fg_color]
+                    pixels[j,height-i] = fg_color
             # Pad the remainder of the bar
             for i in range(bar_length+2,height-2):
                 start = int(ii*float(width)/nbars) + spacing
@@ -1313,14 +1334,14 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
         start = 1
         for ii,adapter in enumerate(adapter_names):
             # Set colour based on adapter content
-            fg_color = fg_colors[ii%4]
+            fg_color = fg_colors[ii%ncolors]
             # Length of bar represents adapter content
             bar_length = int(adapter_content[adapter]*(height-2))
             # Draw the coloured part of the bar
             end = start + bar_length
             for i in range(start,end):
                 for j in range(1,width-2):
-                    pixels[j,height-i] = RGB_COLORS[fg_color]
+                    pixels[j,height-i] = fg_color
             start = end
         # Pad the remainder of the bar
         for i in range(start,height-2):
