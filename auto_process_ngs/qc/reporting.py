@@ -135,6 +135,7 @@ from .rseqc import InferExperiment
 from .seqlens import SeqLens
 from .utils import get_bam_basename
 from ..tenx.multiome import MultiomeLibraries
+from ..tenx.metrics import MissingMetricError
 from ..utils import ZipArchive
 from .. import get_version
 
@@ -2240,6 +2241,7 @@ class SampleQCReporter:
         Valid fields are:
 
         - 10x_cells
+        - 10x_reads_per_cell
         - 10x_genes_per_cell
         - 10x_frac_reads_in_cell
         - 10x_fragments_per_cell
@@ -2287,10 +2289,21 @@ class SampleQCReporter:
                     value = metrics.cells
             value = pretty_print_reads(value)
         elif field == "10x_reads_per_cell":
-            try:
-                value = metrics.mean_reads_per_cell
-            except AttributeError:
-                value = metrics.median_reads_per_cell
+            if cellranger_data.mode == "count":
+                # Default is mean reads for count
+                try:
+                    value = metrics.mean_reads_per_cell
+                except (AttributeError,MissingMetricError):
+                    # Not sure if this fallback is redundant?
+                    value = metrics.median_reads_per_cell
+            elif cellranger_data.mode == "multi":
+                # Default is median for Cellranger>=7
+                try:
+                    value = metrics.median_reads_per_cell
+                except (AttributeError,MissingMetricError):
+                    # Cellranger 8.0.0 doesn't output median
+                    # reads so fall back to mean
+                    value = metrics.mean_reads_per_cell
             value = pretty_print_reads(value)
         elif field == "10x_genes_per_cell":
             value = pretty_print_reads(metrics.median_genes_per_cell)

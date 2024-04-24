@@ -366,6 +366,7 @@ class MultiplexSummary(MetricsSummary):
     The following properties are available:
 
     - cells
+    - mean_reads_per_cell
     - median_reads_per_cell
     - median_genes_per_cell
     - total_genes_detected
@@ -402,23 +403,34 @@ class MultiplexSummary(MetricsSummary):
           name (str): name of the metric
           library_type (str): library type to fetch
             the metric for (default: 'Gene Expression')
+
+        Raises:
+          MissingMetricError: if metric not defined
+          KeyError: if library type not found
         """
         metric = self.lookup('Metric Name',name)
         if not metric:
-            raise Exception("Failed to lookup metric '%s'" % name)
+            raise MissingMetricError("metric '%s' not found"
+                                     % name)
         # Pick out the specific library
         for m in metric:
             if m['Library Type'] == library_type:
                 return m['Metric Value']
         # No matching library
-        raise Exception("No value for metric '%s' associated with "
-                        "library type '%s'" % (name,library_type))
+        raise KeyError("No value for metric '%s' associated with "
+                       "library type '%s'" % (name,library_type))
     @property
     def cells(self):
         """
         Returns the number of cells
         """
         return self.fetch('Cells')
+    @property
+    def mean_reads_per_cell(self):
+        """
+        Returns the mean reads per cell
+        """
+        return self.fetch('Mean reads per cell')
     @property
     def median_reads_per_cell(self):
         """
@@ -443,3 +455,8 @@ class MultiplexSummary(MetricsSummary):
         Returns the median UMI counts per cell
         """
         return self.fetch('Median UMI counts per cell')
+
+class MissingMetricError(Exception):
+    """
+    Custom exception class when metrics are not found
+    """

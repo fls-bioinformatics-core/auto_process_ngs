@@ -96,6 +96,10 @@ class CellrangerCount:
             self._web_summary = None
 
     @property
+    def mode(self):
+        return "count"
+
+    @property
     def dir(self):
         """
         Path to the directory with the cellranger count outputs
@@ -290,6 +294,10 @@ class CellrangerMulti:
             self._samples[smpl]['web_summary'] = os.path.join(
                 smpl_dir,
                 "web_summary.html")
+
+    @property
+    def mode(self):
+        return "multi"
 
     @property
     def dir(self):

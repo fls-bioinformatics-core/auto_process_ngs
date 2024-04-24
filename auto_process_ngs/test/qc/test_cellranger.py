@@ -46,6 +46,7 @@ class TestCellrangerCount(unittest.TestCase):
         with open(os.path.join(count_dir,"_cmdline"),'wt') as fp:
             fp.write("%s\n" % cmdline)
         cellranger_count = CellrangerCount(count_dir)
+        self.assertEqual(cellranger_count.mode,"count")
         self.assertEqual(cellranger_count.dir,count_dir)
         self.assertEqual(cellranger_count.sample_name,"PJB1")
         self.assertEqual(cellranger_count.metrics_csv,
@@ -74,6 +75,7 @@ class TestCellrangerCount(unittest.TestCase):
         with open(os.path.join(count_dir,"_cmdline"),'wt') as fp:
             fp.write("%s\n" % cmdline)
         cellranger_count = CellrangerCount(count_dir)
+        self.assertEqual(cellranger_count.mode,"count")
         self.assertEqual(cellranger_count.dir,count_dir)
         self.assertEqual(cellranger_count.sample_name,"PJB1")
         self.assertEqual(cellranger_count.metrics_csv,
@@ -103,6 +105,7 @@ class TestCellrangerCount(unittest.TestCase):
         with open(os.path.join(count_dir,"_cmdline"),'wt') as fp:
             fp.write("%s\n" % cmdline)
         cellranger_count = CellrangerCount(count_dir)
+        self.assertEqual(cellranger_count.mode,"count")
         self.assertEqual(cellranger_count.dir,count_dir)
         self.assertEqual(cellranger_count.sample_name,"PJB1")
         self.assertEqual(cellranger_count.metrics_csv,
@@ -132,6 +135,7 @@ class TestCellrangerCount(unittest.TestCase):
         with open(os.path.join(count_dir,"_cmdline"),'wt') as fp:
             fp.write("%s\n" % cmdline)
         cellranger_count = CellrangerCount(count_dir)
+        self.assertEqual(cellranger_count.mode,"count")
         self.assertEqual(cellranger_count.dir,count_dir)
         self.assertEqual(cellranger_count.sample_name,"PJB1")
         self.assertEqual(cellranger_count.metrics_csv,
@@ -164,6 +168,7 @@ class TestCellrangerCount(unittest.TestCase):
             cellranger_exe="/alt/path/to/cellranger",
             version="5.0.1",
             reference_data="/alt/data/refdata-gex-GRCh38-2020-A")
+        self.assertEqual(cellranger_count.mode,"count")
         self.assertEqual(cellranger_count.dir,count_dir)
         self.assertEqual(cellranger_count.sample_name,"PJB1")
         self.assertEqual(cellranger_count.metrics_csv,
@@ -187,6 +192,7 @@ class TestCellrangerCount(unittest.TestCase):
         # Do tests
         count_dir = os.path.join(self.project.qc_dir,"cellranger_count","PJB1")
         cellranger_count = CellrangerCount(count_dir)
+        self.assertEqual(cellranger_count.mode,"count")
         self.assertRaises(OSError,
                           getattr,cellranger_count,'dir')
         self.assertEqual(cellranger_count.sample_name,None)
@@ -250,6 +256,7 @@ PBB,CMO302,PBB
         with open(os.path.join(multi_dir,"_cmdline"),'wt') as fp:
             fp.write("%s\n" % cmdline)
         cellranger_multi = CellrangerMulti(multi_dir)
+        self.assertEqual(cellranger_multi.mode,"multi")
         self.assertEqual(cellranger_multi.dir,multi_dir)
         self.assertEqual(cellranger_multi.sample_names,["PBA","PBB"])
         self.assertEqual(cellranger_multi.metrics_csv('PBA'),
@@ -322,6 +329,7 @@ PBB,BC002,PBB
         with open(os.path.join(multi_dir,"_cmdline"),'wt') as fp:
             fp.write("%s\n" % cmdline)
         cellranger_multi = CellrangerMulti(multi_dir)
+        self.assertEqual(cellranger_multi.mode,"multi")
         self.assertEqual(cellranger_multi.dir,multi_dir)
         self.assertEqual(cellranger_multi.sample_names,["PBA","PBB"])
         self.assertEqual(cellranger_multi.metrics_csv('PBA'),

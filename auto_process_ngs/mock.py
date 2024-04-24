@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2024 Peter Briggs
 #
 ########################################################################
 
@@ -2187,15 +2187,16 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             mkfastq.add_argument("--qc",action="store_true")
         # count subparser
         count = sp.add_parser("count")
-        count.add_argument("--id",action="store")
+        count.add_argument("--id",action="store",required=True)
         count.add_argument("--fastqs",action="store")
         count.add_argument("--sample",action="store")
         if self._package_name == "cellranger":
-            count.add_argument("--transcriptome",action="store")
+            count.add_argument("--transcriptome",action="store",
+                               required=True)
             count.add_argument("--chemistry",action="store")
             count.add_argument("--force-cells",action="store",type=int)
-            if version[0] == 7:
-                # Cellranger 7: include introns on by default
+            if version[0] in (7,8):
+                # Cellranger 7,8: include introns on by default
                 count.add_argument("--include-introns",
                                    choices=['true','false'],
                                    default='true')
@@ -2206,6 +2207,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if version[0] >= 5:
                 count.add_argument("--r1-length",action="store")
                 count.add_argument("--r2-length",action="store")
+            if version[0] == 8:
+                # Cellranger 8: explicitly specify BAM creation
+                count.add_argument("--create-bam",
+                                   choices=['true','false'],
+                                   required=True)
         elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
             if version[0] >= 2:
@@ -2450,8 +2456,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             # Per sample outs
             if version[0] < 7:
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY
-            else:
+            elif version[0] == 7:
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_7_1_0
+            elif version[0] == 8:
+                metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_8_0_0
+            else:
+                raise Exception("%s: unsupported version" % self._version)
             for sample in config.sample_names:
                 sample_dir = os.path.join(outs_dir,
                                           "per_sample_outs",
@@ -4297,6 +4307,7 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
                                cellranger_pipelines=('cellranger',),
                                cellranger_samples=None,
                                cellranger_multi_samples=None,
+                               cellranger_version=None,
                                legacy_screens=False,
                                legacy_cellranger_outs=False):
     """
@@ -4345,6 +4356,8 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
         produce 'cellranger count' outputs for
       cellranger_multi_samples (list): list of sample names to
         produce 'cellranger multi' outputs for
+      cellranger_version (str): if set then specifies version of
+        Cellranger to mimick
       legacy_screens (bool): if True then use legacy naming
         convention for FastqScreen outputs
       legacy_cellranger_outs (bool): if True then use legacy
@@ -4402,6 +4415,7 @@ def make_mock_analysis_project(name="PJB",top_dir=None,
                      include_multiqc=include_multiqc,
                      include_cellranger_count=include_cellranger_count,
                      include_cellranger_multi=include_cellranger_multi,
+                     cellranger_version=cellranger_version,
                      legacy_screens=legacy_screens,
                      legacy_cellranger_outs=legacy_cellranger_outs)
     return project_dir

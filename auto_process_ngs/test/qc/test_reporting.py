@@ -48,6 +48,7 @@ class TestReportFunction(unittest.TestCase):
                                cellranger_pipelines=('cellranger',),
                                cellranger_samples=None,
                                cellranger_multi_samples=None,
+                               cellranger_version=None,
                                legacy_screens=False,
                                legacy_cellranger_outs=False):
         # Create a mock Analysis Project directory
@@ -75,6 +76,7 @@ class TestReportFunction(unittest.TestCase):
             cellranger_pipelines=cellranger_pipelines,
             cellranger_samples=cellranger_samples,
             cellranger_multi_samples=cellranger_multi_samples,
+            cellranger_version=cellranger_version,
             legacy_screens=legacy_screens,
             legacy_cellranger_outs=legacy_cellranger_outs)
 
@@ -124,42 +126,76 @@ class TestReportFunction(unittest.TestCase):
         self.assertTrue(os.path.exists(
             os.path.join(self.top_dir,'report.PE.html')))
 
-    def test_report_paired_end_cellranger_count(self):
+    def test_report_paired_end_cellranger_count_710(self):
         """
-        report: paired-end data with cellranger 'count'
+        report: paired-end data with cellranger 'count' (7.1.0)
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_scRNAseq',
             include_cellranger_count=True,
             cellranger_pipelines=('cellranger',),
-            cellranger_samples=('PJB1','PJB2',))
+            cellranger_samples=('PJB1','PJB2',),
+            cellranger_version='7.1.0')
         project = AnalysisProject(analysis_dir)
         report((project,),filename=os.path.join(self.top_dir,
                                                 'report.PE.html'))
         self.assertTrue(os.path.exists(
             os.path.join(self.top_dir,'report.PE.html')))
 
-    def test_report_paired_end_cellranger_multi(self):
+    def test_report_paired_end_cellranger_count_800(self):
         """
-        report: paired-end data with cellranger 'multi'
+        report: paired-end data with cellranger 'count' (8.0.0)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_scRNAseq',
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',),
+            cellranger_samples=('PJB1','PJB2',),
+            cellranger_version='8.0.0')
+        project = AnalysisProject(analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
+
+    def test_report_paired_end_cellranger_multi_710(self):
+        """
+        report: paired-end data with cellranger 'multi' (7.1.0)
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_CellPlex',
             include_cellranger_multi=True,
-            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',),
+            cellranger_version='7.1.0')
         project = AnalysisProject(analysis_dir)
         report((project,),filename=os.path.join(self.top_dir,
                                                 'report.PE.html'))
         self.assertTrue(os.path.exists(
             os.path.join(self.top_dir,'report.PE.html')))
 
-    def test_report_paired_end_bad_cellranger_multi(self):
+    def test_report_paired_end_cellranger_multi_800(self):
         """
-        report: paired-end data with 'bad' 'cellranger_multi' subdir
+        report: paired-end data with cellranger 'multi' (8.0.0)
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_CellPlex',
-            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
+            include_cellranger_multi=True,
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',),
+            cellranger_version='8.0.0')
+        project = AnalysisProject(analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
+
+    def test_report_paired_end_bad_cellranger_multi_710(self):
+        """
+        report: paired-end data with 'bad' 'cellranger_multi' subdir (7.1.0)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',),
+            cellranger_version='7.1.0')
         # Make a "bad" 'cellranger_multi' dir
         # i.e. doesn't conform to expected format
         bad_cellranger_multi_dir = os.path.join(analysis_dir,
@@ -176,9 +212,33 @@ class TestReportFunction(unittest.TestCase):
         self.assertTrue(os.path.exists(
             os.path.join(self.top_dir,'report.PE.html')))
 
-    def test_report_paired_end_cellranger_count_and_multi(self):
+    def test_report_paired_end_bad_cellranger_multi_800(self):
         """
-        report: paired-end data with cellranger 'count' and 'multi'
+        report: paired-end data with 'bad' 'cellranger_multi' subdir (8.0.0)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',),
+            cellranger_version='8.0.0')
+        # Make a "bad" 'cellranger_multi' dir
+        # i.e. doesn't conform to expected format
+        bad_cellranger_multi_dir = os.path.join(analysis_dir,
+                                                "qc",
+                                                "cellranger_multi",
+                                                "PJB")
+        os.makedirs(bad_cellranger_multi_dir)
+        with open(os.path.join(bad_cellranger_multi_dir,"web_summary.html"),
+                  "wt") as fp:
+            fp.write("Placeholder")
+        project = AnalysisProject(analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
+
+    def test_report_paired_end_cellranger_count_and_multi_710(self):
+        """
+        report: paired-end data with cellranger 'count' and 'multi' (7.1.0)
         """
         analysis_dir = self._make_analysis_project(
             protocol='10x_CellPlex',
@@ -187,7 +247,27 @@ class TestReportFunction(unittest.TestCase):
             cellranger_pipelines=('cellranger',),
             # NB only GEX samples
             cellranger_samples=('PJB1_GEX',),
-            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',),
+            cellranger_version='7.1.0')
+        project = AnalysisProject(analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'report.PE.html')))
+
+    def test_report_paired_end_cellranger_count_and_multi_800(self):
+        """
+        report: paired-end data with cellranger 'count' and 'multi' (8.0.0)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol='10x_CellPlex',
+            include_cellranger_multi=True,
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',),
+            # NB only GEX samples
+            cellranger_samples=('PJB1_GEX',),
+            cellranger_multi_samples=('PJB_CML1','PJB_CML2',),
+            cellranger_version='8.0.0')
         project = AnalysisProject(analysis_dir)
         report((project,),filename=os.path.join(self.top_dir,
                                                 'report.PE.html'))

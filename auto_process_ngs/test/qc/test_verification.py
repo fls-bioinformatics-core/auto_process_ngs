@@ -515,7 +515,7 @@ class TestQCVerifier(unittest.TestCase):
         # Explicitly match version with any reference
         self.assertTrue(qc_verifier.verify_qc_module('cellranger_count',
                                                      samples=('PJB1','PJB2'),
-                                                     cellranger_version='6.1.2',
+                                                     cellranger_version='7.1.0',
                                                      cellranger_refdata='*'))
         # Explicitly match reference with any version
         self.assertTrue(qc_verifier.verify_qc_module('cellranger_count',
@@ -534,7 +534,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertFalse(
             qc_verifier.verify_qc_module('cellranger_count',
                                          samples=('PJB1','PJB2'),
-                                         cellranger_version='6.1.2',
+                                         cellranger_version='7.1.0',
                                          cellranger_refdata=\
                                          'refdata-cellranger-2.0.0'))
         # Missing outputs for one sample
@@ -547,7 +547,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertFalse(
             qc_verifier.verify_qc_module('cellranger_count',
                                          samples=('PJB1','PJB2'),
-                                         cellranger_version='6.1.2',
+                                         cellranger_version='7.1.0',
                                          cellranger_refdata=\
                                          'refdata-cellranger-2020-A'))
         # Empty QC dir
@@ -732,7 +732,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi'))
         # Explicitly match version with any reference
         self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi',
-                                                     cellranger_version='6.1.2',
+                                                     cellranger_version='7.1.0',
                                                      cellranger_refdata='*'))
         # Explicitly match reference with any version
         self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi',
@@ -748,7 +748,7 @@ class TestQCVerifier(unittest.TestCase):
         # Fail if reference not found
         self.assertFalse(
             qc_verifier.verify_qc_module('cellranger_multi',
-                                         cellranger_version='6.1.2',
+                                         cellranger_version='7.1.0',
                                          cellranger_refdata=\
                                          'refdata-cellranger-2.0.0'))
         # Missing outputs for one sample
@@ -761,7 +761,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertFalse(
             qc_verifier.verify_qc_module('cellranger_multi',
                                          samples=('PJB1','PJB2'),
-                                         cellranger_version='6.1.2',
+                                         cellranger_version='7.1.0',
                                          cellranger_refdata=\
                                          'refdata-cellranger-2020-A'))
         # Empty QC dir
@@ -1100,7 +1100,7 @@ class TestQCVerifier(unittest.TestCase):
             fastq_screens=('model_organisms',
                            'other_organisms',
                            'rRNA'),
-            cellranger_version="6.1.2",
+            cellranger_version="7.1.0",
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_count_different_version(self):
@@ -1436,7 +1436,7 @@ class TestQCVerifier(unittest.TestCase):
             star_index="/data/star/hg38",
             annotation_bed="/data/annotation/hg38.bed",
             annotation_gtf="/data/annotation/hg38.gtf",
-            cellranger_version="6.1.2",
+            cellranger_version="7.1.0",
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_multi_no_config(self):
@@ -1460,7 +1460,7 @@ class TestQCVerifier(unittest.TestCase):
             fastq_screens=('model_organisms',
                            'other_organisms',
                            'rRNA'),
-            cellranger_version="6.1.2",
+            cellranger_version="7.1.0",
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
 class TestParseQCModuleSpec(unittest.TestCase):

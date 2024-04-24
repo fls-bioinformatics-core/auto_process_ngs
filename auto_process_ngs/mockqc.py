@@ -39,6 +39,13 @@ from .tenx.cellplex import CellrangerMultiConfigCsv
 from .utils import normalise_organism_name
 from . import mockqcdata
 from . import mock10xdata
+from . import tenx
+
+#######################################################################
+# Constants
+#######################################################################
+
+_DEFAULT_CELLRANGER_VERSION = tenx.DEFAULT_CELLRANGER_VERSION
 
 #######################################################################
 # Class definitions
@@ -305,7 +312,7 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
         # Set internals based on 10x pipeline
         if cellranger == 'cellranger':
             if not version:
-                version = '6.1.2'
+                version = _DEFAULT_CELLRANGER_VERSION
             cmdline = "cellranger --transcriptome %s" \
                       % reference_data_path
             metrics_data = mock10xdata.METRICS_SUMMARY
@@ -342,7 +349,8 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
 
     @classmethod
     def cellranger_multi(self,samples,qc_dir,config_csv=None,
-                         prefix='cellranger_multi'):
+                         prefix='cellranger_multi',
+                         cellranger_version=None):
         """
         Create mock outputs for 'cellranger multi'
 
@@ -354,7 +362,22 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
             file
           prefix (str): relative path to QC directory to put
             mock outputs into (default: 'cellranger_multi')
+          cellranger_version (str): version of cellranger to
+            mimick (default: default defined in module)
         """
+        # Determine major version to mimick
+        if cellranger_version is None:
+            cellranger_version = _DEFAULT_CELLRANGER_VERSION
+        version = int(str(cellranger_version).split('.')[0])
+        if version < 7:
+            metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY
+        elif version == 7:
+            metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY_7_1_0
+        elif version == 8:
+            metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY_8_0_0
+        else:
+            raise Exception("%s: unsupported Cellranger "
+                            "version" % cellranger_version)
         # Read in multiplexing config
         if config_csv:
             config = CellrangerMultiConfigCsv(config_csv)
@@ -374,7 +397,7 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
             os.makedirs(sample_dir)
             for f in per_sample_output_files:
                 with open(os.path.join(sample_dir,f),'wt') as fp:
-                    fp.write(mock10xdata.CELLPLEX_METRICS_SUMMARY)
+                    fp.write(metrics_summary)
         # Multiplexing analysis outputs
         multiplexing_output_files = ("assignment_confidence_table.csv",
                                      "cells_per_tag.json",
@@ -427,6 +450,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      include_multiqc=False,
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
+                     cellranger_version=None,
                      legacy_screens=False,
                      legacy_cellranger_outs=False):
     """
@@ -450,6 +474,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         produce 'cellranger count' outputs for
       cellranger_multi_samples (list): list of multiplexed
         sample names for 10x CellPlex
+      cellranger_version (str): if set then specifies version of
+        Cellranger to mimick
       seq_data_samples (list): list with subset of sample
         names which include sequence (i.e. biological) data
       include_fastqc (bool): include outputs from Fastqc
@@ -494,6 +520,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         qc_info['seq_data_samples'] = ','.join(seq_data_samples)
     # Normalise organism names
     organisms_ = [normalise_organism_name(x) for x in organisms]
+    # Cellranger version
+    if cellranger_version is None:
+        cellranger_version = _DEFAULT_CELLRANGER_VERSION
+    else:
+        cellranger_version = str(cellranger_version)
     # Populate with fake QC products
     for fq in fastq_names:
         # Sequence lengths
@@ -612,7 +643,7 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         for cellranger in cellranger_pipelines:
             # Set defaults
             if cellranger == "cellranger":
-                version = "6.1.2"
+                version = cellranger_version
                 refdata = "/data/refdata-cellranger-2020-A"
             elif cellranger == "cellranger-atac":
                 version = "2.0.0"
@@ -684,7 +715,7 @@ PJB_CML2,CMO302,CML2
                                          "fastqs")
             fp.write(config_template.format(fastq_dir=fastq_dir))
         # Cellranger version
-        version = "6.1.2"
+        version = cellranger_version
         # Set top-level output dir
         multi_dir = os.path.join("cellranger_multi",
                                  version,
@@ -693,7 +724,8 @@ PJB_CML2,CMO302,CML2
         MockQCOutputs.cellranger_multi(cellranger_multi_samples,
                                        qc_dir,
                                        config_csv=multi_config,
-                                       prefix=multi_dir)
+                                       prefix=multi_dir,
+                                       cellranger_version=version)
         qc_info['cellranger_version'] = version
     # Additional metadata items
     star_index = "/data/star/hg38"

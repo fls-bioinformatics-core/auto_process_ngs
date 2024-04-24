@@ -2712,11 +2712,16 @@ class RunCellrangerCount(PipelineTask):
                     if self.args.library_type == "snRNA-seq":
                         # For single nuclei RNA-seq specify the
                         # --include-introns for cellranger 5.0+
-                        if cellranger_major_version == 7:
+                        if cellranger_major_version in (7,8):
                             cmd.add_args("--include-introns",
                                          "true")
                         else:
                             cmd.add_args("--include-introns")
+                # Additional options for cellranger 8.0+
+                if cellranger_major_version >= 8:
+                    # --create-bam is compulsory
+                    # Recommended to set to 'true'
+                    cmd.add_args("--create-bam","true")
             elif cellranger_package == "cellranger-atac":
                 # Cellranger-ATAC
                 cmd.add_args("--fastqs",fastq_dir,

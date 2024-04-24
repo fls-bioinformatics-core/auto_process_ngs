@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx/utils.py: utility functions for handling 10xGenomics data
-#     Copyright (C) University of Manchester 2023 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2024 Peter Briggs
 #
 
 """
@@ -37,6 +37,9 @@ from ..docwriter import List
 from ..docwriter import Link
 from ..docwriter import Table
 from .. import css_rules
+
+# Default version of cellranger
+from . import DEFAULT_CELLRANGER_VERSION
 
 # Initialise logging
 import logging
@@ -529,7 +532,8 @@ def add_cellranger_args(cellranger_cmd,
 
 def make_multi_config_template(f,reference=None,probe_set=None,
                                fastq_dir=None,samples=None,
-                               no_bam=None,library_type="CellPlex"):
+                               no_bam=None,library_type="CellPlex",
+                               cellranger_version=None):
     """
     Write a template configuration file for 'cellranger multi'
 
@@ -556,7 +560,14 @@ def make_multi_config_template(f,reference=None,probe_set=None,
         that the configuration file will be used with;
         should be one of 'CellPlex[...]' (the default),
         'Flex' or 'Single Cell Immune Profiling'
+      cellranger_version (str): optionally specify the
+        target Cellranger version number (or None)
     """
+    # Target version
+    if cellranger_version is None:
+        cellranger_version = DEFAULT_CELLRANGER_VERSION
+    else:
+        cellranger_version = str(cellranger_version)
     # Normalise supplied library type
     if library_type.startswith("CellPlex"):
         library_type == "cellplex"
@@ -589,10 +600,18 @@ def make_multi_config_template(f,reference=None,probe_set=None,
                      (probe_set if probe_set
                       else "/path/to/probe/set"))
         fp.write("#force-cells,n\n")
-        if no_bam is not None:
-            fp.write("no-bam,%s\n" % str(no_bam).lower())
-        else:
-            fp.write("#no-bam,true|false\n")
+        if cellranger_version.startswith("7."):
+            # Cellranger 7.* targetted
+            if no_bam is not None:
+                fp.write("no-bam,%s\n" % str(no_bam).lower())
+            else:
+                fp.write("#no-bam,true|false\n")
+        elif cellranger_version.startswith("8."):
+            # Cellranger 8.* targetted
+            if no_bam is not None:
+                fp.write("create-bam,%s\n" % str(not no_bam).lower())
+            else:
+                fp.write("create-bam,true\n")
         fp.write("#cmo-set,/path/to/custom/cmo/reference\n")
         fp.write("\n")
         # Feature section
