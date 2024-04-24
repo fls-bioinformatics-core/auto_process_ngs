@@ -1829,7 +1829,7 @@ class RunFastqScreen(PipelineTask):
             convention for output files (default is to
             use new format)
         """
-        self.conda("fastq-screen=0.14.0",
+        self.conda("fastq-screen=0.15.3",
                    "bowtie=1.2.3")
         # Also need to specify tbb=2020.2 for bowtie
         # See https://www.biostars.org/p/494922/
@@ -1983,7 +1983,7 @@ class RunFastQC(PipelineTask):
           nthreads (int): number of threads/processors to
             use (defaults to number of slots set in runner)
         """
-        self.conda("fastqc=0.11.3")
+        self.conda("fastqc=0.12.1")
     def setup(self):
         if not self.args.fastqs:
             print("Nothing to do")
@@ -4052,15 +4052,9 @@ class ReportQC(PipelineTask):
           zip_outputs (bool): if True then also generate
             a ZIP archive of the QC reports
         """
-        self.conda("multiqc=1.8",
+        self.conda("multiqc=1.21",
+                   "python=3.8",
                    "pillow")
-        # Specify Python version to use to avoid similar
-        # issue as reported here:
-        # https://github.com/ewels/MultiQC/issues/1413
-        self.conda("python=3.8")
-        # Now also seem to need to specify numpy version to
-        # get a working version (fails with latest numpy)
-        self.conda("numpy=1.20.3")
     def setup(self):
         # Check for 10x multiome libraries file with linked projects
         libraries_file = os.path.join(self.args.project.dirn,
