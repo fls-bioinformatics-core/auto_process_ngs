@@ -187,6 +187,7 @@ PBB,CMO302,PBB
                                      "fastqs")
             fp.write("""[gene-expression]
 reference,/data/refdata-cellranger-gex-GRCh38-2024-A
+create-bam,true
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
