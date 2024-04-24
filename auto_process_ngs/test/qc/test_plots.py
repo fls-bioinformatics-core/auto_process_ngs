@@ -411,7 +411,8 @@ ecoli	99859	99836	99.98	4	0.00	18	0.02	0	0.00	1	0.00
                 fp.write(screen_data)
             self.screens.append(screen_file)
         # Reference data
-        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAUCAIAAAD0og/CAAAAtElEQVR4nO2YwQrEIAxEp4vf2t7iJ5R+QnL0Z91DqctiWXagJRXyTmpAhoGMkklVEfzHBFSgVCzbd2Gt1UcRYGYARMRLwClm9vLWMBJhFkGYRZBUTUSAefWW8nxSzpLzhReW/qhiaeutqzq+JCzRhgRhFkGYRdAC/irm34dDPyN7wJeWwX0AY6gMvpVoQ4IwiyDMIvj84Pf90AF8NwnHSORpnKryndtEGxKEWQTJWwCHb2K8AUVlLWZTGFiYAAAAAElFTkSuQmCC"
+        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAUCAIAAAD0og/CAAAA3UlEQVR4nO2YMQ7CMAxFHWRxD+6QLtwh6g5nIAOduQJSws4JuqDegalTB1aO0L1LGBAtohmw1MqN5DclzvL1JX9bUc45EP4DlTZF2bS6eeyv3w9ZeHJp8t4DgLWWS0AU7/2KW0NKiFkExCwCGOqqO1uAPNuduMUsHVTaXO6TZXlRNuNiq4fizxgB1klCRdqQgJhFQMwigKGuJlz/DttNrJz3p6THCCpt1sdbn8HjAIakMnhWpA0JiFkExCwCwwb/vicdwHOD8PkSWRpRVbz/NtKGBMQsAsgtgAZvYrwAtXA45PRIeLsAAAAASUVORK5CYII="
+        self.png_base64_data_legacy_colours = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAUCAIAAAD0og/CAAAAtElEQVR4nO2YwQrEIAxEp4vf2t7iJ5R+QnL0Z91DqctiWXagJRXyTmpAhoGMkklVEfzHBFSgVCzbd2Gt1UcRYGYARMRLwClm9vLWMBJhFkGYRZBUTUSAefWW8nxSzpLzhReW/qhiaeutqzq+JCzRhgRhFkGYRdAC/irm34dDPyN7wJeWwX0AY6gMvpVoQ4IwiyDMIvj84Pf90AF8NwnHSORpnKryndtEGxKEWQTJWwCHb2K8AUVlLWZTGFiYAAAAAElFTkSuQmCC"
         
     def tearDown(self):
         # Remove the temporary test directory
@@ -433,6 +434,14 @@ ecoli	99859	99836	99.98	4	0.00	18	0.02	0	0.00	1	0.00
         self.assertEqual(uscreenplot(self.screens,
                                      inline=True),
                          self.png_base64_data)
+
+    def test_uscreenplot_to_base64_use_legacy_colours(self):
+        """uscreenplot: write PNG as Base64 encoded string (legacy colours)
+        """
+        self.assertEqual(uscreenplot(self.screens,
+                                     inline=True,
+                                     use_legacy_colours=True),
+                         self.png_base64_data_legacy_colours)
 
 class TestUBoxplot(unittest.TestCase):
     """
