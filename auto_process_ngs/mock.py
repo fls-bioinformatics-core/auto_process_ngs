@@ -760,7 +760,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
             print("Adding outputs for %s" % fq)
             if include_seqlens:
                 MockQCOutputs.seqlens(fq,self._project.qc_dir)
-            MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
+            MockQCOutputs.fastqc_v0_12_1(fq,self._project.qc_dir)
             if protocol in ('singlecell',
                             '10x_scRNAseq',
                             '10x_snRNAseq',
@@ -773,10 +773,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
             for screen in ("model_organisms",
                            "other_organisms",
                            "rRNA"):
-                MockQCOutputs.fastq_screen_v0_9_2(fq,
-                                                  self._project.qc_dir,
-                                                  screen,
-                                                  legacy=legacy_screens)
+                MockQCOutputs.fastq_screen_v0_15_3(fq,
+                                                   self._project.qc_dir,
+                                                   screen,
+                                                   legacy=legacy_screens)
         # Handle fastq_strand, if requested
         if include_fastq_strand:
             fastq_strand_conf = os.path.join(self._project.dirn,
