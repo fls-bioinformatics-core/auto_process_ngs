@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     docwriter.py: HTML document generation library
-#     Copyright (C) University of Manchester 2017-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2024 Peter Briggs
 #
 #########################################################################
 
@@ -808,7 +808,7 @@ class Img:
             html.append("alt='%s'" % self._alt)
         # Optional title
         if self._title:
-            html.append("title='%s'" % self._title)
+            html.append("title='%s'" % escape_quotes(self._title))
         # Close the tag
         html.append("/>")
         # Wrap in a hef
@@ -1128,3 +1128,16 @@ def sanitize_css_string(s):
     """
     return ''.join(filter(lambda c: c in VALID_CSS_ID_CHARS,
                           str(s).replace(' ','_').replace('\t','_')))
+
+def escape_quotes(s):
+    """
+    Replaces single and double quotes in string with HTML entities
+
+    Arguments:
+      s (str): string to escape quotes in
+
+    Returns:
+      String: version of the original string with single quotes
+        converted to '&#39;' and double quotes to '&#34;'.
+    """
+    return str(s).replace("'","&#39;").replace('"',"&#34;")
