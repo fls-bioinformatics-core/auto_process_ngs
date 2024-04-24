@@ -1971,7 +1971,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
             elif self._package_name == 'cellranger-arc':
                 self._version = '2.0.0'
             elif self._package_name == 'spaceranger':
-                self._version = '2.1.1'
+                self._version = '3.0.0'
         else:
             self._version = version
         self._exit_code = exit_code
