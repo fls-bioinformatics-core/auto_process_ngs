@@ -464,7 +464,7 @@ def encode_png(png_file):
         PNGBase64Encoder().encodePNG(png_file)
     
 def uscreenplot(screen_files,outfile=None,screen_width=None,
-                inline=None):
+                inline=None,use_legacy_colours=False):
     """
     Generate 'micro-plot' of FastqScreen outputs
 
@@ -476,6 +476,10 @@ def uscreenplot(screen_files,outfile=None,screen_width=None,
         each screen plot
       inline (boolean): if True then returns the PNG
         as base64 encoded string rather than as a file
+      use_legacy_colours (boolean): if True then use the
+        original colour palette from FastqScreen
+        (default: False, use mimick the current colour
+        palette)
     """
     # Mappings
     mappings = ('%One_hit_one_library',
@@ -483,10 +487,16 @@ def uscreenplot(screen_files,outfile=None,screen_width=None,
                 '%One_hit_multiple_libraries',
                 '%Multiple_hits_multiple_libraries',)
     # Colours
-    colors = (RGB_COLORS['blue'],
-              RGB_COLORS['navyblue'],
-              RGB_COLORS['red'],
-              RGB_COLORS['maroon'])
+    if use_legacy_colours:
+        colors = (RGB_COLORS['blue'],
+                  RGB_COLORS['navyblue'],
+                  RGB_COLORS['red'],
+                  RGB_COLORS['maroon'])
+    else:
+        colors = ((146,197,222),
+                  (5,113,176),
+                  (244,165,130),
+                  (202,0,32))
     # Width for each screen plot
     if screen_width is None:
         screen_width = 50
