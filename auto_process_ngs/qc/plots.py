@@ -1306,11 +1306,11 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
     # Create the image
     img = Image.new('RGB',(width,height),RGB_COLORS['white'])
     pixels = img.load()
-    # Add a baseline on the plot
-    for j in range(spacing,width-spacing):
-        pixels[j,height-2] = RGB_COLORS['lightgrey']
     # Generate the plot
     if multi_bar:
+        # Add a baseline on the plot
+        for j in range(spacing,width-spacing):
+            pixels[j,height-2] = RGB_COLORS['lightgrey']
         # Plot a bar for each adapter
         for ii,adapter in enumerate(adapter_names):
             # Set colour based on adapter content
@@ -1330,6 +1330,10 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
                 for j in range(start,end):
                     pixels[j,height-i] = RGB_COLORS['lightgrey']
     else:
+        # Stripe the background
+        for i in range(1,height,2):
+            for j in range(1,width-2):
+                pixels[j,i] = RGB_COLORS['lightgrey']
         # Single bar with all data
         start = 1
         for ii,adapter in enumerate(adapter_names):
@@ -1343,10 +1347,6 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
                 for j in range(1,width-2):
                     pixels[j,height-i] = fg_color
             start = end
-        # Pad the remainder of the bar
-        for i in range(start,height-2):
-            for j in range(1,width-2):
-                pixels[j,height-i] = RGB_COLORS['lightgrey']
     # Output the plot
     return make_plot(img,
                      outfile=outfile,

@@ -612,8 +612,8 @@ class TestUAdapterPlot(unittest.TestCase):
         d["SOLID Small RNA Adapter"] = 0.1
         self.fastqc_adapter_data_legacy = d
         # Reference data
-        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAoCAIAAABB31ytAAAAbUlEQVR4nGP8//8/A3GAiUh1pCllYWBguHLlCn5FOjo6NHPAqFLaRez1wmP4Fenspl3EsjAwMMxKI6AolFRTSXTATKV7VDaVRAeYrN6DX9E7Y9o5YCgpZWFgYFBaHUpAVQdtHRDKcJbKpg5TpQBX5hHyTw6e2QAAAABJRU5ErkJggg=="
-        self.png_base64_data_legacy_colours = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAoCAIAAABB31ytAAAAVElEQVR4nO3TwQnAMAxDUblkHA+ZIb3P76H3xIH6ELDPDyEENkC5e5LujA5JEbFG7l5WQJkFAKBuAc2/Uw+oAWYb9I1UU6Bp05vokIR2HyPKCjR9AY5VFsNpfA2/AAAAAElFTkSuQmCC"
+        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAoCAIAAABB31ytAAAAc0lEQVR4nGP8//8/A3GAhYGB4cqVK/gV6ejoMDAwMI6aOuJNZWFgYLheeIyA0t06DAwMTETaTppSFgYGhllpBBSFkmoqiQ6YqXSPyqaS6ACT1XvwK3pnTDsHDCWlLAwMDEqrQwmo6qCtA0IZzlLZ1GGqFADDkjXmAZp6mQAAAABJRU5ErkJggg=="
+        self.png_base64_data_legacy_colours = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAoCAIAAABB31ytAAAAVUlEQVR4nO3TsQnAMAxE0a/gcTxkhtQ+P0X6WIa4MFj143QIFCq1aUBmfqPeOxAbpVJJVdWruB2YoA3g/jt1goYaMUDvkdYUOPTQnWgDZPQxuKzAoQ/B0yK/d5KxAAAAAABJRU5ErkJggg=="
 
     def tearDown(self):
         # Remove the temporary test directory
@@ -636,15 +636,12 @@ class TestUAdapterPlot(unittest.TestCase):
                                       inline=True),
                          self.png_base64_data)
 
-    def test_uadapterplot_to_file_legacy_colours(self):
+    def test_uadapterplot_to_base64_legacy_colours(self):
         """uadapterplot: write PNG to file (legacy colours)
         """
-        outfile = os.path.join(self.wd,"uadapterplot.png")
         self.assertEqual(uadapterplot(self.fastqc_adapter_data_legacy,
-                                      outfile=outfile,
+                                      inline=True,
                                       use_legacy_colours=True),
-                         outfile)
-        self.assertEqual(encode_png(outfile),
                          self.png_base64_data_legacy_colours)
 
 class TestUStrandPlot(unittest.TestCase):
