@@ -13,6 +13,7 @@ from auto_process_ngs.qc.plots import Plot
 from auto_process_ngs.qc.plots import encode_png
 from auto_process_ngs.qc.plots import uadapterplot
 from auto_process_ngs.qc.plots import uboxplot
+from auto_process_ngs.qc.plots import uduplicationplot
 from auto_process_ngs.qc.plots import ufastqcplot
 from auto_process_ngs.qc.plots import uscreenplot
 from auto_process_ngs.qc.plots import ustackedbar
@@ -643,6 +644,35 @@ class TestUAdapterPlot(unittest.TestCase):
                                       inline=True,
                                       use_legacy_colours=True),
                          self.png_base64_data_legacy_colours)
+
+class TestUDuplicationPlot(unittest.TestCase):
+    """
+    Tests for the uduplicationplot function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestUDuplicationPlot')
+        # Reference data
+        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAMCAIAAACvLXk7AAAAQElEQVR4nGP8//8/w+ADTIyMDNRFGx4xMDBgIZ/f2IBObsBJMtEzDIgHo84iBYw6ixQw6ixSwKizSAGMg7PyAQAMRB8/P9xCSgAAAABJRU5ErkJggg=="
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_uduplicationplot_to_file(self):
+        """uduplicationplot: write PNG to file
+        """
+        outfile = os.path.join(self.wd,"uduplicationplot.png")
+        self.assertEqual(uduplicationplot(45.8,outfile=outfile),
+                         outfile)
+        self.assertEqual(encode_png(outfile),self.png_base64_data)
+
+    def test_uduplicationplot_to_base64(self):
+        """uduplicationplot: write PNG as Base64 encoded string
+        """
+        self.assertEqual(uduplicationplot(45.8,inline=True),
+                         self.png_base64_data)
 
 class TestUStrandPlot(unittest.TestCase):
     """
