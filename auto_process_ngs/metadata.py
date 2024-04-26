@@ -466,6 +466,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'primary_fastq_dir',
                                   'samples',
                                   'biological_samples',
+                                  'multiplexed_samples',
                                   'sequencer_model',
                                   'comments',
                               ),
