@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq/utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
 #
 ########################################################################
 #
@@ -437,7 +437,7 @@ def get_required_samplesheet_format(bcl2fastq_version):
         raise NotImplementedError('unknown version: %s' %
                                   bcl2fastq_version)
 
-def get_bases_mask(run_info_xml,sample_sheet_file=None):
+def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
     """
     Get bases mask string
 
@@ -450,6 +450,8 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None):
       run_info_xml: name and path of RunInfo.xml file from the
         sequencing run
       sample_sheet_file: (optional) path to sample sheet file
+      r1 (int): length to truncate R1 reads to
+      r2 (int): length to truncate R2 reads to
 
     Returns:
       Bases mask string e.g. 'y101,I6'.
@@ -470,6 +472,28 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None):
                                                      example_barcode)
         print("Bases mask: %s (updated for barcode sequence '%s')" %
               (bases_mask,example_barcode))
+    # Truncate reads if specified
+    lengths = (r1,r2)
+    if r1 is not None:
+        reads = []
+        read_number = 0
+        for read in bases_mask.split(','):
+            if read.upper().startswith('I'):
+                # Ignore index reads
+                reads.append(read)
+                continue
+            read_number += 1
+            rlen = lengths[read_number-1]
+            if rlen is not None:
+                # Truncated length specified
+                read_length = int(read[1:])
+                if rlen < read_length:
+                    new_read = "y%dn%d" % (rlen,read_length-rlen)
+                reads.append(new_read)
+            else:
+                reads.append(read)
+        bases_mask = ','.join(reads)
+        print("Bases mask: %s (updated to truncate reads)" % bases_mask)
     return bases_mask
 
 def bases_mask_is_valid(bases_mask):
