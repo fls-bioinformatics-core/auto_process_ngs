@@ -1507,15 +1507,17 @@ def make_fastqs(args):
                     key = "icell8_atac_%s" % key
                 elif key == 'rc_i2_override':
                     key = 'spaceranger_rc_i2_override'
-                # Convert integer values
+                # Convert values where appropriate
                 if key in ('r1_length' ,'r2_length'):
+                    # Convert integer values
                     value = int(value)
-                # Deal with True/False values
-                # Ignore case and also allow 'yes' and 'no'
-                if value.lower() in ('true','yes'):
-                    value = True
-                elif value.lower() in ('false','no'):
-                    value = False
+                else:
+                    # Deal with True/False values
+                    # Ignore case and also allow 'yes' and 'no'
+                    if value.lower() in ('true','yes'):
+                        value = True
+                    elif value.lower() in ('false','no'):
+                        value = False
                 subset_options[key] = value
             # Add the subset to the list
             lane_subsets.append(subset(lanes_,**subset_options))
