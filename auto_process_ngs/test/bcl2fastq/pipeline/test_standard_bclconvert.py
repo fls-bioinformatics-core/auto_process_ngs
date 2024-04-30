@@ -717,6 +717,92 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
             self.assertFastqStats(stats,fq,1,L1=1)
 
     #@unittest.skip("Skipped")
+    def test_makefastqs_standard_protocol_bclconvert_truncate_read_lengths(self):
+        """
+        MakeFastqs: standard protocol/bcl-convert: truncate read lengths
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.miseq)
+        # Create mock bcl2fastq
+        # Check override cycles
+        MockBclConvertExe.create(os.path.join(self.bin,
+                                              "bcl-convert"),
+                                 assert_override_cycles="Y26N75;I8;I8;Y76N25")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make an (empty) analysis directory
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the test
+        p = MakeFastqs(run_dir,sample_sheet,
+                       bcl_converter="bcl-convert",
+                       r1_length=26,r2_length=76)
+        status = p.run(analysis_dir,
+                       poll_interval=POLL_INTERVAL)
+        self.assertEqual(status,0)
+        # Check outputs
+        self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.flow_cell_mode,None)
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bclconvert_info,
+                         (os.path.join(self.bin,"bcl-convert"),
+                          "BCL Convert",
+                          "3.7.5"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_M00879_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+        # Check Fastqs
+        stats = FastqStatistics(IlluminaData(analysis_dir,"bcl2fastq"))
+        self.assertEqual(stats.lane_names,['L1'])
+        for fq in ("Sample1_S1_L001_R1_001.fastq.gz",
+                   "Sample1_S1_L001_R2_001.fastq.gz",
+                   "Sample2_S2_L001_R1_001.fastq.gz",
+                   "Sample2_S2_L001_R2_001.fastq.gz",
+                   "Undetermined_S0_L001_R1_001.fastq.gz",
+                   "Undetermined_S0_L001_R2_001.fastq.gz",):
+            self.assertFastqStats(stats,fq,1,L1=1)
+
+    #@unittest.skip("Skipped")
     def test_makefastqs_require_bclconvert_version(self):
         """
         MakeFastqs: standard protocol/bcl-convert: specify version

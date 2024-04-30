@@ -138,6 +138,8 @@ LANE_SUBSET_ATTRS = (
     'mask_short_adapter_reads',
     'create_fastq_for_index_read',
     'find_adapters_with_sliding_window',
+    'r1_length',
+    'r2_length',
     'no_lane_splitting',
     'tenx_filter_single_index',
     'tenx_filter_dual_index',
@@ -213,6 +215,7 @@ class MakeFastqs(Pipeline):
                  spaceranger_rc_i2_override=None,
                  icell8_atac_swap_i1_and_i2=None,
                  icell8_atac_reverse_complement=None,
+                 r1_length=None,r2_length=None,
                  lanes=None,trim_adapters=True,fastq_statistics=True,
                  analyse_barcodes=True,lane_subsets=None):
         """
@@ -263,6 +266,12 @@ class MakeFastqs(Pipeline):
             ATAC data
           lanes (list): if set then specifies a list of lanes to
             include; all other lanes will be excluded
+          r1_length (int): if specified then truncate R1 reads to
+            this length (ignored if not using bcl2fastq or
+            bclconvert, or if bases mask is set)
+          r2_length (int): if specified then truncate R2 reads to
+            this length (ignored if not using bcl2fastq or
+            bclconvert, or if bases mask is set)
           trim_adapters (bool): if True (default) then perform
             adapter trimming as part of Fastq generation
           fastq_statistics (bool): if True (default) then generate
@@ -337,6 +346,8 @@ class MakeFastqs(Pipeline):
         # Defaults
         self._bcl_converter = bcl_converter
         self._bases_mask = bases_mask
+        self._r1_length = r1_length
+        self._r2_length = r2_length
         self._adapter_sequence = adapter_sequence
         self._adapter_sequence_read2 = adapter_sequence_read2
         self._minimum_trimmed_read_length = minimum_trimmed_read_length
@@ -477,6 +488,8 @@ class MakeFastqs(Pipeline):
                 s,
                 bcl_converter=self._bcl_converter,
                 bases_mask=self._bases_mask,
+                r1_length=self._r1_length,
+                r2_length=self._r2_length,
                 trim_adapters=self._trim_adapters,
                 minimum_trimmed_read_length=\
                 self._minimum_trimmed_read_length,
@@ -1061,6 +1074,8 @@ class MakeFastqs(Pipeline):
             # Bases mask
             #############
             bases_mask = subset['bases_mask']
+            r1_length = subset['r1_length']
+            r2_length = subset['r2_length']
 
             ###################
             # Adapter trimming
@@ -1194,6 +1209,8 @@ class MakeFastqs(Pipeline):
                         fastq_out_dir,
                         make_sample_sheet.output.custom_sample_sheet,
                         bases_mask=bases_mask,
+                        r1_length=r1_length,
+                        r2_length=r2_length,
                         minimum_trimmed_read_length=\
                         minimum_trimmed_read_length,
                         mask_short_adapter_reads=\
@@ -1275,6 +1292,8 @@ class MakeFastqs(Pipeline):
                                 make_sample_sheet.output.custom_sample_sheet,
                                 lane=lane,
                                 bases_mask=bases_mask,
+                                r1_length=r1_length,
+                                r2_length=r2_length,
                                 minimum_trimmed_read_length=\
                                 minimum_trimmed_read_length,
                                 mask_short_adapter_reads=\
@@ -1332,6 +1351,8 @@ class MakeFastqs(Pipeline):
                             tmp_fastq_out_dir,
                             make_sample_sheet.output.custom_sample_sheet,
                             bases_mask=bases_mask,
+                            r1_length=r1_length,
+                            r2_length=r2_length,
                             minimum_trimmed_read_length=\
                             minimum_trimmed_read_length,
                             mask_short_adapter_reads=\
@@ -2389,6 +2410,7 @@ class RunBcl2Fastq(PipelineTask):
     Run bcl2fastq to generate Fastqs from sequencing data
     """
     def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
+             r1_length=None,r2_length=None,
              ignore_missing_bcl=False,no_lane_splitting=False,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
@@ -2406,6 +2428,12 @@ class RunBcl2Fastq(PipelineTask):
           sample_sheet (str): path to input samplesheet file
           bases_mask (str): if set then use this as an
             alternative bases mask setting
+          r1_length (int): if set then truncate R1 reads in
+            bases mask to this length (NB ignored if bases
+            mask is already set)
+          r2_length (int): if set then truncate R2 reads in
+            bases mask to this length (NB ignored if bases
+            mask is already set)
           ignore_missing_bcl (bool): if True then run
             bcl2fastq with --ignore-missing-bcl
           no_lane_splitting (bool): if True then run bcl2fastq
@@ -2457,7 +2485,9 @@ class RunBcl2Fastq(PipelineTask):
         if self.args.bases_mask == "auto":
             print("Setting bases mask from RunInfo.xml")
             bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                        self.args.sample_sheet)
+                                        self.args.sample_sheet,
+                                        r1=self.args.r1_length,
+                                        r2=self.args.r2_length)
         else:
             bases_mask = self.args.bases_mask
         if not bases_mask_is_valid(bases_mask):
@@ -2614,8 +2644,8 @@ class RunBclConvert(PipelineTask):
     Run BCL Convert to generate Fastqs from sequencing data
     """
     def init(self,run_dir,out_dir,sample_sheet,lane=None,
-             bases_mask='auto',ignore_missing_bcl=False,
-             no_lane_splitting=False,
+             bases_mask='auto',r1_length=None,r2_length=None,
+             ignore_missing_bcl=False,no_lane_splitting=False,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
              create_fastq_for_index_read=False,nprocessors=None,
@@ -2633,6 +2663,12 @@ class RunBclConvert(PipelineTask):
             with --bcl-only-lane
           bases_mask (str): if set then use this as an
             alternative bases mask setting
+          r1_length (int): if set then truncate R1 reads in
+            bases mask to this length (NB ignored if bases
+            mask is already set)
+          r2_length (int): if set then truncate R2 reads in
+            bases mask to this length (NB ignored if bases
+            mask is already set)
           no_lane_splitting (bool): if True then run bcl-convert
             with --no-lane-splitting
           minimum_trimmed_read_length (int): if set then supply
@@ -2682,7 +2718,9 @@ class RunBclConvert(PipelineTask):
         if self.args.bases_mask == "auto":
             print("Setting bases mask from RunInfo.xml")
             bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                        self.args.sample_sheet)
+                                        self.args.sample_sheet,
+                                        r1=self.args.r1_length,
+                                        r2=self.args.r2_length)
         else:
             bases_mask = self.args.bases_mask
         if not bases_mask_is_valid(bases_mask):
