@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 #########################################################################
 
@@ -40,7 +40,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 name=None,lanes=None,lane_subsets=None,
                 icell8_well_list=None,
                 nprocessors=None,bcl_converter=None,
-                bases_mask=None,no_lane_splitting=None,
+                bases_mask=None,r1_length=None,
+                r2_length=None,no_lane_splitting=None,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
                 trim_adapters=True,
@@ -119,6 +120,12 @@ def make_fastqs(ap,protocol='standard',platform=None,
         "bcl2fastq>2.0" or "bcl-convert=3.7.5"). Defaults to "bcl2fastq"
       bases_mask (str): if set then use this as an alternative bases
         mask setting
+      r1_length (int): explicitly specify length to truncate R1 reads
+         to (ignored if not using bcl2fastq or bclconvert, or if bases
+         mask is set)
+      r2_length (int): explicitly specify length to truncate R2 reads
+         to (ignored if not using bcl2fastq or bclconvert, or if bases
+         mask is set)
       no_lane_splitting (bool): if True then run bcl2fastq with
         --no-lane-splitting
       minimum_trimmed_read_length (int): if set then specify minimum
@@ -378,6 +385,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              ap.params.sample_sheet,
                              protocol=protocol,
                              bases_mask=bases_mask,
+                             r1_length=r1_length,
+                             r2_length=r2_length,
                              bcl_converter=bcl_converter,
                              platform=platform,
                              icell8_well_list=icell8_well_list,
