@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/auto_process.py: command line interface for auto_process_ngs
-#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
 #
 #########################################################################
 #
@@ -475,24 +475,18 @@ def add_make_fastqs_command(cmdparser):
                           dest="no_adapter_trimming",default=False,
                           help="turn off adapter trimming even if "
                           "adapter sequences are supplied")
-    # ICELL8 options
-    icell8 = p.add_argument_group('ICELL8 options (ICELL8 data only)')
-    icell8.add_argument("--well-list",
-                        dest="icell8_well_list",
-                        default=None,
-                        help="specify ICELL8 well list file")
-    icell8.add_argument('--swap-i1-and-i2',
-                        action='store_true',
-                        dest="icell8_swap_i1_and_i2",
-                        help="swap supplied I1 and I2 Fastqs when matching "
-                        "ATAC barcodes against well list")
-    icell8.add_argument('--reverse-complement',
-                        choices=['i1','i2','both'],
-                        dest="icell8_reverse_complement",
-                        default=None,
-                        help="can be 'i1','i2', or 'both'; reverse complement "
-                        "the specified indices from the well list when "
-                        "matching ATAC barcodes against well list")
+    # Standard/mirna options
+    standard = p.add_argument_group('Standard/miRNA options')
+    standard.add_argument('--r1-length',action="store",
+                          dest="r1_length",default=None,type=int,
+                          help="truncate R1 reads to R1_LENGTH  (ignored if "
+                          "--use-bases-mask is explicitly set; only "
+                          "applies to 'standard' and 'miRNA' protocols)")
+    standard.add_argument('--r2-length',action="store",
+                          dest="r2_length",default=None,type=int,
+                          help="truncate R2 reads to R2_LENGTH (ignored if "
+                          "--use-bases-mask is explicitly set; only "
+                          "applies to 'standard' and 'miRNA' protocols)")
     # 10x Genomics options
     default_cellranger_localcores = __settings['10xgenomics'].\
                                     cellranger_localcores
@@ -567,6 +561,24 @@ def add_make_fastqs_command(cmdparser):
                              "(Workflow A) / older NovaSeq Reagent Kits. "
                              "If unset then workflow will be determined "
                              "automatically (recommended)")
+    # ICELL8 options
+    icell8 = p.add_argument_group('ICELL8 options (ICELL8 data only)')
+    icell8.add_argument("--well-list",
+                        dest="icell8_well_list",
+                        default=None,
+                        help="specify ICELL8 well list file")
+    icell8.add_argument('--swap-i1-and-i2',
+                        action='store_true',
+                        dest="icell8_swap_i1_and_i2",
+                        help="swap supplied I1 and I2 Fastqs when matching "
+                        "ATAC barcodes against well list")
+    icell8.add_argument('--reverse-complement',
+                        choices=['i1','i2','both'],
+                        dest="icell8_reverse_complement",
+                        default=None,
+                        help="can be 'i1','i2', or 'both'; reverse complement "
+                        "the specified indices from the well list when "
+                        "matching ATAC barcodes against well list")
     # Statistics
     statistics = p.add_argument_group('Statistics generation')
     statistics.add_argument('--stats-file',action='store',
@@ -1495,6 +1507,9 @@ def make_fastqs(args):
                     key = "icell8_atac_%s" % key
                 elif key == 'rc_i2_override':
                     key = 'spaceranger_rc_i2_override'
+                # Convert integer values
+                if key in ('r1_length' ,'r2_length'):
+                    value = int(value)
                 # Deal with True/False values
                 # Ignore case and also allow 'yes' and 'no'
                 if value.lower() in ('true','yes'):
@@ -1528,6 +1543,8 @@ def make_fastqs(args):
         unaligned_dir=args.out_dir,
         sample_sheet=args.sample_sheet,
         bases_mask=args.bases_mask,
+        r1_length=args.r1_length,
+        r2_length=args.r2_length,
         lanes=only_include_lanes,lane_subsets=lane_subsets,
         icell8_well_list=args.icell8_well_list,
         icell8_swap_i1_and_i2=args.icell8_swap_i1_and_i2,
