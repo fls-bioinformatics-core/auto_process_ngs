@@ -34,6 +34,7 @@ Various options are available to skip or control each of these stages;
 more detail on the different usage modes can be found in the
 subsequent sections:
 
+* :ref:`make_fastqs-truncating-read-lengths`
 * :ref:`make_fastqs-adapter-trimming-and-masking`
 * :ref:`make_fastqs-mixed-protocols`
 * :ref:`make_fastqs-bcl-converter`
@@ -152,6 +153,54 @@ Some of the most commonly used options are:
 The full set of options can be found in the
 :ref:`'make_fastqs' <commands_make_fastqs>` section of the command
 reference.
+
+.. _make_fastqs-truncating-read-lengths:
+
+Truncating R1/R2 read lengths and setting bases mask
+----------------------------------------------------
+
+In some cases it may be desirable to truncate the lengths of the
+non-index reads, most typically for the R1 and/or R2 sequences.
+In these cases the ``--r1-length`` and/or ``--r2-length`` options
+can be used to specify the maximum length for one or both of the
+R1 and R2 reads.
+
+For example:
+
+::
+
+  auto_process.py make_fastqs --r1-length=28
+
+would result in R1 sequences with a maximum length of 28bp.
+
+Maximum read lengths can also be applied to a subset of lanes
+via the ``--lanes`` option, for example:
+
+::
+
+   auto_process.py make_fastqs --lanes=1-2:standard:r1_length=28
+
+
+.. note::
+
+   The ``--r1-length`` and ``--r2-length`` options are only
+   applied for the ``standard`` and ``mirna`` protocols; they
+   are ignored for other protocols.
+
+   The options operate by adjusting the bases mask used to
+   match the required length, so if a bases mask is explicitly
+   provided then these options will also not be applied.
+
+   Alternatively (or in scenarios where more complicated
+   read manipulations are required), the bases mask can be
+   explicitly specified via the ``--use-bases-mask`` option;
+   for example:
+
+   ::
+
+      y28n48,I8,I8,y76
+
+   would also truncate R1 sequences to the first 28bp.
 
 .. _make_fastqs-adapter-trimming-and-masking:
 
@@ -280,6 +329,12 @@ The available options are:
 Option                                Description
 ===================================== ==================================
 ``bases_mask=BASES_MASK``             Set bases mask
+``r1_length=LENGTH``                  Truncate R1 reads to ``LENGTH``
+                                      (``standard`` and ``mirna``
+                                      protocols only)
+``r2_length=LENGTH``                  Truncate R2 reads to ``LENGTH``
+                                      (``standard`` and ``mirna``
+                                      protocols only)
 ``trim_adapters=yes|no``              Turn adapter trimming on or off
 ``adapter=SEQUENCE``                  Set adapter sequence for trimming
 ``adapter_read2=SEQUENCE``            Set read2 adapter sequence

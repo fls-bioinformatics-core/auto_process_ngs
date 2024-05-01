@@ -1286,6 +1286,51 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
         self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
                          "y76,I6,y76")
 
+    def test_get_bases_mask_dual_index_truncate_reads(self):
+        """get_bases_mask: truncate reads (dual index)
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description
+1,AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+2,AB2,AB2,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+3,AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+4,AB2,AB2,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+5,CD1,CD1,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+6,CD2,CD2,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+7,CD1,CD1,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+8,CD2,CD2,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=26,r2=76),
+                         "y26n75,I8,I8,y76n25")
+
     def test_get_bases_mask_single_index_no_sample_sheet(self):
         """get_bases_mask: handle single index (no samplesheet)
         """
