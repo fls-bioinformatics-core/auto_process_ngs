@@ -24,6 +24,7 @@ from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.pipeline import QCPipeline
+from auto_process_ngs.qc.protocols import QCProtocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 
 # Set to False to keep test output dirs
