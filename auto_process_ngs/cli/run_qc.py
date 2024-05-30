@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/run_qc.py: command line interface for standalone QC pipeline
-#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2024 Peter Briggs
 #
 #########################################################################
 #
@@ -299,6 +299,10 @@ def add_advanced_options(p,use_legacy_screen_names):
                           "FastqScreen output files; can be 'yes' or 'no' "
                           "(default: %s)" %
                           ("yes" if use_legacy_screen_names else "no"))
+    advanced.add_argument('--no-verify',action="store_true",
+                          dest="no_verify_fastqs",default=False,
+                          help="skip Fastq verification (default: verify "
+                          "Fastqs before running QC)")
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
@@ -991,7 +995,7 @@ def main():
                       qc_dir=qc_dir,
                       report_html=out_file,
                       multiqc=(not args.no_multiqc),
-                      verify_fastqs=True,
+                      verify_fastqs=(not args.no_verify_fastqs),
                       split_fastqs_by_lane=args.split_fastqs_by_lane)
     status = runqc.run(nthreads=nthreads,
                        fastq_screens=fastq_screens,
