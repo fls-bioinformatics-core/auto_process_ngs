@@ -114,7 +114,7 @@ def add_reporting_options(p):
 
 def add_metadata_options(p):
     """
-    Metadara options
+    Metadata options
     """
     metadata = p.add_argument_group('Metadata')
     metadata.add_argument('--organism',metavar='ORGANISM',
@@ -133,6 +133,13 @@ def add_metadata_options(p):
                           default=None,
                           help="explicitly specify the single cell "
                           "platform (e.g. '10xGenomics Chromium 3'v3')")
+    metadata.add_argument('--biological-samples',metavar='SAMPLES',
+                          action='store',dest='biological_samples',
+                          default=None,
+                          help="explicitly specify subset of sample "
+                          "names with biological data as comma-separated "
+                          "list (e.g. 'AB1,AB2,..') (default: assume "
+                          "that all samples contain biological data)")
 
 def add_pipeline_options(p,fastq_subset_size,default_nthreads):
     """
@@ -954,6 +961,8 @@ def main():
         project_metadata['library_type'] = args.library_type
     if args.single_cell_platform:
         project_metadata['single_cell_platform'] = args.single_cell_platform
+    if args.biological_samples:
+        project_metadata['biological_samples'] = args.biological_samples
 
     # Import extra files specified by the user
     for f in list(inputs.extra_files):
