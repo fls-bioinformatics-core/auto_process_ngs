@@ -61,6 +61,10 @@ determine which metrics are run:
   cell platform (e.g. ``10xGenomics Chromium 3'v3``; see
   :doc:`../control_files/projects_info` for a complete list,
   or use the ``--info`` option)
+* ``--biological-samples``: explicitly specify the subset of
+  samples with biological data (as opposed to e.g. feature
+  barcode information) (by default all samples are treated as
+  if they contained biological data)
 
 .. note::
 
