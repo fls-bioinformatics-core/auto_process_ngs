@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/run_qc.py: command line interface for standalone QC pipeline
-#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2024 Peter Briggs
 #
 #########################################################################
 #
@@ -114,7 +114,7 @@ def add_reporting_options(p):
 
 def add_metadata_options(p):
     """
-    Metadara options
+    Metadata options
     """
     metadata = p.add_argument_group('Metadata')
     metadata.add_argument('--organism',metavar='ORGANISM',
@@ -133,6 +133,13 @@ def add_metadata_options(p):
                           default=None,
                           help="explicitly specify the single cell "
                           "platform (e.g. '10xGenomics Chromium 3'v3')")
+    metadata.add_argument('--biological-samples',metavar='SAMPLES',
+                          action='store',dest='biological_samples',
+                          default=None,
+                          help="explicitly specify subset of sample "
+                          "names with biological data as comma-separated "
+                          "list (e.g. 'AB1,AB2,..') (default: assume "
+                          "that all samples contain biological data)")
 
 def add_pipeline_options(p,fastq_subset_size,default_nthreads):
     """
@@ -299,6 +306,10 @@ def add_advanced_options(p,use_legacy_screen_names):
                           "FastqScreen output files; can be 'yes' or 'no' "
                           "(default: %s)" %
                           ("yes" if use_legacy_screen_names else "no"))
+    advanced.add_argument('--no-verify-fastqs',action="store_true",
+                          dest="no_verify_fastqs",default=False,
+                          help="skip Fastq verification (default: verify "
+                          "Fastqs before running QC)")
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
@@ -950,6 +961,8 @@ def main():
         project_metadata['library_type'] = args.library_type
     if args.single_cell_platform:
         project_metadata['single_cell_platform'] = args.single_cell_platform
+    if args.biological_samples:
+        project_metadata['biological_samples'] = args.biological_samples
 
     # Import extra files specified by the user
     for f in list(inputs.extra_files):
@@ -991,7 +1004,7 @@ def main():
                       qc_dir=qc_dir,
                       report_html=out_file,
                       multiqc=(not args.no_multiqc),
-                      verify_fastqs=True,
+                      verify_fastqs=(not args.no_verify_fastqs),
                       split_fastqs_by_lane=args.split_fastqs_by_lane)
     status = runqc.run(nthreads=nthreads,
                        fastq_screens=fastq_screens,
