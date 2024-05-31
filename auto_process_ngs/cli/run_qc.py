@@ -306,7 +306,7 @@ def add_advanced_options(p,use_legacy_screen_names):
                           "FastqScreen output files; can be 'yes' or 'no' "
                           "(default: %s)" %
                           ("yes" if use_legacy_screen_names else "no"))
-    advanced.add_argument('--no-verify',action="store_true",
+    advanced.add_argument('--no-verify-fastqs',action="store_true",
                           dest="no_verify_fastqs",default=False,
                           help="skip Fastq verification (default: verify "
                           "Fastqs before running QC)")
