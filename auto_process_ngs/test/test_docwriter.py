@@ -19,6 +19,7 @@ from auto_process_ngs.docwriter import DocumentIcon
 from auto_process_ngs.docwriter import LinkIcon
 from auto_process_ngs.docwriter import DownloadIcon
 from auto_process_ngs.docwriter import sanitize_css_string
+from auto_process_ngs.docwriter import escape_quotes
 from auto_process_ngs.docwriter import WARNING_ICON_BASE64
 from auto_process_ngs.docwriter import DOCUMENT_ICON_BASE64
 from auto_process_ngs.docwriter import LINK_ICON_BASE64
@@ -781,3 +782,14 @@ class TestSanitizeCssStringFunction(unittest.TestCase):
         self.assertEqual(sanitize_css_string("test\t 123"),"test__123")
         self.assertEqual(sanitize_css_string("test123.gz"),"test123gz")
         self.assertEqual(sanitize_css_string("test@123.90.10.3"),"test12390103")
+
+class TestEscapeQuotesFunction(unittest.TestCase):
+    """
+    Tests for the escape_quotes function
+    """
+    def test_escape_quotes(self):
+        self.assertEqual(escape_quotes("test"),"test")
+        self.assertEqual(escape_quotes("'test'"),"&#39;test&#39;")
+        self.assertEqual(escape_quotes('"test"'),"&#34;test&#34;")
+        self.assertEqual(escape_quotes("test's"),"test&#39;s")
+        self.assertEqual(escape_quotes('test"s'),"test&#34;s")

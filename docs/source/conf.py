@@ -416,34 +416,46 @@ plots.uduplicationplot(0.0,outfile=img)
 
 # Adapter content plot examples
 img = os.path.join(imagesdir,"adapter_uplot_no_adptrs.png")
-plots.uadapterplot({'Illumina Universal Adapter': 0.0,
-                    'Illumina Small RNA Adapter': 0.0,
-                    'Nextera Transposase Sequence': 0.0,
-                    'SOLID Small RNA Adapter': 0.0 },
-                   ('Illumina Universal Adapter',
-                    'Illumina Small RNA Adapter',
-                    'Nextera Transposase Sequence',
-                    'SOLID Small RNA Adapter'),outfile=img)
+plots.uadapterplot({"Illumina Universal Adapter": 0.0,
+                    "Illumina Small RNA 3' Adapter": 0.0,
+                    "Illumina Small RNA 5' Adapter": 0.0,
+                    "Nextera Transposase Sequence": 0.0,
+                    "PolyA": 0.0,
+                    "PolyG": 0.0 },
+                   ("Illumina Universal Adapter",
+                    "Illumina Small RNA 3' Adapter",
+                    "Illumina Small RNA 5' Adapter",
+                    "Nextera Transposase Sequence",
+                    "PolyA",
+                    "PolyG"),outfile=img)
 
 img = os.path.join(imagesdir,"adapter_uplot_adptrs_sml.png")
-plots.uadapterplot({'Illumina Universal Adapter': 0.0,
-                    'Illumina Small RNA Adapter': 0.0,
-                    'Nextera Transposase Sequence': 0.2,
-                    'SOLID Small RNA Adapter': 0.0 },
-                   ('Illumina Universal Adapter',
-                    'Illumina Small RNA Adapter',
-                    'Nextera Transposase Sequence',
-                    'SOLID Small RNA Adapter'),outfile=img)
+plots.uadapterplot({"Illumina Universal Adapter": 0.0,
+                    "Illumina Small RNA 3' Adapter": 0.0,
+                    "Illumina Small RNA 5' Adapter": 0.0,
+                    "Nextera Transposase Sequence": 0.2,
+                    "PolyA": 0.0,
+                    "PolyG": 0.0 },
+                   ("Illumina Universal Adapter",
+                    "Illumina Small RNA 3' Adapter",
+                    "Illumina Small RNA 5' Adapter",
+                    "Nextera Transposase Sequence",
+                    "PolyA",
+                    "PolyG"),outfile=img)
 
 img = os.path.join(imagesdir,"adapter_uplot_adptrs_lrg.png")
-plots.uadapterplot({'Illumina Universal Adapter': 0.57,
-                    'Illumina Small RNA Adapter': 0.0,
-                    'Nextera Transposase Sequence': 0.0,
-                    'SOLID Small RNA Adapter': 0.0 },
-                   ('Illumina Universal Adapter',
-                    'Illumina Small RNA Adapter',
-                    'Nextera Transposase Sequence',
-                    'SOLID Small RNA Adapter'),outfile=img)
+plots.uadapterplot({"Illumina Universal Adapter": 0.57,
+                    "Illumina Small RNA 3' Adapter": 0.0,
+                    "Illumina Small RNA 5' Adapter": 0.0,
+                    "Nextera Transposase Sequence": 0.0,
+                    "PolyA": 0.0,
+                    "PolyG": 0.0 },
+                   ("Illumina Universal Adapter",
+                    "Illumina Small RNA 3' Adapter",
+                    "Illumina Small RNA 5' Adapter",
+                    "Nextera Transposase Sequence",
+                    "PolyA",
+                    "PolyG"),outfile=img)
 
 # Picard insert sizes
 img = os.path.join(imagesdir,"picard_insert_size_uplot.png")

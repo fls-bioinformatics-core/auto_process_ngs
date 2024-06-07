@@ -3453,21 +3453,17 @@ class FastqQCReporter:
                                   mode=mode,
                                   inline=inline)
 
-    def uadapterplot(self,height=40,multi_bar=False,inline=True):
+    def uadapterplot(self,height=40,inline=True):
         """
         Return a mini-adapter content summary plot
 
         Arguments:
           height (int): optionally set the plot height in pixels
-          multi_bar (bool): if True then create a plot with one
-            bar per adapter class (otherwise summarise adapter
-            content on one bar in the plot)
           inline (bool): if True then return plot in format for
             inlining in HTML document
         """
         return uadapterplot(self.adapters_summary,self.adapters,
-                            height=height,multi_bar=multi_bar,
-                            inline=inline)
+                            height=height,inline=inline)
 
     def ufastqcplot(self,inline=True):
         """

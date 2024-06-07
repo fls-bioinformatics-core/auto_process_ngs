@@ -464,7 +464,7 @@ def encode_png(png_file):
         PNGBase64Encoder().encodePNG(png_file)
     
 def uscreenplot(screen_files,outfile=None,screen_width=None,
-                inline=None):
+                inline=None,use_legacy_colours=False):
     """
     Generate 'micro-plot' of FastqScreen outputs
 
@@ -476,6 +476,10 @@ def uscreenplot(screen_files,outfile=None,screen_width=None,
         each screen plot
       inline (boolean): if True then returns the PNG
         as base64 encoded string rather than as a file
+      use_legacy_colours (boolean): if True then use the
+        original colour palette from FastqScreen
+        (default: False, use mimick the current colour
+        palette)
     """
     # Mappings
     mappings = ('%One_hit_one_library',
@@ -483,10 +487,16 @@ def uscreenplot(screen_files,outfile=None,screen_width=None,
                 '%One_hit_multiple_libraries',
                 '%Multiple_hits_multiple_libraries',)
     # Colours
-    colors = (RGB_COLORS['blue'],
-              RGB_COLORS['navyblue'],
-              RGB_COLORS['red'],
-              RGB_COLORS['maroon'])
+    if use_legacy_colours:
+        colors = (RGB_COLORS['blue'],
+                  RGB_COLORS['navyblue'],
+                  RGB_COLORS['red'],
+                  RGB_COLORS['maroon'])
+    else:
+        colors = ((146,197,222),
+                  (5,113,176),
+                  (244,165,130),
+                  (202,0,32))
     # Width for each screen plot
     if screen_width is None:
         screen_width = 50
@@ -1084,9 +1094,8 @@ def ureadcountplot(nreads,nmasked=None,npadded=None,max_reads=None,
                      ext=".ureadcount.png")
 
 def uduplicationplot(total_deduplicated_percentage,height=None,
-                     width=None,mode='dup',style='fancy',
-                     warn_cutoff=None,fail_cutoff=None,
-                     outfile=None,inline=False):
+                     width=None,mode='dup',warn_cutoff=None,
+                     fail_cutoff=None,outfile=None,inline=False):
     """
     Make a 'micro' plot summarising sequence duplication
 
@@ -1095,6 +1104,11 @@ def uduplicationplot(total_deduplicated_percentage,height=None,
     module), plots a horizontal bar indicating the level
     of sequence (de)duplication.
 
+    In the plot, the fraction of unique sequences is
+    coloured according to 'pass', 'warn' or 'fail' cut-off
+    levels, with the background to the bar striped with
+    colours according to the cut-offs.
+
     Two modes are available:
 
     - 'dup' shows the fraction of sequences removed after
@@ -1102,22 +1116,11 @@ def uduplicationplot(total_deduplicated_percentage,height=None,
     - 'dedup' shows the fraction of sequences remaining after
       deduplication
 
-    Two styles are supported:
-
-    - 'fancy' produces a multi-colour plot where the fraction
-      of unique sequences is coloured according to pass,
-      warn or fail cut-off levels, with the background to the
-      bar striped with colours according to the cut-offs
-    - 'simple' produces a two-colour plot where the fraction
-      of unique sequences is shown in blue and the remainder
-      in red
-
     Arguments:
       total_deduplicated_percentage (float): percentage of
         sequences remaining after deduplication
       height (int): height of the plot in pixels
       width (int): width of the plot in pixels
-      style (str): either 'fancy' (default) or 'simple'
       mode (str): either 'dup' (default) or 'dedup'
       warn_cutoff (float): fraction of unique sequences
         below which the plot should indicate a warning
@@ -1147,32 +1150,17 @@ def uduplicationplot(total_deduplicated_percentage,height=None,
         width = 50
     if height is None:
         height = 12
-    # Set parameters according to style
-    if style == 'simple':
-        stripe_bg = False
-        use_cutoffs = False
-    elif style == 'fancy':
-        stripe_bg = True
-        use_cutoffs = True
-    else:
-        raise Exception("uduplicationplot: unknown style '%s'"
-                        % style)
     # Set colours
     bg_color = "white"
     fg_color = "blue"
     fg_color_warn = "orange"
     fg_color_fail = "red"
-    fg_color_fill = "red"
-    if use_cutoffs:
-        # Set colour based on cutoffs
-        if total_deduplicated_percentage < fail_cutoff*100.0:
-            dedup_color = fg_color_fail
-        elif total_deduplicated_percentage < warn_cutoff*100.0:
-            dedup_color = fg_color_warn
-        else:
-            dedup_color = fg_color
+    # Set colour based on cutoffs
+    if total_deduplicated_percentage < fail_cutoff*100.0:
+        dedup_color = fg_color_fail
+    elif total_deduplicated_percentage < warn_cutoff*100.0:
+        dedup_color = fg_color_warn
     else:
-        # Ignore cutoffs
         dedup_color = fg_color
     # Scale cutoffs to plot width
     warn_cutoff = int(warn_cutoff*float(width))
@@ -1181,20 +1169,19 @@ def uduplicationplot(total_deduplicated_percentage,height=None,
     img = Image.new('RGB',(width,height),RGB_COLORS[bg_color])
     pixels = img.load()
     # Create background striping
-    if stripe_bg:
-        for i in range(0,width,2):
-            if i < fail_cutoff:
-                stripe_color = (230,175,175) # "red"
-            elif i < warn_cutoff:
-                stripe_color = (230,215,175) # "orange"
+    for i in range(0,width,2):
+        if i < fail_cutoff:
+            stripe_color = (230,175,175) # "red"
+        elif i < warn_cutoff:
+            stripe_color = (230,215,175) # "orange"
+        else:
+            stripe_color = (175,225,255) # "blue"
+        for j in range(1,height-1):
+            if show_dedup:
+                ii = i
             else:
-                stripe_color = (175,225,255) # "blue"
-            for j in range(1,height-1):
-                if show_dedup:
-                    ii = i
-                else:
-                    ii = width - i - 1
-                pixels[ii,j] = stripe_color
+                ii = width - i - 1
+            pixels[ii,j] = stripe_color
     # Plot fraction of deduplicated sequences
     frac_dedup_seqs = float(total_deduplicated_percentage)/100.0
     frac_dup_seqs = 1.0 - frac_dedup_seqs
@@ -1211,11 +1198,6 @@ def uduplicationplot(total_deduplicated_percentage,height=None,
         start = end
     else:
         end = start
-    # Fill remainder of the plot with solid colour
-    if not stripe_bg:
-        for i in range(end,width):
-            for j in range(1,height-1):
-                pixels[i,j] = RGB_COLORS[fg_color_fail]
     # Output the plot
     return make_plot(img,
                      outfile=outfile,
@@ -1223,18 +1205,14 @@ def uduplicationplot(total_deduplicated_percentage,height=None,
                      ext=".uduplication.png")
 
 def uadapterplot(adapter_content,adapter_names=None,outfile=None,
-                 inline=False,height=40,bar_width=10,spacing=2,
-                 multi_bar=False):
+                 inline=False,height=40,bar_width=10,
+                 use_legacy_colours=False):
     """
     Make a 'micro' plot summarising adapter content
 
-    The plot consists of vertical bar(s) which indicate the
-    relative presence of each adapter  class in the sequence
-    data.
-
-    In 'multi-bar' mode the plot has one bar for each
-    adapter class; in 'single-bar' mode the plot combines
-    all data into a single bar.
+    The plot consists of a stacked vertical bar, with each
+    stacked element indicating the relative portion of each
+    adapter class in the sequence data.
 
     The adapter content should be supplied as a dictionary
     where the keys are adapter names and the corresponding
@@ -1253,69 +1231,55 @@ def uadapterplot(adapter_content,adapter_names=None,outfile=None,
       height (int): height of the plot in pixels
       bar_width (int): width of each bar representing
         content for an adapter class, in pixels
-      spacing (int): spacing between each bar, in pixels
-      multi_bar (bool): if True then make a multi-bar
-        plot (one bar per adapter class); otherwise
-        make a single bar plot (all adapter data in a
-        single bar)
+      use_legacy_colours (boolean): if True then use the
+        original colour palette from FastQC adapter plot
+        (default: False, use mimick the current colour
+        palette)
     """
     # Width of plot required for each bar
-    width = bar_width + spacing*2
+    width = bar_width + 4
     # Colours for each adapter
-    fg_colors = ('red','blue','green','black')
+    if use_legacy_colours:
+        fg_colors = (RGB_COLORS['red'],
+                     RGB_COLORS['blue'],
+                     RGB_COLORS['green'],
+                     RGB_COLORS['black'])
+    else:
+        # Based on Tol colour scheme from
+        # https://davidmathlogic.com/colorblind/
+        fg_colors = ((136,34,85),
+                     (51,34,136),
+                     (17,119,51),
+                     (221,204,119),
+                     (68,170,153),
+                     (170,68,153),
+                     (204,102,119),
+                     (136,204,238))
+    # Number of colours
+    ncolors = len(fg_colors)
     # Get adapter names
     if not adapter_names:
         adapter_names = sorted(adapter_content.keys())
-    # Number of bars and total width of plot
-    if multi_bar:
-        nbars = len(adapter_names)
-    else:
-        nbars = 1
-    width *= nbars
     # Create the image
     img = Image.new('RGB',(width,height),RGB_COLORS['white'])
     pixels = img.load()
-    # Add a baseline on the plot
-    for j in range(spacing,width-spacing):
-        pixels[j,height-2] = RGB_COLORS['lightgrey']
+    # Stripe the background
+    for i in range(1,height,2):
+        for j in range(1,width-2):
+            pixels[j,i] = RGB_COLORS['lightgrey']
     # Generate the plot
-    if multi_bar:
-        # Plot a bar for each adapter
-        for ii,adapter in enumerate(adapter_names):
-            # Set colour based on adapter content
-            fg_color = fg_colors[ii%4]
-            # Length of bar represents adapter content
-            bar_length = int(adapter_content[adapter]*(height-4))
-            # Draw the coloured part of the bar
-            for i in range(2,bar_length+2):
-                start = int(ii*float(width)/nbars) + spacing
-                end = start + bar_width
-                for j in range(start,end):
-                    pixels[j,height-i] = RGB_COLORS[fg_color]
-            # Pad the remainder of the bar
-            for i in range(bar_length+2,height-2):
-                start = int(ii*float(width)/nbars) + spacing
-                end = start + bar_width
-                for j in range(start,end):
-                    pixels[j,height-i] = RGB_COLORS['lightgrey']
-    else:
-        # Single bar with all data
-        start = 1
-        for ii,adapter in enumerate(adapter_names):
-            # Set colour based on adapter content
-            fg_color = fg_colors[ii%4]
-            # Length of bar represents adapter content
-            bar_length = int(adapter_content[adapter]*(height-2))
-            # Draw the coloured part of the bar
-            end = start + bar_length
-            for i in range(start,end):
-                for j in range(1,width-2):
-                    pixels[j,height-i] = RGB_COLORS[fg_color]
-            start = end
-        # Pad the remainder of the bar
-        for i in range(start,height-2):
+    start = 1
+    for ii,adapter in enumerate(adapter_names):
+        # Set colour based on adapter content
+        fg_color = fg_colors[ii%ncolors]
+        # Length of bar represents adapter content
+        bar_length = int(adapter_content[adapter]*(height-2))
+        # Draw the coloured part of the bar
+        end = start + bar_length
+        for i in range(start,end):
             for j in range(1,width-2):
-                pixels[j,height-i] = RGB_COLORS['lightgrey']
+                pixels[j,height-i] = fg_color
+        start = end
     # Output the plot
     return make_plot(img,
                      outfile=outfile,

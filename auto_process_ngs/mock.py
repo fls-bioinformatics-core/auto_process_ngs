@@ -760,7 +760,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
             print("Adding outputs for %s" % fq)
             if include_seqlens:
                 MockQCOutputs.seqlens(fq,self._project.qc_dir)
-            MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
+            MockQCOutputs.fastqc_v0_12_1(fq,self._project.qc_dir)
             if protocol in ('singlecell',
                             '10x_scRNAseq',
                             '10x_snRNAseq',
@@ -773,10 +773,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
             for screen in ("model_organisms",
                            "other_organisms",
                            "rRNA"):
-                MockQCOutputs.fastq_screen_v0_9_2(fq,
-                                                  self._project.qc_dir,
-                                                  screen,
-                                                  legacy=legacy_screens)
+                MockQCOutputs.fastq_screen_v0_15_3(fq,
+                                                   self._project.qc_dir,
+                                                   screen,
+                                                   legacy=legacy_screens)
         # Handle fastq_strand, if requested
         if include_fastq_strand:
             fastq_strand_conf = os.path.join(self._project.dirn,
@@ -2580,7 +2580,7 @@ sys.exit(MockFastqScreen(version=%s,
         Internal: configure the fastq_screen
         """
         if version is None:
-            version = "0.14.0"
+            version = "0.15.3"
         self._version = str(version)
         self._no_outputs = no_outputs
         self._exit_code = exit_code
@@ -2615,7 +2615,10 @@ sys.exit(MockFastqScreen(version=%s,
         fastq_base = MockQCOutputs.fastq_basename(args.fastq)
         # Create screen outputs
         if not self._no_outputs:
-            MockQCOutputs.fastq_screen_v0_9_2(args.fastq,outdir)
+            if self._version.startswith("0.15."):
+                MockQCOutputs.fastq_screen_v0_15_3(args.fastq,outdir)
+            else:
+                MockQCOutputs.fastq_screen_v0_9_2(args.fastq,outdir)
         return self._exit_code
 
 class MockFastQC:
@@ -2688,7 +2691,7 @@ sys.exit(MockFastQC(version=%s,
         Internal: configure the mock fastqc
         """
         if version is None:
-            version = "0.11.3"
+            version = "0.12.1"
         self._version = str(version)
         self._no_outputs = no_outputs
         self._exit_code = exit_code
@@ -2721,8 +2724,11 @@ sys.exit(MockFastQC(version=%s,
                 if not os.path.exists(fastq):
                     print("%s: fastq file not found" % fastq)
                     return 1
-                # Fastq base name
-                MockQCOutputs.fastqc_v0_11_2(fastq,outdir)
+                # Create mock outputs
+                if self._version.startswith("0.12."):
+                    MockQCOutputs.fastqc_v0_12_1(fastq,outdir)
+                else:
+                    MockQCOutputs.fastqc_v0_11_2(fastq,outdir)
         return self._exit_code
 
 class MockMultiQC:
@@ -2795,7 +2801,7 @@ sys.exit(MockMultiQC(version=%s,
         if version:
             self._version = version
         else:
-            self._version = "1.5"
+            self._version = "1.21"
         self._no_outputs = no_outputs
         self._exit_code = exit_code
 

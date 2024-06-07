@@ -8,11 +8,14 @@ import os
 import base64
 import tempfile
 
+from collections import OrderedDict
 from auto_process_ngs.qc.plots import Plot
 from auto_process_ngs.qc.plots import encode_png
-from auto_process_ngs.qc.plots import uscreenplot
+from auto_process_ngs.qc.plots import uadapterplot
 from auto_process_ngs.qc.plots import uboxplot
+from auto_process_ngs.qc.plots import uduplicationplot
 from auto_process_ngs.qc.plots import ufastqcplot
+from auto_process_ngs.qc.plots import uscreenplot
 from auto_process_ngs.qc.plots import ustackedbar
 from auto_process_ngs.qc.plots import ustrandplot
 
@@ -411,7 +414,8 @@ ecoli	99859	99836	99.98	4	0.00	18	0.02	0	0.00	1	0.00
                 fp.write(screen_data)
             self.screens.append(screen_file)
         # Reference data
-        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAUCAIAAAD0og/CAAAAtElEQVR4nO2YwQrEIAxEp4vf2t7iJ5R+QnL0Z91DqctiWXagJRXyTmpAhoGMkklVEfzHBFSgVCzbd2Gt1UcRYGYARMRLwClm9vLWMBJhFkGYRZBUTUSAefWW8nxSzpLzhReW/qhiaeutqzq+JCzRhgRhFkGYRdAC/irm34dDPyN7wJeWwX0AY6gMvpVoQ4IwiyDMIvj84Pf90AF8NwnHSORpnKryndtEGxKEWQTJWwCHb2K8AUVlLWZTGFiYAAAAAElFTkSuQmCC"
+        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAUCAIAAAD0og/CAAAA3UlEQVR4nO2YMQ7CMAxFHWRxD+6QLtwh6g5nIAOduQJSws4JuqDegalTB1aO0L1LGBAtohmw1MqN5DclzvL1JX9bUc45EP4DlTZF2bS6eeyv3w9ZeHJp8t4DgLWWS0AU7/2KW0NKiFkExCwCGOqqO1uAPNuduMUsHVTaXO6TZXlRNuNiq4fizxgB1klCRdqQgJhFQMwigKGuJlz/DttNrJz3p6THCCpt1sdbn8HjAIakMnhWpA0JiFkExCwCwwb/vicdwHOD8PkSWRpRVbz/NtKGBMQsAsgtgAZvYrwAtXA45PRIeLsAAAAASUVORK5CYII="
+        self.png_base64_data_legacy_colours = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAUCAIAAAD0og/CAAAAtElEQVR4nO2YwQrEIAxEp4vf2t7iJ5R+QnL0Z91DqctiWXagJRXyTmpAhoGMkklVEfzHBFSgVCzbd2Gt1UcRYGYARMRLwClm9vLWMBJhFkGYRZBUTUSAefWW8nxSzpLzhReW/qhiaeutqzq+JCzRhgRhFkGYRdAC/irm34dDPyN7wJeWwX0AY6gMvpVoQ4IwiyDMIvj84Pf90AF8NwnHSORpnKryndtEGxKEWQTJWwCHb2K8AUVlLWZTGFiYAAAAAElFTkSuQmCC"
         
     def tearDown(self):
         # Remove the temporary test directory
@@ -433,6 +437,14 @@ ecoli	99859	99836	99.98	4	0.00	18	0.02	0	0.00	1	0.00
         self.assertEqual(uscreenplot(self.screens,
                                      inline=True),
                          self.png_base64_data)
+
+    def test_uscreenplot_to_base64_use_legacy_colours(self):
+        """uscreenplot: write PNG as Base64 encoded string (legacy colours)
+        """
+        self.assertEqual(uscreenplot(self.screens,
+                                     inline=True,
+                                     use_legacy_colours=True),
+                         self.png_base64_data_legacy_colours)
 
 class TestUBoxplot(unittest.TestCase):
     """
@@ -575,6 +587,91 @@ class TestUStackedBar(unittest.TestCase):
                                      colors=((0,0,255),
                                              (100,149,237),
                                              (255,255,255))),
+                         self.png_base64_data)
+
+class TestUAdapterPlot(unittest.TestCase):
+    """
+    Tests for the uadapterplot function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestUAdapterPlot')
+        # Adapter data
+        d = OrderedDict()
+        d["Illumina Universal Adapter"] = 0.2
+        d["Illumina Small RNA 3' Adapter"] = 0.2
+        d["Illumina Small RNA 5' Adapter"] = 0.1
+        d["Nextera Transposase Sequence"] = 0.1
+        d["PolyA"] = 0.1
+        d["PolyG"] = 0.1
+        self.fastqc_adapter_data = d
+        # Adapter data (legacy)
+        d = OrderedDict()
+        d["Illumina Universal Adapter"] = 0.5
+        d["Illumina Small RNA Adapter"] = 0.25
+        d["Nextera Transposase Sequence"] = 0.1
+        d["SOLID Small RNA Adapter"] = 0.1
+        self.fastqc_adapter_data_legacy = d
+        # Reference data
+        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAoCAIAAABB31ytAAAAc0lEQVR4nGP8//8/A3GAhYGB4cqVK/gV6ejoMDAwMI6aOuJNZWFgYLheeIyA0t06DAwMTETaTppSFgYGhllpBBSFkmoqiQ6YqXSPyqaS6ACT1XvwK3pnTDsHDCWlLAwMDEqrQwmo6qCtA0IZzlLZ1GGqFADDkjXmAZp6mQAAAABJRU5ErkJggg=="
+        self.png_base64_data_legacy_colours = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAoCAIAAABB31ytAAAAVUlEQVR4nO3TsQnAMAxE0a/gcTxkhtQ+P0X6WIa4MFj143QIFCq1aUBmfqPeOxAbpVJJVdWruB2YoA3g/jt1goYaMUDvkdYUOPTQnWgDZPQxuKzAoQ/B0yK/d5KxAAAAAABJRU5ErkJggg=="
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_uadapterplot_to_file(self):
+        """uadapterplot: write PNG to file
+        """
+        outfile = os.path.join(self.wd,"uadapterplot.png")
+        self.assertEqual(uadapterplot(self.fastqc_adapter_data,
+                                      outfile=outfile),
+                         outfile)
+        self.assertEqual(encode_png(outfile),self.png_base64_data)
+
+    def test_uadapterplot_to_base64(self):
+        """uadapterplot: write PNG as Base64 encoded string
+        """
+        self.assertEqual(uadapterplot(self.fastqc_adapter_data,
+                                      inline=True),
+                         self.png_base64_data)
+
+    def test_uadapterplot_to_base64_legacy_colours(self):
+        """uadapterplot: write PNG to file (legacy colours)
+        """
+        self.assertEqual(uadapterplot(self.fastqc_adapter_data_legacy,
+                                      inline=True,
+                                      use_legacy_colours=True),
+                         self.png_base64_data_legacy_colours)
+
+class TestUDuplicationPlot(unittest.TestCase):
+    """
+    Tests for the uduplicationplot function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestUDuplicationPlot')
+        # Reference data
+        self.png_base64_data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAMCAIAAACvLXk7AAAAQElEQVR4nGP8//8/w+ADTIyMDNRFGx4xMDBgIZ/f2IBObsBJMtEzDIgHo84iBYw6ixQw6ixSwKizSAGMg7PyAQAMRB8/P9xCSgAAAABJRU5ErkJggg=="
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_uduplicationplot_to_file(self):
+        """uduplicationplot: write PNG to file
+        """
+        outfile = os.path.join(self.wd,"uduplicationplot.png")
+        self.assertEqual(uduplicationplot(45.8,outfile=outfile),
+                         outfile)
+        self.assertEqual(encode_png(outfile),self.png_base64_data)
+
+    def test_uduplicationplot_to_base64(self):
+        """uduplicationplot: write PNG as Base64 encoded string
+        """
+        self.assertEqual(uduplicationplot(45.8,inline=True),
                          self.png_base64_data)
 
 class TestUStrandPlot(unittest.TestCase):

@@ -203,10 +203,9 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         # Set up conda wrapper
         conda = CondaWrapper(env_dir=conda_env_dir)
         # Get environment for QC reporting
-        report_qc_conda_pkgs = ("multiqc=1.8",
-                                "pillow",
+        report_qc_conda_pkgs = ("multiqc=1.21",
                                 "python=3.8",
-                                "numpy=1.20.3")
+                                "pillow")
         env_name = make_conda_env_name(*report_qc_conda_pkgs)
         try:
             conda.create_env(env_name,*report_qc_conda_pkgs)
