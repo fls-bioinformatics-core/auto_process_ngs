@@ -13,6 +13,7 @@ import os
 import time
 import logging
 from ..analysis import AnalysisDir
+from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisDirParameters
 from .. import applications
 from .. import fileops
@@ -430,7 +431,21 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             logger.warning("Unable to get old base path from parameters")
             logger.warning("Using base path: %s (may be incorrect)" %
                            base_path)
-        # Metadata and QC info
+        # Run ID and reference
+        metadata_file = os.path.join(staged_analysis_dir,
+                                     "metadata.info")
+        if os.path.exists(metadata_file):
+            metadata = AnalysisDirMetadata()
+            metadata.load(metadata_file,strict=False)
+            if metadata.run_id is None:
+                metadata['run_id'] = ap.run_id
+                print("...storing run ID ('%s')" % metadata.run_id)
+            if metadata.run_reference_id is None:
+                metadata['run_reference_id'] = ap.run_reference_id
+                print("...storing run reference ID ('%s')" %
+                      metadata.run_reference_id)
+            metadata.save()
+        # Project metadata and QC info
         analysis_dir =  AnalysisDir(staged_analysis_dir)
         # FIXME AnalysisDir.get_projects method might not get all
         # FIXME the projects?

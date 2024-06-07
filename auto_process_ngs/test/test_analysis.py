@@ -189,6 +189,8 @@ class TestAnalysisDir(unittest.TestCase):
         analysis_dir = AnalysisDir(mockdir.dirn)
         self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
         self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.run_id,"MISEQ_160621/87")
+        self.assertEqual(analysis_dir.run_reference_id,"MISEQ_160621/87")
         self.assertEqual(analysis_dir.n_sequencing_data,1)
         self.assertEqual(analysis_dir.n_projects,2)
         self.assertTrue(analysis_dir.paired_end)
@@ -204,6 +206,82 @@ class TestAnalysisDir(unittest.TestCase):
         analysis_dir = AnalysisDir(mockdir.dirn)
         self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
         self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.run_id,"MISEQ_160621/87")
+        self.assertEqual(analysis_dir.run_reference_id,"MISEQ_160621/87")
+        self.assertEqual(analysis_dir.n_sequencing_data,1)
+        self.assertEqual(analysis_dir.n_projects,2)
+        self.assertTrue(analysis_dir.paired_end)
+
+    def test_analysisdir_facility_run_number(self):
+        """Check AnalysisDir with facility run number assigned
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ 'run_number': 87, },
+            top_dir=self.dirn)
+        mockdir.create()
+        analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
+        self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.run_id,"MISEQ_160621#87")
+        self.assertEqual(analysis_dir.run_reference_id,"MISEQ_160621#87")
+        self.assertEqual(analysis_dir.n_sequencing_data,1)
+        self.assertEqual(analysis_dir.n_projects,2)
+        self.assertTrue(analysis_dir.paired_end)
+
+    def test_analysisdir_flow_cell_mode(self):
+        """Check AnalysisDir with flow cell mode assigned
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ 'run_number': 87,
+                       'flow_cell_mode': 'SP' },
+            top_dir=self.dirn)
+        mockdir.create()
+        analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
+        self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.run_id,"MISEQ_160621#87")
+        self.assertEqual(analysis_dir.run_reference_id,
+                         "MISEQ_160621#87_SP")
+        self.assertEqual(analysis_dir.n_sequencing_data,1)
+        self.assertEqual(analysis_dir.n_projects,2)
+        self.assertTrue(analysis_dir.paired_end)
+
+    def test_analysisdir_run_id_specified_metadata(self):
+        """Check AnalysisDir with run ID specified in metadata
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ 'run_id': 'Awesome_Run' },
+            top_dir=self.dirn)
+        mockdir.create()
+        analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
+        self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.run_id,"Awesome_Run")
+        self.assertEqual(analysis_dir.run_reference_id,"Awesome_Run")
+        self.assertEqual(analysis_dir.n_sequencing_data,1)
+        self.assertEqual(analysis_dir.n_projects,2)
+        self.assertTrue(analysis_dir.paired_end)
+
+    def test_analysisdir_run_reference_id_specified_metadata(self):
+        """Check AnalysisDir with run ID specified in metadata
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ 'run_reference_id': 'Awesome_Run' },
+            top_dir=self.dirn)
+        mockdir.create()
+        analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
+        self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.run_id,"MISEQ_160621/87")
+        self.assertEqual(analysis_dir.run_reference_id,"Awesome_Run")
         self.assertEqual(analysis_dir.n_sequencing_data,1)
         self.assertEqual(analysis_dir.n_projects,2)
         self.assertTrue(analysis_dir.paired_end)
@@ -220,6 +298,8 @@ class TestAnalysisDir(unittest.TestCase):
         analysis_dir = AnalysisDir(mockdir.dirn)
         self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
         self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.run_id,"M00879_160621/87")
+        self.assertEqual(analysis_dir.run_reference_id,"M00879_160621/87")
         self.assertEqual(analysis_dir.n_sequencing_data,1)
         self.assertEqual(analysis_dir.n_projects,2)
         self.assertTrue(analysis_dir.paired_end)
@@ -247,6 +327,8 @@ class TestAnalysisDir(unittest.TestCase):
         analysis_dir = AnalysisDir(mockdir.dirn)
         self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
         self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.run_id,"MISEQ_160621/87")
+        self.assertEqual(analysis_dir.run_reference_id,"MISEQ_160621/87")
         self.assertEqual(analysis_dir.n_sequencing_data,1)
         self.assertEqual(analysis_dir.n_projects,2)
         self.assertTrue(analysis_dir.paired_end)
@@ -1425,6 +1507,27 @@ class TestRunIdFunction(unittest.TestCase):
                    facility_run_number=22,
                    analysis_number=3),
             "MISEQ_160621/87#22.3")
+
+class TestRunReferenceIDFunction(unittest.TestCase):
+    """
+    Tests for the 'run_reference_id' function
+    """
+    def test_run_reference_id(self):
+        """
+        run_reference_id: run id and flow cell mode
+        """
+        self.assertEqual(
+            run_reference_id("NOVASEQ6000_240621#187",
+                             flow_cell_mode="SP"),
+            "NOVASEQ6000_240621#187_SP")
+
+    def test_run_reference_id_no_flow_cell_mode(self):
+        """
+        run_reference_id: run id and no flow cell mode
+        """
+        self.assertEqual(
+            run_reference_id("MISEQ_160621#87"),
+            "MISEQ_160621#87")
 
 class TestSplitSampleNameFunction(unittest.TestCase):
     """

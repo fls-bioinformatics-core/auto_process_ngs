@@ -370,8 +370,10 @@ class AnalysisDirMetadata(MetadataDict):
         """
         MetadataDict.__init__(self,
                               attributes = {
-                                  'run_name':'run_name',
+                                  'run_name': 'run_name',
                                   'run_number': 'run_number',
+                                  'run_id': 'run_id',
+                                  'run_reference_id': 'run_reference_id',
                                   'source': 'source',
                                   'platform':'platform',
                                   'processing_software': 'processing_software',
@@ -464,6 +466,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'primary_fastq_dir',
                                   'samples',
                                   'biological_samples',
+                                  'multiplexed_samples',
                                   'sequencer_model',
                                   'comments',
                               ),

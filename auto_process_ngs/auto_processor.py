@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
 #
 #########################################################################
 #
@@ -32,6 +32,7 @@ from bcftbx.FASTQFile import FastqIterator
 from . import commands
 from .analysis import AnalysisProject
 from .analysis import run_id
+from .analysis import run_reference_id
 from .decorators import add_command
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
@@ -659,7 +660,13 @@ class AutoProcess:
     def run_id(self):
         """
         Return the run ID (e.g. 'HISEQ_140701/242#22')
+
+        If a run ID is explicitly stored then return that,
+        otherwise construct the ID from the run name,
+        platform, run number and analysis number.
         """
+        if self.metadata.run_id is not None:
+            return self.metadata.run_id
         return run_id(
             self.run_name,
             platform=self.metadata.platform,
@@ -671,14 +678,17 @@ class AutoProcess:
         """
         Return the run reference (e.g. 'NOVASEQ6000_230419/74#22_SP'
 
-        The run reference is the run ID plus the
-        following additional items (if defined):
+        If a run reference is explicitly stored then
+        return that, otherwise construct the reference
+        from the run ID plus the following additional items
+        (if defined):
 
         - flow cell mode
         """
-        return "%s%s" % (self.run_id,
-                         '' if not self.metadata.flow_cell_mode
-                         else "_%s" % self.metadata.flow_cell_mode)
+        if self.metadata.run_reference_id is not None:
+            return self.metadata.run_reference_id
+        return run_reference_id(self.run_id,
+                                flow_cell_mode=self.metadata.flow_cell_mode)
 
     @property
     def parameter_file(self):
