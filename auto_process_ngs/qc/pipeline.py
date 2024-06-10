@@ -721,9 +721,10 @@ class QCPipeline(Pipeline):
 
                 # Whether to set cell count
                 try:
-                    set_cell_count = qc_module_params['set_cell_count']
+                    set_cell_count = (set_metadata and
+                                      qc_module_params['set_cell_count'])
                 except KeyError:
-                    set_cell_count = True
+                    set_cell_count = set_metadata
 
                 # Run cellranger* count
                 run_cellranger_count = self.add_cellranger_count(
