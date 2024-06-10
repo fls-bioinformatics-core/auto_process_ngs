@@ -7,6 +7,7 @@ import tempfile
 import shutil
 import os
 from bcftbx.JobRunner import SimpleJobRunner
+from auto_process_ngs.metadata import AnalysisProjectInfo
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
