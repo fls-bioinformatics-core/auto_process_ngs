@@ -98,7 +98,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
 
     def test_qcpipeline_with_batching(self):
         """
-        QCPipeline: run pipeline using batching
+        QCPipeline: run pipeline with batching
         """
         # Make mock QC executables
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
