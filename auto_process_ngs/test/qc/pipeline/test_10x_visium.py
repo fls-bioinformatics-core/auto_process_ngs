@@ -10,7 +10,8 @@ class TestQCPipeline(BaseQCPipelineTestCase):
     Tests for 10xGenomics Visium data
     """
     def test_qcpipeline_with_10x_visium_data(self):
-        """QCPipeline: spatial RNA-seq QC run (10x_Visium)
+        """
+        QCPipeline: 10xGenomics Visium spatial RNA-seq QC run (10x_Visium)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -88,7 +89,8 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                             "Missing %s" % f)
 
     def test_qcpipeline_with_10x_visium_ffpe_data(self):
-        """QCPipeline: FFPE spatial RNA-seq QC run (10x_Visium_FFPE)
+        """
+        QCPipeline: 10xGenomics Visium FFPE spatial RNA-seq QC run (10x_Visium_FFPE)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))

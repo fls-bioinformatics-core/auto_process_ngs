@@ -1,5 +1,5 @@
 #######################################################################
-# Base module for unit tests for qc/pipeline.py
+# Base module for unit tests for QC modules in qc/pipeline.py
 #######################################################################
 
 import unittest
