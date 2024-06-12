@@ -17,6 +17,7 @@ from bcftbx.IlluminaData import SampleSheet
 from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..samplesheet_utils import check_and_warn
 from ..samplesheet_utils import predict_outputs
+from ..samplesheet_utils import summarise_outputs
 from ..samplesheet_utils import set_samplesheet_column
 from ..utils import edit_file
 from ..utils import fetch_file
@@ -35,8 +36,9 @@ class SampleSheetOperation:
     SET_SAMPLE_ID = 2
     VIEW = 4
     PREDICT = 5
-    EDIT = 6
-    IMPORT = 7
+    SUMMARISE = 6
+    EDIT = 7
+    IMPORT = 8
 
 #######################################################################
 # Command functions
@@ -70,6 +72,9 @@ def samplesheet(ap,cmd,*args,**kws):
     elif cmd == SampleSheetOperation.PREDICT:
         # Predict the outputs
         predict_samplesheet_outputs(ap)
+    elif cmd == SampleSheetOperation.SUMMARISE:
+        # Summarise the outputs
+        summarise_samplesheet_outputs(ap)
     elif cmd == SampleSheetOperation.EDIT:
         # Show raw sample sheet
         edit_samplesheet(ap)
@@ -170,6 +175,16 @@ def predict_samplesheet_outputs(ap):
         predict_outputs(sample_sheet_file=ap.params.sample_sheet))
     paginate(content)
 
+def summarise_samplesheet_outputs(ap):
+    """
+    Summarise the outputs from the SampleSheet
+
+    Arguments:
+      ap (AutoProcessor): autoprocessor pointing to the
+        analysis directory to operate on
+    """
+    print(summarise_outputs(sample_sheet_file=ap.params.sample_sheet))
+
 def edit_samplesheet(ap):
     """
     Bring up SampleSheet in an editor
@@ -225,7 +240,7 @@ def import_samplesheet(ap,new_sample_sheet):
     print("Updating the default sample sheet")
     ap.params['sample_sheet'] = custom_sample_sheet
     # Generate and print predicted outputs
-    print(predict_outputs(sample_sheet=SampleSheet(custom_sample_sheet)))
+    print(summarise_outputs(sample_sheet=SampleSheet(custom_sample_sheet)))
     # Check the sample sheet for problems
     if check_and_warn(sample_sheet_file=custom_sample_sheet):
         logger.warning("Imported sample sheet has problems, see "

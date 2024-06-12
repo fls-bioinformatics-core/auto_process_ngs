@@ -13,6 +13,7 @@ from auto_process_ngs.samplesheet_utils import SampleSheetLinter
 from auto_process_ngs.samplesheet_utils import has_invalid_characters
 from auto_process_ngs.samplesheet_utils import barcode_is_valid
 from auto_process_ngs.samplesheet_utils import barcode_is_10xgenomics
+from auto_process_ngs.samplesheet_utils import summarise_outputs
 from auto_process_ngs.samplesheet_utils import get_close_names
 from auto_process_ngs.samplesheet_utils import set_samplesheet_column
 
@@ -332,6 +333,84 @@ class TestBarcodeIsValidFunction(unittest.TestCase):
         self.assertTrue(barcode_is_valid("SI-GA-G1"))
         self.assertTrue(barcode_is_valid("SI-GA-H1"))
         self.assertTrue(barcode_is_valid("SI-P03-C9"))
+
+class TestSummariseOutputs(unittest.TestCase):
+    """
+    Tests for the 'summarise_outputs' function
+    """
+    def setUp(self):
+        self.wd = tempfile.mkdtemp()
+
+    def tearDown(self):
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
+    def write_sample_sheet(self,content):
+        self.sample_sheet_file = os.path.join(self.wd,
+                                              "SampleSheet.csv")
+        with open(self.sample_sheet_file,'wt') as fp:
+            fp.write(content)
+        return self.sample_sheet_file
+
+    def test_summarise_outputs_single_index_no_lanes(self):
+        """
+        summarise_outputs: sample sheet with single index, no lanes
+        """
+        self.write_sample_sheet("""[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+SM1,SM1,,,A006,GCCAAT,SerenaMcCauley,
+SM2,SM2,,,A012,CTTGTA,SerenaMcCauley,
+""")
+        self.assertEqual(summarise_outputs(
+            sample_sheet_file=self.sample_sheet_file),"""Project: 'SerenaMcCauley':
+- L1	SM1-2	2 samples	6bp indexes""")
+
+    def test_summarise_outputs_single_index_multiple_lanes(self):
+        """
+        summarise_outputs: sample sheet with single index, multiple lanes
+        """
+        self.write_sample_sheet("""[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,SM1,SM1,,,A006,GCCAAT,SerenaMcCauley,
+1,SM2,SM2,,,A012,CTTGTA,SerenaMcCauley,
+2,CD1,CD1,,,N701,CGATGT,CarlDewey,
+2,CD2,CD2,,,N702,TCTTTC,CarlDewey,
+""")
+        self.assertEqual(summarise_outputs(
+            sample_sheet_file=self.sample_sheet_file),"""Project: 'CarlDewey':
+- L2	CD1-2	2 samples	6bp indexes
+Project: 'SerenaMcCauley':
+- L1	SM1-2	2 samples	6bp indexes""")
+
+    def test_summarise_outputs_10x_barcodes(self):
+        """
+        summarise_outputs: sample sheet with 10x Genomics barcodes
+        """
+        self.write_sample_sheet("""[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+SL1,SL1,,,N701,SI-GA-A2,SarahLee,
+SL2,SL2,,,N702,SI-GA-B2,SarahLee,
+SL3,SL3,,,N703,SI-GA-C2,SarahLee,
+SL4,SL4,,,N704,SI-GA-D2,SarahLee,
+""")
+        self.assertEqual(summarise_outputs(
+            sample_sheet_file=self.sample_sheet_file),"""Project: 'SarahLee':
+- L1	SL1-4	4 samples	10x Genomics indexes""")
+
+    def test_summarise_outputs_dual_index(self):
+        """
+        summarise_outputs: sample sheet with dual index barcodes
+        """
+        self.write_sample_sheet("""[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,AndrewBloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,CarlDewey,
+""")
+        self.assertEqual(summarise_outputs(
+            sample_sheet_file=self.sample_sheet_file),"""Project: 'AndrewBloggs':
+- L1	AB1	1 sample	8x8bp indexes
+Project: 'CarlDewey':
+- L2	CD1	1 sample	8x8bp indexes""")
 
 class TestCloseNamesFunction(unittest.TestCase):
     def test_close_names(self):
