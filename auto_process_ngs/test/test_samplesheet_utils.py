@@ -362,7 +362,7 @@ SM1,SM1,,,A006,GCCAAT,SerenaMcCauley,
 SM2,SM2,,,A012,CTTGTA,SerenaMcCauley,
 """)
         self.assertEqual(summarise_outputs(
-            sample_sheet_file=self.sample_sheet_file),"""SerenaMcCauley
+            sample_sheet_file=self.sample_sheet_file),"""Project: 'SerenaMcCauley':
 - L1	SM1-2	2 samples	6bp indexes""")
 
     def test_summarise_outputs_single_index_multiple_lanes(self):
@@ -377,9 +377,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
 2,CD2,CD2,,,N702,TCTTTC,CarlDewey,
 """)
         self.assertEqual(summarise_outputs(
-            sample_sheet_file=self.sample_sheet_file),"""CarlDewey
+            sample_sheet_file=self.sample_sheet_file),"""Project: 'CarlDewey':
 - L2	CD1-2	2 samples	6bp indexes
-SerenaMcCauley
+Project: 'SerenaMcCauley':
 - L1	SM1-2	2 samples	6bp indexes""")
 
     def test_summarise_outputs_10x_barcodes(self):
@@ -394,7 +394,7 @@ SL3,SL3,,,N703,SI-GA-C2,SarahLee,
 SL4,SL4,,,N704,SI-GA-D2,SarahLee,
 """)
         self.assertEqual(summarise_outputs(
-            sample_sheet_file=self.sample_sheet_file),"""SarahLee
+            sample_sheet_file=self.sample_sheet_file),"""Project: 'SarahLee':
 - L1	SL1-4	4 samples	10x Genomics indexes""")
 
     def test_summarise_outputs_dual_index(self):
@@ -407,9 +407,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,CarlDewey,
 """)
         self.assertEqual(summarise_outputs(
-            sample_sheet_file=self.sample_sheet_file),"""AndrewBloggs
+            sample_sheet_file=self.sample_sheet_file),"""Project: 'AndrewBloggs':
 - L1	AB1	1 sample	8x8bp indexes
-CarlDewey
+Project: 'CarlDewey':
 - L2	CD1	1 sample	8x8bp indexes""")
 
 class TestCloseNamesFunction(unittest.TestCase):
