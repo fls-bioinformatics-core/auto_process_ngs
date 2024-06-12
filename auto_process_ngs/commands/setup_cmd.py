@@ -231,15 +231,21 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             run_config = None
             default_bases_mask = None
     # Attempt to acquire RunParameters.xml
-    try:
-        print("Acquiring run parameters...")
-        target = os.path.join(data_dir,"RunParameters.xml")
-        run_parameters_xml = os.path.join(ap.tmp_dir,"RunParameters.xml")
-        fetch_file(target,run_parameters_xml)
+    print("Acquiring run parameters...")
+    for f in ("RunParameters.xml","runParameters.xml"):
+        target = os.path.join(data_dir,f)
+        run_parameters_xml = os.path.join(ap.tmp_dir,f)
+        try:
+            fetch_file(target,run_parameters_xml)
+            break
+        except Exception as ex:
+            # Failed to fetch XML file
+            run_parameters_xml = None
+    if run_parameters_xml is not None:
+        # Extract flow cell mode
         flow_cell_mode = IlluminaRunParameters(run_parameters_xml).\
-            flowcell_mode
-        print("Flow cell mode: %s" % flow_cell_mode)
-    except Exception as ex:
+                         flowcell_mode
+    else:
         # Failed to acquire RunParameters.xml
         if not unaligned_dir:
             # Fatal error
@@ -253,6 +259,9 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
         else:
             # Can ignore if Fastqs already exist
             flow_cell_mode = None
+    print("Flow cell mode: %s" % (flow_cell_mode
+                                  if flow_cell_mode is not None
+                                  else "not set"))
     # Data source metadata
     data_source = ap.settings.metadata.default_data_source
     # Generate and print predicted outputs and warnings
