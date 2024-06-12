@@ -240,7 +240,7 @@ def import_samplesheet(ap,new_sample_sheet):
     print("Updating the default sample sheet")
     ap.params['sample_sheet'] = custom_sample_sheet
     # Generate and print predicted outputs
-    print(predict_outputs(sample_sheet=SampleSheet(custom_sample_sheet)))
+    print(summarise_outputs(sample_sheet=SampleSheet(custom_sample_sheet)))
     # Check the sample sheet for problems
     if check_and_warn(sample_sheet_file=custom_sample_sheet):
         logger.warning("Imported sample sheet has problems, see "
