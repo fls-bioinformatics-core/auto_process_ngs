@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     samplesheet_utils.py: utilities for handling samplesheet files
-#     Copyright (C) University of Manchester 2016-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2024 Peter Briggs
 #
 ########################################################################
 #
@@ -394,7 +394,7 @@ def summarise_outputs(sample_sheet=None,sample_sheet_file=None):
             barcode_lengths.append('x'.join([str(len(x))
                                              for x in b.split('-')]))
         # Add to summary report
-        summary.append("%s" % project_name)
+        summary.append("Project: '%s':" % project_name)
         if len(barcodes) > 1:
             summary.append("!!! mixed barcode lengths and/or types !!!")
         barcode_info = []
