@@ -198,7 +198,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                 # Remove temporary directory
                 shutil.rmtree(tmp_analysis_dir)
                 ap.analysis_dir = None
-            except Exception:
+            except Exception as ex:
                 pass
             raise Exception("Failed to acquire sample sheet: %s" % ex)
         else:
@@ -255,7 +255,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                 ap.analysis_dir = None
             except Exception:
                 pass
-            raise Exception("Failed to acquire RunParameters.xml: %s" % ex)
+            raise Exception("Failed to acquire RunParameters.xml")
         else:
             # Can ignore if Fastqs already exist
             flow_cell_mode = None
