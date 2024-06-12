@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
 #
 #########################################################################
 
@@ -19,7 +19,7 @@ from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..applications import general as general_applications
 from ..fileops import exists
-from ..samplesheet_utils import predict_outputs
+from ..samplesheet_utils import summarise_outputs
 from ..samplesheet_utils import check_and_warn
 from ..utils  import Location
 from ..utils import fetch_file
@@ -255,11 +255,6 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             flow_cell_mode = None
     # Data source metadata
     data_source = ap.settings.metadata.default_data_source
-    # Generate and print predicted outputs and warnings
-    if custom_sample_sheet is not None:
-        sample_sheet_data = SampleSheet(custom_sample_sheet)
-        print(predict_outputs(sample_sheet=sample_sheet_data))
-        check_and_warn(sample_sheet=sample_sheet_data)
     # Import additional files
     if extra_files:
         for extra_file in extra_files:
@@ -327,3 +322,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap._save_params = True
     ap._save_metadata = True
     ap.save_data()
+    # Print summary of expected outputs and warnings
+    if ap.params.sample_sheet is not None:
+        sample_sheet_data = SampleSheet(ap.params.sample_sheet)
+        print(summarise_outputs(sample_sheet=sample_sheet_data))
+        check_and_warn(sample_sheet=sample_sheet_data)
