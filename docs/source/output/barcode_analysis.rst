@@ -206,6 +206,30 @@ Analysing undetermined barcodes only
 
 Currently this can be done by running the ``analyse_barcodes.py`` utility
 directly on the cached counts for just the "undetermined" FASTQ files,
-for example::
+for example:
+
+::
 
     analyse_barcodes.py -c barcode_analysis/Undetermined*.counts
+
+Advanced: analysing sequences instead of barcodes
+-------------------------------------------------
+
+The ``analyse_barcodes.py`` utility can be used to count sequences (or
+sequence fragments) as well as barcodes, by specifying the
+``--sequences`` command line option.
+
+Analysis of partial sequences can be performed by combining this option
+with the ``--seq-start`` and ``--seq-end`` options to specify the limits
+of the sequence fragments to be extracted and counted.
+
+For example:
+
+::
+
+   analysis_barcodes.py SAMPLE.fq\
+     --sequences --seq-start=5 --seq-end=20 \
+     -o sequences.counts
+
+will count the sequence fragments from ``SAMPLE.fq``, taken from the 5th
+to the 20th base in each read.
