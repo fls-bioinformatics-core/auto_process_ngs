@@ -104,48 +104,53 @@ def main():
                    "'PLATFORM_DATESTAMP.RUN_ID-PROJECT'. If this "
                    "option is not set then no subdirectory will be "
                    "used")
-    p.add_argument('--zip_fastqs',action='store_true',
-                   help="put Fastqs into a ZIP file")
-    p.add_argument('--max_zip_size',action='store',dest='max_zip_size',
-                   default=None,
-                   help="when using '--zip_fastqs' option, defines the "
-                   "maximum size for the output zip file; multiple zip "
-                   "files will be created if the data exceeds this "
-                   "limit (default is create a single zip file with no "
-                   "size limit)")
-    p.add_argument('--no_fastqs',action='store_true',
-                   help="don't copy Fastqs (other artefacts will be "
-                   "copied, if specified)")
-    p.add_argument('--readme',action='store',
-                   metavar='README_TEMPLATE',dest='readme_template',
-                   help="template file to generate README file from; "
-                   "can be full path to a template file, or the name "
-                   "of a file in the 'templates' directory")
-    p.add_argument('--weburl',action='store',
-                   help="base URL for webserver (sets the value of "
-                   "the WEBURL variable in the template README)")
-    p.add_argument('--include_downloader',action='store_true',
+    sp = p.add_argument_group("Fastq selection")
+    sp.add_argument('--samples',action='store',dest='sample_list',
+                    default=None,
+                    help="list of names of samples to transfer")
+    sp.add_argument('--filter',action='store',dest='filter_pattern',
+                    default=None,
+                    help="filter Fastq file names based on PATTERN")
+    sp.add_argument('--no_fastqs',action='store_true',
+                    help="don't copy Fastqs (other artefacts will be "
+                    "copied, if specified)")
+    sp = p.add_argument_group("ZIP file archives")
+    sp.add_argument('--zip_fastqs',action='store_true',
+                    help="put Fastqs into a ZIP file")
+    sp.add_argument('--max_zip_size',action='store',dest='max_zip_size',
+                    default=None,
+                    help="when using '--zip_fastqs' option, defines the "
+                    "maximum size for the output zip file; multiple zip "
+                    "files will be created if the data exceeds this "
+                    "limit (default is create a single zip file with no "
+                    "size limit)")
+    sp = p.add_argument_group("README generation")
+    sp.add_argument('--readme',action='store',
+                    metavar='README_TEMPLATE',dest='readme_template',
+                    help="template file to generate README file from; "
+                    "can be full path to a template file, or the name "
+                    "of a file in the 'templates' directory")
+    sp.add_argument('--weburl',action='store',
+                    help="base URL for webserver (sets the value of "
+                    "the WEBURL variable in the template README)")
+    sp = p.add_argument_group("Additional artefacts")
+    sp.add_argument('--include_qc_report',action='store_true',
+                    help="copy the zipped QC reports to the final "
+                    "location")
+    sp.add_argument('--include_10x_outputs',action='store_true',
+                    help="copy outputs from 10xGenomics pipelines (e.g. "
+                    "'cellranger count') to the final location")
+    sp.add_argument('--include_downloader',action='store_true',
                    help="copy the 'download_fastqs.py' utility to the "
-                   "final location")
-    p.add_argument('--include_qc_report',action='store_true',
-                   help="copy the zipped QC reports to the final "
-                   "location")
-    p.add_argument('--include_10x_outputs',action='store_true',
-                   help="copy outputs from 10xGenomics pipelines (e.g. "
-                   "'cellranger count') to the final location")
-    p.add_argument('--link',action='store_true',
-                   help="hard link files instead of copying")
-    p.add_argument('--samples',action='store',dest='sample_list',
-                   default=None,
-                   help="list of names of samples to transfer")
-    p.add_argument('--filter',action='store',dest='filter_pattern',
-                   default=None,
-                   help="filter Fastq file names based on PATTERN")
-    p.add_argument('--runner',action='store',
-                   help="specify the job runner to use for executing "
-                   "the checksumming, Fastq copy and tar gzipping "
-                   "operations (defaults to job runner defined for "
-                   "copying in config file [%s])" % default_runner)
+                    "final location")
+    sp = p.add_argument_group("Advanced options")
+    sp.add_argument('--link',action='store_true',
+                    help="hard link files instead of copying")
+    sp.add_argument('--runner',action='store',
+                    help="specify the job runner to use for executing "
+                    "the checksumming, Fastq copy and tar gzipping "
+                    "operations (defaults to job runner defined for "
+                    "copying in config file [%s])" % default_runner)
     p.add_argument('dest',action='store',metavar="DEST",
                    help="destination to copy Fastqs to; can be the "
                    "name of a destination defined in the configuration "
