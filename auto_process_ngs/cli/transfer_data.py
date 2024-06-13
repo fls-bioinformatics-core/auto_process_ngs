@@ -385,10 +385,13 @@ def main():
     elif subdir == "run_id":
         # Construct subdirectory name based on the
         # run ID
+        run_number = str(analysis_dir.metadata.run_number)
+        if analysis_dir.metadata.analysis_number is not None:
+            run_number += "_" + str(analysis_dir.metadata.analysis_number)
         subdir = "{platform}_{datestamp}.{run_number}-{project}".format(
             platform=analysis_dir.metadata.platform.upper(),
             datestamp=analysis_dir.metadata.instrument_datestamp,
-            run_number=analysis_dir.metadata.run_number,
+            run_number=run_number,
             project=project.name)
         # Check it doesn't already exist
         if exists(os.path.join(target_dir,subdir)):
@@ -519,12 +522,15 @@ def main():
             zip_job.wait()
             check_jobs[zip_job.name] = zip_job
             # Rename ZIP file(s) and move to final location
+            run_number = str(analysis_dir.metadata.run_number)
+            if analysis_dir.metadata.analysis_number is not None:
+                run_number += "_" + str(analysis_dir.metadata.analysis_number)
             final_zip_basename = \
                 "{platform}_{datestamp}.{run_number}-{project}-fastqs".\
                 format(
                     platform=analysis_dir.metadata.platform.upper(),
                     datestamp=analysis_dir.metadata.instrument_datestamp,
-                    run_number=analysis_dir.metadata.run_number,
+                    run_number=run_number,
                     project=project.name)
             job_ix = 0
             for f in listdir(working_dir):
