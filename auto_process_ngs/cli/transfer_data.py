@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
 #
 #########################################################################
 #
@@ -135,6 +135,9 @@ def main():
                    "'cellranger count') to the final location")
     p.add_argument('--link',action='store_true',
                    help="hard link files instead of copying")
+    p.add_argument('--samples',action='store',dest='sample_list',
+                   default=None,
+                   help="list of names of samples to transfer")
     p.add_argument('--filter',action='store',dest='filter_pattern',
                    default=None,
                    help="filter Fastq file names based on PATTERN")
@@ -162,6 +165,12 @@ def main():
 
     # Flag for Fastq transfer
     include_fastqs = not args.no_fastqs
+
+    # List of samples to include
+    if args.sample_list is not None:
+        include_samples = str(args.sample_list).split(',')
+    else:
+        include_samples = None
 
     # Check if target is pre-defined destination
     if args.dest in destinations:
@@ -253,8 +262,11 @@ def main():
     for sample in project.samples:
         fqs = []
         for fq in sample.fastq:
-            if args.filter_pattern and \
-               not fnmatch(os.path.basename(fq),args.filter_pattern):
+            if include_samples and not sample.name in include_samples:
+                # Sample not in list to include
+                continue
+            elif args.filter_pattern and \
+                 not fnmatch(os.path.basename(fq),args.filter_pattern):
                 # Filter pattern specified but Fastq
                 # doesn't match so skip
                 continue
@@ -483,6 +495,8 @@ def main():
         if not zip_fastqs:
             # Build command to run manage_fastqs.py to copy Fastqs
             copy_cmd = Command("manage_fastqs.py")
+            if args.sample_list:
+                copy_cmd.add_args("--samples",args.sample_list)
             if args.filter_pattern:
                 copy_cmd.add_args("--filter",args.filter_pattern)
             if hard_links:
@@ -502,6 +516,8 @@ def main():
         else:
             # Build command to zip Fastqs
             zip_cmd = Command("manage_fastqs.py")
+            if args.sample_list:
+                zip_cmd.add_args("--samples",args.sample_list)
             if args.filter_pattern:
                 zip_cmd.add_args("--filter",args.filter_pattern)
             if max_zip_size:
