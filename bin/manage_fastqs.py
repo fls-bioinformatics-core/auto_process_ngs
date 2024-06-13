@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     manage_runs.py: utility for managing fastq files from auto_process
-#     Copyright (C) University of Manchester 2014,2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2024 Peter Briggs
 #
 #########################################################################
 #
@@ -46,7 +46,7 @@ from auto_process_ngs import get_version
 # Functions
 #######################################################################
 
-def get_fastqs(project,pattern=None):
+def get_fastqs(project,pattern=None,samples=None):
     """Return fastq files within an AnalysisProject
 
     Given an AnalysisProject, yields
@@ -63,10 +63,16 @@ def get_fastqs(project,pattern=None):
       project: AnalysisProject instance
       pattern: if supplied then use the supplied pattern
         to filter fastqs based on filename
-
+      samples: if supplied then only include fastqs
+        belonging samples in the supplied list of sample
+        names
     """
     for sample in project.samples:
         for fq in sample.fastq:
+            # Filter on sample
+            if samples is not None:
+                if sample.name not in samples:
+                    continue
             # Filter on name
             if pattern is not None:
                 if not fnmatch.fnmatch(os.path.basename(fq),pattern):
@@ -78,13 +84,17 @@ def get_fastqs(project,pattern=None):
                 target = fq
             yield (sample.name,fq,target)
 
-def write_checksums(project,pattern=None,filen=None,relative=True):
+def write_checksums(project,pattern=None,samples=None,filen=None,
+                    relative=True):
     """Write MD5 checksums for fastq files with an AnalysisProject
 
     Arguments:
       project: AnalysisProject instance
       pattern: if supplied then use the supplied pattern
         to filter fastqs based on filename
+      samples: if supplied then only include fastqs
+        belonging samples in the supplied list of sample
+        names
       filen: if supplied then checksums will be written
         to this file; otherwise they will be written to
         stdout (default)
@@ -97,7 +107,8 @@ def write_checksums(project,pattern=None,filen=None,relative=True):
         fp = io.open(md5file,'wt')
     else:
         fp = sys.stdout
-    for sample_name,fastq,fq in get_fastqs(project,pattern=pattern):
+    for sample_name,fastq,fq in get_fastqs(project,pattern=pattern,
+                                           samples=samples):
         if relative:
             name = os.path.basename(fq)
         else:
@@ -191,6 +202,9 @@ if __name__ == "__main__":
         "creates a zip file with the fastq files.")
     p.add_argument('-v','--version',action='version',
                    version="%(prog)s "+get_version())
+    p.add_argument('--samples',action='store',dest='sample_list',
+                   default=None,
+                   help="list of names of samples to transfer")
     p.add_argument('--filter',action='store',dest='pattern',
                    default=None,
                    help="filter file names for reporting and copying "
@@ -261,6 +275,12 @@ if __name__ == "__main__":
                              % options.fastq_dir)
             sys.exit(1)
 
+    # Filter fastqs on sample names
+    if options.sample_list:
+        samples = str(options.sample_list).split(',')
+        print("Filtering fastqs using sample list: %s" % ','.join(samples))
+    else:
+        samples = None
     # Filter fastqs on pattern
     if options.pattern is not None:
         print("Filtering fastqs using pattern '%s'" % options.pattern)
@@ -278,7 +298,9 @@ if __name__ == "__main__":
             ("default" if fastq_set == "fastqs" else fastq_set),
             (" (primary)"
              if fastq_set == project.info.primary_fastq_dir else "")))
-        for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
+        for sample_name,fastq,fq in get_fastqs(project,
+                                               pattern=options.pattern,
+                                               samples=samples):
             # File size
             fsize = os.lstat(fq).st_size
             print("%s\t%s%s\t%s" % (sample_name,
@@ -311,7 +333,8 @@ if __name__ == "__main__":
         try:
             md5file = os.path.join(tmp,"%s.chksums" % project.name)
             sys.stdout.write("Creating checksum file %s..." % md5file)
-            write_checksums(project,pattern=options.pattern,filen=md5file)
+            write_checksums(project,pattern=options.pattern,
+                            samples=samples,filen=md5file)
             print("done")
             print("Copying to %s" % dest)
             copy_to_dest(md5file,dest)
@@ -324,9 +347,13 @@ if __name__ == "__main__":
         finally:
             shutil.rmtree(tmp)
         # Copy fastqs
-        nfastqs = sum(1 for _ in get_fastqs(project,pattern=options.pattern))
+        nfastqs = sum(1 for _ in get_fastqs(project,
+                                            pattern=options.pattern,
+                                            samples=samples))
         i = 0
-        for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
+        for sample_name,fastq,fq in get_fastqs(project,
+                                               pattern=options.pattern,
+                                               samples=samples):
             i += 1
             print("(% 2d/% 2d) %s" % (i,nfastqs,fq))
             copy_to_dest(fq,dest,chksums[os.path.basename(fq)],
@@ -338,7 +365,10 @@ if __name__ == "__main__":
             sys.stderr.write("ERROR checksum file '%s' already exists\n" % md5file)
             sys.exit(1)
         sys.stdout.write("Creating checksum file %s..." % md5file)
-        write_checksums(project,pattern=options.pattern,filen=md5file)
+        write_checksums(project,
+                        pattern=options.pattern,
+                        samples=samples,
+                        filen=md5file)
         print("done")
     elif cmd == 'zip':
         # Create zip file(s)
@@ -354,7 +384,8 @@ if __name__ == "__main__":
         zz = None
         # Add Fastqs to zip file(s)
         for sample_name,fastq,fq in get_fastqs(project,
-                                               pattern=options.pattern):
+                                               pattern=options.pattern,
+                                               samples=samples):
             if zip_file and max_zip_size:
                 # Check if next Fastq will exceed limit
                 if (os.lstat(zip_file).st_size +
@@ -381,7 +412,10 @@ if __name__ == "__main__":
         try:
             md5file = os.path.join(tmp,"%s.chksums" % project.name)
             sys.stdout.write("Creating checksum file %s..." % md5file)
-            write_checksums(project,pattern=options.pattern,filen=md5file)
+            write_checksums(project,
+                            pattern=options.pattern,
+                            samples=samples,
+                            filen=md5file)
             print("done")
             if include_checksums_in_zip:
                 # Put checksum file into ZIP archive
