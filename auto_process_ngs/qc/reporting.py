@@ -517,6 +517,8 @@ class QCReport(Document):
                                        'adapter_content']
                 if 'strandedness' in project.outputs:
                     summary_fields_.append('strandedness')
+                elif 'rseqc_infer_experiment' in project.outputs:
+                    summary_fields_.append('strand_specificity')
                 if 'picard_insert_size_metrics' in project.outputs:
                     summary_fields_.append('insert_size_histogram')
                 if 'qualimap_rnaseq' in project.outputs:
@@ -1433,7 +1435,8 @@ class QCReport(Document):
         else:
             fields = ['sample',
                       'fastq']
-        if 'rseqc_infer_experiment' in project.outputs:
+        if 'rseqc_infer_experiment' in project.outputs and \
+           not 'strandedness' in project.outputs:
             # Strandedness from infer_experiment.py
             fields.append('strand_specificity')
         if 'sequence_lengths' in project.outputs:
