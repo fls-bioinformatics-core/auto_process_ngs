@@ -1286,8 +1286,8 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
         self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
                          "y76,I6,y76")
 
-    def test_get_bases_mask_dual_index_truncate_reads(self):
-        """get_bases_mask: truncate reads (dual index)
+    def test_get_bases_mask_dual_index_truncate_r1_and_r2_reads(self):
+        """get_bases_mask: truncate R1 and R2 reads (dual index)
         """
         # Make a RunInfo.xml file
         run_info_xml = os.path.join(self.wd,"RunInfo.xml")
@@ -1326,10 +1326,26 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,i
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
             fp.write(sample_sheet_content)
-        # Check the bases mask
+        # Truncate R1 and R2 reads in bases mask
         self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
                                         r1=26,r2=76),
                          "y26n75,I8,I8,y76n25")
+        # Truncate R1 read only
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=26),
+                         "y26n75,I8,I8,y101")
+        # Truncate R2 read only
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r2=26),
+                         "y101,I8,I8,y26n75")
+        # "Truncate" R1 and R2 reads to same length as actual reads
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=101,r2=101),
+                         "y101,I8,I8,y101")
+        # "Truncate" R1 and R2 reads to longer lengths than actual reads
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=102,r2=102),
+                         "y101,I8,I8,y101")
 
     def test_get_bases_mask_single_index_no_sample_sheet(self):
         """get_bases_mask: handle single index (no samplesheet)
