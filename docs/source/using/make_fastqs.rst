@@ -184,8 +184,9 @@ via the ``--lanes`` option, for example:
 .. note::
 
    The ``--r1-length`` and ``--r2-length`` options are only
-   applied for the ``standard`` and ``mirna`` protocols; they
-   are ignored for other protocols.
+   applied for the ``standard``, ``mirna``, ``10x_chromium``
+   and ``10x_visium`` protocols; they are ignored for other
+   protocols.
 
    The options operate by adjusting the bases mask used to
    match the required length, so if a bases mask is explicitly
