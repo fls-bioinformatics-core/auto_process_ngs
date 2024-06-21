@@ -473,8 +473,8 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
         print("Bases mask: %s (updated for barcode sequence '%s')" %
               (bases_mask,example_barcode))
     # Truncate reads if specified
-    lengths = (r1,r2)
-    if r1 is not None:
+    if not (r1 is None and r2 is None):
+        lengths = (r1,r2)
         reads = []
         read_number = 0
         for read in bases_mask.split(','):
@@ -489,6 +489,8 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
                 read_length = int(read[1:])
                 if rlen < read_length:
                     new_read = "y%dn%d" % (rlen,read_length-rlen)
+                else:
+                    new_read = read
                 reads.append(new_read)
             else:
                 reads.append(read)
