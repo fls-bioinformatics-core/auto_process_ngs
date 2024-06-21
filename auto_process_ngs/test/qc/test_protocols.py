@@ -838,8 +838,7 @@ class TestFetchProtocolDefinition(unittest.TestCase):
                                        'picard_insert_size_metrics',
                                        'qualimap_rnaseq',
                                        'rseqc_genebody_coverage',
-                                       'sequence_lengths',
-                                       'strandedness'])
+                                       'sequence_lengths'])
 
     def test_fetch_protocol_definition_unknown_protocol_name(self):
         """
