@@ -2188,9 +2188,9 @@ class IdentifyPlatform(PipelineTask):
             flow_cell_mode = illumina_run.\
                              runparameters.\
                              flowcell_mode
-        if flow_cell_mode:
-            print("Flow cell mode identified as '%s'" % flow_cell_mode)
-            self.output.flow_cell_mode.set(flow_cell_mode)
+            if flow_cell_mode:
+                print("Flow cell mode identified as '%s'" % flow_cell_mode)
+                self.output.flow_cell_mode.set(flow_cell_mode)
         else:
             print("Unable to identify flow cell mode")
 
