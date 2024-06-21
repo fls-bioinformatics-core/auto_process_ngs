@@ -648,6 +648,18 @@ class MakeFastqs(Pipeline):
 
         # Perform checks for subsets
         for s in self.subsets:
+            if s['protocol'] in ('10x_atac',
+                                 '10x_multiome',
+                                 '10x_multiome_atac',
+                                 '10x_multiome_gex'):
+                # Check read truncation wasn't requested
+                if s['r1_length'] or s['r2_length']:
+                    errmsg = "%s: read truncation was specified " \
+                             "but cannot be applied " % s['protocol']
+                    if s['lanes']:
+                        errmsg += " lanes %s" % s['lanes']
+                    errmsg += " (set bases mask manually instead)"
+                    raise Exception(errmsg)
             if s['protocol'] == 'icell8_atac':
                 # ICELL8 ATAC
                 # Check well list file is defined
@@ -1537,6 +1549,8 @@ class MakeFastqs(Pipeline):
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
                     bases_mask=bases_mask,
+                    r1_length=r1_length,
+                    r2_length=r2_length,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
@@ -1591,6 +1605,8 @@ class MakeFastqs(Pipeline):
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
                     bases_mask=bases_mask,
+                    r1_length=r1_length,
+                    r2_length=r2_length,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
@@ -1646,6 +1662,8 @@ class MakeFastqs(Pipeline):
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
                     bases_mask=bases_mask,
+                    r1_length=r1_length,
+                    r2_length=r2_length,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
@@ -3251,6 +3269,7 @@ class Run10xMkfastq(PipelineTask):
     Runs 10xGenomics 'mkfastq' to generate Fastqs
     """
     def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
+             r1_length=None,r2_length=None,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
              filter_single_index=None,filter_dual_index=None,
@@ -3364,7 +3383,21 @@ class Run10xMkfastq(PipelineTask):
                                          lanes_suffix)
         self.mro_file = "__%s.mro" % self.mkfastq_out_dir
         # Set bases mask
-        if self.pkg == "cellranger-atac":
+        if self.pkg in ('cellranger',
+                        'spaceranger'):
+            # scRNA-seq and Visium
+            if self.args.bases_mask == "auto":
+                if self.args.r1_length or self.args.r2_length:
+                    # Get explicit bases mask including truncation
+                    bases_mask = get_bases_mask(illumina_run.runinfo_xml,
+                                                r1=self.args.r1_length,
+                                                r2=self.args.r2_length)
+                else:
+                    # Leave external pipeline to set bases mask
+                    bases_mask = None
+            else:
+                bases_mask = self.args.bases_mask
+        elif self.pkg == "cellranger-atac":
             # scATAC-seq
             bases_mask = self.args.bases_mask
             if bases_mask is None:
@@ -3380,14 +3413,20 @@ class Run10xMkfastq(PipelineTask):
                 if not bases_mask_is_valid(bases_mask):
                     raise Exception("Invalid bases mask: '%s'" %
                                     bases_mask)
-        elif self.pkg in ('cellranger',
-                          'cellranger-arc',
-                          'spaceranger'):
-            # scRNA-seq
+            # Stop if automated trimming was specified
+            if self.args.r1_length or self.args.r2_length:
+                raise Exception("%s: unable to apply supplied read "
+                                "truncation to bases mask" % self.pkg)
+        elif self.pkg == "cellranger-arc":
+            # 10x multiome
             if self.args.bases_mask == "auto":
                 bases_mask = None
             else:
                 bases_mask = self.args.bases_mask
+            # Stop if automated trimming was specified
+            if self.args.r1_length or self.args.r2_length:
+                raise Exception("%s: unable to apply supplied read "
+                                "truncation to bases mask" % self.pkg)
         else:
             raise Exception("%s: unsupported 10xGenomics package" %
                             self.pkg)
