@@ -315,3 +315,65 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_10x_atac_protocol_refuse_to_truncate_reads(self):
+        """
+        MakeFastqs: '10x_atac' protocol: refuse to truncate reads
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            bases_mask="y101,I8,I8,y101",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet with 10xGenomics Chromium SC ATAC-seq indices
+        samplesheet_chromium_sc_atac_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-NA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_chromium_sc_atac_indices)
+        # Create mock bcl2fastq and cellranger-atac
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,
+                                              "cellranger-atac"),
+                                 version="2.0.0")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the tests
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_atac",
+                          r1_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_atac",
+                          r2_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_atac",
+                          r1_length=16,
+                          r2_length=16)
