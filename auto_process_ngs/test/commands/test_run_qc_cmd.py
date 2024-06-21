@@ -13,7 +13,6 @@ from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
-from auto_process_ngs.mock import MockFastqStrandPy
 from auto_process_ngs.mock import MockGtf2bed
 from auto_process_ngs.mock import MockStar
 from auto_process_ngs.mock import MockSamtools
@@ -92,7 +91,6 @@ class TestAutoProcessRunQc(unittest.TestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
@@ -150,7 +148,6 @@ annotation_gtf = {mm10_gtf}
                               "screens_r1",
                               "screens_r2",
                               "sequence_lengths",
-                              "strandedness",
                               "picard_insert_size_metrics",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
@@ -194,8 +191,6 @@ annotation_gtf = {mm10_gtf}
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -251,7 +246,6 @@ annotation_gtf = {mm10_gtf}
             for qc_module in ("fastqc_r1",
                               "screens_r1",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -294,8 +288,6 @@ annotation_gtf = {mm10_gtf}
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -353,7 +345,6 @@ annotation_gtf = {mm10_gtf}
                               "fastqc_r2",
                               "screens_r2",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -396,8 +387,6 @@ annotation_gtf = {mm10_gtf}
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -453,7 +442,6 @@ annotation_gtf = {mm10_gtf}
             for qc_module in ("fastqc_r1",
                               "screens_r1",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -496,8 +484,6 @@ annotation_gtf = {mm10_gtf}
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -563,7 +549,6 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                               "fastqc_r2",
                               "screens_r2",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -607,8 +592,6 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -676,7 +659,6 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
                               "fastqc_r2",
                               "screens_r2",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -720,8 +702,6 @@ cellranger_premrna_reference = /data/cellranger/transcriptomes/mm10_pre_mrna
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -790,7 +770,6 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                               "fastqc_r2",
                               "screens_r2",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -834,8 +813,6 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -904,7 +881,6 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
                               "fastqc_r2",
                               "screens_r2",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -948,8 +924,6 @@ cellranger_reference = /data/cellranger/transcriptomes/mm10
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
@@ -1019,7 +993,6 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
                               "screens_r1",
                               "screens_r3",
                               "sequence_lengths",
-                              "strandedness",
                               "picard_insert_size_metrics",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
@@ -1064,8 +1037,6 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -1129,7 +1100,6 @@ annotation_gtf = {mm10_gtf}
                               "fastqc_r2",
                               "screens_r2",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -1172,8 +1142,6 @@ annotation_gtf = {mm10_gtf}
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
@@ -1233,7 +1201,6 @@ cellranger_atac_reference = /data/cellranger/atac_references/hg38-atac
                               "screens_r1",
                               "screens_r3",
                               "sequence_lengths",
-                              "strandedness",
                               "picard_insert_size_metrics",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
@@ -1278,8 +1245,6 @@ cellranger_atac_reference = /data/cellranger/atac_references/hg38-atac
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
@@ -1338,7 +1303,6 @@ cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
                               "fastqc_r2",
                               "screens_r2",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -1382,8 +1346,6 @@ cellranger_arc_reference = /data/cellranger/arc_references/mm10-arc
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -1437,7 +1399,6 @@ annotation_gtf = {hg38_gtf}
                               "fastqc_r2",
                               "screens_r1",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
@@ -1480,8 +1441,6 @@ annotation_gtf = {hg38_gtf}
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,
-                                              "fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
@@ -1538,7 +1497,6 @@ annotation_gtf = {mm10_gtf}
             for qc_module in ("fastqc_r1",
                               "screens_r1",
                               "sequence_lengths",
-                              "strandedness",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
                               "qualimap_rnaseq",
