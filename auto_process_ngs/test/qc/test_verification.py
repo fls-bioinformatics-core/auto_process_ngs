@@ -49,7 +49,7 @@ class TestQCVerifier(unittest.TestCase):
                      seq_data_samples=None,
                      include_fastqc=True,
                      include_fastq_screen=True,
-                     include_strandedness=True,
+                     include_strandedness=False,
                      include_seqlens=True,
                      include_picard_insert_size_metrics=False,
                      include_rseqc_genebody_coverage=False,
@@ -848,27 +848,6 @@ class TestQCVerifier(unittest.TestCase):
                            'other_organisms',
                            'rRNA')))
 
-    def test_qcverifier_verify_single_end_no_standedness(self):
-        """
-	QCVerifier: verify single-end data (standardSE, no strandedness)
-        """
-        ##self.remove_test_outputs = False
-        fastq_names=('PJB1_S1_R1_001.fastq.gz',
-                     'PJB2_S2_R1_001.fastq.gz',)
-        qc_dir = self._make_qc_dir('qc',
-                                   protocol="standardSE",
-                                   fastq_names=fastq_names,
-                                   include_strandedness=False)
-        with open(os.path.join(qc_dir,"fastq_strand.conf"),'wt') as fp:
-            fp.write("fastq_strand.conf\n")
-        qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify(
-            fetch_protocol_definition("standardSE"),
-            fastq_names,
-            fastq_screens=('model_organisms',
-                           'other_organisms',
-                           'rRNA')))
-
     def test_qcverifier_verify_single_end_legacy_screen_naming(self):
         """
 	QCVerifier: verify single-end data (standardSE, legacy screen naming)
@@ -985,27 +964,6 @@ class TestQCVerifier(unittest.TestCase):
                                    include_seqlens=False)
         qc_verifier = QCVerifier(qc_dir)
         self.assertFalse(qc_verifier.verify(
-            fetch_protocol_definition("standardPE"),
-            fastq_names,
-            fastq_screens=('model_organisms',
-                           'other_organisms',
-                           'rRNA')))
-
-    def test_qcverifier_verify_paired_end_no_strandedness(self):
-        """
-	QCVerifier: verify paired-end data (standardPE, no strandedness)
-        """
-        ##self.remove_test_outputs = False
-        fastq_names=('PJB1_S1_R1_001.fastq.gz',
-                     'PJB1_S1_R2_001.fastq.gz',
-                     'PJB2_S2_R1_001.fastq.gz',
-                     'PJB2_S2_R2_001.fastq.gz',)
-        qc_dir = self._make_qc_dir('qc',
-                                   protocol="standardPE",
-                                   fastq_names=fastq_names,
-                                   include_strandedness=False)
-        qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify(
             fetch_protocol_definition("standardPE"),
             fastq_names,
             fastq_screens=('model_organisms',

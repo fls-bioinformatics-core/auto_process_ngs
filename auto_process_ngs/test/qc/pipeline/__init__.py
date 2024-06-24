@@ -11,7 +11,6 @@ from auto_process_ngs.metadata import AnalysisProjectInfo
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
-from auto_process_ngs.mock import MockFastqStrandPy
 from auto_process_ngs.mock import MockGtf2bed
 from auto_process_ngs.mock import MockSeqtk
 from auto_process_ngs.mock import MockStar

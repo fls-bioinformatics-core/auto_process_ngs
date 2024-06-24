@@ -15,7 +15,6 @@ class TestQCPipeline(BaseQCPipelineTestCase):
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
@@ -101,7 +100,6 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockPicard.create(os.path.join(self.bin,"picard"))
