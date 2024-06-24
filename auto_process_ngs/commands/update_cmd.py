@@ -82,9 +82,10 @@ def update(ap):
             project_dir = os.path.join(ap.analysis_dir,name)
             if os.path.exists(project_dir):
                 project = AnalysisProject(project_dir)
-                print("Checking metadata for project '%s'" % project.name)
+                print("Checking metadata for project '%s'" % name)
                 # Synchronise metadata in projects with projects.info
                 metadata_items = dict(
+                    name=name,
                     user=line['User'],
                     PI=line['PI'],
                     organism=line['Organism'],
