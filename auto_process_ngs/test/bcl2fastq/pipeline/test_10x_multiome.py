@@ -392,6 +392,130 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
+    def test_makefastqs_10x_multiome_protocol_refuse_to_truncate_reads_gex_data(self):
+        """
+        MakeFastqs: '10x_multiome' protocol (refuse to truncate reads for GEX data)
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet with 10xGenomics indices
+        samplesheet_10x_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_10x_indices)
+        # Create mock bcl2fastq and cellranger-arc
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        Mock10xPackageExe.create(os.path.join(self.bin,
+                                              "cellranger-arc"),
+                                 version="2.0.0",
+                                 multiome_data="GEX")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the tests
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome",
+                          r1_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome",
+                          r2_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome",
+                          r1_length=16,
+                          r2_length=16)
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_10x_multiome_protocol_refuse_to_truncate_reads_atac_data(self):
+        """
+        MakeFastqs: '10x_multiome' protocol (refuse to truncate reads for ATAC data)
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet with 10xGenomics indices
+        samplesheet_10x_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_10x_indices)
+        # Create mock bcl2fastq and cellranger-arc
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        Mock10xPackageExe.create(os.path.join(self.bin,
+                                              "cellranger-arc"),
+                                 version="2.0.0",
+                                 multiome_data="ATAC")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the tests
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome",
+                          r1_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome",
+                          r2_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome",
+                          r1_length=16,
+                          r2_length=16)
+
+    #@unittest.skip("Skipped")
     def test_makefastqs_10x_multiome_atac(self):
         """
         MakeFastqs: '10x_multiome_atac' protocol
@@ -489,6 +613,68 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
+    def test_makefastqs_10x_multiome_atac_refuse_to_truncate_reads(self):
+        """
+        MakeFastqs: '10x_multiome_atac' protocol (refuse to truncate reads)
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet with 10xGenomics indices
+        samplesheet_10x_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_10x_indices)
+        # Create mock bcl2fastq and cellranger-arc
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        Mock10xPackageExe.create(os.path.join(self.bin,
+                                              "cellranger-arc"),
+                                 version="2.0.0",
+                                 multiome_data="ATAC")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the tests
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome_atac",
+                          r1_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome_atac",
+                          r2_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome_atac",
+                          r1_length=16,
+                          r2_length=16)
+
+    #@unittest.skip("Skipped")
     def test_makefastqs_10x_multiome_gex(self):
         """
         MakeFastqs: '10x_multiome_gex' protocol
@@ -584,3 +770,65 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_10x_multiome_gex_refuse_to_truncate_reads(self):
+        """
+        MakeFastqs: '10x_multiome_gex' protocol (refuse to truncate reads)
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet with 10xGenomics indices
+        samplesheet_10x_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_10x_indices)
+        # Create mock bcl2fastq and cellranger-arc
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        Mock10xPackageExe.create(os.path.join(self.bin,
+                                              "cellranger-arc"),
+                                 version="2.0.0",
+                                 multiome_data="GEX")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the tests
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome_gex",
+                          r1_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome_gex",
+                          r2_length=16)
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,protocol="10x_multiome_gex",
+                          r1_length=16,
+                          r2_length=16)
