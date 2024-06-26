@@ -28,6 +28,7 @@ Pipeline task classes:
 - GetBasesMask10xMultiome
 - Run10xMkfastq
 - FastqStatistics
+- SeqLengthStatistics
 - ReportProcessingQC
 
 Utility functions:
@@ -86,6 +87,7 @@ from ..pipeliner import ListParam
 from ..pipeliner import PathExistsParam
 from ..pipeliner import PathJoinParam
 from ..pipeliner import resolve_parameter
+from ..qc.seqlens import get_sequence_lengths
 from ..tenx.utils import add_cellranger_args
 from ..tenx.utils import cellranger_info
 from ..tenx.utils import spaceranger_info
@@ -203,6 +205,7 @@ class MakeFastqs(Pipeline):
     - per_lane_stats: path to the per-lane statistics file
     - per_lane_sample_stats: path to the per-lane per-sample
         statistics file
+    - seq_len_stats: paths to the sequence length statistics file
     - missing_fastqs: list of Fastq files that bcl2fastq failed
         to generate
     """
@@ -381,6 +384,7 @@ class MakeFastqs(Pipeline):
         self.add_param('stats_full',type=str)
         self.add_param('per_lane_stats',type=str)
         self.add_param('per_lane_sample_stats',type=str)
+        self.add_param('seq_len_stats',type=str)
         self.add_param('nprocessors',type=int)
         self.add_param('cellranger_jobmode',value='local',type=str)
         self.add_param('cellranger_mempercore',type=int)
@@ -438,6 +442,7 @@ class MakeFastqs(Pipeline):
         self.add_output('stats_full',Param())
         self.add_output('per_lane_stats',Param())
         self.add_output('per_lane_sample_stats',Param())
+        self.add_output('seq_len_stats',Param())
         self.add_output('missing_fastqs',self.params._missing_fastqs)
 
         # Lane subsets
@@ -996,6 +1001,14 @@ class MakeFastqs(Pipeline):
             self.add_task(fastq_statistics,
                           runner=self.runners['stats_runner'],
                           requires=(merge_fastq_dirs,))
+            # Sequence lengths
+            seqlen_statistics = SeqLengthStatistics(
+                "Get sequence length statistics",
+                self.params.out_dir,
+                self.params.analysis_dir,
+                stats_file=self.params.seq_len_stats)
+            self.add_task(seqlen_statistics,
+                          requires=(merge_fastq_dirs,))
             # Processing QC report
             report_qc = ReportProcessingQC(
                 "Report Processing QC",
@@ -1006,6 +1019,8 @@ class MakeFastqs(Pipeline):
                 fastq_statistics.output.per_lane_stats,
                 per_lane_sample_stats_file=\
                 fastq_statistics.output.per_lane_sample_stats,
+                seq_len_stats_file=\
+                seqlen_statistics.output.seq_len_stats_file,
                 report_html=self.params.qc_report
             )
             self.add_task(report_qc)
@@ -1813,6 +1828,8 @@ class MakeFastqs(Pipeline):
                 fastq_statistics.output.per_lane_stats)
             self.output.per_lane_sample_stats.set(
                 fastq_statistics.output.per_lane_sample_stats)
+            self.output.seq_len_stats.set(
+                seqlen_statistics.output.seq_len_stats_file)
 
         # Update lists of missing Fastqs
         self.params._missing_fastqs.set(
@@ -1988,6 +2005,13 @@ class MakeFastqs(Pipeline):
         if not os.path.isabs(per_lane_sample_stats):
             per_lane_sample_stats = os.path.join(analysis_dir,
                                                  per_lane_sample_stats)
+        # Sequence length stats
+        if name:
+            seq_len_stats = "seq_len_statistics.%s.info" % name
+        else:
+            seq_len_stats = "seq_len_statistics.info"
+        if not os.path.isabs(seq_len_stats):
+            seq_len_stats = os.path.join(analysis_dir,seq_len_stats)
 
         # QC report
         if name:
@@ -2036,6 +2060,7 @@ class MakeFastqs(Pipeline):
             'stats_full': stats_full,
             'per_lane_stats': per_lane_stats,
             'per_lane_sample_stats': per_lane_sample_stats,
+            'seq_len_stats': seq_len_stats,
             'nprocessors': nprocessors,
             'cellranger_jobmode': cellranger_jobmode,
             'cellranger_mempercore': cellranger_mempercore,
@@ -4087,12 +4112,128 @@ class FastqStatistics(PipelineTask):
         self.output.per_lane_sample_stats.set(
             self.final_per_lane_sample_stats)
 
+class SeqLengthStatistics(PipelineFunctionTask):
+    """
+    Gets statistics on sequence lengths, masking and padding
+    """
+    def init(self,bcl2fastq_dir,out_dir,stats_file=None,
+             force=False):
+        """
+        Initialise the SeqLengthStatistics task
+
+        Arguments:
+          bcl2fastq_dir (str): path to directory with
+            Fastqs from bcl2fastq
+          out_dir (str): path to directory to write the
+            output stats files to
+          stats_file (str): optional, path to sequence
+            length statistics output file
+          force (bool): if True then force update of the
+            statistics file even if it's newer than the
+            Fastq files (by default stats are only updated
+            if they are older than the Fastqs)
+        """
+        # Flag to indicate if statistics should be (re)generated
+        self.generate_stats = False
+        # Fastqs to process
+        self._fastqs = []
+        # Outputs
+        self.add_output("seq_len_stats_file",Param(type=str))
+    def setup(self):
+        # Final output file
+        if self.args.stats_file:
+            self.seq_len_stats_file = self.args.stats_file
+        else:
+            self.seq_len_stats_file = os.path.join(self.args.out_dir,
+                                                   "seq_len_statistics.info")
+        # Load data from bcl2fastq outputs
+        self.report("Loading data from %s" % self.args.bcl2fastq_dir)
+        try:
+            illumina_data = IlluminaData(
+                os.path.dirname(self.args.bcl2fastq_dir),
+                os.path.basename(self.args.bcl2fastq_dir))
+        except Exception as ex:
+            raise Exception("Failed to load bcl2fastq data from %s: "
+                            "%s" % (self.args.bcl2fastq_dir,ex))
+        # Collect FASTQ files
+        for project in illumina_data.projects:
+            for sample in project.samples:
+                for fastq in sample.fastq:
+                    self._fastqs.append(os.path.join(sample.dirn,fastq))
+        # Gather same information for undetermined reads (if present)
+        if illumina_data.undetermined is not None:
+            for lane in illumina_data.undetermined.samples:
+                for fastq in lane.fastq:
+                    self._fastqs.append(os.path.join(lane.dirn,fastq))
+        # Check if any Fastqs are newer than stats
+        if os.path.exists(self.seq_len_stats_file):
+            stats_mtime = os.path.getmtime(self.seq_len_stats_file)
+            for fastq in self._fastqs:
+                if (os.path.getmtime(fastq) > stats_mtime):
+                    self.generate_stats = True
+                    break
+        else:
+            self.generate_stats = True
+        # Do stats need generating?
+        if self.generate_stats:
+            print("Fastqs are newer than existing stats files")
+        else:
+            print("Stats files are newer than Fastqs")
+            if self.args.force:
+                # Force regenerate the statistics
+                self.generate_stats = True
+        # Don't continue if nothing to do
+        if not self.generate_stats:
+            print("Nothing to do")
+            return
+        # Get sequence length data for Fastqs
+        for fastq in self._fastqs:
+            outfile = "%s_seqlens.json" % os.path.basename(fastq)
+            self.add_call(
+                "Get read lengths for %s" % os.path.basename(fastq),
+                get_sequence_lengths,
+                fastq)
+    def finish(self):
+        if self.generate_stats:
+            print("Collating sequence length statistics")
+            stats = {}
+            for result in self.result():
+                # Each result is a dictionary with the sequence
+                # lengths data
+                stats[os.path.basename(result['fastq'])] = \
+                    [result['min_length'],
+                     result['max_length'],
+                     result['mean_length'],
+                     result['nreads'],
+                     result['nreads_masked'],
+                     result['nreads_padded'],
+                     result['frac_reads_masked'],
+                     result['frac_reads_padded']]
+            fastqs = sorted([fq for fq in stats])
+            with open(self.seq_len_stats_file,'wt') as fp:
+                fp.write("%s\n" % '\t'.join(["#Fastq",
+                                             "min",
+                                             "max",
+                                             "mean",
+                                             "nreads",
+                                             "masked",
+                                             "padded",
+                                             "masked_frac",
+                                             "padded_frac",]))
+                for fastq in fastqs:
+                    fp.write("%s\t%s\n" %
+                             (fastq,'\t'.join([str(x)
+                                               for x in stats[fastq]])))
+        # Assign outputs
+        self.output.seq_len_stats_file.set(self.seq_len_stats_file)
+
 class ReportProcessingQC(PipelineTask):
     """
     Generate HTML report on the processing QC
     """
     def init(self,name,analysis_dir,stats_file,per_lane_stats_file,
-             per_lane_sample_stats_file,report_html):
+             per_lane_sample_stats_file,seq_len_stats_file,
+             report_html):
         """
         Initialise the ReportProcessingQC task
 
@@ -4106,6 +4247,8 @@ class ReportProcessingQC(PipelineTask):
             per-lane statistics file
           per_lane_sample_stats_file (str): path to
             the per-lane per-sample statistics file
+          seq_len_stats_file (str): path to the
+            sequence length statistics file
           report_html (str): path to the output
             HTML QC report
         """
@@ -4119,6 +4262,7 @@ class ReportProcessingQC(PipelineTask):
             self.args.stats_file,
             self.args.per_lane_stats_file,
             self.args.per_lane_sample_stats_file,
+            self.args.seq_len_stats_file,
             name=self.args.name).\
             write(self.tmp_report)
     def finish(self):

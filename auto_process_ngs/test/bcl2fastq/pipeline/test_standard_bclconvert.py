@@ -62,6 +62,9 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -80,6 +83,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -152,6 +156,9 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -168,6 +175,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -245,6 +253,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -261,6 +272,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -338,6 +350,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -354,6 +369,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -424,6 +440,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -440,6 +459,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -510,6 +530,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -526,6 +549,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -599,6 +623,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -615,6 +642,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -685,6 +713,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -701,6 +732,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -771,6 +803,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -787,6 +822,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -855,6 +891,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -871,6 +910,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -930,6 +970,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
         self.assertEqual(p.output.stats_full,None)
         self.assertEqual(p.output.per_lane_stats,None)
         self.assertEqual(p.output.per_lane_sample_stats,None)
+        self.assertEqual(p.output.seq_len_stats,None)
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),):
@@ -949,6 +990,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,""")
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertFalse(os.path.exists(
                 os.path.join(analysis_dir,filen)),
@@ -1023,6 +1065,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1041,6 +1086,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -1172,6 +1218,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1190,6 +1239,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -1300,6 +1350,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1318,6 +1371,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -1451,6 +1505,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1467,6 +1524,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -1557,6 +1615,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -1575,6 +1636,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -1631,6 +1693,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                   "statistics.info",
                   "per_lane_statistics.info",
                   "per_lane_sample_stats.info",
+                  "seq_len_statistics.info",
                   "processing_qc.html",):
             with open(os.path.join(analysis_dir,f),'wt') as fp:
                 fp.write("")
@@ -1667,6 +1730,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -1682,6 +1748,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
