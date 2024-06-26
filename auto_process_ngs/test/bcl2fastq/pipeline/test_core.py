@@ -63,6 +63,9 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -85,6 +88,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -122,6 +126,8 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                                       "the_per_lane_stats.txt")
         per_lane_sample_stats = os.path.join(analysis_dir,
                                              "the_per_lane_sample_stats.txt")
+        seq_len_statistics = os.path.join(analysis_dir,
+                                          "the_seq_len_statistics.info")
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
@@ -224,6 +230,9 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.test.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.test.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -241,6 +250,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                       "statistics_full.test.info",
                       "per_lane_statistics.test.info",
                       "per_lane_sample_stats.test.info",
+                      "seq_len_statistics.test.info",
                       "processing_qc_test.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -310,6 +320,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertFalse(os.path.exists(
                 os.path.join(analysis_dir,filen)),
@@ -367,6 +378,9 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -385,6 +399,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -442,6 +457,9 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_UNKNOWN_00002_AHGXXXX"),
@@ -458,6 +476,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -515,6 +534,9 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         self.assertEqual(p.output.per_lane_sample_stats,
                          os.path.join(analysis_dir,
                                       "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.seq_len_stats,
+                         os.path.join(analysis_dir,
+                                      "seq_len_statistics.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_UNKNOWN_00002_AHGXXXX"),
@@ -531,6 +553,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
@@ -701,6 +724,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
+                      "seq_len_statistics.info",
                       "processing_qc.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),

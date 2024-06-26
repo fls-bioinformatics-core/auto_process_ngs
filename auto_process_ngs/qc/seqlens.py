@@ -241,20 +241,28 @@ def get_sequence_lengths(fastq,outfile=None,show_progress=False,
                 reads_padded[seqlen] = 1
     # Get statistics
     seqlens = sorted(sequence_length.keys())
-    min_len = min(seqlens)
-    max_len = max(seqlens)
-    mean_len = float(sum([l*sequence_length[l] for l in seqlens]))\
-               /float(nreads)
-    median_read = nreads//2
-    median_len = None
-    read_count = 0
-    for l in seqlens:
-        read_count += sequence_length[l]
-        if read_count >= median_read:
-            median_len = l
-            break
-    frac_reads_masked = float(nreads_masked)/nreads*100.0
-    frac_reads_padded = float(nreads_padded)/nreads*100.0
+    if seqlens:
+        min_len = min(seqlens)
+        max_len = max(seqlens)
+        mean_len = float(sum([l*sequence_length[l] for l in seqlens]))\
+                   /float(nreads)
+        median_read = nreads//2
+        median_len = None
+        read_count = 0
+        for l in seqlens:
+            read_count += sequence_length[l]
+            if read_count >= median_read:
+                median_len = l
+                break
+        frac_reads_masked = float(nreads_masked)/nreads*100.0
+        frac_reads_padded = float(nreads_padded)/nreads*100.0
+    else:
+        min_len = None
+        max_len = None
+        mean_len = None
+        median_len = None
+        frac_reads_masked = None
+        frac_reads_padded = None
     # Build dictionary for output
     stats = dict(fastq=fastq,
                  nreads=nreads,
