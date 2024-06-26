@@ -53,7 +53,8 @@ class ProcessingQCReport(Document):
     >>> report.write("processing_qc_report.html")
     """
     def __init__(self,analysis_dir,stats_file,per_lane_stats_file,
-                 per_lane_sample_stats_file,name=None):
+                 per_lane_sample_stats_file,seq_len_stats_file=None,
+                 name=None):
         """
         Create a new ProcessingQCReport instance
 
@@ -66,6 +67,8 @@ class ProcessingQCReport(Document):
             'per_lane_statistics.info' statistics file
           per_lane_sample_stats_file (str): path to the
             'per_lane_sample_stats.info' statistics file
+          seq_len_stats_file (str): optional path to the
+            'seq_len_statistics.info' statistics file
           name (str): optional identifier to add to the
             report title
         """
@@ -80,6 +83,7 @@ class ProcessingQCReport(Document):
         self._stats_file = stats_file
         self._per_lane_stats_file = per_lane_stats_file
         self._per_lane_sample_stats_file = per_lane_sample_stats_file
+        self._seq_len_stats_file = seq_len_stats_file
         # Add CSS styling rules
         self.add_css_rule(css_rules.QC_REPORT_CSS_RULES)
         self.add_css_rule("table { font-size: 80%;\n"
@@ -360,6 +364,11 @@ class ProcessingQCReport(Document):
         project_toc_list = List()
         per_file_stats.add(project_toc_list)
         stats = TabFile(self._stats_file,first_line_is_header=True)
+        if self._seq_len_stats_file is not None:
+            seq_lens = TabFile(self._seq_len_stats_file,
+                               first_line_is_header=True)
+        else:
+            seq_lens = None
         projects = sorted(list(set([d['Project'] for d in stats])))
         lanes = [c for c in stats.header() if c.startswith('L')]
         sample = None
@@ -399,7 +408,10 @@ class ProcessingQCReport(Document):
             tbl = Table(columns=('Sample','Fastq','Size'))
             if subset_lanes:
                 tbl.append_columns(*subset_lanes)
-            tbl.append_columns('Barplot','Nreads')
+            tbl.append_columns('ReadsPerLane','Nreads')
+            if seq_lens:
+                tbl.append_columns('MinLen','MaxLen','MeanLen',
+                                   'Masked','Padded','PropMaskedPadded')
             s.add(tbl)
             for line in subset:
                 if sample == line['Sample']:
@@ -428,7 +440,29 @@ class ProcessingQCReport(Document):
                                       colors=('grey','lightgrey'),
                                       bbox=True,
                                       inline=True)
-                data['Barplot'] = Img(barplot)
+                data['ReadsPerLane'] = Img(barplot)
+                if seq_lens:
+                    length_data = seq_lens.lookup('Fastq',
+                                                  line['Fastq'])[0]
+                    if length_data['nreads']:
+                        masked = length_data['masked_frac']
+                        padded = length_data['padded_frac']
+                        data['MinLen'] = length_data['min']
+                        data['MaxLen'] = length_data['max']
+                        data['MeanLen'] = "%.1f" % length_data['mean']
+                        data['Masked'] = "%.2f%%" % masked
+                        data['Padded'] = "%.2f%%" % padded
+                        plot_data = [masked,
+                                     masked+padded,
+                                     100.0]
+                        data['PropMaskedPadded'] = Img(
+                            ustackedbar(plot_data,
+                                        length=100,height=10,
+                                        colors=('black',
+                                                'grey',
+                                                'lightgrey'),
+                                        bbox=True,
+                                        inline=True))
                 tbl.add_row(**data)
         # Add to table of contents
         self.add_to_toc("Per-file statistics by project",
