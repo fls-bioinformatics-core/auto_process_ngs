@@ -678,6 +678,24 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "10x_Visium_FFPE_PEX")
 
+    def test_determine_qc_protocol_10x_visium_cytassist_hd_gex(self):
+        """determine_qc_protocol: HD spatial GEX run (10xGenomics CytAssist Visium)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics CytAssist Visium",
+                                          'Library type':
+                                          "HD Spatial GEX"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_Visium_HD")
+
     def test_determine_qc_protocol_10x_multiome_atac(self):
         """determine_qc_protocol: single cell multiome ATAC run (10xGenomics Multiome ATAC)
         """
