@@ -270,6 +270,7 @@ class QCPipeline(Pipeline):
         require_bam_files = False
         for qc_module in ('picard_insert_size_metrics',
                           'rseqc_genebody_coverage',
+                          'rseqc_infer_experiment',
                           'qualimap_rnaseq'):
             if qc_module in qc_modules:
                 require_bam_files = True
@@ -522,6 +523,7 @@ class QCPipeline(Pipeline):
                 reference_gene_model_file,
                 os.path.join(qc_dir,'rseqc_infer_experiment',organism_name))
             self.add_task(rseqc_infer_experiment)
+            verify_qc.requires(rseqc_infer_experiment)
 
         ################
         # Add QC modules
