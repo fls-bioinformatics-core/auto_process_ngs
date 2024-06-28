@@ -379,6 +379,32 @@ class QCVerifier(QCOutputs):
                 return False
             return True
 
+        elif name == "rseqc_infer_experiment":
+            if not seq_data_fastqs:
+                # Nothing to check
+                return None
+            if not organism:
+                # No organism specified
+                return None
+            if not star_index or not annotation_bed:
+                # No STAR index or annotation
+                return None
+            if "rseqc_infer_experiment" not in self.outputs:
+                # No RSeQC infer_experiment.py output present
+                return False
+            if normalise_organism_name(organism) not in \
+               self.data('rseqc_infer_experiment').organisms:
+                return False
+            # Filter Fastq names and convert to BAM names
+            bams = [get_bam_basename(fq)
+                    for fq in self.filter_fastqs(seq_data_reads[:1],
+                                                 seq_data_fastqs)]
+            # Check that outputs exist for every BAM
+            for bam in bams:
+                if bam not in self.data('rseqc_infer_experiment').bam_files:
+                    return False
+            return True
+
         elif name == "picard_insert_size_metrics":
             if not seq_data_fastqs:
                 # Nothing to check

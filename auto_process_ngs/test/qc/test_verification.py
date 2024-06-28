@@ -324,6 +324,76 @@ class TestQCVerifier(unittest.TestCase):
             star_index="/data/indexes/STAR",
             annotation_bed="/data/annot/human.bed"))
 
+    def test_qcverifier_verify_qc_module_rseqc_infer_experiment(self):
+        """
+        QCVerifier: verify QC module 'rseqc_infer_experiment'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_rseqc_infer_experiment=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'rseqc_infer_experiment',
+            fastqs=fastq_names,
+            organism="Human",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf",
+            annotation_bed="/data/annot/human.bed"))
+        # Returns None if organism, STAR index or annotation
+        # is not supplied
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_infer_experiment',
+                             fastqs=fastq_names,
+                             star_index="/data/indexes/STAR",
+                             annotation_gtf="/data/annot/human.gtf",
+                             annotation_bed="/data/annot/human.bed"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_infer_experiment',
+                             fastqs=fastq_names,
+                             organism="Human",
+                             annotation_gtf="/data/annot/human.gtf",
+                             annotation_bed="/data/annot/human.bed"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_infer_experiment',
+                             fastqs=fastq_names,
+                             organism="Human",
+                             star_index="/data/indexes/STAR"))
+        # Organism name contains spaces
+        qc_dir = self._make_qc_dir('qc.homo_sapiens',
+                                   fastq_names=fastq_names[:-2],
+                                   organisms=('Homo sapiens',),
+                                   include_rseqc_infer_experiment=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'rseqc_infer_experiment',
+            fastqs=fastq_names,
+            organism="Homo sapiens",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf",
+            annotation_bed="/data/annot/human.bed"))
+        # Empty QC directory
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_rseqc_infer_experiment=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'rseqc_infer_experiment',
+            fastqs=fastq_names,
+            organism="Human",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf",
+            annotation_bed="/data/annot/human.bed"))
+
     def test_qcverifier_verify_qc_module_picard_insert_size_metrics(self):
         """
         QCVerifier: verify QC module 'picard_insert_size_metrics'
