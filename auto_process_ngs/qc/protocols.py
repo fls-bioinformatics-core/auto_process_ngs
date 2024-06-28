@@ -554,6 +554,7 @@ class QCProtocol:
                              'strandedness',
                              'picard_insert_size_metrics',
                              'rseqc_genebody_coverage',
+                             'rseqc_infer_experiment',
                              'qualimap_rnaseq'):
                 mapped_metrics.append(qc_module)
         return mapped_metrics
