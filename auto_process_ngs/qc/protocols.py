@@ -294,6 +294,21 @@ QC_PROTOCOLS = {
         ]
     },
 
+    "10x_Visium_HD": {
+        "description": "10xGenomics Visium HD spatial GEX",
+        "reads": {
+            "seq_data": ('r2:1-50',),
+            "index": ('r1',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'rseqc_genebody_coverage',
+            'qualimap_rnaseq'
+        ]
+    },
+
     "ParseEvercode": {
         "description": "Parse Biosciences Evercode data",
         "reads": {
@@ -661,6 +676,8 @@ def determine_qc_protocol(project):
             protocol = "10x_Visium_FFPE"
         elif project.info.library_type == "FFPE Spatial PEX":
             protocol = "10x_Visium_FFPE_PEX"
+        elif project.info.library_type == "HD Spatial GEX":
+            protocol = "10x_Visium_HD"
         else:
             protocol = "10x_Visium"
     # Multiome ATAC+GEX
