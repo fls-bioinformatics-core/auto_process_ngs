@@ -275,6 +275,29 @@ def add_job_control_options(p,max_cores,max_jobs,max_batches):
                           "NBATCHES (default: %s)"
                           % (max_batches if max_batches else 'no batching'))
 
+def add_custom_protocol_options(p):
+    """
+    Options for defining custom protocols
+    """
+    protocol = p.add_argument_group('Custom QC protocol')
+    protocol.add_argument("--protocol-spec",metavar='SPECIFICATION',
+                          action='store',
+                          dest="custom_protocol_spec",default=None,
+                          help="specify the QC protocol to use as a full "
+                          "specification string")
+    protocol.add_argument("--index-reads",metavar='READS',action="store",
+                          dest="custom_index_reads",default=None,
+                          help="explicitly specify the reads to treat "
+                          "as index sequences (e.g. 'R2')")
+    protocol.add_argument("--sequence-reads",metavar='READS',action="store",
+                          dest="custom_seq_reads",default=None,
+                          help="explicitly specify the reads to treat "
+                          "as biological sequences data (e.g. 'R1,R3')")
+    protocol.add_argument("--qc-modules",metavar='QC_MODULES',action="store",
+                          dest="custom_qc_modules",default=None,
+                          help="explicitly specify the QC modules to run "
+                          "(e.g. 'fastqc,fastq_screen')")
+
 def add_advanced_options(p,use_legacy_screen_names):
     """
     Advanced options
@@ -645,6 +668,7 @@ def main():
                             max_cores=settings.general.max_cores,
                             max_jobs=settings.general.max_concurrent_jobs,
                             max_batches=settings.general.max_batches)
+    add_custom_protocol_options(p)
     add_advanced_options(p,use_legacy_screen_names=
                          settings.qc.use_legacy_screen_names)
     add_debug_options(p)
@@ -925,6 +949,7 @@ def main():
                          "run QC anyway)")
             sys.exit(1)
         print("Output QC directory already exists, updating")
+    qc_info_file = os.path.join(qc_dir,"qc.info")
 
     # Output file name
     if args.filename is None:
@@ -985,11 +1010,58 @@ def main():
     print("Loaded project '%s'" % project.name)
 
     # Fetch the QC protocol
+    announce("Building QC protocol")
     if args.qc_protocol:
+        # Protocol name supplied on command line
         qc_protocol = args.qc_protocol
+    elif args.custom_protocol_spec:
+        # Explicit protocol specification
+        qc_protocol = args.custom_protocol_spec
     else:
+        # Determine default protocol from project
         qc_protocol = determine_qc_protocol(project)
-    protocol = fetch_protocol_definition(qc_protocol)
+        if os.path.exists(qc_info_file):
+            # Override from existing metadata
+            qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+            if qc_info.protocol_specification:
+                qc_protocol = qc_info.protocol_specification
+            elif qc_info.protocol:
+                qc_protocol = qc_info.protocol
+    try:
+        protocol = fetch_protocol_definition(qc_protocol)
+    except Exception as ex:
+        logger.fatal("Unable to get QC protocol for '%s': %s" %
+                     (qc_protocol,ex))
+        sys.exit(1)
+
+    # Adjust protocol
+    custom_seq_reads = None
+    if args.custom_seq_reads is not None:
+        custom_seq_reads = [x.strip().lower()
+                            for x in str(args.custom_seq_reads).split(',')]
+        print("...setting custom sequence data reads: %s" %
+              ','.join(custom_seq_reads))
+    custom_index_reads = None
+    if args.custom_index_reads is not None:
+        custom_index_reads = [x.strip().lower()
+                              for x in str(args.custom_index_reads).split(',')]
+        print("...setting custom index reads: %s" %
+              ','.join(custom_index_reads))
+    custom_qc_modules = None
+    if args.custom_qc_modules is not None:
+        custom_qc_modules = [x.strip()
+                             for x in str(args.custom_qc_modules).split(',')]
+        print("...setting custom QC modules: %s" %
+              ','.join(custom_qc_modules))
+    if custom_seq_reads or custom_index_reads or custom_qc_modules:
+        protocol.update(seq_data_reads=custom_seq_reads,
+                        index_reads=custom_index_reads,
+                        qc_modules=custom_qc_modules)
+        protocol.name = "custom"
+        protocol.description = "Custom protocol"
+
+    # Report final protocol
+    print("QC protocol: %s" % protocol)
 
     # Set working directory for pipeline
     working_dir = args.working_dir
@@ -1061,8 +1133,7 @@ def main():
 
     # Update the QC metadata
     announce("Updating QC metadata")
-    qc_info = AnalysisProjectQCDirInfo(filen=os.path.join(qc_dir,
-                                                          "qc.info"))
+    qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
     if qc_info.fastq_dir:
         if master_fastq_dir:
             print("Updating stored Fastq directory for QC: %s" %

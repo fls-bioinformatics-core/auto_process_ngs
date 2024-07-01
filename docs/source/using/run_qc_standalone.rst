@@ -50,8 +50,6 @@ Specifying the QC metadata
 The following options specify metadata for the QC which will
 determine which metrics are run:
 
-* ``--protocol``: specify the QC protocol (see :doc:`run_qc`
-  for a complete list, or use the ``--info`` option)
 * ``--organism``: specify the organism(s) (e.g. ``human``,
   ``mouse`` etc; use the ``--info`` option to list the
   organisms available in the current configuration)
@@ -223,3 +221,39 @@ This results in per-lane QC metrics, which can be useful for
 diagnostic purposes when handling Fastqs which have been merged
 across multiple lanes (for example, to determine whether
 contanimation is confined to a single lane).
+
+Specifying and customising the QC protocols
+-------------------------------------------
+
+If a QC protocol is not specified explicitly then by default
+``run_qc.py`` will determine which protocol to use based on the
+metadata; see :doc:`run_qc` for a complete list of the built-in
+protocols (or use ``run_qc.py``'s ``--info`` option).
+
+This behaviour can be overridden in a number of ways:
+
+* The ``--protocol`` option can be used to explicitly specify
+  one of the built-in QC protocols to use, or
+* The ``--protocol-spec`` option can be used to fully specify
+  a custom QC protocol using a specification string (see
+  :doc:`qc_protocol_specification` for details of protocol
+  specification strings), or
+* A combination of the ``--sequence-reads``, ``--index-reads``
+  and/or ``--qc-modules`` can be used to customise or specify
+  the QC protocol.
+
+The ``--sequence-reads`` and ``--index-reads`` options specify
+which reads contain biological data and which contain only
+"index" data; the ``--qc-modules`` option specify which QC
+metrics will be generated and reported.
+
+.. note::
+
+   Details of the available QC modules can be found in
+   :ref:`qc_protocols_qc_modules`.
+
+.. note::
+
+   Using ``--sequence-reads``, ``--index-reads`` and
+   ``--qc-modules`` will override the relevant parts of the
+   specified or automatically determined QC protocol.

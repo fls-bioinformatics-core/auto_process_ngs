@@ -12,6 +12,7 @@ from auto_process_ngs.qc.protocols import QCProtocol
 from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.protocols import parse_protocol_spec
+from auto_process_ngs.qc.protocols import QCProtocolError
 from auto_process_ngs.qc.protocols import QCProtocolParseSpecError
 
 # Set to False to keep test output dirs
@@ -80,6 +81,45 @@ class TestQCProtocol(unittest.TestCase):
                                           "qc_modules=[fastq_screen,"
                                           "fastqc,sequence_lengths]")
         self.assertEqual(p,q)
+
+    def test_qcprotocol_update(self):
+        """
+        QCProtocol: check protocol can be updated
+        """
+        p = QCProtocol(name="example",
+                       description="Example protocol",
+                       seq_data_reads=['r1','r2'],
+                       index_reads=None,
+                       qc_modules=("fastqc",
+                                   "fastq_screen",
+                                   "sequence_lengths"))
+        self.assertEqual(p.seq_data_reads,['r1','r2'])
+        self.assertEqual(p.index_reads,[])
+        self.assertEqual(p.qc_modules,["fastq_screen",
+                                       "fastqc",
+                                       "sequence_lengths"])
+        p.update(seq_data_reads=['r2'],
+                 index_reads=['r1'],
+                 qc_modules=["sequence_lengths","fastqc"])
+        self.assertEqual(p.seq_data_reads,['r2'])
+        self.assertEqual(p.index_reads,['r1'])
+        self.assertEqual(p.qc_modules,["fastqc",
+                                       "sequence_lengths"])
+
+    def test_qcprotocol_unrecognised_module(self):
+        """
+        QCProtocol: raise exception for unrecognised QC module
+        """
+        self.assertRaises(QCProtocolError,
+                          QCProtocol,
+                          name="example",
+                          description="Example protocol",
+                          seq_data_reads=['r1','r2'],
+                          index_reads=None,
+                          qc_modules=("fastqc",
+                                      "doesnt_exist",
+                                      "fastq_screen",
+                                      "sequence_lengths"))
 
     def test_qcprotocol_null_protocol(self):
         """
