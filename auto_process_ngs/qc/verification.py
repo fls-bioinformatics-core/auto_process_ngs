@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     verification: utilities for verification of QC outputs
-#     Copyright (C) University of Manchester 2022-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2022-2024 Peter Briggs
 #
 
 """
@@ -396,9 +396,13 @@ class QCVerifier(QCOutputs):
                self.data('rseqc_infer_experiment').organisms:
                 return False
             # Filter Fastq names and convert to BAM names
-            bams = [get_bam_basename(fq)
-                    for fq in self.filter_fastqs(seq_data_reads[:1],
-                                                 seq_data_fastqs)]
+            if seq_data_reads:
+                fastqs = self.filter_fastqs(seq_data_reads[:1],
+                                            seq_data_fastqs)
+            else:
+                # No Fastqs to get BAM names from
+                return None
+            bams = [get_bam_basename(fq) for fq in fastqs]
             # Check that outputs exist for every BAM
             for bam in bams:
                 if bam not in self.data('rseqc_infer_experiment').bam_files:
