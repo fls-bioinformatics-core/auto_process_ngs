@@ -103,6 +103,26 @@ class TestVerifyQCFunction(unittest.TestCase):
         # Do verification
         self.assertFalse(verify_qc(project))
 
+    def test_verify_qc_custom_protocol(self):
+        """verify_qc: project with custom QC protocol
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Add QC outputs
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs()
+        # Update QC metadata with custom protocol name and specification
+        qc_info = project.qc_info("qc")
+        qc_info['protocol'] = "Custom_QC"
+        qc_info['protocol_specification'] = "Custom_QC:'Custom QC':seq_reads=[r1,r2]:index_reads=[]:qc_modules=[fastq_screen,fastqc,sequence_lengths]"
+        qc_info.save()
+        self.assertTrue(verify_qc(project))
+
 class TestReportQCFunction(unittest.TestCase):
     """
     Tests for report_qc function

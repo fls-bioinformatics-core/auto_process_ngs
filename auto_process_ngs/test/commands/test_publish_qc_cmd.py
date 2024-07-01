@@ -446,6 +446,52 @@ poll_interval = 0.1
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
 
+    def test_publish_qc_with_projects_custom_qc_protocols(self):
+        """publish_qc: projects with custom QC protocols
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Update QC metadata with custom protocol names and specifications
+        for project in ap.get_analysis_projects():
+            qc_info = project.qc_info("qc")
+            qc_info['protocol'] = "Custom_QC"
+            qc_info['protocol_specification'] = "Custom_QC:'Custom QC':seq_reads=[r1,r2]:index_reads=[]:qc_modules=[fastq_screen,fastqc,sequence_lengths]"
+            qc_info.save()
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              project.info.run)
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
     def test_publish_qc_with_project_missing_qc(self):
         """publish_qc: raises exception if project has missing QC
         """
