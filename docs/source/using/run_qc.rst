@@ -60,6 +60,8 @@ QC module                      Details
 ``rseqc_genebody_coverage``    Runs `rseqc`_ ``geneBody_coverage.py`` to
                                generate gene body coverage plot for all
 			       samples
+``rseqc_infer_experimemt``     Run `rseqc`_ ``infer_experiment.py`` to
+                               determine strand-specificity
 ``qualimap_rnaseq``            Runs `qualimap`_ ``rnaseq`` to generate
                                various metrics including coverage and
 			       genomic origin of reads
