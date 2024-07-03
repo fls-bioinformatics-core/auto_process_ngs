@@ -1452,6 +1452,61 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,i
                                         r1=102,r2=102),
                          "y101,I8,nnnnnnnn,y101")
 
+    def test_get_bases_mask_10x_index_truncate_r1_and_r2_reads(self):
+        """get_bases_mask: truncate R1 and R2 reads (10x Genomics index)
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.nextseq("171020_NB500968_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,4/24/2018
+Workflow,GenerateFASTQ
+Application,NextSeq FASTQ Only
+Assay,Nextera XT v2 Set A
+Description,
+Chemistry,Default
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+SL1,SL1,,,N701,SI-GA-A2,SL,
+SL2,SL2,,,N702,SI-GA-B2,SL,
+SL3,SL3,,,N703,SI-GA-C2,SL,
+SL4,SL4,,,N704,SI-GA-D2,SL,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Truncate R1 and R2 reads in bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=26,r2=50),
+                         "y26n50,I6,y50n26")
+        # Truncate R1 read only
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=26),
+                         "y26n50,I6,y76")
+        # Truncate R2 read only
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r2=26),
+                         "y76,I6,y26n50")
+        # "Truncate" R1 and R2 reads to same length as actual reads
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=76,r2=76),
+                         "y76,I6,y76")
+        # "Truncate" R1 and R2 reads to longer lengths than actual reads
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=77,r2=77),
+                         "y76,I6,y76")
+
     def test_get_bases_mask_single_index_no_sample_sheet(self):
         """get_bases_mask: handle single index (no samplesheet)
         """
