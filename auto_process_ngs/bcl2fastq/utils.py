@@ -459,19 +459,6 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
     # Get initial bases mask
     bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
     print("Bases mask: %s (from RunInfo.xml)" % bases_mask)
-    if sample_sheet_file is not None:
-        # Update bases mask from sample sheet
-        example_barcode = IlluminaData.samplesheet_index_sequence(
-            IlluminaData.SampleSheet(sample_sheet_file).data[0])
-        if example_barcode is None:
-            example_barcode = ""
-        if barcode_is_10xgenomics(example_barcode):
-            print("Bases mask: barcode is 10xGenomics sample set ID")
-        else:
-            bases_mask = IlluminaData.fix_bases_mask(bases_mask,
-                                                     example_barcode)
-        print("Bases mask: %s (updated for barcode sequence '%s')" %
-              (bases_mask,example_barcode))
     # Truncate reads if specified
     if not (r1 is None and r2 is None):
         lengths = (r1,r2)
@@ -496,6 +483,19 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
                 reads.append(read)
         bases_mask = ','.join(reads)
         print("Bases mask: %s (updated to truncate reads)" % bases_mask)
+    # Update bases mask from sample sheet if supplied
+    if sample_sheet_file is not None:
+        example_barcode = IlluminaData.samplesheet_index_sequence(
+            IlluminaData.SampleSheet(sample_sheet_file).data[0])
+        if example_barcode is None:
+            example_barcode = ""
+        if barcode_is_10xgenomics(example_barcode):
+            print("Bases mask: barcode is 10xGenomics sample set ID")
+        else:
+            bases_mask = IlluminaData.fix_bases_mask(bases_mask,
+                                                     example_barcode)
+        print("Bases mask: %s (updated for barcode sequence '%s')" %
+              (bases_mask,example_barcode))
     return bases_mask
 
 def bases_mask_is_valid(bases_mask):
