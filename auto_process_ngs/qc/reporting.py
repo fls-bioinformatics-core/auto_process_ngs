@@ -2941,7 +2941,9 @@ class FastqGroupQCReporter:
         elif field == "bam_file":
             value = self.bam
         elif field == "reads":
-            if self.reporters[self.reads[0]].sequence_lengths:
+            if not self.reads:
+                value = ''
+            elif self.reporters[self.reads[0]].sequence_lengths:
                 value = pretty_print_reads(
                     self.reporters[self.reads[0]].sequence_lengths.nreads)
             else:
