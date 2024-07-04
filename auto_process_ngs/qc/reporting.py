@@ -1715,6 +1715,18 @@ class QCProject:
         else:
             logger.warning("Run metadata file '%s' not found"
                            % run_metadata_file)
+        # Run reference ID
+        try:
+            self.run_id = run_id(self.project.info['run'],
+                                 platform=self.project.info['platform'],
+                                 facility_run_number=
+                                 self.run_metadata['run_number'],
+                                 analysis_number=
+                                 self.run_metadata['analysis_number'])
+        except (AttributeError,TypeError) as ex:
+            logger.warning("'%s': run reference ID can't be "
+                           "determined: %s (ignored)" % (self.name,ex))
+            self.run_id = None
         # Collect processing software metadata
         try:
             self.processing_software = ast.literal_eval(
@@ -1777,30 +1789,6 @@ class QCProject:
         Comments associated with the project
         """
         return self.project.info.comments
-
-    @property
-    def run_id(self):
-        """
-        Identifier for parent run
-
-        This is the standard identifier constructed
-        from the platform, datestamp and facility
-        run number (e.g. ``MINISEQ_201120#22``).
-
-        If an identifier can't be constructed then
-        ``None`` is returned.
-        """
-        try:
-            return run_id(self.info['run'],
-                          platform=self.info['platform'],
-                          facility_run_number=
-                          self.run_metadata['run_number'],
-                          analysis_number=
-                          self.run_metadata['analysis_number'])
-        except (AttributeError,TypeError) as ex:
-            logger.warning("Run reference ID can't be "
-                           "determined: %s (ignored)" % ex)
-            return None
 
     @property
     def is_single_cell(self):
