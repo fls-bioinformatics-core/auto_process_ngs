@@ -1939,14 +1939,34 @@ class SampleQCReporter:
                 qc_dir = os.path.join(project.dirn)
         else:
             qc_dir = project.qc_dir
-        # Group Fastqs associated with this sample
+        # Get Fastqs associated with this sample
         self.fastqs = sorted(list(
             filter(lambda fq:
                    project.fastq_attrs(fq).sample_name == sample,
                    project.fastqs)))
+        # Get associated BAM files
+        self.bams = sorted(list(
+            filter(lambda bam:
+                   project.fastq_attrs(bam).sample_name == sample,
+                   project.bams)))
+        # Add reporters for each Fastq group
         for fqs in group_fastqs_by_name(self.fastqs,fastq_attrs):
             self.fastq_groups.append(FastqGroupQCReporter(
                 fqs,
+                qc_dir=qc_dir,
+                project=project,
+                project_id=project.id,
+                fastq_attrs=fastq_attrs,
+                is_seq_data=self.is_seq_data))
+        # Add reporters for any BAM files not associated
+        # with a Fastq group
+        for bam in self.bams:
+            if bam in [grp.bam for grp in self.fastq_groups
+                       if grp.bam is not None]:
+                continueq
+            self.fastq_groups.append(FastqGroupQCReporter(
+                [],
+                bam_file=bam,
                 qc_dir=qc_dir,
                 project=project,
                 project_id=project.id,
@@ -2455,14 +2475,17 @@ class FastqGroupQCReporter:
         path will be treated as a subdirectory of the
         project
       project (QCProject): parent project
+      bam_file (str): (optional) basename for an associated BAM
+        file
       project_id (str): identifier for the project
       fastq_attrs (BaseFastqAttrs): class for extracting
         data from Fastq names
       is_seq_data (bool): if True then indicates that the
         group contains biological data
     """
-    def __init__(self,fastqs,qc_dir,project,project_id=None,
-                 fastq_attrs=AnalysisFastq,is_seq_data=True):
+    def __init__(self,fastqs,qc_dir,project,bam_file=None,
+                 project_id=None,fastq_attrs=AnalysisFastq,
+                 is_seq_data=True):
         """
         Create a new FastqGroupQCReporter
         """
@@ -2493,11 +2516,14 @@ class FastqGroupQCReporter:
             self.reads.add(read)
         self.reads = sorted(list(self.reads))
         # Locate matching BAM file
-        self.bam = None
-        for fastq in fastqs:
-            bam = get_bam_basename(fastq,self.fastq_attrs)
-            if bam in self.project.bams:
-                self.bam = "%s" % bam
+        if bam_file:
+            self.bam = bam_file
+        else:
+            self.bam = None
+            for fastq in fastqs:
+                bam = get_bam_basename(fastq,self.fastq_attrs)
+                if bam in self.project.bams:
+                    self.bam = "%s" % bam
 
     @property
     def paired_end(self):
