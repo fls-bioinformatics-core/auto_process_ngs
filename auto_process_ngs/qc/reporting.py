@@ -499,52 +499,10 @@ class QCReport(Document):
                            ', '.join(project.software[package])))
             # Fields to report in summary table
             if not summary_fields:
-                if project.fastqs:
-                    if len(project.reads) > 1:
-                        summary_fields_ = ['sample',
-                                           'fastqs',
-                                           'reads']
-                    else:
-                        summary_fields_ = ['sample',
-                                           'fastq',
-                                           'reads']
-                    summary_fields_.extend(['read_counts',
-                                            'read_lengths',
-                                            'sequence_duplication',
-                                            'adapter_content'])
-                elif project.bams:
-                    summary_fields_ = ['sample',
-                                       'bam_file']
-                if 'strandedness' in project.outputs:
-                    summary_fields_.append('strandedness')
-                elif 'rseqc_infer_experiment' in project.outputs:
-                    summary_fields_.append('strand_specificity')
-                if 'picard_insert_size_metrics' in project.outputs:
-                    summary_fields_.append('insert_size_histogram')
-                if 'qualimap_rnaseq' in project.outputs:
-                    summary_fields_.extend(
-                        ['coverage_profile_along_genes',
-                         'reads_genomic_origin'])
-                if 'sequence_lengths' not in project.outputs:
-                    try:
-                        summary_fields_.remove('read_counts')
-                    except ValueError:
-                        pass
-                for read in project.reads:
-                    if ('fastqc_%s' % read) in project.outputs:
-                        summary_fields_.append('boxplot_%s' % read)
-                for read in project.reads:
-                    if ('screens_%s' % read) in project.outputs:
-                        summary_fields_.append('screens_%s' % read)
-                if 'cellranger_count' in project.outputs and \
-                   not self.use_single_library_table:
-                    summary_fields_.append('cellranger_count')
+                summary_fields = self._get_summary_fields(project)
             # Attributes to report for each sample
             if report_attrs is None:
-                report_attrs_ = ['fastqc',
-                                 'fastq_screen',]
-                if 'strandedness' in project.outputs:
-                    report_attrs_.append('strandedness')
+                report_attrs = self._get_report_attrs(project)
             # Add data for this project to the report
             print("Adding project '%s' to the report..." % project.name)
             self.report_metadata(project,
@@ -592,12 +550,12 @@ class QCReport(Document):
                                   "per-lane metrics")
             # Create a new summary table
             summary_table = self.add_summary_table(project,
-                                                   summary_fields_,
+                                                   summary_fields,
                                                    section=project_summary)
             # Report each sample
             for sample in project.samples:
-                self.report_sample(project,sample,report_attrs_,
-                                   summary_table,summary_fields_)
+                self.report_sample(project,sample,report_attrs,
+                                   summary_table,summary_fields)
             # Report single library analyses
             if self.use_single_library_table:
                 for single_library in ('cellranger_count',
@@ -732,6 +690,75 @@ class QCReport(Document):
                                            section=additional_metrics)
         # Report the status
         self.report_status()
+
+    def _get_summary_fields(self,project):
+        """
+        Return default set of summary table fields
+
+        Arguments:
+          project (QCProject): project to get default summary
+            table fields for
+
+        Returns:
+          List: list of summary table field names.
+        """
+        if len(project.reads) > 1:
+            if len(project.reads) > 1:
+                summary_fields_ = ['sample',
+                                   'fastqs',
+                                   'reads']
+            else:
+                summary_fields_ = ['sample',
+                                   'fastq',
+                                   'reads']
+            summary_fields_.extend(['read_counts',
+                                    'read_lengths',
+                                    'sequence_duplication',
+                                    'adapter_content'])
+        elif project.bams:
+            summary_fields_ = ['sample',
+                               'bam_file']
+        else:
+            summary_fields_ = ['sample']
+        if 'strandedness' in project.outputs:
+            summary_fields_.append('strandedness')
+        if 'picard_insert_size_metrics' in project.outputs:
+            summary_fields_.append('insert_size_histogram')
+        if 'qualimap_rnaseq' in project.outputs:
+            summary_fields_.extend(['coverage_profile_along_genes',
+                                    'reads_genomic_origin'])
+        if 'sequence_lengths' not in project.outputs:
+            try:
+                summary_fields_.remove('read_counts')
+            except ValueError:
+                pass
+        for read in project.reads:
+            if ('fastqc_%s' % read) in project.outputs:
+                summary_fields_.append('boxplot_%s' % read)
+        for read in project.reads:
+            if ('screens_%s' % read) in project.outputs:
+                summary_fields_.append('screens_%s' % read)
+        if 'cellranger_count' in project.outputs and \
+           not self.use_single_library_table:
+            summary_fields_.append('cellranger_count')
+        return summary_fields_
+
+    def _get_report_attrs(self,project):
+        """
+        Return default set of per-sample metrics to report
+
+        Arguments:
+          project (QCProject): project to get default per-sample
+            metrics for
+
+        Returns:
+          List: list of attribute names.
+        """
+        report_attrs_ = ['fastqc',
+                         'fastq_screen',]
+        if 'strandedness' in project.outputs:
+            report_attrs_.append('strandedness')
+        return report_attrs_
 
     def _init_metadata_table(self,projects):
         """
