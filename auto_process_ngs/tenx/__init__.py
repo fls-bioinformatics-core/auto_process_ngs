@@ -36,6 +36,7 @@ LIBRARIES = {
         "GEX",
         "PEX",
         "Spatial RNA-seq",
+        "HD Spatial GEX",
     ),
     "10xGenomics Single Cell Multiome": (
         "ATAC",
