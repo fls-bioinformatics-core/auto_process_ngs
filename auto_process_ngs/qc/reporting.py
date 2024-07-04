@@ -1953,7 +1953,7 @@ class SampleQCReporter:
         for bam in self.bams:
             if bam in [grp.bam for grp in self.fastq_groups
                        if grp.bam is not None]:
-                continueq
+                continue
             self.fastq_groups.append(FastqGroupQCReporter(
                 [],
                 bam_file=bam,
