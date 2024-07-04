@@ -499,22 +499,22 @@ class QCReport(Document):
                            ', '.join(project.software[package])))
             # Fields to report in summary table
             if not summary_fields:
-                if len(project.reads) > 1:
+                if project.fastqs:
+                    if len(project.reads) > 1:
+                        summary_fields_ = ['sample',
+                                           'fastqs',
+                                           'reads']
+                    else:
+                        summary_fields_ = ['sample',
+                                           'fastq',
+                                           'reads']
+                    summary_fields_.extend(['read_counts',
+                                            'read_lengths',
+                                            'sequence_duplication',
+                                            'adapter_content'])
+                elif project.bams:
                     summary_fields_ = ['sample',
-                                       'fastqs',
-                                       'reads',
-                                       'read_counts',
-                                       'read_lengths',
-                                       'sequence_duplication',
-                                       'adapter_content']
-                else:
-                    summary_fields_ = ['sample',
-                                       'fastq',
-                                       'reads',
-                                       'read_counts',
-                                       'read_lengths',
-                                       'sequence_duplication',
-                                       'adapter_content']
+                                       'bam_file']
                 if 'strandedness' in project.outputs:
                     summary_fields_.append('strandedness')
                 elif 'rseqc_infer_experiment' in project.outputs:
