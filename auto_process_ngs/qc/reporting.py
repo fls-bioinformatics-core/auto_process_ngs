@@ -1285,7 +1285,9 @@ class QCReport(Document):
                                     fastq_attrs=project.fastq_attrs)
         reads = reporter.reads
         n_fastq_groups = len(reporter.fastq_groups)
-        if len(reads) == 1:
+        if len(reads) == 0:
+            sample_report.add("No associated Fastqs")
+        elif len(reads) == 1:
             sample_report.add("%d %s Fastq%s" %
                               (n_fastq_groups,
                                reads[0].upper(),
