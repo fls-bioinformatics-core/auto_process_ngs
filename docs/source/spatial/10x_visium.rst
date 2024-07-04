@@ -52,7 +52,8 @@ Single cell platform                  Library types
                                       ``Fresh Frozen RNA-seq``
 ``10xGenomics CytAssist Visium``      ``FFPE Spatial RNA-seq``
                                       ``FFPE Spatial GEX``,
-                                      ``FFPE Spatial PEX``
+                                      ``FFPE Spatial PEX``,
+                                      ``HD Spatial GEX``
 ===================================== ==============================
 
 .. note::
