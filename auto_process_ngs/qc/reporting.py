@@ -133,6 +133,7 @@ from .plots import encode_png
 from .qualimap import QualimapRnaseq
 from .rseqc import InferExperiment
 from .seqlens import SeqLens
+from ..settings import get_install_dir
 from .utils import get_bam_basename
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.metrics import MissingMetricError
@@ -147,8 +148,6 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 from .constants import FASTQ_SCREENS
-from .constants import QC_REPORT_CSS_STYLES
-from .constants import JS_TOGGLE_FUNCTION
 
 # Metadata field descriptions
 METADATA_FIELD_DESCRIPTIONS = {
@@ -992,10 +991,33 @@ class QCReport(Document):
                            toggle_section)
         # Add Javascript toggle function and set flag
         if not self._has_toggle_sections:
-            self.add_javascript(JS_TOGGLE_FUNCTION)
+            self.import_script(os.path.join(get_static_dir(),
+                                            "toggle.js"))
             self._has_toggle_sections = True
         # Return the section
         return toggle_section
+
+    def import_styles(self,css_file):
+        """
+        Copy style information from file into report HTML
+        """
+        if os.path.exists(css_file):
+            with open(css_file,'rt') as fp:
+                self.add_css_rule(fp.read())
+        else:
+            logger.warning("%s: external styles file not found" %
+                           css_file)
+
+    def import_script(self,script_file):
+        """
+        Copy script from file into report HTML
+        """
+        if os.path.exists(script_file):
+            with open(script_file,'rt') as fp:
+                self.add_javascript(fp.read())
+        else:
+            logger.warning("%s: external script file not found" %
+                           script_file)
 
     def add_summary_table(self,project,fields,section):
         """
@@ -3652,7 +3674,8 @@ def report(projects,title=None,filename=None,qc_dir=None,
                       relpath=relpath,
                       suppress_warning=suppress_warning)
     # Styles
-    report.add_css_rule(QC_REPORT_CSS_STYLES)
+    report.import_styles(os.path.join(get_static_dir(),
+                                      "qc_report.css"))
     # Write the report
     report.write(filename)
     # Make ZIP file
@@ -3744,3 +3767,18 @@ def sanitize_name(s,new_char='_'):
     for c in ('#',':','/'):
         s = s.replace(c,new_char)
     return s
+
+def get_static_dir():
+    """
+    Return location of 'static' directory
+
+    Returns the path to the 'static' directory, or None if
+    it doesn't exist.
+
+    """
+    try:
+        path = os.path.join(get_install_dir(),"static")
+        if os.path.isdir(path):
+            return path
+    except Exception:
+        return None
