@@ -63,6 +63,22 @@ logger.addHandler(logging.NullHandler())
 # Data
 #######################################################################
 
+# QC modules
+
+QC_MODULES = [
+    'cellranger_count',
+    'cellranger-arc_count',
+    'cellranger-atac_count',
+    'cellranger_multi',
+    'fastqc',
+    'fastq_screen',
+    'picard_insert_size_metrics',
+    'qualimap_rnaseq',
+    'rseqc_genebody_coverage',
+    'sequence_lengths',
+    'strandedness'
+]
+
 # QC protocol definitions
 
 QC_PROTOCOLS = {
@@ -417,13 +433,51 @@ class QCProtocol:
         self.name = str(name)
         self.description = (str(description) if description is not None
                             else "")
-        self.qc_modules = (sorted([m for m in qc_modules])
-                           if qc_modules is not None else [])
+        self.seq_data_reads = []
+        self.index_reads = []
+        self.qc_modules = []
+        self.update(seq_data_reads=seq_data_reads,
+                    index_reads=index_reads,
+                    qc_modules=qc_modules)
+
+    def update(self,seq_data_reads=None,index_reads=None,
+                 qc_modules=None):
+        """
+        Update the reads and QC modules for the protocol
+
+        Allows the sequence data reads, index reads and QC
+        modules associated with the protocol to be updated.
+        Checks that values are valid and that internal data
+        is also correctly updated.
+
+        Arguments:
+          seq_data_reads (list): read names associated
+            with sequence data (if not supplied then
+            existing read data will be kept)
+          index_reads (list): read names associated
+            with index data (if not supplied then existing
+            read data will be kept)
+          qc_modules (list): list of names of associated
+            QC modules (if not supplied then existing
+            modules data will be kept)
+        """
+        # Store QC modules
+        if qc_modules is not None:
+            self.qc_modules = (sorted([m for m in qc_modules])
+                               if qc_modules is not None else [])
+            # Check QC modules are valid
+            for m in self.qc_modules:
+                name = m.split('(')[0]
+                if name not in QC_MODULES:
+                    raise QCProtocolError("'%s': unrecognised QC module"
+                                          % name)
         # Store supplied reads
-        self.seq_data_reads = [str(r).lower() for r in seq_data_reads] \
-                              if seq_data_reads else []
-        self.index_reads = [str(r).lower() for r in index_reads] \
-                           if index_reads else []
+        if seq_data_reads is not None:
+            self.seq_data_reads = [str(r).lower() for r in seq_data_reads] \
+                                  if seq_data_reads else []
+        if index_reads is not None:
+            self.index_reads = [str(r).lower() for r in index_reads] \
+                               if index_reads else []
         # Normalise and store supplied read names
         self.reads = AttributeDictionary(
             seq_data=self.__reads(self.seq_data_reads),
@@ -438,10 +492,14 @@ class QCProtocol:
             qc=self.__read_numbers(self.reads.qc))
         # Extract and store sequence ranges for reads
         self.read_range = AttributeDictionary()
-        if not seq_data_reads:
+        if not self.seq_data_reads:
             seq_data_reads = tuple()
+        else:
+            seq_data_reads = self.seq_data_reads
         if not index_reads:
             index_reads = tuple()
+        else:
+            index_reads = self.index_reads
         for r in list(seq_data_reads) + list(index_reads):
             rd,rng = self.__parse_read_defn(r)
             self.read_range[rd] = rng

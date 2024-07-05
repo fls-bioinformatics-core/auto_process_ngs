@@ -70,6 +70,8 @@ Optionally, descriptions can be enclosed in matching quotes
 description includes special characters such as colons or
 quotes.
 
+.. _qc_protocols_seq_and_index_reads:
+
 -----------------------------
 Sequence data and index reads
 -----------------------------
@@ -90,6 +92,8 @@ Subsequences can be specified by ranges attached to reads,
 for example in this case ``seq_reads=[r2:1-50]``, and tell
 the pipeline to only use these portions of the the reads
 when running the mapped metrics.
+
+.. _qc_protocols_qc_modules:
 
 ----------
 QC modules
