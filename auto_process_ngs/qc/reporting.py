@@ -780,6 +780,9 @@ class QCReport(Document):
         if 'strandedness' in project.outputs:
             # Strandedness
             report_attrs_.append('strandedness')
+        if 'qualimap_rnaseq' in project.outputs:
+            # Qualimap RNAseq
+            report_attrs_.append('qualimap_rnaseq')
         return report_attrs_
 
     def _init_metadata_table(self,projects):
@@ -2504,6 +2507,7 @@ class FastqGroupQCReporter:
     - strandedness: fetch strandedness data for this group
     - ustrandplot: return mini-strand stats summary plot
     - report_strandedness: write report for strandedness
+    - report_qualimap_rnaseq: write report for Qualimap RNA-seq
     - report: write report for the group
     - update_summary_table: add line to summary table for
       the group
@@ -2773,6 +2777,43 @@ class FastqGroupQCReporter:
                                     "(or undetermined if 'NaN')")
         return strandedness_report
 
+    def report_qualimap_rnaseq(self,document,relpath=None):
+        """
+        Report the Qualimap rnaseq outputs to a document
+
+        Creates a new subsection called "Qualimap"
+        with a link to the Qualimap output HTML for
+        each organism.
+
+        Arguments:
+          document (Section): section to add report to
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        rd = self.reads[0]
+        qualimap_report = document.add_subsection(
+            "Qualimap outputs",
+            name="qualimap_rnaseq_%s" % self.reporters[rd].safe_name)
+        # Get Qualimap outputs for each organism
+        no_reports = True
+        for organism in self.project.organisms:
+            qualimap_rnaseq = self.qualimap_rnaseq(organism)
+            if qualimap_rnaseq is None:
+                continue
+            no_reports = False
+            html_report = qualimap_rnaseq.html_report
+            if relpath:
+                html_report = os.path.relpath(html_report,
+                                              relpath)
+            qualimap_report.add(Link("Qualimap RNA-seq report (%s)"
+                                     % organism,
+                                     html_report))
+        # No outputs found
+        if no_reports:
+            qualimap_report.add(WarningIcon(),
+                                "No Qualimap RNA-seq outputs available")
+        return qualimap_report
+
     def report(self,sample_report,attrs=None,relpath=None):
         """
         Add report for Fastq group to a document section
@@ -2786,6 +2827,8 @@ class FastqGroupQCReporter:
 
         - fastqc
         - fastq_screen
+        - strandedness
+        - qualimap_rnaseq
         - program versions
 
         By default all attributes are reported.
@@ -2803,7 +2846,8 @@ class FastqGroupQCReporter:
             attrs = ('fastqc',
                      'fastq_screen',
                      'program_versions',
-                     'strandedness')
+                     'strandedness',
+                     'qualimap_rnaseq')
         # Add container section for Fastq pair
         fastqs_report = sample_report.add_subsection(css_classes=('fastqs',))
         # Create sections for individual Fastqs
@@ -2825,8 +2869,9 @@ class FastqGroupQCReporter:
                 elif attr == "program_versions":
                     # Versions of programs used
                     fq.report_program_versions(fq_report)
-                elif attr == "strandedness":
-                    # Strandedness - handle separately
+                elif attr in ("strandedness",
+                              "qualimap_rnaseq"):
+                    # Pairwise metrics handled separately
                     pass
                 else:
                     raise KeyError("'%s': unrecognised reporting element "
@@ -2835,6 +2880,9 @@ class FastqGroupQCReporter:
         if "strandedness" in attrs:
             # Strandedness
             self.report_strandedness(fastqs_report)
+        if "qualimap_rnaseq" in attrs:
+            # Qualimap
+            self.report_qualimap_rnaseq(fastqs_report,relpath=relpath)
         # Add an empty section to clear HTML floats
         clear = fastqs_report.add_subsection(css_classes=("clear",))
 
