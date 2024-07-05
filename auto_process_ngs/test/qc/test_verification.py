@@ -1449,6 +1449,7 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    seq_data_samples=("PJB1_GEX",),
                                    include_rseqc_genebody_coverage=True,
+                                   include_rseqc_infer_experiment=True,
                                    include_qualimap_rnaseq=True,
                                    include_cellranger_count=True,
                                    include_cellranger_multi=True,
@@ -1695,6 +1696,7 @@ class TestVerifyProject(unittest.TestCase):
                                include_seqlens=True,
                                include_picard_insert_size_metrics=True,
                                include_rseqc_genebody_coverage=True,
+                               include_rseqc_infer_experiment=True,
                                include_qualimap_rnaseq=True,
                                include_multiqc=True,
                                include_cellranger_count=False,
@@ -1725,6 +1727,8 @@ class TestVerifyProject(unittest.TestCase):
             include_picard_insert_size_metrics,
             include_rseqc_genebody_coverage=\
             include_rseqc_genebody_coverage,
+            include_rseqc_infer_experiment=\
+            include_rseqc_infer_experiment,
             include_qualimap_rnaseq=include_qualimap_rnaseq,
             include_multiqc=include_multiqc,
             include_cellranger_count=include_cellranger_count,
