@@ -702,7 +702,7 @@ class QCReport(Document):
         Returns:
           List: list of summary table field names.
         """
-        if len(project.reads) > 1:
+        if len(project.reads):
             if len(project.reads) > 1:
                 summary_fields_ = ['sample',
                                    'fastqs',
@@ -711,35 +711,48 @@ class QCReport(Document):
                 summary_fields_ = ['sample',
                                    'fastq',
                                    'reads']
-            summary_fields_.extend(['read_counts',
-                                    'read_lengths',
-                                    'sequence_duplication',
-                                    'adapter_content'])
+            if 'sequence_lengths' in project.outputs:
+                # Get read counts and lengths from
+                # sequence length stats
+                summary_fields_.extend(['read_counts',
+                                        'read_lengths'])
+            for read in project.reads:
+                if ('fastqc_%s' % read) in project.outputs:
+                    if 'read_lengths' not in summary_fields_:
+                        # Get read lengths from FastQC if
+                        # sequenc length stats not present
+                        summary_fields_.append('read_lengths')
+                    # Add FastQC sequence duplication and adapter
+                    # content
+                    summary_fields_.extend(['sequence_duplication',
+                                            'adapter_content'])
+                    break
         elif project.bams:
             summary_fields_ = ['sample',
                                'bam_file']
         else:
             summary_fields_ = ['sample']
         if 'strandedness' in project.outputs:
+            # Strandedness
             summary_fields_.append('strandedness')
         if 'picard_insert_size_metrics' in project.outputs:
+            # Insert size metrics
             summary_fields_.append('insert_size_histogram')
         if 'qualimap_rnaseq' in project.outputs:
+            # Qualimap metrics
             summary_fields_.extend(['coverage_profile_along_genes',
                                     'reads_genomic_origin'])
-        if 'sequence_lengths' not in project.outputs:
-            try:
-                summary_fields_.remove('read_counts')
-            except ValueError:
-                pass
         for read in project.reads:
+            # FastQC boxplots
             if ('fastqc_%s' % read) in project.outputs:
                 summary_fields_.append('boxplot_%s' % read)
         for read in project.reads:
+            # Fastq Screen
             if ('screens_%s' % read) in project.outputs:
                 summary_fields_.append('screens_%s' % read)
         if 'cellranger_count' in project.outputs and \
            not self.use_single_library_table:
+            # Legacy cellranger count outputs
             summary_fields_.append('cellranger_count')
         return summary_fields_
 
@@ -754,9 +767,18 @@ class QCReport(Document):
         Returns:
           List: list of attribute names.
         """
-        report_attrs_ = ['fastqc',
-                         'fastq_screen',]
+        report_attrs_ = []
+        for read in project.reads:
+            # FastQC outputs
+            if ('fastqc_%s' % read) in project.outputs:
+                report_attrs_.append('fastqc')
+                break
+        for read in project.reads:
+            # Fastq Screen outputs
+            if ('screens_%s' % read) in project.outputs:
+                report_attrs_.append('fastq_screen')
         if 'strandedness' in project.outputs:
+            # Strandedness
             report_attrs_.append('strandedness')
         return report_attrs_
 
