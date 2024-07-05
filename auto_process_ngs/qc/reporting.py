@@ -2790,10 +2790,9 @@ class FastqGroupQCReporter:
           relpath (str): if set then make link paths
             relative to 'relpath'
         """
-        rd = self.reads[0]
         qualimap_report = document.add_subsection(
             "Qualimap outputs",
-            name="qualimap_rnaseq_%s" % self.reporters[rd].safe_name)
+            name="qualimap_rnaseq_%s" % self.bam)
         # Get Qualimap outputs for each organism
         no_reports = True
         for organism in self.project.organisms:
