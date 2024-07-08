@@ -453,7 +453,7 @@ class ProcessingQCReport(Document):
                         data['Masked'] = "%.2f%%" % masked
                         data['Padded'] = "%.2f%%" % padded
                         plot_data = [masked,
-                                     masked+padded,
+                                     padded,
                                      100.0]
                         data['PropMaskedPadded'] = Img(
                             ustackedbar(plot_data,
