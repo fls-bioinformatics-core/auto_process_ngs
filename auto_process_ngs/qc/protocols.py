@@ -75,6 +75,7 @@ QC_MODULES = [
     'picard_insert_size_metrics',
     'qualimap_rnaseq',
     'rseqc_genebody_coverage',
+    'rseqc_infer_experiment',
     'sequence_lengths',
     'strandedness'
 ]
