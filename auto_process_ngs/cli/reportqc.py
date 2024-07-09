@@ -93,9 +93,10 @@ def main():
                                 "specified)")
     data_dir_group.add_argument('--no-data-dir',action='store_true',
                                 dest='no_data_dir',
-                                help="don't a data directory with copies "
-                                "of QC artefacts (this is the default "
-                                "except for multi-project reports)")
+                                help="don't create a data directory with "
+                                "copies of QC artefacts (this is the "
+                                "default except for multi-project "
+                                "reports)")
     verification = p.add_argument_group('Verification options')
     verification.add_argument('--verify',action='store_true',
                               dest='verify',

@@ -499,52 +499,10 @@ class QCReport(Document):
                            ', '.join(project.software[package])))
             # Fields to report in summary table
             if not summary_fields:
-                if len(project.reads) > 1:
-                    summary_fields_ = ['sample',
-                                       'fastqs',
-                                       'reads',
-                                       'read_counts',
-                                       'read_lengths',
-                                       'sequence_duplication',
-                                       'adapter_content']
-                else:
-                    summary_fields_ = ['sample',
-                                       'fastq',
-                                       'reads',
-                                       'read_counts',
-                                       'read_lengths',
-                                       'sequence_duplication',
-                                       'adapter_content']
-                if 'strandedness' in project.outputs:
-                    summary_fields_.append('strandedness')
-                elif 'rseqc_infer_experiment' in project.outputs:
-                    summary_fields_.append('strand_specificity')
-                if 'picard_insert_size_metrics' in project.outputs:
-                    summary_fields_.append('insert_size_histogram')
-                if 'qualimap_rnaseq' in project.outputs:
-                    summary_fields_.extend(
-                        ['coverage_profile_along_genes',
-                         'reads_genomic_origin'])
-                if 'sequence_lengths' not in project.outputs:
-                    try:
-                        summary_fields_.remove('read_counts')
-                    except ValueError:
-                        pass
-                for read in project.reads:
-                    if ('fastqc_%s' % read) in project.outputs:
-                        summary_fields_.append('boxplot_%s' % read)
-                for read in project.reads:
-                    if ('screens_%s' % read) in project.outputs:
-                        summary_fields_.append('screens_%s' % read)
-                if 'cellranger_count' in project.outputs and \
-                   not self.use_single_library_table:
-                    summary_fields_.append('cellranger_count')
+                summary_fields = self._get_summary_fields(project)
             # Attributes to report for each sample
             if report_attrs is None:
-                report_attrs_ = ['fastqc',
-                                 'fastq_screen',]
-                if 'strandedness' in project.outputs:
-                    report_attrs_.append('strandedness')
+                report_attrs = self._get_report_attrs(project)
             # Add data for this project to the report
             print("Adding project '%s' to the report..." % project.name)
             self.report_metadata(project,
@@ -592,12 +550,12 @@ class QCReport(Document):
                                   "per-lane metrics")
             # Create a new summary table
             summary_table = self.add_summary_table(project,
-                                                   summary_fields_,
+                                                   summary_fields,
                                                    section=project_summary)
             # Report each sample
             for sample in project.samples:
-                self.report_sample(project,sample,report_attrs_,
-                                   summary_table,summary_fields_)
+                self.report_sample(project,sample,report_attrs,
+                                   summary_table,summary_fields)
             # Report single library analyses
             if self.use_single_library_table:
                 for single_library in ('cellranger_count',
@@ -732,6 +690,100 @@ class QCReport(Document):
                                            section=additional_metrics)
         # Report the status
         self.report_status()
+
+    def _get_summary_fields(self,project):
+        """
+        Return default set of summary table fields
+
+        Arguments:
+          project (QCProject): project to get default summary
+            table fields for
+
+        Returns:
+          List: list of summary table field names.
+        """
+        if len(project.reads):
+            if len(project.reads) > 1:
+                summary_fields_ = ['sample',
+                                   'fastqs',
+                                   'reads']
+            else:
+                summary_fields_ = ['sample',
+                                   'fastq',
+                                   'reads']
+            if 'sequence_lengths' in project.outputs:
+                # Get read counts and lengths from
+                # sequence length stats
+                summary_fields_.extend(['read_counts',
+                                        'read_lengths'])
+            for read in project.reads:
+                if ('fastqc_%s' % read) in project.outputs:
+                    if 'read_lengths' not in summary_fields_:
+                        # Get read lengths from FastQC if
+                        # sequenc length stats not present
+                        summary_fields_.append('read_lengths')
+                    # Add FastQC sequence duplication and adapter
+                    # content
+                    summary_fields_.extend(['sequence_duplication',
+                                            'adapter_content'])
+                    break
+        elif project.bams:
+            summary_fields_ = ['sample',
+                               'bam_file']
+        else:
+            summary_fields_ = ['sample']
+        if 'strandedness' in project.outputs:
+            # Strandedness
+            summary_fields_.append('strandedness')
+        if 'picard_insert_size_metrics' in project.outputs:
+            # Insert size metrics
+            summary_fields_.append('insert_size_histogram')
+        if 'qualimap_rnaseq' in project.outputs:
+            # Qualimap metrics
+            summary_fields_.extend(['coverage_profile_along_genes',
+                                    'reads_genomic_origin'])
+        for read in project.reads:
+            # FastQC boxplots
+            if ('fastqc_%s' % read) in project.outputs:
+                summary_fields_.append('boxplot_%s' % read)
+        for read in project.reads:
+            # Fastq Screen
+            if ('screens_%s' % read) in project.outputs:
+                summary_fields_.append('screens_%s' % read)
+        if 'cellranger_count' in project.outputs and \
+           not self.use_single_library_table:
+            # Legacy cellranger count outputs
+            summary_fields_.append('cellranger_count')
+        return summary_fields_
+
+    def _get_report_attrs(self,project):
+        """
+        Return default set of per-sample metrics to report
+
+        Arguments:
+          project (QCProject): project to get default per-sample
+            metrics for
+
+        Returns:
+          List: list of attribute names.
+        """
+        report_attrs_ = []
+        for read in project.reads:
+            # FastQC outputs
+            if ('fastqc_%s' % read) in project.outputs:
+                report_attrs_.append('fastqc')
+                break
+        for read in project.reads:
+            # Fastq Screen outputs
+            if ('screens_%s' % read) in project.outputs:
+                report_attrs_.append('fastq_screen')
+        if 'strandedness' in project.outputs:
+            # Strandedness
+            report_attrs_.append('strandedness')
+        if 'qualimap_rnaseq' in project.outputs:
+            # Qualimap RNAseq
+            report_attrs_.append('qualimap_rnaseq')
+        return report_attrs_
 
     def _init_metadata_table(self,projects):
         """
@@ -1285,7 +1337,9 @@ class QCReport(Document):
                                     fastq_attrs=project.fastq_attrs)
         reads = reporter.reads
         n_fastq_groups = len(reporter.fastq_groups)
-        if len(reads) == 1:
+        if len(reads) == 0:
+            sample_report.add("No associated Fastqs")
+        elif len(reads) == 1:
             sample_report.add("%d %s Fastq%s" %
                               (n_fastq_groups,
                                reads[0].upper(),
@@ -1713,6 +1767,18 @@ class QCProject:
         else:
             logger.warning("Run metadata file '%s' not found"
                            % run_metadata_file)
+        # Run reference ID
+        try:
+            self.run_id = run_id(self.project.info['run'],
+                                 platform=self.project.info['platform'],
+                                 facility_run_number=
+                                 self.run_metadata['run_number'],
+                                 analysis_number=
+                                 self.run_metadata['analysis_number'])
+        except (AttributeError,TypeError) as ex:
+            logger.warning("'%s': run reference ID can't be "
+                           "determined: %s (ignored)" % (self.name,ex))
+            self.run_id = None
         # Collect processing software metadata
         try:
             self.processing_software = ast.literal_eval(
@@ -1775,30 +1841,6 @@ class QCProject:
         Comments associated with the project
         """
         return self.project.info.comments
-
-    @property
-    def run_id(self):
-        """
-        Identifier for parent run
-
-        This is the standard identifier constructed
-        from the platform, datestamp and facility
-        run number (e.g. ``MINISEQ_201120#22``).
-
-        If an identifier can't be constructed then
-        ``None`` is returned.
-        """
-        try:
-            return run_id(self.info['run'],
-                          platform=self.info['platform'],
-                          facility_run_number=
-                          self.run_metadata['run_number'],
-                          analysis_number=
-                          self.run_metadata['analysis_number'])
-        except (AttributeError,TypeError) as ex:
-            logger.warning("Run reference ID can't be "
-                           "determined: %s (ignored)" % ex)
-            return None
 
     @property
     def is_single_cell(self):
@@ -1939,14 +1981,34 @@ class SampleQCReporter:
                 qc_dir = os.path.join(project.dirn)
         else:
             qc_dir = project.qc_dir
-        # Group Fastqs associated with this sample
+        # Get Fastqs associated with this sample
         self.fastqs = sorted(list(
             filter(lambda fq:
                    project.fastq_attrs(fq).sample_name == sample,
                    project.fastqs)))
+        # Get associated BAM files
+        self.bams = sorted(list(
+            filter(lambda bam:
+                   project.fastq_attrs(bam).sample_name == sample,
+                   project.bams)))
+        # Add reporters for each Fastq group
         for fqs in group_fastqs_by_name(self.fastqs,fastq_attrs):
             self.fastq_groups.append(FastqGroupQCReporter(
                 fqs,
+                qc_dir=qc_dir,
+                project=project,
+                project_id=project.id,
+                fastq_attrs=fastq_attrs,
+                is_seq_data=self.is_seq_data))
+        # Add reporters for any BAM files not associated
+        # with a Fastq group
+        for bam in self.bams:
+            if bam in [grp.bam for grp in self.fastq_groups
+                       if grp.bam is not None]:
+                continue
+            self.fastq_groups.append(FastqGroupQCReporter(
+                [],
+                bam_file=bam,
                 qc_dir=qc_dir,
                 project=project,
                 project_id=project.id,
@@ -2445,6 +2507,7 @@ class FastqGroupQCReporter:
     - strandedness: fetch strandedness data for this group
     - ustrandplot: return mini-strand stats summary plot
     - report_strandedness: write report for strandedness
+    - report_qualimap_rnaseq: write report for Qualimap RNA-seq
     - report: write report for the group
     - update_summary_table: add line to summary table for
       the group
@@ -2455,14 +2518,17 @@ class FastqGroupQCReporter:
         path will be treated as a subdirectory of the
         project
       project (QCProject): parent project
+      bam_file (str): (optional) basename for an associated BAM
+        file
       project_id (str): identifier for the project
       fastq_attrs (BaseFastqAttrs): class for extracting
         data from Fastq names
       is_seq_data (bool): if True then indicates that the
         group contains biological data
     """
-    def __init__(self,fastqs,qc_dir,project,project_id=None,
-                 fastq_attrs=AnalysisFastq,is_seq_data=True):
+    def __init__(self,fastqs,qc_dir,project,bam_file=None,
+                 project_id=None,fastq_attrs=AnalysisFastq,
+                 is_seq_data=True):
         """
         Create a new FastqGroupQCReporter
         """
@@ -2493,11 +2559,14 @@ class FastqGroupQCReporter:
             self.reads.add(read)
         self.reads = sorted(list(self.reads))
         # Locate matching BAM file
-        self.bam = None
-        for fastq in fastqs:
-            bam = get_bam_basename(fastq,self.fastq_attrs)
-            if bam in self.project.bams:
-                self.bam = "%s" % bam
+        if bam_file:
+            self.bam = bam_file
+        else:
+            self.bam = None
+            for fastq in fastqs:
+                bam = get_bam_basename(fastq,self.fastq_attrs)
+                if bam in self.project.bams:
+                    self.bam = "%s" % bam
 
     @property
     def paired_end(self):
@@ -2708,6 +2777,42 @@ class FastqGroupQCReporter:
                                     "(or undetermined if 'NaN')")
         return strandedness_report
 
+    def report_qualimap_rnaseq(self,document,relpath=None):
+        """
+        Report the Qualimap rnaseq outputs to a document
+
+        Creates a new subsection called "Qualimap"
+        with a link to the Qualimap output HTML for
+        each organism.
+
+        Arguments:
+          document (Section): section to add report to
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        qualimap_report = document.add_subsection(
+            "Qualimap outputs",
+            name="qualimap_rnaseq_%s" % self.bam)
+        # Get Qualimap outputs for each organism
+        no_reports = True
+        for organism in self.project.organisms:
+            qualimap_rnaseq = self.qualimap_rnaseq(organism)
+            if qualimap_rnaseq is None:
+                continue
+            no_reports = False
+            html_report = qualimap_rnaseq.html_report
+            if relpath:
+                html_report = os.path.relpath(html_report,
+                                              relpath)
+            qualimap_report.add(Link("Qualimap RNA-seq report (%s)"
+                                     % organism,
+                                     html_report))
+        # No outputs found
+        if no_reports:
+            qualimap_report.add(WarningIcon(),
+                                "No Qualimap RNA-seq outputs available")
+        return qualimap_report
+
     def report(self,sample_report,attrs=None,relpath=None):
         """
         Add report for Fastq group to a document section
@@ -2721,6 +2826,8 @@ class FastqGroupQCReporter:
 
         - fastqc
         - fastq_screen
+        - strandedness
+        - qualimap_rnaseq
         - program versions
 
         By default all attributes are reported.
@@ -2738,7 +2845,8 @@ class FastqGroupQCReporter:
             attrs = ('fastqc',
                      'fastq_screen',
                      'program_versions',
-                     'strandedness')
+                     'strandedness',
+                     'qualimap_rnaseq')
         # Add container section for Fastq pair
         fastqs_report = sample_report.add_subsection(css_classes=('fastqs',))
         # Create sections for individual Fastqs
@@ -2760,8 +2868,9 @@ class FastqGroupQCReporter:
                 elif attr == "program_versions":
                     # Versions of programs used
                     fq.report_program_versions(fq_report)
-                elif attr == "strandedness":
-                    # Strandedness - handle separately
+                elif attr in ("strandedness",
+                              "qualimap_rnaseq"):
+                    # Pairwise metrics handled separately
                     pass
                 else:
                     raise KeyError("'%s': unrecognised reporting element "
@@ -2770,6 +2879,9 @@ class FastqGroupQCReporter:
         if "strandedness" in attrs:
             # Strandedness
             self.report_strandedness(fastqs_report)
+        if "qualimap_rnaseq" in attrs:
+            # Qualimap
+            self.report_qualimap_rnaseq(fastqs_report,relpath=relpath)
         # Add an empty section to clear HTML floats
         clear = fastqs_report.add_subsection(css_classes=("clear",))
 
@@ -2925,7 +3037,9 @@ class FastqGroupQCReporter:
         elif field == "bam_file":
             value = self.bam
         elif field == "reads":
-            if self.reporters[self.reads[0]].sequence_lengths:
+            if not self.reads:
+                value = ''
+            elif self.reporters[self.reads[0]].sequence_lengths:
                 value = pretty_print_reads(
                     self.reporters[self.reads[0]].sequence_lengths.nreads)
             else:
