@@ -695,6 +695,15 @@ def determine_qc_protocol_from_metadata(library_type,
                                         single_cell_platform,
                                         paired_end):
     """
+    Determine the QC protocol from metadata values
+
+    Arguments:
+      library_type (str): library or application
+      single_cell_platform (str): single cell platform (or None)
+      paired_end (bool): whether data are paired end
+
+    Return:
+      String: QC protocol for the project
     """
     # Standard protocols
     if paired_end:
