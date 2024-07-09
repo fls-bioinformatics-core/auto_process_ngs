@@ -280,25 +280,10 @@ QC_PROTOCOLS = {
         ]
     },
 
-    "10x_Visium": {
-        "description": "10xGenomics Visium spatial RNA-seq",
+    "10x_Visium_GEX": {
+        "description": "10xGenomics Visium spatial gene expression",
         "reads": {
-            "seq_data": ('r2',),
-            "index": ('r1',)
-        },
-        "qc_modules": [
-            'fastqc',
-            'fastq_screen',
-            'sequence_lengths',
-            'rseqc_genebody_coverage',
-            'rseqc_infer_experiment',
-            'qualimap_rnaseq'
-        ]
-    },
-
-    "10x_Visium_FFPE": {
-        "description": "10xGenomics Visium FFPE spatial RNA-seq/GEX",
-        "reads": {
+            # 50bp insert in R2
             "seq_data": ('r2:1-50',),
             "index": ('r1',)
         },
@@ -312,9 +297,28 @@ QC_PROTOCOLS = {
         ]
     },
 
-    "10x_Visium_FFPE_PEX": {
-        "description": "10xGenomics Visium FFPE spatial PEX",
+    "10x_Visium_GEX_90bp_insert": {
+        "description": "10xGenomics Visium spatial gene expression "\
+        "(90bp insert R2)",
         "reads": {
+            # 90bp insert in R2
+            "seq_data": ('r2:1-90',),
+            "index": ('r1',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
+            'qualimap_rnaseq'
+        ]
+    },
+
+    "10x_Visium_PEX": {
+        "description": "10xGenomics Visium spatial protein expression",
+        "reads": {
+            # 50bp insert in R2
             "seq_data": ('r2:1-50',),
             "index": ('r1',)
         },
@@ -324,10 +328,10 @@ QC_PROTOCOLS = {
         ]
     },
 
-    "10x_Visium_HD": {
-        "description": "10xGenomics Visium HD spatial GEX",
+    "10x_Visium_legacy": {
+        "description": "10xGenomics Visium spatial RNA-seq (legacy QC)",
         "reads": {
-            "seq_data": ('r2:1-50',),
+            "seq_data": ('r2',),
             "index": ('r1',)
         },
         "qc_modules": [
@@ -754,26 +758,26 @@ def determine_qc_protocol_from_metadata(library_type,
                 protocol = "singlecell"
         # Visium/spatial data
         elif single_cell_platform in ("10xGenomics Visium",
+                                      "10xGenomics Visium (CytAssist)",
                                       "10xGenomics CytAssist Visium"):
-            # Default
-            protocol = "10x_Visium"
-            if library_type == "FFPE Spatial PEX":
+            if library_type.lower() in ("ffpe spatial pex",
+                                        "ffpe spatial protein expression"):
                 # Spatial protein expression
-                protocol = "10x_Visium_FFPE_PEX"
-            elif library_type == "Spatial RNA-seq":
-                # Spatial gene expression
-                protocol = "10x_Visium"
-            elif library_type in ("Spatial Gene Expression",
-                                  "Spatial GEX"):
-                # Spatial gene expression (50bp insert R2)
+                protocol = "10x_Visium_PEX"
+            elif library_type.lower() in \
+                 ("fresh frozen spatial gene expression",
+                  "fresh frozen spatial gex") \
+                  and single_cell_platform == "10xGenomics Visium":
+                # Special case (GEX with 90bp insert in R2)
+                protocol = "10x_Visium_GEX_90bp_insert"
+            elif library_type.lower() == "spatial rna-seq" and \
+                 single_cell_platform in ("10xGenomics Visium",
+                                          "10xGenomics CytAssist Visium"):
+                # Legacy spatial RNA-seq
+                protocol = "10x_Visium_legacy"
+            else:
+                # Default (GEX with 50bp insert in R2)
                 protocol = "10x_Visium_GEX"
-            elif library_type in ("FFPE Spatial Gene Expression",
-                                  "FFPE Spatial GEX"):
-                protocol = "10x_Visium_FFPE"
-            elif library_type == "FFPE Spatial RNA-seq":
-                protocol = "10x_Visium_FFPE"
-            elif library_type == "HD Spatial GEX":
-                protocol = "10x_Visium_HD"
     return protocol
 
 def determine_qc_protocol(project):
