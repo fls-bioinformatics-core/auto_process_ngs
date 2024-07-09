@@ -14,6 +14,7 @@ from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockFastqScreen
 from auto_process_ngs.mock import MockFastQC
 from auto_process_ngs.mock import MockGtf2bed
+from auto_process_ngs.mock import MockSeqtk
 from auto_process_ngs.mock import MockStar
 from auto_process_ngs.mock import MockSamtools
 from auto_process_ngs.mock import MockPicard
@@ -1031,8 +1032,8 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
                                                         "qc.info"))
         self.assertTrue(qc_info.fastqs_split_by_lane)
 
-    def test_run_qc_10x_visium(self):
-        """run_qc: 10x Visium spatial RNA-seq
+    def test_run_qc_10x_visium_ffpe_spatial_gex(self):
+        """run_qc: 10x Visium FFPE spatial GEX
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
@@ -1040,6 +1041,7 @@ cellranger_atac_reference = /data/cellranger/atac_references/mm10
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockSeqtk.create(os.path.join(self.bin,"seqtk"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
