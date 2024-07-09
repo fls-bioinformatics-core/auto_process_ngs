@@ -543,6 +543,48 @@ class QCProtocol:
         """
         return cls(**parse_protocol_spec(s))
 
+    @property
+    def expected_outputs(self):
+        """
+        Return a list of the expected QC outputs
+
+        The expected outputs are based on the
+        QC modules plus the reads associated
+        with the protocol.
+        """
+        expected = []
+        for qc_module in self.qc_module_names:
+            if qc_module == "fastqc":
+                for r in self.reads.qc:
+                    expected.append("fastqc_%s" % r)
+            elif qc_module == "fastq_screen":
+                for r in self.reads.seq_data:
+                    expected.append("screens_%s" % r)
+            else:
+                expected.append(qc_module)
+        return sorted(expected)
+
+    @property
+    def qc_module_names(self):
+        """
+        Return list of QC module names without parameters
+
+        Returns a list of the QC modules associated with
+        the protocol, with any parameter lists (i.e.
+        trailing '(...)') removed.
+
+        For example the QC module list:
+
+        ['cellranger(use_10x_multi_config=true)','fastqc']
+
+        will be returned as:
+
+        ['cellranger','fastqc']
+        """
+        # Internal: return list of QC module names (i.e.
+        # with any trailing paramter lists removed)
+        return [qc_defn.split('(')[0] for qc_defn in self.qc_modules]
+
     def summarise(self):
         """
         Summarise protocol
@@ -641,8 +683,7 @@ class QCProtocol:
         # Internal: return list of QC module names within
         # the protocol which produce mapped metrics
         mapped_metrics = []
-        for qc_defn in self.qc_modules:
-            qc_module = qc_defn.split('(')[0]
+        for qc_module in self.qc_module_names:
             if qc_module in ('fastq_screen',
                              'strandedness',
                              'picard_insert_size_metrics',
