@@ -112,6 +112,7 @@ QC module                      Software                        Metrics
 ``picard_insert_size_metrics`` Picard CollectInsertSizeMetrics Insert sizes
 ``qualimap_rnaseq``            Qualimap 'rnaseq'               Coverage and genomic origin of reads
 ``rseqc_genebody_coverage``    RSeQC geneBody_coverage.py      Coverage
+``rseqc_infer_experiment``     RSeQC infer_experiment.py       Strand-specificity
 ``sequence_lengths``           Built-in                        Sequence length and masking stats
 ``strandedness``               fastq_strand.py                 Strandedness information
 ``cellranger_count``           CellRanger 'count'              Single library analysis

@@ -53,6 +53,7 @@ class TestQCVerifier(unittest.TestCase):
                      include_seqlens=True,
                      include_picard_insert_size_metrics=False,
                      include_rseqc_genebody_coverage=False,
+                     include_rseqc_infer_experiment=False,
                      include_qualimap_rnaseq=False,
                      include_multiqc=False,
                      include_cellranger_count=False,
@@ -79,6 +80,8 @@ class TestQCVerifier(unittest.TestCase):
             include_picard_insert_size_metrics,
             include_rseqc_genebody_coverage=\
             include_rseqc_genebody_coverage,
+            include_rseqc_infer_experiment=\
+            include_rseqc_infer_experiment,
             include_qualimap_rnaseq=include_qualimap_rnaseq,
             include_multiqc=include_multiqc,
             include_cellranger_count=include_cellranger_count,
@@ -322,6 +325,82 @@ class TestQCVerifier(unittest.TestCase):
             fastqs=fastq_names,
             organism="Human",
             star_index="/data/indexes/STAR",
+            annotation_bed="/data/annot/human.bed"))
+
+    def test_qcverifier_verify_qc_module_rseqc_infer_experiment(self):
+        """
+        QCVerifier: verify QC module 'rseqc_infer_experiment'
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # All outputs present
+        qc_dir = self._make_qc_dir('qc.ok',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_rseqc_infer_experiment=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'rseqc_infer_experiment',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Human",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf",
+            annotation_bed="/data/annot/human.bed"))
+        # Returns None if organism, STAR index or annotation
+        # is not supplied
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_infer_experiment',
+                             fastqs=fastq_names,
+                             seq_data_reads=('r1','r2'),
+                             star_index="/data/indexes/STAR",
+                             annotation_gtf="/data/annot/human.gtf",
+                             annotation_bed="/data/annot/human.bed"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_infer_experiment',
+                             fastqs=fastq_names,
+                             seq_data_reads=('r1','r2'),
+                             organism="Human",
+                             annotation_gtf="/data/annot/human.gtf",
+                             annotation_bed="/data/annot/human.bed"))
+        self.assertEqual(None,
+                         qc_verifier.verify_qc_module(
+                             'rseqc_infer_experiment',
+                             fastqs=fastq_names,
+                             seq_data_reads=('r1','r2'),
+                             organism="Human",
+                             star_index="/data/indexes/STAR"))
+        # Organism name contains spaces
+        qc_dir = self._make_qc_dir('qc.homo_sapiens',
+                                   fastq_names=fastq_names,
+                                   organisms=('Homo sapiens',),
+                                   include_rseqc_infer_experiment=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'rseqc_infer_experiment',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Homo sapiens",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf",
+            annotation_bed="/data/annot/human.bed"))
+        # Empty QC directory
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   organisms=('human',),
+                                   include_rseqc_infer_experiment=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'rseqc_infer_experiment',
+            fastqs=fastq_names,
+            seq_data_reads=('r1','r2'),
+            organism="Human",
+            star_index="/data/indexes/STAR",
+            annotation_gtf="/data/annot/human.gtf",
             annotation_bed="/data/annot/human.bed"))
 
     def test_qcverifier_verify_qc_module_picard_insert_size_metrics(self):
@@ -1370,6 +1449,7 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    seq_data_samples=("PJB1_GEX",),
                                    include_rseqc_genebody_coverage=True,
+                                   include_rseqc_infer_experiment=True,
                                    include_qualimap_rnaseq=True,
                                    include_cellranger_count=True,
                                    include_cellranger_multi=True,
@@ -1616,6 +1696,7 @@ class TestVerifyProject(unittest.TestCase):
                                include_seqlens=True,
                                include_picard_insert_size_metrics=True,
                                include_rseqc_genebody_coverage=True,
+                               include_rseqc_infer_experiment=True,
                                include_qualimap_rnaseq=True,
                                include_multiqc=True,
                                include_cellranger_count=False,
@@ -1646,6 +1727,8 @@ class TestVerifyProject(unittest.TestCase):
             include_picard_insert_size_metrics,
             include_rseqc_genebody_coverage=\
             include_rseqc_genebody_coverage,
+            include_rseqc_infer_experiment=\
+            include_rseqc_infer_experiment,
             include_qualimap_rnaseq=include_qualimap_rnaseq,
             include_multiqc=include_multiqc,
             include_cellranger_count=include_cellranger_count,

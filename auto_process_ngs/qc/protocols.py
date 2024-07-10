@@ -75,6 +75,7 @@ QC_MODULES = [
     'picard_insert_size_metrics',
     'qualimap_rnaseq',
     'rseqc_genebody_coverage',
+    'rseqc_infer_experiment',
     'sequence_lengths',
     'strandedness'
 ]
@@ -94,6 +95,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq'
         ]
     },
@@ -110,6 +112,7 @@ QC_PROTOCOLS = {
             'sequence_lengths',
             'picard_insert_size_metrics',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq'
         ]
     },
@@ -125,6 +128,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger_count'
         ]
@@ -141,6 +145,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger_count'
         ]
@@ -158,6 +163,7 @@ QC_PROTOCOLS = {
             'sequence_lengths',
             'picard_insert_size_metrics',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger-atac_count'
         ]
@@ -174,6 +180,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger-arc_count',
             # Also run Cellranger
@@ -200,6 +207,7 @@ QC_PROTOCOLS = {
             'sequence_lengths',
             'picard_insert_size_metrics',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger-arc_count',
             # Also run Cellranger ATAC
@@ -225,6 +233,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger_count(cellranger_use_multi_config=True;'
                              'set_cell_count=false;'
@@ -244,6 +253,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger_multi'
         ]
@@ -260,6 +270,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger_count(cellranger_use_multi_config=True;'
                              'set_cell_count=false;'
@@ -279,6 +290,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq'
         ]
     },
@@ -294,6 +306,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq'
         ]
     },
@@ -321,6 +334,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq'
         ]
     },
@@ -336,6 +350,7 @@ QC_PROTOCOLS = {
             'fastq_screen',
             'sequence_lengths',
             'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
             'qualimap_rnaseq'
         ]
     },
@@ -627,6 +642,7 @@ class QCProtocol:
                              'strandedness',
                              'picard_insert_size_metrics',
                              'rseqc_genebody_coverage',
+                             'rseqc_infer_experiment',
                              'qualimap_rnaseq'):
                 mapped_metrics.append(qc_module)
         return mapped_metrics

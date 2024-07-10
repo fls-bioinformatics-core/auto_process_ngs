@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     verification: utilities for verification of QC outputs
-#     Copyright (C) University of Manchester 2022-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2022-2024 Peter Briggs
 #
 
 """
@@ -377,6 +377,36 @@ class QCVerifier(QCOutputs):
             if normalise_organism_name(organism) not in \
                self.data('rseqc_genebody_coverage').organisms:
                 return False
+            return True
+
+        elif name == "rseqc_infer_experiment":
+            if not seq_data_fastqs:
+                # Nothing to check
+                return None
+            if not organism:
+                # No organism specified
+                return None
+            if not star_index or not annotation_bed:
+                # No STAR index or annotation
+                return None
+            if "rseqc_infer_experiment" not in self.outputs:
+                # No RSeQC infer_experiment.py output present
+                return False
+            if normalise_organism_name(organism) not in \
+               self.data('rseqc_infer_experiment').organisms:
+                return False
+            # Filter Fastq names and convert to BAM names
+            if seq_data_reads:
+                fastqs = self.filter_fastqs(seq_data_reads[:1],
+                                            seq_data_fastqs)
+            else:
+                # No Fastqs to get BAM names from
+                return None
+            bams = [get_bam_basename(fq) for fq in fastqs]
+            # Check that outputs exist for every BAM
+            for bam in bams:
+                if bam not in self.data('rseqc_infer_experiment').bam_files:
+                    return False
             return True
 
         elif name == "picard_insert_size_metrics":
