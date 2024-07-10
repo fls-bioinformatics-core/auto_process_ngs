@@ -582,9 +582,7 @@ class QCProtocol:
 
         ['cellranger','fastqc']
         """
-        # Internal: return list of QC module names (i.e.
-        # with any trailing paramter lists removed)
-        return [qc_defn.split('(')[0] for qc_defn in self.qc_modules]
+        return [parse_qc_module_spec(m)[0] for m in self.qc_modules]
 
     def summarise(self):
         """
