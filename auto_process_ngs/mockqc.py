@@ -632,7 +632,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                             '10x_CellPlex',
                             '10x_Flex',
                             '10x_ImmuneProfiling',
-                            '10x_Visium',) and \
+                            '10x_Visium',
+                            '10x_Visium_GEX',
+                            '10x_Visium_PEX',
+                            '10x_Visium_GEX_90bp_insert',
+                            '10x_Visium_legacy',) and \
             (AnalysisFastq(fq).read_number == 1):
                 # Skip for R1 reads
                 continue
@@ -647,7 +651,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                         '10x_CellPlex',
                         '10x_Flex',
                         '10x_ImmuneProfiling',
-                        '10x_Visium',):
+                        '10x_Visium',
+                        '10x_Visium_GEX',
+                        '10x_Visium_PEX',
+                        '10x_Visium_GEX_90bp_insert',
+                        '10x_Visium_legacy',):
             fq = fq_group[1]
         else:
             fq = fq_group[0]

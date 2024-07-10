@@ -12,6 +12,7 @@ PLATFORMS = (
     "10xGenomics Chromium 5'",
     "10xGenomics Single Cell ATAC",
     "10xGenomics Visium",
+    "10xGenomics Visium (CytAssist)",
     "10xGenomics CytAssist Visium",
     "10xGenomics Single Cell Multiome",
 )
@@ -30,16 +31,37 @@ LIBRARIES = {
         "scATAC-seq",
         "snATAC-seq",
     ),
+    "10xGenomics Single Cell Multiome": (
+        "ATAC",
+        "GEX",
+    ),
+    "10xGenomics Visium": (
+        "Fresh Frozen Spatial GEX",
+        "FFPE Spatial GEX",
+        "Fresh Frozen Spatial Gene Expression",
+        "FFPE Spatial Gene Expression",
+    ),
+    "10xGenomics Visium (CytAssist)": (
+        "FFPE HD Spatial GEX",
+        "FFPE Spatial GEX",
+        "Fixed Frozen Spatial GEX",
+        "Fresh Frozen Spatial GEX",
+        "FFPE Spatial PEX",
+        "FFPE HD Spatial Gene Expression",
+        "FFPE Spatial Gene Expression",
+        "Fixed Frozen Spatial Gene Expression",
+        "Fresh Frozen Spatial Gene Expression",
+        "FFPE Spatial Protein Expression",
+    ),
+    # Legacy Visium platform/application combinations kept for
+    # backwards compatibility
     "10xGenomics * Visium": (
         "FFPE Spatial RNA-seq",
         "Fresh Frozen RNA-seq",
         "GEX",
         "PEX",
         "Spatial RNA-seq",
-    ),
-    "10xGenomics Single Cell Multiome": (
-        "ATAC",
-        "GEX",
+        "HD Spatial GEX",
     ),
 }
 

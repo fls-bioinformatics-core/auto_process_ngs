@@ -47,11 +47,12 @@ The following values are valid options for spatial data:
 ===================================== ==============================
 Single cell platform                  Library types
 ===================================== ==============================
-``10xGenomics Visium``                ``Spatial RNA-seq``,
-                                      ``FFPE Spatial RNA-seq``,
-                                      ``Fresh Frozen RNA-seq``
-``10xGenomics CytAssist Visium``      ``FFPE Spatial RNA-seq``
+``10xGenomics Visium``                ``FFPE Spatial GEX``,
+                                      ``Fresh Frozen Spatial GEX``
+``10xGenomics Visium (CytAssist)``    ``FFPE HD Spatial GEX``
                                       ``FFPE Spatial GEX``,
+                                      ``Fixed Frozen Spatial GEX``,
+                                      ``Fresh Frozen Spatial GEX``,
                                       ``FFPE Spatial PEX``
 ===================================== ==============================
 
@@ -61,6 +62,21 @@ Single cell platform                  Library types
    for historical reasons the platform information is currently
    being stored in the single cell platform metadata field.
 
+.. note::
+
+   The platform/library combinations above are based on the
+   information at https://www.10xgenomics.com/platforms/visium
+
+   Where ``GEX`` and ``PEX`` appear in the library types, the
+   long form versions ``Gene Expression`` and ``Protein Expression``
+   can also be used.
+
+   Some legacy values are also still recognised, for example
+   ``10xGenomics CytAssist Visium`` (as an alternative to
+   ``10xGenomics Visium (CytAssist)``), and ``spatial RNA-seq``
+   (as an alternative to ``spatial Gene Expression`` or
+   ``spatial GEX``).
+
 Running the :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
 command will automatically transfer these values into the Visium
 project metadata on creation.
@@ -68,6 +84,27 @@ project metadata on creation.
 The :doc:`run_qc <../using/run_qc>` command
 will then determine the appropriate QC protocol to use based on the
 metadata values.
+
+Currently the following protocols are defined:
+
+============================== ==================================
+Protocol name                  Used for
+============================== ==================================
+``10x_Visium_GEX``             Spatial Gene Expression and HD
+                               Spatial Gene Expression data with
+                               50bp insert in R2
+``10x_Visium_PEX``             Spatial Gene Expression data with
+                               50bp insert in R2
+``10x_Visium_GEX_90bp_insert`` Spatial Gene Expression data with
+                               90bp insert in R2 (fresh frozen
+                               tissues only)
+``10x_Visium_legacy``          Spatial Gene Expression data where
+                               the R2 insert size is unknown (so
+                               is not accounted for) (NB this
+                               protocol is deprecated and is only
+                               maintained for backwards
+                               compatibility)
+============================== ==================================
 
 Image data
 ----------

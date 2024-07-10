@@ -9,6 +9,7 @@ import shutil
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.qc.protocols import QCProtocol
+from auto_process_ngs.qc.protocols import determine_qc_protocol_from_metadata
 from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.protocols import parse_protocol_spec
@@ -254,6 +255,325 @@ class TestQCProtocol(unittest.TestCase):
                          "seq_reads=[r1,r2:1-50]:index_reads=[]:"
                          "qc_modules=[fastq_screen,fastqc,sequence_lengths]")
         self.assertEqual(p,QCProtocol.from_specification(repr(p)))
+
+class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
+    """
+    Tests for determine_qc_protocol_from_metadata function
+    """
+    def test_determine_qc_protocol_from_metadata_standardPE(self):
+        """
+        determine_qc_protocol_from_metadata: standard paired-end data
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="RNA-seq",
+            single_cell_platform=None,
+            paired_end=True),
+                         "standardPE")
+
+    def test_determine_qc_protocol_from_metadata_standardSE(self):
+        """
+        determine_qc_protocol_from_metadata: standard single-end data
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="RNA-seq",
+            single_cell_platform=None,
+            paired_end=False),
+                         "standardSE")
+
+    def test_determine_qc_protocol_from_metadata_icell8(self):
+        """
+        determine_qc_protocol_from_metadata: ICELL8 data
+        """
+        # Non-ATAC ICELL8
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="any",
+            single_cell_platform="ICELL8",
+            paired_end=True),
+                         "singlecell")
+        # ATAC
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scATAC-seq",
+            single_cell_platform="ICELL8",
+            paired_end=True),
+                         "ICELL8_scATAC")
+
+    def test_determine_qc_protocol_from_metadata_10xchromium3(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Chromium 3' data
+        """
+        # Default
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="any",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "singlecell")
+        # scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "10x_scRNAseq")
+        # snRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="snRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "10x_snRNAseq")
+        # CellPlex
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CellPlex",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "10x_CellPlex")
+        # CellPlex scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CellPlex scRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "10x_CellPlex")
+        # CellPlex snRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CellPlex snRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "10x_CellPlex")
+        # Flex
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Flex",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "10x_Flex")
+
+    def test_determine_qc_protocol_from_metadata_10xchromium3v2(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Chromium 3'v2 data
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="any",
+            single_cell_platform="10xGenomics Chromium 3'v2",
+            paired_end=True),
+                         "singlecell")
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'v2",
+            paired_end=True),
+                         "10x_scRNAseq")
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="snRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'v2",
+            paired_end=True),
+                         "10x_snRNAseq")
+
+    def test_determine_qc_protocol_from_metadata_10xchromium3v3(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Chromium 3'v3 data
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Any",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            paired_end=True),
+                         "singlecell")
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            paired_end=True),
+                         "10x_scRNAseq")
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="snRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            paired_end=True),
+                         "10x_snRNAseq")
+        # CellPlex
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CellPlex",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            paired_end=True),
+                         "10x_CellPlex")
+        # CellPlex scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CellPlex scRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            paired_end=True),
+                         "10x_CellPlex")
+        # CellPlex snRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CellPlex snRNA-seq",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            paired_end=True),
+                         "10x_CellPlex")
+        # Flex
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Flex",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "10x_Flex")
+
+    def test_determine_qc_protocol_from_metadata_10xchromium5(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Chromium 5' data
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Single Cell Immune Profiling",
+            single_cell_platform="10xGenomics Chromium 5'",
+            paired_end=True),
+                         "10x_ImmuneProfiling")
+
+    def test_determine_qc_protocol_from_metadata_10x_atac(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Single Cell ATAC
+        """
+        # Single cell ATAC
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scATAC-seq",
+            single_cell_platform="10xGenomics Single Cell ATAC",
+            paired_end=True),
+                         "10x_scATAC")
+        # Single nuclei ATAC
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="snATAC-seq",
+            single_cell_platform="10xGenomics Single Cell ATAC",
+            paired_end=True),
+                         "10x_scATAC")
+
+    def test_determine_qc_protocol_from_metadata_10x_visium(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Visium
+        """
+        # Visium Fresh Frozen Spatial Gene Expression
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Fresh Frozen Spatial Gene Expression",
+            single_cell_platform="10xGenomics Visium",
+            paired_end=True),
+                         "10x_Visium_GEX_90bp_insert")
+        # Visium FFPE Spatial Gene Expression
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="FFPE Spatial Gene Expresion",
+            single_cell_platform="10xGenomics Visium",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # Visium (CytAssist) FFPE HD Spatial Gene Expression
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="FFPE spatial Gene Expression",
+            single_cell_platform="10xGenomics Visium (CytAssist)",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # Visium (CytAssist) FFPE Spatial Gene Expression
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="FFPE Spatial Gene Expression",
+            single_cell_platform="10xGenomics Visium (CytAssist)",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # Visium (CytAssist) Fixed Frozen spatial Gene Expression
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Fixed Frozen Spatial Gene Expression",
+            single_cell_platform="10xGenomics Visium (CytAssist)",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # Visium (CytAssist) Fresh Frozen Spatial Gene Expression
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Fresh Frozen Spatial Gene Expression",
+            single_cell_platform="10xGenomics Visium (CytAssist)",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # Visium (CytAssist) FFPE Spatial Protein Expression
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="FFPE Spatial Protein Expression",
+            single_cell_platform="10xGenomics Visium (CytAssist)",
+            paired_end=True),
+                         "10x_Visium_PEX")
+
+    def test_determine_qc_protocol_from_metadata_10x_visium_legacy(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Visium (legacy)
+        """
+        # Spatial RNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="spatial RNA-seq",
+            single_cell_platform="10xGenomics Visium",
+            paired_end=True),
+                         "10x_Visium_legacy")
+        # FFPE spatial RNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="FFPE Spatial RNA-seq",
+            single_cell_platform="10xGenomics Visium",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # CytAssist spatial RNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="spatial RNA-seq",
+            single_cell_platform="10xGenomics CytAssist Visium",
+            paired_end=True),
+                         "10x_Visium_legacy")
+        # CytAssist FFPE RNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="FFPE Spatial RNA-seq",
+            single_cell_platform="10xGenomics CytAssist Visium",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # CytAssist FFPE spatial GEX
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="FFPE Spatial GEX",
+            single_cell_platform="10xGenomics CytAssist Visium",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # CytAssist HD spatial GEX
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="HD Spatial GEX",
+            single_cell_platform="10xGenomics CytAssist Visium",
+            paired_end=True),
+                         "10x_Visium_GEX")
+        # CytAssist FFPE spatial PEX
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="FFPE Spatial PEX",
+            single_cell_platform="10xGenomics CytAssist Visium",
+            paired_end=True),
+                         "10x_Visium_PEX")
+
+    def test_determine_qc_protocol_from_metadata_10x_multiome(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics single cell multiome data
+        """
+        # ATAC component
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="ATAC",
+            single_cell_platform="10xGenomics Single Cell Multiome",
+            paired_end=True),
+                         "10x_Multiome_ATAC")
+        # GEX component
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="GEX",
+            single_cell_platform="10xGenomics Single Cell Multiome",
+            paired_end=True),
+                         "10x_Multiome_GEX")
+
+    def test_determine_qc_protocol_from_metadata_parse_evercode(self):
+        """
+        determine_qc_protocol_from_metadata: Parse Evercode data
+        """
+        # scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scRNA-seq",
+            single_cell_platform="Parse Evercode",
+            paired_end=True),
+                         "ParseEvercode")
+        # TCR scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="TCR scRNA-seq",
+            single_cell_platform="Parse Evercode",
+            paired_end=True),
+                         "ParseEvercode")
+        # WT scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="WT scRNA-seq",
+            single_cell_platform="Parse Evercode",
+            paired_end=True),
+                         "ParseEvercode")
+        # snRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="snRNA-seq",
+            single_cell_platform="Parse Evercode",
+            paired_end=True),
+                         "ParseEvercode")
 
 class TestDetermineQCProtocolFunction(unittest.TestCase):
     """
@@ -610,8 +930,8 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "ICELL8_scATAC")
 
-    def test_determine_qc_protocol_10x_visium(self):
-        """determine_qc_protocol: spatial RNA-seq run (10xGenomics Visium)
+    def test_determine_qc_protocol_10x_visium_spatial_rnaseq_legacy(self):
+        """determine_qc_protocol: 10xGenomics Visium spatial RNA-seq (legacy)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -626,7 +946,25 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_Visium")
+                         "10x_Visium_legacy")
+
+    def test_determine_qc_protocol_10x_visium_spatial_gex(self):
+        """determine_qc_protocol: 10xGenomics Visium spatial GEX
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Visium",
+                                          'Library type':
+                                          "spatial RNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_Visium_legacy")
 
     def test_determine_qc_protocol_10x_visium_ffpe_rnaseq(self):
         """determine_qc_protocol: FFPE spatial RNA-seq run (10xGenomics Visium)
@@ -644,7 +982,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_Visium_FFPE")
+                         "10x_Visium_GEX")
 
     def test_determine_qc_protocol_10x_cytassist_visium(self):
         """determine_qc_protocol: spatial RNA-seq run (10xGenomics CytAssist Visium)
@@ -662,7 +1000,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_Visium")
+                         "10x_Visium_legacy")
 
     def test_determine_qc_protocol_10x_visium_cytassist_ffpe_rnaseq(self):
         """determine_qc_protocol: FFPE spatial RNA-seq run (10xGenomics CytAssist Visium)
@@ -680,7 +1018,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_Visium_FFPE")
+                         "10x_Visium_GEX")
 
     def test_determine_qc_protocol_10x_visium_cytassist_ffpe_gex(self):
         """determine_qc_protocol: FFPE spatial GEX run (10xGenomics CytAssist Visium)
@@ -691,14 +1029,14 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                        "PJB2_S2_R1_001.fastq.gz",
                                        "PJB2_S2_R2_001.fastq.gz"),
                                 metadata={'Single cell platform':
-                                          "10xGenomics CytAssist Visium",
+                                          "10xGenomics Visium (CytAssist)",
                                           'Library type':
                                           "FFPE Spatial GEX"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_Visium_FFPE")
+                         "10x_Visium_GEX")
 
     def test_determine_qc_protocol_10x_visium_cytassist_ffpe_pex(self):
         """determine_qc_protocol: FFPE spatial PEX run (10xGenomics CytAssist Visium)
@@ -709,17 +1047,17 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                        "PJB2_S2_R1_001.fastq.gz",
                                        "PJB2_S2_R2_001.fastq.gz"),
                                 metadata={'Single cell platform':
-                                          "10xGenomics CytAssist Visium",
+                                          "10xGenomics Visium (CytAssist)",
                                           'Library type':
                                           "FFPE Spatial PEX"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_Visium_FFPE_PEX")
+                         "10x_Visium_PEX")
 
-    def test_determine_qc_protocol_10x_visium_cytassist_hd_gex(self):
-        """determine_qc_protocol: HD spatial GEX run (10xGenomics CytAssist Visium)
+    def test_determine_qc_protocol_10x_visium_cytassist_ffpe_hd_gex(self):
+        """determine_qc_protocol: FFPE HD spatial GEX run (10xGenomics CytAssist Visium)
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -727,14 +1065,14 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                        "PJB2_S2_R1_001.fastq.gz",
                                        "PJB2_S2_R2_001.fastq.gz"),
                                 metadata={'Single cell platform':
-                                          "10xGenomics CytAssist Visium",
+                                          "10xGenomics Visium (CytAssist)",
                                           'Library type':
-                                          "HD Spatial GEX"})
+                                          "FFPE HD Spatial GEX"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_Visium_HD")
+                         "10x_Visium_GEX")
 
     def test_determine_qc_protocol_10x_multiome_atac(self):
         """determine_qc_protocol: single cell multiome ATAC run (10xGenomics Multiome ATAC)

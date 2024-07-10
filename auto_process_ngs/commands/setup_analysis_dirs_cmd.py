@@ -256,6 +256,7 @@ def setup_analysis_dirs(ap,
                 logger.warning("Failed to create '%s': %s" % (f,ex))
         # Additional subdir for Visium images
         if single_cell_platform in ("10xGenomics Visium",
+                                    "10xGenomics Visium (CytAssist)",
                                     "10xGenomics CytAssist Visium"):
             print("-- making 'Visium_images' directory")
             d = os.path.join(project.dirn,"Visium_images")
