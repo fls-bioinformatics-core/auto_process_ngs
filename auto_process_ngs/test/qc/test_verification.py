@@ -1415,9 +1415,29 @@ class TestQCVerifier(unittest.TestCase):
             cellranger_version="2.0.0",
             cellranger_refdata="refdata-cellranger-arc-2020-A"))
 
-    def test_qcverifier_verify_10x_visium(self):
+    def test_qcverifier_verify_10x_visium_gex(self):
         """
-        QCVerifier: verify 10xGenomics Visium data (10x_Visium)
+        QCVerifier: verify 10xGenomics Visium data (10x_Visium_GEX)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Visium_GEX",
+                                   fastq_names=fastq_names)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Visium_GEX"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
+
+    def test_qcverifier_verify_10x_visium_gex_90bp_insert(self):
+        """
+        QCVerifier: verify 10xGenomics Visium data (10x_Visium_GEX_90bp_insert)
         """
         ##self.remove_test_outputs = False
         fastq_names=('PJB1_S1_R1_001.fastq.gz',
@@ -1429,7 +1449,47 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names)
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(
-            fetch_protocol_definition("10x_Visium"),
+            fetch_protocol_definition("10x_Visium_GEX_90bp_insert"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
+
+    def test_qcverifier_verify_10x_visium_pex(self):
+        """
+        QCVerifier: verify 10xGenomics Visium data (10x_Visium_PEX)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Visium_PEX",
+                                   fastq_names=fastq_names)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Visium_PEX"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA')))
+
+    def test_qcverifier_verify_10x_visium_legacy(self):
+        """
+        QCVerifier: verify 10xGenomics Visium data (10x_Visium_legacy)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Visium_legacy",
+                                   fastq_names=fastq_names)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Visium_legacy"),
             fastq_names,
             fastq_screens=('model_organisms',
                            'other_organisms',
