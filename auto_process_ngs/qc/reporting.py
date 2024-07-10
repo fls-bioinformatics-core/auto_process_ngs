@@ -3720,7 +3720,7 @@ def report(projects,title=None,filename=None,qc_dir=None,
         report for each Fastq pair
       summary_fields (list): optional, list of fields to
         report for each sample in the summary table
-        relative_links (boolean): optional, if set to True
+      relative_links (boolean): optional, if set to True
         then use relative paths for links in the report
         (default is to use absolute paths)
       use_data_dir (boolean): if True then copy QC
