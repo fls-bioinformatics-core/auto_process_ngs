@@ -1389,8 +1389,8 @@ class QCReport(Document):
                                      relpath=self.relpath)
         # Update the summary table
         status = reporter.update_summary_table(summary_table,
+                                               summary_fields,
                                                sample_report=sample_report,
-                                               fields=summary_fields,
                                                relpath=self.relpath)
         if not status:
             # Update flag to indicate problems with the
@@ -1540,7 +1540,7 @@ class QCReport(Document):
                                         qc_dir=project.qc_dir,
                                         fastq_attrs=project.fastq_attrs)
             reporter.update_summary_table(summary_table,
-                                          fields=fields,
+                                          fields,
                                           relpath=self.relpath)
 
     def report_genebody_coverage(self,project,section):
@@ -2127,7 +2127,7 @@ class SampleQCReporter:
                                    attrs=attrs,
                                    relpath=relpath)
 
-    def update_summary_table(self,summary_table,fields=None,
+    def update_summary_table(self,summary_table,fields,
                              sample_report=None,relpath=None):
         """
         Add lines to a summary table reporting a sample
@@ -2140,7 +2140,7 @@ class SampleQCReporter:
 
         Arguments:
           summary_table (Table): table to update
-          fields (list): list of custom fields to report
+          fields (list): list of fields to report
           relpath (str): if set then make link paths
             relative to 'relpath'
 
@@ -2191,8 +2191,8 @@ class SampleQCReporter:
                 # lines in summary table
                 idx = summary_table.add_row(sample="&nbsp;")
             status = fastq_group.update_summary_table(
-                summary_table,idx=idx,
-                fields=fields,
+                summary_table,fields,
+                idx=idx,
                 relpath=relpath)
             if not status:
                 has_problems = True
@@ -2914,7 +2914,7 @@ class FastqGroupQCReporter:
         # Add an empty section to clear HTML floats
         clear = fastqs_report.add_subsection(css_classes=("clear",))
 
-    def update_summary_table(self,summary_table,idx=None,fields=None,
+    def update_summary_table(self,summary_table,fields,idx=None,
                              relpath=None):
         """
         Add a line to a summary table reporting a Fastq group
@@ -2927,10 +2927,10 @@ class FastqGroupQCReporter:
 
         Arguments:
           summary_table (Table): table to add the summary to
+          fields (list): list of fields to report
           idx (int): if supplied then indicates which existing
             table row to update (if None then a new row is
             appended)
-          fields (list): list of custom fields to report
           relpath (str): if set then make link paths
             relative to 'relpath'
 
@@ -2940,39 +2940,6 @@ class FastqGroupQCReporter:
         """
         # Flag indicating issues
         has_problems = False
-        # Fields to report
-        if fields is None:
-            if self.paired_end:
-                fields = ('fastqs',
-                          'reads',
-                          'read_lengths',
-                          'read_lengths_dist_r1',
-                          'read_lengths_dist_r2',
-                          'boxplot_r1','boxplot_r2',
-                          'fastqc_r1','fastqc_r2',
-                          'screens_r1','screens_r2')
-            else:
-                fields = ('fastq',
-                          'reads',
-                          'read_lengths',
-                          'read_lengths_dist_r1',
-                          'boxplot_r1',
-                          'fastqc_r1',
-                          'screens_r1')
-        else:
-            # Drop fields for reads that aren't present
-            # For example if there are a mixture of
-            # single and paired-end Fastqs
-            updated_fields = []
-            for field in fields:
-                if field[:-1].endswith("_r"):
-                    read = field.split("_")[-1]
-                    if read not in self.reads:
-                        logging.warning("Dropping '%s' from summary table"
-                                        % field)
-                        continue
-                updated_fields.append(field)
-            fields = updated_fields
         # Add row to summary table
         if idx is None:
             idx = summary_table.add_row()
