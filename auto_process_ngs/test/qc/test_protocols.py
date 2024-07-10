@@ -13,6 +13,7 @@ from auto_process_ngs.qc.protocols import determine_qc_protocol_from_metadata
 from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.protocols import parse_protocol_spec
+from auto_process_ngs.qc.protocols import parse_qc_module_spec
 from auto_process_ngs.qc.protocols import QCProtocolError
 from auto_process_ngs.qc.protocols import QCProtocolParseSpecError
 
@@ -295,9 +296,9 @@ class TestQCProtocol(unittest.TestCase):
                        description="Basic paired-end QC with parameters",
                        seq_data_reads=['r1','r2'],
                        index_reads=None,
-                       qc_modules=("fastqc(*)",
-                                   "fastq_screen(*)",
-                                   "sequence_lengths(*)"))
+                       qc_modules=("fastqc(dummy_var=true)",
+                                   "fastq_screen(dummy_var=false)",
+                                   "sequence_lengths(dummy_var=*)"))
         self.assertEqual(p.name,"basicPE_with_parameters")
         self.assertEqual(p.description,"Basic paired-end QC with parameters")
         self.assertEqual(p.reads.seq_data,('r1','r2',))
@@ -309,9 +310,9 @@ class TestQCProtocol(unittest.TestCase):
         self.assertEqual(p.read_range.r1,None)
         self.assertEqual(p.read_range.r2,None)
         self.assertEqual(p.qc_modules,
-                         ["fastq_screen(*)",
-                          "fastqc(*)",
-                          "sequence_lengths(*)"])
+                         ["fastq_screen(dummy_var=false)",
+                          "fastqc(dummy_var=true)",
+                          "sequence_lengths(dummy_var=*)"])
         self.assertEqual(p.qc_module_names,
                          ["fastq_screen",
                           "fastqc",
@@ -330,8 +331,9 @@ class TestQCProtocol(unittest.TestCase):
                          "basicPE_with_parameters:"
                          "'Basic paired-end QC with parameters':"
                          "seq_reads=[r1,r2]:index_reads=[]:"
-                         "qc_modules=[fastq_screen(*),fastqc(*),"
-                         "sequence_lengths(*)]")
+                         "qc_modules=[fastq_screen(dummy_var=false),"
+                         "fastqc(dummy_var=true),"
+                         "sequence_lengths(dummy_var=*)]")
         self.assertEqual(p,QCProtocol.from_specification(repr(p)))
 
 class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
@@ -1576,3 +1578,61 @@ class TestParseProtocolSpec(unittest.TestCase):
                           "index_reads=[]:" \
                           "magic_spell=True:" \
                           "qc_modules=[fastqc]")
+
+class TestParseQCModuleSpec(unittest.TestCase):
+
+    def test_parse_qc_module_spec(self):
+        """
+        parse_qc_module_spec: handle valid specifications
+        """
+        self.assertEqual(
+            parse_qc_module_spec("fastqc"),
+            ('fastqc',{}))
+        self.assertEqual(
+            parse_qc_module_spec("cellranger_count(cellranger_version=6.1.2)"),
+            ('cellranger_count',{ 'cellranger_version': '6.1.2' }))
+        self.assertEqual(
+            parse_qc_module_spec("cellranger_count(cellranger_version=6.1.2;"
+                                 "cellranger_refdata=*)"),
+            ('cellranger_count',{ 'cellranger_version': '6.1.2',
+                                  'cellranger_refdata': '*' }))
+
+    def test_parse_qc_module_spec_quoted_string(self):
+        """
+        parse_qc_module_spec: handle quoted string values
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(s=hello)"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='hello')"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s=\"hello\")"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='\"hello\"')"),
+            ('module',{ 's': '"hello"' }))
+
+    def test_parse_qc_module_spec_boolean(self):
+        """
+        parse_qc_module_spec: handle boolean values
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(b=True)"),
+            ('module',{ 'b': True }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=true)"),
+            ('module',{ 'b': True }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b='true')"),
+            ('module',{ 'b': 'true' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=False)"),
+            ('module',{ 'b': False }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=false)"),
+            ('module',{ 'b': False }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b='false')"),
+            ('module',{ 'b': 'false' }))

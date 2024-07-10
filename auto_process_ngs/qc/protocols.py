@@ -47,6 +47,7 @@ This module also provides the following classes and functions:
 - determine_qc_protocol: determine built-in protocol for a project
 - fetch_protocol_definition: get the definition for a QC protocol
 - parse_protocol_repr: get a QCProtocol object from a string
+- parse_qc_module_spec: process QC module specification string
 """
 
 #######################################################################
@@ -1013,6 +1014,63 @@ def parse_protocol_spec(s):
                                seq_data_reads=seq_data_reads,
                                index_reads=index_reads,
                                qc_modules=qc_modules)
+
+def parse_qc_module_spec(module_spec):
+    """
+    Parse QC module spec into name and parameters
+
+    Parse a QC module specification of the form
+    ``NAME`` or ``NAME(KEY=VALUE;...)`` and return
+    the module name and any additional parameters
+    in the form of a dictionary.
+
+    For example:
+
+    >>> parse_qc_module_spec('NAME')
+    ('NAME', {})
+    >>> parse_qc_module_spec('NAME(K1=V1;K2=V2)')
+    ('NAME', { 'K1':'V1', 'K2':'V2' })
+
+    By default values are returned as strings (with
+    surrounding single or double quotes removed);
+    however basic type conversion is also applied to
+    certain values:
+
+    - True/true and False/false are returned as the
+      appropriate boolean value
+
+    Arguments:
+      module_spec (str): QC module specification
+
+    Returns:
+      Tuple: tuple of the form (name,params) where
+        'name' is the QC module name and 'params'
+        is a dictionary with the extracted key-value
+        pairs.
+    """
+    # Handle module specification string of the form
+    # 'NAME[(KEY=VALUE;...)]'
+    items = module_spec.split('(')
+    # Extract the module name and associated parameter list
+    name = items[0]
+    params = {}
+    try:
+        for item in items[1].rstrip(')').split(';'):
+            key,value = item.split('=')
+            if value[0] in ('\'','"'):
+                # Quoted string
+                if value[-1] == value[-1]:
+                    value = value[1:-1]
+            elif value in ('True','true'):
+                # Boolean true
+                value = True
+            elif value in ('False','false'):
+                # Boolean false
+                value = False
+            params[key] = value
+    except IndexError:
+        pass
+    return (name,params)
 
 ######################################################################
 # Custom exceptions
