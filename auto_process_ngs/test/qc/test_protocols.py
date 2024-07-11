@@ -1327,12 +1327,14 @@ class TestFetchProtocolDefinition(unittest.TestCase):
                                             'picard_insert_size_metrics',
                                             'qualimap_rnaseq',
                                             'rseqc_genebody_coverage',
+                                            'rseqc_infer_experiment',
                                             'sequence_lengths'])
         self.assertEqual(p.expected_outputs,['fastqc_r1',
                                              'fastqc_r2',
                                              'picard_insert_size_metrics',
                                              'qualimap_rnaseq',
                                              'rseqc_genebody_coverage',
+                                             'rseqc_infer_experiment',
                                              'screens_r1',
                                              'screens_r2',
                                              'sequence_lengths'])
