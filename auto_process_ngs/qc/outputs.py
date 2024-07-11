@@ -46,12 +46,12 @@ from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..metadata import AnalysisProjectQCDirInfo
 from ..tenx.cellplex import CellrangerMultiConfigCsv
-from .constants import FASTQ_SCREENS
-from .fastqc import Fastqc
-from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
+from .modules import QCDir
+from .modules.fastqc import Fastqc
+from .modules.fastq_screen import FastqScreen
 from .seqlens import SeqLens
 
 # Module specific logger
@@ -222,16 +222,17 @@ class QCOutputs:
         """
         Internal: determine which QC outputs are present
         """
+        # QC directory object
+        qcdir = QCDir(self.qc_dir,fastq_attrs=self.fastq_attrs)
         # Get list of files
         print("Scanning contents of %s" % self.qc_dir)
-        files = [os.path.join(self.qc_dir,f)
-                 for f in os.listdir(self.qc_dir)]
+        files = qcdir.file_list
         print("\t- %d objects found" % len(files))
         logger.debug("files: %s" % files)
-        # Collect QC outputs
+        # Collect QC outputs from modules
         for qc_data in (
-                self._collect_fastq_screens(files),
-                self._collect_fastqc(files),
+                self._collect_fastq_screens(qcdir),
+                self._collect_fastqc(qcdir),
                 self._collect_fastq_strand(files),
                 self._collect_seq_lengths(files),
                 self._collect_picard_insert_size_metrics(self.qc_dir),
@@ -430,7 +431,7 @@ class QCOutputs:
                            (f,ex))
         return software
 
-    def _collect_fastq_screens(self,files):
+    def _collect_fastq_screens(self,qcdir):
         """
         Collect information on FastqScreen outputs
 
@@ -448,92 +449,11 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          files (list): list of file names to examine.
+          qcdir (QCDir): QC directory object to examine
         """
-        versions = set()
-        output_files = list()
-        fastqs = set()
-        fastqs_for_screen = dict()
-        screen_names = set()
-        tags = set()
-        # Look for legacy screen files
-        legacy_screens = list(filter(lambda f:
-                                     f.endswith("_screen.txt") or
-                                     f.endswith("_screen.png"),
-                                     files))
-        logger.debug("Screens (legacy): %s" % legacy_screens)
-        # Look for new-style screen files
-        screens = list(filter(lambda f:
-                              "_screen_" in os.path.basename(f) and
-                              (f.endswith(".txt") or
-                               f.endswith(".png")),
-                               files))
-        logger.debug("Screens: %s" % screens)
-        print("\t- %d fastq_screen files" % (len(legacy_screens) +
-                                             len(screens)))
-        if legacy_screens:
-            for screen_name in FASTQ_SCREENS:
-                # Explicitly check for legacy screens
-                for screen in list(filter(lambda s:
-                                          s.endswith("_%s_screen.txt" %
-                                                     screen_name),
-                                          legacy_screens)):
-                    fq = self.fastq_attrs(screen[:-len("_screen.txt")])
-                    fastq_name = str(fq)[:-len("_%s" % screen_name)]
-                    tags.add("screens_%s%s" %
-                             (('i' if fq.is_index_read else 'r'),
-                              (fq.read_number
-                               if fq.read_number is not None else '1')))
-                    # Store general information
-                    fastqs.add(fastq_name)
-                    screen_names.add(screen_name)
-                    versions.add(Fastqscreen(screen).version)
-                    # Store Fastq against screen name
-                    if screen_name not in fastqs_for_screen:
-                        fastqs_for_screen[screen_name] = set()
-                    fastqs_for_screen[screen_name].add(fastq_name)
-            # Store the legacy screen files
-            output_files.extend(legacy_screens)
-        if screens:
-            # Pull out the Fastq names from the .txt files
-            for screen in list(filter(lambda s: s.endswith(".txt"),
-                                      screens)):
-                # Assume that names are 'FASTQ_screen_SCREENNAME.txt'
-                fastq_name,screen_name = os.path.basename(screen)\
-                                         [:-len(".txt")].\
-                                         split("_screen_")
-                fq = self.fastq_attrs(fastq_name)
-                tags.add("screens_%s%s" %
-                         (('i' if fq.is_index_read else 'r'),
-                          (fq.read_number
-                           if fq.read_number is not None else '1')))
-                # Store general information
-                fastqs.add(fastq_name)
-                screen_names.add(screen_name)
-                versions.add(Fastqscreen(screen).version)
-                # Store Fastq against screen name
-                if screen_name not in fastqs_for_screen:
-                    fastqs_for_screen[screen_name] = set()
-                fastqs_for_screen[screen_name].add(fastq_name)
-            # Store the screen files
-            output_files.extend(screens)
-        # Return collected information
-        if versions:
-            software = { 'fastq_screen': sorted(list(versions)) }
-        else:
-            software = {}
-        return AttributeDictionary(
-            name='fastq_screen',
-            software=software,
-            screen_names=sorted(list(screen_names)),
-            fastqs=sorted(list(fastqs)),
-            fastqs_for_screen={ s: sorted(list(fastqs_for_screen[s]))
-                                for s in fastqs_for_screen },
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return FastqScreen.collect_qc_outputs(qcdir)
 
-    def _collect_fastqc(self,files):
+    def _collect_fastqc(self,qcdir):
         """
         Collect information on FastQC outputs
 
@@ -547,58 +467,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          files (list): list of file names to examine.
+          qcdir (QCDir): QC directory object to examine
         """
-        versions = set()
-        output_files = list()
-        fastqs = set()
-        tags = set()
-        # Look for fastqc outputs
-        fastqcs = list(
-            filter(lambda f:
-                   f.endswith("_fastqc") and
-                   os.path.exists("%s.html" % f) and
-                   os.path.exists(os.path.join(f,"summary.txt")) and
-                   os.path.exists(os.path.join(f,"fastqc_data.txt")),
-                   files))
-        logger.debug("Fastqc: %s" % fastqcs)
-        print("\t- %d fastqc files" % len(fastqcs))
-        if fastqcs:
-            versions = set()
-            # Pull out the Fastq names from the Fastqc files
-            for fastqc in fastqcs:
-                f = os.path.basename(fastqc)[:-len("_fastqc")]
-                fastqs.add(f)
-                fq = self.fastq_attrs(f)
-                tags.add("fastqc_%s%s" %
-                         (('i' if fq.is_index_read else 'r'),
-                          (fq.read_number
-                           if fq.read_number is not None else '1')))
-                versions.add(Fastqc(fastqc).version)
-            # Store the fastqc files needed for reporting
-            output_files.extend(["%s.html" % f for f in fastqcs])
-            output_files.extend([os.path.join(f,"summary.txt")
-                                 for f in fastqcs])
-            output_files.extend([os.path.join(f,"fastqc_data.txt")
-                                 for f in fastqcs])
-            # Fastqc plot images
-            for png in ("per_base_quality",):
-                output_files.extend([os.path.join(f,
-                                                  "Images",
-                                                  "%s.png" % png)
-                                     for f in fastqcs])
-        # Return collected information
-        if versions:
-            software = { 'fastqc': sorted(list(versions)) }
-        else:
-            software = {}
-        return AttributeDictionary(
-            name='fastqc',
-            software=software,
-            fastqs=sorted(list(fastqs)),
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return Fastqc.collect_qc_outputs(qcdir)
 
     def _collect_fastq_strand(self,files):
         """
