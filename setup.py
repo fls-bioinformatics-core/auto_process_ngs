@@ -47,6 +47,7 @@ setup(name = "auto_process_ngs",
                   'auto_process_ngs.commands',
                   'auto_process_ngs.icell8',
                   'auto_process_ngs.qc',
+                  'auto_process_ngs.qc.modules',
                   'auto_process_ngs.tenx',],
       license = 'AFL-3',
       # Pull in dependencies
