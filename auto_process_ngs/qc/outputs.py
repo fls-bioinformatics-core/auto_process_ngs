@@ -52,7 +52,7 @@ from .cellranger import CellrangerMulti
 from .modules import QCDir
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
-from .seqlens import SeqLens
+from .modules.sequence_lengths import SequenceLengths
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -234,7 +234,7 @@ class QCOutputs:
                 self._collect_fastq_screens(qcdir),
                 self._collect_fastqc(qcdir),
                 self._collect_fastq_strand(files),
-                self._collect_seq_lengths(files),
+                self._collect_seq_lengths(qcdir),
                 self._collect_picard_insert_size_metrics(self.qc_dir),
                 self._collect_rseqc_genebody_coverage(self.qc_dir),
                 self._collect_rseqc_infer_experiment(self.qc_dir),
@@ -520,7 +520,7 @@ class QCOutputs:
             tags=sorted(list(tags))
         )
 
-    def _collect_seq_lengths(self,files):
+    def _collect_seq_lengths(self,qcdir):
         """
         Collect information on sequence length outputs
 
@@ -541,62 +541,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          files (list): list of file names to examine.
+          qcdir (QCDir): QC directory object to examine
         """
-        output_files = list()
-        fastqs = set()
-        reads = set()
-        max_seqs = None
-        min_seq_length = {}
-        max_seq_length = {}
-        tags = set()
-        # Look for sequence length outputs
-        seq_lens = list(filter(lambda f:
-                               f.endswith("_seqlens.json"),
-                               files))
-        logger.debug("seq_lens: %s" % seq_lens)
-        print("\t- %d sequence length files" % len(seq_lens))
-        if seq_lens:
-            tags.add("sequence_lengths")
-            for f in seq_lens:
-                fq = self.fastq_attrs(f[:-len("_seqlens.json")])
-                read = '%s%s' % ('i' if fq.is_index_read else 'r',
-                                 fq.read_number)
-                fastqs.add(
-                    os.path.basename(
-                        os.path.splitext(f)[0])[:-len("_seqlens")])
-                reads.add(read)
-                seqlens_data = SeqLens(f)
-                try:
-                    # Try to extract the sequence lengths
-                    max_seqs = max(max_seqs,seqlens_data.nreads)
-                except Exception:
-                    if not max_seqs:
-                        max_seqs = seqlens_data.nreads
-                if not read in min_seq_length:
-                    min_seq_length[read] = seqlens_data.min_length
-                else:
-                    min_seq_length[read] = min(min_seq_length[read],
-                                               seqlens_data.min_length)
-                if not read in max_seq_length:
-                    max_seq_length[read] = seqlens_data.max_length
-                else:
-                    max_seq_length[read] = max(max_seq_length[read],
-                                               seqlens_data.max_length)
-            # Store the sequence length files
-            output_files.extend(seq_lens)
-        # Return collected information
-        return AttributeDictionary(
-            name='sequence_lengths',
-            software={},
-            max_seqs=max_seqs,
-            min_seq_length=min_seq_length,
-            max_seq_length=max_seq_length,
-            reads=sorted(list(reads)),
-            fastqs=sorted(list(fastqs)),
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return SequenceLengths.collect_qc_outputs(qcdir)
 
     def _collect_picard_insert_size_metrics(self,qc_dir):
         """
