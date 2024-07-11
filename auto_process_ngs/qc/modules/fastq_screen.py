@@ -20,7 +20,7 @@ import os
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..fastq_screen import Fastqscreen as FastqscreenApp
+from ..fastq_screen import Fastqscreen as FastqscreenOutput
 from ..fastq_screen import fastq_screen_output_files
 from ..utils import filter_fastqs
 from ...fastq_utils import remove_index_fastqs
@@ -107,7 +107,7 @@ class FastqScreen(QCModule):
                     # Store general information
                     fastqs.add(fastq_name)
                     screen_names.add(screen_name)
-                    versions.add(FastqscreenApp(screen).version)
+                    versions.add(FastqscreenOutput(screen).version)
                     # Store Fastq against screen name
                     if screen_name not in fastqs_for_screen:
                         fastqs_for_screen[screen_name] = set()
@@ -130,7 +130,7 @@ class FastqScreen(QCModule):
                 # Store general information
                 fastqs.add(fastq_name)
                 screen_names.add(screen_name)
-                versions.add(FastqscreenApp(screen).version)
+                versions.add(FastqscreenOutput(screen).version)
                 # Store Fastq against screen name
                 if screen_name not in fastqs_for_screen:
                     fastqs_for_screen[screen_name] = set()

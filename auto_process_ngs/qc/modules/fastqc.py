@@ -20,7 +20,7 @@ import os
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..fastqc import Fastqc as FastqcApp
+from ..fastqc import Fastqc as FastqcOutput
 from ..fastqc import fastqc_output_files
 from ..utils import filter_fastqs
 from ...fastq_utils import remove_index_fastqs
@@ -89,7 +89,7 @@ class Fastqc(QCModule):
                          (('i' if fq.is_index_read else 'r'),
                           (fq.read_number
                            if fq.read_number is not None else '1')))
-                versions.add(FastqcApp(fastqc).version)
+                versions.add(FastqcOutput(fastqc).version)
             # Store the fastqc files needed for reporting
             output_files.extend(["%s.html" % f for f in fastqcs])
             output_files.extend([os.path.join(f,"summary.txt")
@@ -304,7 +304,6 @@ class RunFastQC(PipelineTask):
 # Helper functions
 #######################################################################
 
-# FIXME modified copy of version from qc/outputs.py
 def check_fastqc_outputs(project,qc_dir,fastqs=None,
                          read_numbers=None):
     """
