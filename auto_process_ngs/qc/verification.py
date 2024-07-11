@@ -13,7 +13,7 @@ Provides the following classes:
 
 Provides the following functions:
 
-- filter_fastqs: filter list of Fastqs based on read IDs
+- parse_qc_module_spec: process QC module specification string
 - filter_10x_pipelines: filter list of 10xGenomics pipeline tuples
 - verify_project: check the QC outputs for a project
 """
@@ -31,6 +31,7 @@ from .constants import FASTQ_SCREENS
 from .protocols import fetch_protocol_definition
 from .protocols import parse_qc_module_spec
 from .outputs import QCOutputs
+from .utils import filter_fastqs
 from .utils import get_bam_basename
 from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..utils import normalise_organism_name
@@ -629,47 +630,62 @@ class QCVerifier(QCOutputs):
 # Functions
 #######################################################################
 
-def filter_fastqs(reads,fastqs,fastq_attrs=AnalysisFastq):
+def parse_qc_module_spec(module_spec):
     """
-    Filter list of Fastqs and return names matching reads
+    Parse QC module spec into name and parameters
+
+    Parse a QC module specification of the form
+    ``NAME`` or ``NAME(KEY=VALUE;...)`` and return
+    the module name and any additional parameters
+    in the form of a dictionary.
+
+    For example:
+
+    >>> parse_qc_module_spec('NAME')
+    ('NAME', {})
+    >>> parse_qc_module_spec('NAME(K1=V1;K2=V2)')
+    ('NAME', { 'K1':'V1', 'K2':'V2' })
+
+    By default values are returned as strings (with
+    surrounding single or double quotes removed);
+    however basic type conversion is also applied to
+    certain values:
+
+    - True/true and False/false are returned as the
+      appropriate boolean value
 
     Arguments:
-      reads (list): list of reads to filter ('r1',
-        'i2' etc: '*' matches all reads, 'r*' matches
-        all data reads, 'i*' matches all index reads)
-      fastqs (list): list of Fastq files or names
-        to filter
-      fastq_attrs (BaseFastqAttrs): class for extracting
-        attribute data from Fastq names
+      module_spec (str): QC module specification
 
     Returns:
-      List: matching Fastq names (i.e. no leading
-        path or trailing extensions)
+      Tuple: tuple of the form (name,params) where
+        'name' is the QC module name and 'params'
+        is a dictionary with the extracted key-value
+        pairs.
     """
-    fqs = set()
-    for read in reads:
-        index_read = (read.startswith('i') or read == '*')
-        if read == '*':
-            # All reads
-            for fastq in fastqs:
-                fqs.add(fastq_attrs(fastq).basename)
-            continue
-        if read[1:] == '*':
-            # All read numbers
-            read_number = None
-        else:
-            # Specific read
-            read_number = int(read[1:])
-        for fastq in fastqs:
-            fq = fastq_attrs(fastq)
-            if (not index_read and fq.is_index_read) or \
-               (index_read and not fq.is_index_read):
-                # Skip index reads
-                continue
-            if fq.read_number == read_number or \
-               not read_number:
-                fqs.add(fq.basename)
-    return sorted(list(fqs))
+    # Handle module specification string of the form
+    # 'NAME[(KEY=VALUE;...)]'
+    items = module_spec.split('(')
+    # Extract the module name and associated parameter list
+    name = items[0]
+    params = {}
+    try:
+        for item in items[1].rstrip(')').split(';'):
+            key,value = item.split('=')
+            if value[0] in ('\'','"'):
+                # Quoted string
+                if value[-1] == value[-1]:
+                    value = value[1:-1]
+            elif value in ('True','true'):
+                # Boolean true
+                value = True
+            elif value in ('False','false'):
+                # Boolean false
+                value = False
+            params[key] = value
+    except IndexError:
+        pass
+    return (name,params)
 
 def filter_10x_pipelines(p,pipelines):
     """

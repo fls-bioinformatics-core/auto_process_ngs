@@ -21,6 +21,7 @@ from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
 from auto_process_ngs.qc.utils import get_bam_basename
 from auto_process_ngs.qc.utils import get_seq_data_samples
+from auto_process_ngs.qc.utils import filter_fastqs
 from auto_process_ngs.qc.utils import set_cell_count_for_project
 
 # Set to False to keep test output dirs
@@ -389,6 +390,55 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
         # Check sequence data samples
         self.assertEqual(get_seq_data_samples(project_dir),
                          ["PJB1_GEX","PJB1_TCR","PJB2_GEX","PJB2_TCR"])
+
+class TestFilterFastqs(unittest.TestCase):
+
+    def test_filter_fastqs(self):
+        """
+        filter_fastqs: check Fastq names are correctly filtered
+        """
+        fastqs = ("PJB1_S1_R1_001.fastq.gz",
+                  "PJB1_S1_R2_001.fastq.gz",
+                  "PJB1_S1_R3_001.fastq.gz",
+                  "PJB1_S1_I1_001.fastq.gz",
+                  "PJB2_S2_R1_001.fastq.gz",
+                  "PJB2_S2_R2_001.fastq.gz",
+                  "PJB2_S2_R3_001.fastq.gz",
+                  "PJB2_S2_I1_001.fastq.gz",)
+        # Filter R1
+        self.assertEqual(filter_fastqs(['r1'],fastqs),
+                         ["PJB1_S1_R1_001",
+                          "PJB2_S2_R1_001",])
+        # Filter R1 & R3
+        self.assertEqual(filter_fastqs(['r1','r3'],fastqs),
+                         ["PJB1_S1_R1_001",
+                          "PJB1_S1_R3_001",
+                          "PJB2_S2_R1_001",
+                          "PJB2_S2_R3_001",])
+        # Filter I1
+        self.assertEqual(filter_fastqs(['i1'],fastqs),
+                         ["PJB1_S1_I1_001",
+                          "PJB2_S2_I1_001",])
+        # Filter R*
+        self.assertEqual(filter_fastqs(['r*'],fastqs),
+                         ["PJB1_S1_R1_001",
+                          "PJB1_S1_R2_001",
+                          "PJB1_S1_R3_001",
+                          "PJB2_S2_R1_001",
+                          "PJB2_S2_R2_001",
+                          "PJB2_S2_R3_001",])
+        # Filter *
+        self.assertEqual(filter_fastqs(['*'],fastqs),
+                         ["PJB1_S1_I1_001",
+                          "PJB1_S1_R1_001",
+                          "PJB1_S1_R2_001",
+                          "PJB1_S1_R3_001",
+                          "PJB2_S2_I1_001",
+                          "PJB2_S2_R1_001",
+                          "PJB2_S2_R2_001",
+                          "PJB2_S2_R3_001",])
+        # Filter everything
+        self.assertEqual(filter_fastqs([],fastqs),[])
 
 class TestSetCellCountForProject(unittest.TestCase):
     """

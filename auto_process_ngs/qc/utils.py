@@ -13,6 +13,7 @@ Provides the following functions:
 - get_bam_basename: return the BAM file basename from a Fastq filename
 - get_seq_data_samples: identify samples with biological (sequencing)
   data
+- filter_fastqs: filter list of Fastqs based on read IDs
 - set_cell_count_for_project: sets total number of cells for a project
 """
 
@@ -346,6 +347,48 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
                                      if s in samples])
             samples = sorted(samples_)
     return samples
+
+def filter_fastqs(reads,fastqs,fastq_attrs=AnalysisFastq):
+    """
+    Filter list of Fastqs and return names matching reads
+
+    Arguments:
+      reads (list): list of reads to filter ('r1',
+        'i2' etc: '*' matches all reads, 'r*' matches
+        all data reads, 'i*' matches all index reads)
+      fastqs (list): list of Fastq files or names
+        to filter
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        attribute data from Fastq names
+
+    Returns:
+      List: matching Fastq names (i.e. no leading
+        path or trailing extensions)
+    """
+    fqs = set()
+    for read in reads:
+        index_read = (read.startswith('i') or read == '*')
+        if read == '*':
+            # All reads
+            for fastq in fastqs:
+                fqs.add(fastq_attrs(fastq).basename)
+            continue
+        if read[1:] == '*':
+            # All read numbers
+            read_number = None
+        else:
+            # Specific read
+            read_number = int(read[1:])
+        for fastq in fastqs:
+            fq = fastq_attrs(fastq)
+            if (not index_read and fq.is_index_read) or \
+               (index_read and not fq.is_index_read):
+                # Skip index reads
+                continue
+            if fq.read_number == read_number or \
+               not read_number:
+                fqs.add(fq.basename)
+    return sorted(list(fqs))
 
 def set_cell_count_for_project(project_dir,qc_dir=None,
                                source="count"):

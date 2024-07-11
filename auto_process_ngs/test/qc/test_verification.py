@@ -12,8 +12,8 @@ from auto_process_ngs.mockqc import make_mock_qc_dir
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.verification import QCVerifier
-from auto_process_ngs.qc.verification import filter_fastqs
 from auto_process_ngs.qc.verification import filter_10x_pipelines
+from auto_process_ngs.qc.verification import parse_qc_module_spec
 from auto_process_ngs.qc.verification import verify_project
 
 # Set to False to keep test output dirs
@@ -1560,54 +1560,63 @@ class TestQCVerifier(unittest.TestCase):
             cellranger_version="7.1.0",
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
-class TestFilterFastqs(unittest.TestCase):
+class TestParseQCModuleSpec(unittest.TestCase):
 
-    def test_filter_fastqs(self):
+    def test_parse_qc_module_spec(self):
         """
-        filter_fastqs: check Fastq names are correctly filtered
+        parse_qc_module_spec: handle valid specifications
         """
-        fastqs = ("PJB1_S1_R1_001.fastq.gz",
-                  "PJB1_S1_R2_001.fastq.gz",
-                  "PJB1_S1_R3_001.fastq.gz",
-                  "PJB1_S1_I1_001.fastq.gz",
-                  "PJB2_S2_R1_001.fastq.gz",
-                  "PJB2_S2_R2_001.fastq.gz",
-                  "PJB2_S2_R3_001.fastq.gz",
-                  "PJB2_S2_I1_001.fastq.gz",)
-        # Filter R1
-        self.assertEqual(filter_fastqs(['r1'],fastqs),
-                         ["PJB1_S1_R1_001",
-                          "PJB2_S2_R1_001",])
-        # Filter R1 & R3
-        self.assertEqual(filter_fastqs(['r1','r3'],fastqs),
-                         ["PJB1_S1_R1_001",
-                          "PJB1_S1_R3_001",
-                          "PJB2_S2_R1_001",
-                          "PJB2_S2_R3_001",])
-        # Filter I1
-        self.assertEqual(filter_fastqs(['i1'],fastqs),
-                         ["PJB1_S1_I1_001",
-                          "PJB2_S2_I1_001",])
-        # Filter R*
-        self.assertEqual(filter_fastqs(['r*'],fastqs),
-                         ["PJB1_S1_R1_001",
-                          "PJB1_S1_R2_001",
-                          "PJB1_S1_R3_001",
-                          "PJB2_S2_R1_001",
-                          "PJB2_S2_R2_001",
-                          "PJB2_S2_R3_001",])
-        # Filter *
-        self.assertEqual(filter_fastqs(['*'],fastqs),
-                         ["PJB1_S1_I1_001",
-                          "PJB1_S1_R1_001",
-                          "PJB1_S1_R2_001",
-                          "PJB1_S1_R3_001",
-                          "PJB2_S2_I1_001",
-                          "PJB2_S2_R1_001",
-                          "PJB2_S2_R2_001",
-                          "PJB2_S2_R3_001",])
-        # Filter everything
-        self.assertEqual(filter_fastqs([],fastqs),[])
+        self.assertEqual(
+            parse_qc_module_spec("fastqc"),
+            ('fastqc',{}))
+        self.assertEqual(
+            parse_qc_module_spec("cellranger_count(cellranger_version=6.1.2)"),
+            ('cellranger_count',{ 'cellranger_version': '6.1.2' }))
+        self.assertEqual(
+            parse_qc_module_spec("cellranger_count(cellranger_version=6.1.2;"
+                                 "cellranger_refdata=*)"),
+            ('cellranger_count',{ 'cellranger_version': '6.1.2',
+                                  'cellranger_refdata': '*' }))
+
+    def test_parse_qc_module_spec_quoted_string(self):
+        """
+        parse_qc_module_spec: handle quoted string values
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(s=hello)"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='hello')"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s=\"hello\")"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='\"hello\"')"),
+            ('module',{ 's': '"hello"' }))
+
+    def test_parse_qc_module_spec_boolean(self):
+        """
+        parse_qc_module_spec: handle boolean values
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(b=True)"),
+            ('module',{ 'b': True }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=true)"),
+            ('module',{ 'b': True }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b='true')"),
+            ('module',{ 'b': 'true' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=False)"),
+            ('module',{ 'b': False }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=false)"),
+            ('module',{ 'b': False }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b='false')"),
+            ('module',{ 'b': 'false' }))
 
 class TestFilter10xPipelines(unittest.TestCase):
 
