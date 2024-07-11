@@ -82,8 +82,6 @@ from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.utils import add_cellranger_args
 from ..utils import get_organism_list
-from .modules.fastqc import check_fastqc_outputs
-from .modules.fastq_screen import check_fastq_screen_ouputs
 from .outputs import fastq_strand_output
 from .outputs import picard_collect_insert_size_metrics_output
 from .outputs import rseqc_genebody_coverage_output
@@ -107,8 +105,8 @@ from .seqlens import get_sequence_lengths
 # Import tasks for QC modules
 from .modules.fastq_screen import CheckFastqScreenOutputs
 from .modules.fastq_screen import RunFastqScreen
-from .modules.fastqc import CheckFastqcOutputs
-from .modules.fastqc import RunFastqc
+from .modules.fastqc import CheckFastQCOutputs
+from .modules.fastqc import RunFastQC
 
 # Module specific logger
 logger = logging.getLogger(__name__)
