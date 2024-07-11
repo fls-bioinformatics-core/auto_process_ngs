@@ -106,12 +106,12 @@ from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from .fastqc import Fastqc
+from .fastqc import fastqc_output_files
 from .fastq_screen import Fastqscreen
+from .fastq_screen import fastq_screen_output_files
 from .fastq_strand import Fastqstrand
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
-from .outputs import fastqc_output
-from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
 from .outputs import QCOutputs
 from .outputs import ExtraOutputs
@@ -3327,10 +3327,10 @@ class FastqQCReporter:
         logging.debug("QCDir : %s" % qc_dir)
         # FastQC
         logging.debug("Fastqc: %s" %
-                      os.path.join(qc_dir,fastqc_output(fastq)[0]))
+                      os.path.join(qc_dir,fastqc_output_files(fastq)[0]))
         try:
             self.fastqc = Fastqc(os.path.join(
-                qc_dir,fastqc_output(fastq)[0]))
+                qc_dir,fastqc_output_files(fastq)[0]))
         except Exception as ex:
             self.fastqc = None
         # Fastqscreen
@@ -3343,8 +3343,8 @@ class FastqQCReporter:
                                  f.startswith(fastq_base) and
                                  f.endswith("_%s_screen.txt" % screen_name),
                                  os.listdir(qc_dir))):
-                png,txt = fastq_screen_output(fastq,screen_name,
-                                              legacy=True)
+                png,txt = fastq_screen_output_files(fastq,screen_name,
+                                                    legacy=True)
                 png = os.path.join(qc_dir,png)
                 txt = os.path.join(qc_dir,txt)
                 if os.path.exists(png) and os.path.exists(txt):
@@ -3363,7 +3363,7 @@ class FastqQCReporter:
                              "_screen_" in f,
                              os.listdir(qc_dir))):
             screen_name = f[:-len(".txt")].split("_screen_")[1]
-            png,txt = fastq_screen_output(fastq,screen_name)
+            png,txt = fastq_screen_output_files(fastq,screen_name)
             png = os.path.join(qc_dir,png)
             txt = os.path.join(qc_dir,txt)
             if os.path.exists(png) and os.path.exists(txt):
