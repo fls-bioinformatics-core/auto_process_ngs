@@ -13,8 +13,6 @@ Provides the following classes:
 
 Provides the following functions:
 
-- fastq_screen_output: get names for fastq_screen outputs
-- fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
 - picard_collect_insert_size_metrics_output: get names for Picard
   CollectInsertSizeMetrics output
@@ -1484,60 +1482,6 @@ class ExtraOutputs:
 # Functions
 #######################################################################
 
-def fastq_screen_output(fastq,screen_name,legacy=False):
-    """
-    Generate name of fastq_screen output files
-
-    Given a Fastq file name and a screen name, the outputs from
-    fastq_screen will look like:
-
-    - {FASTQ}_screen_{SCREEN_NAME}.png
-    - {FASTQ}_screen_{SCREEN_NAME}.txt
-
-    "Legacy" screen outputs look like:
-
-    - {FASTQ}_{SCREEN_NAME}_screen.png
-    - {FASTQ}_{SCREEN_NAME}_screen.txt
-
-    Arguments:
-       fastq (str): name of Fastq file
-       screen_name (str): name of screen
-       legacy (bool): if True then use 'legacy' (old-style)
-         naming convention (default: False)
-
-    Returns:
-       tuple: fastq_screen output names (without leading path)
-
-    """
-    if not legacy:
-        base_name = "%s_screen_%s"
-    else:
-        base_name = "%s_%s_screen"
-    base_name = base_name  % (strip_ngs_extensions(os.path.basename(fastq)),
-                              str(screen_name))
-    return (base_name+'.png',base_name+'.txt')
-
-def fastqc_output(fastq):
-    """
-    Generate name of FastQC outputs
-
-    Given a Fastq file name, the outputs from FastQC will look
-    like:
-
-    - {FASTQ}_fastqc/
-    - {FASTQ}_fastqc.html
-    - {FASTQ}_fastqc.zip
-
-    Arguments:
-       fastq (str): name of Fastq file
-
-    Returns:
-       tuple: FastQC outputs (without leading paths)
-
-    """
-    base_name = "%s_fastqc" % strip_ngs_extensions(os.path.basename(fastq))
-    return (base_name,base_name+'.html',base_name+'.zip')
-
 def fastq_strand_output(fastq):
     """
     Generate name for fastq_strand.py output
@@ -1819,96 +1763,6 @@ def cellranger_multi_output(project,config_csv,sample_name=None,
     for f in ("tag_calls_summary.csv",):
         outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
-
-def check_fastq_screen_outputs(project,qc_dir,screen,fastqs=None,
-                               read_numbers=None,legacy=False):
-    """
-    Return Fastqs missing QC outputs from FastqScreen
-
-    Returns a list of the Fastqs from a project for which
-    one or more associated outputs from FastqScreen
-    don't exist in the specified QC directory.
-
-    Arguments:
-      project (AnalysisProject): project to check the
-        QC outputs for
-      qc_dir (str): path to the QC directory (relative
-        path is assumed to be a subdirectory of the
-        project)
-      screen (str): screen name to check
-      fastqs (list): optional list of Fastqs to check
-        against (defaults to Fastqs from the project)
-      read_numbers (list): read numbers to define Fastqs
-        to predict outputs for; if not set then all
-        non-index reads will be included
-      legacy (bool): if True then check for 'legacy'-style
-         names (defult: False)
-
-    Returns:
-      List: list of Fastq files with missing outputs.
-    """
-    if not os.path.isabs(qc_dir):
-        qc_dir = os.path.join(project.dirn,qc_dir)
-    if not fastqs:
-        fastqs_in = project.fastqs
-    else:
-        fastqs_in = fastqs
-    fastqs = set()
-    for fastq in remove_index_fastqs(fastqs_in,
-                                     project.fastq_attrs):
-        if read_numbers and \
-           project.fastq_attrs(fastq).read_number not in read_numbers:
-            # Ignore non-data reads
-            continue
-        for output in [os.path.join(qc_dir,f)
-                       for f in fastq_screen_output(fastq,screen,
-                                                    legacy=legacy)]:
-            if not os.path.exists(output):
-                fastqs.add(fastq)
-    return sorted(list(fastqs))
-
-def check_fastqc_outputs(project,qc_dir,fastqs=None,
-                         read_numbers=None):
-    """
-    Return Fastqs missing QC outputs from FastQC
-
-    Returns a list of the Fastqs from a project for which
-    one or more associated outputs from FastQC don't exist
-    in the specified QC directory.
-
-    Arguments:
-      project (AnalysisProject): project to check the
-        QC outputs for
-      qc_dir (str): path to the QC directory (relative
-        path is assumed to be a subdirectory of the
-        project)
-      fastqs (list): optional list of Fastqs to check
-        against (defaults to Fastqs from the project)
-      read_numbers (list): read numbers to predict
-        outputs for
-
-    Returns:
-      List: list of Fastq files with missing outputs.
-    """
-    if not os.path.isabs(qc_dir):
-        qc_dir = os.path.join(project.dirn,qc_dir)
-    if not fastqs:
-        fastqs_in = project.fastqs
-    else:
-        fastqs_in = fastqs
-    fastqs = set()
-    for fastq in remove_index_fastqs(fastqs_in,
-                                     project.fastq_attrs):
-        if read_numbers and \
-           project.fastq_attrs(fastq).read_number not in read_numbers:
-            # Ignore non-QC reads
-            continue
-        # FastQC outputs
-        for output in [os.path.join(qc_dir,f)
-                       for f in fastqc_output(fastq)]:
-            if not os.path.exists(output):
-                fastqs.add(fastq)
-    return sorted(list(fastqs))
 
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
                                fastqs=None,read_numbers=None):
