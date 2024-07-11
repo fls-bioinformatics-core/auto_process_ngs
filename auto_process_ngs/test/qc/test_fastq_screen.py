@@ -7,6 +7,7 @@ import unittest
 import tempfile
 
 from auto_process_ngs.qc.fastq_screen import Fastqscreen
+from auto_process_ngs.qc.fastq_screen import fastq_screen_output_files
 
 class TestFastqscreen(unittest.TestCase):
     def setUp(self):
@@ -169,3 +170,39 @@ SpR6	94997	94994	100.00	0	0.00	3	0.00	0	0.00	0	0.00
                                            'ecoli','saccer','PhiX','Vectors',
                                            'SpR6'])
         self.assertEqual(screen.no_hits,6.90)
+
+class TestFastqScreenOutputFilesFunction(unittest.TestCase):
+
+    def test_fastq_screen_output_files(self):
+        """
+        fastq_screen_output_files: handles .fastq file
+        """
+        self.assertEqual(
+            fastq_screen_output_files(
+                '/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
+                'model_organisms'),
+            ('PB1_ATTAGG_L001_R1_001_screen_model_organisms.png',
+             'PB1_ATTAGG_L001_R1_001_screen_model_organisms.txt'))
+
+    def test_fastq_screen_output_files_fastqgz(self):
+        """
+        fastq_screen_output_files: handles fastq.gz file
+        """
+        self.assertEqual(
+            fastq_screen_output_files(
+                '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz',
+                'model_organisms'),
+            ('PB1_ATTAGG_L001_R1_001_screen_model_organisms.png',
+             'PB1_ATTAGG_L001_R1_001_screen_model_organisms.txt'))
+
+    def test_fastq_screen_output_files_legacy_naming(self):
+        """
+        fastq_screen_output_files: handles legacy naming convention
+        """
+        self.assertEqual(
+            fastq_screen_output_files(
+                '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz',
+                'model_organisms',
+                legacy=True),
+            ('PB1_ATTAGG_L001_R1_001_model_organisms_screen.png',
+             'PB1_ATTAGG_L001_R1_001_model_organisms_screen.txt'))

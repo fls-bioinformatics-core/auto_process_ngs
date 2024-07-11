@@ -1,8 +1,31 @@
 #!/usr/bin/env python
 #
-# fastq screens library
+#     qc/fastq_screen: utilities for handling FastqScreen outputs
+#     Copyright (C) University of Manchester 2024 Peter Briggs
+#
+"""
+Provides utility classes and functions for handling FastqScreen outputs.
+
+Provides the following classes:
+
+- Fastqscreen: wrapper for handling outputs from FastqScreen
+
+Provides the following functions:
+
+- fastq_screen_output_files: generates names of FastScreen outputs files
+"""
+
+#######################################################################
+# Imports
+#######################################################################
+
 import os
 from bcftbx.TabFile import TabFile
+from bcftbx.qc.report import strip_ngs_extensions
+
+#######################################################################
+# Classes
+#######################################################################
 
 """
 Example screen file for v0.4.1:
@@ -144,3 +167,40 @@ class Fastqscreen(TabFile):
         Percentage of reads with no hits on any library
         """
         return self._no_hits
+
+#######################################################################
+# Functions
+#######################################################################
+
+def fastq_screen_output_files(fastq,screen_name,legacy=False):
+    """
+    Generate names of fastq_screen output files
+
+    Given a Fastq file name and a screen name, the outputs from
+    fastq_screen will look like:
+
+    - {FASTQ}_screen_{SCREEN_NAME}.png
+    - {FASTQ}_screen_{SCREEN_NAME}.txt
+
+    "Legacy" screen outputs look like:
+
+    - {FASTQ}_{SCREEN_NAME}_screen.png
+    - {FASTQ}_{SCREEN_NAME}_screen.txt
+
+    Arguments:
+       fastq (str): name of Fastq file
+       screen_name (str): name of screen
+       legacy (bool): if True then use 'legacy' (old-style)
+         naming convention (default: False)
+
+    Returns:
+       tuple: fastq_screen output names (without leading path)
+
+    """
+    if not legacy:
+        base_name = "%s_screen_%s"
+    else:
+        base_name = "%s_%s_screen"
+    base_name = base_name  % (strip_ngs_extensions(os.path.basename(fastq)),
+                              str(screen_name))
+    return (base_name+'.png',base_name+'.txt')
