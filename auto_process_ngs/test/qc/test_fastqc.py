@@ -10,6 +10,7 @@ import tempfile
 from auto_process_ngs.qc.fastqc import Fastqc
 from auto_process_ngs.qc.fastqc import FastqcSummary
 from auto_process_ngs.qc.fastqc import FastqcData
+from auto_process_ngs.qc.fastqc import fastqc_output_files
 
 class TestFastqc_v0_11_3(unittest.TestCase):
     def setUp(self):
@@ -523,3 +524,23 @@ PASS	Adapter Content	PJB_S1_L001_R1_001.fastq.gz
                           "Nextera Transposase Sequence",
                           "PolyA",
                           "PolyG"])
+
+class TestFastqcOutputFilesFunction(unittest.TestCase):
+    def test_fastqc_output_files(self):
+        """
+        fastqc_output_files: handles .fastq file
+        """
+        self.assertEqual(
+            fastqc_output_files('/data/PB/PB1_ATTAGG_L001_R1_001.fastq'),
+            ('PB1_ATTAGG_L001_R1_001_fastqc',
+             'PB1_ATTAGG_L001_R1_001_fastqc.html',
+             'PB1_ATTAGG_L001_R1_001_fastqc.zip'))
+    def test_fastqc_output_files_fastqgz(self):
+        """
+        fastqc_output_files: handles fastq.gz file
+        """
+        self.assertEqual(
+            fastqc_output_files('/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
+            ('PB1_ATTAGG_L001_R1_001_fastqc',
+             'PB1_ATTAGG_L001_R1_001_fastqc.html',
+             'PB1_ATTAGG_L001_R1_001_fastqc.zip'))

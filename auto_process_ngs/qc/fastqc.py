@@ -1,16 +1,41 @@
 #!/usr/bin/env python
 #
-# fastqc library
+#     qc/fastqc: utilities for handling FastQC outputs
+#     Copyright (C) University of Manchester 2024 Peter Briggs
+#
+"""
+Provides utility classes and functions for handling FastQC outputs.
+
+Provides the following classes:
+
+- Fastqc: wrapper for handling outputs from FastQC
+- FastqcSummary: handler for FastQC summary file
+- FastqcData: handler for FastQC data file
+
+Provides the following functions:
+
+- fastqc_output_files: generates names of FastQC outputs files
+"""
+
+#######################################################################
+# Imports
+#######################################################################
+
 import os
 import logging
 from collections import OrderedDict
 from bcftbx.TabFile import TabFile
 from bcftbx.htmlpagewriter import PNGBase64Encoder
+from bcftbx.qc.report import strip_ngs_extensions
 from ..docwriter import Table
 from ..docwriter import Link
 
 # Module specific logger
 logger = logging.getLogger(__name__)
+
+#######################################################################
+# Classes
+#######################################################################
 
 """
 Example Fastqc summary text file (FASTQ_fastqc/summary.txt):
@@ -477,3 +502,28 @@ class FastqcData:
             summary[adapter] = summary[adapter]/total_area
         # Return content summary
         return summary
+
+#######################################################################
+# Functions
+#######################################################################
+
+def fastqc_output_files(fastq):
+    """
+    Generate names of FastQC output files
+
+    Given a Fastq file name, the outputs from FastQC will look
+    like:
+
+    - {FASTQ}_fastqc/
+    - {FASTQ}_fastqc.html
+    - {FASTQ}_fastqc.zip
+
+    Arguments:
+       fastq (str): name of Fastq file
+
+    Returns:
+       tuple: FastQC outputs (without leading paths)
+
+    """
+    base_name = "%s_fastqc" % strip_ngs_extensions(os.path.basename(fastq))
+    return (base_name,base_name+'.html',base_name+'.zip')
