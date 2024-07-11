@@ -86,13 +86,12 @@ from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.utils import add_cellranger_args
 from ..utils import get_organism_list
-from .outputs import fastq_screen_output
+from .modules.fastqc import check_fastqc_outputs
+from .modules.fastq_screen import check_fastq_screen_ouputs
 from .outputs import fastq_strand_output
 from .outputs import picard_collect_insert_size_metrics_output
 from .outputs import rseqc_genebody_coverage_output
 from .outputs import qualimap_rnaseq_output
-from .outputs import check_fastq_screen_outputs
-from .outputs import check_fastqc_outputs
 from .outputs import check_fastq_strand_outputs
 from .outputs import check_cellranger_count_outputs
 from .outputs import check_cellranger_atac_count_outputs
