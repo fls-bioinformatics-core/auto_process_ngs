@@ -19,7 +19,6 @@ Pipeline task classes:
 - GetSequenceDataFastqs
 - UpdateQCMetadata
 - VerifyFastqs
-- GetSeqLengthStats
 - SetupFastqStrandConf
 - CheckFastqStrandOutputs
 - RunFastqStrand
@@ -100,13 +99,13 @@ from .utils import set_cell_count_for_project
 from .verification import parse_qc_module_spec
 from .verification import verify_project
 from .fastq_strand import build_fastq_strand_conf
-from .seqlens import get_sequence_lengths
 
 # Import tasks for QC modules
 from .modules.fastq_screen import CheckFastqScreenOutputs
 from .modules.fastq_screen import RunFastqScreen
 from .modules.fastqc import CheckFastQCOutputs
 from .modules.fastqc import RunFastQC
+from .modules.sequence_lengths import GetSeqLengthStats
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -1660,68 +1659,6 @@ class VerifyFastqs(PipelineFunctionTask):
             self.fail(message="Failed to verify Fastq files")
         else:
             print("Verified Fastq files")
-
-class GetSeqLengthStats(PipelineFunctionTask):
-    """
-    Get data on sequence lengths, masking and padding
-    for Fastqs in a project, and write the data to
-    JSON files.
-    """
-    def init(self,project,qc_dir,read_numbers=None,fastqs=None,
-             fastq_attrs=None):
-        """
-        Initialise the GetSeqLengthStats task
-
-        Arguments:
-          project (AnalysisProject): project with Fastqs
-            to get the sequence length data from
-          qc_dir (str): directory for QC outputs (defaults
-            to subdirectory 'qc' of project directory)
-          read_numbers (sequence): list of read numbers to
-            include (or None to include all reads)
-          fastqs (list): optional, list of Fastq files
-            (overrides Fastqs in project)
-          fastq_attrs (BaseFastqAttrs): class to use for
-            extracting data from Fastq names
-        """
-        self._fastqs = list()
-    def setup(self):
-        # Input Fastqs
-        if self.args.fastqs:
-            fastqs_in = self.args.fastqs
-        else:
-            fastqs_in = self.args.project.fastqs
-        # Remove index Fastqs
-        self._fastqs = remove_index_fastqs(
-            fastqs_in,
-            fastq_attrs=self.args.fastq_attrs)
-        # Get sequence length data for Fastqs
-        for fastq in self._fastqs:
-            if self.args.read_numbers and \
-               self.args.fastq_attrs(fastq).read_number \
-               not in self.args.read_numbers:
-                continue
-            outfile = os.path.join(self.args.qc_dir,
-                                   "%s_seqlens.json" %
-                                   self.args.fastq_attrs(fastq))
-            if os.path.exists(outfile):
-                continue
-            self.add_call(
-                "Get read lengths for %s" % os.path.basename(fastq),
-                get_sequence_lengths,
-                fastq,
-                outfile=outfile)
-    def finish(self):
-        for result in self.result():
-            # Fastq name
-            fastq = result['fastq']
-            # Check output file exists
-            outfile = os.path.join(self.args.qc_dir,
-                                   "%s_seqlens.json" %
-                                   self.args.fastq_attrs(fastq))
-            if not os.path.exists(outfile):
-                raise Exception("Missing sequence length file: %s"  %
-                                outfile)
 
 class SetupFastqStrandConf(PipelineFunctionTask):
     """
