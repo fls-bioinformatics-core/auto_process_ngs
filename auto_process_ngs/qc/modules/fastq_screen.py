@@ -376,6 +376,8 @@ class RunFastqScreen(PipelineTask):
         # Also need to specify tbb=2020.2 for bowtie
         # See https://www.biostars.org/p/494922/
         self.conda("tbb=2020.2")
+        # perl-gd seems to be needed explicitly
+        self.conda("perl-gd")
     def setup(self):
         if not self.args.fastqs:
             print("Nothing to do")
