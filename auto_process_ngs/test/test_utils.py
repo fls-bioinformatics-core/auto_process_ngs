@@ -1130,6 +1130,20 @@ class TestPrettyPrintRows(unittest.TestCase):
         self.assertEqual(pretty_print_rows(rows,prepend=True),
                          "-   hello: A salutation\n- goodbye:      The End")
 
+class TestPrettyPrintReadsFunction(unittest.TestCase):
+
+    def test_pretty_print_reads(self):
+        """
+        pretty_print_reads: handles different inputs
+        """
+        self.assertEqual(pretty_print_reads(1),"1")
+        self.assertEqual(pretty_print_reads(12),"12")
+        self.assertEqual(pretty_print_reads(117),"117")
+        self.assertEqual(pretty_print_reads(1024),"1,024")
+        self.assertEqual(pretty_print_reads(33385500),"33,385,500")
+        self.assertEqual(pretty_print_reads(112839902),"112,839,902")
+        self.assertEqual(pretty_print_reads(10212341927),"10,212,341,927")
+
 class TestWriteScriptFile(unittest.TestCase):
     """Tests for the write_script_file function
 
