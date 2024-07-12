@@ -20,12 +20,6 @@ Provides the following functions:
   output
 - qualimap_rnaseq_output: get names for Qualimap 'rnaseq' output
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
-- check_cellranger_count_outputs: fetch sample names without cellranger
-  count outputs
-- check_cellranger_atac_count_outputs: fetch sample names without
-  cellranger-atac count outputs
-- check_cellranger_arc_count_outputs: fetch sample names without
-  cellranger-arc count outputs
 """
 
 #######################################################################
@@ -43,13 +37,9 @@ from ..fastq_utils import remove_index_fastqs
 from ..metadata import AnalysisProjectQCDirInfo
 from ..tenx.cellplex import CellrangerMultiConfigCsv
 from .fastq_strand import Fastqstrand
-from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
-from .cellranger import cellranger_count_output
-from .cellranger import cellranger_atac_count_output
-from .cellranger import cellranger_arc_count_output
-from .cellranger import cellranger_multi_output
 from .modules import QCDir
+from .modules.cellranger_count import CellrangerCount
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
 from .modules.sequence_lengths import SequenceLengths
@@ -240,7 +230,7 @@ class QCOutputs:
                 self._collect_rseqc_infer_experiment(self.qc_dir),
                 self._collect_qualimap_rnaseq(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
-                self._collect_cellranger_count(self.qc_dir),
+                self._collect_cellranger_count(qcdir),
                 self._collect_cellranger_multi(self.qc_dir),
                 self._collect_multiqc(self.qc_dir),
                 self._collect_extra_outputs(self.qc_dir)):
@@ -857,7 +847,7 @@ class QCOutputs:
             tags=sorted(list(tags))
         )
 
-    def _collect_cellranger_count(self,qc_dir):
+    def _collect_cellranger_count(self,qcdir):
         """
         Collect information on Cellranger count outputs
 
@@ -878,121 +868,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          qc_dir (str): top-level directory to look under.
+          qcdir (QCDir): QC directory object to examine
         """
-        software = {}
-        output_files = list()
-        cellranger_samples = []
-        cellranger_references = set()
-        samples_by_pipeline = dict()
-        tags = set()
-        # Look for cellranger_count outputs
-        cellranger_count_dir = os.path.join(qc_dir,
-                                            "cellranger_count")
-        print("Checking for cellranger* count outputs under %s" %
-              cellranger_count_dir)
-        cellranger_versioned_samples = {}
-        if os.path.isdir(cellranger_count_dir):
-            cellranger_name = None
-            versions = set()
-            # Old-style (unversioned)
-            for d in filter(
-                    lambda f:
-                    os.path.isdir(os.path.join(cellranger_count_dir,f)),
-                    os.listdir(cellranger_count_dir)):
-                sample_dir = os.path.join(cellranger_count_dir,d)
-                try:
-                    cellranger = CellrangerCount(sample_dir)
-                    output_files.append(cellranger.web_summary)
-                    output_files.append(cellranger.metrics_csv)
-                    output_files.append(cellranger.cmdline_file)
-                    cellranger_samples.append(d)
-                    cellranger_name = cellranger.pipeline_name
-                    cellranger_references.add(cellranger.reference_data)
-                    # Store as version '?'
-                    ref = os.path.basename(cellranger.reference_data)
-                    if cellranger_name not in cellranger_versioned_samples:
-                        cellranger_versioned_samples[cellranger_name] = {}
-                    if '?' not in cellranger_versioned_samples[cellranger_name]:
-                        cellranger_versioned_samples[cellranger_name]['?'] = {}
-                    if ref not in \
-                       cellranger_versioned_samples[cellranger_name]['?']:
-                        cellranger_versioned_samples[cellranger_name]['?'][ref] = []
-                    cellranger_versioned_samples[cellranger_name]['?'][ref].append(d)
-                    versions.add('?')
-                except OSError:
-                    pass
-            if cellranger_samples:
-                tags.add("%s_count" % cellranger_name)
-            # New-style (versioned)
-            cellranger_name = None
-            for ver in filter(
-                    lambda f:
-                    os.path.isdir(os.path.join(cellranger_count_dir,f)),
-                    os.listdir(cellranger_count_dir)):
-                # Check putative version numbers
-                for ref in filter(
-                        lambda f:
-                        os.path.isdir(os.path.join(cellranger_count_dir,ver,f)),
-                        os.listdir(os.path.join(cellranger_count_dir,ver))):
-                    # Check putative reference dataset names
-                    samples = []
-                    for smpl in filter(
-                            lambda f:
-                            os.path.isdir(os.path.join(cellranger_count_dir,
-                                                       ver,ref,f)),
-                            os.listdir(os.path.join(cellranger_count_dir,
-                                                    ver,ref))):
-                        sample_dir = os.path.join(cellranger_count_dir,
-                                                  ver,ref,smpl)
-                        cellranger_name = None
-                        try:
-                            cellranger = CellrangerCount(sample_dir)
-                            output_files.append(cellranger.web_summary)
-                            output_files.append(cellranger.metrics_csv)
-                            output_files.append(cellranger.cmdline_file)
-                            samples.append(smpl)
-                            cellranger_name = cellranger.pipeline_name
-                            cellranger_references.add(
-                                cellranger.reference_data)
-                        except OSError:
-                            pass
-                    # Add outputs, samples and version
-                    if samples:
-                        tags.add("%s_count" % cellranger_name)
-                        if cellranger_name not in cellranger_versioned_samples:
-                            cellranger_versioned_samples[cellranger_name] = {}
-                        if ver not in cellranger_versioned_samples[cellranger_name]:
-                            cellranger_versioned_samples[cellranger_name][ver] = {}
-                        cellranger_versioned_samples[cellranger_name][ver][ref] = samples
-                        versions.add(ver)
-                        for smpl in cellranger_versioned_samples[cellranger_name][ver][ref]:
-                            if smpl not in cellranger_samples:
-                                cellranger_samples.append(smpl)
-            # Store cellranger versions
-            for cellranger_name in cellranger_versioned_samples:
-                software[cellranger_name] = sorted(list(cellranger_versioned_samples[cellranger_name].keys()))
-        # Store sample lists associated with pipeline,
-        # version and reference dataset
-        for name in cellranger_versioned_samples:
-            for version in cellranger_versioned_samples[name]:
-                for reference in cellranger_versioned_samples[name][version]:
-                    pipeline_key = (name,version,reference)
-                    samples_by_pipeline[pipeline_key] = \
-                        [s for s in
-                         cellranger_versioned_samples[name][version][reference]]
-        # Return collected information
-        return AttributeDictionary(
-            name='cellranger_count',
-            software=software,
-            references=sorted(list(cellranger_references)),
-            fastqs=[],
-            samples=cellranger_samples,
-            pipelines=sorted([p for p in samples_by_pipeline]),
-            samples_by_pipeline=samples_by_pipeline,
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return CellrangerCount.collect_qc_outputs(qcdir)
 
     def _collect_cellranger_multi(self,qc_dir):
         """
@@ -1467,104 +1345,3 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         if not os.path.exists(output):
             fastq_pairs.add(fq_pair)
     return sorted(list(fastq_pairs))
-
-def check_cellranger_count_outputs(project,qc_dir=None,
-                                   prefix="cellranger_count"):
-    """
-    Return samples missing QC outputs from 'cellranger count'
-
-    Returns a list of the samples from a project for which
-    one or more associated outputs from `cellranger count`
-    don't exist in the specified QC directory.
-
-    Arguments:
-      project (AnalysisProject): project to check the
-        QC outputs for
-      qc_dir (str): path to QC directory (if not the default
-        QC directory for the project)
-      prefix (str): directory for outputs (defaults
-        to "cellranger_count")
-
-    Returns:
-      List: list of sample names with missing outputs
-    """
-    if qc_dir is None:
-        qc_dir = project.qc_dir
-    qc_dir = os.path.abspath(qc_dir)
-    samples = set()
-    for sample in project.samples:
-        for output in cellranger_count_output(project,
-                                              sample.name,
-                                              prefix):
-            if not os.path.exists(os.path.join(qc_dir,output)):
-                samples.add(sample.name)
-    return sorted(list(samples))
-
-def check_cellranger_atac_count_outputs(project,qc_dir=None,
-                                        prefix="cellranger_count"):
-    """
-    Return samples missing QC outputs from 'cellranger-atac count'
-
-    Returns a list of the samples from a project for which
-    one or more associated outputs from `cellranger-atac count`
-    don't exist in the specified QC directory.
-
-    Arguments:
-      project (AnalysisProject): project to check the
-        QC outputs for
-      qc_dir (str): path to QC directory (if not the default
-        QC directory for the project)
-      prefix (str): directory for outputs (defaults
-        to "cellranger_count")
-
-    Returns:
-      List: list of sample names with missing outputs
-    """
-    if qc_dir is None:
-        qc_dir = project.qc_dir
-    qc_dir = os.path.abspath(qc_dir)
-    samples = set()
-    for sample in project.samples:
-        for output in cellranger_atac_count_output(project,
-                                                   sample.name,
-                                                   prefix):
-            if not os.path.exists(os.path.join(qc_dir,output)):
-                samples.add(sample.name)
-    return sorted(list(samples))
-
-def check_cellranger_arc_count_outputs(project,qc_dir=None,
-                                       prefix="cellranger_count"):
-    """
-    Return samples missing QC outputs from 'cellranger-arc count'
-
-    Returns a list of the samples from a project for which
-    one or more associated outputs from `cellranger-arc count`
-    don't exist in the specified QC directory.
-
-    Arguments:
-      project (AnalysisProject): project to check the
-        QC outputs for
-      qc_dir (str): path to QC directory (if not the default
-        QC directory for the project)
-      prefix (str): directory for outputs (defaults
-        to "cellranger_count")
-
-    Returns:
-      List: list of sample names with missing outputs
-    """
-    if qc_dir is None:
-        qc_dir = project.qc_dir
-    qc_dir = os.path.abspath(qc_dir)
-    samples = set()
-    for sample in project.samples:
-        if not os.path.exists(os.path.join(qc_dir,
-                                           "libraries.%s.csv"
-                                           % sample.name)):
-            # Skip if there is no libraries.csv for the sample
-            continue
-        for output in cellranger_arc_count_output(project,
-                                                  sample.name,
-                                                  prefix):
-            if not os.path.exists(os.path.join(qc_dir,output)):
-                samples.add(sample.name)
-    return sorted(list(samples))
