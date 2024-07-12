@@ -109,9 +109,9 @@ from .fastqc import fastqc_output_files
 from .fastq_screen import Fastqscreen
 from .fastq_screen import fastq_screen_output_files
 from .fastq_strand import Fastqstrand
+from .fastq_strand import fastq_strand_output
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
-from .outputs import fastq_strand_output
 from .outputs import QCOutputs
 from .outputs import ExtraOutputs
 from .picard import CollectInsertSizeMetrics
