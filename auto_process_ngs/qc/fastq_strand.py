@@ -1,13 +1,37 @@
 #!/usr/bin/env python
 #
-# fastq strand library
+#     qc/fastq_strand: utilities for handling FastqStrand outputs
+#     Copyright (C) University of Manchester 2024 Peter Briggs
+#
+"""
+Provides utility classes and functions for handling FastStrand outputs.
+
+Provides the following classes:
+
+- FastqStrand: wrapper for handling outputs from FastqStrand
+
+Provides the following functions:
+
+- build_fastq_strand_conf: construct a FastqStrand conf file
+- fastq_strand_output: generates name of FastqStrand output file
+"""
+
+#######################################################################
+# Imports
+#######################################################################
+
 import os
 import logging
 from bcftbx.TabFile import TabFile
+from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 
 # Module specific logger
 logger = logging.getLogger(__name__)
+
+#######################################################################
+# Classes
+#######################################################################
 
 """
 Example fastq_strand file for 0.0.1:
@@ -107,6 +131,10 @@ class Fastqstrand:
         """
         return self._genomes
 
+#######################################################################
+# Functions
+#######################################################################
+
 def build_fastq_strand_conf(organisms,indexes):
     """
     Construct a conf file for input into fastq_strand
@@ -133,3 +161,22 @@ def build_fastq_strand_conf(organisms,indexes):
         return '\n'.join(conf)
     else:
         return None
+
+def fastq_strand_output(fastq):
+    """
+    Generate name for fastq_strand.py output
+
+    Given a Fastq file name, the output from fastq_strand.py
+    will look like:
+
+    - {FASTQ}_fastq_strand.txt
+
+    Arguments:
+       fastq (str): name of Fastq file
+
+    Returns:
+       tuple: fastq_strand.py output (without leading paths)
+
+    """
+    return "%s_fastq_strand.txt" % strip_ngs_extensions(
+        os.path.basename(fastq))

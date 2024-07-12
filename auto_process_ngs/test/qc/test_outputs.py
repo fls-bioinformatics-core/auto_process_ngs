@@ -13,7 +13,6 @@ from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import ExtraOutputs
-from auto_process_ngs.qc.outputs import fastq_strand_output
 from auto_process_ngs.qc.outputs import picard_collect_insert_size_metrics_output
 from auto_process_ngs.qc.outputs import rseqc_genebody_coverage_output
 from auto_process_ngs.qc.outputs import qualimap_rnaseq_output
@@ -2621,20 +2620,6 @@ external_stuff/index.html\tBunch of external stuff\texternal_stuff/results,exter
         self.assertEqual(extra_outputs.outputs[1].additional_files,
                          ["external_stuff/results",
                           "external_stuff/more_results"])
-
-class TestFastqStrandOutputFunction(unittest.TestCase):
-    def test_fastq_strand_output(self):
-        """fastq_strand_output: handles .fastq file
-        """
-        self.assertEqual(fastq_strand_output(
-            '/data/PB/PB1_ATTAGG_L001_R1_001.fastq'),
-                         'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
-    def test_fastq_strand_output_fastqgz(self):
-        """fastq_strand_output: handles fastq.gz file
-        """
-        self.assertEqual(fastq_strand_output(
-            '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
-                         'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
 
 class TestPicardCollectInsertSizeMetricsOutputFunction(unittest.TestCase):
     def test_picard_collect_insert_size_metrics_output_fastq(self):

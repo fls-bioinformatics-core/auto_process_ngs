@@ -1178,25 +1178,6 @@ class ExtraOutputs:
 # Functions
 #######################################################################
 
-def fastq_strand_output(fastq):
-    """
-    Generate name for fastq_strand.py output
-
-    Given a Fastq file name, the output from fastq_strand.py
-    will look like:
-
-    - {FASTQ}_fastq_strand.txt
-
-    Arguments:
-       fastq (str): name of Fastq file
-
-    Returns:
-       tuple: fastq_strand.py output (without leading paths)
-
-    """
-    return "%s_fastq_strand.txt" % strip_ngs_extensions(
-        os.path.basename(fastq))
-
 def picard_collect_insert_size_metrics_output(filen,prefix=None):
     """
     Generate names of Picard CollectInsertSizeMetrics output
