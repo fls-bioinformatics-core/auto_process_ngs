@@ -19,10 +19,6 @@ Provides the following functions:
 - rseqc_genebody_coverage_output: get names for RSeQC geneBody_coverage.py
   output
 - qualimap_rnaseq_output: get names for Qualimap 'rnaseq' output
-- cellranger_count_output: get names for cellranger count output
-- cellranger_atac_count_output: get names for cellranger-atac count output
-- cellranger_arc_count_output: get names for cellranger-arc count output
-- cellranger_multi_output: get names for cellranger multi output
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 - check_cellranger_count_outputs: fetch sample names without cellranger
   count outputs
@@ -49,6 +45,10 @@ from ..tenx.cellplex import CellrangerMultiConfigCsv
 from .fastq_strand import Fastqstrand
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
+from .cellranger import cellranger_count_output
+from .cellranger import cellranger_atac_count_output
+from .cellranger import cellranger_arc_count_output
+from .cellranger import cellranger_multi_output
 from .modules import QCDir
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
@@ -1403,183 +1403,6 @@ def qualimap_rnaseq_output(prefix=None):
                'rnaseq_qc_results.txt']
     if prefix is not None:
         outputs = [os.path.join(prefix,f) for f in outputs]
-    return tuple(outputs)
-
-def cellranger_count_output(project,sample_name=None,
-                            prefix="cellranger_count"):
-    """
-    Generate list of 'cellranger count' outputs
-
-    Given an AnalysisProject, the outputs from 'cellranger
-    count' will look like:
-
-    - {PREFIX}/{SAMPLE_n}/outs/metrics_summary.csv
-    - {PREFIX}/{SAMPLE_n}/outs/web_summary.html
-
-    for each SAMPLE_n in the project.
-
-    If a sample name is supplied then outputs are limited
-    to those for that sample
-
-    Arguments:
-      project (AnalysisProject): project to generate
-        output names for
-      sample_name (str): sample to limit outputs to
-      prefix (str): directory for outputs (defaults
-        to "cellranger_count")
-
-    Returns:
-       tuple: cellranger count outputs (without leading paths)
-    """
-    outputs = []
-    # Metrics and web summary files
-    for sample in project.samples:
-        if sample_name and sample_name != sample.name:
-            continue
-        sample_count_dir = os.path.join(prefix,
-                                        sample.name)
-        for f in ("metrics_summary.csv",
-                  "web_summary.html"):
-            outputs.append(os.path.join(sample_count_dir,
-                                        "outs",f))
-    return tuple(outputs)
-
-def cellranger_atac_count_output(project,sample_name=None,
-                                 prefix="cellranger_count"):
-    """
-    Generate list of 'cellranger-atac count' outputs
-
-    Given an AnalysisProject, the outputs from 'cellranger-atac
-    count' will look like:
-
-    - {PREFIX}/{SAMPLE_n}/outs/summary.csv
-    - {PREFIX}/{SAMPLE_n}/outs/web_summary.html
-
-    for each SAMPLE_n in the project.
-
-    If a sample name is supplied then outputs are limited
-    to those for that sample
-
-    Arguments:
-      project (AnalysisProject): project to generate
-        output names for
-      sample_name (str): sample to limit outputs to
-      prefix (str): directory for outputs (defaults
-        to "cellranger_count")
-
-    Returns:
-       tuple: cellranger count outputs (without leading paths)
-    """
-    outputs = []
-    # Metrics and web summary files
-    for sample in project.samples:
-        if sample_name and sample_name != sample.name:
-            continue
-        sample_count_dir = os.path.join(prefix,
-                                        sample.name)
-        for f in ("summary.csv",
-                  "web_summary.html"):
-            outputs.append(os.path.join(sample_count_dir,
-                                        "outs",f))
-    return tuple(outputs)
-
-def cellranger_arc_count_output(project,sample_name=None,
-                                prefix="cellranger_count"):
-    """
-    Generate list of 'cellranger-arc count' outputs
-
-    Given an AnalysisProject, the outputs from 'cellranger-arc
-    count' will look like:
-
-    - {PREFIX}/{SAMPLE_n}/outs/summary.csv
-    - {PREFIX}/{SAMPLE_n}/outs/web_summary.html
-
-    for each SAMPLE_n in the project.
-
-    If a sample name is supplied then outputs are limited
-    to those for that sample
-
-    Arguments:
-      project (AnalysisProject): project to generate
-        output names for
-      sample_name (str): sample to limit outputs to
-      prefix (str): directory for outputs (defaults
-        to "cellranger_count")
-
-    Returns:
-       tuple: cellranger count outputs (without leading paths)
-    """
-    outputs = []
-    # Metrics and web summary files
-    for sample in project.samples:
-        if sample_name and sample_name != sample.name:
-            continue
-        sample_count_dir = os.path.join(prefix,
-                                        sample.name)
-        for f in ("summary.csv",
-                  "web_summary.html"):
-            outputs.append(os.path.join(sample_count_dir,
-                                        "outs",f))
-    return tuple(outputs)
-
-def cellranger_multi_output(project,config_csv,sample_name=None,
-                            prefix="cellranger_multi"):
-    """
-    Generate list of 'cellranger multi' outputs
-
-    Given an AnalysisProject, the outputs from 'cellranger
-    multi' will look like:
-
-    - {PREFIX}/outs/multi/multiplexing_analysis/tag_calls_summary.csv
-
-    and
-
-    - {PREFIX}/outs/per_sample_outs/{SAMPLE_n}/metrics_summary.csv
-    - {PREFIX}/outs/per_sample_outs/{SAMPLE_n}/web_summary.html
-
-    for each multiplexed SAMPLE_n defined in the config.csv file
-    (nb these are not equivalent to the 'samples' defined by the
-    Fastq files in the project).
-
-    If a sample name is supplied then outputs are limited
-    to those for that sample; if the supplied config.csv file isn't
-    found then no outputs will be returned.
-
-    Arguments:
-      project (AnalysisProject): project to generate
-        output names for
-      config_csv (str): path to the cellranger multi
-        config.csv file
-      sample_name (str): multiplexed sample to limit outputs
-        to (optional)
-      prefix (str): directory for outputs (optional, defaults
-        to "cellranger_multi")
-
-    Returns:
-       tuple: cellranger multi outputs (without leading paths)
-    """
-    outputs = []
-    # Check that config.csv file exists
-    if not os.path.isfile(config_csv):
-        return outputs
-    # Per-sample metrics and web summary files
-    for sample in CellrangerMultiConfigCsv(config_csv).sample_names:
-        if sample_name and sample_name != sample:
-            continue
-        sample_dir = os.path.join(prefix,
-                                  "outs",
-                                  "per_sample_outs",
-                                  sample)
-        for f in ("metrics_summary.csv",
-                  "web_summary.html"):
-            outputs.append(os.path.join(sample_dir,f))
-    # Multiplexing outputs
-    multi_analysis_dir = os.path.join(prefix,
-                                      "outs",
-                                      "multi",
-                                      "multiplexing_analysis")
-    for f in ("tag_calls_summary.csv",):
-        outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
 
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
