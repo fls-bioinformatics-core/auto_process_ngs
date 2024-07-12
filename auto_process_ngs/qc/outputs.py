@@ -36,12 +36,12 @@ from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..metadata import AnalysisProjectQCDirInfo
 from ..tenx.cellplex import CellrangerMultiConfigCsv
-from .fastq_strand import Fastqstrand
 from .cellranger import CellrangerMulti
 from .modules import QCDir
 from .modules.cellranger_count import CellrangerCount
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
+from .modules.fastq_strand import FastqStrand
 from .modules.sequence_lengths import SequenceLengths
 
 # Module specific logger
@@ -223,7 +223,7 @@ class QCOutputs:
         for qc_data in (
                 self._collect_fastq_screens(qcdir),
                 self._collect_fastqc(qcdir),
-                self._collect_fastq_strand(files),
+                self._collect_fastq_strand(qcdir),
                 self._collect_seq_lengths(qcdir),
                 self._collect_picard_insert_size_metrics(self.qc_dir),
                 self._collect_rseqc_genebody_coverage(self.qc_dir),
@@ -461,7 +461,7 @@ class QCOutputs:
         """
         return Fastqc.collect_qc_outputs(qcdir)
 
-    def _collect_fastq_strand(self,files):
+    def _collect_fastq_strand(self,qcdir):
         """
         Collect information on FastqStrand outputs
 
@@ -475,40 +475,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          files (list): list of file names to examine.
+          qcdir (QCDir): QC directory object to examine
         """
-        versions = set()
-        output_files = list()
-        fastqs = set()
-        tags = set()
-        # Look for fastq_strand outputs
-        fastq_strand = list(filter(lambda f:
-                                   f.endswith("_fastq_strand.txt"),
-                                   files))
-        logger.debug("fastq_strand: %s" % fastq_strand)
-        print("\t- %d fastq_strand files" % len(fastq_strand))
-        if fastq_strand:
-            tags.add("strandedness")
-            for f in fastq_strand:
-                fq = self.fastq_attrs(os.path.splitext(f)[0])
-                fastqs.add(
-                    os.path.basename(
-                        os.path.splitext(f)[0])[:-len("_fastq_strand")])
-                versions.add(Fastqstrand(f).version)
-            # Store the fastq_strand files
-            output_files.extend(fastq_strand)
-        # Return collected information
-        if versions:
-            software = { 'fastq_strand': sorted(list(versions)) }
-        else:
-            software = {}
-        return AttributeDictionary(
-            name='fastq_strand',
-            software=software,
-            fastqs=sorted(list(fastqs)),
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return FastqStrand.collect_qc_outputs(qcdir)
 
     def _collect_seq_lengths(self,qcdir):
         """
@@ -1263,66 +1232,3 @@ def qualimap_rnaseq_output(prefix=None):
     if prefix is not None:
         outputs = [os.path.join(prefix,f) for f in outputs]
     return tuple(outputs)
-
-def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
-                               fastqs=None,read_numbers=None):
-    """
-    Return Fastqs missing QC outputs from fastq_strand.py
-
-    Returns a list of the Fastqs from a project for which
-    one or more associated outputs from `fastq_strand.py`
-    don't exist in the specified QC directory.
-
-    Arguments:
-      project (AnalysisProject): project to check the
-        QC outputs for
-      qc_dir (str): path to the QC directory (relative
-        path is assumed to be a subdirectory of the
-        project)
-      fastq_strand_conf (str): path to a fastq_strand
-        config file; strandedness QC outputs will be
-        included unless the path is `None` or the
-        config file doesn't exist. Relative path is
-        assumed to be a subdirectory of the project
-      fastqs (list): optional list of Fastqs to check
-        against (defaults to Fastqs from the project)
-      read_numbers (list): read numbers to predict
-        outputs for
-
-    Returns:
-      List: list of Fastq file "pairs" with missing
-        outputs; pairs are (R1,R2) tuples, with 'R2'
-        missing if only one Fastq is used for the
-        strandedness determination.
-    """
-    # Sort out QC directory
-    if not os.path.isabs(qc_dir):
-        qc_dir = os.path.join(project.dirn,qc_dir)
-    # Sort out fastq_strand config file
-    if fastq_strand_conf is not None:
-        if not os.path.isabs(fastq_strand_conf):
-            fastq_strand_conf = os.path.join(project.dirn,
-                                             fastq_strand_conf)
-    if not os.path.exists(fastq_strand_conf):
-        # No conf file, nothing to check
-        return list()
-    if not fastqs:
-        fastqs_in = project.fastqs
-    else:
-        fastqs_in = fastqs
-    fastq_pairs = set()
-    for fq_group in group_fastqs_by_name(
-            remove_index_fastqs(fastqs_in,
-                                project.fastq_attrs),
-            fastq_attrs=project.fastq_attrs):
-        # Assemble Fastq pairs based on read numbers
-        if read_numbers:
-            fq_pair = tuple([fq_group[r-1] for r in read_numbers])
-        else:
-            fq_pair = tuple([fq_group[0]])
-        # Strand stats output
-        output = os.path.join(qc_dir,
-                              fastq_strand_output(fq_pair[0]))
-        if not os.path.exists(output):
-            fastq_pairs.add(fq_pair)
-    return sorted(list(fastq_pairs))
