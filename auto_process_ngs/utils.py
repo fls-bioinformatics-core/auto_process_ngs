@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_ngs module
-#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
 #
 ########################################################################
 #
@@ -34,6 +34,7 @@ Functions:
 - parse_version:
 - parse_samplesheet_spec:
 - pretty_print_rows:
+- pretty_print_reads: print number of reads with commas at each thousand
 - sort_sample_names:
 - write_script_file:
 - edit_file:
@@ -1190,6 +1191,24 @@ def pretty_print_rows(data,prepend=False):
                 line.append(item + padding)
         output.append(' '.join(line))
     return '\n'.join(output)
+
+def pretty_print_reads(n):
+    """
+    Print the number of reads with commas at each thousand
+
+    For example:
+
+    >>> pretty_print_reads(10409789)
+    10,409,789
+
+    Arguments:
+      n (int): number of reads
+
+    Returns:
+      String: representation with commas for every thousand.
+    """
+    # Reimplemented as per https://stackoverflow.com/a/10742904
+    return f'{n:,}'
 
 def sort_sample_names(samples):
     """

@@ -21,7 +21,6 @@ In addition there are a number of supporting classes:
 There are also a number of utility functions:
 
 - report: report the QC for a project
-- pretty_print_reads: print number of reads with commas at each thousand
 - sanitize_name: replace 'unsafe' characters in HTML link targets
 
 Overview
@@ -139,6 +138,7 @@ from ..settings import get_install_dir
 from .utils import get_bam_basename
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.metrics import MissingMetricError
+from ..utils import pretty_print_reads
 from ..utils import ZipArchive
 from .. import get_version
 
@@ -3847,29 +3847,6 @@ def report(projects,title=None,filename=None,qc_dir=None,
                             (zip_name,ex))
     # Return the output filename
     return filename
-
-def pretty_print_reads(n):
-    """
-    Print the number of reads with commas at each thousand
-
-    For example:
-
-    >>> pretty_print_reads(10409789)
-    10,409,789
-
-    Arguments:
-      n (int): number of reads
-
-    Returns:
-      String: representation with commas for every thousand.
-    """
-    n = str(int(n))[::-1]
-    n0 = []
-    while len(n) >= 3:
-        n0.append(n[0:3])
-        n = n[3:]
-    if n: n0.append(n)
-    return (','.join(n0))[::-1]
 
 def sanitize_name(s,new_char='_'):
     """
