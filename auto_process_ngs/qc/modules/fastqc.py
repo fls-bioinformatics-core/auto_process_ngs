@@ -150,10 +150,10 @@ class Fastqc(QCModule):
 
     @classmethod
     def add_to_pipeline(self,p,project_name,project,qc_dir,
-                        read_numbers,fastqs,verbose=True,
-                        nthreads=None,require_tasks=[],
+                        read_numbers,fastqs,nthreads=None,
+                        require_tasks=[],
                         verify_runner=None,compute_runner=None,
-                        envmodules=None):
+                        envmodules=None,verbose=True):
         """
         Adds tasks for 'fastqc' module to pipeline
 
@@ -164,7 +164,6 @@ class Fastqc(QCModule):
           qc_dir (str): path to QC directory
           read_numbers (list): read numbers to include
           fastqs (list): Fastqs to run the module on
-          verbose (bool): enable verbose output
           nthreads (int): number of threads (if not set then
             will be taken from the runner)
           require_tasks (list): list of tasks that the module
@@ -172,6 +171,9 @@ class Fastqc(QCModule):
           verify_runner (JobRunner): runner to use for checks
           compute_runner (JobRunner): runner to use for
             computation
+          envmodules (list): environment module names to
+            load for running FastQC
+          verbose (bool): enable verbose output
         """
         # Check outputs for FastQC
         check_fastqc = CheckFastQCOutputs(
