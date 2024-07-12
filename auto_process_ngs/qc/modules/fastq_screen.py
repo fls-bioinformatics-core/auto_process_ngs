@@ -194,10 +194,10 @@ class FastqScreen(QCModule):
     @classmethod
     def add_to_pipeline(self,p,project_name,project,qc_dir,
                         screens,fastqs,read_numbers,include_samples=None,
-                        nthreads=1,fastq_subset=0,
-                        legacy=False,verbose=True,requires_tasks=[],
+                        nthreads=None,fastq_subset=None,
+                        legacy=False,requires_tasks=[],
                         verify_runner=None,compute_runner=None,
-                        envmodules=None):
+                        envmodules=None,verbose=False):
         """
         Adds tasks for 'fastq_screen' module to pipeline
 
