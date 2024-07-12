@@ -33,7 +33,7 @@ from ..docwriter import Para
 from ..docwriter import Table
 from ..docwriter import WarningIcon
 from ..qc.plots import ustackedbar
-from ..qc.reporting import pretty_print_reads
+from ..utils import pretty_print_reads
 from .. import css_rules
 
 # Module specific logger
