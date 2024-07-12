@@ -8,6 +8,7 @@ import tempfile
 
 from auto_process_ngs.qc.fastq_strand import Fastqstrand
 from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
+from auto_process_ngs.qc.fastq_strand import fastq_strand_output
 
 class TestFastqstrand(unittest.TestCase):
     def setUp(self):
@@ -136,3 +137,17 @@ class TestBuildFastqStrandConfFunction(unittest.TestCase):
         """
         self.assertEqual(build_fastq_strand_conf(("zebrafish",),self.indexes),
                          None)
+
+class TestFastqStrandOutputFunction(unittest.TestCase):
+    def test_fastq_strand_output(self):
+        """fastq_strand_output: handles .fastq file
+        """
+        self.assertEqual(fastq_strand_output(
+            '/data/PB/PB1_ATTAGG_L001_R1_001.fastq'),
+                         'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
+    def test_fastq_strand_output_fastqgz(self):
+        """fastq_strand_output: handles fastq.gz file
+        """
+        self.assertEqual(fastq_strand_output(
+            '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
+                         'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
