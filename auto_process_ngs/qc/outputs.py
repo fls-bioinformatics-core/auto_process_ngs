@@ -36,9 +36,9 @@ from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..metadata import AnalysisProjectQCDirInfo
 from ..tenx.cellplex import CellrangerMultiConfigCsv
-from .cellranger import CellrangerMulti
 from .modules import QCDir
 from .modules.cellranger_count import CellrangerCount
+from .modules.cellranger_multi import CellrangerMulti
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
 from .modules.fastq_strand import FastqStrand
@@ -231,7 +231,7 @@ class QCOutputs:
                 self._collect_qualimap_rnaseq(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(qcdir),
-                self._collect_cellranger_multi(self.qc_dir),
+                self._collect_cellranger_multi(qcdir),
                 self._collect_multiqc(self.qc_dir),
                 self._collect_extra_outputs(self.qc_dir)):
             self._add_qc_outputs(qc_data)
@@ -841,7 +841,7 @@ class QCOutputs:
         """
         return CellrangerCount.collect_qc_outputs(qcdir)
 
-    def _collect_cellranger_multi(self,qc_dir):
+    def _collect_cellranger_multi(self,qcdir):
         """
         Collect information on Cellranger multi outputs
 
@@ -864,92 +864,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          qc_dir (str): top-level directory to look under.
+          qcdir (QCDir): QC directory object to examine
         """
-        software = {}
-        output_files = list()
-        multiplexed_samples = set()
-        cellranger_references = set()
-        cellranger_probe_sets = set()
-        samples_by_pipeline = dict()
-        tags = set()
-        # Look for cellranger multi outputs
-        cellranger_multi_dir = os.path.join(qc_dir,
-                                            "cellranger_multi")
-        print("Checking for cellranger multi outputs under %s" %
-              cellranger_multi_dir)
-        if os.path.isdir(cellranger_multi_dir):
-            cellranger_name = None
-            versions = set()
-            cellranger_multi_samples = {}
-            for ver in filter(
-                    lambda f:
-                    os.path.isdir(os.path.join(cellranger_multi_dir,f)),
-                    os.listdir(cellranger_multi_dir)):
-                cellranger_multi_samples[ver] = {}
-                for ref in filter(
-                        lambda f:
-                        os.path.isdir(os.path.join(cellranger_multi_dir,ver,f)),
-                        os.listdir(os.path.join(cellranger_multi_dir,ver))):
-                    # Check putative reference dataset names
-                    cellranger_multi_samples[ver][ref] = []
-                    cellranger_multi = CellrangerMulti(
-                        os.path.join(
-                            cellranger_multi_dir,
-                            ver,
-                            ref))
-                    for smpl in cellranger_multi.sample_names:
-                        cellranger_multi_samples[ver][ref].append(smpl)
-                        try:
-                            output_files.append(cellranger_multi.web_summary(smpl))
-                            output_files.append(cellranger_multi.metrics_csv(smpl))
-                            cellranger_name = cellranger_multi.pipeline_name
-                            if cellranger_name is None:
-                                cellranger_name = 'cellranger'
-                            if cellranger_multi.reference_data:
-                                cellranger_references.add(
-                                    cellranger_multi.reference_data)
-                            if cellranger_multi.probe_set:
-                                cellranger_probe_sets.add(
-                                    cellranger_multi.probe_set)
-                        except OSError:
-                            pass
-                    # Add outputs, samples and version
-                    if cellranger_multi_samples[ver][ref]:
-                        tags.add("cellranger_multi")
-                        versions.add(ver)
-                    for smpl in cellranger_multi_samples[ver][ref]:
-                        multiplexed_samples.add(smpl)
-            # Store sample lists associated with pipeline,
-            # version and reference dataset
-            for version in cellranger_multi_samples:
-                for reference in cellranger_multi_samples[version]:
-                    pipeline_key = (cellranger_name,version,reference)
-                    samples_by_pipeline[pipeline_key] = \
-                        [s for s in
-                         cellranger_multi_samples[version][reference]]
-            # Store cellranger versions
-            if cellranger_name and versions:
-                if cellranger_name not in software:
-                    software[cellranger_name] = list(versions)
-                else:
-                    for v in list(versions):
-                        if v not in software[cellranger_name]:
-                            software[cellranger_name].append(v)
-                software[cellranger_name] = sorted(software[cellranger_name])
-        # Return collected information
-        return AttributeDictionary(
-            name='cellranger_multi',
-            software=software,
-            references=sorted(list(cellranger_references)),
-            probe_sets=sorted(list(cellranger_probe_sets)),
-            fastqs=[],
-            multiplexed_samples=sorted(list(multiplexed_samples)),
-            pipelines=sorted([p for p in samples_by_pipeline]),
-            samples_by_pipeline=samples_by_pipeline,
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return CellrangerMulti.collect_qc_outputs(qcdir)
 
     def _collect_multiqc(self,qc_dir):
         """
