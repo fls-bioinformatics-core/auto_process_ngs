@@ -22,6 +22,10 @@ Pipeline helper functions:
 * filter_10x_pipelines: filters a list of 10x pipelines
 * verify_10x_pipleine: check for and verify outputs for a 10x package
 
+Also imports the following pipeline tasks:
+
+- Get10xPackage
+
 Additional helper functions:
 
 * check_cellranger_count_outputs: fetch names of samples with
@@ -46,15 +50,15 @@ from ..cellranger import CellrangerCount as CellrangerCountOutputs
 from ..cellranger import cellranger_count_output
 from ..cellranger import cellranger_atac_count_output
 from ..cellranger import cellranger_arc_count_output
-from ...command import Command
-from ...tenx.cellplex import CellrangerMultiConfigCsv
-from ...tenx.multiome import MultiomeLibraries
 from ...bcl2fastq.pipeline import Get10xPackage
-from ...tenx.utils import add_cellranger_args
+from ...command import Command
 from ...pipeliner import PipelineTask
 from ...pipeliner import PipelineFunctionTask
 from ...pipeliner import PipelineParam as Param
 from ...pipeliner import FunctionParam
+from ...tenx.cellplex import CellrangerMultiConfigCsv
+from ...tenx.multiome import MultiomeLibraries
+from ...tenx.utils import add_cellranger_args
 from ...utils import get_organism_list
 
 # Module specific logger
@@ -268,21 +272,7 @@ class CellrangerCount(QCModule):
         """
         Adds tasks for 'cellranger_count' module to pipeline
 
-        Arguments:
-          p (Pipeline): pipeline to extend
-          project_name (str): name of project
-          project (AnalysisProject): project to run module on
-          qc_dir (str): path to QC directory
-          read_numbers (list): read numbers to include
-          fastqs (list): Fastqs to run the module on
-          verbose (bool): enable verbose output
-          nthreads (int): number of threads (if not set then
-            will be taken from the runner)
-          require_tasks (list): list of tasks that the module
-            needs to wait for
-          verify_runner (JobRunner): runner to use for checks
-          compute_runner (JobRunner): runner to use for
-            computation
+        Wrapper for the 'add_cellranger_count' function
         """
         return add_cellranger_count(*args,**kws)
 
@@ -903,7 +893,7 @@ def add_cellranger_count(p,project_name,project,qc_dir,
       qc_dir (str): directory for QC outputs (defaults
         to subdirectory 'qc' of project directory)
       organism (str): organism for pipeline
-        fastq_dir (str): directory holding Fastq files
+      fastq_dir (str): directory holding Fastq files
       qc_module (str): QC module being used
       library_type (str): type of data being analysed (e.g.
         'scRNA-seq')
