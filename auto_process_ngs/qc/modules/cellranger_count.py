@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#     fastqc: implements 'cellranger_count' QC module
+#     cellranger_count: implements 'cellranger_count' QC module
 #     Copyright (C) University of Manchester 2024 Peter Briggs
 
 """

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#     fastqc: implements 'cellranger_count' QC module
+#     cellranger-atac_count: implements 'cellranger-atac_count' QC module
 #     Copyright (C) University of Manchester 2024 Peter Briggs
 
 """
@@ -44,7 +44,7 @@ class CellrangerAtacCount(CellrangerCount):
     @classmethod
     def verify(self,params,qc_outputs):
         """
-        Verify 'cellranger_count' QC module against outputs
+        Verify 'cellranger-atac_count' QC module against outputs
 
         Returns one of 3 values:
 
