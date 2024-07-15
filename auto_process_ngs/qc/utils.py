@@ -15,6 +15,7 @@ Provides the following functions:
   data
 - filter_fastqs: filter list of Fastqs based on read IDs
 - set_cell_count_for_project: sets total number of cells for a project
+- read_versions_file: extract software info from 'versions' file
 """
 
 #######################################################################
@@ -559,3 +560,47 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
     else:
         # Cell count wasn't set
         return 1
+
+def read_versions_file(f,pkgs=None):
+    """
+    Extract software info from 'versions' file
+
+    'versions' files (typically named ``_versions``)
+    should consist of one or more lines of text, with
+    each line comprising a software package name and
+    a version number, separated by a tab character.
+
+    Returns a dictionary where package names are keys,
+    and the corresponding values are lists of versions.
+
+    If an existing dictionary is supplied via the 'pkgs'
+    argument then any package information is added to this
+    dictionary; otherwise an empty dictionary is created
+    and populated.
+
+    Arguments:
+      f (str): path to 'versions' file
+      pkgs (dict): optional, dictionary to extend with
+        with information from 'versions' file
+    """
+    if pkgs is not None:
+        software = pkgs
+    else:
+        software = dict()
+    if not os.path.exists(f):
+        return software
+    try:
+        with open(f,'rt') as fp:
+            for line in fp:
+                try:
+                    pkg,version = line.strip().split('\t')
+                except IndexError:
+                    continue
+                try:
+                    software[pkg].append(version)
+                except KeyError:
+                    software[pkg] = [version]
+    except Exception as ex:
+        logger.warning("%s: unable to extract versions: %s" %
+                       (f,ex))
+    return software
