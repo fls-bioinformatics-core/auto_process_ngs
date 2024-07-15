@@ -28,9 +28,7 @@ from ..utils import filter_fastqs
 from ..utils import get_bam_basename
 from ..utils import read_versions_file
 from ...utils import normalise_organism_name
-##from ...fastq_utils import remove_index_fastqs
 from ...pipeliner import PipelineTask
-##from ...pipeliner import PipelineFunctionTask
 
 # Module specific logger
 logger = logging.getLogger(__name__)
