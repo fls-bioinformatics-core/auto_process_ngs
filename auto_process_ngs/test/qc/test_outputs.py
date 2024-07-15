@@ -13,7 +13,6 @@ from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import ExtraOutputs
-from auto_process_ngs.qc.outputs import picard_collect_insert_size_metrics_output
 from auto_process_ngs.qc.outputs import rseqc_genebody_coverage_output
 from auto_process_ngs.qc.outputs import qualimap_rnaseq_output
 
@@ -2619,33 +2618,6 @@ external_stuff/index.html\tBunch of external stuff\texternal_stuff/results,exter
         self.assertEqual(extra_outputs.outputs[1].additional_files,
                          ["external_stuff/results",
                           "external_stuff/more_results"])
-
-class TestPicardCollectInsertSizeMetricsOutputFunction(unittest.TestCase):
-    def test_picard_collect_insert_size_metrics_output_fastq(self):
-        """picard_collect_insert_size_metrics_output: no prefix (Fastq file)
-        """
-        self.assertEqual(
-            picard_collect_insert_size_metrics_output(
-                '/data/PB/PB1_ATTAGG_L001_R1_001.fastq'),
-            ('PB1_ATTAGG_L001_R1_001.insert_size_metrics.txt',
-             'PB1_ATTAGG_L001_R1_001.insert_size_histogram.pdf'))
-    def test_picard_collect_insert_size_metrics_output_bam_file(self):
-        """picard_collect_insert_size_metrics_output: no prefix (BAM file)
-        """
-        self.assertEqual(
-            picard_collect_insert_size_metrics_output(
-                '/data/PB/PB1_ATTAGG_L001_R1_001.bam'),
-            ('PB1_ATTAGG_L001_R1_001.insert_size_metrics.txt',
-             'PB1_ATTAGG_L001_R1_001.insert_size_histogram.pdf'))
-    def test_picard_collect_insert_size_metrics_output_with_prefix(self):
-        """picard_collect_insert_size_metrics_output: with prefix
-        """
-        self.assertEqual(
-            picard_collect_insert_size_metrics_output(
-                '/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
-                prefix="picard/human"),
-            ('picard/human/PB1_ATTAGG_L001_R1_001.insert_size_metrics.txt',
-             'picard/human/PB1_ATTAGG_L001_R1_001.insert_size_histogram.pdf'))
 
 class TestRseqcGeneBodyCoverageOutputFunction(unittest.TestCase):
     def test_rseqc_genebody_coverage_output(self):

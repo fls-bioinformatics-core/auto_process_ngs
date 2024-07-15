@@ -42,6 +42,7 @@ from .modules.cellranger_multi import CellrangerMulti
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
 from .modules.fastq_strand import FastqStrand
+from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
 from .modules.sequence_lengths import SequenceLengths
 
 # Module specific logger
@@ -225,7 +226,7 @@ class QCOutputs:
                 self._collect_fastqc(qcdir),
                 self._collect_fastq_strand(qcdir),
                 self._collect_seq_lengths(qcdir),
-                self._collect_picard_insert_size_metrics(self.qc_dir),
+                self._collect_picard_insert_size_metrics(qcdir),
                 self._collect_rseqc_genebody_coverage(self.qc_dir),
                 self._collect_rseqc_infer_experiment(self.qc_dir),
                 self._collect_qualimap_rnaseq(self.qc_dir),
@@ -504,7 +505,7 @@ class QCOutputs:
         """
         return SequenceLengths.collect_qc_outputs(qcdir)
 
-    def _collect_picard_insert_size_metrics(self,qc_dir):
+    def _collect_picard_insert_size_metrics(self,qcdir):
         """
         Collect information on Picard CollectInsertSizeMetrics outputs
 
@@ -520,60 +521,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          qc_dir (str): top-level directory to look under.
+          qcdir (str): top-level directory to look under.
         """
-        software = {}
-        bam_files = set()
-        output_files = list()
-        tags = set()
-        # Look for Picard CollectInsertSizeMetrics outputs
-        organisms = set()
-        picard_dir = os.path.join(qc_dir,"picard")
-        if os.path.isdir(picard_dir):
-            # Look for subdirs with organism names
-            for d in filter(
-                    lambda dd:
-                    os.path.isdir(os.path.join(picard_dir,dd)),
-                    os.listdir(picard_dir)):
-                # Check for outputs
-                for f in filter(
-                        lambda ff:
-                        ff.endswith(".insert_size_metrics.txt"),
-                        os.listdir(os.path.join(picard_dir,d))):
-                    name = f[:-len(".insert_size_metrics.txt")]
-                    outputs = picard_collect_insert_size_metrics_output(
-                        name,
-                        prefix=os.path.join(picard_dir,d))
-                    if all([os.path.exists(f) for f in outputs]):
-                        # All outputs present
-                        organisms.add(d)
-                        bam_files.add(name)
-                        output_files.extend(outputs)
-                # Check for software information
-                software = self._read_versions_file(
-                    os.path.join(picard_dir,d,"_versions"),
-                    software)
-        if organisms:
-            tags.add("picard_insert_size_metrics")
-            if not software:
-                software['picard'] = [None]
-        # Look for collated insert sizes files
-        for f in filter(
-                lambda ff:
-                ff.startswith("insert_sizes.") and ff.endswith(".tsv"),
-                os.listdir(qc_dir)):
-            tags.add("collated_insert_sizes")
-            output_files.append(os.path.join(qc_dir,f))
-            organisms.add(f[len("insert_sizes."):-len(".tsv")])
-        # Return collected information
-        return AttributeDictionary(
-            name='picard_collect_insert_size_metrics',
-            software=software,
-            bam_files=sorted(list(bam_files)),
-            organisms=sorted(list(organisms)),
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return PicardInsertSizeMetrics.collect_qc_outputs(qcdir)
 
     def _collect_rseqc_genebody_coverage(self,qc_dir):
         """
@@ -1063,39 +1013,6 @@ class ExtraOutputs:
 #######################################################################
 # Functions
 #######################################################################
-
-def picard_collect_insert_size_metrics_output(filen,prefix=None):
-    """
-    Generate names of Picard CollectInsertSizeMetrics output
-
-    Given a Fastq or BAM file name, the output from Picard's
-    CollectInsertSizeMetrics function will look like:
-
-    - {PREFIX}/{FASTQ}.insert_size_metrics.txt
-    - {PREFIX}/{FASTQ}.insert_size_histogram.pdf
-
-    Arguments:
-      filen (str): name of Fastq or BAM file
-      prefix (str): optional directory to prepend to
-        outputs
-
-    Returns:
-      tuple: CollectInsertSizeMetrics output (without leading
-        paths)
-
-    """
-    outputs = []
-    basename = os.path.basename(filen)
-    while basename.split('.')[-1] in ('bam',
-                                      'fastq',
-                                      'gz'):
-        basename = '.'.join(basename.split('.')[:-1])
-    for ext in ('.insert_size_metrics.txt',
-                '.insert_size_histogram.pdf'):
-        outputs.append("%s%s" % (basename,ext))
-    if prefix is not None:
-        outputs = [os.path.join(prefix,f) for f in outputs]
-    return tuple(outputs)
 
 def rseqc_genebody_coverage_output(name,prefix=None):
     """
