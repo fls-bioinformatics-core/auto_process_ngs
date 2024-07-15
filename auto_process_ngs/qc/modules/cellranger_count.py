@@ -260,8 +260,7 @@ class CellrangerCount(QCModule):
             return True
         # Check expected samples against actual samples
         # associated with specified version and dataset
-        return verify_10x_pipeline('cellranger_count',
-                                   ('cellranger',
+        return verify_10x_pipeline(('cellranger',
                                     params.cellranger_version,
                                     cellranger_refdata),
                                    samples,
@@ -1124,12 +1123,11 @@ def filter_10x_pipelines(p,pipelines):
         matching_pipelines.append(pipeline)
     return matching_pipelines
 
-def verify_10x_pipeline(name,pipeline,samples,qc_outputs):
+def verify_10x_pipeline(pipeline,samples,qc_outputs):
     """
     Check for and verify outputs for 10x package
 
     Arguments:
-      name (str): name the QC data is stored under
       pipeline (tuple): tuple specifying pipeline(s) to
         verify
       samples (list): list of sample names to verify
