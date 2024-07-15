@@ -9,6 +9,7 @@ import shutil
 
 from auto_process_ngs.mockqcdata import PICARD_COLLECT_INSERT_SIZE_METRICS
 from auto_process_ngs.qc.picard import CollectInsertSizeMetrics
+from auto_process_ngs.qc.picard import picard_collect_insert_size_metrics_output
 
 class TestCollectInsertSizeMetrics(unittest.TestCase):
     def setUp(self):
@@ -41,3 +42,36 @@ class TestCollectInsertSizeMetrics(unittest.TestCase):
         self.assertEqual(insert_size.histogram[32],1)
         self.assertEqual(insert_size.histogram[33],2)
         self.assertEqual(insert_size.histogram[34],3)
+
+class TestPicardCollectInsertSizeMetricsOutputFunction(unittest.TestCase):
+    
+    def test_picard_collect_insert_size_metrics_output_fastq(self):
+        """
+        picard_collect_insert_size_metrics_output: no prefix (Fastq file)
+        """
+        self.assertEqual(
+            picard_collect_insert_size_metrics_output(
+                '/data/PB/PB1_ATTAGG_L001_R1_001.fastq'),
+            ('PB1_ATTAGG_L001_R1_001.insert_size_metrics.txt',
+             'PB1_ATTAGG_L001_R1_001.insert_size_histogram.pdf'))
+
+    def test_picard_collect_insert_size_metrics_output_bam_file(self):
+        """
+        picard_collect_insert_size_metrics_output: no prefix (BAM file)
+        """
+        self.assertEqual(
+            picard_collect_insert_size_metrics_output(
+                '/data/PB/PB1_ATTAGG_L001_R1_001.bam'),
+            ('PB1_ATTAGG_L001_R1_001.insert_size_metrics.txt',
+             'PB1_ATTAGG_L001_R1_001.insert_size_histogram.pdf'))
+
+    def test_picard_collect_insert_size_metrics_output_with_prefix(self):
+        """
+        picard_collect_insert_size_metrics_output: with prefix
+        """
+        self.assertEqual(
+            picard_collect_insert_size_metrics_output(
+                '/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
+                prefix="picard/human"),
+            ('picard/human/PB1_ATTAGG_L001_R1_001.insert_size_metrics.txt',
+             'picard/human/PB1_ATTAGG_L001_R1_001.insert_size_histogram.pdf'))

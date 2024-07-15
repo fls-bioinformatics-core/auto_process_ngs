@@ -1,8 +1,35 @@
 #!/usr/bin/env python
 #
-# picard library
+#     qc/picard: utilities for handling Picard outputs
+#     Copyright (C) University of Manchester 2024 Peter Briggs
+#
+"""
+Provides utility classes and functions for handling Picard outputs.
+
+Provides the following classes:
+
+- CollectInsertSizeMetrics: wrapper for handling outputs from Picard
+  'CollectInsertSizeMetrics'
+
+Provides the following functions:
+
+- fastqc_output_files: generates names of FastQC outputs files
+"""
+
+#######################################################################
+# Imports
+#######################################################################
+
 import os
+import logging
 from bcftbx.utils import AttributeDictionary
+
+# Module specific logger
+logger = logging.getLogger(__name__)
+
+#######################################################################
+# Classes
+#######################################################################
 
 """
 Example CollectInsertSizeMetrics output (SAMPLE.insert_size_metrics.txt):
@@ -122,3 +149,40 @@ class CollectInsertSizeMetrics(object):
         associated number of alignments.
         """
         return self._histogram
+
+#######################################################################
+# Functions
+#######################################################################
+
+def picard_collect_insert_size_metrics_output(filen,prefix=None):
+    """
+    Generate names of Picard CollectInsertSizeMetrics output
+
+    Given a Fastq or BAM file name, the output from Picard's
+    CollectInsertSizeMetrics function will look like:
+
+    - {PREFIX}/{FASTQ}.insert_size_metrics.txt
+    - {PREFIX}/{FASTQ}.insert_size_histogram.pdf
+
+    Arguments:
+      filen (str): name of Fastq or BAM file
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: CollectInsertSizeMetrics output (without leading
+        paths)
+
+    """
+    outputs = []
+    basename = os.path.basename(filen)
+    while basename.split('.')[-1] in ('bam',
+                                      'fastq',
+                                      'gz'):
+        basename = '.'.join(basename.split('.')[:-1])
+    for ext in ('.insert_size_metrics.txt',
+                '.insert_size_histogram.pdf'):
+        outputs.append("%s%s" % (basename,ext))
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
