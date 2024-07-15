@@ -23,6 +23,7 @@ from auto_process_ngs.qc.utils import get_bam_basename
 from auto_process_ngs.qc.utils import get_seq_data_samples
 from auto_process_ngs.qc.utils import filter_fastqs
 from auto_process_ngs.qc.utils import set_cell_count_for_project
+from auto_process_ngs.qc.utils import read_versions_file
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -1046,3 +1047,50 @@ Cellranger version\t5.0.1
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          None)
+
+class TestReadVersionsFile(unittest.TestCase):
+    """
+    Tests for the 'read_versions_file' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestReadVersionsFile')
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+    def test_read_versions_file(self):
+        """
+        read_versions_file: get data from a file
+        """
+        # Make example '_versions' file
+        versions_file = os.path.join(self.wd,"_versions")
+        with open(versions_file,'wt') as fp:
+            fp.write("star\t2.7.7a\nsamtools\t1.15.1\n")
+        # Read version information from file
+        self.assertEqual(read_versions_file(versions_file),
+                         {
+                             "star": ['2.7.7a'],
+                             "samtools": ['1.15.1']
+                         })
+    def test_read_versions_file_add_to_existing_data(self):
+        """
+        read_versions_file: get data from a file (add to existing data)
+        """
+        # Make example '_versions' file
+        versions_file = os.path.join(self.wd,"_versions")
+        with open(versions_file,'wt') as fp:
+            fp.write("star\t2.7.7a\nsamtools\t1.15.1\n")
+        # Existing packages data
+        pkgs = {
+            "seqtk": ['1.3'],
+            "star": ['2.4.2a']
+        }
+        # Read version information from file
+        self.assertEqual(read_versions_file(versions_file,pkgs),
+                         {
+                             "star": ['2.4.2a',
+                                      '2.7.7a'],
+                             "samtools": ['1.15.1'],
+                             "seqtk": ['1.3']
+                         })
