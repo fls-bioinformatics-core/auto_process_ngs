@@ -54,7 +54,7 @@ class CellrangerMulti(QCModule):
     mapped_metrics = False
     runners = ("cellranger_multi_runner",)
     envmodules = ("cellranger",)
-    
+
     def __init__(self):
         QCModule.__init__(self)
 
