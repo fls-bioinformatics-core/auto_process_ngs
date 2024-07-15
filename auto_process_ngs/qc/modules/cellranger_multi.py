@@ -203,8 +203,7 @@ class CellrangerMulti(QCModule):
             return True
         # Check against actual multiplexed samples
         # associated with specified version and dataset
-        return verify_10x_pipeline('cellranger_multi',
-                                   ('cellranger',
+        return verify_10x_pipeline(('cellranger',
                                     params.cellranger_version,
                                     params.cellranger_refdata),
                                    multiplexed_samples,
