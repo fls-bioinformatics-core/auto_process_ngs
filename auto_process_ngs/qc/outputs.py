@@ -42,6 +42,7 @@ from .modules.fastq_screen import FastqScreen
 from .modules.fastq_strand import FastqStrand
 from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
 from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
+from .modules.rseqc_infer_experiment import RseqcInferExperiment
 from .modules.sequence_lengths import SequenceLengths
 
 # Module specific logger
@@ -227,7 +228,7 @@ class QCOutputs:
                 self._collect_seq_lengths(qcdir),
                 self._collect_picard_insert_size_metrics(qcdir),
                 self._collect_rseqc_genebody_coverage(qcdir),
-                self._collect_rseqc_infer_experiment(self.qc_dir),
+                self._collect_rseqc_infer_experiment(qcdir),
                 self._collect_qualimap_rnaseq(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(qcdir),
@@ -543,7 +544,7 @@ class QCOutputs:
         """
         return RseqcGenebodyCoverage.collect_qc_outputs(qcdir)
 
-    def _collect_rseqc_infer_experiment(self,qc_dir):
+    def _collect_rseqc_infer_experiment(self,qcdir):
         """
         Collect information on RSeQC infer_experiment.py outputs
 
@@ -559,50 +560,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          qc_dir (str): top-level directory to look under.
+          qcdir (QCDir): QC directory to examine
         """
-        software = {}
-        bam_files = set()
-        output_files = list()
-        tags = set()
-        # Look for RSeQC infer_experiment.py outputs
-        organisms = set()
-        infer_experiment_dir = os.path.join(qc_dir,
-                                            "rseqc_infer_experiment")
-        if os.path.isdir(infer_experiment_dir):
-            # Look for subdirs with organism names
-            for d in filter(
-                    lambda dd:
-                    os.path.isdir(os.path.join(infer_experiment_dir,dd)),
-                    os.listdir(infer_experiment_dir)):
-                # Check for outputs
-                for f in filter(
-                        lambda ff:
-                        ff.endswith(".infer_experiment.log"),
-                        os.listdir(os.path.join(infer_experiment_dir,d))):
-                    name = f[:-len(".infer_experiment.log")]
-                    organisms.add(d)
-                    bam_files.add(name)
-                    output_files.append(os.path.join(infer_experiment_dir,
-                                                     d,f))
-                # Check for software information
-                software = self._read_versions_file(
-                    os.path.join(infer_experiment_dir,
-                                 d,"_versions"),
-                    software)
-        if organisms:
-            tags.add("rseqc_infer_experiment")
-            if not software:
-                software['rseqc:infer_experiment'] = [None]
-        # Return collected information
-        return AttributeDictionary(
-            name='rseqc_infer_experiment',
-            software=software,
-            bam_files=sorted(list(bam_files)),
-            organisms=sorted(list(organisms)),
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return RseqcInferExperiment.collect_qc_outputs(qcdir)
 
     def _collect_qualimap_rnaseq(self,qc_dir):
         """
