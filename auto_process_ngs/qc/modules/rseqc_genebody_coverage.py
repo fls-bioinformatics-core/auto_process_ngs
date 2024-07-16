@@ -137,8 +137,8 @@ class RseqcGenebodyCoverage(QCModule):
         return True
 
     @classmethod
-    def add_to_pipeline(self,p,project_name,project,qc_dir,
-                        bam_files,reference_gene_model,organism_name,
+    def add_to_pipeline(self,p,project_name,qc_dir,bam_files,
+                        reference_gene_model,organism_name,
                         required_tasks=[],rseqc_runner=None):
         """
         Adds tasks for 'rseqc_genebody_coverage' module to pipeline
@@ -146,7 +146,6 @@ class RseqcGenebodyCoverage(QCModule):
         Arguments:
           p (Pipeline): pipeline to extend
           project_name (str): name of project
-          project (AnalysisProject): project to run module on
           qc_dir (str): path to QC directory
           bam_files (list): BAM files to run the module on
           reference_gene_model (str): path to reference gene
