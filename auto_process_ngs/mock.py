@@ -89,7 +89,7 @@ from .tenx.utils import flow_cell_id
 from .utils import ZipArchive
 from .mockqc import MockQCOutputs
 from .mockqc import make_mock_qc_dir
-from .qc.outputs import rseqc_genebody_coverage_output
+from .qc.rseqc import rseqc_genebody_coverage_output
 from . import mock10xdata
 from . import mockqcdata
 
