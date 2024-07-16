@@ -16,8 +16,6 @@ Provides the following functions:
 - fastq_strand_output: get name for fastq_strand.py output
 - picard_collect_insert_size_metrics_output: get names for Picard
   CollectInsertSizeMetrics output
-- rseqc_genebody_coverage_output: get names for RSeQC geneBody_coverage.py
-  output
 - qualimap_rnaseq_output: get names for Qualimap 'rnaseq' output
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 """
@@ -43,6 +41,7 @@ from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
 from .modules.fastq_strand import FastqStrand
 from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
+from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
 from .modules.sequence_lengths import SequenceLengths
 
 # Module specific logger
@@ -227,7 +226,7 @@ class QCOutputs:
                 self._collect_fastq_strand(qcdir),
                 self._collect_seq_lengths(qcdir),
                 self._collect_picard_insert_size_metrics(qcdir),
-                self._collect_rseqc_genebody_coverage(self.qc_dir),
+                self._collect_rseqc_genebody_coverage(qcdir),
                 self._collect_rseqc_infer_experiment(self.qc_dir),
                 self._collect_qualimap_rnaseq(self.qc_dir),
                 self._collect_icell8(self.qc_dir),
@@ -525,7 +524,7 @@ class QCOutputs:
         """
         return PicardInsertSizeMetrics.collect_qc_outputs(qcdir)
 
-    def _collect_rseqc_genebody_coverage(self,qc_dir):
+    def _collect_rseqc_genebody_coverage(self,qcdir):
         """
         Collect information on RSeQC geneBody_coverage.py outputs
 
@@ -540,51 +539,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          qc_dir (str): top-level directory to look under.
+          qcdir (QCDir): QC directory to examine
         """
-        software = {}
-        output_files = list()
-        tags = set()
-        # Look for RSeQC geneBody_coverage.py outputs
-        organisms = set()
-        genebody_cov_dir = os.path.join(qc_dir,
-                                        "rseqc_genebody_coverage")
-        if os.path.isdir(genebody_cov_dir):
-            # Look for subdirs with organism names
-            for d in filter(
-                    lambda dd:
-                    os.path.isdir(os.path.join(genebody_cov_dir,dd)),
-                    os.listdir(genebody_cov_dir)):
-                # Check for outputs
-                for f in filter(
-                        lambda ff:
-                        ff.endswith(".geneBodyCoverage.txt"),
-                        os.listdir(os.path.join(genebody_cov_dir,d))):
-                    name = f[:-len(".geneBodyCoverage.txt")]
-                    outputs = rseqc_genebody_coverage_output(
-                        name,
-                        prefix=os.path.join(genebody_cov_dir,d))
-                    if all([os.path.exists(f) for f in outputs]):
-                        # All outputs present
-                        organisms.add(d)
-                        output_files.extend(outputs)
-                # Check for software information
-                software = self._read_versions_file(
-                    os.path.join(genebody_cov_dir,
-                                 d,"_versions"),
-                    software)
-        if organisms:
-            tags.add("rseqc_genebody_coverage")
-            if not software:
-                software['rseqc:genebody_coverage'] = [None]
-        # Return collected information
-        return AttributeDictionary(
-            name='rseqc_genebody_coverage',
-            software=software,
-            organisms=sorted(list(organisms)),
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return RseqcGenebodyCoverage.collect_qc_outputs(qcdir)
 
     def _collect_rseqc_infer_experiment(self,qc_dir):
         """
