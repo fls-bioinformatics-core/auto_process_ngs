@@ -1,7 +1,33 @@
 #!/usr/bin/env python
 #
-# rseqc library
+#     qc/rseqc: utilities for handling RSeQC outputs
+#     Copyright (C) University of Manchester 2024 Peter Briggs
+#
+"""
+Provides utility classes and functions for handling RSeQC outputs.
+
+Provides the following classes:
+
+- InferExperiment: wrapper for handling outputs from 'infer_experiment.py'
+
+Provides the following functions:
+
+- fastqc_output_files: generates names of FastQC outputs files
+"""
+
+#######################################################################
+# Imports
+#######################################################################
+
 import os
+import logging
+
+# Module specific logger
+logger = logging.getLogger(__name__)
+
+#######################################################################
+# Classes
+#######################################################################
 
 """
 Example output from infer_experiment.py:
@@ -98,3 +124,36 @@ class InferExperiment(object):
         Fraction of aligned reads neither 'forward' nor 'reverse'
         """
         return self._unstranded
+
+#######################################################################
+# Functions
+#######################################################################
+
+def rseqc_genebody_coverage_output(name,prefix=None):
+    """
+    Generate names of RSeQC geneBody_coverage.py output
+
+    Given a basename, the output from geneBody_coverage.py
+    will look like:
+
+    - {PREFIX}/{NAME}.geneBodyCoverage.curves.png
+    - {PREFIX}/{NAME}.geneBodyCoverage.r
+    - {PREFIX}/{NAME}.geneBodyCoverage.txt
+
+    Arguments:
+      name (str): basename for output files
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: geneBody_coverage.py output (without leading paths)
+
+    """
+    outputs = []
+    for ext in ('.geneBodyCoverage.curves.png',
+                '.geneBodyCoverage.r',
+                '.geneBodyCoverage.txt'):
+        outputs.append("%s%s" % (name,ext))
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
