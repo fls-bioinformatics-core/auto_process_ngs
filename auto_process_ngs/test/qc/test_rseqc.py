@@ -8,6 +8,7 @@ import tempfile
 import shutil
 
 from auto_process_ngs.qc.rseqc import InferExperiment
+from auto_process_ngs.qc.rseqc import rseqc_genebody_coverage_output
 
 class TestInferExperiment(unittest.TestCase):
     def setUp(self):
@@ -57,3 +58,25 @@ Fraction of reads explained by "+-,-+": 0.0161
         self.assertEqual(infer_expt.forward,0.9669)
         self.assertEqual(infer_expt.reverse,0.0161)
         self.assertEqual(infer_expt.unstranded,0.0170)
+
+class TestRseqcGeneBodyCoverageOutputFunction(unittest.TestCase):
+
+    def test_rseqc_genebody_coverage_output(self):
+        """
+        rseqc_genebody_coverage_output: no prefix
+        """
+        self.assertEqual(rseqc_genebody_coverage_output('rseqc'),
+                         ('rseqc.geneBodyCoverage.curves.png',
+                          'rseqc.geneBodyCoverage.r',
+                          'rseqc.geneBodyCoverage.txt'))
+
+    def test_rseqc_genebody_coverage_output_with_prefix(self):
+        """
+        rseqc_genebody_coverage_output: with prefix
+        """
+        self.assertEqual(rseqc_genebody_coverage_output(
+            'rseqc',
+            prefix="rseqc/human"),
+                         ('rseqc/human/rseqc.geneBodyCoverage.curves.png',
+                          'rseqc/human/rseqc.geneBodyCoverage.r',
+                          'rseqc/human/rseqc.geneBodyCoverage.txt'))
