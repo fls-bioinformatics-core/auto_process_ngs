@@ -971,35 +971,6 @@ class ExtraOutputs:
 # Functions
 #######################################################################
 
-def rseqc_genebody_coverage_output(name,prefix=None):
-    """
-    Generate names of RSeQC geneBody_coverage.py output
-
-    Given a basename, the output from geneBody_coverage.py
-    will look like:
-
-    - {PREFIX}/{NAME}.geneBodyCoverage.curves.png
-    - {PREFIX}/{NAME}.geneBodyCoverage.r
-    - {PREFIX}/{NAME}.geneBodyCoverage.txt
-
-    Arguments:
-      name (str): basename for output files
-      prefix (str): optional directory to prepend to
-        outputs
-
-    Returns:
-      tuple: geneBody_coverage.py output (without leading paths)
-
-    """
-    outputs = []
-    for ext in ('.geneBodyCoverage.curves.png',
-                '.geneBodyCoverage.r',
-                '.geneBodyCoverage.txt'):
-        outputs.append("%s%s" % (name,ext))
-    if prefix is not None:
-        outputs = [os.path.join(prefix,f) for f in outputs]
-    return tuple(outputs)
-
 def qualimap_rnaseq_output(prefix=None):
     """
     Generate names of Qualimap 'rnaseq' output

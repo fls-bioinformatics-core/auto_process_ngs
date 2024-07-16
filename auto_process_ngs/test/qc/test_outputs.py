@@ -13,7 +13,6 @@ from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import ExtraOutputs
-from auto_process_ngs.qc.outputs import rseqc_genebody_coverage_output
 from auto_process_ngs.qc.outputs import qualimap_rnaseq_output
 
 # Set to False to keep test output dirs
@@ -2618,24 +2617,6 @@ external_stuff/index.html\tBunch of external stuff\texternal_stuff/results,exter
         self.assertEqual(extra_outputs.outputs[1].additional_files,
                          ["external_stuff/results",
                           "external_stuff/more_results"])
-
-class TestRseqcGeneBodyCoverageOutputFunction(unittest.TestCase):
-    def test_rseqc_genebody_coverage_output(self):
-        """rseqc_genebody_coverage_output: no prefix
-        """
-        self.assertEqual(rseqc_genebody_coverage_output('rseqc'),
-                         ('rseqc.geneBodyCoverage.curves.png',
-                          'rseqc.geneBodyCoverage.r',
-                          'rseqc.geneBodyCoverage.txt'))
-    def test_rseqc_genebody_coverage_output_with_prefix(self):
-        """rseqc_genebody_coverage_output: with prefix
-        """
-        self.assertEqual(rseqc_genebody_coverage_output(
-            'rseqc',
-            prefix="rseqc/human"),
-                         ('rseqc/human/rseqc.geneBodyCoverage.curves.png',
-                          'rseqc/human/rseqc.geneBodyCoverage.r',
-                          'rseqc/human/rseqc.geneBodyCoverage.txt'))
 
 class TestQualimapRnaseqOutputFunction(unittest.TestCase):
     def test_qualimap_rnaseq_output(self):
