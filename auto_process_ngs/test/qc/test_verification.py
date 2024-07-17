@@ -12,7 +12,6 @@ from auto_process_ngs.mockqc import make_mock_qc_dir
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.verification import QCVerifier
-from auto_process_ngs.qc.verification import filter_10x_pipelines
 from auto_process_ngs.qc.verification import parse_qc_module_spec
 from auto_process_ngs.qc.verification import verify_project
 
@@ -1617,61 +1616,6 @@ class TestParseQCModuleSpec(unittest.TestCase):
         self.assertEqual(
             parse_qc_module_spec("module(b='false')"),
             ('module',{ 'b': 'false' }))
-
-class TestFilter10xPipelines(unittest.TestCase):
-
-    def test_filter_10x_pipelines(self):
-        """
-        filter_10x_pipelines: check pipelines are correctly filtered
-        """
-        pipelines = (("cellranger","5.0.0","refdata-gex-GRCh38-2.0.0"),
-                     ("cellranger","6.0.1","refdata-gex-GRCh38-2020"),
-                     ("cellranger","6.1.2","refdata-gex-GRCh38-2020"),
-                     ("cellranger-arc","2.0.0","refdata-arc-GRCh38-2020"),
-                     ("cellranger-arc","2.0.0","refdata-arc-mm10-2020"),)
-        # Specific pipeline
-        self.assertEqual(
-            filter_10x_pipelines(
-                ("cellranger","6.1.2","refdata-gex-GRCh38-2020"),
-                pipelines),
-            [("cellranger","6.1.2","refdata-gex-GRCh38-2020"),])
-        # Specific package and reference data, any version
-        self.assertEqual(
-            filter_10x_pipelines(
-                ("cellranger","*","refdata-gex-GRCh38-2020"),
-                pipelines),
-            [("cellranger","6.0.1","refdata-gex-GRCh38-2020"),
-             ("cellranger","6.1.2","refdata-gex-GRCh38-2020"),])
-        # Specific package and version, any reference
-        self.assertEqual(
-            filter_10x_pipelines(
-                ("cellranger-arc","2.0.0","*"),
-                pipelines),
-            [("cellranger-arc","2.0.0","refdata-arc-GRCh38-2020"),
-             ("cellranger-arc","2.0.0","refdata-arc-mm10-2020"),])
-        # Specific package, any version, any reference
-        self.assertEqual(
-            filter_10x_pipelines(
-                ("cellranger","*","*"),
-                pipelines),
-            [("cellranger","5.0.0","refdata-gex-GRCh38-2.0.0"),
-             ("cellranger","6.0.1","refdata-gex-GRCh38-2020"),
-             ("cellranger","6.1.2","refdata-gex-GRCh38-2020"),])
-        # No matching package
-        self.assertEqual(
-            filter_10x_pipelines(
-                ("cellranger-atac","*","*"),
-                pipelines),[])
-        # No matching version
-        self.assertEqual(
-            filter_10x_pipelines(
-                ("cellranger","3.0.1","*"),
-                pipelines),[])
-        # No matching reference
-        self.assertEqual(
-            filter_10x_pipelines(
-                ("cellranger","*","refdata-gex-mm10-2020"),
-                pipelines),[])
 
 class TestVerifyProject(unittest.TestCase):
 
