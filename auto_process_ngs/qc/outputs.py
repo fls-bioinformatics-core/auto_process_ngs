@@ -383,45 +383,6 @@ class QCOutputs:
         for tag in data.tags:
             self.outputs.add(tag)
 
-    def _read_versions_file(self,f,pkgs=None):
-        """
-        Internal: extract software info from 'versions' file
-
-        'versions' files (typically named ``_versions``)
-        should consist of one or more lines of text, with
-        each line comprising a software package name and
-        a version number, separated by a tab character.
-
-        Returns a dictionary where package names are keys,
-        and the corresponding values are lists of versions.
-
-        If an existing dictionary is supplied via the 'pkgs'
-        argument then any package information is added to this
-        dictionary; otherwise an empty dictionary is created
-        and populated.
-        """
-        if pkgs is not None:
-            software = pkgs
-        else:
-            software = dict()
-        if not os.path.exists(f):
-            return software
-        try:
-            with open(f,'rt') as fp:
-                for line in fp:
-                    try:
-                        pkg,version = line.strip().split('\t')
-                    except IndexError:
-                        continue
-                    try:
-                        software[pkg].append(version)
-                    except KeyError:
-                        software[pkg] = [version]
-        except Exception as ex:
-            logger.warning("%s: unable to extract versions: %s" %
-                           (f,ex))
-        return software
-
     def _collect_fastq_screens(self,qcdir):
         """
         Collect information on FastqScreen outputs
