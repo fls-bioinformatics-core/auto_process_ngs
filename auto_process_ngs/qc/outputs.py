@@ -16,7 +16,6 @@ Provides the following functions:
 - fastq_strand_output: get name for fastq_strand.py output
 - picard_collect_insert_size_metrics_output: get names for Picard
   CollectInsertSizeMetrics output
-- qualimap_rnaseq_output: get names for Qualimap 'rnaseq' output
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 """
 
@@ -41,6 +40,7 @@ from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
 from .modules.fastq_strand import FastqStrand
 from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
+from .modules.qualimap_rnaseq import QualimapRnaseq
 from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
 from .modules.rseqc_infer_experiment import RseqcInferExperiment
 from .modules.sequence_lengths import SequenceLengths
@@ -229,7 +229,7 @@ class QCOutputs:
                 self._collect_picard_insert_size_metrics(qcdir),
                 self._collect_rseqc_genebody_coverage(qcdir),
                 self._collect_rseqc_infer_experiment(qcdir),
-                self._collect_qualimap_rnaseq(self.qc_dir),
+                self._collect_qualimap_rnaseq(qcdir),
                 self._collect_icell8(self.qc_dir),
                 self._collect_cellranger_count(qcdir),
                 self._collect_cellranger_multi(qcdir),
@@ -564,7 +564,7 @@ class QCOutputs:
         """
         return RseqcInferExperiment.collect_qc_outputs(qcdir)
 
-    def _collect_qualimap_rnaseq(self,qc_dir):
+    def _collect_qualimap_rnaseq(self,qcdir):
         """
         Collect information on Qualimap 'rnaseq' outputs
 
@@ -580,66 +580,9 @@ class QCOutputs:
         - tags: list of associated output classes
 
         Arguments:
-          qc_dir (str): top-level directory to look under.
+          qc_dir (QCDir): QC directory to examine
         """
-        software = {}
-        bam_files = set()
-        output_files = list()
-        tags = set()
-        # Look for Qualimap 'rnaseq' outputs
-        organisms = set()
-        qualimap_dir = os.path.join(qc_dir,"qualimap-rnaseq")
-        if os.path.isdir(qualimap_dir):
-            # Look for subdirs with organism names
-            for d in filter(
-                    lambda dd:
-                    os.path.isdir(os.path.join(qualimap_dir,dd)),
-                    os.listdir(qualimap_dir)):
-                # Look for subdirs with BAM file names
-                organism_dir = os.path.join(qualimap_dir,d)
-                for bam in filter(
-                        lambda dd:
-                        os.path.isdir(os.path.join(organism_dir,dd)),
-                        os.listdir(organism_dir)):
-                    # Check for Qualimap rnaseq outputs
-                    for f in filter(
-                            lambda ff:
-                            ff == "qualimapReport.html",
-                            os.listdir(os.path.join(organism_dir,bam))):
-                        outputs = [os.path.join(organism_dir,bam,ff)
-                                   for ff in ('qualimapReport.html',
-                                              'rnaseq_qc_results.txt')]
-                        if all([os.path.exists(ff) for ff in outputs]):
-                            # All outputs present
-                            organisms.add(d)
-                            bam_files.add(bam)
-                            output_files.extend(outputs)
-                            # Add additional outputs (CSS, images etc)
-                            for subdir in ('css',
-                                           'images_qualimapReport',
-                                           'raw_data_qualimapReport',):
-                                dd = os.path.join(organism_dir,bam,subdir)
-                                if os.path.exists(dd):
-                                    extra_files = [os.path.join(dd,ff)
-                                                   for ff in os.listdir(dd)]
-                                    output_files.extend(extra_files)
-                # Check for software information
-                software = self._read_versions_file(
-                    os.path.join(organism_dir,"_versions"),
-                    software)
-        if organisms:
-            tags.add("qualimap_rnaseq")
-            if not software:
-                software['qualimap'] = [None]
-        # Return collected information
-        return AttributeDictionary(
-            name='qualimap_rnaseq',
-            software=software,
-            bam_files=sorted(list(bam_files)),
-            organisms=sorted(list(organisms)),
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
+        return QualimapRnaseq.collect_qc_outputs(qcdir)
 
     def _collect_icell8(self,qc_dir):
         """
@@ -926,31 +869,3 @@ class ExtraOutputs:
                     AttributeDictionary(file_path=file_path,
                                         description=description,
                                         additional_files=additional_files))
-
-#######################################################################
-# Functions
-#######################################################################
-
-def qualimap_rnaseq_output(prefix=None):
-    """
-    Generate names of Qualimap 'rnaseq' output
-
-    The output from Qualimap 'rnaseq' are always::
-
-    - {PREFIX}/qualimapReport.html
-    - {PREFIX}/rnaseq_qc_results.txt
-    - {PREFIX}/...
-
-    Arguments:
-      prefix (str): optional directory to prepend to
-        outputs
-
-    Returns:
-      tuple: Qualimap 'rnaseq' output (without leading paths)
-
-    """
-    outputs = ['qualimapReport.html',
-               'rnaseq_qc_results.txt']
-    if prefix is not None:
-        outputs = [os.path.join(prefix,f) for f in outputs]
-    return tuple(outputs)

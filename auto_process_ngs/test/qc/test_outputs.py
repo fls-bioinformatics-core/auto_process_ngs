@@ -13,7 +13,6 @@ from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import ExtraOutputs
-from auto_process_ngs.qc.outputs import qualimap_rnaseq_output
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -2617,19 +2616,3 @@ external_stuff/index.html\tBunch of external stuff\texternal_stuff/results,exter
         self.assertEqual(extra_outputs.outputs[1].additional_files,
                          ["external_stuff/results",
                           "external_stuff/more_results"])
-
-class TestQualimapRnaseqOutputFunction(unittest.TestCase):
-    def test_qualimap_rnaseq_output(self):
-        """qualimap_rnaseq_output: no prefix
-        """
-        self.assertEqual(qualimap_rnaseq_output(),
-                         ('qualimapReport.html',
-                          'rnaseq_qc_results.txt'))
-    def test_picard_collect_insert_size_metrics_output_with_prefix(self):
-        """qualimap_rnaseq_output: with prefix
-        """
-        self.assertEqual(
-            qualimap_rnaseq_output(
-                prefix="qualimap-rnaseq/human/PB1_ATTAGG_L001_R1_001"),
-            ('qualimap-rnaseq/human/PB1_ATTAGG_L001_R1_001/qualimapReport.html',
-             'qualimap-rnaseq/human/PB1_ATTAGG_L001_R1_001/rnaseq_qc_results.txt'))
