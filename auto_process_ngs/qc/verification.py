@@ -14,7 +14,6 @@ Provides the following classes:
 Provides the following functions:
 
 - parse_qc_module_spec: process QC module specification string
-- filter_10x_pipelines: filter list of 10xGenomics pipeline tuples
 - verify_project: check the QC outputs for a project
 """
 
@@ -406,49 +405,6 @@ class QCVerifier(QCOutputs):
         else:
             raise Exception("unknown QC module: '%s'" % name)
 
-    def verify_10x_pipeline(self,name,pipeline,samples):
-        """
-        Internal: check for and verify outputs for 10x package
-
-        Arguments:
-          name (str): name the QC data is stored under
-          pipeline (tuple): tuple specifying pipeline(s) to
-            verify
-          samples (list): list of sample names to verify
-
-        Returns:
-          Boolean: True if at least one set of valid outputs
-            exist for the specified pipeline and sample list,
-            False otherwise.
-        """
-        pipelines = filter_10x_pipelines(pipeline,
-                                         self.data(name).pipelines)
-        for pipeline in pipelines:
-            verified_pipeline = True
-            for sample in samples:
-                if sample not in self.data(name).\
-                   samples_by_pipeline[pipeline]:
-                    # At least one sample missing outputs from
-                    # this pipeline, so move on to the next
-                    verified_pipeline = False
-                    break
-            if verified_pipeline:
-                # At least one matching pipeline has
-                # verified
-                return True
-        # No matching outputs from cellranger count
-        return False
-
-    def filter_fastqs(self,reads,fastqs):
-        """
-        Filter list of Fastqs and return names matching reads
-
-        Wrap external 'filter_fastqs' function
-        """
-        return filter_fastqs(reads,
-                             fastqs,
-                             fastq_attrs=self.fastq_attrs)
-
     def identify_seq_data(self,samples):
         """
         Identify samples with sequence (biological) data
@@ -529,61 +485,6 @@ def parse_qc_module_spec(module_spec):
     except IndexError:
         pass
     return (name,params)
-
-def filter_10x_pipelines(p,pipelines):
-    """
-    Filter list of 10x pipelines
-
-    Pipelines are described using tuples of the form:
-
-    (NAME,VERSION,REFERENCE)
-
-    for example:
-
-    ('cellranger','6.1.2','refdata-gex-2020')
-
-    Only pipelines matching the specified name, version
-    and reference data will be included in the returned
-    list.
-
-    Where the supplied version or reference dataset name
-    are either None or '*', these will match any version
-    and/or reference dataset.
-
-    Arguments:
-      p (tuple): tuple specifying pipeline(s) to match
-        against
-      pipelines (list): list of pipeline tuples to filter
-
-    Returns:
-      List: list of matching 10x pipeline tuples.
-    """
-    # Extract elements from pipeline pattern
-    name = p[0]
-    version = p[1]
-    refdata = p[2]
-    # Check for wildcard versions and reference data
-    if version == "*":
-        version = None
-    if refdata == "*":
-        refdata = None
-    # Normalise reference dataset name
-    refdata = (os.path.basename(refdata) if refdata else None)
-    # Find all matching pipelines
-    matching_pipelines = list()
-    for pipeline in pipelines:
-        if pipeline[0] != name:
-            # Wrong 10x package name
-            continue
-        if version and pipeline[1] != version:
-            # Wrong version
-            continue
-        if refdata and pipeline[2] != refdata:
-            # Wrong reference dataset
-            continue
-        # Passed all filters
-        matching_pipelines.append(pipeline)
-    return matching_pipelines
 
 def verify_project(project,qc_dir=None,qc_protocol=None,
                    fastqs=None):
