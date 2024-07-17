@@ -28,6 +28,18 @@ from bcftbx.utils import AttributeDictionary
 from ..analysis import AnalysisFastq
 from ..metadata import AnalysisProjectQCDirInfo
 from .constants import FASTQ_SCREENS
+from .modules.cellranger_arc_count import CellrangerArcCount
+from .modules.cellranger_atac_count import CellrangerAtacCount
+from .modules.cellranger_count import CellrangerCount
+from .modules.cellranger_multi import CellrangerMulti
+from .modules.fastqc import Fastqc
+from .modules.fastq_screen import FastqScreen
+from .modules.fastq_strand import FastqStrand
+from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
+from .modules.qualimap_rnaseq import QualimapRnaseq
+from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
+from .modules.rseqc_infer_experiment import RseqcInferExperiment
+from .modules.sequence_lengths import SequenceLengths
 from .protocols import fetch_protocol_definition
 from .protocols import parse_qc_module_spec
 from .outputs import QCOutputs
@@ -289,276 +301,107 @@ class QCVerifier(QCOutputs):
 
         # Perform checks based on QC module
         if name == "fastqc":
-            if not fastqs:
-                # Nothing to check
-                return None
-            try:
-                # Filter Fastq names
-                fastqs = self.filter_fastqs(qc_reads,fastqs)
-                # Check that outputs exist for every Fastq
-                for fq in fastqs:
-                    if fq not in self.data('fastqc').fastqs:
-                        return False
-                return True
-            except KeyError:
-                # No Fastqc outputs present
-                return False
+            return Fastqc.verify(
+                AttributeDictionary(fastqs=fastqs,
+                                    qc_reads=qc_reads),
+                self.data('fastqc'))
 
         elif name == "fastq_screen":
-            if not seq_data_fastqs or not fastq_screens:
-                # Nothing to check
-                return None
-            try:
-                # Filter Fastq names
-                fastqs = self.filter_fastqs(seq_data_reads,
-                                            seq_data_fastqs)
-                # Check outputs exist for each screen
-                for screen in fastq_screens:
-                    if screen not in self.data('fastq_screen').\
-                       screen_names:
-                        # No outputs associated with screen
-                        return False
-                    # Check outputs exist for each Fastq
-                    for fq in fastqs:
-                        if fq not in self.data('fastq_screen').\
-                           fastqs_for_screen[screen]:
-                            return False
-                return True
-            except KeyError as ex:
-                # No FastqScreen outputs present
-                return False
+            return FastqScreen.verify(
+                AttributeDictionary(
+                    fastqs=fastqs,
+                    seq_data_fastqs=seq_data_fastqs,
+                    seq_data_reads=seq_data_reads,
+                    fastq_screens=fastq_screens),
+                self.data('fastq_screen'))
 
         elif name == "sequence_lengths":
-            if not fastqs:
-                # Nothing to check
-                return None
-            try:
-                # Filter Fastq names
-                fastqs = self.filter_fastqs(qc_reads,fastqs)
-                # Check that outputs exist for every Fastq
-                for fq in fastqs:
-                    if fq not in self.data('sequence_lengths').fastqs:
-                        return False
-                return True
-            except KeyError:
-                # No sequence length outputs present
-                return False
+            return SequenceLengths.verify(
+                AttributeDictionary(
+                    fastqs=fastqs,
+                    qc_reads=qc_reads),
+                self.data('sequence_lengths'))
 
         elif name == "strandedness":
-            if not seq_data_fastqs or \
-               "fastq_strand.conf" not in self.config_files:
-                # No Fastqs or no conf file so strandedness
-                # outputs not expected
-                return None
-            if "strandedness" not in self.outputs:
-                # No strandedness outputs present
-                return False
-            # Filter Fastq names
-            fastqs = self.filter_fastqs(seq_data_reads[:1],
-                                        seq_data_fastqs)
-            # Check that outputs exist for every Fastq
-            for fq in fastqs:
-                if fq not in self.data('fastq_strand').fastqs:
-                    return False
-            return True
+            return FastqStrand.verify(
+                AttributeDictionary(
+                    seq_data_fastqs=seq_data_fastqs,
+                    seq_data_reads=seq_data_reads,
+                    config_files=self.config_files),
+                self.data('fastq_strand'))
 
         elif name == "rseqc_genebody_coverage":
-            if not seq_data_fastqs:
-                # Nothing to check
-                return None
-            if not organism:
-                # No organism specified
-                return None
-            if not star_index or not annotation_bed:
-                # No STAR index or annotation
-                return None
-            if "rseqc_genebody_coverage" not in self.outputs:
-                # No RSeQC gene body coverage present
-                return False
-            if normalise_organism_name(organism) not in \
-               self.data('rseqc_genebody_coverage').organisms:
-                return False
-            return True
+            return RseqcGenebodyCoverage.verify(
+                AttributeDictionary(seq_data_fastqs=seq_data_fastqs,
+                                    organism=organism,
+                                    star_index=star_index,
+                                    annotation_bed=annotation_bed),
+                self.data('rseqc_genebody_coverage'))
 
         elif name == "rseqc_infer_experiment":
-            if not seq_data_fastqs:
-                # Nothing to check
-                return None
-            if not organism:
-                # No organism specified
-                return None
-            if not star_index or not annotation_bed:
-                # No STAR index or annotation
-                return None
-            if "rseqc_infer_experiment" not in self.outputs:
-                # No RSeQC infer_experiment.py output present
-                return False
-            if normalise_organism_name(organism) not in \
-               self.data('rseqc_infer_experiment').organisms:
-                return False
-            # Filter Fastq names and convert to BAM names
-            if seq_data_reads:
-                fastqs = self.filter_fastqs(seq_data_reads[:1],
-                                            seq_data_fastqs)
-            else:
-                # No Fastqs to get BAM names from
-                return None
-            bams = [get_bam_basename(fq) for fq in fastqs]
-            # Check that outputs exist for every BAM
-            for bam in bams:
-                if bam not in self.data('rseqc_infer_experiment').bam_files:
-                    return False
-            return True
+            return RseqcInferExperiment.verify(
+                AttributeDictionary(seq_data_fastqs=seq_data_fastqs,
+                                    seq_data_reads=seq_data_reads,
+                                    organism=organism,
+                                    star_index=star_index,
+                                    annotation_bed=annotation_bed),
+                self.data('rseqc_infer_experiment'))
 
         elif name == "picard_insert_size_metrics":
-            if not seq_data_fastqs:
-                # Nothing to check
-                return None
-            if not organism:
-                # No organism specified
-                return None
-            if not star_index:
-                # No STAR index
-                return None
-            if "picard_insert_size_metrics" not in self.outputs:
-                # No insert size metrics present
-                return False
-            if normalise_organism_name(organism) not in \
-               self.data('picard_collect_insert_size_metrics').organisms:
-                return False
-            # Filter Fastq names and convert to BAM names
-            bams = [get_bam_basename(fq)
-                    for fq in self.filter_fastqs(seq_data_reads[:1],
-                                                 seq_data_fastqs)]
-            # Check that outputs exist for every BAM
-            for bam in bams:
-                if bam not in self.data('picard_collect_insert_size_metrics').\
-                   bam_files:
-                    return False
-            return True
+            return PicardInsertSizeMetrics.verify(
+                AttributeDictionary(
+                    seq_data_fastqs=seq_data_fastqs,
+                    seq_data_reads=seq_data_reads,
+                    organism=organism,
+                    star_index=star_index),
+                self.data('picard_collect_insert_size_metrics'))
 
         elif name == "qualimap_rnaseq":
-            if not seq_data_fastqs:
-                # Nothing to check
-                return None
-            if not organism:
-                # No organism specified
-                return None
-            if not star_index or not annotation_gtf:
-                # No STAR index or annotation
-                return None
-            if "qualimap_rnaseq" not in self.outputs:
-                # No Qualimap 'rnaseq' outputs present
-                return False
-            if normalise_organism_name(organism) not in \
-               self.data('qualimap_rnaseq').organisms:
-                return False
-            # Filter Fastq names and convert to BAM names
-            bams = [get_bam_basename(fq)
-                    for fq in self.filter_fastqs(seq_data_reads[:1],
-                                                 seq_data_fastqs)]
-            # Check that outputs exist for every BAM
-            for bam in bams:
-                if bam not in self.data('qualimap_rnaseq').bam_files:
-                    return False
-            return True
+            return QualimapRnaseq.verify(
+                AttributeDictionary(seq_data_fastqs=seq_data_fastqs,
+                                    seq_data_reads=seq_data_reads,
+                                    organism=organism,
+                                    star_index=star_index,
+                                    annotation_gtf=annotation_gtf),
+                self.data('qualimap_rnaseq'))
 
         elif name == "multiqc":
             return ("multiqc" in self.outputs)
 
         elif name == "cellranger_count":
-            if cellranger_use_multi_config:
-                # Take parameters from 10x_multi_config.csv
-                if "10x_multi_config.csv" not in self.config_files:
-                    # No multi config file so no outputs expected
-                    return True
-                # Get GEX sample names and reference dataset from
-                # multi config file
-                cf = CellrangerMultiConfigCsv(
-                    os.path.join(self.qc_dir,"10x_multi_config.csv"))
-                samples = cf.gex_libraries
-                cellranger_refdata = cf.reference_data_path
-            if not samples:
-                # No samples so cellranger outputs not expected
-                return True
-            if cellranger_refdata is None:
-                # No reference data so cellranger outputs not expected
-                return True
-            if "cellranger_count" not in self.outputs:
-                # No cellranger outputs present
-                return False
-            # Check expected samples against actual samples
-            # associated with specified version and dataset
-            return self.verify_10x_pipeline('cellranger_count',
-                                            ('cellranger',
-                                             cellranger_version,
-                                             cellranger_refdata),
-                                            samples)
+            return CellrangerCount.verify(
+                AttributeDictionary(
+                    qc_dir=self.qc_dir,
+                    samples=samples,
+                    cellranger_version=cellranger_version,
+                    cellranger_refdata=cellranger_refdata,
+                    cellranger_use_multi_config=cellranger_use_multi_config),
+                self.data('cellranger_count'))
 
         elif name == "cellranger-atac_count":
-            if not samples:
-                # No samples so cellranger-atac outputs not
-                # expected
-                return True
-            if cellranger_refdata is None:
-                # No reference data so cellranger-atac outputs not
-                # expected
-                return True
-            if "cellranger-atac_count" not in self.outputs:
-                # No cellranger-atac outputs present
-                return False
-            # Check expected samples against actual samples
-            # associated with specified version and dataset
-            return self.verify_10x_pipeline('cellranger_count',
-                                            ('cellranger-atac',
-                                             cellranger_version,
-                                             cellranger_refdata),
-                                            samples)
+            return CellrangerAtacCount.verify(
+                AttributeDictionary(
+                    samples=samples,
+                    cellranger_version=cellranger_version,
+                    cellranger_refdata=cellranger_refdata),
+                self.data('cellranger_count'))
 
         elif name == "cellranger-arc_count":
-            # Look for cellranger-arc config files and
-            # make a list of expected samples
-            expected_samples = []
-            for cf in self.config_files:
-                if cf.startswith("libraries.") and \
-                   cf.endswith(".csv"):
-                    sample = '.'.join(cf.split('.')[1:-1])
-                    expected_samples.append(sample)
-            if not expected_samples:
-                # No libraries to check
-                return True
-            if "cellranger-arc_count" not in self.outputs:
-                # No cellranger-arc outputs present
-                return False
-            # Check expected samples against actual samples
-            # associated with specified version and dataset
-            return self.verify_10x_pipeline('cellranger_count',
-                                            ('cellranger-arc',
-                                             cellranger_version,
-                                             cellranger_refdata),
-                                            samples)
+            return CellrangerArcCount.verify(
+                AttributeDictionary(
+                    config_files=self.config_files,
+                    samples=samples,
+                    cellranger_version=cellranger_version,
+                    cellranger_refdata=cellranger_refdata),
+                self.data('cellranger_count'))
 
         elif name == "cellranger_multi":
-            if "10x_multi_config.csv" not in self.config_files:
-                # No multi config file so no outputs expected
-                return True
-            if "cellranger_multi" not in self.outputs:
-                return False
-            # Get expected multiplexed sample names
-            # from config file
-            cf = os.path.join(self.qc_dir,"10x_multi_config.csv")
-            multiplexed_samples = CellrangerMultiConfigCsv(cf).\
-                                  sample_names
-            if not multiplexed_samples:
-                # No samples to check outputs for
-                return True
-            # Check against actual multiplexed samples
-            # associated with specified version and dataset
-            return self.verify_10x_pipeline('cellranger_multi',
-                                            ('cellranger',
-                                             cellranger_version,
-                                             cellranger_refdata),
-                                            multiplexed_samples)
+            return CellrangerMulti.verify(
+                AttributeDictionary(
+                    qc_dir=self.qc_dir,
+                    cellranger_version=cellranger_version,
+                    cellranger_refdata=cellranger_refdata),
+                self.data('cellranger_multi'))
 
         else:
             raise Exception("unknown QC module: '%s'" % name)
