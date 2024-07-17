@@ -9,6 +9,7 @@ import shutil
 
 from auto_process_ngs.mockqcdata import QUALIMAP_RNASEQ_RESULTS
 from auto_process_ngs.qc.qualimap import QualimapRnaseq
+from auto_process_ngs.qc.qualimap import qualimap_rnaseq_output
 
 class TestQualimapRnaseq(unittest.TestCase):
     def setUp(self):
@@ -58,3 +59,23 @@ class TestQualimapRnaseq(unittest.TestCase):
         self.assertEqual(rnaseq_results.link_to_output("Reads Genomic Origin"),
                          os.path.join(self.dirn,
                                       "qualimapReport.html#Reads%20Genomic%20Origin"))
+
+class TestQualimapRnaseqOutputFunction(unittest.TestCase):
+
+    def test_qualimap_rnaseq_output(self):
+        """
+        qualimap_rnaseq_output: no prefix
+        """
+        self.assertEqual(qualimap_rnaseq_output(),
+                         ('qualimapReport.html',
+                          'rnaseq_qc_results.txt'))
+
+    def test_qualimap_rnaseq_output_with_prefix(self):
+        """
+        qualimap_rnaseq_output: with prefix
+        """
+        self.assertEqual(
+            qualimap_rnaseq_output(
+                prefix="qualimap-rnaseq/human/PB1_ATTAGG_L001_R1_001"),
+            ('qualimap-rnaseq/human/PB1_ATTAGG_L001_R1_001/qualimapReport.html',
+             'qualimap-rnaseq/human/PB1_ATTAGG_L001_R1_001/rnaseq_qc_results.txt'))

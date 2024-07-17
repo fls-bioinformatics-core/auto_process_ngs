@@ -1,6 +1,24 @@
 #!/usr/bin/env python
 #
-# qualimap library
+#     qc/qualimap: utilities for handling Qualimap outputs
+#     Copyright (C) University of Manchester 2024 Peter Briggs
+#
+"""
+Provides utility classes and functions for handling Qualimap outputs.
+
+Provides the following classes:
+
+- QualimapRnaseq: wrapper for handling outputs from Qualimap 'rnaseq'
+
+Provides the following functions:
+
+- qualimap_rnaseq_output: generates names of Qualimap 'rnaseq' outputs
+"""
+
+#######################################################################
+# Imports
+#######################################################################
+
 import os
 
 """
@@ -191,3 +209,31 @@ class QualimapRnaseq(object):
             if relpath:
                 link = os.path.relpath(link,relpath)
         return link
+
+#######################################################################
+# Functions
+#######################################################################
+
+def qualimap_rnaseq_output(prefix=None):
+    """
+    Generate names of Qualimap 'rnaseq' output
+
+    The output from Qualimap 'rnaseq' are always::
+
+    - {PREFIX}/qualimapReport.html
+    - {PREFIX}/rnaseq_qc_results.txt
+    - {PREFIX}/...
+
+    Arguments:
+      prefix (str): optional directory to prepend to
+        outputs
+
+    Returns:
+      tuple: Qualimap 'rnaseq' output (without leading paths)
+
+    """
+    outputs = ['qualimapReport.html',
+               'rnaseq_qc_results.txt']
+    if prefix is not None:
+        outputs = [os.path.join(prefix,f) for f in outputs]
+    return tuple(outputs)
