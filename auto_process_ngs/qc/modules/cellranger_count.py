@@ -208,7 +208,7 @@ class CellrangerCount(QCModule):
                          cellranger_versioned_samples[name][version][reference]]
         # Return collected information
         return AttributeDictionary(
-            name='cellranger_count',
+            name=self.name,
             software=software,
             references=sorted(list(cellranger_references)),
             fastqs=[],
