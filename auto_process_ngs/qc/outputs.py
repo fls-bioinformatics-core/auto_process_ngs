@@ -10,13 +10,6 @@ Provides the following classes:
 
 - QCOutputs: detect and characterise QC outputs
 - ExtraOutputs: helper class for reading 'extra_outputs.tsv' file
-
-Provides the following functions:
-
-- fastq_strand_output: get name for fastq_strand.py output
-- picard_collect_insert_size_metrics_output: get names for Picard
-  CollectInsertSizeMetrics output
-- check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 """
 
 #######################################################################
@@ -350,7 +343,7 @@ class QCOutputs:
         print("- adding data for '%s'" % data.name)
         if data.name in self._qc_data:
             raise KeyError("'%s': data already stored against "
-                           "this name")
+                           "this name" % data.name)
         ##print(data)
         # Store raw data
         self._qc_data[data.name] = data
