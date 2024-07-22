@@ -32,7 +32,7 @@ class CellrangerArcCount(CellrangerCount):
     """
     Class for handling the 'cellranger-arc_count' QC module
     """
-    name = "cellranger-atac_count"
+    name = "cellranger-arc_count"
     mapped_metrics = False
     runners = ("verify_runner",
                "cellranger_count_runner")
