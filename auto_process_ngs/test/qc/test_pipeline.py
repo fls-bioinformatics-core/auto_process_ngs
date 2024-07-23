@@ -1,13 +1,115 @@
 #######################################################################
-# Unit tests for qc/pipeline.py (basic functionality)
+# Base module for unit tests for qc/pipeline.py
 #######################################################################
 
-# All imports declared in __init__.py file
-from . import *
+import unittest
+import tempfile
+import shutil
+import os
+from bcftbx.JobRunner import SimpleJobRunner
+from auto_process_ngs.metadata import AnalysisProjectInfo
+from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
+from auto_process_ngs.mock import MockFastqScreen
+from auto_process_ngs.mock import MockFastQC
+from auto_process_ngs.mock import MockGtf2bed
+from auto_process_ngs.mock import MockSeqtk
+from auto_process_ngs.mock import MockStar
+from auto_process_ngs.mock import MockSamtools
+from auto_process_ngs.mock import MockPicard
+from auto_process_ngs.mock import MockRSeQC
+from auto_process_ngs.mock import MockQualimap
+from auto_process_ngs.mock import MockMultiQC
+from auto_process_ngs.mock import MockCellrangerExe
+from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import UpdateAnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.qc.pipeline import QCPipeline
+from auto_process_ngs.qc.protocols import QCProtocol
+from auto_process_ngs.qc.protocols import fetch_protocol_definition
+
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
+# Polling interval for pipeline
+POLL_INTERVAL = 0.1
+
+class BaseQCPipelineTestCase(unittest.TestCase):
+    """
+    Base class for tests of QCPipeline class
+
+    Provides setUp() and tearDown() wrappers and common
+    environment for tests.
+
+    Following properties are available to subclasses:
+
+    - wd: path to temporary working directory
+    - bin: path to a 'bin' directory for mock executables
+    - data: path to a temporary 'data' directory with mock
+      reference data files
+
+    setUp() moves to the working directory automatically
+
+    Tests must populate the 'bin' directory themselves with
+    the required mock executables. The 'bin' directory is
+    automatically prepended to the PATH.
+
+    tearDown() moves back to the original directory and
+    restores the PATH environment variable. It also
+    deletes the working directory and all its contents
+    unless the module-wide 'REMOVE_TEST_OUTPUTS' variable
+    is set to False.
+    """    
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestQCPipeline')
+        # Create a temp 'bin' dir
+        self.bin = os.path.join(self.wd,"bin")
+        os.mkdir(self.bin)
+        # Create a temp 'data' dir
+        self.data = os.path.join(self.wd,"data")
+        os.mkdir(self.data)
+        # Add (empty) FastqScreen conf files
+        self.fastq_screens = {
+            'model_organisms': "fastq_screen_model_organisms.conf",
+            'other_organisms': "fastq_screen_other_organisms.conf",
+            'rRNA': "fastq_screen_rRNA.conf",
+        }
+        for screen in self.fastq_screens:
+            conf_file = os.path.join(self.data,
+                                     self.fastq_screens[screen])
+            with open(conf_file,'wt') as fp:
+                fp.write("")
+            self.fastq_screens[screen] = conf_file
+        # Add (empty) reference data files
+        self.ref_data = dict()
+        for build in ('hg38','mm10',):
+            self.ref_data[build] = {}
+            build_dir = os.path.join(self.data,build)
+            os.mkdir(build_dir)
+            for ext in ('bed','gtf'):
+                f = os.path.join(build_dir,"%s.%s" % (build,ext))
+                with open(f,'wt') as fp:
+                    fp.write("")
+                self.ref_data[build][ext] = f
+        # Store original location
+        self.pwd = os.getcwd()
+        # Store original PATH
+        self.path = os.environ['PATH']
+        # Move to working dir
+        os.chdir(self.wd)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Restore PATH
+        os.environ['PATH'] = self.path
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
 
 class TestQCPipeline(BaseQCPipelineTestCase):
     """
-    Tests for basic pipeline functionality
+    Tests for core pipeline functionality
     """
     def test_qcpipeline_multiple_projects(self):
         """
@@ -591,4 +693,297 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
+                            "Missing %s" % f)
+
+    def test_qcpipeline_verify_fastqs_with_valid_fastqs(self):
+        """
+        QCPipeline: verify Fastqs with valid files
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
+                          verify_fastqs=True,
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': self.ref_data['hg38']['bed'] },
+                           annotation_gtf_files=
+                           { 'human': self.ref_data['hg38']['gtf'] },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        self.assertEqual(qc_info.cellranger_probeset,None)
+
+    def test_qcpipeline_verify_fastqs_with_corrupted_fastq(self):
+        """
+        QCPipeline: verify Fastqs with corrupted file
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Replace a Fastq file with 'bad' version
+        bad_fastq = os.path.join(self.wd,
+                                 "PJB","fastqs",
+                                 "PJB1_S1_R2_001.fastq.gz")
+        with open(bad_fastq,'wb') as fp:
+            fp.write(b"Corrupted\ndata\nfor\nGzipped file!")
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          fetch_protocol_definition("standardPE"),
+                          verify_fastqs=True,
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': self.ref_data['hg38']['bed'] },
+                           annotation_gtf_files=
+                           { 'human': self.ref_data['hg38']['gtf'] },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,1)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        self.assertEqual(qc_info.cellranger_probeset,None)
+
+    def test_qcpipeline_sra_paired_end(self):
+        """
+        QCPipeline: SRA paired-end Fastqs
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("SRA",("SRR7089001_1.fastq.gz",
+                                       "SRR7089001_2.fastq.gz",
+                                       "SRR7089002_1.fastq.gz",
+                                       "SRR7089002_2.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"SRA")),
+                          fetch_protocol_definition("standardPE"),
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': self.ref_data['hg38']['bed'] },
+                           annotation_gtf_files=
+                           { 'human': self.ref_data['hg38']['gtf'] },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"SRA","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.seq_data_samples,
+                         "SRR7089001,SRR7089002")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"SRA","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "SRR7089001_1.fastq.gz,"
+                         "SRR7089001_2.fastq.gz,"
+                         "SRR7089002_1.fastq.gz,"
+                         "SRR7089002_2.fastq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        self.assertEqual(qc_info.cellranger_probeset,None)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.SRA.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "SRA",f)),
+                            "Missing %s" % f)
+        # Check collated Picard insert sizes
+        collated_insert_sizes = os.path.join(self.wd,
+                                             "SRA",
+                                             "qc",
+                                             "insert_sizes.human.tsv")
+        self.assertTrue(os.path.exists(collated_insert_sizes),
+                        "Missing collated insert sizes TSV")
+        with open(collated_insert_sizes,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """#Bam file	Mean insert size	Standard deviation	Median insert size	Median absolute deviation
+SRR7089001.bam	153.754829	69.675347	139	37
+SRR7089002.bam	153.754829	69.675347	139	37
+""")
+
+    def test_qcpipeline_sra_single_end(self):
+        """
+        QCPipeline: SRA single-end Fastqs
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("SRA",("SRR7089001.fastq.gz",
+                                       "SRR7089002.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"SRA")),
+                          fetch_protocol_definition("standardSE"),
+                          multiqc=True)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_bed_files=
+                           { 'human': self.ref_data['hg38']['bed'] },
+                           annotation_gtf_files=
+                           { 'human': self.ref_data['hg38']['gtf'] },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"SRA","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"standardSE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardSE")))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.seq_data_samples,
+                         "SRR7089001,SRR7089002")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"SRA","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "SRR7089001.fastq.gz,"
+                         "SRR7089002.fastq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        self.assertEqual(qc_info.cellranger_probeset,None)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.SRA.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "SRA",f)),
                             "Missing %s" % f)
