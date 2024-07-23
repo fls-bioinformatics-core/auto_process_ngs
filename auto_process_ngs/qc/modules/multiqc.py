@@ -108,4 +108,4 @@ class Multiqc(QCModule):
           qc_outputs (AttributeDictionary): QC outputs returned
             from the 'collect_qc_outputs' method
         """
-        return None
+        return (len(qc_outputs.output_files) > 0)
