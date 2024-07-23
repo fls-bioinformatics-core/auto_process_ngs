@@ -146,7 +146,7 @@ class QCOutputs:
         self.software = {}
         self.outputs = set()
         self.output_files = []
-        self.config_files = []
+        self.config_files = set()
         # Raw QC output data
         self._qc_data = {}
         # Scan the directory for QC outputs
@@ -229,8 +229,6 @@ class QCOutputs:
                 self._collect_multiqc(self.qc_dir),
                 self._collect_extra_outputs(self.qc_dir)):
             self._add_qc_outputs(qc_data)
-        # Collect QC config files
-        self.config_files = self._collect_qc_config_files(files)
         # Fastq screens
         fastq_screen = self.data('fastq_screen')
         self.fastq_screens = sorted(fastq_screen.screen_names)
@@ -273,6 +271,8 @@ class QCOutputs:
         self.fastqs = sorted(list(self.fastqs))
         # BAMs
         self.bams = sorted(list(self.bams))
+        # Configs
+        self.config_files = sorted(list(self.config_files))
         # Samples
         samples = set([self.fastq_attrs(fq).sample_name
                        for fq in self.fastqs])
@@ -366,6 +366,12 @@ class QCOutputs:
         try:
             for organism in data.organisms:
                 self.organisms.add(organism)
+        except AttributeError:
+            pass
+        # Config files
+        try:
+            for cf in data.config_files:
+                self.config_files.add(cf)
         except AttributeError:
             pass
         # Software versions
@@ -722,41 +728,6 @@ class QCOutputs:
             output_files=sorted(list(output_files)),
             tags=sorted(list(tags))
         )
-
-    def _collect_qc_config_files(self,files):
-        """
-        Collect information on QC config files
-
-        Returns a list of QC configuration (if any) found
-        in the supplied list (with the leading paths
-        removed).
-
-        The following configuration files are checked for:
-
-        - fastq_strand.conf
-        - 10x_multi_config.csv
-        - 10x_multi_config.<SAMPLE>.csv
-        - libraries.<SAMPLE>.csv
-
-        Arguments:
-          files (list): list of file names to examine.
-        """
-        config_files = set()
-        # Strand and cellranger multi configs
-        for f in ("fastq_strand.conf",
-                  "10x_multi_config.csv",):
-            if os.path.join(self.qc_dir,f) in files:
-                config_files.add(f)
-        # Cellranger-arc configs ('libraries.SAMPLE.csv') and per-sample
-        # cellranger multi configs ('10x_multi_config.SAMPLE.csv')
-        for f in list(
-                filter(lambda f:
-                       f.endswith(".csv") and
-                       (os.path.basename(f).startswith("libraries.") or
-                        os.path.basename(f).startswith("10x_multi_config.")),
-                       files)):
-            config_files.add(os.path.basename(f))
-        return sorted(list(config_files))
 
 class ExtraOutputs:
     """
