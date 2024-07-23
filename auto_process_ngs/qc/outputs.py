@@ -259,11 +259,15 @@ class QCOutputs:
                         for r in seq_lengths.max_seq_length]
             if max_lens:
                 self.stats['max_sequence_length'] = max(max_lens)
-        # Cellranger count
-        cellranger_count = self.data('cellranger_count')
         # Single library analyses reference data
-        self.cellranger_references = [ref for ref in
-                                      cellranger_count.references]
+        cellranger_references = []
+        for name in ('cellranger_count',
+                     'cellranger-atac_count',
+                     'cellranger-arc_count'):
+            cellranger_count = self.data(name)
+            cellranger_references.extend([ref for ref in
+                                          cellranger_count.references])
+        self.cellranger_references = sorted(list(set(cellranger_references)))
         # Cellranger multi
         cellranger_multi = self.data('cellranger_multi')
         # Multiplexed samples
