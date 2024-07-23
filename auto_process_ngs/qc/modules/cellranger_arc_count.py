@@ -61,7 +61,7 @@ class CellrangerArcCount(CellrangerCount):
         # Look for cellranger-arc config files and
         # make a list of expected samples
         expected_samples = []
-        for cf in params.config_files:
+        for cf in qc_outputs.config_files:
             if cf.startswith("libraries.") and \
                cf.endswith(".csv"):
                 sample = '.'.join(cf.split('.')[1:-1])
