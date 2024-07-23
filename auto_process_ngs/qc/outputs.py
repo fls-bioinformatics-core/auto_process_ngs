@@ -27,11 +27,14 @@ from ..fastq_utils import remove_index_fastqs
 from ..metadata import AnalysisProjectQCDirInfo
 from ..tenx.cellplex import CellrangerMultiConfigCsv
 from .modules import QCDir
+from .modules.cellranger_arc_count import CellrangerArcCount
+from .modules.cellranger_atac_count import CellrangerAtacCount
 from .modules.cellranger_count import CellrangerCount
 from .modules.cellranger_multi import CellrangerMulti
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
 from .modules.fastq_strand import FastqStrand
+from .modules.multiqc import Multiqc
 from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
 from .modules.qualimap_rnaseq import QualimapRnaseq
 from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
@@ -214,20 +217,24 @@ class QCOutputs:
         print("\t- %d objects found" % len(files))
         logger.debug("files: %s" % files)
         # Collect QC outputs from modules
+        for m in (CellrangerCount,
+                  CellrangerAtacCount,
+                  CellrangerArcCount,
+                  CellrangerMulti,
+                  Fastqc,
+                  FastqScreen,
+                  FastqStrand,
+                  Multiqc,
+                  PicardInsertSizeMetrics,
+                  QualimapRnaseq,
+                  RseqcGenebodyCoverage,
+                  RseqcInferExperiment,
+                  SequenceLengths,):
+            self._add_qc_outputs(m.collect_qc_outputs(qcdir))
+        # Non-QC module outputs
         for qc_data in (
-                self._collect_fastq_screens(qcdir),
-                self._collect_fastqc(qcdir),
-                self._collect_fastq_strand(qcdir),
-                self._collect_seq_lengths(qcdir),
-                self._collect_picard_insert_size_metrics(qcdir),
-                self._collect_rseqc_genebody_coverage(qcdir),
-                self._collect_rseqc_infer_experiment(qcdir),
-                self._collect_qualimap_rnaseq(qcdir),
                 self._collect_icell8(self.qc_dir),
-                self._collect_cellranger_count(qcdir),
-                self._collect_cellranger_multi(qcdir),
-                self._collect_multiqc(self.qc_dir),
-                self._collect_extra_outputs(self.qc_dir)):
+                self._collect_extra_outputs(self.qc_dir),):
             self._add_qc_outputs(qc_data)
         # Fastq screens
         fastq_screen = self.data('fastq_screen')
@@ -382,168 +389,6 @@ class QCOutputs:
         for tag in data.tags:
             self.outputs.add(tag)
 
-    def _collect_fastq_screens(self,qcdir):
-        """
-        Collect information on FastqScreen outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'fastq_screen'
-        - software: dictionary of software and versions
-        - screen_names: list of associated panel names
-        - fastqs: list of associated Fastq names
-        - fastqs_for_screen: dictionary of panel names
-          and lists of Fastq names associated with each
-          panel
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (QCDir): QC directory object to examine
-        """
-        return FastqScreen.collect_qc_outputs(qcdir)
-
-    def _collect_fastqc(self,qcdir):
-        """
-        Collect information on FastQC outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'fastqc'
-        - software: dictionary of software and versions
-        - fastqs: list of associated Fastq names
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (QCDir): QC directory object to examine
-        """
-        return Fastqc.collect_qc_outputs(qcdir)
-
-    def _collect_fastq_strand(self,qcdir):
-        """
-        Collect information on FastqStrand outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'fastq_strand'
-        - software: dictionary of software and versions
-        - fastqs: list of associated Fastq names
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (QCDir): QC directory object to examine
-        """
-        return FastqStrand.collect_qc_outputs(qcdir)
-
-    def _collect_seq_lengths(self,qcdir):
-        """
-        Collect information on sequence length outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'sequence_lengths'
-        - software: dictionary of software and versions
-        - max_seqs: maximum number of sequences found in
-          a single Fastq
-        - min_seq_length: dictionary with minimum sequence
-          lengths for each read
-        - max_seq_length: dictionary with maximum sequence
-          lengths for each read
-        - reads: list of read IDs (e.g. 'r1', 'i2')
-        - fastqs: list of associated Fastq names
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (QCDir): QC directory object to examine
-        """
-        return SequenceLengths.collect_qc_outputs(qcdir)
-
-    def _collect_picard_insert_size_metrics(self,qcdir):
-        """
-        Collect information on Picard CollectInsertSizeMetrics outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'picard_collect_insert_size_metrics'
-        - software: dictionary of software and versions
-        - organisms: list of organisms with associated
-          outputs
-        - bam_files: list of associated BAM file names
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (str): top-level directory to look under.
-        """
-        return PicardInsertSizeMetrics.collect_qc_outputs(qcdir)
-
-    def _collect_rseqc_genebody_coverage(self,qcdir):
-        """
-        Collect information on RSeQC geneBody_coverage.py outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'rseqc_genebody_coverage'
-        - software: dictionary of software and versions
-        - organisms: list of organisms with associated
-          outputs
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (QCDir): QC directory to examine
-        """
-        return RseqcGenebodyCoverage.collect_qc_outputs(qcdir)
-
-    def _collect_rseqc_infer_experiment(self,qcdir):
-        """
-        Collect information on RSeQC infer_experiment.py outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'rseqc_infer_experiment'
-        - software: dictionary of software and versions
-        - organisms: list of organisms with associated
-          outputs
-        - bam_files: list of associated BAM file names
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (QCDir): QC directory to examine
-        """
-        return RseqcInferExperiment.collect_qc_outputs(qcdir)
-
-    def _collect_qualimap_rnaseq(self,qcdir):
-        """
-        Collect information on Qualimap 'rnaseq' outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'qualimap_rnaseq'
-        - software: dictionary of software and versions
-        - organisms: list of organisms with associated
-          outputs
-        - bam_files: list of associated BAM file names
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qc_dir (QCDir): QC directory to examine
-        """
-        return QualimapRnaseq.collect_qc_outputs(qcdir)
-
     def _collect_icell8(self,qc_dir):
         """
         Collect information on ICell8 reports
@@ -581,111 +426,6 @@ class QCOutputs:
         return AttributeDictionary(
             name='icell8',
             software={},
-            fastqs=[],
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
-
-    def _collect_cellranger_count(self,qcdir):
-        """
-        Collect information on Cellranger count outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'cellranger_count'
-        - software: dictionary of software and versions
-        - references: list of associated reference datasets
-        - fastqs: list of associated Fastq names
-        - samples: list of associated sample names
-        - pipelines: list of tuples defining 10x pipelines
-          in the form (name,version,reference)
-        - samples_by_pipeline: dictionary with lists of
-          sample names associated with each 10x pipeline
-          tuple
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (QCDir): QC directory object to examine
-        """
-        return CellrangerCount.collect_qc_outputs(qcdir)
-
-    def _collect_cellranger_multi(self,qcdir):
-        """
-        Collect information on Cellranger multi outputs
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'cellranger_multi'
-        - software: dictionary of software and versions
-        - references: list of associated reference datasets
-        - probe_sets: list of associated probe sets
-        - fastqs: list of associated Fastq names
-        - multiplexed_samples: list of associated multiplexed
-          sample names
-        - pipelines: list of tuples defining 10x pipelines
-          in the form (name,version,reference)
-        - samples_by_pipeline: dictionary with lists of
-          multiplexed sample names associated with each 10x
-          pipeline tuple
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qcdir (QCDir): QC directory object to examine
-        """
-        return CellrangerMulti.collect_qc_outputs(qcdir)
-
-    def _collect_multiqc(self,qc_dir):
-        """
-        Collect information on MultiQC reports
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'multiqc'
-        - software: dictionary of software and versions
-        - fastqs: list of associated Fastq names
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qc_dir (str): top-level directory to look under.
-        """
-        version = None
-        output_files = list()
-        tags = set()
-        # Look for MultiQC report
-        multiqc_dir = os.path.dirname(qc_dir)
-        print("Checking for MultiQC report in %s" % multiqc_dir)
-        multiqc_report = os.path.join(multiqc_dir,
-                                      "multi%s_report.html"
-                                      % os.path.basename(qc_dir))
-        if os.path.isfile(multiqc_report):
-            tags.add("multiqc")
-            output_files.append(multiqc_report)
-            # Try to locate version from HTML file
-            # Look for line like e.g.
-            # <a href="http://multiqc.info" target="_blank">MultiQC v1.8</a>
-            with open(multiqc_report,'rt') as fp:
-                for line in fp:
-                    if line.strip().startswith("<a href=\"http://multiqc.info\" target=\"_blank\">MultiQC v"):
-                        try:
-                            version = line.strip().split()[3][1:-4]
-                        except Exception as ex:
-                            logger.warning("Failed to extract MultiQC version "
-                                           "from '%s': %s" % (line,ex))
-                        break
-        # Return collected information
-        if version:
-            software = { 'multiqc': [ version ] }
-        else:
-            software = {}
-        return AttributeDictionary(
-            name='multiqc',
-            software=software,
             fastqs=[],
             output_files=output_files,
             tags=sorted(list(tags))
