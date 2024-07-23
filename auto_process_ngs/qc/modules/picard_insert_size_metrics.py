@@ -149,9 +149,6 @@ class PicardInsertSizeMetrics(QCModule):
         if not params.star_index:
             # No STAR index
             return None
-        ##if "picard_insert_size_metrics" not in self.outputs:
-        ##    # No insert size metrics present
-        ##    return False
         if normalise_organism_name(params.organism) not in qc_outputs.organisms:
             return False
         # Filter Fastq names and convert to BAM names
