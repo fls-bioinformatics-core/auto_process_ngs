@@ -78,6 +78,8 @@ class CellrangerMulti(QCModule):
         - samples_by_pipeline: dictionary with lists of
           multiplexed sample names associated with each 10x
           pipeline tuple
+        - config_files: list of associated config files
+          ('10x_multi_config[.<SAMPLE>].csv')
         - output_files: list of associated output files
         - tags: list of associated output classes
 
@@ -91,6 +93,11 @@ class CellrangerMulti(QCModule):
         cellranger_probe_sets = set()
         samples_by_pipeline = dict()
         tags = set()
+        # Look for cellranger multi configs
+        config_files = list(
+            filter(lambda f:
+                   f.endswith(".csv") and f.startswith("10x_multi_config."),
+                   [os.path.basename(f) for f in qc_dir.file_list]))
         # Look for cellranger multi outputs
         cellranger_multi_dir = os.path.join(qc_dir.path,
                                             "cellranger_multi")
@@ -168,6 +175,7 @@ class CellrangerMulti(QCModule):
             pipelines=sorted([p for p in samples_by_pipeline]),
             samples_by_pipeline=samples_by_pipeline,
             output_files=output_files,
+            config_files=sorted(config_files),
             tags=sorted(list(tags))
         )
 
