@@ -69,6 +69,8 @@ class FastqStrand(QCModule):
         - name: set to 'fastq_strand'
         - software: dictionary of software and versions
         - fastqs: list of associated Fastq names
+        - config_files: list of associated config files
+          ('fastq_strand.conf')
         - output_files: list of associated output files
         - tags: list of associated output classes
 
@@ -79,6 +81,11 @@ class FastqStrand(QCModule):
         output_files = list()
         fastqs = set()
         tags = set()
+        # Look for fastq_strand config file
+        if os.path.join(qc_dir.path,"fastq_strand.conf") in qc_dir.file_list:
+            config_files = ["fastq_strand.conf"]
+        else:
+            config_files = []
         # Look for fastq_strand outputs
         fastq_strand = list(filter(lambda f:
                                    f.endswith("_fastq_strand.txt"),
@@ -105,6 +112,7 @@ class FastqStrand(QCModule):
             software=software,
             fastqs=sorted(list(fastqs)),
             output_files=output_files,
+            config_files=sorted(config_files),
             tags=sorted(list(tags))
         )
 
