@@ -2,8 +2,29 @@
 # Unit tests for qc/pipeline.py ('picard_insert_size_metrics' QC module)
 #######################################################################
 
-# All imports declared in __init__.py file
-from . import *
+import unittest
+import tempfile
+import shutil
+import os
+from bcftbx.JobRunner import SimpleJobRunner
+from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
+from auto_process_ngs.mock import MockGtf2bed
+from auto_process_ngs.mock import MockPicard
+from auto_process_ngs.mock import MockRSeQC
+from auto_process_ngs.mock import MockSamtools
+from auto_process_ngs.mock import MockStar
+from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import UpdateAnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.qc.protocols import QCProtocol
+from auto_process_ngs.qc.pipeline import QCPipeline
+from ..protocols import BaseQCPipelineTestCase
+
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
+# Polling interval for pipeline
+POLL_INTERVAL = 0.1
 
 class TestQCPipelinePicardInsertSizeMetrics(BaseQCPipelineTestCase):
     """
