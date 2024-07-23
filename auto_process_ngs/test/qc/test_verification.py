@@ -6,6 +6,7 @@ import unittest
 import os
 import tempfile
 import shutil
+from bcftbx.utils import AttributeDictionary
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import make_mock_analysis_project
 from auto_process_ngs.mockqc import make_mock_qc_dir
@@ -87,6 +88,33 @@ class TestQCVerifier(unittest.TestCase):
             legacy_screens=legacy_screens,
             legacy_cellranger_outs=legacy_cellranger_outs)
 
+    def _create_params_dict(self,**kws):
+        # Return an AttributeDictionary with the
+        # appropriate parameters set
+        params = AttributeDictionary(
+            qc_dir=None,
+            fastqs=None,
+            samples=None,
+            seq_data_fastqs=None,
+            seq_data_samples=None,
+            seq_data_reads=None,
+            qc_reads=None,
+            organism=None,
+            fastq_screens=None,
+            star_index=None,
+            annotation_bed=None,
+            annotation_gtf=None,
+            cellranger_version=None,
+            cellranger_refdata=None,
+            cellranger_use_multi_config=None
+        )
+        if kws:
+            for k in kws:
+                params[k] = kws[k]
+        if not params.seq_data_fastqs:
+            params['seq_data_fastqs'] = params.fastqs
+        return params
+
     def test_qcverifier_verify_qc_module_fastqc(self):
         """
         QCVerifier: verify QC module 'fastqc'
@@ -100,25 +128,28 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_fastqc=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module('fastqc',
-                                                     fastqs=fastq_names,
-                                                     qc_reads=('r1','r2')))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'fastqc',
+            self._create_params_dict(fastqs=fastq_names,
+                                     qc_reads=('r1','r2'))))
         # Some outputs missing
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:-1],
                                    include_fastqc=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('fastqc',
-                                                      fastqs=fastq_names,
-                                                      qc_reads=('r1','r2')))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'fastqc',
+            self._create_params_dict(fastqs=fastq_names,
+                                     qc_reads=('r1','r2'))))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_fastqc=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('fastqc',
-                                                      fastqs=fastq_names,
-                                                      qc_reads=('r1','r2')))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'fastqc',
+            self._create_params_dict(fastqs=fastq_names,
+                                     qc_reads=('r1','r2'))))
 
     def test_qcverifier_verify_qc_module_fastq_screen(self):
         """
@@ -136,14 +167,14 @@ class TestQCVerifier(unittest.TestCase):
                                             'other_organisms',
                                             'rRNA',))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module('fastq_screen',
-                                                     fastqs=fastq_names,
-                                                     fastq_screens=(
-                                                         'model_organisms',
-                                                         'other_organisms',
-                                                         'rRNA',),
-                                                     seq_data_reads=(
-                                                         'r1','r2')))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'fastq_screen',
+            self._create_params_dict(fastqs=fastq_names,
+                                     fastq_screens=(
+                                         'model_organisms',
+                                         'other_organisms',
+                                         'rRNA',),
+                                     seq_data_reads=('r1','r2'))))
         # Some outputs missing
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:-1],
@@ -152,41 +183,41 @@ class TestQCVerifier(unittest.TestCase):
                                             'other_organisms',
                                             'rRNA',))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('fastq_screen',
-                                                      fastqs=fastq_names,
-                                                      fastq_screens=(
-                                                          'model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA',),
-                                                      seq_data_reads=(
-                                                          'r1','r2')))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'fastq_screen',
+            self._create_params_dict(fastqs=fastq_names,
+                                     fastq_screens=(
+                                         'model_organisms',
+                                         'other_organisms',
+                                         'rRNA',),
+                                     seq_data_reads=('r1','r2'))))
         # Some screens missing
         qc_dir = self._make_qc_dir('qc.missing_screens',
                                    fastq_names=fastq_names,
                                    include_fastq_screen=True,
                                    screens=('rRNA',))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('fastq_screen',
-                                                      fastqs=fastq_names,
-                                                      fastq_screens=(
-                                                          'model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA',),
-                                                      seq_data_reads=(
-                                                          'r1','r2')))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'fastq_screen',
+            self._create_params_dict(fastqs=fastq_names,
+                                     fastq_screens=(
+                                         'model_organisms',
+                                         'other_organisms',
+                                         'rRNA',),
+                                     seq_data_reads=('r1','r2'))))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_fastq_screen=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('fastq_screen',
-                                                      fastqs=fastq_names,
-                                                      fastq_screens=(
-                                                          'model_organisms',
-                                                          'other_organisms',
-                                                          'rRNA',),
-                                                      seq_data_reads=(
-                                                          'r1','r2')))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'fastq_screen',
+            self._create_params_dict(fastqs=fastq_names,
+                                     fastq_screens=(
+                                         'model_organisms',
+                                         'other_organisms',
+                                         'rRNA',),
+                                     seq_data_reads=('r1','r2'))))
 
     def test_qcverifier_verify_qc_module_strandedness(self):
         """
@@ -201,19 +232,19 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_strandedness=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module('strandedness',
-                                                     fastqs=fastq_names,
-                                                     seq_data_reads=(
-                                                         'r1','r2')))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'strandedness',
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'))))
         # Some outputs missing
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:2],
                                    include_strandedness=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('strandedness',
-                                                      fastqs=fastq_names,
-                                                      seq_data_reads=(
-                                                          'r1','r2')))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'strandedness',
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'))))
         # Empty QC directory
         # NB this will verify as None because the fastq_strand.conf
         # file is missing (so no outputs are expected)
@@ -222,10 +253,11 @@ class TestQCVerifier(unittest.TestCase):
                                    include_strandedness=False)
         qc_verifier = QCVerifier(qc_dir)
         self.assertEqual(None,
-                         qc_verifier.verify_qc_module('strandedness',
-                                                      fastqs=fastq_names,
+                         qc_verifier.verify_qc_module(
+                             'strandedness',
+                             self._create_params_dict(fastqs=fastq_names,
                                                       seq_data_reads=(
-                                                          'r1','r2')))
+                                                          'r1','r2'))))
 
     def test_qcverifier_verify_qc_module_sequence_lengths(self):
         """
@@ -240,25 +272,28 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_seqlens=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module('sequence_lengths',
-                                                     fastqs=fastq_names,
-                                                     qc_reads=('r1','r2')))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'sequence_lengths',
+            self._create_params_dict(fastqs=fastq_names,
+                                     qc_reads=('r1','r2'))))
         # Some outputs missing
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:-1],
                                    include_seqlens=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('sequence_lengths',
-                                                      fastqs=fastq_names,
-                                                      qc_reads=('r1','r2')))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'sequence_lengths',
+            self._create_params_dict(fastqs=fastq_names,
+                                     qc_reads=('r1','r2'))))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_seqlens=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('sequence_lengths',
-                                                      fastqs=fastq_names,
-                                                      qc_reads=('r1','r2')))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'sequence_lengths',
+            self._create_params_dict(fastqs=fastq_names,
+                                     qc_reads=('r1','r2'))))
 
     def test_qcverifier_verify_qc_module_rseqc_genebody_coverage(self):
         """
@@ -276,30 +311,33 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module(
             'rseqc_genebody_coverage',
-            fastqs=fastq_names,
-            organism="Human",
-            star_index="/data/indexes/STAR",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     organism="Human",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_bed="/data/annot/human.bed")))
         # Returns None if organism, STAR index or annotation
         # is not supplied
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'rseqc_genebody_coverage',
-                             fastqs=fastq_names,
-                             star_index="/data/indexes/STAR",
-                             annotation_bed="/data/annot/human.bed"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 star_index="/data/indexes/STAR",
+                                 annotation_bed="/data/annot/human.bed")))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'rseqc_genebody_coverage',
-                             fastqs=fastq_names,
-                             organism="Human",
-                             annotation_bed="/data/annot/human.bed"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 organism="Human",
+                                 annotation_bed="/data/annot/human.bed")))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'rseqc_genebody_coverage',
-                             fastqs=fastq_names,
-                             organism="Human",
-                             star_index="/data/indexes/STAR"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 organism="Human",
+                                 star_index="/data/indexes/STAR")))
         # Organism name contains spaces
         qc_dir = self._make_qc_dir('qc.homo_sapiens',
                                    fastq_names=fastq_names[:-2],
@@ -308,10 +346,10 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module(
             'rseqc_genebody_coverage',
-            fastqs=fastq_names,
-            organism="Homo sapiens",
-            star_index="/data/indexes/STAR",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     organism="Homo sapiens",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_bed="/data/annot/human.bed")))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
@@ -320,10 +358,10 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertFalse(qc_verifier.verify_qc_module(
             'rseqc_genebody_coverage',
-            fastqs=fastq_names,
-            organism="Human",
-            star_index="/data/indexes/STAR",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     organism="Human",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_bed="/data/annot/human.bed")))
 
     def test_qcverifier_verify_qc_module_rseqc_infer_experiment(self):
         """
@@ -341,37 +379,40 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module(
             'rseqc_infer_experiment',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Human",
-            star_index="/data/indexes/STAR",
-            annotation_gtf="/data/annot/human.gtf",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Human",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_gtf="/data/annot/human.gtf",
+                                     annotation_bed="/data/annot/human.bed")))
         # Returns None if organism, STAR index or annotation
         # is not supplied
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'rseqc_infer_experiment',
-                             fastqs=fastq_names,
-                             seq_data_reads=('r1','r2'),
-                             star_index="/data/indexes/STAR",
-                             annotation_gtf="/data/annot/human.gtf",
-                             annotation_bed="/data/annot/human.bed"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 seq_data_reads=('r1','r2'),
+                                 star_index="/data/indexes/STAR",
+                                 annotation_gtf="/data/annot/human.gtf",
+                                 annotation_bed="/data/annot/human.bed")))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'rseqc_infer_experiment',
-                             fastqs=fastq_names,
-                             seq_data_reads=('r1','r2'),
-                             organism="Human",
-                             annotation_gtf="/data/annot/human.gtf",
-                             annotation_bed="/data/annot/human.bed"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 seq_data_reads=('r1','r2'),
+                                 organism="Human",
+                                 annotation_gtf="/data/annot/human.gtf",
+                                 annotation_bed="/data/annot/human.bed")))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'rseqc_infer_experiment',
-                             fastqs=fastq_names,
-                             seq_data_reads=('r1','r2'),
-                             organism="Human",
-                             star_index="/data/indexes/STAR"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 seq_data_reads=('r1','r2'),
+                                 organism="Human",
+                                 star_index="/data/indexes/STAR")))
         # Organism name contains spaces
         qc_dir = self._make_qc_dir('qc.homo_sapiens',
                                    fastq_names=fastq_names,
@@ -380,12 +421,12 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module(
             'rseqc_infer_experiment',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Homo sapiens",
-            star_index="/data/indexes/STAR",
-            annotation_gtf="/data/annot/human.gtf",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Homo sapiens",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_gtf="/data/annot/human.gtf",
+                                     annotation_bed="/data/annot/human.bed")))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
@@ -394,12 +435,12 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertFalse(qc_verifier.verify_qc_module(
             'rseqc_infer_experiment',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Human",
-            star_index="/data/indexes/STAR",
-            annotation_gtf="/data/annot/human.gtf",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Human",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_gtf="/data/annot/human.gtf",
+                                     annotation_bed="/data/annot/human.bed")))
 
     def test_qcverifier_verify_qc_module_picard_insert_size_metrics(self):
         """
@@ -417,23 +458,25 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module(
             'picard_insert_size_metrics',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Human",
-            star_index="/data/indexes/STAR"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Human",
+                                     star_index="/data/indexes/STAR")))
         # Returns None if organism or STAR index is not supplied
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'picard_insert_size_metrics',
-                             fastqs=fastq_names,
-                             seq_data_reads=('r1','r2'),
-                             star_index="/data/indexes/STAR"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 seq_data_reads=('r1','r2'),
+                                 star_index="/data/indexes/STAR")))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'picard_insert_size_metrics',
-                             fastqs=fastq_names,
-                             seq_data_reads=('r1','r2'),
-                             organism="Human"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 seq_data_reads=('r1','r2'),
+                                 organism="Human")))
         # Some outputs missing
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:-2],
@@ -442,10 +485,10 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertFalse(qc_verifier.verify_qc_module(
             'picard_insert_size_metrics',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Human",
-            star_index="/data/indexes/STAR"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Human",
+                                     star_index="/data/indexes/STAR")))
         # Organism name contains spaces
         qc_dir = self._make_qc_dir('qc.homo_sapiens',
                                    fastq_names=fastq_names,
@@ -454,10 +497,10 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module(
             'picard_insert_size_metrics',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Homo sapiens",
-            star_index="/data/indexes/STAR"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Homo sapiens",
+                                     star_index="/data/indexes/STAR")))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
@@ -466,9 +509,9 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertFalse(qc_verifier.verify_qc_module(
             'picard_insert_size_metrics',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Human"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Human")))
 
     def test_qcverifier_verify_qc_module_qualimap_rnaseq(self):
         """
@@ -486,37 +529,40 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module(
             'qualimap_rnaseq',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Human",
-            star_index="/data/indexes/STAR",
-            annotation_gtf="/data/annot/human.gtf",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Human",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_gtf="/data/annot/human.gtf",
+                                     annotation_bed="/data/annot/human.bed")))
         # Returns None if organism, STAR index or annotation
         # is not supplied
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'qualimap_rnaseq',
-                             fastqs=fastq_names,
-                             seq_data_reads=('r1','r2'),
-                             star_index="/data/indexes/STAR",
-                             annotation_gtf="/data/annot/human.gtf",
-                             annotation_bed="/data/annot/human.bed"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 seq_data_reads=('r1','r2'),
+                                 star_index="/data/indexes/STAR",
+                                 annotation_gtf="/data/annot/human.gtf",
+                                 annotation_bed="/data/annot/human.bed")))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'qualimap_rnaseq',
-                             fastqs=fastq_names,
-                             seq_data_reads=('r1','r2'),
-                             organism="Human",
-                             annotation_gtf="/data/annot/human.gtf",
-                             annotation_bed="/data/annot/human.bed"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 seq_data_reads=('r1','r2'),
+                                 organism="Human",
+                                 annotation_gtf="/data/annot/human.gtf",
+                                 annotation_bed="/data/annot/human.bed")))
         self.assertEqual(None,
                          qc_verifier.verify_qc_module(
                              'qualimap_rnaseq',
-                             fastqs=fastq_names,
-                             seq_data_reads=('r1','r2'),
-                             organism="Human",
-                             star_index="/data/indexes/STAR"))
+                             self._create_params_dict(
+                                 fastqs=fastq_names,
+                                 seq_data_reads=('r1','r2'),
+                                 organism="Human",
+                                 star_index="/data/indexes/STAR")))
         # Organism name contains spaces
         qc_dir = self._make_qc_dir('qc.homo_sapiens',
                                    fastq_names=fastq_names,
@@ -525,12 +571,12 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify_qc_module(
             'qualimap_rnaseq',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Homo sapiens",
-            star_index="/data/indexes/STAR",
-            annotation_gtf="/data/annot/human.gtf",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Homo sapiens",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_gtf="/data/annot/human.gtf",
+                                     annotation_bed="/data/annot/human.bed")))
         # Empty QC directory
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
@@ -539,12 +585,12 @@ class TestQCVerifier(unittest.TestCase):
         qc_verifier = QCVerifier(qc_dir)
         self.assertFalse(qc_verifier.verify_qc_module(
             'qualimap_rnaseq',
-            fastqs=fastq_names,
-            seq_data_reads=('r1','r2'),
-            organism="Human",
-            star_index="/data/indexes/STAR",
-            annotation_gtf="/data/annot/human.gtf",
-            annotation_bed="/data/annot/human.bed"))
+            self._create_params_dict(fastqs=fastq_names,
+                                     seq_data_reads=('r1','r2'),
+                                     organism="Human",
+                                     star_index="/data/indexes/STAR",
+                                     annotation_gtf="/data/annot/human.gtf",
+                                     annotation_bed="/data/annot/human.bed")))
 
     def test_qcverifier_verify_qc_module_multiqc(self):
         """
@@ -559,13 +605,17 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_multiqc=True)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module('multiqc'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'multiqc',
+            self._create_params_dict()))
         # QC dir without MultiQC
         qc_dir = self._make_qc_dir('qc.no_multiqc',
                                    fastq_names=fastq_names,
                                    include_multiqc=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(qc_verifier.verify_qc_module('multiqc'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'multiqc',
+            self._create_params_dict()))
 
     def test_qcverifier_verify_qc_module_cellranger_count(self):
         """
@@ -588,32 +638,34 @@ class TestQCVerifier(unittest.TestCase):
         # Implicitly match any version and reference
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_count',
-            samples=('PJB1','PJB2')))
+            self._create_params_dict(samples=('PJB1','PJB2'))))
         # Explicitly match version with any reference
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger_count',
-                                                     samples=('PJB1','PJB2'),
-                                                     cellranger_version='7.1.0',
-                                                     cellranger_refdata='*'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='7.1.0',
+                                     cellranger_refdata='*')))
         # Explicitly match reference with any version
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger_count',
-                                                     samples=('PJB1','PJB2'),
-                                                     cellranger_version='*',
-                                                     cellranger_refdata=\
-                                                     'refdata-cellranger-2020-A'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='*',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
         # Fail if version not found
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_version='5.0.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-2020-A'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='5.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
         # Fail if reference not found
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_version='7.1.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-2.0.0'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='7.1.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2.0.0')))
         # Missing outputs for one sample
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:2],
@@ -621,25 +673,26 @@ class TestQCVerifier(unittest.TestCase):
                                    cellranger_pipelines=('cellranger',),
                                    cellranger_samples=('PJB1',))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_version='7.1.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-2020-A'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='7.1.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
         # Empty QC dir
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_cellranger_count=False)
         qc_verifier = QCVerifier(qc_dir)
         # Okay if no reference data specified
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger_count',
-                                                     samples=('PJB1','PJB2')))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_count',
+            self._create_params_dict(samples=('PJB1','PJB2'))))
         # Fail if reference data is specified
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_refdata='*'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_refdata='*')))
 
     def test_qcverifier_verify_qc_module_cellranger_atac_count(self):
         """
@@ -662,33 +715,34 @@ class TestQCVerifier(unittest.TestCase):
         # Implicitly match any version and reference
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger-atac_count',
-            samples=('PJB1','PJB2')))
+            self._create_params_dict(samples=('PJB1','PJB2'))))
         # Explicitly match version with any reference
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger-atac_count',
-                                                     samples=('PJB1','PJB2'),
-                                                     cellranger_version='2.0.0',
-                                                     cellranger_refdata='*'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                cellranger_version='2.0.0',
+                                cellranger_refdata='*')))
         # Explicitly match reference with any version
-        self.assertTrue(
-            qc_verifier.verify_qc_module('cellranger-atac_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_version='*',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-atac-2020-A'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                cellranger_version='*',
+                                cellranger_refdata=\
+                                'refdata-cellranger-atac-2020-A')))
         # Fail if version not found
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger-atac_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_version='1.0.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-atac-2020-A'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='1.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-atac-2020-A')))
         # Fail if reference not found
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger-atac_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_version='2.0.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-atac-2.0.0'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='2.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-atac-2.0.0')))
         # Missing outputs for one sample
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:2],
@@ -696,25 +750,27 @@ class TestQCVerifier(unittest.TestCase):
                                    cellranger_pipelines=('cellranger-atac',),
                                    cellranger_samples=('PJB1',))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger-atac_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_version='2.0.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-atac-2020-A'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='2.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-atac-2020-A')))
         # Empty QC dir
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_cellranger_count=False)
         qc_verifier = QCVerifier(qc_dir)
         # Okay if no reference data specified
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger-atac_count',
-                                                     samples=('PJB1','PJB2')))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'))))
         # Fail if reference data is specified
         self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger-atac_count',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_refdata='*'))
+            qc_verifier.verify_qc_module(
+                'cellranger-atac_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
+                                         cellranger_refdata='*')))
 
     def test_qcverifier_verify_qc_module_cellranger_arc_count(self):
         """
@@ -737,33 +793,37 @@ class TestQCVerifier(unittest.TestCase):
         # Implicitly match any version and reference
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger-arc_count',
-            samples=('PJB1','PJB2')))
+            self._create_params_dict(samples=('PJB1','PJB2'))))
         # Explicitly match version with any reference
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger-arc_count',
-                                                     samples=('PJB1','PJB2'),
-                                                     cellranger_version='2.0.0',
-                                                     cellranger_refdata='*'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-arc_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='2.0.0',
+                                     cellranger_refdata='*')))
         # Explicitly match reference with any version
         self.assertTrue(
-            qc_verifier.verify_qc_module('cellranger-arc_count',
-                                         samples=('PJB1','PJB2'),
+            qc_verifier.verify_qc_module(
+                'cellranger-arc_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
                                          cellranger_version='*',
                                          cellranger_refdata=\
-                                         'refdata-cellranger-arc-2020-A'))
+                                         'refdata-cellranger-arc-2020-A')))
         # Fail if version not found
         self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger-arc_count',
-                                         samples=('PJB1','PJB2'),
+            qc_verifier.verify_qc_module(
+                'cellranger-arc_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
                                          cellranger_version='1.0.0',
                                          cellranger_refdata=\
-                                         'refdata-cellranger-arc-2020-A'))
+                                         'refdata-cellranger-arc-2020-A')))
         # Fail if reference not found
         self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger-arc_count',
-                                         samples=('PJB1','PJB2'),
+            qc_verifier.verify_qc_module(
+                'cellranger-arc_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
                                          cellranger_version='2.0.0',
                                          cellranger_refdata=\
-                                         'refdata-cellranger-arc-2.0.0'))
+                                         'refdata-cellranger-arc-2.0.0')))
         # Missing outputs for one sample
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:2],
@@ -772,11 +832,12 @@ class TestQCVerifier(unittest.TestCase):
                                    cellranger_samples=('PJB1',))
         qc_verifier = QCVerifier(qc_dir)
         self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger-arc_count',
-                                         samples=('PJB1','PJB2'),
+            qc_verifier.verify_qc_module(
+                'cellranger-arc_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
                                          cellranger_version='2.0.0',
                                          cellranger_refdata=\
-                                         'refdata-cellranger-arc-2020-A'))
+                                         'refdata-cellranger-arc-2020-A')))
         # Empty QC dir
         # NB this will verify as True because the multiome CSV config
         # files are missing (so no outputs are expected)
@@ -784,8 +845,9 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_cellranger_count=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger-arc_count',
-                                                     samples=('PJB1','PJB2')))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-arc_count',
+            self._create_params_dict(samples=('PJB1','PJB2'))))
 
     def test_qcverifier_verify_qc_module_cellranger_multi(self):
         """
@@ -806,28 +868,36 @@ class TestQCVerifier(unittest.TestCase):
                                    ))
         qc_verifier = QCVerifier(qc_dir)
         # Implicitly match any version and reference
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir)))
         # Explicitly match version with any reference
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi',
-                                                     cellranger_version='7.1.0',
-                                                     cellranger_refdata='*'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='7.1.0',
+                                     cellranger_refdata='*')))
         # Explicitly match reference with any version
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi',
-                                                     cellranger_version='*',
-                                                     cellranger_refdata=\
-                                                     'refdata-cellranger-2020-A'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='*',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
         # Fail if version not found
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger_multi',
-                                         cellranger_version='5.0.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-2020-A'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='5.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
         # Fail if reference not found
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger_multi',
-                                         cellranger_version='7.1.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-2.0.0'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='7.1.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2.0.0')))
         # Missing outputs for one sample
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:2],
@@ -835,12 +905,13 @@ class TestQCVerifier(unittest.TestCase):
                                    cellranger_pipelines=('cellranger',),
                                    cellranger_multi_samples=('PJB_CML1',))
         qc_verifier = QCVerifier(qc_dir)
-        self.assertFalse(
-            qc_verifier.verify_qc_module('cellranger_multi',
-                                         samples=('PJB1','PJB2'),
-                                         cellranger_version='7.1.0',
-                                         cellranger_refdata=\
-                                         'refdata-cellranger-2020-A'))
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     samples=('PJB1','PJB2'),
+                                     cellranger_version='7.1.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
         # Empty QC dir
         # NB this will verify as True because the 10x multi CSV config
         # file is missing (so no outputs are expected)
@@ -848,7 +919,9 @@ class TestQCVerifier(unittest.TestCase):
                                    fastq_names=fastq_names,
                                    include_cellranger_multi=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module('cellranger_multi'))
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir)))
 
     def test_qcverifier_verify_single_end(self):
         """
