@@ -19,31 +19,11 @@ Pipeline task classes:
 - GetSequenceDataFastqs
 - UpdateQCMetadata
 - VerifyFastqs
-- SetupFastqStrandConf
-- CheckFastqStrandOutputs
-- RunFastqStrand
-- DetermineRequired10xPackage
-- GetCellrangerReferenceData
-- MakeCellrangerArcCountLibraries
-- GetCellrangerMultiConfig
-- CheckCellrangerCountOutputs
-- RunCellrangerCount
-- RunCellrangerMulti
 - SetCellCountFromCellranger
 - GetReferenceDataset
-- GetBAMFiles
-- RunRSeQCGenebodyCoverage
-- RunPicardCollectInsertSizeMetrics
-- CollateInsertSizes
+- GetBAMFile
 - ConvertGTFToBed
-- RunRSeQCInferExperiment
-- RunQualimapRnaseq
 - ReportQC
-
-Also imports the following pipeline tasks:
-
-- Get10xPackage
-
 """
 
 ######################################################################
@@ -65,8 +45,6 @@ from bcftbx.ngsutils import getreads
 from bcftbx.ngsutils import getreads_subset
 from ..analysis import AnalysisFastq
 from ..analysis import copy_analysis_project
-from ..bcl2fastq.pipeline import Get10xPackage
-from ..bcl2fastq.pipeline import FunctionParam
 from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
@@ -81,31 +59,27 @@ from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.utils import add_cellranger_args
 from ..utils import get_organism_list
-from .outputs import fastq_strand_output
-from .outputs import picard_collect_insert_size_metrics_output
-from .outputs import rseqc_genebody_coverage_output
-from .outputs import qualimap_rnaseq_output
-from .outputs import check_fastq_strand_outputs
-from .outputs import check_cellranger_count_outputs
-from .outputs import check_cellranger_atac_count_outputs
-from .outputs import check_cellranger_arc_count_outputs
-from .picard import CollectInsertSizeMetrics
+from .modules.cellranger_count import CellrangerCount
+from .modules.cellranger_count import check_cellranger_count_outputs
+from .modules.cellranger_count import check_cellranger_atac_count_outputs
+from .modules.cellranger_count import check_cellranger_arc_count_outputs
+from .modules.cellranger_multi import CellrangerMulti
+from .modules.cellranger_multi import GetCellrangerMultiConfig
+from .modules.fastqc import Fastqc
+from .modules.fastq_screen import FastqScreen
+from .modules.fastq_strand import FastqStrand
+from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
+from .modules.qualimap_rnaseq import QualimapRnaseq
+from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
+from .modules.rseqc_infer_experiment import RseqcInferExperiment
+from .modules.sequence_lengths import SequenceLengths
 from .protocols import determine_qc_protocol
 from .protocols import fetch_protocol_definition
-from .rseqc import InferExperiment
 from .utils import get_bam_basename
 from .utils import get_seq_data_samples
 from .utils import set_cell_count_for_project
 from .verification import parse_qc_module_spec
 from .verification import verify_project
-from .fastq_strand import build_fastq_strand_conf
-
-# Import tasks for QC modules
-from .modules.fastq_screen import CheckFastqScreenOutputs
-from .modules.fastq_screen import RunFastqScreen
-from .modules.fastqc import CheckFastQCOutputs
-from .modules.fastqc import RunFastQC
-from .modules.sequence_lengths import GetSeqLengthStats
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -514,12 +488,14 @@ class QCPipeline(Pipeline):
                                             output.reference_dataset
 
             # Run RSeQC infer experiment
-            rseqc_infer_experiment = RunRSeQCInferExperiment(
-                "%s: infer experiment from BAM files (RSeQC)" %
-                project.name,
+            rseqc_infer_experiment = RseqcInferExperiment.add_to_pipeline(
+                self,
+                project_name,
+                qc_dir,
                 get_bam_files.output.bam_files,
                 reference_gene_model_file,
-                os.path.join(qc_dir,'rseqc_infer_experiment',organism_name))
+                organism_name,
+                rseqc_runner=self.runners['rseqc_runner'])
             self.add_task(rseqc_infer_experiment)
             verify_qc.requires(rseqc_infer_experiment)
 
@@ -535,57 +511,38 @@ class QCPipeline(Pipeline):
             # Fastq sequence length statistics
             ##################################
             if qc_module_name == 'sequence_lengths':
-                get_seq_lengths = GetSeqLengthStats(
-                    "%s: get sequence length statistics" %
+                get_seq_lengths = SequenceLengths.add_to_pipeline(
+                    self,
                     project_name,
                     project,
                     qc_dir,
                     read_numbers=read_numbers.qc,
                     fastqs=fastqs_in,
-                    fastq_attrs=project.fastq_attrs)
-                self.add_task(get_seq_lengths,
-                              requires=startup_tasks,
-                              runner=self.runners['fastqc_runner'])
+                    require_tasks=startup_tasks,
+                    compute_runner=self.runners['fastqc_runner'])
                 verify_qc.requires(get_seq_lengths)
 
             #############
             # FastqScreen
             #############
             if qc_module_name == 'fastq_screen':
-                # Check outputs for FastqScreen
-                check_fastq_screen = CheckFastqScreenOutputs(
-                    "%s: check FastqScreen outputs" %
+                run_fastq_screen = FastqScreen.add_to_pipeline(
+                    self,
                     project_name,
                     project,
                     qc_dir,
                     self.params.fastq_screens,
-                    fastqs=get_seq_fastqs.output.fastqs,
-                    read_numbers=read_numbers.seq_data,
+                    get_seq_fastqs.output.fastqs,
+                    read_numbers.seq_data,
                     include_samples=get_seq_data.output.seq_data_samples,
-                    fastq_attrs=project.fastq_attrs,
-                    legacy=self.params.legacy_screens,
-                    verbose=self.params.VERBOSE
-                )
-                self.add_task(check_fastq_screen,
-                              requires=startup_tasks,
-                              runner=self.runners['verify_runner'])
-
-                # Run FastqScreen
-                run_fastq_screen = RunFastqScreen(
-                    "%s: FastqScreen" % project_name,
-                    check_fastq_screen.output.fastqs,
-                    qc_dir,
-                    self.params.fastq_screens,
-                    subset=self.params.fastq_subset,
                     nthreads=self.params.nthreads,
-                    read_numbers=read_numbers.seq_data,
-                    fastq_attrs=project.fastq_attrs,
-                    legacy=self.params.legacy_screens
-                )
-                self.add_task(run_fastq_screen,
-                              requires=(check_fastq_screen,),
-                              runner=self.runners['fastq_screen_runner'],
-                              envmodules=self.envmodules['fastq_screen'])
+                    fastq_subset=self.params.fastq_subset,
+                    legacy=self.params.legacy_screens,
+                    verbose=self.params.VERBOSE,
+                    requires_tasks=startup_tasks,
+                    verify_runner=self.runners['verify_runner'],
+                    compute_runner=self.runners['fastq_screen_runner'],
+                    envmodules=self.envmodules['fastq_screen'])
                 qc_metadata['fastq_screens'] = self.params.fastq_screens
                 qc_metadata['legacy_screens'] = self.params.legacy_screens
                 verify_qc.requires(run_fastq_screen)
@@ -594,79 +551,43 @@ class QCPipeline(Pipeline):
             # FastQC
             ########
             if qc_module_name == 'fastqc':
-                # Check outputs for FastQC
-                check_fastqc = CheckFastQCOutputs(
-                    "%s: check FastQC outputs" %
+                run_fastqc = Fastqc.add_to_pipeline(
+                    self,
                     project_name,
                     project,
                     qc_dir,
-                    read_numbers=read_numbers.qc,
-                    fastqs=fastqs_in,
-                    verbose=self.params.VERBOSE
-                )
-                self.add_task(check_fastqc,
-                              requires=startup_tasks,
-                              runner=self.runners['verify_runner'])
-
-                # Run FastqQC
-                run_fastqc = RunFastQC(
-                    "%s: FastQC" % project_name,
-                    check_fastqc.output.fastqs,
-                    qc_dir,
-                    nthreads=self.params.nthreads
-                )
-                self.add_task(run_fastqc,
-                              requires=(check_fastqc,),
-                              runner=self.runners['fastqc_runner'],
-                              envmodules=self.envmodules['fastqc'])
+                    read_numbers.qc,
+                    fastqs_in,
+                    verbose=self.params.VERBOSE,
+                    nthreads=self.params.nthreads,
+                    require_tasks=startup_tasks,
+                    verify_runner=self.runners['verify_runner'],
+                    compute_runner=self.runners['fastqc_runner'],
+                    envmodules=self.envmodules['fastqc'])
                 verify_qc.requires(run_fastqc)
 
             ##############
             # Fastq_strand
             ##############
             if qc_module_name == 'strandedness':
-                # Set up fastq_strand.conf file
-                setup_fastq_strand_conf = SetupFastqStrandConf(
-                    "%s: conf file for strandedness (fastq_strand)" %
-                    project_name,
-                    project,
-                    qc_dir=qc_dir,
-                    organism=organism,
-                    star_indexes=self.params.star_indexes
-                )
-                self.add_task(setup_fastq_strand_conf,
-                              requires=startup_tasks)
-
-                # Check outputs for fastq_strand.py
-                check_fastq_strand = CheckFastqStrandOutputs(
-                    "%s: check strandedness outputs (fastq_strand)" %
+                run_fastq_strand = FastqStrand.add_to_pipeline(
+                    self,
                     project_name,
                     project,
                     qc_dir,
-                    setup_fastq_strand_conf.output.fastq_strand_conf,
-                    fastqs=get_seq_fastqs.output.fastqs,
+                    organism=organism,
                     read_numbers=read_numbers.seq_data,
+                    fastqs=get_seq_fastqs.output.fastqs,
+                    star_indexes=self.params.star_indexes,
                     include_samples=get_seq_data.output.seq_data_samples,
+                    nthreads=self.params.nthreads,
+                    fastq_subset=self.params.fastq_subset,
+                    require_tasks=startup_tasks,
+                    verify_runner=self.runners['verify_runner'],
+                    compute_runner=self.runners['star_runner'],
+                    envmodules=self.envmodules['fastq_strand'],
                     verbose=self.params.VERBOSE
                 )
-                self.add_task(check_fastq_strand,
-                              requires=(setup_fastq_strand_conf,),
-                              runner=self.runners['verify_runner'])
-
-                # Run fastq_strand.py
-                run_fastq_strand = RunFastqStrand(
-                    "%s: strandedness (fastq_strand.py)" %
-                    project_name,
-                    check_fastq_strand.output.fastq_pairs,
-                    qc_dir,
-                    setup_fastq_strand_conf.output.fastq_strand_conf,
-                    fastq_strand_subset=self.params.fastq_subset,
-                    nthreads=self.params.nthreads
-                )
-                self.add_task(run_fastq_strand,
-                              requires=(check_fastq_strand,),
-                              runner=self.runners['star_runner'],
-                              envmodules=self.envmodules['fastq_strand'])
                 verify_qc.requires(run_fastq_strand)
 
             #############################
@@ -727,7 +648,8 @@ class QCPipeline(Pipeline):
                     set_cell_count = set_metadata
 
                 # Run cellranger* count
-                run_cellranger_count = self.add_cellranger_count(
+                run_cellranger_count = CellrangerCount.add_to_pipeline(
+                    self,
                     project_name,
                     project,
                     qc_dir,
@@ -735,13 +657,31 @@ class QCPipeline(Pipeline):
                     fastq_dir,
                     qc_module_name,
                     library_type=library_type,
+                    transcriptome_references=\
+                    self.params.cellranger_transcriptomes,
+                    premrna_references=\
+                    self.params.cellranger_premrna_references,
+                    atac_references=self.params.cellranger_atac_references,
+                    multiome_references=self.params.cellranger_arc_references,
                     chemistry=chemistry,
                     force_cells=self.params.cellranger_force_cells,
                     reference_dataset=reference_dataset,
                     samples=samples,
                     fastq_dirs=fastq_dirs,
+                    cellranger_exe=self.params.cellranger_exe,
                     extra_projects=self.params.cellranger_extra_projects,
-                    required_tasks=startup_tasks)
+                    cellranger_out_dir=self.params.cellranger_out_dir,
+                    cellranger_jobmode=self.params.cellranger_jobmode,
+                    cellranger_maxjobs=self.params.cellranger_maxjobs,
+                    cellranger_mempercore=self.params.cellranger_mempercore,
+                    cellranger_jobinterval=self.params.cellranger_jobinterval,
+                    cellranger_localcores=self.params.cellranger_localcores,
+                    cellranger_localmem=self.params.cellranger_localmem,
+                    required_tasks=startup_tasks,
+                    verify_runner=self.runners['verify_runner'],
+                    cellranger_runner=self.runners['cellranger_count_runner'],
+                    envmodules=self.envmodules['cellranger'],
+                    verbose=self.params.VERBOSE)
                 verify_qc.requires(run_cellranger_count)
 
                 # Update metadata
@@ -772,81 +712,35 @@ class QCPipeline(Pipeline):
             ################################
             if qc_module_name == "cellranger_multi":
 
-                # Tasks 'check_cellranger_multi' depends on
-                check_cellranger_multi_requires = []
-
-                # Locate cellranger
-                required_cellranger = DetermineRequired10xPackage(
-                    "%s: determine required 'cellranger' package" %
+                run_cellranger_multi = CellrangerMulti.add_to_pipeline(
+                    self,
                     project_name,
+                    project,
+                    qc_dir,
                     qc_module_name,
-                    self.params.cellranger_exe)
-                self.add_task(required_cellranger)
-
-                get_cellranger = Get10xPackage(
-                    "%s: get information on cellranger" % project_name,
-                    require_package=\
-                    required_cellranger.output.require_cellranger)
-                self.add_task(get_cellranger,
-                              requires=(required_cellranger,),
-                              envmodules=self.envmodules['cellranger'])
-                check_cellranger_multi_requires.append(get_cellranger)
-                qc_metadata['cellranger_version'] = \
-                        get_cellranger.output.package_version
-                update_qc_metadata.requires(get_cellranger)
-
-                # Locate config.csv file for 'cellranger multi'
-                get_cellranger_multi_config = GetCellrangerMultiConfig(
-                    "%s: get config file for 'cellranger multi'" %
-                    project_name,
-                    project,
-                    qc_dir
-                )
-                self.add_task(get_cellranger_multi_config,
-                              requires=startup_tasks)
-                check_cellranger_multi_requires.append(
-                    get_cellranger_multi_config)
-                qc_metadata['cellranger_refdata'] = \
-                    get_cellranger_multi_config.output.reference_data_path
-                qc_metadata['cellranger_probeset'] = \
-                    get_cellranger_multi_config.output.probe_set_path
-                update_qc_metadata.requires(get_cellranger_multi_config)
-
-                # Parent directory for cellranger multi outputs
-                # Set to project directory unless the 'cellranger_out_dir'
-                # parameter is set
-                cellranger_out_dir = FunctionParam(
-                    lambda out_dir,project_dir:
-                    out_dir if out_dir is not None else project_dir,
-                    self.params.cellranger_out_dir,
-                    project.dirn)
-
-                # Run cellranger multi
-                run_cellranger_multi = RunCellrangerMulti(
-                    "%s: run cellranger multi (%s)" %
-                    (project_name,
-                     project.info.library_type),
-                    project,
-                    get_cellranger_multi_config.output.config_csvs,
-                    get_cellranger_multi_config.output.samples,
-                    get_cellranger_multi_config.output.reference_data_path,
-                    cellranger_out_dir,
-                    qc_dir=qc_dir,
-                    working_dir=self.params.WORKING_DIR,
-                    cellranger_exe=get_cellranger.output.package_exe,
-                    cellranger_version=get_cellranger.output.package_version,
+                    cellranger_exe=self.params.cellranger_exe,
+                    cellranger_out_dir=self.params.cellranger_out_dir,
                     cellranger_jobmode=self.params.cellranger_jobmode,
                     cellranger_maxjobs=self.params.cellranger_maxjobs,
                     cellranger_mempercore=self.params.cellranger_mempercore,
                     cellranger_jobinterval=self.params.cellranger_jobinterval,
                     cellranger_localcores=self.params.cellranger_localcores,
                     cellranger_localmem=self.params.cellranger_localmem,
+                    required_tasks=startup_tasks,
+                    cellranger_runner=self.runners['cellranger_multi_runner'],
+                    envmodules=self.envmodules['cellranger'],
+                    working_dir=self.params.WORKING_DIR
                 )
-                self.add_task(run_cellranger_multi,
-                              requires=(get_cellranger,
-                                        get_cellranger_multi_config,),
-                              runner=self.runners['cellranger_multi_runner'],
-                              envmodules=self.envmodules['cellranger'])
+                verify_qc.requires(run_cellranger_multi)
+
+                # Update metadata
+                qc_metadata['cellranger_version'] = \
+                    run_cellranger_multi.output.cellranger_version
+                qc_metadata['cellranger_refdata'] = \
+                    run_cellranger_multi.output.cellranger_refdata
+                qc_metadata['cellranger_probeset'] = \
+                    run_cellranger_multi.output.cellranger_probeset
+                update_qc_metadata.requires(run_cellranger_multi)
 
                 # Set cell count
                 set_cellranger_cell_count = SetCellCountFromCellranger(
@@ -864,42 +758,31 @@ class QCPipeline(Pipeline):
             # RSeQC gene body coverage
             ##########################
             if qc_module_name == 'rseqc_genebody_coverage':
-                # Run RSeQC gene body coverage
-                rseqc_gene_body_coverage = RunRSeQCGenebodyCoverage(
-                    "%s: calculate gene body coverage (RSeQC)" % project.name,
+                rseqc_gene_body_coverage = RseqcGenebodyCoverage.add_to_pipeline(
+                    self,
+                    project_name,
+                    qc_dir,
                     get_bam_files.output.bam_files,
                     get_reference_gene_model.output.reference_dataset,
-                    os.path.join(qc_dir,
-                                 'rseqc_genebody_coverage',
-                                 organism_name),
-                    name=project.name)
-                self.add_task(rseqc_gene_body_coverage,
-                              requires=startup_tasks,
-                              runner=self.runners['rseqc_runner'])
+                    organism_name,
+                    required_tasks=startup_tasks,
+                    rseqc_runner=self.runners['rseqc_runner'])
                 verify_qc.requires(rseqc_gene_body_coverage)
 
             ##########################
             # Picard insert sizes
             ##########################
             if qc_module_name == 'picard_insert_size_metrics' and paired:
-                # Run Picard's CollectInsertSizeMetrics
-                insert_size_metrics = RunPicardCollectInsertSizeMetrics(
-                    "%s: Picard: collect insert size metrics" %
-                    project.name,
+                collate_insert_sizes = PicardInsertSizeMetrics.add_to_pipeline(
+                    self,
+                    project_name,
+                    project,
+                    qc_dir,
                     get_bam_files.output.bam_files,
-                    os.path.join(qc_dir,'picard',organism_name))
-                self.add_task(insert_size_metrics,
-                              requires=startup_tasks,
-                              runner=self.runners['picard_runner'])
-
-                collate_insert_sizes = CollateInsertSizes(
-                    "%s: collate insert size data" % project.name,
-                    get_bam_files.output.bam_files,
-                    os.path.join(qc_dir,'picard',organism_name),
-                    os.path.join(qc_dir,
-                                 'insert_sizes.%s.tsv' % organism_name))
-                self.add_task(collate_insert_sizes,
-                              requires=(insert_size_metrics,))
+                    organism_name,
+                    required_tasks=startup_tasks,
+                    compute_runner=self.runners['picard_runner']
+                )
                 verify_qc.requires(collate_insert_sizes)
 
             #################
@@ -907,172 +790,19 @@ class QCPipeline(Pipeline):
             #################
             if qc_module_name == 'qualimap_rnaseq':
                 # Run Qualimap RNA-seq analysis
-                qualimap_rnaseq = RunQualimapRnaseq(
-                    "%s: Qualimap rnaseq: RNA-seq metrics" % project.name,
+                qualimap_rnaseq = QualimapRnaseq.add_to_pipeline(
+                    self,
+                    project_name,
+                    qc_dir,
                     get_bam_files.output.bam_files,
                     get_annotation_gtf.output.reference_dataset,
-                    os.path.join(qc_dir,'qualimap-rnaseq',organism_name),
-                    bam_properties=rseqc_infer_experiment.output.experiments)
-                self.add_task(qualimap_rnaseq,
-                              requires=startup_tasks,
-                              runner=self.runners['qualimap_runner'])
+                    organism_name,
+                    rseqc_infer_experiment_outputs=\
+                    rseqc_infer_experiment.output.experiments,
+                    required_tasks=startup_tasks,
+                    qualimap_runner=self.runners['qualimap_runner']
+                )
                 verify_qc.requires(qualimap_rnaseq)
-
-    def add_cellranger_count(self,project_name,project,qc_dir,
-                             organism,fastq_dir,qc_module_name,
-                             library_type,chemistry,
-                             force_cells,samples=None,
-                             fastq_dirs=None,reference_dataset=None,
-                             extra_projects=None,required_tasks=None):
-        """
-        Add tasks to pipeline to run 'cellranger* count'
-
-        Arguments:
-          project_name (str): name to associate with project for
-            reporting tasks
-          project (AnalysisProject): project to run 10x
-            cellranger pipeline within
-          qc_dir (str): directory for QC outputs (defaults
-            to subdirectory 'qc' of project directory)
-          organism (str): organism for pipeline
-          fastq_dir (str): directory holding Fastq files
-          qc_module (str): QC module being used
-          library_type (str): type of data being analysed (e.g.
-            'scRNA-seq')
-          chemistry (str): chemistry to use in single
-            library analysis
-          force_cells (int): if set then bypasses
-            the cell detection algorithm in 'cellranger'
-            and 'cellranger-atac' using the '--force-cells'
-            option (does nothing for 'cellranger-arc')
-          samples (list): optional, list of samples to
-            restrict single library analyses to (or None
-            to use all samples in project)
-          fastq_dirs (dict): optional, a dictionary mapping
-            sample names to Fastq directories which will
-            be used to override the paths set by the
-            'fastq_dirs' argument
-          reference_dataset (str): optional, path to
-            reference dataset (otherwise will be determined
-            automatically based on organism)
-          extra_projects (list): optional list of extra
-            AnalysisProjects to include Fastqs from when
-            running cellranger pipeline
-          required_tasks (list): list of tasks that the
-            cellranger pipeline should wait for
-        """
-        # Tasks 'check_cellranger_count' depends on
-        check_cellranger_count_requires = []
-
-        # Locate cellranger
-        required_cellranger = DetermineRequired10xPackage(
-            "%s: determine required 10x pipeline package (%s)" %
-            (project_name,qc_module_name),
-            qc_module_name,
-            self.params.cellranger_exe)
-        self.add_task(required_cellranger)
-
-        get_cellranger = Get10xPackage(
-            "%s: get information on 10x pipeline package (%s)" %
-            (project_name,qc_module_name),
-            require_package=\
-            required_cellranger.output.require_cellranger)
-        self.add_task(get_cellranger,
-                      requires=(required_cellranger,),
-                      envmodules=self.envmodules['cellranger'])
-        check_cellranger_count_requires.append(get_cellranger)
-
-        # Get reference data for cellranger
-        get_cellranger_reference_data = GetCellrangerReferenceData(
-            "%s: get single library analysis reference data (%s)" %
-            (project_name,qc_module_name),
-            project,
-            organism=organism,
-            transcriptomes=self.params.cellranger_transcriptomes,
-            premrna_references=self.params.cellranger_premrna_references,
-            atac_references=self.params.cellranger_atac_references,
-            multiome_references=self.params.cellranger_arc_references,
-            cellranger_exe=get_cellranger.output.package_exe,
-            cellranger_version=get_cellranger.output.package_version,
-            force_reference_data=reference_dataset
-        )
-        self.add_task(get_cellranger_reference_data,
-                      requires=(get_cellranger,),
-                      runner=self.runners['verify_runner'])
-        check_cellranger_count_requires.append(get_cellranger_reference_data)
-
-        # Make libraries.csv files (cellranger-arc only)
-        if qc_module_name == "cellranger-arc_count":
-            make_cellranger_libraries = MakeCellrangerArcCountLibraries(
-                "%s: make libraries files for 'cellranger-arc count'" %
-                project_name,
-                project,
-                qc_dir
-            )
-            self.add_task(make_cellranger_libraries,
-                          requires=required_tasks)
-            check_cellranger_count_requires.append(
-                make_cellranger_libraries)
-
-        # Check QC outputs for cellranger count
-        check_cellranger_count = CheckCellrangerCountOutputs(
-            "%s: check for single library analysis outputs (%s)" %
-            (project_name,qc_module_name),
-            project,
-            fastq_dir=fastq_dir,
-            samples=samples,
-            qc_dir=qc_dir,
-            qc_module=qc_module_name,
-            extra_projects=extra_projects,
-            cellranger_version=get_cellranger.output.package_version,
-            cellranger_ref_data=\
-            get_cellranger_reference_data.output.reference_data_path,
-            verbose=self.params.VERBOSE
-        )
-        self.add_task(check_cellranger_count,
-                      requires=check_cellranger_count_requires,
-                      runner=self.runners['verify_runner'])
-
-        # Parent directory for cellranger count outputs
-        # Set to project directory unless the 'cellranger_out_dir'
-        # parameter is set
-        cellranger_out_dir = FunctionParam(
-            lambda out_dir,project_dir:
-            out_dir if out_dir is not None else project_dir,
-            self.params.cellranger_out_dir,
-            project.dirn)
-
-        # Run cellranger count
-        run_cellranger_count = RunCellrangerCount(
-            "%s: run single library analysis (%s)" %
-            (project_name,project.info.library_type),
-            check_cellranger_count.output.samples,
-            check_cellranger_count.output.fastq_dir,
-            get_cellranger_reference_data.output.reference_data_path,
-            library_type=library_type,
-            out_dir=cellranger_out_dir,
-            qc_dir=qc_dir,
-            cellranger_exe=get_cellranger.output.package_exe,
-            cellranger_version=get_cellranger.output.package_version,
-            chemistry=chemistry,
-            fastq_dirs=fastq_dirs,
-            force_cells=force_cells,
-            cellranger_jobmode=self.params.cellranger_jobmode,
-            cellranger_maxjobs=self.params.cellranger_maxjobs,
-            cellranger_mempercore=self.params.cellranger_mempercore,
-            cellranger_jobinterval=self.params.cellranger_jobinterval,
-            cellranger_localcores=self.params.cellranger_localcores,
-            cellranger_localmem=self.params.cellranger_localmem
-        )
-        self.add_task(run_cellranger_count,
-                      requires=(get_cellranger,
-                                get_cellranger_reference_data,
-                                check_cellranger_count,),
-                      runner=self.runners['cellranger_count_runner'],
-                      envmodules=self.envmodules['cellranger'])
-
-        # Return the 'cellranger count' task
-        return run_cellranger_count
 
     def run(self,nthreads=None,fastq_screens=None,star_indexes=None,
             annotation_bed_files=None,annotation_gtf_files=None,
@@ -1660,1067 +1390,6 @@ class VerifyFastqs(PipelineFunctionTask):
         else:
             print("Verified Fastq files")
 
-class SetupFastqStrandConf(PipelineFunctionTask):
-    """
-    Set up a fastq_strand.conf file
-    """
-    def init(self,project,qc_dir=None,organism=None,star_indexes=None):
-        """
-        Initialise the SetupFastqStrandConf task.
-
-        Arguments:
-          project (AnalysisProject): project to run
-            QC for
-          qc_dir (str): if supplied then points to directory
-            for QC outputs (defaults to subdirectory 'qc'
-            of project directory)
-          organism (str): if supplied then must be a
-            string with the names of one or more organisms,
-            with multiple organisms separated by spaces
-            (defaults to the organisms associated with
-            the project)
-          star_indexes (dict): dictionary mapping
-            normalised organism names to STAR indexes
-
-        Outputs:
-          fastq_strand_conf (PipelineParam): pipeline
-            parameter instance that resolves to a string
-            with the path to the generated config file.
-        """
-        self.add_output('fastq_strand_conf',Param(type=str))
-    def setup(self):
-        qc_dir = self.args.qc_dir
-        if qc_dir is None:
-            qc_dir = 'qc'
-        if not os.path.isabs(qc_dir):
-            qc_dir = os.path.join(self.args.project.dirn,qc_dir)
-        self.fastq_strand_conf = os.path.join(qc_dir,
-                                              "fastq_strand.conf")
-        self.add_call("Setup fastq_strand.conf for %s"
-                      % self.args.project.name,
-                      self.setup_fastq_strand_conf,
-                      self.args.project,
-                      self.fastq_strand_conf,
-                      organism=self.args.organism,
-                      star_indexes=self.args.star_indexes)
-    def setup_fastq_strand_conf(self,project,fastq_strand_conf,
-                                organism=None,star_indexes=None):
-        # Remove existing fastq_strand.conf file
-        if os.path.exists(fastq_strand_conf):
-            print("Removing existing conf file: %s" % fastq_strand_conf)
-            os.remove(fastq_strand_conf)
-        # Sort out organism(s)
-        if not organism:
-            organism = project.info.organism
-        if not organism:
-            print("No organisms specified")
-            return
-        print("Organism(s): %s" % organism)
-        # Fetch matching STAR indexes
-        if not star_indexes:
-            print("No STAR indexes available")
-            return
-        print("STAR indexes: %s" % star_indexes)
-        star_indexes = build_fastq_strand_conf(
-            get_organism_list(organism),
-            star_indexes)
-        if not star_indexes:
-            print("No matching indexes for strandedness determination")
-            return
-        # Create the conf file
-        print("Writing conf file: %s" % fastq_strand_conf)
-        with open(fastq_strand_conf,'wt') as fp:
-            fp.write("%s\n" % star_indexes)
-    def finish(self):
-        if os.path.exists(self.fastq_strand_conf):
-            self.output.fastq_strand_conf.set(
-                self.fastq_strand_conf)
-
-class CheckFastqStrandOutputs(PipelineFunctionTask):
-    """
-    Check the outputs from the fastq_strand.py utility
-    """
-    def init(self,project,qc_dir,fastq_strand_conf,fastqs=None,
-             read_numbers=None,include_samples=None,verbose=False):
-        """
-        Initialise the CheckFastqStrandOutputs task.
-
-        Arguments:
-          project (AnalysisProject): project to run
-            QC for
-          qc_dir (str): directory for QC outputs (defaults
-            to subdirectory 'qc' of project directory)
-          fastq_strand_conf (str): path to the fastq_strand
-            config file
-          fastqs (list):  explicit list of Fastq files
-            to check against (default is to use Fastqs
-            from supplied analysis project)
-          read_numbers (list): list of read numbers to
-            include when checking outputs
-          include_samples (list): optional, list of sample
-            names to include
-          verbose (bool): if True then print additional
-            information from the task
-
-        Outputs:
-          fastq_pairs (list): list of tuples with Fastq
-            "pairs" that have missing outputs from
-            fastq_strand.py under the specified QC
-            protocol. A "pair" may be an (R1,R2) tuple,
-            or a single Fastq (e.g. (fq,)).
-        """
-        self.add_output('fastq_pairs',list())
-    def setup(self):
-        fastq_strand_conf = self.args.fastq_strand_conf
-        if not fastq_strand_conf or not os.path.exists(fastq_strand_conf):
-            print("No conf file, nothing to check")
-            return
-        self.add_call("Check fastq_strand.py outputs for %s"
-                      % self.args.project.name,
-                      check_fastq_strand_outputs,
-                      self.args.project,
-                      self.args.qc_dir,
-                      fastq_strand_conf,
-                      fastqs=self.args.fastqs,
-                      read_numbers=self.args.read_numbers)
-    def finish(self):
-        for result in self.result():
-            for fq_pair in result:
-                if self.args.include_samples:
-                    if self.args.project.fastq_attrs(fq_pair[0]).sample_name \
-                       not in self.args.include_samples:
-                        continue
-                self.output.fastq_pairs.append(fq_pair)
-        if self.output.fastq_pairs:
-            if self.args.verbose:
-                print("Fastq pairs with missing QC outputs from "
-                      "fastq_strand.py:")
-                for fq_pair in self.output.fastq_pairs:
-                    print("-- %s" % (fq_pair,))
-            else:
-                print("%s Fastq pairs with missing QC outputs from "
-                      "fastq_strand.py" % len(self.output.fastq_pairs))
-        else:
-            print("No Fastqs with missing QC outputs from "
-                  "fastq_strand.py")
-
-class RunFastqStrand(PipelineTask):
-    """
-    Run the fastq_strand.py utility
-    """
-    def init(self,fastq_pairs,qc_dir,fastq_strand_conf,
-             fastq_strand_subset=None,nthreads=None):
-        """
-        Initialise the RunFastqStrand task.
-
-        Arguments:
-          fastq_pairs (list): list of tuples with "pairs"
-            of Fastq files to run fastq_strand.py on (it is
-            expected that this list will come from the
-            CheckFastqStrandOutputs task)
-          qc_dir (str): directory for QC outputs (defaults
-            to subdirectory 'qc' of project directory)
-          fastq_strand_conf (str): path to the fastq_strand
-            config file to use
-          fastq_strand_subset (int): explicitly specify
-            the subset size for running fastq_strand
-          nthreads (int): number of threads/processors to
-            use (defaults to number of slots set in job
-            runner)
-        """
-        self.conda("star=2.7.7a",
-                   "future")
-    def setup(self):
-        if not self.args.fastq_pairs:
-            print("No Fastqs: nothing to do")
-            return
-        elif not self.args.fastq_strand_conf or \
-             not os.path.exists(self.args.fastq_strand_conf):
-            print("No conf file: nothing to do")
-            return
-        for fastq_pair in self.args.fastq_pairs:
-            cmd = PipelineCommandWrapper(
-                "Run fastq_strand.py for %s" %
-                os.path.basename(fastq_pair[0]),
-                'fastq_strand.py',
-                '--conf',self.args.fastq_strand_conf,
-                '--outdir',
-                os.path.abspath(self.args.qc_dir))
-            if self.args.fastq_strand_subset:
-                cmd.add_args('--subset',
-                             self.args.fastq_strand_subset)
-            if self.args.nthreads:
-                cmd.add_args('-n',self.args.nthreads)
-            else:
-                cmd.add_args('-n',self.runner_nslots)
-            cmd.add_args(*fastq_pair)
-            # Add the command
-            self.add_cmd(cmd)
-
-class DetermineRequired10xPackage(PipelineTask):
-    """
-    Determine which 10xGenomics software package is required
-
-    By default determines the package name based on the
-    supplied QC module, but this can be overridden by
-    explicitly supplying a required package (which can
-    also be a path to an executable).
-
-    The output 'require_cellranger' parameter should be
-    supplied to the 'Get10xPackage' task, which will
-    do the job of actually locating an executable.
-    """
-    def init(self,qc_module,require_cellranger=None):
-        """
-        Initialise the DetermineRequired10xPackage task
-
-        Argument:
-          qc_module (str): QC module being used
-          require_cellranger (str): optional package name
-            or path to an executable; if supplied then
-            overrides the automatic package determination
-
-        Outputs:
-          require_cellranger (pipelineParam): the 10xGenomics
-            software package name or path to use
-        """
-        self.add_output('require_cellranger',Param(type=str))
-    def setup(self):
-        qc_modules = {
-            "cellranger_count": "cellranger",
-            "cellranger-atac_count": "cellranger-atac",
-            "cellranger-arc_count": "cellranger-arc",
-            "cellranger_multi": "cellranger",
-        }
-        require_cellranger = self.args.require_cellranger
-        if require_cellranger is None:
-            try:
-                require_cellranger = qc_modules[self.args.qc_module]
-            except KeyError:
-                raise Exception("Can't identify 10xGenomics package "
-                                "required for QC module '%s'" %
-                                self.args.qc_module)
-        print("Required 10x package: %s" % require_cellranger)
-        self.output.require_cellranger.set(require_cellranger)
-
-class GetCellrangerReferenceData(PipelineFunctionTask):
-    """
-    """
-    def init(self,project,organism=None,transcriptomes=None,
-             premrna_references=None,atac_references=None,
-             multiome_references=None,cellranger_exe=None,
-             cellranger_version=None,force_reference_data=None):
-        """
-        Initialise the GetCellrangerReferenceData task
-
-        Arguments:
-          project (AnalysisProject): project to run
-            QC for
-          organism (str): if supplied then must be a
-            string with the names of one or more organisms,
-            with multiple organisms separated by spaces
-            (defaults to the organisms associated with
-            the project)
-          transcriptomes (mapping): mapping of organism names
-            to reference transcriptome data for cellranger
-          premrna_references (mapping): mapping of organism
-            names to "pre-mRNA" reference data for cellranger
-          atac_references (mapping): mapping of organism names
-            to reference genome data for cellranger-atac
-          multiome_references (mapping): mapping of organism
-            names to reference datasets for cellranger-arc
-          cellranger_exe (str): the path to the Cellranger
-            software package to use (e.g. 'cellranger',
-            'cellranger-atac', 'spaceranger')
-          cellranger_version (str): the version string for the
-            Cellranger package
-          force_reference_data (str): if supplied then
-            will be used as the reference dataset, instead of
-            trying to locate appropriate reference data
-            automatically
-
-        Outputs:
-          reference_data_path (PipelineParam): pipeline
-            parameter instance which resolves to a string
-            with the path to the reference data set
-            corresponding to the supplied organism.
-        """
-        self.add_output('reference_data_path',Param(type=str))
-    def setup(self):
-        # Report inputs
-        print("Cellranger : %s" % self.args.cellranger_exe)
-        print("Version    : %s" % self.args.cellranger_version)
-        print("Organism(s): %s" % self.args.organism)
-        # Check pre-determined reference dataset
-        if self.args.force_reference_data:
-            reference_data = self.args.force_reference_data
-            print("Using pre-determined dataset: %s" %
-                  reference_data)
-            self.output.reference_data_path.set(reference_data)
-            return
-        # Check that a cellranger exe was supplied
-        if self.args.cellranger_exe is None:
-            print("No cellranger package supplied")
-            return
-        # Set the class of references we're going to use,
-        # based on cellranger package and QC protocol (where
-        # appropriate)
-        cellranger_pkg = os.path.basename(self.args.cellranger_exe)
-        if cellranger_pkg == "cellranger":
-            references = self.args.transcriptomes
-            if self.args.project.info.library_type == "snRNA-seq" and \
-               int(self.args.cellranger_version.split('.')[0]) < 5:
-                references = self.args.premrna_references
-        elif cellranger_pkg == "cellranger-atac":
-            references = self.args.atac_references
-        elif cellranger_pkg == "cellranger-arc":
-            references = self.args.multiome_references
-        else:
-            self.fail(message="Don't know which reference "
-                      "dataset to use for '%s' and library '%s'" %
-                      (self.args.cellranger_exe,
-                       self.args.project.info.library_type))
-            return
-        if references is None:
-            references = {}
-        # Get organism name
-        organism = self.args.organism
-        if organism is None:
-            organism = self.args.project.info.organism
-        if not organism:
-            self.fail(message="No organism specified")
-            return
-        organisms = get_organism_list(organism)
-        if len(organisms) > 1:
-            self.fail(message="Can't handle multiple organisms")
-            return
-        # Look up reference
-        try:
-            self.output.reference_data_path.set(
-                references[organisms[0]])
-            print("Reference dataset: %s" % references[organisms[0]])
-        except KeyError:
-            # No reference data available
-            print("No reference data available for '%s'" % organism)
-        except Exception as ex:
-            # Some other problem
-            self.fail(message="Failed to get reference data for "
-                      "'%s': %s" % (organism,ex))
-
-class MakeCellrangerArcCountLibraries(PipelineFunctionTask):
-    """
-    Make 'libraries.csv' files for cellranger-arc count
-    """
-    def init(self,project,qc_dir):
-        """
-        Initialise the MakeCellrangerArcCountLibraries task.
-
-        Arguments:
-          project (AnalysisProject): project to run
-            QC for
-          qc_dir (str): top-level QC directory to put
-            'libraries.csv' files
-        """
-        pass
-    def setup(self):
-        # Check for top-level libraries file
-        libraries_file = os.path.join(self.args.project.dirn,
-                                      "10x_multiome_libraries.info")
-        if not os.path.exists(libraries_file):
-            # Nothing to do
-            print("No 10x multiome libraries file '%s': nothing to "
-                  "do " % libraries_file)
-            return
-        # Read the file and get sample associations between
-        # 'local' and 'remote' datasets
-        libraries = MultiomeLibraries(libraries_file)
-        # Set up libraries.csv files for each sample for
-        # cellranger-arc count
-        for local_sample in libraries.local_samples:
-            libraries_csv = os.path.join(self.args.qc_dir,
-                                         "libraries.%s.csv" % local_sample)
-            print("Sample '%s': making %s" % (local_sample,
-                                              libraries_csv))
-            libraries.write_libraries_csv(
-                local_sample,
-                self.args.project.fastq_dir,
-                self.args.project.info.library_type,
-                filen=libraries_csv)
-            print("Generated %s" % libraries_csv)
-
-class GetCellrangerMultiConfig(PipelineFunctionTask):
-    """
-    Locate 'config.csv' files for cellranger multi
-    """
-    def init(self,project,qc_dir):
-        """
-        Initialise the GetCellrangerMultiConfig task.
-
-        Arguments:
-          project (AnalysisProject): project to run
-            QC for
-          qc_dir (str): top-level QC directory to put
-            'config.csv' files
-        """
-        self.add_output('config_csvs',ListParam())
-        self.add_output('samples',ListParam())
-        self.add_output('gex_libraries',ListParam())
-        self.add_output('fastq_dirs',dict())
-        self.add_output('reference_data_path',Param(type=str))
-        self.add_output('probe_set_path',Param(type=str))
-    def setup(self):
-        # Check for top-level multi config files
-        config_files = [os.path.join(self.args.project.dirn,f)
-                        for f in os.listdir(self.args.project.dirn)
-                        if f.startswith("10x_multi_config.")
-                        and f.endswith(".csv")]
-        if not config_files:
-            # No configs found
-            print("No 10x multi config files found: nothing to do")
-            return
-        samples = list()
-        gex_libraries = list()
-        fastq_dirs = dict()
-        for config_file in config_files:
-            # Extract information from each config.csv file
-            print("Reading '%s'" % os.path.basename(config_file))
-            config_csv = CellrangerMultiConfigCsv(config_file)
-            reference_data_path = config_csv.reference_data_path
-            probe_set_path = config_csv.probe_set_path
-            samples.extend(config_csv.sample_names)
-            gex_libraries.extend(config_csv.gex_libraries)
-            for sample in config_csv.fastq_dirs:
-                fastq_dirs[sample] = config_csv.fastq_dirs[sample]
-        print("Samples:")
-        for sample in samples:
-            print("- %s" % sample)
-        print("GEX libraries:")
-        for library in gex_libraries:
-            print("- %s" % library)
-        print("Reference dataset: %s" % reference_data_path)
-        print("Probe set        : %s" % probe_set_path)
-        # Copy config files to QC dir
-        for config_file in config_files:
-            print("Copy '%s' into %s" % (config_file,self.args.qc_dir))
-            shutil.copy(config_file,self.args.qc_dir)
-        # Set outputs
-        self.output.config_csvs.extend(
-            [os.path.join(self.args.qc_dir,os.path.basename(cf))
-             for cf in config_files])
-        self.output.samples.extend(samples)
-        self.output.gex_libraries.extend(gex_libraries)
-        self.output.reference_data_path.set(reference_data_path)
-        self.output.probe_set_path.set(probe_set_path)
-        for sample in fastq_dirs:
-            self.output.fastq_dirs[sample] = fastq_dirs[sample]
-
-class CheckCellrangerCountOutputs(PipelineFunctionTask):
-    """
-    Check the outputs from cellranger(-atac) count
-    """
-    def init(self,project,fastq_dir=None,samples=None,qc_dir=None,
-             qc_module=None,extra_projects=None,
-             cellranger_version=None,cellranger_ref_data=None,
-             verbose=False):
-        """
-        Initialise the CheckCellrangerCountOutputs task.
-
-        Arguments:
-          project (AnalysisProject): project to run
-            QC for
-          fastq_dir (str): directory holding Fastq files
-          samples (list): list of samples to restrict
-            checks to (all samples in project are checked
-            by default)
-          qc_dir (str): top-level QC directory to look
-            for 'count' QC outputs (e.g. metrics CSV and
-            summary HTML files)
-          qc_module (str): QC protocol being used
-          extra_projects (list): optional list of extra
-            AnalysisProjects to include Fastqs from when
-            running cellranger pipeline
-          cellranger_version (str): version number of
-            10xGenomics package
-          cellranger_ref_data (str): name or path to
-            reference dataset for single library analysis
-          verbose (bool): if True then print additional
-            information from the task
-
-        Outputs:
-          fastq_dir (PipelineParam): pipeline parameter
-            instance that resolves to a string with the
-            path to directory with Fastq files
-          samples (list): list of sample names that have
-            missing outputs from 'cellranger count'
-        """
-        self.add_output('fastq_dir',Param(type=str))
-        self.add_output('samples',list())
-    def setup(self):
-        if not self.args.cellranger_ref_data:
-            # No reference data, nothing to check
-            return
-        # Determine which checking function to use
-        if self.args.qc_module == "cellranger_count":
-            check_outputs = check_cellranger_count_outputs
-        elif self.args.qc_module == "cellranger-atac_count":
-            check_outputs = check_cellranger_atac_count_outputs
-        elif self.args.qc_module == "cellranger-arc_count":
-            check_outputs = check_cellranger_arc_count_outputs
-        # Set the prefix for cellranger/10x outputs
-        prefix = os.path.join("cellranger_count",
-                              self.args.cellranger_version,
-                              os.path.basename(self.args.cellranger_ref_data))
-        # Check if the outputs exist
-        projects = [self.args.project]
-        if self.args.extra_projects:
-            projects.extend(self.args.extra_projects)
-        for project in projects:
-            self.add_call("Check cellranger count outputs from %s"
-                          % self.args.project.name,
-                          check_outputs,
-                          project,
-                          self.args.qc_dir,
-                          prefix=prefix)
-    def finish(self):
-        if not self.args.cellranger_ref_data:
-            # No reference data, nothing to check
-            print("No reference data to check against")
-            return
-        # Collect the sample names with missing outputs
-        samples = set()
-        for result in self.result():
-            for smpl in result:
-                if self.args.samples is None or \
-                   smpl in self.args.samples:
-                    samples.add(smpl)
-        self.output.samples.extend(sorted(list(samples)))
-        if self.output.samples:
-            if self.args.verbose:
-                print("Samples with missing outputs from "
-                      "cellranger count:")
-                for sample in self.output.samples:
-                    print("-- %s" % sample)
-            else:
-                print("%s samples with missing outputs from "
-                      "cellranger count" %
-                      len(self.output.samples))
-        else:
-            print("No samples with missing outputs from "
-                  "cellranger count")
-        # Set the fastq_dir that these are found in
-        fastq_dir = self.args.project.fastq_dir
-        if self.args.extra_projects:
-            for project in self.args.extra_projects:
-                fastq_dir += ",%s" % project.fastq_dir
-        self.output.fastq_dir.set(fastq_dir)
-
-class RunCellrangerCount(PipelineTask):
-    """
-    Run 'cellranger count'
-    """
-    def init(self,samples,fastq_dir,reference_data_path,library_type,
-             out_dir,qc_dir=None,cellranger_exe=None,
-             cellranger_version=None,chemistry='auto',fastq_dirs=None,
-             force_cells=None,cellranger_jobmode='local',
-             cellranger_maxjobs=None,cellranger_mempercore=None,
-             cellranger_jobinterval=None,cellranger_localcores=None,
-             cellranger_localmem=None):
-        """
-        Initialise the RunCellrangerCount task.
-
-        Arguments:
-          samples (list): list of sample names to run
-            cellranger count on (it is expected that this
-            list will come from the
-            CheckCellrangerCountsOutputs task)
-          fastq_dir (str): path to directory holding the
-            Fastq files
-          reference_data_path (str): path to the cellranger
-            compatible reference dataset
-          library_type (str): type of data being analysed
-            (e.g. 'scRNA-seq')
-          out_dir (str): top-level directory to copy all
-            final 'count' outputs into. Outputs won't be
-            copied if no value is supplied
-          qc_dir (str): top-level QC directory to put
-            'count' QC outputs (e.g. metrics CSV and summary
-            HTML files) into. Outputs won't be copied if
-            no value is supplied
-          cellranger_exe (str): the path to the Cellranger
-            software package to use (e.g. 'cellranger',
-            'cellranger-atac', 'spaceranger')
-          cellranger_version (str): the version string for
-            the Cellranger package
-          fastq_dirs (dict): optional, a dictionary mapping
-            sample names to Fastq directories which will
-            be used to override the paths set by the
-            'fastq_dirs' argument
-          force_cells (int): optional, if set then bypasses
-            the cell detection algorithm in 'cellranger'
-            and 'cellranger-atac' using the '--force-cells'
-            option (does nothing for 'cellranger-arc')
-          chemistry (str): assay configuration (set to
-            'auto' to let cellranger determine this
-            automatically; ignored if not scRNA-seq)
-          cellranger_jobmode (str): specify the job mode to
-            pass to cellranger (default: "local")
-          cellranger_maxjobs (int): specify the maximum
-            number of jobs to pass to cellranger (default:
-            None)
-          cellranger_mempercore (int): specify the memory
-            per core (in Gb) to pass to cellranger (default:
-            None)
-          cellranger_jobinterval (int): specify the interval
-            between launching jobs (in ms) to pass to
-            cellranger (default: None)
-          cellranger_localcores (int): maximum number of cores
-            cellranger can request in jobmode 'local'
-            (defaults to number of slots set in runner)
-          cellranger_localmem (int): maximum memory cellranger
-            can request in jobmode 'local' (default: None)
-        """
-        # Add outputs
-        self.add_output('cellranger_version',Param(type=str))
-        self.add_output('cellranger_refdata',Param(type=str))
-        self.add_output('cellranger_exe',Param(type=str))
-    def setup(self):
-        # Check if there's anything to do
-        if not self.args.samples:
-            print("No samples: nothing to do")
-            return
-        if not self.args.reference_data_path:
-            print("No reference data available: nothing to do")
-            return
-        if not self.args.cellranger_exe:
-            raise Exception("No cellranger executable provided")
-        if not (self.args.out_dir or self.args.qc_dir):
-            raise Exception("Need to provide at least one of "
-                            "output directory and QC directory")
-        # Cellranger details
-        cellranger_exe = self.args.cellranger_exe
-        cellranger_package = os.path.basename(cellranger_exe)
-        cellranger_version = self.args.cellranger_version
-        cellranger_major_version = int(cellranger_version.split('.')[0])
-        # Expected outputs from cellranger
-        self._top_level_files = ("_cmdline",)
-        if cellranger_package in ("cellranger",):
-            self._outs_files = ("web_summary.html",
-                                "metrics_summary.csv")
-        elif cellranger_package in ("cellranger-atac",
-                                    "cellranger-arc",):
-            self._outs_files = ("web_summary.html",
-                                "summary.csv")
-        # Check output for each sample, and run cellranger if required
-        for sample in self.args.samples:
-            # Check final outputs
-            run_cellranger_count = False
-            count_dir = os.path.abspath(
-                os.path.join(self.args.out_dir,
-                             "cellranger_count",
-                             cellranger_version,
-                             os.path.basename(self.args.reference_data_path),
-                             sample))
-            outs_dir = os.path.join(count_dir,"outs")
-            for f in self._outs_files:
-                path = os.path.join(outs_dir,f)
-                if not os.path.exists(path):
-                    run_cellranger_count = True
-                    break
-            for f in self._top_level_files:
-                path = os.path.join(count_dir,f)
-                if not os.path.exists(path):
-                    run_cellranger_count = True
-                    break
-            if not run_cellranger_count:
-                print("Sample '%s': found existing outputs" % sample)
-                continue
-            # Create a working directory for this sample
-            work_dir = "tmp.count.%s" % sample
-            # Get the path(s) to the Fastq directory(ies)
-            if self.args.fastq_dirs and sample in self.args.fastq_dirs:
-                fastq_dir = self.args.fastq_dirs[sample]
-            else:
-                fastq_dir = self.args.fastq_dir
-            # Build cellranger command
-            cmd = Command(cellranger_exe,
-                          "count",
-                          "--id",sample)
-            # Add package-specific options
-            if cellranger_package == "cellranger":
-                # Cellranger (gene expression data)
-                cmd.add_args("--fastqs",self.args.fastq_dir,
-                             "--sample",sample,
-                             "--transcriptome",
-                             self.args.reference_data_path,
-                             "--chemistry",self.args.chemistry)
-                # Force cells
-                if self.args.force_cells:
-                    cmd.add_args("--force-cells",
-                                 self.args.force_cells)
-                # Additional options for cellranger 5.0+
-                if cellranger_major_version >= 5:
-                    # Hard-trim the input R1 sequence to 26bp
-                    cmd.add_args("--r1-length=26")
-                    if self.args.library_type == "snRNA-seq":
-                        # For single nuclei RNA-seq specify the
-                        # --include-introns for cellranger 5.0+
-                        if cellranger_major_version in (7,8):
-                            cmd.add_args("--include-introns",
-                                         "true")
-                        else:
-                            cmd.add_args("--include-introns")
-                # Additional options for cellranger 8.0+
-                if cellranger_major_version >= 8:
-                    # --create-bam is compulsory
-                    # Recommended to set to 'true'
-                    cmd.add_args("--create-bam","true")
-            elif cellranger_package == "cellranger-atac":
-                # Cellranger-ATAC
-                cmd.add_args("--fastqs",fastq_dir,
-                             "--sample",sample,
-                             "--reference",
-                             self.args.reference_data_path)
-                # Force cells
-                if self.args.force_cells:
-                    cmd.add_args("--force-cells",
-                                 self.args.force_cells)
-                # Additional options for cellranger-atac 2+
-                if cellranger_major_version >= 2:
-                    # Enable chemistry to be specified
-                    if self.args.chemistry == "auto":
-                        # 'auto' not recognised by cellranger-atac 2.0.0
-                        print("Dropping \"--chemistry='auto'\" from "
-                              "cellranger-atac 2+ command line")
-                    else:
-                        cmd.add_args("--chemistry",self.args.chemistry)
-            elif cellranger_package == "cellranger-arc":
-                # Cellranger-ARC (multiome GEX + ATAC data)
-                cmd.add_args("--reference",
-                             self.args.reference_data_path,
-                             "--libraries",
-                             os.path.join(self.args.qc_dir,
-                                          "libraries.%s.csv"
-                                          % sample))
-            else:
-                # Unimplemented package
-                raise Exception("Don't know how to run 'count' "
-                                "for %s" % cellranger_package)
-            # Set number of local cores
-            if self.args.cellranger_localcores:
-                localcores = self.args.cellranger_localcores
-            elif self.args.cellranger_jobmode == "local":
-                # Get number of local cores from runner
-                localcores = self.runner_nslots
-            else:
-                # Not in jobmode 'local'
-                localcores = None
-            add_cellranger_args(cmd,
-                                jobmode=self.args.cellranger_jobmode,
-                                mempercore=self.args.cellranger_mempercore,
-                                maxjobs=self.args.cellranger_maxjobs,
-                                jobinterval=self.args.cellranger_jobinterval,
-                                localcores=localcores,
-                                localmem=self.args.cellranger_localmem)
-            # Append to command in task
-            print("Running %s" % cmd)
-            self.add_cmd("Run %s count for %s" % (cellranger_exe,sample),
-                         """
-                         # Create working dir
-                         mkdir -p {work_dir} && cd {work_dir}
-                         # Run single library analysis
-                         {cellranger_count}
-                         if [ $? -ne 0 ] ; then
-                           echo "{sample}: single library analysis failed"
-                           exit 1
-                         fi
-                         # Check expected outputs
-                         for f in {top_level_files} ; do
-                           if [ ! -e {sample}/$f ] ; then
-                             echo "{sample}: missing top-level file $f"
-                             exit 1
-                           fi
-                         done
-                         for f in {outs_files} ; do
-                           if [ ! -e {sample}/outs/$f ] ; then
-                             echo "{sample}: missing outs file $f"
-                             exit 1
-                           fi
-                         done
-                         # Move outputs to final location
-                         mkdir -p {dest_dir}
-                         mv {sample} {dest_dir}
-                         """.format(cellranger_count=str(cmd),
-                                    outs_files=' '.join(self._outs_files),
-                                    top_level_files=' '.join(
-                                        self._top_level_files),
-                                    sample=sample,
-                                    work_dir=work_dir,
-                                    dest_dir=os.path.dirname(count_dir)))
-    def finish(self):
-        # If no reference data then ignore and return
-        if not self.args.reference_data_path:
-            print("No reference data: single library analysis was "
-                  "skipped")
-            return
-        # Set outputs
-        self.output.cellranger_exe.set(self.args.cellranger_exe)
-        self.output.cellranger_refdata.set(self.args.reference_data_path)
-        self.output.cellranger_version.set(self.args.cellranger_version)
-        # Copy outputs to QC directory
-        if self.args.qc_dir and self.args.samples:
-            print("Copying outputs to QC directory")
-            # Top level output directory
-            count_dir = os.path.abspath(
-                os.path.join(self.args.out_dir,
-                             "cellranger_count",
-                             self.args.cellranger_version,
-                             os.path.basename(
-                                 self.args.reference_data_path)))
-            for sample in self.args.samples:
-                print("Sample: %s" % sample)
-                # Location of outputs
-                top_dir = os.path.join(count_dir,sample)
-                outs_dir = os.path.join(top_dir,"outs")
-                # Set location to copy QC outputs to
-                qc_dir = os.path.abspath(
-                    os.path.join(self.args.qc_dir,
-                                 "cellranger_count",
-                                 self.args.cellranger_version,
-                                 os.path.basename(
-                                     self.args.reference_data_path),
-                                 sample))
-                qc_outs_dir = os.path.join(qc_dir,"outs")
-                # Make directories and copy the files
-                mkdirs(qc_outs_dir)
-                for f in self._outs_files:
-                    path = os.path.join(outs_dir,f)
-                    print("Copying %s from %s to %s" % (f,
-                                                        outs_dir,
-                                                        qc_outs_dir))
-                    shutil.copy(path,qc_outs_dir)
-                for f in self._top_level_files:
-                    path = os.path.join(top_dir,f)
-                    print("Copying %s from %s to %s" % (f,
-                                                        top_dir,
-                                                        qc_dir))
-                    shutil.copy(path,qc_dir)
-
-class RunCellrangerMulti(PipelineTask):
-    """
-    Run 'cellranger multi'
-    """
-    def init(self,project,config_csvs,samples,reference_data_path,out_dir,
-             qc_dir=None,cellranger_exe=None,cellranger_version=None,
-             cellranger_jobmode='local',cellranger_maxjobs=None,
-             cellranger_mempercore=None,cellranger_jobinterval=None,
-             cellranger_localcores=None,cellranger_localmem=None,
-             working_dir=None):
-        """
-        Initialise the RunCellrangerMulti task.
-
-        Arguments:
-          project (AnalysisProject): project to run
-            QC for
-          config_csvs (list): list of paths to
-            'cellranger multi' configuration files
-          samples (list): list of sample names from the
-            config.csv file
-          reference_data_path (str): path to the cellranger
-            compatible reference dataset from the config.csv
-            file
-          out_dir (str): top-level directory to copy all
-            final 'count' outputs into. Outputs won't be
-            copied if no value is supplied
-          qc_dir (str): top-level QC directory to put
-            'count' QC outputs (e.g. metrics CSV and summary
-            HTML files) into. Outputs won't be copied if
-            no value is supplied
-          cellranger_exe (str): the path to the Cellranger
-            software package to use (e.g. 'cellranger',
-            'cellranger-atac', 'spaceranger')
-          cellranger_version (str): the version string for
-            the Cellranger package
-          cellranger_jobmode (str): specify the job mode to
-            pass to cellranger (default: "local")
-          cellranger_maxjobs (int): specify the maximum
-            number of jobs to pass to cellranger (default:
-            None)
-          cellranger_mempercore (int): specify the memory
-            per core (in Gb) to pass to cellranger (default:
-            None)
-          cellranger_jobinterval (int): specify the interval
-            between launching jobs (in ms) to pass to
-            cellranger (default: None)
-          cellranger_localcores (int): maximum number of cores
-            cellranger can request in jobmode 'local'
-            (defaults to number of slots set in runner)
-          cellranger_localmem (int): maximum memory cellranger
-            can request in jobmode 'local' (default: None)
-        """
-        # Internal: top-level working directory
-        self._working_dir = None
-        # Samples from config.csv
-        self._samples = []
-        # Whether to run cellranger multi
-        self.run_cellranger_multi = False
-    def setup(self):
-        # Check if there's anything to do
-        if not self.args.config_csvs:
-            print("No config file: nothing to do")
-            return
-        if len(self.args.config_csvs) > 1:
-            print("Too many config files: skipping multi analysis")
-            return
-        if not self.args.cellranger_exe:
-            raise Exception("No cellranger executable provided")
-        if not (self.args.out_dir or self.args.qc_dir):
-            raise Exception("Need to provide at least one of "
-                            "output directory and QC directory")
-        # Top-level working directory
-        self._working_dir = self.args.working_dir
-        # Cellranger details
-        cellranger_exe = self.args.cellranger_exe
-        cellranger_package = os.path.basename(cellranger_exe)
-        cellranger_version = self.args.cellranger_version
-        cellranger_major_version = int(cellranger_version.split('.')[0])
-        # Expected outputs from cellranger multi
-        self._expected_files = ["_cmdline",]
-        for sample in self.args.samples:
-            for f in ("web_summary.html",
-                      "metrics_summary.csv"):
-                # Per-sample outputs
-                self._expected_files.append(os.path.join("outs",
-                                                         "per_sample_outs",
-                                                         sample,
-                                                         f))
-        # Check outputs and run cellranger if required
-        multi_dir = os.path.abspath(
-            os.path.join(self.args.out_dir,
-                         "cellranger_multi",
-                         cellranger_version,
-                         os.path.basename(self.args.reference_data_path)))
-        for path in self._expected_files:
-            if not os.path.exists(os.path.join(multi_dir,path)):
-                # At least one expected file is missing
-                # so we need to run 'multi'
-                self.run_cellranger_multi = True
-                break
-        if not self.run_cellranger_multi:
-            print("Found existing outputs")
-            return
-        # Create a working directory for this sample
-        work_dir = os.path.join(self._working_dir,
-                                "tmp.cellranger_multi.%s" %
-                                self.args.project.name)
-        # Build cellranger command
-        cmd = Command(cellranger_exe,
-                      "multi",
-                      "--id",self.args.project.name,
-                      "--csv",self.args.config_csvs[0])
-        # Set number of local cores
-        if self.args.cellranger_localcores:
-            localcores = self.args.cellranger_localcores
-        elif self.args.cellranger_jobmode == "local":
-            # Get number of local cores from runner
-            localcores = self.runner_nslots
-        else:
-            # Not in jobmode 'local'
-            localcores = None
-        add_cellranger_args(cmd,
-                            jobmode=self.args.cellranger_jobmode,
-                            mempercore=self.args.cellranger_mempercore,
-                            maxjobs=self.args.cellranger_maxjobs,
-                            jobinterval=self.args.cellranger_jobinterval,
-                            localcores=localcores,
-                            localmem=self.args.cellranger_localmem)
-        # Add command to task
-        print("Running %s" % cmd)
-        self.add_cmd(
-            "Run %s multi" % cellranger_exe,
-            """
-            # Create working dir
-            mkdir -p {work_dir} && cd {work_dir}
-            # Run multi analysis
-            {cellranger_multi}
-            if [ $? -ne 0 ] ; then
-              echo "Multi library analysis failed"
-              exit 1
-            fi
-            # Check expected outputs
-            ls -ltrh
-            for f in {top_level_files} ; do
-              if [ ! -e {project}/$f ] ; then
-                echo "Missing top-level file $f"
-                exit 1
-              fi
-            done
-            for s in {samples} ; do
-              for f in web_summary.html metrics_summary.csv ; do
-                if [ ! -e {project}/outs/per_sample_outs/$s/$f ] ; then
-                  echo "$s: missing outs file $f"
-                  exit 1
-                fi
-              done
-            done
-            # Move outputs to final location
-            mkdir -p {dest_dir}
-            mv {project}/* {dest_dir}
-            """.format(work_dir=work_dir,
-                       cellranger_multi=str(cmd),
-                       project=self.args.project.name,
-                       samples=' '.join(self.args.samples),
-                       top_level_files=' '.join(self._expected_files),
-                       dest_dir=multi_dir))
-    def finish(self):
-        # If no config.csv then ignore and return
-        if not self.args.config_csvs:
-            print("No config file: cellranger multi analysis was skipped")
-            return
-        elif len(self.args.config_csvs) > 1:
-            print("Too many config files: cellranger multi analysis was "
-                  "skipped")
-            return
-        # Location of final outputs
-        multi_dir = os.path.abspath(
-            os.path.join(self.args.out_dir,
-                         "cellranger_multi",
-                         self.args.cellranger_version,
-                         os.path.basename(
-                             self.args.reference_data_path)
-            ))
-        # Copy subset of outputs to QC directory
-        if self.args.qc_dir:
-            print("Copying outputs to QC directory")
-            # Build list of QC outputs to copy
-            qc_files = [f for f in self._expected_files]
-            qc_files.append(os.path.join("outs",
-                                         "config.csv"))
-            qc_files.append(os.path.join("outs",
-                                         "multi",
-                                         "multiplexing_analysis",
-                                         "tag_calls_summary.csv"))
-            # Final destination for QC outputs
-            qc_multi_dir = os.path.abspath(
-                os.path.join(self.args.qc_dir,
-                             "cellranger_multi",
-                             self.args.cellranger_version,
-                             os.path.basename(
-                                 self.args.reference_data_path)))
-            # Copy the files
-            for path in qc_files:
-                src = os.path.join(multi_dir,path)
-                if not os.path.exists(src):
-                    # File not found, note and skip
-                    print("INFO: no file '%s' found" % path)
-                    continue
-                # Determine destination and copy
-                dst = os.path.normpath(os.path.join(qc_multi_dir,
-                                                    os.path.dirname(path)))
-                print("Copying file '%s'" % path)
-                if not os.path.exists(dst):
-                    mkdirs(dst)
-                shutil.copy(src,dst)
-
 class SetCellCountFromCellranger(PipelineTask):
     """
     Update the number of cells in the project metadata from
@@ -3107,538 +1776,6 @@ class ConvertGTFToBed(PipelineTask):
                 raise Exception("failed to generate BED file")
         # Set output
         self.output.bed_file.set(self.args.bed_out)
-
-class RunRSeQCInferExperiment(PipelineTask):
-    """
-    Run RSeQC's 'infer_experiment.py' on BAM files
-
-    Given a list of BAM files, for each file runs the
-    RSeQC 'infer_experiment.py' utility
-    (http://rseqc.sourceforge.net/#infer-experiment-py).
-
-    The log for each run is written to a file called
-    '<BASENAME>.infer_experiment.log'; the data are
-    also extracted and put into an output parameter
-    for direct consumption by downstream tasks.
-    """
-    def init(self,bam_files,reference_gene_model,out_dir):
-        """
-        Initialise the RunRSeQCInferExperiment task
-
-        Arguments:
-          bam_files (list): list of paths to BAM files
-            to run infer_experiment.py on
-          reference_gene_model (str): path to BED file
-            with the reference gene model data
-          out_dir (str): path to a directory where the
-            output files will be written
-
-        Outputs:
-          experiments: a dictionary with BAM files as
-            keys; each value is another dictionary with
-            keys 'paired_end' (True for paired-end data,
-            False for single-end), 'reverse', 'forward'
-            and 'unstranded' (fractions of reads mapped
-            in each configuration).
-        """
-        # Conda dependencies
-        self.conda("rseqc=4.0.0",
-                   "r-base=4")
-        # Outputs
-        self.add_output('experiments',Param())
-    def setup(self):
-        # Check for reference gene model
-        if self.args.reference_gene_model:
-            print("Reference gene model: %s" %
-                  self.args.reference_gene_model)
-        else:
-            print("Reference gene model is not set, cannot "
-                  "run RSeQC infer_experiment.py")
-            return
-        # Set up command to run infer_experiment.py
-        get_version = False
-        for bam_file in self.args.bam_files:
-            if not os.path.exists(os.path.join(
-                    self.args.out_dir,
-                    "%s.infer_experiment.log" %
-                    os.path.basename(bam_file)[:-4])):
-                self.add_cmd("Run RSeQC infer_experiment.py",
-                             """
-                             infer_experiment.py \\
-                             -r {reference_gene_model} \\
-                             -i {bam_file} >{basename}.infer_experiment.log
-                             """.format(
-                                 reference_gene_model=\
-                                 self.args.reference_gene_model,
-                                 bam_file=bam_file,
-                                 basename=os.path.basename(bam_file)[:-4]))
-                get_version = True
-        # Get version of RSeQC
-        if get_version:
-            self.add_cmd("Get RSeQC infer_experiment.py version",
-                         """
-                         infer_experiment.py --version >_versions 2>&1
-                         """)
-    def finish(self):
-        if not self.args.reference_gene_model:
-            return
-        outputs = dict()
-        for bam_file in self.args.bam_files:
-            infer_expt_log = os.path.join(self._working_dir,
-                                          "%s.infer_experiment.log" %
-                                          os.path.basename(bam_file)[:-4])
-            # Copy to final destination
-            if os.path.exists(infer_expt_log):
-                if not os.path.exists(self.args.out_dir):
-                    os.makedirs(self.args.out_dir)
-                shutil.copy(infer_expt_log,self.args.out_dir)
-            # Load data from log file
-            infer_expt_log = os.path.join(self.args.out_dir,
-                                          os.path.basename(infer_expt_log))
-            infer_expt = InferExperiment(infer_expt_log)
-            # Dump data associated with previous BAM
-            outputs[bam_file] = {
-                'paired_end': infer_expt.paired_end,
-                'unstranded': infer_expt.unstranded,
-                'forward': infer_expt.forward,
-                'reverse': infer_expt.reverse,
-            }
-        # RSeQC version
-        if os.path.exists("_versions"):
-            rseqc_infer_experiment_version = None
-            with open("_versions",'rt') as fp:
-                for line in fp:
-                    if line.startswith("infer_experiment.py "):
-                        # Example: infer_experiment.py 4.0.0
-                        rseqc_infer_experiment_version = \
-                            ' '.join(line.strip().split(' ')[1:])
-            if rseqc_infer_experiment_version:
-                with open("_versions",'wt') as fp:
-                    fp.write("rseqc:infer_experiment\t%s\n" %
-                             rseqc_infer_experiment_version)
-            shutil.copy("_versions",self.args.out_dir)
-        # Set output
-        self.output.experiments.set(outputs)
-
-class RunRSeQCGenebodyCoverage(PipelineTask):
-    """
-    Run RSeQC's 'genebody_coverage.py' on BAM files
-
-    Given a collection of BAM files, runs the RSeQC
-    'genebody_coverage.py' utility
-    (http://rseqc.sourceforge.net/#genebody-coverage-py).
-    """
-    def init(self,bam_files,reference_gene_model,out_dir,name="rseqc"):
-        """
-        Initialise the RunRSeQCGenebodyCoverage task
-
-        Arguments:
-          bam_files (list): list of paths to BAM files
-            to run genebody_coverage.py on
-          reference_gene_model (str): path to BED file
-            with the reference gene model data
-          out_dir (str): path to a directory where the
-            output files will be written
-          name (str): optional basename for the output
-            files (defaults to 'rseqc')
-        """
-        # Conda dependencies
-        self.conda("rseqc=4.0.0",
-                   "r-base=4")
-    def setup(self):
-        # Check we have BAM files
-        if len(self.args.bam_files) < 1:
-            print("No BAM files, cannot run RSeQC genebody_coverage.py")
-            return
-        # Check if outputs already exist
-        outputs_exist = True
-        for f in rseqc_genebody_coverage_output(self.args.name,
-                                                self.args.out_dir):
-            outputs_exist = (outputs_exist and os.path.exists(f))
-        if outputs_exist:
-            print("All outputs exist already, nothing to do")
-            return
-        # Check for reference gene model
-        if self.args.reference_gene_model:
-            print("Reference gene model: %s" %
-                  self.args.reference_gene_model)
-        else:
-            print("Reference gene model is not set, cannot run RSeQC "
-                  "geneBody_coverage.py")
-            return
-        # Set up command to run genebody_coverage.py
-        self.add_cmd("Run RSeQC geneBody_coverage.py",
-                     """
-                     # Get version
-                     geneBody_coverage.py --version >_versions 2>&1
-                     # Run geneBody_coverage
-                     geneBody_coverage.py \\
-                         -r {reference_gene_model} \\
-                         -i {bam_files} \\
-                         -f png \\
-                         -o {basename}
-                     """.format(
-                         reference_gene_model=self.args.reference_gene_model,
-                         bam_files=','.join(self.args.bam_files),
-                         basename=self.args.name))
-    def finish(self):
-        if not self.args.reference_gene_model or \
-           len(self.args.bam_files) < 1:
-            return
-        # Copy outputs to final location
-        if not os.path.exists(self.args.out_dir):
-            os.makedirs(self.args.out_dir,exist_ok=True)
-        for f in rseqc_genebody_coverage_output(self.args.name,
-                                                self.args.out_dir):
-            if not os.path.exists(f):
-                # Copy new version to ouput location
-                shutil.copy(os.path.basename(f),self.args.out_dir)
-        # RSeQC version version
-        if os.path.exists("_versions"):
-            rseqc_genebody_coverage_version = None
-            with open("_versions",'rt') as fp:
-                for line in fp:
-                    if line.startswith("geneBody_coverage.py "):
-                        # Example: geneBody_coverage.py 4.0.0
-                        rseqc_genebody_coverage_version = \
-                            ' '.join(line.strip().split(' ')[1:])
-            if rseqc_genebody_coverage_version:
-                with open("_versions",'wt') as fp:
-                    fp.write("rseqc:genebody_coverage\t%s\n" %
-                             rseqc_genebody_coverage_version)
-            shutil.copy("_versions",self.args.out_dir)
-
-class RunPicardCollectInsertSizeMetrics(PipelineTask):
-    """
-    Run Picard 'CollectInsertSizeMetrics' on BAM files
-
-    Given a list of BAM files, for each file first runs
-    the Picard 'CleanSam' utility (to remove alignments
-    that would otherwise cause problems for the insert
-    size calculations) and then 'CollectInsertSizeMetrics'
-    to generate the insert size metrics.
-
-    Note that this task should only be run on BAM files
-    with paired-end data.
-    """
-    def init(self,bam_files,out_dir):
-        """
-        Initialise the RunPicardCollectInsertSizeMetrics
-        task
-
-        Arguments:
-          bam_files (list): list of paths to BAM files
-            to run CollectInsertSizeMetrics on
-          out_dir (str): path to a directory where the
-            output files will be written
-        """
-        # Conda dependencies
-        self.conda("picard=2.27.1",
-                   "r-base=4")
-        self.java_gc_threads = 1
-        self.java_mem_size = '4G'
-    def setup(self):
-        # Set up commands to run CleanSam and
-        # CollectInsertSizeMetrics for each BAM file
-        get_version = False
-        for bam in self.args.bam_files:
-            # Check if outputs already exist
-            outputs_exist = True
-            for f in picard_collect_insert_size_metrics_output(
-                    bam,
-                    self.args.out_dir):
-                outputs_exist = (outputs_exist and os.path.exists(f))
-            if outputs_exist:
-                # Skip this BAM
-                continue
-            # Add command to get insert sizes
-            self.add_cmd("%s: collect insert size metrics" %
-                         os.path.basename(bam),
-                         """
-                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={java_gc_threads} -Xmx{java_mem_size}"
-                         tmpdir=$(mktemp -d)
-                         picard CleanSam \\
-                             -I {bam} \\
-                             -O $tmpdir/{basename}.bam \\
-                             -XX:ActiveProcessorCount={nslots} \\
-                         && \\
-                         picard CollectInsertSizeMetrics \\
-                             -I $tmpdir/{basename}.bam \\
-                             -O {basename}.insert_size_metrics.txt \\
-                             -H {basename}.insert_size_histogram.pdf \\
-                             -XX:ActiveProcessorCount={nslots}
-                         """.format(bam=bam,
-                                    basename=os.path.basename(bam)[:-4],
-                                    nslots=self.runner_nslots,
-                                    java_gc_threads=self.java_gc_threads,
-                                    java_mem_size=self.java_mem_size))
-            get_version = True
-        # Get version of Picard
-        if get_version:
-            self.add_cmd("Get Picard version",
-                         """
-                         # Get version of CollectInsertSizeMetrics
-                         picard CollectInsertSizeMetrics --version >_versions 2>&1
-                         # Force zero exit code
-                         exit 0
-                         """)
-    def finish(self):
-        # Check if any BAM files were processed
-        if not self.args.bam_files:
-            return
-        # Copy outputs to final location
-        if not os.path.exists(self.args.out_dir):
-            print("Creating output dir '%s'" % self.args.out_dir)
-            os.makedirs(self.args.out_dir)
-        for bam in self.args.bam_files:
-            for f in picard_collect_insert_size_metrics_output(
-                    bam,
-                    self.args.out_dir):
-                if not os.path.exists(f):
-                    # Copy new version to ouput location
-                    shutil.copy(os.path.basename(f),self.args.out_dir)
-        # Picard version
-        if os.path.exists("_versions"):
-            picard_version = None
-            with open("_versions",'rt') as fp:
-                for line in fp:
-                    if line.startswith("Version:"):
-                        # Example: Version:2.27.1
-                        picard_version = ':'.join(line.strip().split(':')[1:])
-                        break
-            if picard_version:
-                with open("_versions",'wt') as fp:
-                    fp.write("picard\t%s\n" % picard_version)
-            shutil.copy("_versions",self.args.out_dir)
-
-class CollateInsertSizes(PipelineTask):
-    """
-    Collate insert size metrics data from multiple BAMs
-
-    Gathers together the Picard insert size data from a
-    set of BAM files and puts them into a single TSV
-    file.
-    """
-    def init(self,bam_files,picard_out_dir,out_file,delimiter='\t'):
-        """
-        Initialise the CollateInsertSizes task
-
-        Arguments:
-          bam_files (list): list of paths to BAM files
-            to get associated insert size data for
-          picard_out_dir (str): path to the directory
-            containing the Picard CollectInsertSizeMetrics
-            output files
-          out_file (str): path to the output TSV file
-          delimiter (str): specify the delimiter to use
-            in the output file
-        """
-        pass
-    def setup(self):
-        # Set up a TabFile instance for the collated data
-        tf = TabFile(column_names=("Bam file",
-                                   "Mean insert size",
-                                   "Standard deviation",
-                                   "Median insert size",
-                                   "Median absolute deviation"))
-        metrics_files = {}
-        for bam in self.args.bam_files:
-            # Get metrics file associated with this BAM file
-            outputs = list(filter(lambda f:
-                                  f.endswith('.txt') and
-                                  os.path.exists(f),
-                                  picard_collect_insert_size_metrics_output(
-                                      os.path.basename(bam)[:-4],
-                                      prefix=self.args.picard_out_dir)))
-            if not outputs:
-                # No metrics located
-                print("%s: no associated Picard insert size "
-                      "metrics file found in %s" %
-                      (bam,
-                       self.args.picard_out_dir))
-                continue
-            metrics_files[os.path.basename(bam)] = outputs[0]
-        # Check there is data to collate
-        if not metrics_files:
-            print("no insert size metrics files recovered")
-            return
-        # Set up a TabFile instance for the collated data
-        tf = TabFile(column_names=("Bam file",
-                                   "Mean insert size",
-                                   "Standard deviation",
-                                   "Median insert size",
-                                   "Median absolute deviation"))
-        for bam in sorted(list(metrics_files.keys())):
-            # Get mean and median insert sizes
-            metrics_file = metrics_files[bam]
-            insert_size_metrics = CollectInsertSizeMetrics(metrics_file)
-            tf.append(data=(
-                bam,
-                insert_size_metrics.metrics['MEAN_INSERT_SIZE'],
-                insert_size_metrics.metrics['STANDARD_DEVIATION'],
-                insert_size_metrics.metrics['MEDIAN_INSERT_SIZE'],
-                insert_size_metrics.metrics['MEDIAN_ABSOLUTE_DEVIATION']
-            ))
-        # Output to file
-        print("Writing to %s" % self.args.out_file)
-        tf.write(self.args.out_file,
-                 include_header=True,
-                 delimiter=self.args.delimiter)
-
-class RunQualimapRnaseq(PipelineTask):
-    """
-    Run Qualimap's 'rnaseq' module on BAM files
-
-    Given a list of BAM files, for each file runs the
-    Qualimap 'rnaseq' module
-    (http://qualimap.conesalab.org/doc_html/command_line.html#rna-seq-qc)
-    """
-    def init(self,bam_files,feature_file,out_dir,
-             bam_properties):
-        """
-        Initialise the RunQualimapRnaseq task
-
-        Arguments:
-          bam_files (list): list of paths to BAM files
-            to run Qualimap rnaseq on
-          feature_file (str): path to GTF file with the
-            reference annotation data
-          out_dir (str): path to a directory where the
-            output files will be written
-          bam_properties (mapping): properties for each
-            BAM file from RSeQC 'infer_experiment.py'
-            (used to determine if BAM is paired and
-            what the strand-specificity is)
-        """
-        self.conda("qualimap=2.2")
-        self.java_gc_threads = 1
-        self.java_mem_size = '8G'
-    def setup(self):
-        # Check for feature file
-        if self.args.feature_file:
-            print("Feature file: %s" % self.args.feature_file)
-        else:
-            print("Feature file is not set, cannot run Qualimap rnaseq")
-            return
-        # Check for BAM file properties
-        if self.args.bam_properties:
-            self.bam_files = self.args.bam_files
-        else:
-            print("No properties for BAM files, cannot run Qualimap "
-                  "rnaseq")
-            return
-        # Set up Qualimap rnaseq for each BAM file
-        get_version = False
-        for bam in self.args.bam_files:
-            # Output directory for individual BAM file
-            bam_name = os.path.basename(bam)[:-4]
-            out_dir = os.path.join(self.args.out_dir,bam_name)
-            # Check for existing outputs
-            outputs_exist = True
-            for f in qualimap_rnaseq_output(out_dir):
-                outputs_exist = (outputs_exist and os.path.exists(f))
-            if outputs_exist:
-                # Skip running Qualimap for this BAM
-                continue
-            # Get properties for BAM file
-            paired_end = self.args.bam_properties[bam]['paired_end']
-            unstranded = self.args.bam_properties[bam]['unstranded']
-            forward = self.args.bam_properties[bam]['forward']
-            reverse = self.args.bam_properties[bam]['reverse']
-            # Check data are valid
-            if paired_end is None or \
-               unstranded is None or \
-               forward is None or \
-               reverse is None:
-                print("Bad properties data supplied for %s" %
-                      os.path.basename(bam))
-                for item in self.args.bam_properties[bam]:
-                    print("-- %s: %s" % (item,
-                                         self.args.bam_properties[bam][item]))
-                print("Skipping Qualimap for this BAM file")
-                continue
-            # Set sequencing protocol (aka strand specificity)
-            # Qualimap sequencing protocol can be
-            # 'strand-specific-forward', 'strand-specific-reverse',
-            # or 'non-strand-specific'
-            if reverse > forward and reverse > unstranded:
-                seq_protocol = "strand-specific-reverse"
-            elif forward > reverse and forward > unstranded:
-                seq_protocol = "strand-specific-forward"
-            else:
-                seq_protocol = "non-strand-specific"
-            # Run Qualimap
-            self.add_cmd("Run qualimap rnaseq on %s" %
-                         os.path.basename(bam),
-                         """
-                         export _JAVA_OPTIONS="-XX:ParallelGCThreads={java_gc_threads} -Xmx{java_mem_size}"
-                         if [ ! -z "$DISPLAY" ] ; then
-                             echo "DISPLAY set to $DISPLAY"
-                             echo "Unsetting to disable interactive window"
-                             export DISPLAY=
-                         fi
-                         qualimap rnaseq \\
-                             -bam {bam} \\
-                             -gtf {feature_file} \\
-                             -p {sequencing_protocol} \\
-                             {paired} \\
-                             -outdir {out_dir} \\
-                             -outformat HTML \\
-                             --java-mem-size={java_mem_size}
-                         if [ $? -ne 0 ] ; then
-                           echo "{bam}: qualimap rnaseq failed"
-                           exit 1
-                         fi
-                         # Check expected outputs
-                         for f in {outputs} ; do
-                           if [ ! -e {out_dir}/$f ] ; then
-                             echo "{bam}: missing output file $f"
-                             exit 1
-                           fi
-                         done
-                         # Copy outputs to final location
-                         mkdir -p {final_dir}
-                         cp -r {out_dir}/* {final_dir}
-                         """.format(
-                             bam=bam,
-                             feature_file=self.args.feature_file,
-                             final_dir=os.path.join(self.args.out_dir,bam_name),
-                             sequencing_protocol=seq_protocol,
-                             paired=('-pe' if paired_end else ''),
-                             out_dir=bam_name,
-                             outputs=' '.join(qualimap_rnaseq_output()),
-                             nthreads=self.runner_nslots,
-                             java_gc_threads=self.java_gc_threads,
-                             java_mem_size=self.java_mem_size))
-            get_version = True
-        # Get version of Qualimap
-        if get_version:
-            self.add_cmd("Get Qualimap version",
-                         """
-                         qualimap --help >_versions 2>&1
-                         """)
-    def finish(self):
-        missing_outputs = False
-        if not self.args.feature_file:
-            return
-        if not self.args.bam_properties:
-            return
-        # Qualimap version
-        if os.path.exists("_versions"):
-            qualimap_version = None
-            with open("_versions",'rt') as fp:
-                for line in fp:
-                    if line.startswith("QualiMap "):
-                        # Example: QualiMap v.2.2.2-dev
-                        qualimap_version = ' '.join(line.strip().split(' ')[1:])
-                        break
-            if qualimap_version:
-                with open("_versions",'wt') as fp:
-                    fp.write("qualimap\t%s\n" % qualimap_version)
-            shutil.copy("_versions",self.args.out_dir)
-        # Raise failure if errors were encountered
-        if missing_outputs:
-            self.fail(message="Some outputs are missing")
 
 class VerifyQC(PipelineFunctionTask):
     """
