@@ -115,7 +115,7 @@ class PicardInsertSizeMetrics(QCModule):
                           [len("insert_sizes."):-len(".tsv")])
         # Return collected information
         return AttributeDictionary(
-            name='picard_collect_insert_size_metrics',
+            name=self.name,
             software=software,
             bam_files=sorted(list(bam_files)),
             organisms=sorted(list(organisms)),
