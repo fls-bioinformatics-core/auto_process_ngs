@@ -34,6 +34,7 @@ from .modules.cellranger_multi import CellrangerMulti
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
 from .modules.fastq_strand import FastqStrand
+from .modules.multiqc import Multiqc
 from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
 from .modules.qualimap_rnaseq import QualimapRnaseq
 from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
@@ -125,8 +126,13 @@ class QCVerifier(QCOutputs):
                            if self.fastq_attrs(fq).sample_name
                            in seq_data_samples]
 
+        # Seq data Fastqs defaults to all Fastqs
+        if seq_data_fastqs is None:
+            seq_data_fastqs = fastqs
+
         # Default parameters for verification
         default_params = dict(
+            qc_dir=self.qc_dir,
             fastqs=fastqs,
             samples=samples,
             seq_data_fastqs=seq_data_fastqs,
@@ -165,7 +171,7 @@ class QCVerifier(QCOutputs):
 
             # Verify outputs for this QC module
             verified[qc_module] = self.verify_qc_module(qc_module,
-                                                        **params)
+                                                        params)
         # Make templates for parameter and status
         field_width = 21
         for qc_module in protocol.qc_modules:
@@ -241,50 +247,14 @@ class QCVerifier(QCOutputs):
         # Return verification status
         return status
 
-    def verify_qc_module(self,name,fastqs=None,samples=None,
-                         seq_data_fastqs=None,
-                         seq_data_samples=None,
-                         seq_data_reads=None,qc_reads=None,
-                         organism=None,
-                         fastq_screens=None,
-                         star_index=None,
-                         annotation_bed=None,
-                         annotation_gtf=None,
-                         cellranger_version=None,
-                         cellranger_refdata=None,
-                         cellranger_use_multi_config=None,
-                         **extra_params):
+    def verify_qc_module(self,name,params):
         """
         Verify QC outputs for specific QC module
 
         Arguments:
           name (str): QC module name
-          fastqs (list): list of Fastqs
-          samples (list): list of sample names
-          seq_data_fastqs (list): list of Fastqs with
-            sequence (i.e. biological) data
-          seq_data_samples (list): list of sample names
-            with sequence (i.e. biological) data
-          seq_data_reads (list): list of reads containing
-            sequence data
-          qc_reads (list): list of reads to perform general
-            QC on
-          organism (str): organism associated with outputs
-          fastq_screens (list): list of panel names to verify
-            FastqScreen outputs against
-          star_index (str): path to STAR index
-          annotation_bed (str): path to BED annotation file
-          annotation_gtf (str): path to GTF annotation file
-          cellranger_version (str): specific version of 10x
-            package to check for
-          cellranger_refdata (str): specific 10x reference
-            dataset to check for
-          cellranger_use_multi_config (bool): if True then
-            cellranger count verification will attempt to
-            use data (GEX samples and reference dataset) from
-            the '10x_multi_config.csv' file
-          extra_params (mapping): any additional parameters
-            not required for verification
+          params (AttributeDictionary): parameters to
+            verify QC module using
 
         Returns:
           Boolean: True if all outputs are present, False
@@ -294,116 +264,24 @@ class QCVerifier(QCOutputs):
           Exception: if the specified QC module name is not
             recognised.
         """
-        # Seq data Fastqs defaults to all Fastqs
-        if seq_data_fastqs is None:
-            seq_data_fastqs = fastqs
-
-        # Perform checks based on QC module
-        if name == "fastqc":
-            return Fastqc.verify(
-                AttributeDictionary(fastqs=fastqs,
-                                    qc_reads=qc_reads),
-                self.data('fastqc'))
-
-        elif name == "fastq_screen":
-            return FastqScreen.verify(
-                AttributeDictionary(
-                    fastqs=fastqs,
-                    seq_data_fastqs=seq_data_fastqs,
-                    seq_data_reads=seq_data_reads,
-                    fastq_screens=fastq_screens),
-                self.data('fastq_screen'))
-
-        elif name == "sequence_lengths":
-            return SequenceLengths.verify(
-                AttributeDictionary(
-                    fastqs=fastqs,
-                    qc_reads=qc_reads),
-                self.data('sequence_lengths'))
-
-        elif name == "strandedness":
-            return FastqStrand.verify(
-                AttributeDictionary(
-                    seq_data_fastqs=seq_data_fastqs,
-                    seq_data_reads=seq_data_reads,
-                    config_files=self.config_files),
-                self.data('fastq_strand'))
-
-        elif name == "rseqc_genebody_coverage":
-            return RseqcGenebodyCoverage.verify(
-                AttributeDictionary(seq_data_fastqs=seq_data_fastqs,
-                                    organism=organism,
-                                    star_index=star_index,
-                                    annotation_bed=annotation_bed),
-                self.data('rseqc_genebody_coverage'))
-
-        elif name == "rseqc_infer_experiment":
-            return RseqcInferExperiment.verify(
-                AttributeDictionary(seq_data_fastqs=seq_data_fastqs,
-                                    seq_data_reads=seq_data_reads,
-                                    organism=organism,
-                                    star_index=star_index,
-                                    annotation_bed=annotation_bed),
-                self.data('rseqc_infer_experiment'))
-
-        elif name == "picard_insert_size_metrics":
-            return PicardInsertSizeMetrics.verify(
-                AttributeDictionary(
-                    seq_data_fastqs=seq_data_fastqs,
-                    seq_data_reads=seq_data_reads,
-                    organism=organism,
-                    star_index=star_index),
-                self.data('picard_collect_insert_size_metrics'))
-
-        elif name == "qualimap_rnaseq":
-            return QualimapRnaseq.verify(
-                AttributeDictionary(seq_data_fastqs=seq_data_fastqs,
-                                    seq_data_reads=seq_data_reads,
-                                    organism=organism,
-                                    star_index=star_index,
-                                    annotation_gtf=annotation_gtf),
-                self.data('qualimap_rnaseq'))
-
-        elif name == "multiqc":
-            return ("multiqc" in self.outputs)
-
-        elif name == "cellranger_count":
-            return CellrangerCount.verify(
-                AttributeDictionary(
-                    qc_dir=self.qc_dir,
-                    samples=samples,
-                    cellranger_version=cellranger_version,
-                    cellranger_refdata=cellranger_refdata,
-                    cellranger_use_multi_config=cellranger_use_multi_config),
-                self.data('cellranger_count'))
-
-        elif name == "cellranger-atac_count":
-            return CellrangerAtacCount.verify(
-                AttributeDictionary(
-                    samples=samples,
-                    cellranger_version=cellranger_version,
-                    cellranger_refdata=cellranger_refdata),
-                self.data('cellranger_count'))
-
-        elif name == "cellranger-arc_count":
-            return CellrangerArcCount.verify(
-                AttributeDictionary(
-                    config_files=self.config_files,
-                    samples=samples,
-                    cellranger_version=cellranger_version,
-                    cellranger_refdata=cellranger_refdata),
-                self.data('cellranger_count'))
-
-        elif name == "cellranger_multi":
-            return CellrangerMulti.verify(
-                AttributeDictionary(
-                    qc_dir=self.qc_dir,
-                    cellranger_version=cellranger_version,
-                    cellranger_refdata=cellranger_refdata),
-                self.data('cellranger_multi'))
-
-        else:
-            raise Exception("unknown QC module: '%s'" % name)
+        for m in (CellrangerCount,
+                  CellrangerAtacCount,
+                  CellrangerArcCount,
+                  CellrangerMulti,
+                  Fastqc,
+                  FastqScreen,
+                  FastqStrand,
+                  Multiqc,
+                  PicardInsertSizeMetrics,
+                  QualimapRnaseq,
+                  RseqcGenebodyCoverage,
+                  RseqcInferExperiment,
+                  SequenceLengths,):
+            print("Module name: %s" % m.name)
+            if m.name == name:
+                return m.verify(params,self.data(name))
+        # No match
+        raise Exception("unknown QC module: '%s'" % name)
 
     def identify_seq_data(self,samples):
         """
