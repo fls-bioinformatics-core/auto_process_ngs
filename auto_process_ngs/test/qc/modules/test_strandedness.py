@@ -1,5 +1,5 @@
 #######################################################################
-# Unit tests for qc/modules/fastq_strand.py ('fastq_strand' QC module)
+# Unit tests for qc/modules/strandedness.py ('strandedness' QC module)
 #######################################################################
 
 import unittest
@@ -9,7 +9,7 @@ import os
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
-from auto_process_ngs.qc.modules.fastq_strand import check_fastq_strand_outputs
+from auto_process_ngs.qc.modules.strandedness import check_fastq_strand_outputs
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True

@@ -26,8 +26,8 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
                                 metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # QC protocol
-        protocol = QCProtocol(name="fastq_strand",
-                              description="Fastq_strand test",
+        protocol = QCProtocol(name="strandedness",
+                              description="Strandedness test",
                               seq_data_reads=['r1','r2'],
                               index_reads=None,
                               qc_modules=("strandedness",))
@@ -51,7 +51,7 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
-        self.assertEqual(qc_info.protocol,"fastq_strand")
+        self.assertEqual(qc_info.protocol,"strandedness")
         self.assertEqual(qc_info.protocol_specification,
                          str(protocol))
         self.assertEqual(qc_info.organism,"Human")
@@ -97,8 +97,8 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
                                 metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # QC protocol
-        protocol = QCProtocol(name="fastq_strand",
-                              description="Fastq_strand test",
+        protocol = QCProtocol(name="strandedness",
+                              description="Strandedness test",
                               seq_data_reads=['r2'],
                               index_reads=['r1'],
                               qc_modules=("strandedness",))
@@ -122,7 +122,7 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
-        self.assertEqual(qc_info.protocol,"fastq_strand")
+        self.assertEqual(qc_info.protocol,"strandedness")
         self.assertEqual(qc_info.protocol_specification,
                          str(protocol))
         self.assertEqual(qc_info.organism,"Human")
@@ -166,8 +166,8 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
                                 metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # QC protocol
-        protocol = QCProtocol(name="fastq_strand",
-                              description="Fastq_strand test",
+        protocol = QCProtocol(name="strandedness",
+                              description="Strandedness test",
                               seq_data_reads=['r1',],
                               index_reads=None,
                               qc_modules=("strandedness",))
@@ -191,7 +191,7 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
-        self.assertEqual(qc_info.protocol,"fastq_strand")
+        self.assertEqual(qc_info.protocol,"strandedness")
         self.assertEqual(qc_info.protocol_specification,
                          str(protocol))
         self.assertEqual(qc_info.organism,"Human")
@@ -234,8 +234,8 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
                                            'Biological samples': 'PJB1' })
         p.create(top_dir=self.wd)
         # QC protocol
-        protocol = QCProtocol(name="fastq_strand",
-                              description="Fastq_strand test",
+        protocol = QCProtocol(name="strandedness",
+                              description="Strandedness test",
                               seq_data_reads=['r1',],
                               index_reads=None,
                               qc_modules=("strandedness",))
@@ -261,7 +261,7 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
-        self.assertEqual(qc_info.protocol,"fastq_strand")
+        self.assertEqual(qc_info.protocol,"strandedness")
         self.assertEqual(qc_info.protocol_specification,
                          str(protocol))
         self.assertEqual(qc_info.organism,"Human")
@@ -303,8 +303,8 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
                                 metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # QC protocol
-        protocol = QCProtocol(name="fastq_strand",
-                              description="Fastq_strand test",
+        protocol = QCProtocol(name="strandedness",
+                              description="Strandedness test",
                               seq_data_reads=['r1',],
                               index_reads=None,
                               qc_modules=("strandedness",))
@@ -329,7 +329,7 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
-        self.assertEqual(qc_info.protocol,"fastq_strand")
+        self.assertEqual(qc_info.protocol,"strandedness")
         self.assertEqual(qc_info.protocol_specification,
                          str(protocol))
         self.assertEqual(qc_info.organism,"Human")
@@ -371,8 +371,8 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
                                 metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # QC protocol
-        protocol = QCProtocol(name="fastq_strand",
-                              description="Fastq_strand test",
+        protocol = QCProtocol(name="strandedness",
+                              description="Strandedness test",
                               seq_data_reads=['r1',],
                               index_reads=None,
                               qc_modules=("strandedness",))
@@ -394,7 +394,7 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
-        self.assertEqual(qc_info.protocol,"fastq_strand")
+        self.assertEqual(qc_info.protocol,"strandedness")
         self.assertEqual(qc_info.protocol_specification,
                          str(protocol))
         self.assertEqual(qc_info.organism,"Human")
@@ -437,8 +437,8 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
                                 metadata={ 'Organism': 'Human' })
         p.create(top_dir=self.wd)
         # QC protocol
-        protocol = QCProtocol(name="fastq_strand",
-                              description="Fastq_strand protocol",
+        protocol = QCProtocol(name="strandedness",
+                              description="Strandedness protocol",
                               seq_data_reads=['r1','r2'],
                               index_reads=None,
                               qc_modules=("strandedness",))
@@ -455,7 +455,7 @@ class TestQCPipelineStrandedness(BaseQCPipelineTestCase):
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
-        self.assertEqual(qc_info.protocol,"fastq_strand")
+        self.assertEqual(qc_info.protocol,"strandedness")
         self.assertEqual(qc_info.protocol_specification,
                          str(protocol))
         self.assertEqual(qc_info.organism,"Human")
