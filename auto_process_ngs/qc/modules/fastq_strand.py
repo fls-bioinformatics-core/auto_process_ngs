@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#     fastqc: implements 'fastq_strand' QC module
+#     fastq_strand: implements 'fastq_strand' QC module
 #     Copyright (C) University of Manchester 2024 Peter Briggs
 
 #FIXME there is some ambiguity elsewhere in the code as to
@@ -49,7 +49,7 @@ class FastqStrand(QCModule):
     """
     Class for handling the 'fastq_strand' QC module
     """
-    name = "fastq_strand"
+    name = "strandedness"
     mapped_metrics = True
     runners = ("star_runner",
                "verify_runner")
@@ -108,7 +108,7 @@ class FastqStrand(QCModule):
         else:
             software = {}
         return AttributeDictionary(
-            name='fastq_strand',
+            name=self.name,
             software=software,
             fastqs=sorted(list(fastqs)),
             output_files=output_files,
@@ -134,7 +134,7 @@ class FastqStrand(QCModule):
             from the 'collect_qc_outputs' method
         """
         if not params.seq_data_fastqs or \
-           "fastq_strand.conf" not in params.config_files:
+           "fastq_strand.conf" not in qc_outputs.config_files:
             # No Fastqs or no conf file so strandedness
             # outputs not expected
             return None
