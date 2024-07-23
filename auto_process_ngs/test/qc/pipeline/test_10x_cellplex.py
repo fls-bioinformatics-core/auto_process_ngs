@@ -218,7 +218,7 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
         self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
         self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
-        self.assertEqual(qc_info.cellranger_version,"6.0.0")
+        self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         self.assertEqual(qc_info.cellranger_probeset,None)
         # Check output and reports

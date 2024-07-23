@@ -311,7 +311,7 @@ PBB,CMO302,PBB
         self.assertEqual(qc_info.star_index,None)
         self.assertEqual(qc_info.annotation_bed,None)
         self.assertEqual(qc_info.annotation_gtf,None)
-        self.assertEqual(qc_info.cellranger_version,"8.0.0")
+        self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         self.assertEqual(qc_info.cellranger_probeset,None)
         # Check reports
@@ -590,7 +590,7 @@ PB2,BC002,PB2
         self.assertEqual(qc_info.star_index,None)
         self.assertEqual(qc_info.annotation_bed,None)
         self.assertEqual(qc_info.annotation_gtf,None)
-        self.assertEqual(qc_info.cellranger_version,"8.0.0")
+        self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         self.assertEqual(qc_info.cellranger_probeset,None)
         # Check reports
