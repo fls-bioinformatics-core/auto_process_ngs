@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#     fastq_strand: implements 'fastq_strand' QC module
+#     strandedness: implements 'strandedness' QC module
 #     Copyright (C) University of Manchester 2024 Peter Briggs
 
 #FIXME there is some ambiguity elsewhere in the code as to
@@ -8,9 +8,9 @@
 #FIXME 'fastq_strand'?
 
 """
-Implements the 'fastq_strand' QC module:
+Implements the 'strandedness' QC module:
 
-* FastqStrand: core QCModule class
+* Strandedness: core QCModule class
 * SetupFastqStrandConf: pipeline task to set up conf file
 * CheckFastqStrandOutputs: pipeline task to check outputs
 * RunFastqStrand: pipeline task to run 'fastq_strand'
@@ -45,9 +45,9 @@ logger = logging.getLogger(__name__)
 # Core class
 #######################################################################
 
-class FastqStrand(QCModule):
+class Strandedness(QCModule):
     """
-    Class for handling the 'fastq_strand' QC module
+    Class for handling the 'strandedness' QC module
     """
     name = "strandedness"
     mapped_metrics = True
@@ -61,12 +61,12 @@ class FastqStrand(QCModule):
     @classmethod
     def collect_qc_outputs(self,qc_dir):
         """
-        Collect information on FastqStrand outputs
+        Collect information on strandedness outputs
 
         Returns an AttributeDictionary with the following
         attributes:
 
-        - name: set to 'fastq_strand'
+        - name: set to 'strandedness'
         - software: dictionary of software and versions
         - fastqs: list of associated Fastq names
         - config_files: list of associated config files
@@ -119,7 +119,7 @@ class FastqStrand(QCModule):
     @classmethod
     def verify(self,params,qc_outputs):
         """
-        Verify 'fastq_strand' QC module against outputs
+        Verify 'strandedness' QC module against outputs
 
         Returns one of 3 values:
 
@@ -155,7 +155,7 @@ class FastqStrand(QCModule):
                         verify_runner=None,compute_runner=None,
                         envmodules=None,verbose=False):
         """
-        Adds tasks for 'cellranger_count' module to pipeline
+        Adds tasks for 'strandedness' module to pipeline
 
         Arguments:
           p (Pipeline): pipeline to extend

@@ -67,12 +67,12 @@ from .modules.cellranger_multi import CellrangerMulti
 from .modules.cellranger_multi import GetCellrangerMultiConfig
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
-from .modules.fastq_strand import FastqStrand
 from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
 from .modules.qualimap_rnaseq import QualimapRnaseq
 from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
 from .modules.rseqc_infer_experiment import RseqcInferExperiment
 from .modules.sequence_lengths import SequenceLengths
+from .modules.strandedness import Strandedness
 from .protocols import determine_qc_protocol
 from .protocols import fetch_protocol_definition
 from .utils import get_bam_basename
@@ -570,7 +570,7 @@ class QCPipeline(Pipeline):
             # Fastq_strand
             ##############
             if qc_module_name == 'strandedness':
-                run_fastq_strand = FastqStrand.add_to_pipeline(
+                run_fastq_strand = Strandedness.add_to_pipeline(
                     self,
                     project_name,
                     project,

@@ -33,13 +33,13 @@ from .modules.cellranger_count import CellrangerCount
 from .modules.cellranger_multi import CellrangerMulti
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
-from .modules.fastq_strand import FastqStrand
 from .modules.multiqc import Multiqc
 from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
 from .modules.qualimap_rnaseq import QualimapRnaseq
 from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
 from .modules.rseqc_infer_experiment import RseqcInferExperiment
 from .modules.sequence_lengths import SequenceLengths
+from .modules.strandedness import Strandedness
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -223,13 +223,13 @@ class QCOutputs:
                   CellrangerMulti,
                   Fastqc,
                   FastqScreen,
-                  FastqStrand,
                   Multiqc,
                   PicardInsertSizeMetrics,
                   QualimapRnaseq,
                   RseqcGenebodyCoverage,
                   RseqcInferExperiment,
-                  SequenceLengths,):
+                  SequenceLengths,
+                  Strandedness,):
             self._add_qc_outputs(m.collect_qc_outputs(qcdir))
         # Non-QC module outputs
         for qc_data in (
