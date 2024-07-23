@@ -69,9 +69,6 @@ class CellrangerArcCount(CellrangerCount):
         if not expected_samples:
             # No libraries to check
             return True
-        ##if "cellranger-arc_count" not in self.outputs:
-        ##    # No cellranger-arc outputs present
-        ##    return False
         # Check expected samples against actual samples
         # associated with specified version and dataset
         return verify_10x_pipeline(('cellranger-arc',
