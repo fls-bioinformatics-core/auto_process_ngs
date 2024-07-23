@@ -89,7 +89,7 @@ class CellrangerCount(QCModule):
         Returns an AttributeDictionary with the following
         attributes:
 
-        - name: set to 'cellranger_count'
+        - name: set to the QC module name
         - software: dictionary of software and versions
         - references: list of associated reference datasets
         - fastqs: list of associated Fastq names
@@ -99,6 +99,8 @@ class CellrangerCount(QCModule):
         - samples_by_pipeline: dictionary with lists of
           sample names associated with each 10x pipeline
           tuple
+        - config_files: list of associated config files
+          ('libraries.<SAMPLE>.csv')
         - output_files: list of associated output files
         - tags: list of associated output classes
 
@@ -111,6 +113,14 @@ class CellrangerCount(QCModule):
         cellranger_references = set()
         samples_by_pipeline = dict()
         tags = set()
+        # Look for cellranger-arc config files
+        if self.name == "cellranger-arc_count":
+            config_files = list(
+                filter(lambda f:
+                       f.endswith(".csv") and f.startswith("libraries."),
+                       [os.path.basename(f) for f in qc_dir.file_list]))
+        else:
+            config_files = []
         # Look for cellranger_count outputs
         cellranger_count_dir = os.path.join(qc_dir.path,
                                             "cellranger_count")
@@ -216,6 +226,7 @@ class CellrangerCount(QCModule):
             pipelines=sorted([p for p in samples_by_pipeline]),
             samples_by_pipeline=samples_by_pipeline,
             output_files=output_files,
+            config_files=sorted(config_files),
             tags=sorted(list(tags))
         )
 
