@@ -121,7 +121,13 @@ class CellrangerCount(QCModule):
                        [os.path.basename(f) for f in qc_dir.file_list]))
         else:
             config_files = []
-        # Look for cellranger_count outputs
+        # Look for 'count' outputs for specific 10x pipeline
+        if self.name == "cellranger_count":
+            pipeline_name = "cellranger"
+        elif self.name == "cellranger-arc_count":
+            pipeline_name = "cellranger-arc"
+        elif self.name == "cellranger-atac_count":
+            pipeline_name = "cellranger-atac"
         cellranger_count_dir = os.path.join(qc_dir.path,
                                             "cellranger_count")
         ##print("Checking for cellranger* count outputs under %s" %
@@ -138,11 +144,14 @@ class CellrangerCount(QCModule):
                 sample_dir = os.path.join(cellranger_count_dir,d)
                 try:
                     cellranger = CellrangerCountOutputs(sample_dir)
+                    cellranger_name = cellranger.pipeline_name
+                    if cellranger_name != pipeline_name:
+                        # Output doesn't belong to this pipeline
+                        continue
                     output_files.append(cellranger.web_summary)
                     output_files.append(cellranger.metrics_csv)
                     output_files.append(cellranger.cmdline_file)
                     cellranger_samples.append(d)
-                    cellranger_name = cellranger.pipeline_name
                     cellranger_references.add(cellranger.reference_data)
                     # Store as version '?'
                     ref = os.path.basename(cellranger.reference_data)
@@ -183,11 +192,14 @@ class CellrangerCount(QCModule):
                         cellranger_name = None
                         try:
                             cellranger = CellrangerCountOutputs(sample_dir)
+                            cellranger_name = cellranger.pipeline_name
+                            if cellranger_name != pipeline_name:
+                                # Output doesn't belong to this pipeline
+                                continue
                             output_files.append(cellranger.web_summary)
                             output_files.append(cellranger.metrics_csv)
                             output_files.append(cellranger.cmdline_file)
                             samples.append(smpl)
-                            cellranger_name = cellranger.pipeline_name
                             cellranger_references.add(
                                 cellranger.reference_data)
                         except OSError:
