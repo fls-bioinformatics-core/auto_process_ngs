@@ -2,8 +2,26 @@
 # Unit tests for qc/pipeline.py ('cellranger-arc_count' QC module)
 #######################################################################
 
-# All imports declared in __init__.py file
-from . import *
+import unittest
+import tempfile
+import shutil
+import os
+from bcftbx.JobRunner import SimpleJobRunner
+from auto_process_ngs.metadata import AnalysisProjectInfo
+from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
+from auto_process_ngs.mock import MockCellrangerExe
+from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import UpdateAnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.qc.protocols import QCProtocol
+from auto_process_ngs.qc.pipeline import QCPipeline
+from ..protocols import BaseQCPipelineTestCase
+
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
+# Polling interval for pipeline
+POLL_INTERVAL = 0.1
 
 class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
     """
@@ -174,7 +192,6 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Make mock QC executables
         MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"),
                                  version="1.0.0")
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Make mock multiome ATAC analysis project
