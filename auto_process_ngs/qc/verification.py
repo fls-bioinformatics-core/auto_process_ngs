@@ -51,6 +51,24 @@ from ..utils import normalise_organism_name
 # Module specific logger
 logger = logging.getLogger(__name__)
 
+######################################################################
+# Supported QC module classes
+######################################################################
+
+QC_MODULES = (CellrangerCount,
+              CellrangerAtacCount,
+              CellrangerArcCount,
+              CellrangerMulti,
+              Fastqc,
+              FastqScreen,
+              Multiqc,
+              PicardInsertSizeMetrics,
+              QualimapRnaseq,
+              RseqcGenebodyCoverage,
+              RseqcInferExperiment,
+              SequenceLengths,
+              Strandedness)
+
 #######################################################################
 # Classes
 #######################################################################
@@ -264,20 +282,7 @@ class QCVerifier(QCOutputs):
           Exception: if the specified QC module name is not
             recognised.
         """
-        for m in (CellrangerCount,
-                  CellrangerAtacCount,
-                  CellrangerArcCount,
-                  CellrangerMulti,
-                  Fastqc,
-                  FastqScreen,
-                  Multiqc,
-                  PicardInsertSizeMetrics,
-                  QualimapRnaseq,
-                  RseqcGenebodyCoverage,
-                  RseqcInferExperiment,
-                  SequenceLengths,
-                  Strandedness,):
-            print("Module name: %s" % m.name)
+        for m in QC_MODULES:
             if m.name == name:
                 return m.verify(params,self.data(name))
         # No match
