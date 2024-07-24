@@ -20,8 +20,8 @@ import os
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..fastqc import Fastqc as FastqcOutput
-from ..fastqc import fastqc_output_files
+from ..apps.fastqc import Fastqc as FastqcOutput
+from ..apps.fastqc import fastqc_output_files
 from ..utils import filter_fastqs
 from ...fastq_utils import remove_index_fastqs
 from ...pipeliner import PipelineTask

@@ -27,8 +27,8 @@ from collections import OrderedDict
 from bcftbx.TabFile import TabFile
 from bcftbx.htmlpagewriter import PNGBase64Encoder
 from bcftbx.qc.report import strip_ngs_extensions
-from ..docwriter import Table
-from ..docwriter import Link
+from ...docwriter import Table
+from ...docwriter import Link
 
 # Module specific logger
 logger = logging.getLogger(__name__)
