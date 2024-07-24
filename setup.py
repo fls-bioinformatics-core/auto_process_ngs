@@ -58,6 +58,8 @@ setup(name = "auto_process_ngs",
       scripts = scripts,
       # Configuration file for QC
       data_files = [('config',['config/auto_process.ini.sample']),
+                    ('static',['static/qc_report.css',
+                               'static/toggle.js']),
                     ('templates',['templates/README.template.sample']),
                     ('etc/bash_completion.d',['scripts/auto_process-completion.bash']),],
       classifiers=[
