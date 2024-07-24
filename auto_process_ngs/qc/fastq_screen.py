@@ -24,6 +24,15 @@ from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
 
 #######################################################################
+# Data
+#######################################################################
+
+# Names of "legacy" screens
+LEGACY_SCREENS = ("model_organisms",
+                  "other_organisms",
+                  "rRNA")
+
+#######################################################################
 # Classes
 #######################################################################
 

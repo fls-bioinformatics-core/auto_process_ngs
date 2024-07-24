@@ -20,6 +20,7 @@ import os
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
+from ..fastq_screen import LEGACY_SCREENS
 from ..fastq_screen import Fastqscreen as FastqscreenOutput
 from ..fastq_screen import fastq_screen_output_files
 from ..utils import filter_fastqs
@@ -29,9 +30,6 @@ from ...pipeliner import PipelineFunctionTask
 
 # Module specific logger
 logger = logging.getLogger(__name__)
-
-# Data
-from ..constants import FASTQ_SCREENS
 
 #######################################################################
 # Core class
@@ -93,7 +91,7 @@ class FastqScreen(QCModule):
         print("\t- %d fastq_screen files" % (len(legacy_screens) +
                                              len(screens)))
         if legacy_screens:
-            for screen_name in FASTQ_SCREENS:
+            for screen_name in LEGACY_SCREENS:
                 # Explicitly check for legacy screens
                 for screen in list(filter(lambda s:
                                           s.endswith("_%s_screen.txt" %

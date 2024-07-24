@@ -25,7 +25,7 @@ import logging
 from bcftbx.utils import AttributeDictionary
 from ..analysis import AnalysisFastq
 from ..metadata import AnalysisProjectQCDirInfo
-from .constants import FASTQ_SCREENS
+from .fastq_screen import LEGACY_SCREENS
 from .modules.cellranger_arc_count import CellrangerArcCount
 from .modules.cellranger_atac_count import CellrangerAtacCount
 from .modules.cellranger_count import CellrangerCount
@@ -404,7 +404,7 @@ def verify_project(project,qc_dir=None,qc_protocol=None,
             if fastq_screens:
                 fastq_screens = fastq_screens.split(',')
             elif 'fastq_screens' not in qc_info.keys_in_file():
-                fastq_screens = FASTQ_SCREENS
+                fastq_screens = LEGACY_SCREENS
         except KeyError:
             pass
     logger.debug("verify: cellranger reference data : %s" %

@@ -106,6 +106,7 @@ from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from .fastqc import Fastqc
 from .fastqc import fastqc_output_files
+from .fastq_screen import LEGACY_SCREENS
 from .fastq_screen import Fastqscreen
 from .fastq_screen import fastq_screen_output_files
 from .fastq_strand import Fastqstrand
@@ -148,8 +149,6 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # Data
 #######################################################################
-
-from .constants import FASTQ_SCREENS
 
 # Metadata field descriptions
 METADATA_FIELD_DESCRIPTIONS = {
@@ -3338,7 +3337,7 @@ class FastqQCReporter:
         self.fastq_screen['names'] = list()
         fastq_base = self.fastq_attrs(fastq).basename
         # Legacy screens
-        for screen_name in FASTQ_SCREENS:
+        for screen_name in LEGACY_SCREENS:
             for f in list(filter(lambda f:
                                  f.startswith(fastq_base) and
                                  f.endswith("_%s_screen.txt" % screen_name),
