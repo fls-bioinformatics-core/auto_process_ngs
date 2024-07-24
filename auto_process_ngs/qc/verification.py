@@ -25,7 +25,7 @@ import logging
 from bcftbx.utils import AttributeDictionary
 from ..analysis import AnalysisFastq
 from ..metadata import AnalysisProjectQCDirInfo
-from .fastq_screen import LEGACY_SCREENS
+from .apps.fastq_screen import LEGACY_SCREENS
 from .modules.cellranger_arc_count import CellrangerArcCount
 from .modules.cellranger_atac_count import CellrangerAtacCount
 from .modules.cellranger_count import CellrangerCount

@@ -106,9 +106,9 @@ from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from .apps.fastqc import Fastqc
 from .apps.fastqc import fastqc_output_files
-from .fastq_screen import LEGACY_SCREENS
-from .fastq_screen import Fastqscreen
-from .fastq_screen import fastq_screen_output_files
+from .apps.fastq_screen import LEGACY_SCREENS
+from .apps.fastq_screen import Fastqscreen
+from .apps.fastq_screen import fastq_screen_output_files
 from .fastq_strand import Fastqstrand
 from .fastq_strand import fastq_strand_output
 from .cellranger import CellrangerCount

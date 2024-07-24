@@ -6,8 +6,8 @@ import os
 import unittest
 import tempfile
 
-from auto_process_ngs.qc.fastq_screen import Fastqscreen
-from auto_process_ngs.qc.fastq_screen import fastq_screen_output_files
+from auto_process_ngs.qc.apps.fastq_screen import Fastqscreen
+from auto_process_ngs.qc.apps.fastq_screen import fastq_screen_output_files
 
 class TestFastqscreen(unittest.TestCase):
     def setUp(self):
