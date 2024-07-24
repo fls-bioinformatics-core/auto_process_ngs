@@ -59,10 +59,9 @@ from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.utils import add_cellranger_args
 from ..utils import get_organism_list
+from .modules.cellranger_atac_count import CellrangerAtacCount
+from .modules.cellranger_arc_count import CellrangerArcCount
 from .modules.cellranger_count import CellrangerCount
-from .modules.cellranger_count import check_cellranger_count_outputs
-from .modules.cellranger_count import check_cellranger_atac_count_outputs
-from .modules.cellranger_count import check_cellranger_arc_count_outputs
 from .modules.cellranger_multi import CellrangerMulti
 from .modules.cellranger_multi import GetCellrangerMultiConfig
 from .modules.fastqc import Fastqc
@@ -596,6 +595,14 @@ class QCPipeline(Pipeline):
             if qc_module_name in ('cellranger_count',
                                   'cellranger-atac_count',
                                   'cellranger-arc_count',):
+                # Set base QC module
+                if qc_module_name == "cellranger_count":
+                    count = CellrangerCount
+                elif qc_module_name == "cellranger-atac_count":
+                    count = CellrangerAtacCount
+                elif qc_module_name == "cellranger-arc_count":
+                    count = CellrangerArcCount
+
                 # Set library type
                 try:
                     library_type = qc_module_params['library']
@@ -648,7 +655,7 @@ class QCPipeline(Pipeline):
                     set_cell_count = set_metadata
 
                 # Run cellranger* count
-                run_cellranger_count = CellrangerCount.add_to_pipeline(
+                run_cellranger_count = count.add_to_pipeline(
                     self,
                     project_name,
                     project,
