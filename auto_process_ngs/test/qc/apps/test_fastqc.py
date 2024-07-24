@@ -7,10 +7,10 @@ import os
 import shutil
 import tempfile
 
-from auto_process_ngs.qc.fastqc import Fastqc
-from auto_process_ngs.qc.fastqc import FastqcSummary
-from auto_process_ngs.qc.fastqc import FastqcData
-from auto_process_ngs.qc.fastqc import fastqc_output_files
+from auto_process_ngs.qc.apps.fastqc import Fastqc
+from auto_process_ngs.qc.apps.fastqc import FastqcSummary
+from auto_process_ngs.qc.apps.fastqc import FastqcData
+from auto_process_ngs.qc.apps.fastqc import fastqc_output_files
 
 class TestFastqc_v0_11_3(unittest.TestCase):
     def setUp(self):
