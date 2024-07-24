@@ -14,7 +14,7 @@ from bcftbx.htmlpagewriter import PNGBase64Encoder
 from bcftbx.utils import AttributeDictionary
 from .apps.fastqc import FastqcData
 from .apps.fastqc import FastqcSummary
-from .fastq_screen import Fastqscreen
+from .apps.fastq_screen import Fastqscreen
 from .fastq_stats import FastqQualityStats
 from .fastq_strand import Fastqstrand
 

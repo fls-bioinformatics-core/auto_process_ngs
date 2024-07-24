@@ -20,9 +20,9 @@ import os
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..fastq_screen import LEGACY_SCREENS
-from ..fastq_screen import Fastqscreen as FastqscreenOutput
-from ..fastq_screen import fastq_screen_output_files
+from ..apps.fastq_screen import LEGACY_SCREENS
+from ..apps.fastq_screen import Fastqscreen as FastqscreenOutput
+from ..apps.fastq_screen import fastq_screen_output_files
 from ..utils import filter_fastqs
 from ...fastq_utils import remove_index_fastqs
 from ...pipeliner import PipelineTask
