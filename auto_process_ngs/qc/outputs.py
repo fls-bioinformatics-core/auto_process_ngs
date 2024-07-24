@@ -44,6 +44,24 @@ from .modules.strandedness import Strandedness
 # Module specific logger
 logger = logging.getLogger(__name__)
 
+######################################################################
+# Supported QC module classes
+######################################################################
+
+QC_MODULES = (CellrangerCount,
+              CellrangerAtacCount,
+              CellrangerArcCount,
+              CellrangerMulti,
+              Fastqc,
+              FastqScreen,
+              Multiqc,
+              PicardInsertSizeMetrics,
+              QualimapRnaseq,
+              RseqcGenebodyCoverage,
+              RseqcInferExperiment,
+              SequenceLengths,
+              Strandedness)
+
 #######################################################################
 # Classes
 #######################################################################
@@ -217,19 +235,7 @@ class QCOutputs:
         print("\t- %d objects found" % len(files))
         logger.debug("files: %s" % files)
         # Collect QC outputs from modules
-        for m in (CellrangerCount,
-                  CellrangerAtacCount,
-                  CellrangerArcCount,
-                  CellrangerMulti,
-                  Fastqc,
-                  FastqScreen,
-                  Multiqc,
-                  PicardInsertSizeMetrics,
-                  QualimapRnaseq,
-                  RseqcGenebodyCoverage,
-                  RseqcInferExperiment,
-                  SequenceLengths,
-                  Strandedness,):
+        for m in QC_MODULES:
             self._add_qc_outputs(m.collect_qc_outputs(qcdir))
         # Non-QC module outputs
         for qc_data in (
