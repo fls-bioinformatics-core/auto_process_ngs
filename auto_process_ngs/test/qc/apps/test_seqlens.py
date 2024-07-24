@@ -7,8 +7,8 @@ import shutil
 import os
 import tempfile
 
-from auto_process_ngs.qc.seqlens import SeqLens
-from auto_process_ngs.qc.seqlens import get_sequence_lengths
+from auto_process_ngs.qc.apps.seqlens import SeqLens
+from auto_process_ngs.qc.apps.seqlens import get_sequence_lengths
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True

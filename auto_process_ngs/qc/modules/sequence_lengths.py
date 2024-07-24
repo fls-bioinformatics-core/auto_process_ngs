@@ -18,8 +18,8 @@ import os
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..seqlens import SeqLens
-from ..seqlens import get_sequence_lengths
+from ..apps.seqlens import SeqLens
+from ..apps.seqlens import get_sequence_lengths
 from ..utils import filter_fastqs
 from ...fastq_utils import remove_index_fastqs
 from ...pipeliner import PipelineFunctionTask

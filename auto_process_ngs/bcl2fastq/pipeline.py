@@ -87,7 +87,7 @@ from ..pipeliner import ListParam
 from ..pipeliner import PathExistsParam
 from ..pipeliner import PathJoinParam
 from ..pipeliner import resolve_parameter
-from ..qc.seqlens import get_sequence_lengths
+from ..qc.apps.seqlens import get_sequence_lengths
 from ..tenx.utils import add_cellranger_args
 from ..tenx.utils import cellranger_info
 from ..tenx.utils import spaceranger_info
