@@ -3,7 +3,7 @@
 # Fastq statistics utilities
 from builtins import range
 from bcftbx.FASTQFile import FastqIterator
-from .fastqc import FastqcData
+from .apps.fastqc import FastqcData
 
 class FastqQualityStats:
     """

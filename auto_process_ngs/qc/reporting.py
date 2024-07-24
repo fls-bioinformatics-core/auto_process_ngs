@@ -104,8 +104,8 @@ from ..docwriter import DownloadIcon
 from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
-from .fastqc import Fastqc
-from .fastqc import fastqc_output_files
+from .apps.fastqc import Fastqc
+from .apps.fastqc import fastqc_output_files
 from .fastq_screen import LEGACY_SCREENS
 from .fastq_screen import Fastqscreen
 from .fastq_screen import fastq_screen_output_files

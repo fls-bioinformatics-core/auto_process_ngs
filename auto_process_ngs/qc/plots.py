@@ -12,14 +12,14 @@ from PIL import Image
 from builtins import range
 from bcftbx.htmlpagewriter import PNGBase64Encoder
 from bcftbx.utils import AttributeDictionary
-from .fastqc import FastqcData
-from .fastqc import FastqcSummary
+from .apps.fastqc import FastqcData
+from .apps.fastqc import FastqcSummary
 from .fastq_screen import Fastqscreen
 from .fastq_stats import FastqQualityStats
 from .fastq_strand import Fastqstrand
 
 # Data
-from .fastqc import SEQUENCE_DEDUP_CUTOFFS
+from .apps.fastqc import SEQUENCE_DEDUP_CUTOFFS
 
 # Module specific logger
 logger = logging.getLogger(__name__)
