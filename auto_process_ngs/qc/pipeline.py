@@ -85,6 +85,23 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 ######################################################################
+# Supported QC module classes
+######################################################################
+
+QC_MODULES = (CellrangerCount,
+              CellrangerAtacCount,
+              CellrangerArcCount,
+              CellrangerMulti,
+              Fastqc,
+              FastqScreen,
+              PicardInsertSizeMetrics,
+              QualimapRnaseq,
+              RseqcGenebodyCoverage,
+              RseqcInferExperiment,
+              SequenceLengths,
+              Strandedness)
+
+######################################################################
 # Pipeline classes
 ######################################################################
 
@@ -239,13 +256,12 @@ class QCPipeline(Pipeline):
 
         # Determine if BAM files are required
         require_bam_files = False
-        for qc_module in ('picard_insert_size_metrics',
-                          'rseqc_genebody_coverage',
-                          'rseqc_infer_experiment',
-                          'qualimap_rnaseq'):
-            if qc_module in qc_modules:
-                require_bam_files = True
-                break
+        qc_module_names = [parse_qc_module_spec(m_)[0] for m_ in qc_modules]
+        for m in QC_MODULES:
+            if m.name in qc_module_names:
+                require_bam_files = (m.require_bam_files or require_bam_files)
+                if require_bam_files:
+                    break
 
         # Clone the supplied project
         project = copy_analysis_project(project,fastq_dir=fastq_dir)
