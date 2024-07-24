@@ -34,8 +34,8 @@ from ..conda import make_conda_env_name
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
 from ..tenx.cellplex import CellrangerMultiConfigCsv
-from .cellranger import CellrangerCount
-from .cellranger import CellrangerMulti
+from .apps.cellranger import CellrangerCount
+from .apps.cellranger import CellrangerMulti
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
