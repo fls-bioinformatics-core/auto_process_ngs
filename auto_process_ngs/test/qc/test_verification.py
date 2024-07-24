@@ -13,7 +13,6 @@ from auto_process_ngs.mockqc import make_mock_qc_dir
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.verification import QCVerifier
-from auto_process_ngs.qc.verification import parse_qc_module_spec
 from auto_process_ngs.qc.verification import verify_project
 
 # Set to False to keep test output dirs
@@ -1631,64 +1630,6 @@ class TestQCVerifier(unittest.TestCase):
                            'rRNA'),
             cellranger_version="7.1.0",
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
-
-class TestParseQCModuleSpec(unittest.TestCase):
-
-    def test_parse_qc_module_spec(self):
-        """
-        parse_qc_module_spec: handle valid specifications
-        """
-        self.assertEqual(
-            parse_qc_module_spec("fastqc"),
-            ('fastqc',{}))
-        self.assertEqual(
-            parse_qc_module_spec("cellranger_count(cellranger_version=6.1.2)"),
-            ('cellranger_count',{ 'cellranger_version': '6.1.2' }))
-        self.assertEqual(
-            parse_qc_module_spec("cellranger_count(cellranger_version=6.1.2;"
-                                 "cellranger_refdata=*)"),
-            ('cellranger_count',{ 'cellranger_version': '6.1.2',
-                                  'cellranger_refdata': '*' }))
-
-    def test_parse_qc_module_spec_quoted_string(self):
-        """
-        parse_qc_module_spec: handle quoted string values
-        """
-        self.assertEqual(
-            parse_qc_module_spec("module(s=hello)"),
-            ('module',{ 's': 'hello' }))
-        self.assertEqual(
-            parse_qc_module_spec("module(s='hello')"),
-            ('module',{ 's': 'hello' }))
-        self.assertEqual(
-            parse_qc_module_spec("module(s=\"hello\")"),
-            ('module',{ 's': 'hello' }))
-        self.assertEqual(
-            parse_qc_module_spec("module(s='\"hello\"')"),
-            ('module',{ 's': '"hello"' }))
-
-    def test_parse_qc_module_spec_boolean(self):
-        """
-        parse_qc_module_spec: handle boolean values
-        """
-        self.assertEqual(
-            parse_qc_module_spec("module(b=True)"),
-            ('module',{ 'b': True }))
-        self.assertEqual(
-            parse_qc_module_spec("module(b=true)"),
-            ('module',{ 'b': True }))
-        self.assertEqual(
-            parse_qc_module_spec("module(b='true')"),
-            ('module',{ 'b': 'true' }))
-        self.assertEqual(
-            parse_qc_module_spec("module(b=False)"),
-            ('module',{ 'b': False }))
-        self.assertEqual(
-            parse_qc_module_spec("module(b=false)"),
-            ('module',{ 'b': False }))
-        self.assertEqual(
-            parse_qc_module_spec("module(b='false')"),
-            ('module',{ 'b': 'false' }))
 
 class TestVerifyProject(unittest.TestCase):
 
