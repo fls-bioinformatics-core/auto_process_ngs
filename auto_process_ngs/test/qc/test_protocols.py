@@ -13,6 +13,7 @@ from auto_process_ngs.qc.protocols import determine_qc_protocol_from_metadata
 from auto_process_ngs.qc.protocols import determine_qc_protocol
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.protocols import parse_protocol_spec
+from auto_process_ngs.qc.protocols import parse_qc_module_spec
 from auto_process_ngs.qc.protocols import QCProtocolError
 from auto_process_ngs.qc.protocols import QCProtocolParseSpecError
 
@@ -141,6 +142,8 @@ class TestQCProtocol(unittest.TestCase):
         self.assertEqual(p.read_numbers.qc,())
         self.assertEqual(p.read_range,{})
         self.assertEqual(p.qc_modules,[])
+        self.assertEqual(p.qc_module_names,[])
+        self.assertEqual(p.expected_outputs,[])
         self.assertEqual(p.summarise(),"'null' protocol: no reads "
                          "explicitly assigned as biological data; no "
                          "reads explicitly assigned as index data")
@@ -173,6 +176,16 @@ class TestQCProtocol(unittest.TestCase):
         self.assertEqual(p.qc_modules,
                          ["fastq_screen",
                           "fastqc",
+                          "sequence_lengths"])
+        self.assertEqual(p.qc_module_names,
+                         ["fastq_screen",
+                          "fastqc",
+                          "sequence_lengths"])
+        self.assertEqual(p.expected_outputs,
+                         ["fastqc_r1",
+                          "fastqc_r2",
+                          "screens_r1",
+                          "screens_r2",
                           "sequence_lengths"])
         self.assertEqual(p.summarise(),"'basicPE' protocol: biological "
                          "data in R1 and R2; no reads explicitly assigned "
@@ -209,6 +222,15 @@ class TestQCProtocol(unittest.TestCase):
                          ["fastq_screen",
                           "fastqc",
                           "sequence_lengths"])
+        self.assertEqual(p.qc_module_names,
+                         ["fastq_screen",
+                          "fastqc",
+                          "sequence_lengths"])
+        self.assertEqual(p.expected_outputs,
+                         ["fastqc_r1",
+                          "fastqc_r2",
+                          "screens_r2",
+                          "sequence_lengths"])
         self.assertEqual(p.summarise(),"'basicSC' protocol: biological "
                          "data in R2 only; index data in R1 only; mapped "
                          "metrics generated using only biological data "
@@ -244,6 +266,16 @@ class TestQCProtocol(unittest.TestCase):
                          ["fastq_screen",
                           "fastqc",
                           "sequence_lengths"])
+        self.assertEqual(p.qc_module_names,
+                         ["fastq_screen",
+                          "fastqc",
+                          "sequence_lengths"])
+        self.assertEqual(p.expected_outputs,
+                         ["fastqc_r1",
+                          "fastqc_r2",
+                          "screens_r1",
+                          "screens_r2",
+                          "sequence_lengths"])
         self.assertEqual(p.summarise(),"'basicPE_with_ranges' protocol: "
                          "biological data in R1 and R2 (R2 bases 1 to 50); "
                          "no reads explicitly assigned as index data; mapped "
@@ -254,6 +286,54 @@ class TestQCProtocol(unittest.TestCase):
                          "'Basic paired-end QC with ranges':"
                          "seq_reads=[r1,r2:1-50]:index_reads=[]:"
                          "qc_modules=[fastq_screen,fastqc,sequence_lengths]")
+        self.assertEqual(p,QCProtocol.from_specification(repr(p)))
+
+    def test_qcprotocol_example_paired_end_protocol_with_parameters(self):
+        """
+        QCProtocol: check basic paired end protocol with parameters
+        """
+        p = QCProtocol(name="basicPE_with_parameters",
+                       description="Basic paired-end QC with parameters",
+                       seq_data_reads=['r1','r2'],
+                       index_reads=None,
+                       qc_modules=("fastqc(dummy_var=true)",
+                                   "fastq_screen(dummy_var=false)",
+                                   "sequence_lengths(dummy_var=*)"))
+        self.assertEqual(p.name,"basicPE_with_parameters")
+        self.assertEqual(p.description,"Basic paired-end QC with parameters")
+        self.assertEqual(p.reads.seq_data,('r1','r2',))
+        self.assertEqual(p.reads.index,())
+        self.assertEqual(p.reads.qc,('r1','r2'))
+        self.assertEqual(p.read_numbers.seq_data,(1,2))
+        self.assertEqual(p.read_numbers.index,())
+        self.assertEqual(p.read_numbers.qc,(1,2))
+        self.assertEqual(p.read_range.r1,None)
+        self.assertEqual(p.read_range.r2,None)
+        self.assertEqual(p.qc_modules,
+                         ["fastq_screen(dummy_var=false)",
+                          "fastqc(dummy_var=true)",
+                          "sequence_lengths(dummy_var=*)"])
+        self.assertEqual(p.qc_module_names,
+                         ["fastq_screen",
+                          "fastqc",
+                          "sequence_lengths"])
+        self.assertEqual(p.expected_outputs,
+                         ["fastqc_r1",
+                          "fastqc_r2",
+                          "screens_r1",
+                          "screens_r2",
+                          "sequence_lengths"])
+        self.assertEqual(p.summarise(),"'basicPE_with_parameters' protocol: "
+                         "biological data in R1 and R2; "
+                         "no reads explicitly assigned as index data; mapped "
+                         "metrics generated using only biological data reads")
+        self.assertEqual(repr(p),
+                         "basicPE_with_parameters:"
+                         "'Basic paired-end QC with parameters':"
+                         "seq_reads=[r1,r2]:index_reads=[]:"
+                         "qc_modules=[fastq_screen(dummy_var=false),"
+                         "fastqc(dummy_var=true),"
+                         "sequence_lengths(dummy_var=*)]")
         self.assertEqual(p,QCProtocol.from_specification(repr(p)))
 
 class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
@@ -1216,6 +1296,12 @@ class TestFetchProtocolDefinition(unittest.TestCase):
         self.assertEqual(p.read_numbers.qc,(1,2))
         self.assertEqual(p.qc_modules,['fastq_screen',
                                        'fastqc'])
+        self.assertEqual(p.qc_module_names,['fastq_screen',
+                                            'fastqc'])
+        self.assertEqual(p.expected_outputs,['fastqc_r1',
+                                             'fastqc_r2',
+                                             'screens_r1',
+                                             'screens_r2'])
 
     def test_fetch_protocol_definition_from_name(self):
         """
@@ -1236,6 +1322,22 @@ class TestFetchProtocolDefinition(unittest.TestCase):
                                        'rseqc_genebody_coverage',
                                        'rseqc_infer_experiment',
                                        'sequence_lengths'])
+        self.assertEqual(p.qc_module_names,['fastq_screen',
+                                            'fastqc',
+                                            'picard_insert_size_metrics',
+                                            'qualimap_rnaseq',
+                                            'rseqc_genebody_coverage',
+                                            'rseqc_infer_experiment',
+                                            'sequence_lengths'])
+        self.assertEqual(p.expected_outputs,['fastqc_r1',
+                                             'fastqc_r2',
+                                             'picard_insert_size_metrics',
+                                             'qualimap_rnaseq',
+                                             'rseqc_genebody_coverage',
+                                             'rseqc_infer_experiment',
+                                             'screens_r1',
+                                             'screens_r2',
+                                             'sequence_lengths'])
 
     def test_fetch_protocol_definition_unknown_protocol_name(self):
         """
@@ -1478,3 +1580,61 @@ class TestParseProtocolSpec(unittest.TestCase):
                           "index_reads=[]:" \
                           "magic_spell=True:" \
                           "qc_modules=[fastqc]")
+
+class TestParseQCModuleSpec(unittest.TestCase):
+
+    def test_parse_qc_module_spec(self):
+        """
+        parse_qc_module_spec: handle valid specifications
+        """
+        self.assertEqual(
+            parse_qc_module_spec("fastqc"),
+            ('fastqc',{}))
+        self.assertEqual(
+            parse_qc_module_spec("cellranger_count(cellranger_version=6.1.2)"),
+            ('cellranger_count',{ 'cellranger_version': '6.1.2' }))
+        self.assertEqual(
+            parse_qc_module_spec("cellranger_count(cellranger_version=6.1.2;"
+                                 "cellranger_refdata=*)"),
+            ('cellranger_count',{ 'cellranger_version': '6.1.2',
+                                  'cellranger_refdata': '*' }))
+
+    def test_parse_qc_module_spec_quoted_string(self):
+        """
+        parse_qc_module_spec: handle quoted string values
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(s=hello)"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='hello')"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s=\"hello\")"),
+            ('module',{ 's': 'hello' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='\"hello\"')"),
+            ('module',{ 's': '"hello"' }))
+
+    def test_parse_qc_module_spec_boolean(self):
+        """
+        parse_qc_module_spec: handle boolean values
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(b=True)"),
+            ('module',{ 'b': True }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=true)"),
+            ('module',{ 'b': True }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b='true')"),
+            ('module',{ 'b': 'true' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=False)"),
+            ('module',{ 'b': False }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b=false)"),
+            ('module',{ 'b': False }))
+        self.assertEqual(
+            parse_qc_module_spec("module(b='false')"),
+            ('module',{ 'b': 'false' }))

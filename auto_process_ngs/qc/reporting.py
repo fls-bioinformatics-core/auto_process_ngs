@@ -130,6 +130,8 @@ from .plots import uinsertsizeplot
 from .plots import ucoverageprofileplot
 from .plots import ugenomicoriginplot
 from .plots import encode_png
+from .protocols import QCProtocol
+from .protocols import fetch_protocol_definition
 from .qualimap import QualimapRnaseq
 from .rseqc import InferExperiment
 from .seqlens import SeqLens
@@ -497,12 +499,24 @@ class QCReport(Document):
                     print("\t- %s: %s" %
                           (package,
                            ', '.join(project.software[package])))
+            # Expected outputs from QC protocol
+            if project.qc_info.protocol_specification:
+                qc_protocol = project.qc_info.protocol_specification
+            else:
+                qc_protocol = project.qc_info.protocol
+            if qc_protocol:
+                expected_outputs = fetch_protocol_definition(qc_protocol).\
+                                   expected_outputs
+            else:
+                expected_outputs = None
             # Fields to report in summary table
             if not summary_fields:
-                summary_fields = self._get_summary_fields(project)
+                summary_fields = self._get_summary_fields(project,
+                                                          expected_outputs)
             # Attributes to report for each sample
             if report_attrs is None:
-                report_attrs = self._get_report_attrs(project)
+                report_attrs = self._get_report_attrs(project,
+                                                      expected_outputs)
             # Add data for this project to the report
             print("Adding project '%s' to the report..." % project.name)
             self.report_metadata(project,
@@ -691,17 +705,24 @@ class QCReport(Document):
         # Report the status
         self.report_status()
 
-    def _get_summary_fields(self,project):
+    def _get_summary_fields(self,project,expected_outputs=None):
         """
         Return default set of summary table fields
 
         Arguments:
           project (QCProject): project to get default summary
             table fields for
+          expected_outputs (list): optional list of QC outputs
+            are expected to be present (and so should be
+            reported)
 
         Returns:
           List: list of summary table field names.
         """
+        outputs = set([m for m in project.outputs])
+        if expected_outputs:
+            for output in expected_outputs:
+                outputs.add(output)
         if len(project.reads):
             if len(project.reads) > 1:
                 summary_fields_ = ['sample',
@@ -711,13 +732,13 @@ class QCReport(Document):
                 summary_fields_ = ['sample',
                                    'fastq',
                                    'reads']
-            if 'sequence_lengths' in project.outputs:
+            if 'sequence_lengths' in outputs:
                 # Get read counts and lengths from
                 # sequence length stats
                 summary_fields_.extend(['read_counts',
                                         'read_lengths'])
             for read in project.reads:
-                if ('fastqc_%s' % read) in project.outputs:
+                if ('fastqc_%s' % read) in outputs:
                     if 'read_lengths' not in summary_fields_:
                         # Get read lengths from FastQC if
                         # sequenc length stats not present
@@ -732,55 +753,63 @@ class QCReport(Document):
                                'bam_file']
         else:
             summary_fields_ = ['sample']
-        if 'strandedness' in project.outputs:
+        if 'strandedness' in outputs:
             # Strandedness
             summary_fields_.append('strandedness')
-        if 'picard_insert_size_metrics' in project.outputs:
+        if 'picard_insert_size_metrics' in outputs:
             # Insert size metrics
             summary_fields_.append('insert_size_histogram')
-        if 'qualimap_rnaseq' in project.outputs:
+        if 'qualimap_rnaseq' in outputs:
             # Qualimap metrics
             summary_fields_.extend(['coverage_profile_along_genes',
                                     'reads_genomic_origin'])
         for read in project.reads:
             # FastQC boxplots
-            if ('fastqc_%s' % read) in project.outputs:
+            if ('fastqc_%s' % read) in outputs:
                 summary_fields_.append('boxplot_%s' % read)
         for read in project.reads:
             # Fastq Screen
-            if ('screens_%s' % read) in project.outputs:
+            if ('screens_%s' % read) in outputs:
                 summary_fields_.append('screens_%s' % read)
-        if 'cellranger_count' in project.outputs and \
+        if 'cellranger_count' in outputs and \
            not self.use_single_library_table:
             # Legacy cellranger count outputs
             summary_fields_.append('cellranger_count')
         return summary_fields_
 
-    def _get_report_attrs(self,project):
+    def _get_report_attrs(self,project,expected_outputs=None):
         """
         Return default set of per-sample metrics to report
 
         Arguments:
           project (QCProject): project to get default per-sample
             metrics for
+          expected_outputs (list): optional list of QC outputs
+            are expected to be present (and so should be
+            reported)
 
         Returns:
           List: list of attribute names.
         """
+        outputs = set([m for m in project.outputs])
+        if expected_outputs:
+            for output in expected_outputs:
+                outputs.add(output)
         report_attrs_ = []
         for read in project.reads:
             # FastQC outputs
-            if ('fastqc_%s' % read) in project.outputs:
+            if ('fastqc_%s' % read) in outputs:
                 report_attrs_.append('fastqc')
                 break
         for read in project.reads:
             # Fastq Screen outputs
-            if ('screens_%s' % read) in project.outputs:
+            if ('screens_%s' % read) in outputs:
                 report_attrs_.append('fastq_screen')
+                break
         if 'strandedness' in project.outputs:
             # Strandedness
             report_attrs_.append('strandedness')
-        if 'qualimap_rnaseq' in project.outputs:
+        if 'qualimap_rnaseq' in outputs:
             # Qualimap RNAseq
             report_attrs_.append('qualimap_rnaseq')
         return report_attrs_
@@ -1360,8 +1389,8 @@ class QCReport(Document):
                                      relpath=self.relpath)
         # Update the summary table
         status = reporter.update_summary_table(summary_table,
+                                               summary_fields,
                                                sample_report=sample_report,
-                                               fields=summary_fields,
                                                relpath=self.relpath)
         if not status:
             # Update flag to indicate problems with the
@@ -1511,7 +1540,7 @@ class QCReport(Document):
                                         qc_dir=project.qc_dir,
                                         fastq_attrs=project.fastq_attrs)
             reporter.update_summary_table(summary_table,
-                                          fields=fields,
+                                          fields,
                                           relpath=self.relpath)
 
     def report_genebody_coverage(self,project,section):
@@ -2098,7 +2127,7 @@ class SampleQCReporter:
                                    attrs=attrs,
                                    relpath=relpath)
 
-    def update_summary_table(self,summary_table,fields=None,
+    def update_summary_table(self,summary_table,fields,
                              sample_report=None,relpath=None):
         """
         Add lines to a summary table reporting a sample
@@ -2111,7 +2140,7 @@ class SampleQCReporter:
 
         Arguments:
           summary_table (Table): table to update
-          fields (list): list of custom fields to report
+          fields (list): list of fields to report
           relpath (str): if set then make link paths
             relative to 'relpath'
 
@@ -2162,8 +2191,8 @@ class SampleQCReporter:
                 # lines in summary table
                 idx = summary_table.add_row(sample="&nbsp;")
             status = fastq_group.update_summary_table(
-                summary_table,idx=idx,
-                fields=fields,
+                summary_table,fields,
+                idx=idx,
                 relpath=relpath)
             if not status:
                 has_problems = True
@@ -2885,7 +2914,7 @@ class FastqGroupQCReporter:
         # Add an empty section to clear HTML floats
         clear = fastqs_report.add_subsection(css_classes=("clear",))
 
-    def update_summary_table(self,summary_table,idx=None,fields=None,
+    def update_summary_table(self,summary_table,fields,idx=None,
                              relpath=None):
         """
         Add a line to a summary table reporting a Fastq group
@@ -2898,10 +2927,10 @@ class FastqGroupQCReporter:
 
         Arguments:
           summary_table (Table): table to add the summary to
+          fields (list): list of fields to report
           idx (int): if supplied then indicates which existing
             table row to update (if None then a new row is
             appended)
-          fields (list): list of custom fields to report
           relpath (str): if set then make link paths
             relative to 'relpath'
 
@@ -2911,39 +2940,6 @@ class FastqGroupQCReporter:
         """
         # Flag indicating issues
         has_problems = False
-        # Fields to report
-        if fields is None:
-            if self.paired_end:
-                fields = ('fastqs',
-                          'reads',
-                          'read_lengths',
-                          'read_lengths_dist_r1',
-                          'read_lengths_dist_r2',
-                          'boxplot_r1','boxplot_r2',
-                          'fastqc_r1','fastqc_r2',
-                          'screens_r1','screens_r2')
-            else:
-                fields = ('fastq',
-                          'reads',
-                          'read_lengths',
-                          'read_lengths_dist_r1',
-                          'boxplot_r1',
-                          'fastqc_r1',
-                          'screens_r1')
-        else:
-            # Drop fields for reads that aren't present
-            # For example if there are a mixture of
-            # single and paired-end Fastqs
-            updated_fields = []
-            for field in fields:
-                if field[:-1].endswith("_r"):
-                    read = field.split("_")[-1]
-                    if read not in self.reads:
-                        logging.warning("Dropping '%s' from summary table"
-                                        % field)
-                        continue
-                updated_fields.append(field)
-            fields = updated_fields
         # Add row to summary table
         if idx is None:
             idx = summary_table.add_row()
@@ -3724,7 +3720,7 @@ def report(projects,title=None,filename=None,qc_dir=None,
         report for each Fastq pair
       summary_fields (list): optional, list of fields to
         report for each sample in the summary table
-        relative_links (boolean): optional, if set to True
+      relative_links (boolean): optional, if set to True
         then use relative paths for links in the report
         (default is to use absolute paths)
       use_data_dir (boolean): if True then copy QC
