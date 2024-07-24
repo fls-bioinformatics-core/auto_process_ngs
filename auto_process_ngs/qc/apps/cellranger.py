@@ -24,11 +24,11 @@ Provides the following functions:
 #######################################################################
 
 import os
-from ..tenx.metrics import GexSummary
-from ..tenx.metrics import AtacSummary
-from ..tenx.metrics import MultiplexSummary
-from ..tenx.metrics import MultiomeSummary
-from ..tenx.cellplex import CellrangerMultiConfigCsv
+from ...tenx.metrics import GexSummary
+from ...tenx.metrics import AtacSummary
+from ...tenx.metrics import MultiplexSummary
+from ...tenx.metrics import MultiomeSummary
+from ...tenx.cellplex import CellrangerMultiConfigCsv
 
 #######################################################################
 # Classes

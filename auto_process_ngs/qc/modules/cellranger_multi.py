@@ -28,7 +28,7 @@ from bcftbx.utils import mkdirs
 from . import QCModule
 from .cellranger_count import verify_10x_pipeline
 from .cellranger_count import DetermineRequired10xPackage
-from ..cellranger import CellrangerMulti as CellrangerMultiOutputs
+from ..apps.cellranger import CellrangerMulti as CellrangerMultiOutputs
 from ...bcl2fastq.pipeline import Get10xPackage
 from ...command import Command
 from ...tenx.cellplex import CellrangerMultiConfigCsv

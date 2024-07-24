@@ -46,10 +46,10 @@ import logging
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import mkdirs
 from . import QCModule
-from ..cellranger import CellrangerCount as CellrangerCountOutputs
-from ..cellranger import cellranger_count_output
-from ..cellranger import cellranger_atac_count_output
-from ..cellranger import cellranger_arc_count_output
+from ..apps.cellranger import CellrangerCount as CellrangerCountOutputs
+from ..apps.cellranger import cellranger_count_output
+from ..apps.cellranger import cellranger_atac_count_output
+from ..apps.cellranger import cellranger_arc_count_output
 from ...bcl2fastq.pipeline import Get10xPackage
 from ...command import Command
 from ...pipeliner import PipelineTask

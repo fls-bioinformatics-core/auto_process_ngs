@@ -111,8 +111,8 @@ from .apps.fastq_screen import Fastqscreen
 from .apps.fastq_screen import fastq_screen_output_files
 from .apps.fastq_strand import Fastqstrand
 from .apps.fastq_strand import fastq_strand_output
-from .cellranger import CellrangerCount
-from .cellranger import CellrangerMulti
+from .apps.cellranger import CellrangerCount
+from .apps.cellranger import CellrangerMulti
 from .outputs import QCOutputs
 from .outputs import ExtraOutputs
 from .picard import CollectInsertSizeMetrics

@@ -12,12 +12,12 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.tenx.cellplex import CellrangerMultiConfigCsv
 from auto_process_ngs.tenx.metrics import MultiplexSummary
 
-from auto_process_ngs.qc.cellranger import CellrangerCount
-from auto_process_ngs.qc.cellranger import CellrangerMulti
-from auto_process_ngs.qc.cellranger import cellranger_count_output
-from auto_process_ngs.qc.cellranger import cellranger_atac_count_output
-from auto_process_ngs.qc.cellranger import cellranger_arc_count_output
-from auto_process_ngs.qc.cellranger import cellranger_multi_output
+from auto_process_ngs.qc.apps.cellranger import CellrangerCount
+from auto_process_ngs.qc.apps.cellranger import CellrangerMulti
+from auto_process_ngs.qc.apps.cellranger import cellranger_count_output
+from auto_process_ngs.qc.apps.cellranger import cellranger_atac_count_output
+from auto_process_ngs.qc.apps.cellranger import cellranger_arc_count_output
+from auto_process_ngs.qc.apps.cellranger import cellranger_multi_output
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
