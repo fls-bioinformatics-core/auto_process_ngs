@@ -19,7 +19,7 @@ from .fastq_stats import FastqQualityStats
 from .fastq_strand import Fastqstrand
 
 # Data
-from .constants import SEQUENCE_DEDUP_CUTOFFS
+from .fastqc import SEQUENCE_DEDUP_CUTOFFS
 
 # Module specific logger
 logger = logging.getLogger(__name__)
