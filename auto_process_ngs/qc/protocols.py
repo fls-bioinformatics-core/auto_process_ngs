@@ -66,21 +66,8 @@ logger.addHandler(logging.NullHandler())
 #######################################################################
 
 # QC modules
-
-QC_MODULES = [
-    'cellranger_count',
-    'cellranger-arc_count',
-    'cellranger-atac_count',
-    'cellranger_multi',
-    'fastqc',
-    'fastq_screen',
-    'picard_insert_size_metrics',
-    'qualimap_rnaseq',
-    'rseqc_genebody_coverage',
-    'rseqc_infer_experiment',
-    'sequence_lengths',
-    'strandedness'
-]
+from .qc_modules import QC_MODULES
+from .qc_modules import QC_MODULE_NAMES
 
 # QC protocol definitions
 
@@ -489,7 +476,7 @@ class QCProtocol:
             # Check QC modules are valid
             for m in self.qc_modules:
                 name = m.split('(')[0]
-                if name not in QC_MODULES:
+                if name not in QC_MODULE_NAMES:
                     raise QCProtocolError("'%s': unrecognised QC module"
                                           % name)
         # Store supplied reads
