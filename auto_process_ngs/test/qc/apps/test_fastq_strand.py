@@ -6,9 +6,9 @@ import os
 import unittest
 import tempfile
 
-from auto_process_ngs.qc.fastq_strand import Fastqstrand
-from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
-from auto_process_ngs.qc.fastq_strand import fastq_strand_output
+from auto_process_ngs.qc.apps.fastq_strand import Fastqstrand
+from auto_process_ngs.qc.apps.fastq_strand import build_fastq_strand_conf
+from auto_process_ngs.qc.apps.fastq_strand import fastq_strand_output
 
 class TestFastqstrand(unittest.TestCase):
     def setUp(self):

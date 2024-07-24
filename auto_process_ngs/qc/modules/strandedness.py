@@ -25,9 +25,9 @@ import os
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..fastq_strand import Fastqstrand as FastqstrandOutput
-from ..fastq_strand import build_fastq_strand_conf
-from ..fastq_strand import fastq_strand_output
+from ..apps.fastq_strand import Fastqstrand as FastqstrandOutput
+from ..apps.fastq_strand import build_fastq_strand_conf
+from ..apps.fastq_strand import fastq_strand_output
 from ..utils import filter_fastqs
 from ...fastq_utils import group_fastqs_by_name
 from ...fastq_utils import remove_index_fastqs
