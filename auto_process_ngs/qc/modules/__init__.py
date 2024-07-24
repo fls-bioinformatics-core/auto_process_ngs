@@ -25,6 +25,7 @@ class QCModule:
     """
     name = "base"
     mapped_metrics = False
+    require_bam_files = False
     
     def __init__(self):
         pass

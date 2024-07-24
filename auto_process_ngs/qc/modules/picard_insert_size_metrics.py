@@ -43,6 +43,7 @@ class PicardInsertSizeMetrics(QCModule):
     """
     name = "picard_insert_size_metrics"
     mapped_metrics = True
+    require_bam_files = True
     runners = ("picard_runner",)
     envmodules = ()
     

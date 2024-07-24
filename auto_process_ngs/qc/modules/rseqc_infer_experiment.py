@@ -40,6 +40,7 @@ class RseqcInferExperiment(QCModule):
     """
     name = "rseqc_infer_experiment"
     mapped_metrics = True
+    require_bam_files = True
     runners = ("rseqc_runner",)
     envmodules = ()
     

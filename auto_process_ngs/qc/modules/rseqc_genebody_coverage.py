@@ -37,6 +37,7 @@ class RseqcGenebodyCoverage(QCModule):
     """
     name = "rseqc_genebody_coverage"
     mapped_metrics = True
+    require_bam_files = True
     runners = ("rseqc_runner",)
     envmodules = ()
     

@@ -37,6 +37,7 @@ class SequenceLengths(QCModule):
     """
     name = "sequence_lengths"
     mapped_metrics = False
+    require_bam_files = False
     runners = ("fastqc_runner",)
     
     def __init__(self):

@@ -43,6 +43,7 @@ class FastqScreen(QCModule):
     """
     name = "fastq_screen"
     mapped_metrics = True
+    require_bam_files = False
     runners = ("verify_runner",
                "fastq_screen_runner")
     envmodules = ("fastq_screen",)

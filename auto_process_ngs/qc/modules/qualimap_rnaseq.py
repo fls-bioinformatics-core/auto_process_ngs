@@ -39,6 +39,7 @@ class QualimapRnaseq(QCModule):
     """
     name = "qualimap_rnaseq"
     mapped_metrics = True
+    require_bam_files = True
     runners = ("qualimap_runner",)
     envmodules = ()
     
