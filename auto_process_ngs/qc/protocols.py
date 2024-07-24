@@ -669,15 +669,10 @@ class QCProtocol:
         # Internal: return list of QC module names within
         # the protocol which produce mapped metrics
         mapped_metrics = []
-        for qc_module in self.qc_module_names:
-            if qc_module in ('fastq_screen',
-                             'strandedness',
-                             'picard_insert_size_metrics',
-                             'rseqc_genebody_coverage',
-                             'rseqc_infer_experiment',
-                             'qualimap_rnaseq'):
-                mapped_metrics.append(qc_module)
-        return mapped_metrics
+        for m in QC_MODULES:
+            if m.name in self.qc_module_names and m.mapped_metrics:
+                mapped_metrics.append(m.name)
+        return sorted(mapped_metrics)
 
     def __repr_reads(self,rds):
         # Internal: get string representation of reads
