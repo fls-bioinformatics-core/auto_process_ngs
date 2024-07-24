@@ -256,9 +256,8 @@ class QCPipeline(Pipeline):
 
         # Determine if BAM files are required
         require_bam_files = False
-        qc_module_names = [parse_qc_module_spec(m_)[0] for m_ in qc_modules]
         for m in QC_MODULES:
-            if m.name in qc_module_names:
+            if m.name in protocol.qc_module_names:
                 require_bam_files = (m.require_bam_files or require_bam_files)
                 if require_bam_files:
                     break
