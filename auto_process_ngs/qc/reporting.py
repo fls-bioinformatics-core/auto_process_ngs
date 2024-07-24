@@ -109,8 +109,8 @@ from .apps.fastqc import fastqc_output_files
 from .apps.fastq_screen import LEGACY_SCREENS
 from .apps.fastq_screen import Fastqscreen
 from .apps.fastq_screen import fastq_screen_output_files
-from .fastq_strand import Fastqstrand
-from .fastq_strand import fastq_strand_output
+from .apps.fastq_strand import Fastqstrand
+from .apps.fastq_strand import fastq_strand_output
 from .cellranger import CellrangerCount
 from .cellranger import CellrangerMulti
 from .outputs import QCOutputs
