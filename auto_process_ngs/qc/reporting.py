@@ -113,6 +113,7 @@ from .apps.fastq_strand import Fastqstrand
 from .apps.fastq_strand import fastq_strand_output
 from .apps.cellranger import CellrangerCount
 from .apps.cellranger import CellrangerMulti
+from .apps.seqlens import SeqLens
 from .outputs import QCOutputs
 from .outputs import ExtraOutputs
 from .picard import CollectInsertSizeMetrics
@@ -134,7 +135,6 @@ from .protocols import QCProtocol
 from .protocols import fetch_protocol_definition
 from .qualimap import QualimapRnaseq
 from .rseqc import InferExperiment
-from .seqlens import SeqLens
 from ..settings import get_install_dir
 from .utils import get_bam_basename
 from ..tenx.multiome import MultiomeLibraries
