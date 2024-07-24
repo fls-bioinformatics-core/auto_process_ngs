@@ -42,18 +42,23 @@ from ..fastq_utils import group_fastqs_by_name
 from ..settings import Settings
 from ..settings import fetch_reference_data
 from ..qc.pipeline import QCPipeline
+from ..qc.protocols import QC_PROTOCOLS
 from ..qc.protocols import determine_qc_protocol
 from ..qc.protocols import fetch_protocol_definition
 from ..qc.utils import report_qc
-
-# QC protocols
-from ..qc.constants import PROTOCOLS
 
 # 10x Genomics assays
 from ..tenx import CELLRANGER_ASSAY_CONFIGS
 
 # Module-specific logger
 logger = logging.getLogger("run_qc")
+
+#######################################################################
+# Module data
+#######################################################################
+
+# Names of QC protocols
+PROTOCOLS = tuple(QC_PROTOCOLS.keys())
 
 #######################################################################
 # Classes

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/reportqc.py: generate reports for auto-process-ngs QC runs
-#     Copyright (C) University of Manchester 2015-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2024 Peter Briggs
 #
 #########################################################################
 #
@@ -27,13 +27,20 @@ from ..analysis import AnalysisProject
 from ..analysis import locate_project_info_file
 from ..command import Command
 from ..metadata import AnalysisProjectQCDirInfo
-from ..qc.constants import PROTOCOLS
+from ..qc.protocols import QC_PROTOCOLS
 from ..qc.protocols import determine_qc_protocol
 from ..qc.reporting import report
 from ..qc.verification import verify_project
 
 # Module-specific logger
 logger = logging.getLogger("reportqc")
+
+#######################################################################
+# Module data
+#######################################################################
+
+# Names of QC protocols
+PROTOCOLS = tuple(QC_PROTOCOLS.keys())
 
 #######################################################################
 # Main program
