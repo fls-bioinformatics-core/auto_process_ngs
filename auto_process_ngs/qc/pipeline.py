@@ -88,18 +88,7 @@ logger.addHandler(logging.NullHandler())
 # Supported QC module classes
 ######################################################################
 
-QC_MODULES = (CellrangerCount,
-              CellrangerAtacCount,
-              CellrangerArcCount,
-              CellrangerMulti,
-              Fastqc,
-              FastqScreen,
-              PicardInsertSizeMetrics,
-              QualimapRnaseq,
-              RseqcGenebodyCoverage,
-              RseqcInferExperiment,
-              SequenceLengths,
-              Strandedness)
+from .qc_modules import QC_MODULES
 
 ######################################################################
 # Pipeline classes
