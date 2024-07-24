@@ -34,6 +34,7 @@ class CellrangerArcCount(CellrangerCount):
     """
     name = "cellranger-arc_count"
     mapped_metrics = False
+    require_bam_files = False
     runners = ("verify_runner",
                "cellranger_count_runner")
     envmodules = ("cellranger",)

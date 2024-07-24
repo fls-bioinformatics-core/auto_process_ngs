@@ -51,6 +51,7 @@ class Strandedness(QCModule):
     """
     name = "strandedness"
     mapped_metrics = True
+    require_bam_files = False
     runners = ("star_runner",
                "verify_runner")
     envmodules = ("star")

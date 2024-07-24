@@ -40,6 +40,7 @@ class Fastqc(QCModule):
     """
     name = "fastqc"
     mapped_metrics = False
+    require_bam_files = False
     runners = ("verify_runner",
                "fastqc_runner")
     envmodules = ("fastqc",)

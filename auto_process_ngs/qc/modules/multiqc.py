@@ -31,6 +31,7 @@ class Multiqc(QCModule):
     """
     name = "multiqc"
     mapped_metrics = False
+    require_bam_files = False
     runners = ()
     envmodules = ()
 
