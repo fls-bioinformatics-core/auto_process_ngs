@@ -10,6 +10,7 @@
 
 import os
 import logging
+from ...analysis import AnalysisFastq
 from ...metadata import AnalysisProjectQCDirInfo
 
 # Module specific logger
