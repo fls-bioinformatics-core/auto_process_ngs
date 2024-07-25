@@ -115,6 +115,7 @@ from .apps.cellranger import CellrangerCount
 from .apps.cellranger import CellrangerMulti
 from .apps.picard import CollectInsertSizeMetrics
 from .apps.qualimap import QualimapRnaseq
+from .apps.rseqc import InferExperiment
 from .apps.seqlens import SeqLens
 from .outputs import QCOutputs
 from .outputs import ExtraOutputs
@@ -134,7 +135,6 @@ from .plots import ugenomicoriginplot
 from .plots import encode_png
 from .protocols import QCProtocol
 from .protocols import fetch_protocol_definition
-from .rseqc import InferExperiment
 from ..settings import get_install_dir
 from .utils import get_bam_basename
 from ..tenx.multiome import MultiomeLibraries

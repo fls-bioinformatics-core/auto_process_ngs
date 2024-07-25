@@ -7,8 +7,8 @@ import os
 import tempfile
 import shutil
 
-from auto_process_ngs.qc.rseqc import InferExperiment
-from auto_process_ngs.qc.rseqc import rseqc_genebody_coverage_output
+from auto_process_ngs.qc.apps.rseqc import InferExperiment
+from auto_process_ngs.qc.apps.rseqc import rseqc_genebody_coverage_output
 
 class TestInferExperiment(unittest.TestCase):
     def setUp(self):

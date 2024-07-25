@@ -19,7 +19,7 @@ import shutil
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..rseqc import rseqc_genebody_coverage_output
+from ..apps.rseqc import rseqc_genebody_coverage_output
 from ..utils import read_versions_file
 from ...pipeliner import PipelineTask
 from ...utils import normalise_organism_name
