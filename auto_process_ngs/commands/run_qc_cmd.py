@@ -14,7 +14,6 @@ import logging
 from ..analysis import AnalysisProject
 from ..command import Command
 from ..qc.pipeline import QCPipeline
-from ..qc.fastq_strand import build_fastq_strand_conf
 from ..qc.protocols import determine_qc_protocol
 from ..qc.protocols import fetch_protocol_definition
 from ..settings import fetch_reference_data
