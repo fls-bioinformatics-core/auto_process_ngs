@@ -19,7 +19,7 @@ import shutil
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..rseqc import InferExperiment as InferExperimentOutput
+from ..apps.rseqc import InferExperiment as InferExperimentOutput
 from ..utils import filter_fastqs
 from ..utils import get_bam_basename
 from ..utils import read_versions_file
