@@ -8,8 +8,8 @@ import tempfile
 import shutil
 
 from auto_process_ngs.mockqcdata import PICARD_COLLECT_INSERT_SIZE_METRICS
-from auto_process_ngs.qc.picard import CollectInsertSizeMetrics
-from auto_process_ngs.qc.picard import picard_collect_insert_size_metrics_output
+from auto_process_ngs.qc.apps.picard import CollectInsertSizeMetrics
+from auto_process_ngs.qc.apps.picard import picard_collect_insert_size_metrics_output
 
 class TestCollectInsertSizeMetrics(unittest.TestCase):
     def setUp(self):
