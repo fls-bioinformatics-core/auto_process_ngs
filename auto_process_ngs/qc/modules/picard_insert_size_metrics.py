@@ -22,8 +22,8 @@ import logging
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..picard import CollectInsertSizeMetrics
-from ..picard import picard_collect_insert_size_metrics_output
+from ..apps.picard import CollectInsertSizeMetrics
+from ..apps.picard import picard_collect_insert_size_metrics_output
 from ..utils import filter_fastqs
 from ..utils import get_bam_basename
 from ..utils import read_versions_file

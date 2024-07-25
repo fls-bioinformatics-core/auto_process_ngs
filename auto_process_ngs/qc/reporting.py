@@ -113,10 +113,10 @@ from .apps.fastq_strand import Fastqstrand
 from .apps.fastq_strand import fastq_strand_output
 from .apps.cellranger import CellrangerCount
 from .apps.cellranger import CellrangerMulti
+from .apps.picard import CollectInsertSizeMetrics
 from .apps.seqlens import SeqLens
 from .outputs import QCOutputs
 from .outputs import ExtraOutputs
-from .picard import CollectInsertSizeMetrics
 from .plots import RGB_COLORS
 from .plots import Plot
 from .plots import useqlenplot
