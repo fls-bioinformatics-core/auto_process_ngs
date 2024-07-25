@@ -8,8 +8,8 @@ import tempfile
 import shutil
 
 from auto_process_ngs.mockqcdata import QUALIMAP_RNASEQ_RESULTS
-from auto_process_ngs.qc.qualimap import QualimapRnaseq
-from auto_process_ngs.qc.qualimap import qualimap_rnaseq_output
+from auto_process_ngs.qc.apps.qualimap import QualimapRnaseq
+from auto_process_ngs.qc.apps.qualimap import qualimap_rnaseq_output
 
 class TestQualimapRnaseq(unittest.TestCase):
     def setUp(self):

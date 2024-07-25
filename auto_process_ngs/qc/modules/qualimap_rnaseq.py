@@ -19,7 +19,7 @@ import shutil
 import logging
 from bcftbx.utils import AttributeDictionary
 from . import QCModule
-from ..qualimap import qualimap_rnaseq_output
+from ..apps.qualimap import qualimap_rnaseq_output
 from ..utils import filter_fastqs
 from ..utils import read_versions_file
 from ..utils import get_bam_basename
