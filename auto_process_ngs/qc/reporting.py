@@ -755,6 +755,10 @@ class QCReport(Document):
         if 'strandedness' in outputs:
             # Strandedness
             summary_fields_.append('strandedness')
+        elif 'rseqc_infer_experiment' in outputs:
+            # Report strand specificity if strandedness
+            # not present
+            summary_fields_.append('strand_specificity')
         if 'picard_insert_size_metrics' in outputs:
             # Insert size metrics
             summary_fields_.append('insert_size_histogram')
