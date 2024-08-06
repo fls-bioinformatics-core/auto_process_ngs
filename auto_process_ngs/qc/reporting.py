@@ -361,6 +361,9 @@ class QCReport(Document):
         warning message even when there are missing metrics
         (default: show the warning if there are missing
         metrics)
+      report_expected_outputs (bool): if True then include
+        all expected outputs from the QC protocol (default:
+        only include the outputs that are actually present)
     """
     # Field descriptions for summary table
     field_descriptions = SUMMARY_FIELD_DESCRIPTIONS
@@ -372,7 +375,7 @@ class QCReport(Document):
 
     def __init__(self,projects,title=None,qc_dir=None,report_attrs=None,
                  summary_fields=None,relpath=None,data_dir=None,
-                 suppress_warning=False):
+                 suppress_warning=False,report_expected_outputs=False):
         """
         Create a new QCReport instance
         """
@@ -503,7 +506,7 @@ class QCReport(Document):
                 qc_protocol = project.qc_info.protocol_specification
             else:
                 qc_protocol = project.qc_info.protocol
-            if qc_protocol:
+            if report_expected_outputs and qc_protocol:
                 expected_outputs = fetch_protocol_definition(qc_protocol).\
                                    expected_outputs
             else:
@@ -512,6 +515,9 @@ class QCReport(Document):
             if not summary_fields:
                 summary_fields = self._get_summary_fields(project,
                                                           expected_outputs)
+            print("Reporting summary fields:")
+            for f in summary_fields:
+                print("- %s" % f)
             # Attributes to report for each sample
             if report_attrs is None:
                 report_attrs = self._get_report_attrs(project,
@@ -755,6 +761,10 @@ class QCReport(Document):
         if 'strandedness' in outputs:
             # Strandedness
             summary_fields_.append('strandedness')
+        elif 'rseqc_infer_experiment' in outputs:
+            # Report strand specificity if strandedness
+            # not present
+            summary_fields_.append('strand_specificity')
         if 'picard_insert_size_metrics' in outputs:
             # Insert size metrics
             summary_fields_.append('insert_size_histogram')
