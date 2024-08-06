@@ -548,8 +548,6 @@ class QCProtocol:
             elif qc_module == "fastq_screen":
                 for r in self.reads.seq_data:
                     expected.append("screens_%s" % r)
-            elif qc_module == "rseqc_infer_experiment":
-                expected.append("strand_specificity")
             else:
                 expected.append(qc_module)
         return sorted(expected)
