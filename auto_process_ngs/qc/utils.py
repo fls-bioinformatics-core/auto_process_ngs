@@ -13,7 +13,9 @@ Provides the following functions:
 - get_bam_basename: return the BAM file basename from a Fastq filename
 - get_seq_data_samples: identify samples with biological (sequencing)
   data
+- filter_fastqs: filter list of Fastqs based on read IDs
 - set_cell_count_for_project: sets total number of cells for a project
+- read_versions_file: extract software info from 'versions' file
 """
 
 #######################################################################
@@ -32,8 +34,8 @@ from ..conda import make_conda_env_name
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
 from ..tenx.cellplex import CellrangerMultiConfigCsv
-from .cellranger import CellrangerCount
-from .cellranger import CellrangerMulti
+from .apps.cellranger import CellrangerCount
+from .apps.cellranger import CellrangerMulti
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -347,6 +349,48 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
             samples = sorted(samples_)
     return samples
 
+def filter_fastqs(reads,fastqs,fastq_attrs=AnalysisFastq):
+    """
+    Filter list of Fastqs and return names matching reads
+
+    Arguments:
+      reads (list): list of reads to filter ('r1',
+        'i2' etc: '*' matches all reads, 'r*' matches
+        all data reads, 'i*' matches all index reads)
+      fastqs (list): list of Fastq files or names
+        to filter
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        attribute data from Fastq names
+
+    Returns:
+      List: matching Fastq names (i.e. no leading
+        path or trailing extensions)
+    """
+    fqs = set()
+    for read in reads:
+        index_read = (read.startswith('i') or read == '*')
+        if read == '*':
+            # All reads
+            for fastq in fastqs:
+                fqs.add(fastq_attrs(fastq).basename)
+            continue
+        if read[1:] == '*':
+            # All read numbers
+            read_number = None
+        else:
+            # Specific read
+            read_number = int(read[1:])
+        for fastq in fastqs:
+            fq = fastq_attrs(fastq)
+            if (not index_read and fq.is_index_read) or \
+               (index_read and not fq.is_index_read):
+                # Skip index reads
+                continue
+            if fq.read_number == read_number or \
+               not read_number:
+                fqs.add(fq.basename)
+    return sorted(list(fqs))
+
 def set_cell_count_for_project(project_dir,qc_dir=None,
                                source="count"):
     """
@@ -516,3 +560,47 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
     else:
         # Cell count wasn't set
         return 1
+
+def read_versions_file(f,pkgs=None):
+    """
+    Extract software info from 'versions' file
+
+    'versions' files (typically named ``_versions``)
+    should consist of one or more lines of text, with
+    each line comprising a software package name and
+    a version number, separated by a tab character.
+
+    Returns a dictionary where package names are keys,
+    and the corresponding values are lists of versions.
+
+    If an existing dictionary is supplied via the 'pkgs'
+    argument then any package information is added to this
+    dictionary; otherwise an empty dictionary is created
+    and populated.
+
+    Arguments:
+      f (str): path to 'versions' file
+      pkgs (dict): optional, dictionary to extend with
+        with information from 'versions' file
+    """
+    if pkgs is not None:
+        software = pkgs
+    else:
+        software = dict()
+    if not os.path.exists(f):
+        return software
+    try:
+        with open(f,'rt') as fp:
+            for line in fp:
+                try:
+                    pkg,version = line.strip().split('\t')
+                except IndexError:
+                    continue
+                try:
+                    software[pkg].append(version)
+                except KeyError:
+                    software[pkg] = [version]
+    except Exception as ex:
+        logger.warning("%s: unable to extract versions: %s" %
+                       (f,ex))
+    return software
