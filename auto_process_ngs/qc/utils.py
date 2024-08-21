@@ -215,8 +215,11 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
             "multiqc",
             "--title", title,
             "--filename", multiqc_report,
-            "--force",
-            qc_dir)
+            "--force")
+        if qc_dir:
+            multiqc_cmd.add_args(qc_dir)
+        else:
+            multiqc_cmd.add_args(project.qc_dir)
         # Wrap in a script
         multiqc_script = os.path.join(scripts_dir,
                                       f"multiqc.{project.name}.sh")
