@@ -244,7 +244,7 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
             multiqc_report.wait()
         except KeyboardInterrupt as ex:
             logger.warning("Keyboard interrupt, terminating QC reporting")
-            report.terminate()
+            multiqc_report.terminate()
             raise ex
     # Final QC reporting
     if report_html is None:
