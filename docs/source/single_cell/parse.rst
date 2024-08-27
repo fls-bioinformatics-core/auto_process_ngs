@@ -34,8 +34,9 @@ The following values are valid options:
 ===================================== =================================
 Single cell platform                  Library types
 ===================================== =================================
-``Parse Evercode``                    ``scRNA-seq``, ``TCR scRNA-seq``,
-                                      ``WT scRNA-seq``, ``snRNA-seq``
+``Parse Evercode``                    ``scRNA-seq``, ``snRNA-seq``,
+                                      ``TCR``, ``TCR scRNA-seq``,
+                                      ``WT``, ``WT scRNA-seq``
 ===================================== =================================
 
 Running the :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
