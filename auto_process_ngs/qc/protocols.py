@@ -790,9 +790,11 @@ def determine_qc_protocol_from_metadata(library_type,
         # Parse Evercode
         elif single_cell_platform == 'Parse Evercode':
             if library_type in ("scRNA-seq",
+                                "snRNA-seq",
+                                "TCR",
                                 "TCR scRNA-seq",
-                                "WT scRNA-seq",
-                                "snRNA-seq"):
+                                "WT",
+                                "WT scRNA-seq"):
                 # Parse Evercode snRNAseq
                 protocol = "ParseEvercode"
         # ICELL8

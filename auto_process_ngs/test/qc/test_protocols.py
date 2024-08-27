@@ -636,21 +636,31 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             single_cell_platform="Parse Evercode",
             paired_end=True),
                          "ParseEvercode")
-        # TCR scRNA-seq
+        # snRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="snRNA-seq",
+            single_cell_platform="Parse Evercode",
+            paired_end=True),
+                         "ParseEvercode")
+        # TCR/TCR scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="TCR",
+            single_cell_platform="Parse Evercode",
+            paired_end=True),
+                         "ParseEvercode")
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="TCR scRNA-seq",
             single_cell_platform="Parse Evercode",
             paired_end=True),
                          "ParseEvercode")
-        # WT scRNA-seq
+        # WT/WT scRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="WT scRNA-seq",
+            library_type="WT",
             single_cell_platform="Parse Evercode",
             paired_end=True),
                          "ParseEvercode")
-        # snRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="snRNA-seq",
+            library_type="WT scRNA-seq",
             single_cell_platform="Parse Evercode",
             paired_end=True),
                          "ParseEvercode")
@@ -1216,6 +1226,26 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "ParseEvercode")
 
+    def test_determine_qc_protocol_parse_evercode_tcr(self):
+        """determine_qc_protocol: TCR (Parse Evercode)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",
+                                       "PJB1_S1_I1_001.fastq.gz",
+                                       "PJB1_S1_I2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "Parse Evercode",
+                                          'Library type':
+                                          "TCR"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "ParseEvercode")
+
     def test_determine_qc_protocol_parse_evercode_tcr_sc_rnaseq(self):
         """determine_qc_protocol: TCR single-cell RNA-seq (Parse Evercode)
         """
@@ -1230,6 +1260,26 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                           "Parse Evercode",
                                           'Library type':
                                           "TCR scRNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "ParseEvercode")
+
+    def test_determine_qc_protocol_parse_evercode_wt(self):
+        """determine_qc_protocol: WT (Parse Evercode)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",
+                                       "PJB1_S1_I1_001.fastq.gz",
+                                       "PJB1_S1_I2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "Parse Evercode",
+                                          'Library type':
+                                          "WT"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
