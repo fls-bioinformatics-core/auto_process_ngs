@@ -2801,7 +2801,7 @@ sys.exit(MockMultiQC(version=%s,
         if version:
             self._version = version
         else:
-            self._version = "1.21"
+            self._version = "1.24"
         self._no_outputs = no_outputs
         self._exit_code = exit_code
 
