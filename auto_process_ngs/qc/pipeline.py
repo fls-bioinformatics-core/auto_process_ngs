@@ -4055,8 +4055,8 @@ class ReportQC(PipelineTask):
           zip_outputs (bool): if True then also generate
             a ZIP archive of the QC reports
         """
-        self.conda("multiqc=1.21",
-                   "python=3.8",
+        self.conda("multiqc=1.24",
+                   "python=3.12",
                    "pillow")
     def setup(self):
         # Check for 10x multiome libraries file with linked projects
