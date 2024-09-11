@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     conda.py: utilities for managing conda environments
-#     Copyright (C) University of Manchester 2021-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2021-2024 Peter Briggs
 #
 """
 Module providing utility classes and functions to help with managing
@@ -40,7 +40,6 @@ logger.addHandler(logging.NullHandler())
 DEFAULT_CONDA_CHANNELS = (
     'conda-forge',
     'bioconda',
-    'defaults',
 )
 
 ######################################################################
