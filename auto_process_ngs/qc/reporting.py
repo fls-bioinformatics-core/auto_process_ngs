@@ -21,7 +21,6 @@ In addition there are a number of supporting classes:
 There are also a number of utility functions:
 
 - report: report the QC for a project
-- pretty_print_reads: print number of reads with commas at each thousand
 - sanitize_name: replace 'unsafe' characters in HTML link targets
 
 Overview
@@ -105,17 +104,21 @@ from ..docwriter import DownloadIcon
 from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
-from .fastqc import Fastqc
-from .fastq_screen import Fastqscreen
-from .fastq_strand import Fastqstrand
-from .cellranger import CellrangerCount
-from .cellranger import CellrangerMulti
-from .outputs import fastqc_output
-from .outputs import fastq_screen_output
-from .outputs import fastq_strand_output
+from .apps.fastqc import Fastqc
+from .apps.fastqc import fastqc_output_files
+from .apps.fastq_screen import LEGACY_SCREENS
+from .apps.fastq_screen import Fastqscreen
+from .apps.fastq_screen import fastq_screen_output_files
+from .apps.fastq_strand import Fastqstrand
+from .apps.fastq_strand import fastq_strand_output
+from .apps.cellranger import CellrangerCount
+from .apps.cellranger import CellrangerMulti
+from .apps.picard import CollectInsertSizeMetrics
+from .apps.qualimap import QualimapRnaseq
+from .apps.rseqc import InferExperiment
+from .apps.seqlens import SeqLens
 from .outputs import QCOutputs
 from .outputs import ExtraOutputs
-from .picard import CollectInsertSizeMetrics
 from .plots import RGB_COLORS
 from .plots import Plot
 from .plots import useqlenplot
@@ -132,13 +135,11 @@ from .plots import ugenomicoriginplot
 from .plots import encode_png
 from .protocols import QCProtocol
 from .protocols import fetch_protocol_definition
-from .qualimap import QualimapRnaseq
-from .rseqc import InferExperiment
-from .seqlens import SeqLens
 from ..settings import get_install_dir
 from .utils import get_bam_basename
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.metrics import MissingMetricError
+from ..utils import pretty_print_reads
 from ..utils import ZipArchive
 from .. import get_version
 
@@ -148,8 +149,6 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # Data
 #######################################################################
-
-from .constants import FASTQ_SCREENS
 
 # Metadata field descriptions
 METADATA_FIELD_DESCRIPTIONS = {
@@ -3327,10 +3326,10 @@ class FastqQCReporter:
         logging.debug("QCDir : %s" % qc_dir)
         # FastQC
         logging.debug("Fastqc: %s" %
-                      os.path.join(qc_dir,fastqc_output(fastq)[0]))
+                      os.path.join(qc_dir,fastqc_output_files(fastq)[0]))
         try:
             self.fastqc = Fastqc(os.path.join(
-                qc_dir,fastqc_output(fastq)[0]))
+                qc_dir,fastqc_output_files(fastq)[0]))
         except Exception as ex:
             self.fastqc = None
         # Fastqscreen
@@ -3338,13 +3337,13 @@ class FastqQCReporter:
         self.fastq_screen['names'] = list()
         fastq_base = self.fastq_attrs(fastq).basename
         # Legacy screens
-        for screen_name in FASTQ_SCREENS:
+        for screen_name in LEGACY_SCREENS:
             for f in list(filter(lambda f:
                                  f.startswith(fastq_base) and
                                  f.endswith("_%s_screen.txt" % screen_name),
                                  os.listdir(qc_dir))):
-                png,txt = fastq_screen_output(fastq,screen_name,
-                                              legacy=True)
+                png,txt = fastq_screen_output_files(fastq,screen_name,
+                                                    legacy=True)
                 png = os.path.join(qc_dir,png)
                 txt = os.path.join(qc_dir,txt)
                 if os.path.exists(png) and os.path.exists(txt):
@@ -3363,7 +3362,7 @@ class FastqQCReporter:
                              "_screen_" in f,
                              os.listdir(qc_dir))):
             screen_name = f[:-len(".txt")].split("_screen_")[1]
-            png,txt = fastq_screen_output(fastq,screen_name)
+            png,txt = fastq_screen_output_files(fastq,screen_name)
             png = os.path.join(qc_dir,png)
             txt = os.path.join(qc_dir,txt)
             if os.path.exists(png) and os.path.exists(txt):
@@ -3847,29 +3846,6 @@ def report(projects,title=None,filename=None,qc_dir=None,
                             (zip_name,ex))
     # Return the output filename
     return filename
-
-def pretty_print_reads(n):
-    """
-    Print the number of reads with commas at each thousand
-
-    For example:
-
-    >>> pretty_print_reads(10409789)
-    10,409,789
-
-    Arguments:
-      n (int): number of reads
-
-    Returns:
-      String: representation with commas for every thousand.
-    """
-    n = str(int(n))[::-1]
-    n0 = []
-    while len(n) >= 3:
-        n0.append(n[0:3])
-        n = n[3:]
-    if n: n0.append(n)
-    return (','.join(n0))[::-1]
 
 def sanitize_name(s,new_char='_'):
     """

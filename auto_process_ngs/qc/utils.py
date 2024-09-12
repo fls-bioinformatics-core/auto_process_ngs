@@ -13,7 +13,9 @@ Provides the following functions:
 - get_bam_basename: return the BAM file basename from a Fastq filename
 - get_seq_data_samples: identify samples with biological (sequencing)
   data
+- filter_fastqs: filter list of Fastqs based on read IDs
 - set_cell_count_for_project: sets total number of cells for a project
+- read_versions_file: extract software info from 'versions' file
 """
 
 #######################################################################
@@ -32,8 +34,8 @@ from ..conda import make_conda_env_name
 from ..settings import Settings
 from ..simple_scheduler import SchedulerJob
 from ..tenx.cellplex import CellrangerMultiConfigCsv
-from .cellranger import CellrangerCount
-from .cellranger import CellrangerMulti
+from .apps.cellranger import CellrangerCount
+from .apps.cellranger import CellrangerMulti
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -132,50 +134,20 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
       Integer: exit code from reporting job (zero indicates
         success, non-zero indicates a problem).
     """
+    # Locations for scripts and logs
+    scripts_dir = os.path.join(project.dirn,"ScriptCode")
+    if not os.path.isdir(scripts_dir):
+        logger.warning("no ScriptCode directory found in '%s'" %
+                       project.name)
+        scripts_dir = project.dirn
+    # Locate log dir
+    if log_dir is None:
+        log_dir = os.path.join(project.dirn,"logs")
+        if not os.path.isdir(log_dir):
+            log_dir = None
     # Sort out runners
     if runner is None:
         runner = Settings().general.default_runner
-    # Basename for the outputs
-    if qc_dir is None:
-        qc_base = os.path.basename(project.qc_dir)
-    else:
-        qc_base = os.path.basename(qc_dir)
-    # Report HTML file name
-    if report_html is None:
-        out_file = '%s_report.html' % qc_base
-    else:
-        out_file = report_html
-    if not os.path.isabs(out_file):
-        out_file = os.path.join(project.dirn,out_file)
-    # Report title
-    if project.info.run is None:
-        title = "%s" % project.name
-    else:
-        title = "%s/%s" % (project.info.run,
-                           project.name)
-    if fastq_dir is not None:
-        title = "%s (%s)" % (title,fastq_dir)
-    title = "%s: QC report" % title
-    # Construct command for reporting
-    report_cmd = Command(
-        "reportqc.py",
-        "--filename",out_file,
-        "--title",title)
-    if qc_protocol is not None:
-        report_cmd.add_args("--protocol",qc_protocol)
-    if qc_dir is not None:
-        report_cmd.add_args("--qc_dir",qc_dir)
-    if fastq_dir is not None:
-        report_cmd.add_args("--fastq_dir",fastq_dir)
-    if multiqc:
-        report_cmd.add_args("--multiqc")
-    if zip_outputs:
-        report_cmd.add_args("--zip")
-    if force:
-        report_cmd.add_args("--force")
-    if suppress_warning:
-        report_cmd.add_args("--suppress-warning")
-    report_cmd.add_args(project.dirn)
     # Check if environment modules are defined
     module_load_cmds = None
     if Settings().modulefiles['report_qc']:
@@ -202,13 +174,12 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         conda_env_dir = Settings().conda.env_dir
         # Set up conda wrapper
         conda = CondaWrapper(env_dir=conda_env_dir)
-        # Get environment for QC reporting
-        report_qc_conda_pkgs = ("multiqc=1.24",
-                                "python=3.12",
-                                "pillow")
-        env_name = make_conda_env_name(*report_qc_conda_pkgs)
+        # Get environment for MultiQC reporting
+        multiqc_conda_pkgs = ("multiqc=1.24",
+                              "python=3.12")
+        env_name = make_conda_env_name(*multiqc_conda_pkgs)
         try:
-            conda.create_env(env_name,*report_qc_conda_pkgs)
+            conda.create_env(env_name,*multiqc_conda_pkgs)
             conda_env = os.path.join(conda_env_dir,env_name)
             # Script fragment to activate the environment
             conda_activate_cmd = conda.activate_env_cmd(conda_env)
@@ -216,32 +187,99 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
             # Failed to acquire the environment
             logger.warning("failed to acquire conda environment '%s': %s" %
                            (env_name,ex))
+    # Basename for the outputs
+    if qc_dir is None:
+        qc_base = os.path.basename(project.qc_dir)
+    else:
+        qc_base = os.path.basename(qc_dir)
+    # Report title
+    if project.info.run is None:
+        title = "%s" % project.name
+    else:
+        title = "%s/%s" % (project.info.run,
+                           project.name)
+    if fastq_dir is not None:
+        title = "%s (%s)" % (title,fastq_dir)
+    title = "%s: QC report" % title
+    # Run MultiQC
+    if multiqc:
+        # Output file
+        multiqc_report = f"multi{qc_base}_report.html"
+        if report_html:
+            multiqc_report = os.path.join(os.path.dirname(report_html),
+                                          multiqc_report)
+        else:
+            multiqc_report = os.path.join(project.dirn, multiqc_report)
+        # Build MultiQC command
+        multiqc_cmd = Command(
+            "multiqc",
+            "--title", title,
+            "--filename", multiqc_report,
+            "--force")
+        if qc_dir:
+            multiqc_cmd.add_args(qc_dir)
+        else:
+            multiqc_cmd.add_args(project.qc_dir)
+        # Wrap in a script
+        multiqc_script = os.path.join(scripts_dir,
+                                      f"multiqc.{project.name}.sh")
+        prologue = []
+        if module_load_cmds:
+            prologue.append(module_load_cmds)
+        if conda_activate_cmd:
+            prologue.append(str(conda_activate_cmd))
+        if prologue:
+            prologue = '\n'.join(prologue)
+        else:
+            prologue = None
+        multiqc_cmd.make_wrapper_script(filen=multiqc_script,
+                                        prologue=prologue,
+                                        quote_spaces=True)
+        multiqc_report = SchedulerJob(
+            runner,
+            Command('/bin/bash','-l', multiqc_script).command_line,
+            name=f"multiqc.{project.name}",
+            working_dir=project.dirn,
+            log_dir=log_dir)
+        print(f"Running {multiqc_cmd}")
+        multiqc_report.start()
+        try:
+            multiqc_report.wait()
+        except KeyboardInterrupt as ex:
+            logger.warning("Keyboard interrupt, terminating QC reporting")
+            multiqc_report.terminate()
+            raise ex
+    # Final QC reporting
+    if report_html is None:
+        out_file = '%s_report.html' % qc_base
+    else:
+        out_file = report_html
+    if not os.path.isabs(out_file):
+        out_file = os.path.join(project.dirn,out_file)
+    report_cmd = Command(
+        "reportqc.py",
+        "--filename",out_file,
+        "--title",title)
+    if qc_protocol is not None:
+        report_cmd.add_args("--protocol",qc_protocol)
+    if qc_dir is not None:
+        report_cmd.add_args("--qc_dir",qc_dir)
+    if fastq_dir is not None:
+        report_cmd.add_args("--fastq_dir",fastq_dir)
+    if zip_outputs:
+        report_cmd.add_args("--zip")
+    if force:
+        report_cmd.add_args("--force")
+    if suppress_warning:
+        report_cmd.add_args("--suppress-warning")
+    report_cmd.add_args(project.dirn)
     # Wrap the command in a script
-    scripts_dir = os.path.join(project.dirn,"ScriptCode")
-    if not os.path.isdir(scripts_dir):
-        logger.warning("no ScriptCode directory found in '%s'" %
-                       project.name)
-        scripts_dir = project.dirn
     report_script = os.path.join(scripts_dir,
                                  "report_qc.%s.sh" % project.name)
-    prologue = []
-    if module_load_cmds:
-        prologue.append(module_load_cmds)
-    if conda_activate_cmd:
-        prologue.append(str(conda_activate_cmd))
-    if prologue:
-        prologue = '\n'.join(prologue)
-    else:
-        prologue = None
     report_cmd.make_wrapper_script(filen=report_script,
-                                   prologue=prologue,
                                    quote_spaces=True)
-    # Locate log dir
-    if log_dir is None:
-        log_dir = os.path.join(project.dirn,"logs")
-        if not os.path.isdir(log_dir):
-            log_dir = None
     # Run the command
+    print(f"Running {report_cmd}")
     report = SchedulerJob(runner,
                           Command('/bin/bash','-l',report_script).command_line,
                           name="report_qc.%s" % project.name,
@@ -346,6 +384,48 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
                                      if s in samples])
             samples = sorted(samples_)
     return samples
+
+def filter_fastqs(reads,fastqs,fastq_attrs=AnalysisFastq):
+    """
+    Filter list of Fastqs and return names matching reads
+
+    Arguments:
+      reads (list): list of reads to filter ('r1',
+        'i2' etc: '*' matches all reads, 'r*' matches
+        all data reads, 'i*' matches all index reads)
+      fastqs (list): list of Fastq files or names
+        to filter
+      fastq_attrs (BaseFastqAttrs): class for extracting
+        attribute data from Fastq names
+
+    Returns:
+      List: matching Fastq names (i.e. no leading
+        path or trailing extensions)
+    """
+    fqs = set()
+    for read in reads:
+        index_read = (read.startswith('i') or read == '*')
+        if read == '*':
+            # All reads
+            for fastq in fastqs:
+                fqs.add(fastq_attrs(fastq).basename)
+            continue
+        if read[1:] == '*':
+            # All read numbers
+            read_number = None
+        else:
+            # Specific read
+            read_number = int(read[1:])
+        for fastq in fastqs:
+            fq = fastq_attrs(fastq)
+            if (not index_read and fq.is_index_read) or \
+               (index_read and not fq.is_index_read):
+                # Skip index reads
+                continue
+            if fq.read_number == read_number or \
+               not read_number:
+                fqs.add(fq.basename)
+    return sorted(list(fqs))
 
 def set_cell_count_for_project(project_dir,qc_dir=None,
                                source="count"):
@@ -516,3 +596,47 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
     else:
         # Cell count wasn't set
         return 1
+
+def read_versions_file(f,pkgs=None):
+    """
+    Extract software info from 'versions' file
+
+    'versions' files (typically named ``_versions``)
+    should consist of one or more lines of text, with
+    each line comprising a software package name and
+    a version number, separated by a tab character.
+
+    Returns a dictionary where package names are keys,
+    and the corresponding values are lists of versions.
+
+    If an existing dictionary is supplied via the 'pkgs'
+    argument then any package information is added to this
+    dictionary; otherwise an empty dictionary is created
+    and populated.
+
+    Arguments:
+      f (str): path to 'versions' file
+      pkgs (dict): optional, dictionary to extend with
+        with information from 'versions' file
+    """
+    if pkgs is not None:
+        software = pkgs
+    else:
+        software = dict()
+    if not os.path.exists(f):
+        return software
+    try:
+        with open(f,'rt') as fp:
+            for line in fp:
+                try:
+                    pkg,version = line.strip().split('\t')
+                except IndexError:
+                    continue
+                try:
+                    software[pkg].append(version)
+                except KeyError:
+                    software[pkg] = [version]
+    except Exception as ex:
+        logger.warning("%s: unable to extract versions: %s" %
+                       (f,ex))
+    return software

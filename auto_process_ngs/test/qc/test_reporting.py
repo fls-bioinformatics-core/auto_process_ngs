@@ -11,7 +11,6 @@ from auto_process_ngs.mock import make_mock_analysis_project
 from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.reporting import report
-from auto_process_ngs.qc.reporting import pretty_print_reads
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -812,17 +811,3 @@ external_outs/index.html\tExternal outputs\texternal_outs/results
             'report.SE.PJB/qc/external_outs/results/result2.txt')
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
-
-class TestPrettyPrintReadsFunction(unittest.TestCase):
-
-    def test_pretty_print_reads(self):
-        """
-        pretty_print_reads: handles different inputs
-        """
-        self.assertEqual(pretty_print_reads(1),"1")
-        self.assertEqual(pretty_print_reads(12),"12")
-        self.assertEqual(pretty_print_reads(117),"117")
-        self.assertEqual(pretty_print_reads(1024),"1,024")
-        self.assertEqual(pretty_print_reads(33385500),"33,385,500")
-        self.assertEqual(pretty_print_reads(112839902),"112,839,902")
-        self.assertEqual(pretty_print_reads(10212341927),"10,212,341,927")
