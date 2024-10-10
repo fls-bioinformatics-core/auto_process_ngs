@@ -16,6 +16,7 @@ Utilities for working with 10x Genomics single cell multiplexing
 #######################################################################
 
 import os
+import re
 from bcftbx.utils import pretty_print_names
 
 # Initialise logging
@@ -85,6 +86,7 @@ class CellrangerMultiConfigCsv:
         self._vdj_reference_path = None
         self._libraries = {}
         self._fastq_dirs = {}
+        self._errors = []
         self._read_config_csv()
 
     def _read_config_csv(self):
@@ -93,6 +95,7 @@ class CellrangerMultiConfigCsv:
         """
         logger.debug("Reading data from '%s'" % self._filen)
         sections = set()
+        cmo_list = set()
         with open(self._filen,'rt') as config_csv:
             current_section = None
             for line in config_csv:
@@ -127,17 +130,34 @@ class CellrangerMultiConfigCsv:
                         # Extract sample name
                         values = [x.strip() for x in line.split(',')]
                         if len(values) < 2:
-                            raise ValueError("%s: bad line in 'samples' "
-                                             "section?: %s" % (self._filen,
-                                                              line))
+                            self._error("samples", f"bad line: {line}")
+                            continue
                         sample = values[0]
-                        cmo = values[1]
+                        cmos = values[1]
+                        for cmo in cmos.split("|"):
+                            if not re.fullmatch("[A-Za-z0-9_]+", cmo):
+                                self._error("samples",
+                                            f"bad CMO or probe ID '{cmo}': "
+                                            f"{line}")
+                                continue
+                            elif cmo in cmo_list:
+                                self._error("samples",
+                                            f"CMO or probe ID '{cmo}' "
+                                            f"(provided for '{sample}') "
+                                            "already in use")
+                                continue
+                            cmo_list.add(cmo)
                         if len(values) > 2:
                             desc = values[2]
                         else:
                             desc = ""
                         logger.debug("Found sample '%s'" % sample)
-                        self._samples[sample] = { 'cmo': cmo,
+                        if sample in self._samples:
+                            self._error("samples",
+                                        f"duplicate entry for sample name "
+                                        f"'{sample}': {line}")
+                            continue
+                        self._samples[sample] = { 'cmo': cmos,
                                                   'description': desc }
                 elif current_section == "gene-expression":
                     if line.startswith('reference,'):
@@ -174,17 +194,17 @@ class CellrangerMultiConfigCsv:
                             library_id = None
                             subsample_rate = ""
                         else:
-                            raise Exception("%s: bad line in 'libraries' "
-                                            "section?: %s" % (self._filen,
-                                                              line))
+                            self._error("libraries", f"bad line: {line}")
+                            continue
+                        # Check feature type
+                        feature_name = self._feature_name(feature_type)
+                        if feature_name not in KNOWN_FEATURE_TYPES:
+                            self._error("libraries",
+                                        f"'{feature_type}': unrecognised "
+                                        "feature type")
                         # Store Fastq dir
                         self._fastq_dirs[name] = fastqs
                         # Store library
-                        feature_name = self._feature_name(feature_type)
-                        if feature_name not in KNOWN_FEATURE_TYPES:
-                            raise Exception("'%s': unrecognised feature type "
-                                            "in multi config file" %
-                                            feature_type)
                         self._libraries[name] = {
                             'fastqs': fastqs,
                             'lanes': lanes,
@@ -193,6 +213,10 @@ class CellrangerMultiConfigCsv:
                             'subsample_rate': subsample_rate
                         }
         self._sections = sorted(list(sections))
+        if self._errors:
+            for err in self._errors:
+                logger.critical(f"[{err[0]}]: {err[1]}")
+            raise Exception(f"Errors encountered reading in {self._filen}")
 
     @property
     def sample_names(self):
@@ -322,6 +346,17 @@ class CellrangerMultiConfigCsv:
             }
         except KeyError:
             raise KeyError("'%s': feature type not found" % feature_type)
+
+    def _error(self, section, err):
+        """
+        Register an error in the config file
+
+        Arguments:
+          section (str): name of the section that the error
+            occurred in
+          err (str): the details of the error
+        """
+        self._errors.append((section, err))
 
     def library(self,feature_type,name):
         """
