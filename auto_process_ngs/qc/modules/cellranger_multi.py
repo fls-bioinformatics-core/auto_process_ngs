@@ -378,7 +378,12 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         for config_file in config_files:
             # Extract information from each config.csv file
             print("Reading '%s'" % os.path.basename(config_file))
-            config_csv = CellrangerMultiConfigCsv(config_file)
+            try:
+                config_csv = CellrangerMultiConfigCsv(config_file)
+            except Exception as ex:
+                self.fail(message=f"problems with 10x multi config "
+                          f"file {config_file}: {ex}")
+                return
             reference_data_path = config_csv.reference_data_path
             probe_set_path = config_csv.probe_set_path
             samples.extend(config_csv.sample_names)

@@ -277,6 +277,78 @@ PBB,CMO302
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PBA, PBB")
 
+    def test_cellranger_multi_config_csv_duplicated_sample(self):
+        """
+        CellrangerMultiConfigCsv: raise exception for duplicated sample
+        """
+        with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/vdj_ref.csv
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
+PJB2_CML,/data/runs/fastqs_cml,any,PJB2,Multiplexing Capture,
+
+[samples]
+PB1,CMO1,PB1
+PB2,CMO2,PB2
+PB1,CMO3,PB1
+""")
+        self.assertRaises(Exception,
+                          CellrangerMultiConfigCsv,
+                          os.path.join(self.wd,"10x_multi_config.csv"))
+
+    def test_cellranger_multi_config_csv_duplicated_cmo(self):
+        """
+        CellrangerMultiConfigCsv: raise exception for duplicated CMO
+        """
+        with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/vdj_ref.csv
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
+PJB2_CML,/data/runs/fastqs_cml,any,PJB2,Multiplexing Capture,
+
+[samples]
+PB1,CMO1|CMO2,PB1
+PB2,CMO2|CMO3,PB2
+""")
+        self.assertRaises(Exception,
+                          CellrangerMultiConfigCsv,
+                          os.path.join(self.wd,"10x_multi_config.csv"))
+
+    def test_cellranger_multi_config_csv_bad_cmo(self):
+        """
+        CellrangerMultiConfigCsv: raise exception for "bad" CMO
+        """
+        with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/vdj_ref.csv
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
+PJB2_CML,/data/runs/fastqs_cml,any,PJB2,Multiplexing Capture,
+
+[samples]
+PB1,CMO1|CMO2...,PB1
+""")
+        self.assertRaises(Exception,
+                          CellrangerMultiConfigCsv,
+                          os.path.join(self.wd,"10x_multi_config.csv"))
+
     def test_cellranger_multi_config_csv_unknown_feature_type(self):
         """
         CellrangerMultiConfigCsv: raise exception for unknown feature type

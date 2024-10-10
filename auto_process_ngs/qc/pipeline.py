@@ -1175,8 +1175,13 @@ class GetSequenceDataSamples(PipelineTask):
         self.add_output('seq_data_samples',list())
     def setup(self):
         # Identify samples with biological data
-        seq_data_samples = get_seq_data_samples(self.args.project.dirn,
-                                                self.args.fastq_attrs)
+        try:
+            seq_data_samples = get_seq_data_samples(self.args.project.dirn,
+                                                    self.args.fastq_attrs)
+        except Exception as ex:
+            self.fail(message=f"failed to identify sequence data samples: "
+                      f"{ex}")
+            return
         # Report
         print("Samples with sequence data:")
         for sample in seq_data_samples:
