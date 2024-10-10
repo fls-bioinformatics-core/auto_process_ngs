@@ -253,7 +253,13 @@ def setup_analysis_dirs(ap,
                     library_type=library_type,
                     cellranger_version=cellranger_version)
             except Exception as ex:
-                logger.warning("Failed to create '%s': %s" % (f,ex))
+                logger.warning("Error when attempting to create '%s': "
+                               "%s" % (f,ex))
+                if os.path.exists(f):
+                    logger.warning("Template file was created but may be "
+                                   "incomplete")
+                else:
+                    logger.warning("Template file was not created")
         # Additional subdir for Visium images
         if single_cell_platform in ("10xGenomics Visium",
                                     "10xGenomics Visium (CytAssist)",
