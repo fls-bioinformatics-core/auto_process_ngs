@@ -570,7 +570,7 @@ def make_multi_config_template(f,reference=None,probe_set=None,
         cellranger_version = str(cellranger_version)
     # Normalise supplied library type
     if library_type.startswith("CellPlex"):
-        library_type == "cellplex"
+        library_type = "cellplex"
     library_type = library_type.lower()
     # Write template file
     with open(f,'wt') as fp:
