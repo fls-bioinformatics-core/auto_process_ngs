@@ -568,10 +568,15 @@ def make_multi_config_template(f,reference=None,probe_set=None,
         cellranger_version = DEFAULT_CELLRANGER_VERSION
     else:
         cellranger_version = str(cellranger_version)
-    # Normalise supplied library type
+    # Normalise and check supplied library type
     if library_type.startswith("CellPlex"):
         library_type = "cellplex"
     library_type = library_type.lower()
+    if library_type not in ("cellplex",
+                            "flex",
+                            "single cell immune profiling"):
+        raise Exception(f"'{library_type}': unsupported library type for "
+                        "multi template generation")
     # Write template file
     with open(f,'wt') as fp:
         # Header
