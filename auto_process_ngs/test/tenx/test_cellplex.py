@@ -70,6 +70,7 @@ PBB,CMO302,PBB
                          })
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PBA, PBB")
+        self.assertTrue(config_csv.is_valid)
 
     def test_cellranger_multi_config_csv_frp(self):
         """
@@ -120,6 +121,7 @@ PB2,BC002,PB2
                          })
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PB1-2")
+        self.assertTrue(config_csv.is_valid)
 
     def test_cellranger_multi_config_csv_feature_ref(self):
         """
@@ -173,6 +175,7 @@ PBB,CMO302,PBB
                          })
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PBA, PBB")
+        self.assertTrue(config_csv.is_valid)
 
     def test_cellranger_multi_config_csv_vdj_t_ref(self):
         """
@@ -228,6 +231,7 @@ PJB2_TCR,/data/runs/fastqs_vdj_t,any,PJB2,VDJ-T,
                            'PJB2_TCR': '/data/runs/fastqs_vdj_t'
                          })
         self.assertEqual(config_csv.pretty_print_samples(),"")
+        self.assertTrue(config_csv.is_valid)
 
     def test_cellranger_multi_config_csv_reduced_fields(self):
         """
@@ -276,10 +280,11 @@ PBB,CMO302
                          })
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PBA, PBB")
+        self.assertTrue(config_csv.is_valid)
 
     def test_cellranger_multi_config_csv_duplicated_sample(self):
         """
-        CellrangerMultiConfigCsv: raise exception for duplicated sample
+        CellrangerMultiConfigCsv: handle for duplicated sample
         """
         with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
             fp.write("""[gene-expression]
@@ -298,13 +303,20 @@ PB1,CMO1,PB1
 PB2,CMO2,PB2
 PB1,CMO3,PB1
 """)
+        # Raise exception by default
         self.assertRaises(Exception,
                           CellrangerMultiConfigCsv,
                           os.path.join(self.wd,"10x_multi_config.csv"))
+        # Invalid if loaded with 'strict' turned off
+        config_csv = CellrangerMultiConfigCsv(
+            os.path.join(self.wd,
+                         "10x_multi_config.csv"), strict=False)
+        self.assertFalse(config_csv.is_valid)
+        self.assertEqual(len(config_csv.get_errors()), 1)
 
     def test_cellranger_multi_config_csv_duplicated_cmo(self):
         """
-        CellrangerMultiConfigCsv: raise exception for duplicated CMO
+        CellrangerMultiConfigCsv: handle duplicated CMO
         """
         with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
             fp.write("""[gene-expression]
@@ -322,13 +334,20 @@ PJB2_CML,/data/runs/fastqs_cml,any,PJB2,Multiplexing Capture,
 PB1,CMO1|CMO2,PB1
 PB2,CMO2|CMO3,PB2
 """)
+        # Raise exception by default
         self.assertRaises(Exception,
                           CellrangerMultiConfigCsv,
                           os.path.join(self.wd,"10x_multi_config.csv"))
+        # Invalid if loaded with 'strict' turned off
+        config_csv = CellrangerMultiConfigCsv(
+            os.path.join(self.wd,
+                         "10x_multi_config.csv"), strict=False)
+        self.assertFalse(config_csv.is_valid)
+        self.assertEqual(len(config_csv.get_errors()), 1)
 
     def test_cellranger_multi_config_csv_bad_cmo(self):
         """
-        CellrangerMultiConfigCsv: raise exception for "bad" CMO
+        CellrangerMultiConfigCsv: handle "bad" CMO
         """
         with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
             fp.write("""[gene-expression]
@@ -345,13 +364,20 @@ PJB2_CML,/data/runs/fastqs_cml,any,PJB2,Multiplexing Capture,
 [samples]
 PB1,CMO1|CMO2...,PB1
 """)
+        # Raise exception by default
         self.assertRaises(Exception,
                           CellrangerMultiConfigCsv,
                           os.path.join(self.wd,"10x_multi_config.csv"))
+        # Invalid if loaded with 'strict' turned off
+        config_csv = CellrangerMultiConfigCsv(
+            os.path.join(self.wd,
+                         "10x_multi_config.csv"), strict=False)
+        self.assertFalse(config_csv.is_valid)
+        self.assertEqual(len(config_csv.get_errors()), 1)
 
     def test_cellranger_multi_config_csv_unknown_feature_type(self):
         """
-        CellrangerMultiConfigCsv: raise exception for unknown feature type
+        CellrangerMultiConfigCsv: handle unknown feature type
         """
         with open(os.path.join(self.wd,"10x_multi_config.csv"),'wt') as fp:
             fp.write("""[gene-expression]
@@ -365,6 +391,13 @@ fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
 PJB2_UNKNOWN,/data/runs/fastqs_unknown,any,PJB2,Unknown,
 """)
+        # Raise exception by default
         self.assertRaises(Exception,
                           CellrangerMultiConfigCsv,
                           os.path.join(self.wd,"10x_multi_config.csv"))
+        # Invalid if loaded with 'strict' turned off
+        config_csv = CellrangerMultiConfigCsv(
+            os.path.join(self.wd,
+                         "10x_multi_config.csv"), strict=False)
+        self.assertFalse(config_csv.is_valid)
+        self.assertEqual(len(config_csv.get_errors()), 1)

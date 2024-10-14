@@ -57,6 +57,7 @@ class CellrangerMultiConfigCsv:
     - vdj_reference_path: path to the V(D)J-compatible reference
     - gex_libraries: list of Fastq IDs associated
       with GEX data
+    - is_valid: indicates whether the file appears to be valid
 
     Provides the following methods:
 
@@ -68,14 +69,28 @@ class CellrangerMultiConfigCsv:
       associated Fastq directory paths
     - pretty_print_samples: returns a string with a 'nice'
       description of the multiplexed sample names
+    - get_errors: returns a list of error messages (if any)
+      indicating problems with the config.csv file
+
+    By default data from the config.csv file is read in
+    'strict' mode; any errors detected in formatting will
+    cause an exception to be raised. If the file is read
+    with 'strict' turned off then the 'is_valid' property
+    can be used to check if the file is corrected formatted,
+    and any errors can be accessed via the 'get_errors'
+    method.
     """
-    def __init__(self,filen):
+    def __init__(self, filen, strict=True):
         """
         Create new CellrangerMultiConfigCsv instance
 
         Arguments:
           filen (str): path to cellranger multi config.csv
             file
+          strict (bool): if True (the default) then raise
+            an exception if problems are detected with
+            the config file; otherwise skip the offending
+            lines
         """
         self._filen = os.path.abspath(filen)
         self._sections = []
@@ -87,9 +102,9 @@ class CellrangerMultiConfigCsv:
         self._libraries = {}
         self._fastq_dirs = {}
         self._errors = []
-        self._read_config_csv()
+        self._read_config_csv(strict=strict)
 
-    def _read_config_csv(self):
+    def _read_config_csv(self, strict=True):
         """
         Internal: read in data from a multiplex 'config.csv' file
         """
@@ -98,7 +113,7 @@ class CellrangerMultiConfigCsv:
         cmo_list = set()
         with open(self._filen,'rt') as config_csv:
             current_section = None
-            for line in config_csv:
+            for lineno, line in enumerate(config_csv, start=1):
                 if current_section:
                     sections.add(current_section)
                 line = line.rstrip('\n')
@@ -130,21 +145,22 @@ class CellrangerMultiConfigCsv:
                         # Extract sample name
                         values = [x.strip() for x in line.split(',')]
                         if len(values) < 2:
-                            self._error("samples", f"bad line: {line}")
+                            self._error("samples",
+                                        f"L{lineno}: bad line: {line}")
                             continue
                         sample = values[0]
                         cmos = values[1]
                         for cmo in cmos.split("|"):
                             if not re.fullmatch("[A-Za-z0-9_]+", cmo):
                                 self._error("samples",
-                                            f"bad CMO or probe ID '{cmo}': "
-                                            f"{line}")
+                                            f"L{lineno}: bad CMO or probe ID "
+                                            f"'{cmo}': {line}")
                                 continue
                             elif cmo in cmo_list:
                                 self._error("samples",
-                                            f"CMO or probe ID '{cmo}' "
-                                            f"(provided for '{sample}') "
-                                            "already in use")
+                                            f"L{lineno}: CMO or probe ID  "
+                                            f"'{cmo}'(provided for "
+                                            f"'{sample}') already in use")
                                 continue
                             cmo_list.add(cmo)
                         if len(values) > 2:
@@ -154,8 +170,8 @@ class CellrangerMultiConfigCsv:
                         logger.debug("Found sample '%s'" % sample)
                         if sample in self._samples:
                             self._error("samples",
-                                        f"duplicate entry for sample name "
-                                        f"'{sample}': {line}")
+                                        f"L{lineno}: duplicate entry for "
+                                        f"sample name '{sample}': {line}")
                             continue
                         self._samples[sample] = { 'cmo': cmos,
                                                   'description': desc }
@@ -194,14 +210,15 @@ class CellrangerMultiConfigCsv:
                             library_id = None
                             subsample_rate = ""
                         else:
-                            self._error("libraries", f"bad line: {line}")
+                            self._error("libraries",
+                                        f"L{lineno}: bad line: {line}")
                             continue
                         # Check feature type
                         feature_name = self._feature_name(feature_type)
                         if feature_name not in KNOWN_FEATURE_TYPES:
                             self._error("libraries",
-                                        f"'{feature_type}': unrecognised "
-                                        "feature type")
+                                        f"L{lineno}: '{feature_type}': "
+                                        "unrecognised feature type")
                         # Store Fastq dir
                         self._fastq_dirs[name] = fastqs
                         # Store library
@@ -213,10 +230,35 @@ class CellrangerMultiConfigCsv:
                             'subsample_rate': subsample_rate
                         }
         self._sections = sorted(list(sections))
-        if self._errors:
-            for err in self._errors:
-                logger.critical(f"[{err[0]}]: {err[1]}")
-            raise Exception(f"Errors encountered reading in {self._filen}")
+        if not self.is_valid:
+            if strict:
+                # Report errors and raise exception
+                for err in self.get_errors():
+                    logger.critical(f"[{err[0]}]: {err[1]}")
+                raise Exception(f"Errors encountered reading in {self._filen}")
+            else:
+                logger.warning(f"Errors encountered reading in {self._filen}")
+
+    @property
+    def is_valid(self):
+        """
+        Indicate whether config.csv file is valid
+
+        Returns:
+          Boolean: True if no errors were encountered reading in
+            the file, False if not.
+        """
+        return not bool(self._errors)
+
+    def get_errors(self):
+        """
+        Return errors detected on reading in the config.csv file
+
+        Returns:
+          List: list of error messages that were encountered;
+            will be empty if there were no errors.
+        """
+        return [err for err in self._errors]
 
     @property
     def sample_names(self):
