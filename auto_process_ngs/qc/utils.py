@@ -356,6 +356,7 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
     if single_cell_platform:
         if single_cell_platform.startswith("10xGenomics Chromium") and \
            project.info.library_type in ("CellPlex",
+                                         "CellPlex scRNA-seq",
                                          "Flex"):
             # CellPlex/Flex
             # Check for a single config file
