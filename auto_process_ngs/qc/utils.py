@@ -362,9 +362,18 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
             config_file = os.path.join(project.dirn,
                                        "10x_multi_config.csv")
             if os.path.exists(config_file):
-                config_csv = CellrangerMultiConfigCsv(config_file)
-                samples = sorted([s for s in config_csv.gex_libraries
-                                  if s in samples])
+                config_csv = CellrangerMultiConfigCsv(config_file,
+                                                      strict=False)
+                if config_csv.is_valid:
+                    samples = sorted([s for s in config_csv.gex_libraries
+                                      if s in samples])
+                else:
+                    print(f"Invalid cellranger multi config file: "
+                          f"{config_file}")
+                    for err in config_csv.get_errors():
+                        print(f"- {err}")
+                    raise Exception(f"Invalid cellranger multi config file: "
+                                    f"{config_file}")
         elif single_cell_platform.startswith("10xGenomics Chromium") and \
              project.info.library_type == "Single Cell Immune Profiling":
             # Single Cell Immune Profiling
@@ -375,7 +384,12 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
                                 f.endswith(".csv"))]
             samples_ = []
             for config_file in config_files:
-                config_csv = CellrangerMultiConfigCsv(config_file)
+                config_csv = CellrangerMultiConfigCsv(config_file,
+                                                      strict=False)
+                if not config_csv.is_valid:
+                    logger.warning(f"Invalid cellranger multi config file: "
+                                   f"{config_file} (skipped)")
+                    continue
                 for feature_type in ("gene_expression",
                                      "vdj_b",
                                      "vdj_t"):

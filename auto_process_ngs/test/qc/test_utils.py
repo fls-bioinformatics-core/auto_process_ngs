@@ -392,6 +392,36 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
         self.assertEqual(get_seq_data_samples(project_dir),
                          ["PJB1_GEX","PJB1_TCR","PJB2_GEX","PJB2_TCR"])
 
+    def test_get_seq_data_samples_bad_cellranger_multi_config(self):
+        """
+        get_seq_data_samples: exception for 'bad' Cellranger multi config file
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "CellPlex",
+            single_cell_platform="10xGenomics Chromium 3'v3")
+        # Make 10x_multi_config.csv file
+        with open(os.path.join(project_dir,"10x_multi_config.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1,{fastq_dir},any,PJB1,[Gene expression|Multiplexing Capture],
+PJB2,{fastq_dir},any,PJB2,[Gene expression|Multiplexing Capture],
+
+[samples]
+sample_id,cmo_ids,description
+MULTIPLEXED_SAMPLE,CMO301|CMO302|...,DESCRIPTION
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""".format(fastq_dir=os.path.join(project_dir,'fastqs')))
+        # Raises exception when fetching sequence data samples
+        self.assertRaises(Exception,
+                          get_seq_data_samples,
+                          project_dir)
+
 class TestFilterFastqs(unittest.TestCase):
 
     def test_filter_fastqs(self):
