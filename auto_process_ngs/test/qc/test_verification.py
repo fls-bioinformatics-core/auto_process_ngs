@@ -642,7 +642,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_count',
             self._create_params_dict(samples=('PJB1','PJB2'),
-                                     cellranger_version='7.1.0',
+                                     cellranger_version='8.0.0',
                                      cellranger_refdata='*')))
         # Explicitly match reference with any version
         self.assertTrue(qc_verifier.verify_qc_module(
@@ -874,7 +874,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_multi',
             self._create_params_dict(qc_dir=qc_dir,
-                                     cellranger_version='7.1.0',
+                                     cellranger_version='8.0.0',
                                      cellranger_refdata='*')))
         # Explicitly match reference with any version
         self.assertTrue(qc_verifier.verify_qc_module(
@@ -1207,7 +1207,7 @@ class TestQCVerifier(unittest.TestCase):
             fastq_screens=('model_organisms',
                            'other_organisms',
                            'rRNA'),
-            cellranger_version="7.1.0",
+            cellranger_version="8.0.0",
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_count_different_version(self):
@@ -1604,7 +1604,7 @@ class TestQCVerifier(unittest.TestCase):
             star_index="/data/star/hg38",
             annotation_bed="/data/annotation/hg38.bed",
             annotation_gtf="/data/annotation/hg38.gtf",
-            cellranger_version="7.1.0",
+            cellranger_version="8.0.0",
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_multi_no_config(self):

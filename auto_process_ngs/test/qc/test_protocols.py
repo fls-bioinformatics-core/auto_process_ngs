@@ -484,9 +484,37 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
         # Flex
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="Flex",
-            single_cell_platform="10xGenomics Chromium 3'",
+            single_cell_platform="10xGenomics Chromium 3'v3",
             paired_end=True),
                          "10x_Flex")
+
+    def test_determine_qc_protocol_from_metadata_10xchromium_gemx3(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Chromium GEM-X 3' data
+        """
+        # scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scRNA-seq",
+            single_cell_platform="10xGenomics Chromium GEM-X 3'v4",
+            paired_end=True),
+                         "10x_scRNAseq")
+
+    def test_determine_qc_protocol_from_metadata_10xchromium_next_gem3(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Chromium Next GEM 3' data
+        """
+        # scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scRNA-seq",
+            single_cell_platform="10xGenomics Chromium Next GEM 3'v3.1",
+            paired_end=True),
+                         "10x_scRNAseq")
+        # CellPlex scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CellPlex scRNA-seq",
+            single_cell_platform="10xGenomics Chromium Next GEM 3'v3.1",
+            paired_end=True),
+                         "10x_CellPlex")
 
     def test_determine_qc_protocol_from_metadata_10xchromium5(self):
         """

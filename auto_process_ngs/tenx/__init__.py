@@ -10,6 +10,8 @@ PLATFORMS = (
     "10xGenomics Chromium 3'v3",
     "10xGenomics Chromium 3'v3.1",
     "10xGenomics Chromium 5'",
+    "10xGenomics Chromium GEM-X 3'v4",
+    "10xGenomics Chromium Next GEM 3'v3.1",
     "10xGenomics Single Cell ATAC",
     "10xGenomics Visium",
     "10xGenomics Visium (CytAssist)",
@@ -19,6 +21,13 @@ PLATFORMS = (
 
 # List of known library types for 10xGenomics
 LIBRARIES = {
+    "10xGenomics Chromium GEM-X 3'*": (
+        "scRNA-seq",
+    ),
+    "10xGenomics Chromium Next GEM 3'v*": (
+        "scRNA-seq",
+        "CellPlex scRNA-seq",
+    ),
     "10xGenomics Chromium*": (
         "scRNA-seq",
         "snRNA-seq",
@@ -80,4 +89,4 @@ CELLRANGER_ASSAY_CONFIGS = {
 }
 
 # Default Cellranger version
-DEFAULT_CELLRANGER_VERSION = "7.1.0"
+DEFAULT_CELLRANGER_VERSION = "8.0.0"

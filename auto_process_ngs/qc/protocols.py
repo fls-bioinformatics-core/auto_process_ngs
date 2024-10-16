@@ -736,7 +736,9 @@ def determine_qc_protocol_from_metadata(library_type,
     if single_cell_platform is not None:
         # Default/fallback
         protocol = "singlecell"
-        if single_cell_platform.startswith('10xGenomics Chromium 3\''):
+        if single_cell_platform.startswith('10xGenomics Chromium 3\'') or \
+           single_cell_platform.startswith('10xGenomics Chromium GEM-X 3\'') or \
+           single_cell_platform.startswith('10xGenomics Chromium Next GEM 3\''):
             # 10xGenomics scRNA-seq
             if library_type == "scRNA-seq":
                 protocol = "10x_scRNAseq"

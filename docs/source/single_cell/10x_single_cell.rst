@@ -118,21 +118,27 @@ for the 10x Genomics single cell project(s) in the ``projects.info``
 control file.
 
 The following values are valid options for 10x Genomics single cell
-data:
+data within ``auto-process-ngs``:
 
-===================================== ==============================
-Single cell platform                  Library types
-===================================== ==============================
-``10xGenomics Chromium 3'``           ``scRNA-seq``, ``snRNA-seq``,
-                                      ``CellPlex``, ``Flex``
-``10xGenomics Chromium 3'v3``         ``scRNA-seq``, ``snRNA-seq``
-                                      ``CellPlex``, ``Flex``
-``10xGenomics Chromium 3'v2``         ``scRNA-seq``, ``snRNA-seq``
-                                      ``CellPlex``, ``Flex``
-``10xGenomics Chromium 5'``           ``Single Cell Immune Profiling``
-``10xGenomics Single Cell ATAC``      ``scATAC-seq``, ``snATAC-seq``
-``10xGenomics Single Cell Multiome``  ``ATAC``, ``GEX``
-===================================== ==============================
+========================================= ==============================
+Single cell platform                      Library types
+========================================= ==============================
+``10xGenomics Chromium 3'``               ``scRNA-seq``, ``snRNA-seq``,
+                                          ``CellPlex``,
+                                          ``scRNA-seq CellPlex``, ``Flex``
+``10xGenomics Chromium 3'v3``             ``scRNA-seq``, ``snRNA-seq``
+                                          ``CellPlex``,
+                                          ``scRNA-seq CellPlex``, ``Flex``
+``10xGenomics Chromium 3'v2``             ``scRNA-seq``, ``snRNA-seq``
+                                          ``CellPlex``,
+                                          ``scRNA-seq CellPlex``, ``Flex``
+``10xGenomics Chromium GEM-X 3'v4``       ``scRNA-seq``
+``10xGenomics Chromium Next GEM 3'v3.1``  ``scRNA-seq``,
+                                          ``scRNA-seq CellPlex``
+``10xGenomics Chromium 5'``               ``Single Cell Immune Profiling``
+``10xGenomics Single Cell ATAC``          ``scATAC-seq``, ``snATAC-seq``
+``10xGenomics Single Cell Multiome``      ``ATAC``, ``GEX``
+========================================= ==============================
 
 Running the :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
 command will automatically transfer these values into the single cell
