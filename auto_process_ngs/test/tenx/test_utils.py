@@ -649,7 +649,7 @@ class TestMakeMultiConfigTemplate(unittest.TestCase):
         expected_content = """[gene-expression]
 reference,/path/to/transcriptome
 #force-cells,n
-#no-bam,true|false
+create-bam,true
 #cmo-set,/path/to/custom/cmo/reference
 
 #[feature]
