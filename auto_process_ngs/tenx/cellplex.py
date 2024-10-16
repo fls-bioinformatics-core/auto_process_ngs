@@ -111,6 +111,7 @@ class CellrangerMultiConfigCsv:
         logger.debug("Reading data from '%s'" % self._filen)
         sections = set()
         cmo_list = set()
+        feature_type_list = set()
         with open(self._filen,'rt') as config_csv:
             current_section = None
             for lineno, line in enumerate(config_csv, start=1):
@@ -218,7 +219,13 @@ class CellrangerMultiConfigCsv:
                         if feature_name not in KNOWN_FEATURE_TYPES:
                             self._error("libraries",
                                         f"L{lineno}: '{feature_type}': "
-                                        "unrecognised feature type")
+                                        "unrecognised feature type for "
+                                        f"sample '{name}'")
+                        elif feature_type.lower() in feature_type_list:
+                            self._error("libraries",
+                                        f"L{lineno}: '{feature_type}': "
+                                        "duplicated feature type for "
+                                        f"sample '{name}'")
                         # Store Fastq dir
                         self._fastq_dirs[name] = fastqs
                         # Store library
@@ -229,6 +236,7 @@ class CellrangerMultiConfigCsv:
                             'feature_type': feature_type,
                             'subsample_rate': subsample_rate
                         }
+                        feature_type_list.add(feature_type.lower())
         self._sections = sorted(list(sections))
         if not self.is_valid:
             if strict:
