@@ -1544,7 +1544,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.multiplexed_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
-                         { 'cellranger': [ '7.1.0' ],
+                         { 'cellranger': [ '8.0.0' ],
                            'cellranger-arc': [ '2.0.0' ],
                            'fastqc': [ '0.11.3' ],
                            'fastq_screen': [ '0.9.2' ],
