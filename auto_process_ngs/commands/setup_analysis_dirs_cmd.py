@@ -214,10 +214,13 @@ def setup_analysis_dirs(ap,
             print("-- looking up transcriptome for '%s'" % organism)
             try:
                 organism_id = normalise_organism_name(organism)
-                print("-- using ID '%s'" % organism_id)
+                print("-- ...using ID '%s'" % organism_id)
                 reference_dataset = ap.settings.organisms[organism_id].\
                                     cellranger_reference
-                print("-- found %s" % reference_dataset)
+                if reference_dataset:
+                    print("-- ...found %s" % reference_dataset)
+                else:
+                    print("-- ...no matching transcriptome data")
             except Exception as ex:
                 logger.warning("Failed to locate 10xGenomics reference "
                                "transcriptome for project '%s': %s" %
@@ -228,10 +231,13 @@ def setup_analysis_dirs(ap,
                 print("-- looking up probe set for '%s'" % organism)
                 try:
                     organism_id = normalise_organism_name(organism)
-                    print("-- using ID '%s'" % organism_id)
+                    print("-- ...using ID '%s'" % organism_id)
                     probe_set = ap.settings.organisms[organism_id].\
                                 cellranger_probe_set
-                    print("-- found %s" % probe_set)
+                    if probe_set:
+                        print("-- ...found %s" % probe_set)
+                    else:
+                        print("-- ...no matching probe set")
                 except Exception as ex:
                     logger.warning("Failed to locate 10xGenomics reference "
                                    "probe set for project '%s': %s" %
