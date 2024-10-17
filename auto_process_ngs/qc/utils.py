@@ -351,6 +351,8 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
             else:
                 bio_samples.append(s)
         return bio_samples
+    # Initial sample list
+    samples = sorted([s.name for s in project.samples])
     # 10x Genomics CellPlex
     single_cell_platform = project.info.single_cell_platform
     if single_cell_platform:
@@ -393,7 +395,8 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
                             samples_.extend([s for s in
                                              config_csv.libraries(feature_type)
                                              if s in samples])
-            samples = sorted(samples_)
+            if samples_:
+                samples = sorted(samples_)
     return samples
 
 def filter_fastqs(reads,fastqs,fastq_attrs=AnalysisFastq):
