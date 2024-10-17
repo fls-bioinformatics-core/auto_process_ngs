@@ -316,6 +316,57 @@ PBB,CMO302,PBB
         self.assertEqual(get_seq_data_samples(project_dir),
                          ["PJB1"])
 
+    def test_get_seq_data_samples_10x_cellplex_multiple_configs(self):
+        """
+        get_seq_data_samples: 10x CellPlex project (multiple configs)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "CellPlex",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            fastq_names=("PJB1_GEX_S1_L001_R1_001.fastq.gz",
+                         "PJB1_GEX_S1_L001_R2_001.fastq.gz",
+                         "PJB1_CML_S2_L001_R1_001.fastq.gz",
+                         "PJB1_CML_S2_L001_R2_001.fastq.gz",
+                         "PJB2_GEX_S3_L001_R1_001.fastq.gz",
+                         "PJB2_GEX_S3_L001_R2_001.fastq.gz",
+                         "PJB2_CML_S4_L001_R1_001.fastq.gz",
+                         "PJB2_CML_S4_L001_R2_001.fastq.gz",))
+        # Make 10x_multi_config.csv files
+        with open(os.path.join(project_dir,"10x_multi_config.PJB1.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,{fastq_dir},any,PJB1,gene expression,
+PJB1_CML,{fastq_dir},any,PJB1,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""".format(fastq_dir=os.path.join(project_dir,'fastqs')))
+        with open(os.path.join(project_dir,"10x_multi_config.PJB2.csv"),
+                  'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB2_GEX,{fastq_dir},any,PJB2,gene expression,
+PJB2_CML,{fastq_dir},any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBC,CMO303,PBC
+PBD,CMO304,PBD
+""".format(fastq_dir=os.path.join(project_dir,'fastqs')))
+        # Check sequence data samples
+        self.assertEqual(get_seq_data_samples(project_dir),
+                         ["PJB1_GEX", "PJB2_GEX"])
+
     def test_get_seq_data_samples_10x_flex(self):
         """
         get_seq_data_samples: 10x Flex project
