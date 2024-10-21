@@ -1631,6 +1631,142 @@ class TestQCVerifier(unittest.TestCase):
             cellranger_version="7.1.0",
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
+    def test_qcverifier_identify_seq_data(self):
+        """
+        QCVerifier.identify_seq_data: no 10x multi config
+        """
+        fastq_names=('PJB1_R1_001.fastq.gz',
+                     'PJB1_R2_001.fastq.gz',
+                     'PJB2_R1_001.fastq.gz',
+                     'PJB2_R2_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="RNA-seq",
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False,
+                                   include_cellranger_multi=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertEqual(qc_verifier.identify_seq_data(["PJB1", "PJB2"]),
+                         ["PJB1", "PJB2"])
+
+    def test_qcverifier_identify_seq_data_using_10x_multi_config(self):
+        """
+        QCVerifier.identify_seq_data: using 10x multi config
+        """
+        fastq_names=('PJB1_GEX_R1_001.fastq.gz',
+                     'PJB1_GEX_R2_001.fastq.gz',
+                     'PJB1_CML_R1_001.fastq.gz',
+                     'PJB1_CML_R2_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False,
+                                   include_cellranger_multi=False)
+        with open(os.path.join(qc_dir, "10x_multi_config.csv"), "wt") as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/vdj_ref.csv
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs,any,PJB1,Gene Expression,
+PJB2_CML,/data/runs/fastqs,any,PJB1,Multiplexing capture,
+""")
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertEqual(qc_verifier.identify_seq_data(["PJB1_GEX",
+                                                        "PJB1_CML"]),
+                         ["PJB1_GEX"])
+
+    def test_qcverifier_identify_seq_data_using_multiple_10x_multi_configs(self):
+        """
+        QCVerifier.identify_seq_data: using multiple 10x multi configs
+        """
+        fastq_names=('PJB1_GEX_R1_001.fastq.gz',
+                     'PJB1_GEX_R2_001.fastq.gz',
+                     'PJB1_CML_R1_001.fastq.gz',
+                     'PJB1_CML_R2_001.fastq.gz',
+                     'PJB2_GEX_R1_001.fastq.gz',
+                     'PJB2_GEX_R2_001.fastq.gz',
+                     'PJB2_CML_R1_001.fastq.gz',
+                     'PJB2_CML_R2_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False,
+                                   include_cellranger_multi=False)
+        with open(os.path.join(qc_dir, "10x_multi_config.PJB1.csv"),
+                  "wt") as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/vdj_ref.csv
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs,any,PJB1,Gene Expression,
+PJB1_CML,/data/runs/fastqs,any,PJB1,Multiplexing capture,
+""")
+        with open(os.path.join(qc_dir, "10x_multi_config.PJB2.csv"),
+                  "wt") as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/vdj_ref.csv
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB2_GEX,/data/runs/fastqs,any,PJB2,Gene Expression,
+PJB2_CML,/data/runs/fastqs,any,PJB2,Multiplexing capture,
+""")
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertEqual(qc_verifier.identify_seq_data(["PJB1_GEX",
+                                                        "PJB1_CML",
+                                                        "PJB2_GEX",
+                                                        "PJB2_CML"]),
+                         ["PJB1_GEX", "PJB2_GEX"])
+
+    def test_qcverifier_identify_seq_data_handle_invalid_10x_multi_config(self):
+        """
+        QCVerifier.identify_seq_data: handle invalid 10x multi config
+        """
+        fastq_names=('PJB1_GEX_R1_001.fastq.gz',
+                     'PJB1_GEX_R2_001.fastq.gz',
+                     'PJB1_CML_R1_001.fastq.gz',
+                     'PJB1_CML_R2_001.fastq.gz',
+                     'PJB2_GEX_R1_001.fastq.gz',
+                     'PJB2_GEX_R2_001.fastq.gz',
+                     'PJB2_CML_R1_001.fastq.gz',
+                     'PJB2_CML_R2_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_CellPlex",
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False,
+                                   include_cellranger_multi=False)
+        with open(os.path.join(qc_dir, "10x_multi_config.csv"),
+                  "wt") as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[vdj]
+reference,/data/vdj_ref.csv
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs,any,PJB1,Gene Expression,
+PJB1_CML,/data/runs/fastqs,any,PJB1,Multiplexing capture,
+PJB2_GEX,/data/runs/fastqs,any,PJB2,Gene Expression,
+PJB2_CML,/data/runs/fastqs,any,PJB2,Multiplexing capture,
+""")
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertEqual(qc_verifier.identify_seq_data(["PJB1_GEX",
+                                                        "PJB1_CML",
+                                                        "PJB2_GEX",
+                                                        "PJB2_CML"]),
+                         ["PJB1_GEX", "PJB2_GEX"])
+
 class TestVerifyProject(unittest.TestCase):
 
     def setUp(self):

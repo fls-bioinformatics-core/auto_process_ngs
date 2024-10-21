@@ -296,7 +296,8 @@ class QCOutputs:
         for cf in self.config_files:
             # Implicitly defined in 10x multi config file(s) as GEX data
             if cf.startswith('10x_multi_config.'):
-                cf = CellrangerMultiConfigCsv(os.path.join(self.qc_dir,cf))
+                cf = CellrangerMultiConfigCsv(os.path.join(self.qc_dir,cf),
+                                              strict=False)
                 self.seq_data_samples.extend([s for s in cf.gex_libraries
                                               if s in samples])
         if not self.seq_data_samples:
