@@ -285,12 +285,18 @@ class QCVerifier(QCOutputs):
         Returns:
           List: subset of sample names with sequence data.
         """
-        # Check for 10x_multi_config.csv
-        if "10x_multi_config.csv" in self.config_files:
-            # Get GEX sample names from multi config file
-            cf = CellrangerMultiConfigCsv(
-                os.path.join(self.qc_dir,"10x_multi_config.csv"))
-            seq_data = [s for s in cf.gex_libraries if s in samples]
+        # Check for 10x_multi_config.*.csv files
+        config_files = [cf for cf in self.config_files
+                        if cf.startswith("10x_multi_config.") and
+                        cf.endswith(".csv")]
+        if config_files:
+            seq_data = []
+            for cf in config_files:
+                # Get GEX sample names from multi config file
+                cf = CellrangerMultiConfigCsv(
+                    os.path.join(self.qc_dir, cf),
+                    strict=False)
+                seq_data.extend([s for s in cf.gex_libraries if s in samples])
         else:
             seq_data = [s for s in samples]
         return seq_data
