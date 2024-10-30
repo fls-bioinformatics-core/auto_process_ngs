@@ -1125,6 +1125,7 @@ import atexit
 import textwrap
 import math
 from collections.abc import Iterator
+from datetime import datetime
 from io import StringIO
 from functools import reduce
 from bcftbx.utils import mkdir
@@ -2717,6 +2718,77 @@ class PipelineTask:
             with open(self._log_file,'a') as log:
                 log.write("%s\n" % (report,))
         print(report)
+
+    def get_audit_info(self):
+        """
+        Returns compute auditing information for a task
+
+        Returns information about compute resources used
+        by jobs within the task.
+
+        The information is only returned once the task has
+        completed, and consists of a dictionary of job IDs
+        which in term map to dictionaries of auditing
+        information:
+
+        - 'task_name': name of the parent task
+        - 'nslots': number of slots (cores) assigned by the
+          runner which executed the job
+        - 'start_date': text string describing the start
+          time as a date string
+        - 'start_time': start date as number of seconds
+          from arbitrary zero time
+        - 'end_date': text string describing the end time
+        - 'end_time': end date as number of seconds from
+          same zero time as 'start_time'
+
+        Note the information is extracted from log files
+        output by each job run by the task. There will be
+        no audit data for tasks which haven't run any
+        external jobs.
+
+        Returns:
+          Dictionary: keys are unique job IDS, mapping to
+            dictionaries where keys are audit data items
+            for that job.
+        """
+        audit_info = {}
+        if not self.completed:
+            # No information available if task hasn't completed
+            return audit_info
+        # Extract raw data from the stdout files
+        for f in self._stdout_files:
+            jobid = None
+            if f is not None and os.path.exists(f):
+                with open(f,'r') as fp:
+                    for line in fp:
+                        line = line.rstrip()
+                        if line.startswith("#### UUID "):
+                            # Unique ID for compute job
+                            jobid = line.split(" ")[-1]
+                            audit_info[jobid] = { "task_name": self.name() }
+                        elif line.startswith("#### START "):
+                            # Start time
+                            start_date = line[len("#### START "):]
+                            audit_info[jobid]["start_date"] = start_date
+                            start_time = datetime.strptime(
+                                start_date,
+                                "%a %d %b %H:%M:%S %Z %Y").timestamp()
+                            audit_info[jobid]["start_time"] = start_time
+                        elif line.startswith("#### END "):
+                            # End time
+                            end_date = line[len("#### END "):]
+                            audit_info[jobid]["end_date"] = end_date
+                            end_time = datetime.strptime(
+                                end_date,
+                                "%a %d %b %H:%M:%S %Z %Y").timestamp()
+                            audit_info[jobid]["end_time"] = end_time
+                        elif line.startswith("#### NSLOTS "):
+                            # Number of slots (cores) assigned
+                            # by job runner
+                            nslots = int(line.split(" ")[-1])
+                            audit_info[jobid]["nslots"] = nslots
+        return audit_info
 
     def invoke(self,f,args=None,kws=None):
         """
