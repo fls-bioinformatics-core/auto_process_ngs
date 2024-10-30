@@ -3197,7 +3197,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
                 "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3215,7 +3215,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "printenv >__env.DUMMY-UUID\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3255,7 +3255,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
                 "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3289,7 +3289,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "printenv >__env.DUMMY-UUID\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3329,7 +3329,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
                 "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3355,7 +3355,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "printenv >__env.DUMMY-UUID\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3394,7 +3394,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
                 "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3413,7 +3413,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "printenv >__env.DUMMY-UUID\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3485,7 +3485,7 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
                 "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3508,7 +3508,7 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                 "fi\n"
                 "# Finished\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3546,7 +3546,7 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
                 "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3572,7 +3572,7 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                 "    fi\n"
                 "}\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 

@@ -3826,11 +3826,12 @@ class PipelineCommand:
         prologue = ["echo \"#### COMMAND %s\"" % self._name]
         if batch_number is not None:
             prologue.append("echo \"#### BATCH %s\"" % batch_number)
-        prologue.extend(["echo \"#### HOSTNAME $HOSTNAME\"",
-                         "echo \"#### USER $USER\"",
-                         "echo \"#### UUID %s\"" % script_uuid,
-                         "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"",
-                         "echo \"#### START $(date)\""])
+        prologue.extend(
+            ["echo \"#### HOSTNAME $HOSTNAME\"",
+             "echo \"#### USER $USER\"",
+             "echo \"#### UUID %s\"" % script_uuid,
+             "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"",
+             "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\""])
         # Disable Python's user site-packages directory
         prologue.extend(
             ["# Disable Python user site-packages directory",
@@ -3892,7 +3893,7 @@ class PipelineCommand:
         prologue.append("printenv >__env.%s" % script_uuid)
         # Handle script exit
         epilogue = ["exit_code=$?",
-                    "echo \"#### END $(date)\"",
+                    "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"",
                     "echo \"#### EXIT_CODE $exit_code\"",
                     "exit $exit_code"]
         # Build the wrapper
