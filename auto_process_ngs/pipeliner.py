@@ -3718,6 +3718,7 @@ class PipelineCommand:
         prologue.extend(["echo \"#### HOSTNAME $HOSTNAME\"",
                          "echo \"#### USER $USER\"",
                          "echo \"#### UUID %s\"" % script_uuid,
+                         "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"",
                          "echo \"#### START $(date)\""])
         # Disable Python's user site-packages directory
         prologue.extend(
