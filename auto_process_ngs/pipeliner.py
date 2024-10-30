@@ -1503,6 +1503,7 @@ class Pipeline:
         self._conda_envs_dir = None
         self._scheduler = None
         self._log_file = None
+        self._task_audit_info = {}
         self._lock_manager = None
         self._exit_on_failure = PipelineFailure.IMMEDIATE
         # Initialise default runner
@@ -1999,6 +2000,38 @@ class Pipeline:
                     break
         return list(dependents)
 
+    def report_audit_info(self):
+        """
+        Collate and report pipeline compute auditing data
+        """
+        # Collate and report audit information
+        ncompute_jobs = 0
+        compute_time_total = 0
+        ncompute_jobs_by_nslots = {}
+        compute_time_by_nslots = {}
+        for id_ in self._task_audit_info:
+            try:
+                ncompute_jobs += 1
+                compute_time = (self._task_audit_info[id_]["end_time"] -
+                                self._task_audit_info[id_]["start_time"])
+                compute_time_total += compute_time
+                nslots = self._task_audit_info[id_]["nslots"]
+                if nslots not in ncompute_jobs_by_nslots:
+                    ncompute_jobs_by_nslots[nslots] = 0
+                    compute_time_by_nslots[nslots] = 0
+                ncompute_jobs_by_nslots[nslots] += 1
+                compute_time_by_nslots[nslots] += compute_time
+            except KeyError as ex:
+                self.report(
+                    f"Missing data item in auditing data for compute job "
+                    f"{id_} {self._task_audit_info[id_]}: {ex}")
+        self.report(f"Compute summary: {ncompute_jobs} compute jobs")
+        for nslots in sorted(list(compute_time_by_nslots.keys())):
+            self.report(f"- {nslots:2d}-core jobs: "
+                        f"{ncompute_jobs_by_nslots[nslots]} jobs taking "
+                        f"{compute_time_by_nslots[nslots]}s total")
+        self.report(f"Total compute time {compute_time_total}s")
+
     def run(self,working_dir=None,tasks_work_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,sched=None,default_runner=None,
             max_jobs=1,max_slots=None,poll_interval=5,params=None,
@@ -2336,6 +2369,10 @@ class Pipeline:
                                 % task.name())
                     self._finished.append(task)
                     update = True
+                    # Extract audit information from task
+                    task_audit_info = task.get_audit_info()
+                    for id_ in task_audit_info:
+                        self._task_audit_info[id_] = task_audit_info[id_]
                     # Check if task failed
                     if task.exit_code != 0:
                         failed.append(task)
@@ -2427,6 +2464,8 @@ class Pipeline:
                     pass
                 self.report("- setting '%s': %s" % (name,
                                                     self._output[name]))
+        # Report compute auditing information
+        self.report_audit_info()
         if self._failed:
             # Report failed tasks
             self.report("Pipeline completed but the following tasks failed:")
