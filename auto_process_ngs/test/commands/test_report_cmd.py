@@ -17,6 +17,7 @@ from auto_process_ngs.commands.report_cmd import report_summary
 from auto_process_ngs.commands.report_cmd import report_projects
 from auto_process_ngs.commands.report_cmd import fetch_value
 from auto_process_ngs.commands.report_cmd import default_value
+from auto_process_ngs.commands.report_cmd import get_multiplexed_samples
 
 # Unit tests
 
@@ -2389,3 +2390,125 @@ class TestDefaultValueFunction(unittest.TestCase):
         self.assertEqual("",default_value(None))
         self.assertEqual("Goodbye",default_value(None,default="Goodbye"))
         self.assertEqual(0,default_value(0))
+
+class TestGetMultiplexedSamplesFunction(unittest.TestCase):
+    """
+    Tests for the 'get_multiplexed_samples' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestGetMultiplexedSamples')
+        # Store original location so we can get back at the end
+        self.pwd = os.getcwd()
+        # Move to working dir
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        def del_rw(action,name,excinfo):
+            # Explicitly remove read only files/
+            # dirs
+            os.chmod(os.path.dirname(name),0o755)
+            os.chmod(name,0o655)
+            os.remove(name)
+        shutil.rmtree(self.dirn,onerror=del_rw)
+
+    def test_get_multiplexed_samples_no_samples(self):
+        """
+        report: test 'get_multiplexed_samples' (no multiplexed samples)
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq",
+                       "analysis_number": 2 },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "scRNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Single cell platform": None,
+                        "Number of cells": None,
+                        "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        project = AnalysisProject(os.path.join(mockdir.dirn,'AB'))
+        self.assertEqual(get_multiplexed_samples(project), None)
+
+    def test_get_multiplexed_samples_missing_samples(self):
+        """
+        report: test 'get_multiplexed_samples' (missing multiplexed samples)
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq",
+                       "analysis_number": 2 },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "CellPlex scRNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Single cell platform": "10xGenomics Chromium 3'v3",
+                        "Number of cells": None,
+                        "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        project = AnalysisProject(os.path.join(mockdir.dirn,'AB'))
+        self.assertEqual(get_multiplexed_samples(project), [])
+
+    def test_get_multiplexed_samples_10x_multi_config(self):
+        """
+        report: test 'get_multiplexed_samples' (use 10x multi config)
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq",
+                       "analysis_number": 2 },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "CellPlex scRNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Single cell platform": "10xGenomics Chromium 3'v3",
+                        "Number of cells": None,
+                        "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add a cellranger multi config.csv file
+        with open(os.path.join(mockdir.dirn,
+                               "AB",
+                               "10x_multi_config.csv"),'wt') as fp:
+            fastq_dir = os.path.join(mockdir.dirn,
+                                     "AB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+AB1,%s,any,AB1,gene expression,
+AB2,%s,any,AB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+ABM1,CMO301,ABM1
+ABM2,CMO302,ABM2
+ABM3,CMO303,ABM3
+ABM4,CMO304,ABM4
+""" % (fastq_dir,fastq_dir))
+        project = AnalysisProject(os.path.join(mockdir.dirn,'AB'))
+        self.assertEqual(get_multiplexed_samples(project),
+                         ["ABM1", "ABM2", "ABM3", "ABM4"])

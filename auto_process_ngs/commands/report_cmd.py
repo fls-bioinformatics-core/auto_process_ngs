@@ -745,3 +745,35 @@ def default_value(s,default=""):
     if s is None:
         return default
     return s
+
+def get_multiplexed_samples(project):
+    """
+    Return the names of implicit multiplexed samples in a project
+
+    Arguments:
+      project (AnalysisProject): project to get implicit multiplexed
+        samples for
+
+    Returns:
+      List: list of multiplexed sample names, or empty list if
+        project should have multiplexed samples but the cannot be
+        identified. Returns None if project is not of a type to
+        have multiplexed samples.
+    """
+    if project.info.library_type in ("CellPlex",
+                                     "CellPlex scRNA-seq",
+                                     "Flex"):
+        # Fetch implicit multiplexed sample info from config
+        try:
+            multi_config = CellrangerMultiConfigCsv(
+                os.path.join(project.dirn,"10x_multi_config.csv"))
+            # Return multiplexed sample names
+            return multi_config.sample_names
+        except FileNotFoundError:
+            # Multiplexed samples expected but can't be identified
+            # Return empty list
+            return []
+    else:
+        # No multiplexed samples expected
+        # Return None
+        return None
