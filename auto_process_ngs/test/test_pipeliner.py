@@ -1883,22 +1883,24 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),10) # 10 = 9 + trailing newline
+        self.assertEqual(len(stdout),11) # 11 = 10 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Echo text")
         self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[2],"#### USER %s" % self._user())
         self.assertTrue(stdout[3].startswith("#### UUID "))
-        self.assertTrue(stdout[4].startswith("#### START "))
-        self.assertEqual(stdout[5],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[6],"Hello!")
-        self.assertTrue(stdout[7].startswith("#### END "))
-        self.assertEqual(stdout[8],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[4].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[5].startswith("#### START "))
+        self.assertEqual(stdout[6],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[7],"Hello!")
+        self.assertTrue(stdout[8].startswith("#### END "))
+        self.assertEqual(stdout[9],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_multiple_commands(self):
         """
@@ -1936,6 +1938,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
@@ -1946,33 +1949,36 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Goodbye!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),21) # 21 = 20 + trailing newline
+        self.assertEqual(len(stdout),23) # 23= 22 + trailing newline
         self.assertTrue(stdout[0].startswith("#### STDOUT <<"))
         self.assertEqual(stdout[1],"#### COMMAND Echo text")
         self.assertEqual(stdout[2],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[3],"#### USER %s" % self._user())
         self.assertTrue(stdout[4].startswith("#### UUID "))
-        self.assertTrue(stdout[5].startswith("#### START "))
-        self.assertEqual(stdout[6],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[7],"Hello!")
-        self.assertTrue(stdout[8].startswith("#### END "))
-        self.assertEqual(stdout[9],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[10].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[11],"#### COMMAND Echo text")
-        self.assertEqual(stdout[12],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[13],"#### USER %s" % self._user())
-        self.assertTrue(stdout[14].startswith("#### UUID "))
-        self.assertTrue(stdout[15].startswith("#### START "))
-        self.assertEqual(stdout[16],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[17],"Goodbye!")
-        self.assertTrue(stdout[18].startswith("#### END "))
-        self.assertEqual(stdout[19],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[5].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[6].startswith("#### START "))
+        self.assertEqual(stdout[7],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[8],"Hello!")
+        self.assertTrue(stdout[9].startswith("#### END "))
+        self.assertEqual(stdout[10],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[11].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[12],"#### COMMAND Echo text")
+        self.assertEqual(stdout[13],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[14],"#### USER %s" % self._user())
+        self.assertTrue(stdout[15].startswith("#### UUID "))
+        self.assertTrue(stdout[16].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[17].startswith("#### START "))
+        self.assertEqual(stdout[18],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[19],"Goodbye!")
+        self.assertTrue(stdout[20].startswith("#### END "))
+        self.assertEqual(stdout[21],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_batched_commands(self):
         """
@@ -2022,6 +2028,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
@@ -2034,6 +2041,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Takk!
@@ -2046,13 +2054,14 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Benvenuto!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),36) # 36 = 35 + trailing newline
+        self.assertEqual(len(stdout),39) # 39 = 38 + trailing newline
         self.assertTrue(stdout[0].startswith("#### STDOUT <<"))
         self.assertEqual(stdout[1],
                          "#### COMMAND Batch commands for Echo string")
@@ -2060,37 +2069,40 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(stdout[3],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[4],"#### USER %s" % self._user())
         self.assertTrue(stdout[5].startswith("#### UUID "))
-        self.assertTrue(stdout[6].startswith("#### START "))
-        self.assertEqual(stdout[7],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[8],"Hello!")
-        self.assertEqual(stdout[9],"Bonjour!")
-        self.assertTrue(stdout[10].startswith("#### END "))
-        self.assertEqual(stdout[11],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[12].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[13],
+        self.assertTrue(stdout[6].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[7].startswith("#### START "))
+        self.assertEqual(stdout[8],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[9],"Hello!")
+        self.assertEqual(stdout[10],"Bonjour!")
+        self.assertTrue(stdout[11].startswith("#### END "))
+        self.assertEqual(stdout[12],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[13].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[14],
                          "#### COMMAND Batch commands for Echo string")
-        self.assertEqual(stdout[14],"#### BATCH 2")
-        self.assertEqual(stdout[15],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[16],"#### USER %s" % self._user())
-        self.assertTrue(stdout[17].startswith("#### UUID "))
-        self.assertTrue(stdout[18].startswith("#### START "))
-        self.assertEqual(stdout[19],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[20],"Takk!")
-        self.assertEqual(stdout[21],"Wilkommen!")
-        self.assertTrue(stdout[22].startswith("#### END "))
-        self.assertEqual(stdout[23],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[24].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[25],
+        self.assertEqual(stdout[15],"#### BATCH 2")
+        self.assertEqual(stdout[16],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[17],"#### USER %s" % self._user())
+        self.assertTrue(stdout[18].startswith("#### UUID "))
+        self.assertTrue(stdout[19].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[20].startswith("#### START "))
+        self.assertEqual(stdout[21],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[22],"Takk!")
+        self.assertEqual(stdout[23],"Wilkommen!")
+        self.assertTrue(stdout[24].startswith("#### END "))
+        self.assertEqual(stdout[25],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[26].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[27],
                          "#### COMMAND Batch commands for Echo string")
-        self.assertEqual(stdout[26],"#### BATCH 3")
-        self.assertEqual(stdout[27],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[28],"#### USER %s" % self._user())
-        self.assertTrue(stdout[29].startswith("#### UUID "))
-        self.assertTrue(stdout[30].startswith("#### START "))
-        self.assertEqual(stdout[31],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[32],"Benvenuto!")
-        self.assertTrue(stdout[33].startswith("#### END "))
-        self.assertEqual(stdout[34],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[28],"#### BATCH 3")
+        self.assertEqual(stdout[29],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[30],"#### USER %s" % self._user())
+        self.assertTrue(stdout[31].startswith("#### UUID "))
+        self.assertTrue(stdout[32].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[33].startswith("#### START "))
+        self.assertEqual(stdout[34],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[35],"Benvenuto!")
+        self.assertTrue(stdout[36].startswith("#### END "))
+        self.assertEqual(stdout[37],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_batched_functions(self):
         """
@@ -2140,6 +2152,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
@@ -2152,6 +2165,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Takk!
@@ -2164,13 +2178,14 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Benvenuto!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),36) # 36 = 35 + trailing newline
+        self.assertEqual(len(stdout),39) # 39 = 38 + trailing newline
         self.assertTrue(stdout[0].startswith("#### STDOUT <<"))
         self.assertEqual(stdout[1],
                          "#### COMMAND Batch commands for Echo string")
@@ -2178,37 +2193,40 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(stdout[3],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[4],"#### USER %s" % self._user())
         self.assertTrue(stdout[5].startswith("#### UUID "))
-        self.assertTrue(stdout[6].startswith("#### START "))
-        self.assertEqual(stdout[7],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[8],"Hello!")
-        self.assertEqual(stdout[9],"Bonjour!")
-        self.assertTrue(stdout[10].startswith("#### END "))
-        self.assertEqual(stdout[11],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[12].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[13],
+        self.assertTrue(stdout[6].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[7].startswith("#### START "))
+        self.assertEqual(stdout[8],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[9],"Hello!")
+        self.assertEqual(stdout[10],"Bonjour!")
+        self.assertTrue(stdout[11].startswith("#### END "))
+        self.assertEqual(stdout[12],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[13].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[14],
                          "#### COMMAND Batch commands for Echo string")
-        self.assertEqual(stdout[14],"#### BATCH 2")
-        self.assertEqual(stdout[15],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[16],"#### USER %s" % self._user())
-        self.assertTrue(stdout[17].startswith("#### UUID "))
-        self.assertTrue(stdout[18].startswith("#### START "))
-        self.assertEqual(stdout[19],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[20],"Takk!")
-        self.assertEqual(stdout[21],"Wilkommen!")
-        self.assertTrue(stdout[22].startswith("#### END "))
-        self.assertEqual(stdout[23],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[24].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[25],
+        self.assertEqual(stdout[15],"#### BATCH 2")
+        self.assertEqual(stdout[16],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[17],"#### USER %s" % self._user())
+        self.assertTrue(stdout[18].startswith("#### UUID "))
+        self.assertTrue(stdout[19].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[20].startswith("#### START "))
+        self.assertEqual(stdout[21],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[22],"Takk!")
+        self.assertEqual(stdout[23],"Wilkommen!")
+        self.assertTrue(stdout[24].startswith("#### END "))
+        self.assertEqual(stdout[25],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[26].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[27],
                          "#### COMMAND Batch commands for Echo string")
-        self.assertEqual(stdout[26],"#### BATCH 3")
-        self.assertEqual(stdout[27],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[28],"#### USER %s" % self._user())
-        self.assertTrue(stdout[29].startswith("#### UUID "))
-        self.assertTrue(stdout[30].startswith("#### START "))
-        self.assertEqual(stdout[31],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[32],"Benvenuto!")
-        self.assertTrue(stdout[33].startswith("#### END "))
-        self.assertEqual(stdout[34],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[28],"#### BATCH 3")
+        self.assertEqual(stdout[29],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[30],"#### USER %s" % self._user())
+        self.assertTrue(stdout[31].startswith("#### UUID "))
+        self.assertTrue(stdout[32].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[33].startswith("#### START "))
+        self.assertEqual(stdout[34],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[35],"Benvenuto!")
+        self.assertTrue(stdout[36].startswith("#### END "))
+        self.assertEqual(stdout[37],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_batched_scripts(self):
         """
@@ -2261,6 +2279,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
@@ -2273,6 +2292,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Takk!
@@ -2285,13 +2305,14 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Benvenuto!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),36) # 36 = 35 + trailing newline
+        self.assertEqual(len(stdout),39) # 39 = 38 + trailing newline
         self.assertTrue(stdout[0].startswith("#### STDOUT <<"))
         self.assertEqual(stdout[1],
                          "#### COMMAND Batch commands for Echo string")
@@ -2299,37 +2320,40 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(stdout[3],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[4],"#### USER %s" % self._user())
         self.assertTrue(stdout[5].startswith("#### UUID "))
-        self.assertTrue(stdout[6].startswith("#### START "))
-        self.assertEqual(stdout[7],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[8],"Hello!")
-        self.assertEqual(stdout[9],"Bonjour!")
-        self.assertTrue(stdout[10].startswith("#### END "))
-        self.assertEqual(stdout[11],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[12].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[13],
+        self.assertTrue(stdout[6].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[7].startswith("#### START "))
+        self.assertEqual(stdout[8],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[9],"Hello!")
+        self.assertEqual(stdout[10],"Bonjour!")
+        self.assertTrue(stdout[11].startswith("#### END "))
+        self.assertEqual(stdout[12],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[13].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[14],
                          "#### COMMAND Batch commands for Echo string")
-        self.assertEqual(stdout[14],"#### BATCH 2")
-        self.assertEqual(stdout[15],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[16],"#### USER %s" % self._user())
-        self.assertTrue(stdout[17].startswith("#### UUID "))
-        self.assertTrue(stdout[18].startswith("#### START "))
-        self.assertEqual(stdout[19],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[20],"Takk!")
-        self.assertEqual(stdout[21],"Wilkommen!")
-        self.assertTrue(stdout[22].startswith("#### END "))
-        self.assertEqual(stdout[23],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[24].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[25],
+        self.assertEqual(stdout[15],"#### BATCH 2")
+        self.assertEqual(stdout[16],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[17],"#### USER %s" % self._user())
+        self.assertTrue(stdout[18].startswith("#### UUID "))
+        self.assertTrue(stdout[19].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[20].startswith("#### START "))
+        self.assertEqual(stdout[21],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[22],"Takk!")
+        self.assertEqual(stdout[23],"Wilkommen!")
+        self.assertTrue(stdout[24].startswith("#### END "))
+        self.assertEqual(stdout[25],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[26].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[27],
                          "#### COMMAND Batch commands for Echo string")
-        self.assertEqual(stdout[26],"#### BATCH 3")
-        self.assertEqual(stdout[27],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[28],"#### USER %s" % self._user())
-        self.assertTrue(stdout[29].startswith("#### UUID "))
-        self.assertTrue(stdout[30].startswith("#### START "))
-        self.assertEqual(stdout[31],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[32],"Benvenuto!")
-        self.assertTrue(stdout[33].startswith("#### END "))
-        self.assertEqual(stdout[34],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[28],"#### BATCH 3")
+        self.assertEqual(stdout[29],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[30],"#### USER %s" % self._user())
+        self.assertTrue(stdout[31].startswith("#### UUID "))
+        self.assertTrue(stdout[32].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[33].startswith("#### START "))
+        self.assertEqual(stdout[34],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[35],"Benvenuto!")
+        self.assertTrue(stdout[36].startswith("#### END "))
+        self.assertEqual(stdout[37],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_batch_limit(self):
         """
@@ -2379,6 +2403,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
@@ -2391,6 +2416,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Takk!
@@ -2403,6 +2429,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Benvenuto!
@@ -2410,7 +2437,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### EXIT_CODE 0
         print(task.stdout)
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),36) # 36 = 35 + trailing newline
+        self.assertEqual(len(stdout),39) # 39 = 38 + trailing newline
         self.assertTrue(stdout[0].startswith("#### STDOUT <<"))
         self.assertEqual(stdout[1],
                          "#### COMMAND Batch commands for Echo string")
@@ -2418,37 +2445,40 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(stdout[3],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[4],"#### USER %s" % self._user())
         self.assertTrue(stdout[5].startswith("#### UUID "))
-        self.assertTrue(stdout[6].startswith("#### START "))
-        self.assertEqual(stdout[7],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[8],"Hello!")
-        self.assertEqual(stdout[9],"Bonjour!")
-        self.assertTrue(stdout[10].startswith("#### END "))
-        self.assertEqual(stdout[11],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[12].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[13],
+        self.assertTrue(stdout[6].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[7].startswith("#### START "))
+        self.assertEqual(stdout[8],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[9],"Hello!")
+        self.assertEqual(stdout[10],"Bonjour!")
+        self.assertTrue(stdout[11].startswith("#### END "))
+        self.assertEqual(stdout[12],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[13].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[14],
                          "#### COMMAND Batch commands for Echo string")
-        self.assertEqual(stdout[14],"#### BATCH 2")
-        self.assertEqual(stdout[15],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[16],"#### USER %s" % self._user())
-        self.assertTrue(stdout[17].startswith("#### UUID "))
-        self.assertTrue(stdout[18].startswith("#### START "))
-        self.assertEqual(stdout[19],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[20],"Takk!")
-        self.assertEqual(stdout[21],"Wilkommen!")
-        self.assertTrue(stdout[22].startswith("#### END "))
-        self.assertEqual(stdout[23],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[24].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[25],
+        self.assertEqual(stdout[15],"#### BATCH 2")
+        self.assertEqual(stdout[16],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[17],"#### USER %s" % self._user())
+        self.assertTrue(stdout[18].startswith("#### UUID "))
+        self.assertTrue(stdout[19].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[20].startswith("#### START "))
+        self.assertEqual(stdout[21],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[22],"Takk!")
+        self.assertEqual(stdout[23],"Wilkommen!")
+        self.assertTrue(stdout[24].startswith("#### END "))
+        self.assertEqual(stdout[25],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[26].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[27],
                          "#### COMMAND Batch commands for Echo string")
-        self.assertEqual(stdout[26],"#### BATCH 3")
-        self.assertEqual(stdout[27],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[28],"#### USER %s" % self._user())
-        self.assertTrue(stdout[29].startswith("#### UUID "))
-        self.assertTrue(stdout[30].startswith("#### START "))
-        self.assertEqual(stdout[31],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[32],"Benvenuto!")
-        self.assertTrue(stdout[33].startswith("#### END "))
-        self.assertEqual(stdout[34],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[28],"#### BATCH 3")
+        self.assertEqual(stdout[29],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[30],"#### USER %s" % self._user())
+        self.assertTrue(stdout[31].startswith("#### UUID "))
+        self.assertTrue(stdout[32].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[33].startswith("#### START "))
+        self.assertEqual(stdout[34],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[35],"Benvenuto!")
+        self.assertTrue(stdout[36].startswith("#### END "))
+        self.assertEqual(stdout[37],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_commands_as_command_instances(self):
         """
@@ -2485,6 +2515,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
@@ -2495,33 +2526,36 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Goodbye!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),21) # 21 = 20 + trailing newline
+        self.assertEqual(len(stdout),23) # 23 = 22 + trailing newline
         self.assertTrue(stdout[0].startswith("#### STDOUT <<"))
         self.assertEqual(stdout[1],"#### COMMAND Echo text")
         self.assertEqual(stdout[2],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[3],"#### USER %s" % self._user())
         self.assertTrue(stdout[4].startswith("#### UUID "))
-        self.assertTrue(stdout[5].startswith("#### START "))
-        self.assertEqual(stdout[6],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[7],"Hello!")
-        self.assertTrue(stdout[8].startswith("#### END "))
-        self.assertEqual(stdout[9],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[10].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[11],"#### COMMAND Echo text")
-        self.assertEqual(stdout[12],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[13],"#### USER %s" % self._user())
-        self.assertTrue(stdout[14].startswith("#### UUID "))
-        self.assertTrue(stdout[15].startswith("#### START "))
-        self.assertEqual(stdout[16],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[17],"Goodbye!")
-        self.assertTrue(stdout[18].startswith("#### END "))
-        self.assertEqual(stdout[19],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[5].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[6].startswith("#### START "))
+        self.assertEqual(stdout[7],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[8],"Hello!")
+        self.assertTrue(stdout[9].startswith("#### END "))
+        self.assertEqual(stdout[10],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[11].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[12],"#### COMMAND Echo text")
+        self.assertEqual(stdout[13],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[14],"#### USER %s" % self._user())
+        self.assertTrue(stdout[15].startswith("#### UUID "))
+        self.assertTrue(stdout[16].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[17].startswith("#### START "))
+        self.assertEqual(stdout[18],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[19],"Goodbye!")
+        self.assertTrue(stdout[20].startswith("#### END "))
+        self.assertEqual(stdout[21],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_commands_as_scripts(self):
         """
@@ -2565,6 +2599,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
@@ -2575,33 +2610,36 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Goodbye!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),21) # 21 = 20 + trailing newline
+        self.assertEqual(len(stdout),23) # 23 = 22 + trailing newline
         self.assertTrue(stdout[0].startswith("#### STDOUT <<"))
         self.assertEqual(stdout[1],"#### COMMAND Echo text")
         self.assertEqual(stdout[2],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[3],"#### USER %s" % self._user())
         self.assertTrue(stdout[4].startswith("#### UUID "))
-        self.assertTrue(stdout[5].startswith("#### START "))
-        self.assertEqual(stdout[6],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[7],"Hello!")
-        self.assertTrue(stdout[8].startswith("#### END "))
-        self.assertEqual(stdout[9],"#### EXIT_CODE 0")
-        self.assertTrue(stdout[10].startswith("#### STDOUT <<"))
-        self.assertEqual(stdout[11],"#### COMMAND Echo text")
-        self.assertEqual(stdout[12],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[13],"#### USER %s" % self._user())
-        self.assertTrue(stdout[14].startswith("#### UUID "))
-        self.assertTrue(stdout[15].startswith("#### START "))
-        self.assertEqual(stdout[16],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[17],"Goodbye!")
-        self.assertTrue(stdout[18].startswith("#### END "))
-        self.assertEqual(stdout[19],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[5].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[6].startswith("#### START "))
+        self.assertEqual(stdout[7],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[8],"Hello!")
+        self.assertTrue(stdout[9].startswith("#### END "))
+        self.assertEqual(stdout[10],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[11].startswith("#### STDOUT <<"))
+        self.assertEqual(stdout[12],"#### COMMAND Echo text")
+        self.assertEqual(stdout[13],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[14],"#### USER %s" % self._user())
+        self.assertTrue(stdout[15].startswith("#### UUID "))
+        self.assertTrue(stdout[16].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[17].startswith("#### START "))
+        self.assertEqual(stdout[18],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[19],"Goodbye!")
+        self.assertTrue(stdout[20].startswith("#### END "))
+        self.assertEqual(stdout[21],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_failing_command(self):
         """
@@ -2636,20 +2674,22 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 127
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),9) # 9 = 8 + trailing newline
+        self.assertEqual(len(stdout),10) # 10 = 9 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Nonexistant")
         self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[2],"#### USER %s" % self._user())
         self.assertTrue(stdout[3].startswith("#### UUID "))
-        self.assertTrue(stdout[4].startswith("#### START "))
-        self.assertEqual(stdout[5],"#### CWD %s" % self.working_dir)
-        self.assertTrue(stdout[6].startswith("#### END "))
-        self.assertEqual(stdout[7],"#### EXIT_CODE 127")
+        self.assertTrue(stdout[4].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[5].startswith("#### START "))
+        self.assertEqual(stdout[6],"#### CWD %s" % self.working_dir)
+        self.assertTrue(stdout[7].startswith("#### END "))
+        self.assertEqual(stdout[8],"#### EXIT_CODE 127")
 
     def test_pipelinetask_with_command_using_runner_nslots(self):
         """
@@ -2682,22 +2722,24 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # NSLOTS=8
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),10) # 10 = 9 + trailing newline
+        self.assertEqual(len(stdout),11) # 11 = 10 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Get nslots")
         self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[2],"#### USER %s" % self._user())
         self.assertTrue(stdout[3].startswith("#### UUID "))
-        self.assertTrue(stdout[4].startswith("#### START "))
-        self.assertEqual(stdout[5],"#### CWD %s" % self.working_dir)
-        self.assertEqual(stdout[6],"NSLOTS=8")
-        self.assertTrue(stdout[7].startswith("#### END "))
-        self.assertEqual(stdout[8],"#### EXIT_CODE 0")
+        self.assertTrue(stdout[4].startswith("#### NSLOTS "))
+        self.assertTrue(stdout[5].startswith("#### START "))
+        self.assertEqual(stdout[6],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[7],"NSLOTS=8")
+        self.assertTrue(stdout[8].startswith("#### END "))
+        self.assertEqual(stdout[9],"#### EXIT_CODE 0")
 
     def test_pipelinetask_stdout(self):
         """
@@ -2734,6 +2776,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### HOSTNAME popov
         # #### USER pjb
         # #### UUID ...
+        # #### NSLOTS ...
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### CWD /tmp/dir
         # Hello!
@@ -2742,19 +2785,20 @@ class TestPipelineTask(unittest.TestCase):
         # ...x three times
         print(task.stdout)
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),31) # 31 = 3 * 10 + trailing newline
+        self.assertEqual(len(stdout),34) # 31 = 3 * 11 + trailing newline
         for i in range(3):
-            self.assertTrue(stdout[0+i*10].startswith("#### STDOUT <<"))
-            self.assertEqual(stdout[1+i*10],"#### COMMAND Echo text")
-            self.assertEqual(stdout[2+i*10],
+            self.assertTrue(stdout[0+i*11].startswith("#### STDOUT <<"))
+            self.assertEqual(stdout[1+i*11],"#### COMMAND Echo text")
+            self.assertEqual(stdout[2+i*11],
                              "#### HOSTNAME %s" % self._hostname())
-            self.assertEqual(stdout[3+i*10],"#### USER %s" % self._user())
-            self.assertTrue(stdout[4+i*10].startswith("#### UUID "))
-            self.assertTrue(stdout[5+i*10].startswith("#### START "))
-            self.assertEqual(stdout[6+i*10],"#### CWD %s" % self.working_dir)
-            self.assertEqual(stdout[7+i*10],"Hello!")
-            self.assertTrue(stdout[8+i*10].startswith("#### END "))
-            self.assertEqual(stdout[9+i*10],"#### EXIT_CODE 0")
+            self.assertEqual(stdout[3+i*11],"#### USER %s" % self._user())
+            self.assertTrue(stdout[4+i*11].startswith("#### UUID "))
+            self.assertTrue(stdout[5+i*11].startswith("#### NSLOTS "))
+            self.assertTrue(stdout[6+i*11].startswith("#### START "))
+            self.assertEqual(stdout[7+i*11],"#### CWD %s" % self.working_dir)
+            self.assertEqual(stdout[8+i*11],"Hello!")
+            self.assertTrue(stdout[9+i*11].startswith("#### END "))
+            self.assertEqual(stdout[10+i*11],"#### EXIT_CODE 0")
 
     def test_pipelinetask_stderr(self):
         """
@@ -3152,7 +3196,8 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### HOSTNAME $HOSTNAME\"\n"
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3170,7 +3215,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "printenv >__env.DUMMY-UUID\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3209,7 +3254,8 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### HOSTNAME $HOSTNAME\"\n"
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3243,7 +3289,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "printenv >__env.DUMMY-UUID\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3282,7 +3328,8 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### HOSTNAME $HOSTNAME\"\n"
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3308,7 +3355,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "printenv >__env.DUMMY-UUID\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3346,7 +3393,8 @@ class TestPipelineCommand(unittest.TestCase):
                 "echo \"#### HOSTNAME $HOSTNAME\"\n"
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3365,7 +3413,7 @@ class TestPipelineCommand(unittest.TestCase):
                 "printenv >__env.DUMMY-UUID\n"
                 "echo 'hello there'\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3436,7 +3484,8 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                 "echo \"#### HOSTNAME $HOSTNAME\"\n"
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3459,7 +3508,7 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                 "fi\n"
                 "# Finished\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 
@@ -3496,7 +3545,8 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                 "echo \"#### HOSTNAME $HOSTNAME\"\n"
                 "echo \"#### USER $USER\"\n"
                 "echo \"#### UUID DUMMY-UUID\"\n"
-                "echo \"#### START $(date)\"\n"
+                "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"\n"
+                "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "# Disable Python user site-packages directory\n"
                 "export PYTHONNOUSERSITE=1\n"
                 "_pythonpath=$PYTHONPATH\n"
@@ -3522,7 +3572,7 @@ class TestPipelineScriptWrapper(unittest.TestCase):
                 "    fi\n"
                 "}\n"
                 "exit_code=$?\n"
-                "echo \"#### END $(date)\"\n"
+                "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"\n"
                 "echo \"#### EXIT_CODE $exit_code\"\n"
                 "exit $exit_code")
 

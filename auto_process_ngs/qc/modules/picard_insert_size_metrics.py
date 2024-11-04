@@ -280,8 +280,10 @@ class RunPicardCollectInsertSizeMetrics(PipelineTask):
                          """
                          # Get version of CollectInsertSizeMetrics
                          picard CollectInsertSizeMetrics --version >_versions 2>&1
-                         # Force zero exit code
-                         exit 0
+                         # Ignore non-zero exit code
+                         if [ $? -ne 0 ] ; then
+                            :
+                         fi
                          """)
     def finish(self):
         # Check if any BAM files were processed

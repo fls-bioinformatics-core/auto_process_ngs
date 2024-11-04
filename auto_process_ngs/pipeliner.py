@@ -1125,6 +1125,7 @@ import atexit
 import textwrap
 import math
 from collections.abc import Iterator
+from datetime import datetime
 from io import StringIO
 from functools import reduce
 from bcftbx.utils import mkdir
@@ -1502,6 +1503,7 @@ class Pipeline:
         self._conda_envs_dir = None
         self._scheduler = None
         self._log_file = None
+        self._task_audit_info = {}
         self._lock_manager = None
         self._exit_on_failure = PipelineFailure.IMMEDIATE
         # Initialise default runner
@@ -1998,6 +2000,38 @@ class Pipeline:
                     break
         return list(dependents)
 
+    def report_audit_info(self):
+        """
+        Collate and report pipeline compute auditing data
+        """
+        # Collate and report audit information
+        ncompute_jobs = 0
+        compute_time_total = 0
+        ncompute_jobs_by_nslots = {}
+        compute_time_by_nslots = {}
+        for id_ in self._task_audit_info:
+            try:
+                ncompute_jobs += 1
+                compute_time = (self._task_audit_info[id_]["end_time"] -
+                                self._task_audit_info[id_]["start_time"])
+                compute_time_total += compute_time
+                nslots = self._task_audit_info[id_]["nslots"]
+                if nslots not in ncompute_jobs_by_nslots:
+                    ncompute_jobs_by_nslots[nslots] = 0
+                    compute_time_by_nslots[nslots] = 0
+                ncompute_jobs_by_nslots[nslots] += 1
+                compute_time_by_nslots[nslots] += compute_time
+            except KeyError as ex:
+                self.report(
+                    f"Missing data item in auditing data for compute job "
+                    f"{id_} {self._task_audit_info[id_]}: {ex}")
+        self.report(f"Compute summary: {ncompute_jobs} compute jobs")
+        for nslots in sorted(list(compute_time_by_nslots.keys())):
+            self.report(f"- {nslots:2d}-core jobs: "
+                        f"{ncompute_jobs_by_nslots[nslots]} jobs taking "
+                        f"{compute_time_by_nslots[nslots]}s total")
+        self.report(f"Total compute time {compute_time_total}s")
+
     def run(self,working_dir=None,tasks_work_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,sched=None,default_runner=None,
             max_jobs=1,max_slots=None,poll_interval=5,params=None,
@@ -2335,6 +2369,10 @@ class Pipeline:
                                 % task.name())
                     self._finished.append(task)
                     update = True
+                    # Extract audit information from task
+                    task_audit_info = task.get_audit_info()
+                    for id_ in task_audit_info:
+                        self._task_audit_info[id_] = task_audit_info[id_]
                     # Check if task failed
                     if task.exit_code != 0:
                         failed.append(task)
@@ -2426,6 +2464,8 @@ class Pipeline:
                     pass
                 self.report("- setting '%s': %s" % (name,
                                                     self._output[name]))
+        # Report compute auditing information
+        self.report_audit_info()
         if self._failed:
             # Report failed tasks
             self.report("Pipeline completed but the following tasks failed:")
@@ -2717,6 +2757,77 @@ class PipelineTask:
             with open(self._log_file,'a') as log:
                 log.write("%s\n" % (report,))
         print(report)
+
+    def get_audit_info(self):
+        """
+        Returns compute auditing information for a task
+
+        Returns information about compute resources used
+        by jobs within the task.
+
+        The information is only returned once the task has
+        completed, and consists of a dictionary of job IDs
+        which in term map to dictionaries of auditing
+        information:
+
+        - 'task_name': name of the parent task
+        - 'nslots': number of slots (cores) assigned by the
+          runner which executed the job
+        - 'start_date': text string describing the start
+          time as a date string
+        - 'start_time': start date as number of seconds
+          from arbitrary zero time
+        - 'end_date': text string describing the end time
+        - 'end_time': end date as number of seconds from
+          same zero time as 'start_time'
+
+        Note the information is extracted from log files
+        output by each job run by the task. There will be
+        no audit data for tasks which haven't run any
+        external jobs.
+
+        Returns:
+          Dictionary: keys are unique job IDS, mapping to
+            dictionaries where keys are audit data items
+            for that job.
+        """
+        audit_info = {}
+        if not self.completed:
+            # No information available if task hasn't completed
+            return audit_info
+        # Extract raw data from the stdout files
+        for f in self._stdout_files:
+            jobid = None
+            if f is not None and os.path.exists(f):
+                with open(f,'r') as fp:
+                    for line in fp:
+                        line = line.rstrip()
+                        if line.startswith("#### UUID "):
+                            # Unique ID for compute job
+                            jobid = line.split(" ")[-1]
+                            audit_info[jobid] = { "task_name": self.name() }
+                        elif line.startswith("#### START "):
+                            # Start time
+                            start_date = line[len("#### START "):]
+                            audit_info[jobid]["start_date"] = start_date
+                            start_time = datetime.strptime(
+                                start_date,
+                                "%a %d %b %H:%M:%S %Z %Y").timestamp()
+                            audit_info[jobid]["start_time"] = start_time
+                        elif line.startswith("#### END "):
+                            # End time
+                            end_date = line[len("#### END "):]
+                            audit_info[jobid]["end_date"] = end_date
+                            end_time = datetime.strptime(
+                                end_date,
+                                "%a %d %b %H:%M:%S %Z %Y").timestamp()
+                            audit_info[jobid]["end_time"] = end_time
+                        elif line.startswith("#### NSLOTS "):
+                            # Number of slots (cores) assigned
+                            # by job runner
+                            nslots = int(line.split(" ")[-1])
+                            audit_info[jobid]["nslots"] = nslots
+        return audit_info
 
     def invoke(self,f,args=None,kws=None):
         """
@@ -3715,10 +3826,12 @@ class PipelineCommand:
         prologue = ["echo \"#### COMMAND %s\"" % self._name]
         if batch_number is not None:
             prologue.append("echo \"#### BATCH %s\"" % batch_number)
-        prologue.extend(["echo \"#### HOSTNAME $HOSTNAME\"",
-                         "echo \"#### USER $USER\"",
-                         "echo \"#### UUID %s\"" % script_uuid,
-                         "echo \"#### START $(date)\""])
+        prologue.extend(
+            ["echo \"#### HOSTNAME $HOSTNAME\"",
+             "echo \"#### USER $USER\"",
+             "echo \"#### UUID %s\"" % script_uuid,
+             "echo \"#### NSLOTS $BCFTBX_RUNNER_NSLOTS\"",
+             "echo \"#### START $(date +\"%a %d %b %H:%M:%S %Z %Y\")\""])
         # Disable Python's user site-packages directory
         prologue.extend(
             ["# Disable Python user site-packages directory",
@@ -3780,7 +3893,7 @@ class PipelineCommand:
         prologue.append("printenv >__env.%s" % script_uuid)
         # Handle script exit
         epilogue = ["exit_code=$?",
-                    "echo \"#### END $(date)\"",
+                    "echo \"#### END $(date +\"%a %d %b %H:%M:%S %Z %Y\")\"",
                     "echo \"#### EXIT_CODE $exit_code\"",
                     "exit $exit_code"]
         # Build the wrapper
