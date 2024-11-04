@@ -164,25 +164,23 @@ def report_info(ap):
                                (bcf_utils.pretty_print_names(
                                    info.multiplexed_samples.split(',')),
                                 project.prettyPrintSamples())
-        elif project.info.library_type in ("CellPlex",
-                                           "CellPlex scRNA-seq",
-                                           "Flex"):
-            # Fetch implicit multiplexed sample info from config
-            try:
-                multi_config = CellrangerMultiConfigCsv(
-                    os.path.join(project.dirn,"10x_multi_config.csv"))
-                number_of_samples = "%s multiplexed (%s physical)" % \
-                                    (len(multi_config.sample_names),
-                                     len(project.samples))
-                sample_names = "%s (%s)" % \
-                               (multi_config.pretty_print_samples(),
-                                project.prettyPrintSamples())
-            except FileNotFoundError:
-                number_of_samples = "%s (physical)" % len(project.samples)
-                sample_names = project.prettyPrintSamples()
         else:
-            number_of_samples = len(project.samples)
-            sample_names = project.prettyPrintSamples()
+            multiplexed_samples = get_multiplexed_samples(project)
+            if multiplexed_samples is not None:
+                if multiplexed_samples:
+                    number_of_samples = "%s multiplexed (%s physical)" % \
+                                        (len(multiplexed_samples),
+                                         len(project.samples))
+                    sample_names = "%s (%s)" % \
+                                   (bcf_utils.pretty_print_names(
+                                       multiplexed_samples),
+                                    project.prettyPrintSamples())
+                else:
+                    number_of_samples = "%s (physical)" % len(project.samples)
+                    sample_names = project.prettyPrintSamples()
+            else:
+                number_of_samples = len(project.samples)
+                sample_names = project.prettyPrintSamples()
         report.append("\n- %s" % project.name)
         report.append("  %s" % ('-'*len(project.name),))
         report.append("  User    : %s" % info.user)
@@ -233,21 +231,15 @@ def report_concise(ap):
                     number_of_samples = len(p.info.multiplexed_samples.\
                                             split(','))
                 has_multiplexed_samples = True
-            elif p.info.library_type in ("CellPlex",
-                                         "CellPlex scRNA-seq",
-                                         "Flex"):
-                # Fetch implicit multiplexed sample info from config
-                try:
-                    multi_config = CellrangerMultiConfigCsv(
-                        os.path.join(p.dirn,
-                                     "10x_multi_config.csv"))
-                    number_of_samples = len(multi_config.sample_names)
-                    has_multiplexed_samples = True
-                except FileNotFoundError:
-                    number_of_samples = len(p.samples)
             else:
-                # Physical samples
-                number_of_samples = len(p.samples)
+                multiplexed_samples = get_multiplexed_samples(p)
+                if multiplexed_samples:
+                    # Implicit multiplexed sample info from config
+                    number_of_samples = len(multiplexed_samples)
+                    has_multiplexed_samples = True
+                else:
+                    # Fall back to physical samples
+                    number_of_samples = len(p.samples)
             if has_multiplexed_samples:
                 samples = "%s multiplexed sample%s" % \
                           ('?' if number_of_samples == 0
@@ -466,21 +458,15 @@ def report_summary(ap):
                     number_of_samples = len(project.info.multiplexed_samples.\
                                             split(','))
                 has_multiplexed_samples = True
-            elif project.info.library_type in ("CellPlex",
-                                               "CellPlex scRNA-seq",
-                                               "Flex"):
-                # Fetch implicit multiplexed sample info from config
-                try:
-                    multi_config = CellrangerMultiConfigCsv(
-                        os.path.join(project.dirn,
-                                     "10x_multi_config.csv"))
-                    number_of_samples = len(multi_config.sample_names)
-                    has_multiplexed_samples = True
-                except FileNotFoundError:
-                    number_of_samples = len(project.samples)
             else:
-                # Physical samples
-                number_of_samples = len(project.samples)
+                multiplexed_samples = get_multiplexed_samples(project)
+                if multiplexed_samples:
+                    # Implicit multiplexed sample info from config
+                    number_of_samples = len(multiplexed_samples)
+                    has_multiplexed_samples = True
+                else:
+                    # Physical samples
+                    number_of_samples = len(project.samples)
             if has_multiplexed_samples:
                 samples = "%s multiplexed sample%s" % \
                           ('?' if number_of_samples == 0
@@ -649,16 +635,8 @@ def fetch_value(ap,project,field):
         info = project.info
     except AttributeError:
         info = None
-    # 10x CellPlex and Flex data
-    multi_config = None
-    if project.info.library_type in ("CellPlex",
-                                     "CellPlex scRNA-seq",
-                                     "Flex"):
-        try:
-            multi_config = CellrangerMultiConfigCsv(
-                os.path.join(project.dirn,"10x_multi_config.csv"))
-        except FileNotFoundError:
-            pass
+    # Implicit multiplexed samples
+    multiplexed_samples = get_multiplexed_samples(project)
     # Generate value for supplied field name
     if field == 'datestamp':
         return IlluminaData.split_run_name(ap.run_name)[0]
@@ -707,9 +685,9 @@ def fetch_value(ap,project,field):
                 return '?'
             else:
                 return str(len(info.multiplexed_samples.split(',')))
-        elif multi_config:
-            # Number of multiplexed samples from 10x multi config
-            return str(len(multi_config.sample_names))
+        elif multiplexed_samples:
+            # Implicit number of multiplexed samples
+            return str(len(multiplexed_samples))
         else:
             # Number of "physical" samples
             return str(len(project.samples))
@@ -726,9 +704,9 @@ def fetch_value(ap,project,field):
             else:
                 return bcf_utils.pretty_print_names(
                     info.multiplexed_samples.split(','))
-        elif multi_config:
-            # Names of multiplexed samples from 10x multi config
-            return multi_config.pretty_print_samples()
+        elif multiplexed_samples:
+            # Names of implicit multiplexed samples
+            return bcf_utils.pretty_print_names(multiplexed_samples)
         else:
             # Names of "physical" samples
             return project.prettyPrintSamples()
