@@ -165,6 +165,7 @@ def report_info(ap):
                                    info.multiplexed_samples.split(',')),
                                 project.prettyPrintSamples())
         elif project.info.library_type in ("CellPlex",
+                                           "CellPlex scRNA-seq",
                                            "Flex"):
             # Fetch implicit multiplexed sample info from config
             try:
@@ -233,6 +234,7 @@ def report_concise(ap):
                                             split(','))
                 has_multiplexed_samples = True
             elif p.info.library_type in ("CellPlex",
+                                         "CellPlex scRNA-seq",
                                          "Flex"):
                 # Fetch implicit multiplexed sample info from config
                 try:
@@ -465,6 +467,7 @@ def report_summary(ap):
                                             split(','))
                 has_multiplexed_samples = True
             elif project.info.library_type in ("CellPlex",
+                                               "CellPlex scRNA-seq",
                                                "Flex"):
                 # Fetch implicit multiplexed sample info from config
                 try:
@@ -649,6 +652,7 @@ def fetch_value(ap,project,field):
     # 10x CellPlex and Flex data
     multi_config = None
     if project.info.library_type in ("CellPlex",
+                                     "CellPlex scRNA-seq",
                                      "Flex"):
         try:
             multi_config = CellrangerMultiConfigCsv(
