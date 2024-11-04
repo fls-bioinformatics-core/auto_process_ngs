@@ -2512,3 +2512,68 @@ ABM4,CMO304,ABM4
         project = AnalysisProject(os.path.join(mockdir.dirn,'AB'))
         self.assertEqual(get_multiplexed_samples(project),
                          ["ABM1", "ABM2", "ABM3", "ABM4"])
+
+    def test_get_multiplexed_samples_multiple_10x_multi_configs(self):
+        """
+        report: test 'get_multiplexed_samples' (multiple 10x multi configs)
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq",
+                       "analysis_number": 2 },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "CellPlex scRNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Single cell platform": "10xGenomics Chromium 3'v3",
+                        "Number of cells": None,
+                        "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add cellranger multi config.csv files
+        with open(os.path.join(mockdir.dirn,
+                               "AB",
+                               "10x_multi_config.AB1.csv"),'wt') as fp:
+            fastq_dir = os.path.join(mockdir.dirn,
+                                     "AB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+AB1,%s,any,AB1,gene expression,
+AB1,%s,any,AB1,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+ABM1,CMO301,ABM1
+ABM2,CMO302,ABM2
+""" % (fastq_dir,fastq_dir))
+        with open(os.path.join(mockdir.dirn,
+                               "AB",
+                               "10x_multi_config.AB2.csv"),'wt') as fp:
+            fastq_dir = os.path.join(mockdir.dirn,
+                                     "AB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+AB2,%s,any,AB2,gene expression,
+AB2,%s,any,AB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+ABM3,CMO303,ABM3
+ABM4,CMO304,ABM4
+""" % (fastq_dir,fastq_dir))
+        project = AnalysisProject(os.path.join(mockdir.dirn,'AB'))
+        self.assertEqual(get_multiplexed_samples(project),
+                         ["ABM1", "ABM2", "ABM3", "ABM4"])

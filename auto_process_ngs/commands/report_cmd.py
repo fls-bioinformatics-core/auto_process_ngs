@@ -741,16 +741,16 @@ def get_multiplexed_samples(project):
     if project.info.library_type in ("CellPlex",
                                      "CellPlex scRNA-seq",
                                      "Flex"):
-        # Fetch implicit multiplexed sample info from config
-        try:
-            multi_config = CellrangerMultiConfigCsv(
-                os.path.join(project.dirn,"10x_multi_config.csv"))
-            # Return multiplexed sample names
-            return multi_config.sample_names
-        except FileNotFoundError:
-            # Multiplexed samples expected but can't be identified
-            # Return empty list
-            return []
+        # Fetch implicit multiplexed sample info from configs
+        multiplexed_samples = []
+        for f in os.listdir(project.dirn):
+            if f.startswith("10x_multi_config.") and \
+               f.endswith(".csv"):
+                multi_config = CellrangerMultiConfigCsv(
+                    os.path.join(project.dirn, f))
+                multiplexed_samples.extend(multi_config.sample_names)
+        # Return multiplexed sample names
+        return sorted(multiplexed_samples)
     else:
         # No multiplexed samples expected
         # Return None
