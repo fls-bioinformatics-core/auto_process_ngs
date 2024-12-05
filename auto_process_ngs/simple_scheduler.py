@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     simple_scheduler.py: provide basic scheduler capability
-#     Copyright (C) University of Manchester 2013-2022 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
 #
 ########################################################################
 #
@@ -10,9 +10,9 @@
 #########################################################################
 
 
-"""Python module to provide scheduler capability for running external
+"""
+Python module to provide scheduler capability for running external
 programs
-
 """
 
 #######################################################################
