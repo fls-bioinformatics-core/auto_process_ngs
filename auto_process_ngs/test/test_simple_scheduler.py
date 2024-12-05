@@ -937,14 +937,38 @@ class TestSchedulerJob(unittest.TestCase):
             shutil.rmtree(self.log_dir)
 
     def test_scheduler_job_basic(self):
-        """Basic test of SchedulerJob
-
+        """
+        SchedulerJob: test running basic job
         """
         job = SchedulerJob(MockJobRunner(),['sleep','50'])
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,None)
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.command, "sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
+        self.assertFalse(job.is_running)
+        self.assertFalse(job.completed)
+        job.start()
+        self.assertTrue(job.is_running)
+        self.assertFalse(job.completed)
+        self.assertEqual(job.job_number,None)
+        self.assertEqual(job.log_dir,None)
+        job.terminate()
+        self.assertFalse(job.is_running)
+        self.assertTrue(job.completed)
+
+    def test_scheduler_job_fails(self):
+        """
+        SchedulerJob: test failing job
+        """
+        job = SchedulerJob(MockJobRunner(),['ls','*.whereisit'])
+        self.assertEqual(job.job_name, "ls")
+        self.assertEqual(job.job_number,None)
+        self.assertEqual(job.log_dir,None)
+        self.assertEqual(job.command,"ls")
+        self.assertEqual(job.args, ['*.whereisit'])
+        self.assertEqual(str(job), "ls *.whereisit")
         self.assertFalse(job.is_running)
         self.assertFalse(job.completed)
         job.start()
@@ -955,16 +979,18 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_scheduler_job_set_log_dir(self):
-        """Set explicit log_dir for SchedulerJob
-
+        """
+        SchedulerJob: explicitly set log directory for job
         """
         runner = MockJobRunner()
         self.assertEqual(runner.log_dir,None)
         job = SchedulerJob(runner,['sleep','50'],log_dir='/logs')
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,'/logs')
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.command,"sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
         self.assertFalse(job.is_running)
         self.assertFalse(job.completed)
         self.assertEqual(runner.log_dir,None)
@@ -978,7 +1004,8 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_scheduler_job_wait(self):
-        """Wait for SchedulerJob to complete
+        """
+        SchedulerJob: wait for running job to complete
         """
         self.log_dir = tempfile.mkdtemp()
         job = SchedulerJob(
@@ -993,7 +1020,8 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_submitted_scheduler_job_wait(self):
-        """Wait for submitted SchedulerJob to complete
+        """
+        SchedulerJob: wait for submitted job to complete
         """
         self.log_dir = tempfile.mkdtemp()
         sched = SimpleScheduler(
@@ -1009,7 +1037,8 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_scheduler_job_wait_timeout_raises_exception(self):
-        """SchedulerJob raises exception if 'wait' timeout exceeded
+        """
+        SchedulerJob: raise exception if 'wait' timeout exceeded
         """
         self.log_dir = tempfile.mkdtemp()
         job = SchedulerJob(
@@ -1022,13 +1051,16 @@ class TestSchedulerJob(unittest.TestCase):
                           timeout=1)
 
     def test_restart_scheduler_job(self):
-        """Restart running SchedulerJob
+        """
+        SchedulerJob: restart running job
         """
         job = SchedulerJob(MockJobRunner(),['sleep','50'])
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,None)
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.command,"sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
         self.assertFalse(job.is_running)
         self.assertFalse(job.completed)
         initial_job_id = job.start()
@@ -1044,13 +1076,16 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_cant_restart_completed_scheduler_job(self):
-        """Can't restart a completed SchedulerJob
+        """
+        SchedulerJob: don't restart a completed job
         """
         job = SchedulerJob(MockJobRunner(),['sleep','50'])
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,None)
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.command, "sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
         job.start()
         job.terminate()
         self.assertFalse(job.is_running)
@@ -1061,13 +1096,16 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_restart_scheduler_job_exceed_max_tries(self):
-        """Restart running SchedulerJob fails if max attempts exceeded
+        """
+        SchedulerJob: restart fails if maximum attempts exceeded
         """
         job = SchedulerJob(MockJobRunner(),['sleep','50'])
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,None)
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.command, "sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
         self.assertFalse(job.is_running)
         self.assertFalse(job.completed)
         job_id = job.start()
