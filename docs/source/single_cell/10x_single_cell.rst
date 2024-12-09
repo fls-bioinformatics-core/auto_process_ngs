@@ -123,18 +123,18 @@ data within ``auto-process-ngs``:
 ========================================= ==============================
 Single cell platform                      Library types
 ========================================= ==============================
-``10xGenomics Chromium 3'``               ``scRNA-seq``, ``snRNA-seq``,
+``10xGenomics Chromium 3'[*]``            ``scRNA-seq``, ``snRNA-seq``,
                                           ``CellPlex``,
-                                          ``scRNA-seq CellPlex``, ``Flex``
+                                          ``CellPlex scRNA-seq``, ``Flex``
 ``10xGenomics Chromium 3'v3``             ``scRNA-seq``, ``snRNA-seq``
                                           ``CellPlex``,
-                                          ``scRNA-seq CellPlex``, ``Flex``
+                                          ``CellPlex scRNA-seq``, ``Flex``
 ``10xGenomics Chromium 3'v2``             ``scRNA-seq``, ``snRNA-seq``
                                           ``CellPlex``,
-                                          ``scRNA-seq CellPlex``, ``Flex``
+                                          ``CellPlex scRNA-seq``, ``Flex``
 ``10xGenomics Chromium GEM-X 3'v4``       ``scRNA-seq``
 ``10xGenomics Chromium Next GEM 3'v3.1``  ``scRNA-seq``,
-                                          ``scRNA-seq CellPlex``
+                                          ``CellPlex scRNA-seq``
 ``10xGenomics Chromium 5'``               ``Single Cell Immune Profiling``
 ``10xGenomics Single Cell ATAC``          ``scATAC-seq``, ``snATAC-seq``
 ``10xGenomics Single Cell Multiome``      ``ATAC``, ``GEX``
