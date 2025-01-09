@@ -24,6 +24,8 @@ class MockJobRunner(BaseJobRunner):
         self.__log_dirs = dict()
         self.__error_states = dict()
         self.__nslots = nslots
+        self.__log_files = dict()
+        self.__exit_status = dict()
         BaseJobRunner.__init__(self)
 
     def run(self,name,working_dir,script,args):
@@ -32,8 +34,11 @@ class MockJobRunner(BaseJobRunner):
         self.__jobs[job_id] = { 'name': name,
                                 'working_dir': working_dir,
                                 'script': script,
-                                'args': args }
+                                'args': args, }
         self.__log_dirs[job_id] = self.log_dir
+        self.__log_files[job_id] ="%s.%s.log" % (self.__jobs[job_id]['name'],
+                                                 job_id)
+        self.__exit_status[job_id] = None
         return job_id
 
     @property
@@ -41,14 +46,25 @@ class MockJobRunner(BaseJobRunner):
         return self.__nslots
 
     def logFile(self,job_id):
-        return "%s.%s.log" % (self.__jobs[job_id]['name'],job_id)
+        if job_id in self.__log_files:
+            log_dir = self.__log_dirs[job_id]
+            if not log_dir:
+                log_dir = os.getcwd()
+            return os.path.join(log_dir, self.__log_files[job_id])
+        return None
 
     def errFile(self,job_id):
         return self.logFile(job_id)
 
+    def exit_status(self,job_id):
+        if job_id in self.__exit_status:
+            return self.__exit_status[job_id]
+        return None
+
     def terminate(self,job_id):
         if job_id in self.__jobs:
             del(self.__jobs[job_id])
+            del(self.__exit_status[job_id])
 
     def errorState(self,job_id):
         try:
@@ -58,6 +74,12 @@ class MockJobRunner(BaseJobRunner):
 
     def list(self):
         return self.__jobs.keys()
+
+    def set_job_completed(self,job_id,exit_status=0):
+        # Simulate job completion
+        if job_id in self.__jobs:
+            del(self.__jobs[job_id])
+            self.__exit_status[job_id] = exit_status
 
     def set_error_state(self,job_id,state):
         # Allow error state on jobs to be set manually for testing
@@ -937,48 +959,104 @@ class TestSchedulerJob(unittest.TestCase):
             shutil.rmtree(self.log_dir)
 
     def test_scheduler_job_basic(self):
-        """Basic test of SchedulerJob
-
         """
-        job = SchedulerJob(MockJobRunner(),['sleep','50'])
-        self.assertEqual(job.job_name,None)
+        SchedulerJob: test running basic job
+        """
+        runner = MockJobRunner()
+        job = SchedulerJob(runner, ['sleep','50'])
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
-        self.assertEqual(job.log_dir,None)
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.job_id, None)
+        self.assertEqual(job.log_dir, None)
+        self.assertEqual(job.command, "sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(job.runner, runner)
+        self.assertEqual(job.exit_status, None)
+        self.assertEqual(str(job), "sleep 50")
         self.assertFalse(job.is_running)
+        self.assertEqual(job.log, None)
+        self.assertEqual(job.err, None)
         self.assertFalse(job.completed)
+        self.assertEqual(job.exit_status, None)
+        # Start the job
         job.start()
+        self.assertNotEqual(job.job_id, None)
         self.assertTrue(job.is_running)
+        self.assertEqual(job.log, runner.logFile(job.job_id))
+        self.assertEqual(job.err, runner.logFile(job.job_id))
         self.assertFalse(job.completed)
-        job.terminate()
+        self.assertEqual(job.exit_status, None)
+        # Simulate job completion (no error)
+        runner.set_job_completed(job.job_id)
         self.assertFalse(job.is_running)
         self.assertTrue(job.completed)
+        self.assertEqual(job.exit_status, 0)
+
+    def test_scheduler_job_fails(self):
+        """
+        SchedulerJob: test failing job
+        """
+        runner = MockJobRunner()
+        job = SchedulerJob(runner, ['ls','*.whereisit'])
+        self.assertEqual(job.job_name, "ls")
+        self.assertEqual(job.job_number,None)
+        self.assertEqual(job.log_dir, None)
+        self.assertEqual(job.log, None)
+        self.assertEqual(job.err, None)
+        self.assertEqual(job.command,"ls")
+        self.assertEqual(job.args, ['*.whereisit'])
+        self.assertEqual(str(job), "ls *.whereisit")
+        self.assertFalse(job.is_running)
+        self.assertFalse(job.completed)
+        # Start the job
+        job.start()
+        self.assertNotEqual(job.job_id, None)
+        self.assertTrue(job.is_running)
+        self.assertEqual(job.log, runner.logFile(job.job_id))
+        self.assertEqual(job.err, runner.logFile(job.job_id))
+        self.assertFalse(job.completed)
+        # Simulate job completion with error
+        runner.set_job_completed(job.job_id, exit_status=1)
+        self.assertFalse(job.is_running)
+        self.assertTrue(job.completed)
+        self.assertEqual(job.exit_status, 1)
 
     def test_scheduler_job_set_log_dir(self):
-        """Set explicit log_dir for SchedulerJob
-
+        """
+        SchedulerJob: explicitly set log directory for job
         """
         runner = MockJobRunner()
         self.assertEqual(runner.log_dir,None)
         job = SchedulerJob(runner,['sleep','50'],log_dir='/logs')
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,'/logs')
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.log, None)
+        self.assertEqual(job.err, None)
+        self.assertEqual(job.command,"sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
         self.assertFalse(job.is_running)
         self.assertFalse(job.completed)
         self.assertEqual(runner.log_dir,None)
+        # Start the job
         job.start()
-        self.assertEqual(job.log_dir,'/logs')
         self.assertTrue(job.is_running)
+        self.assertEqual(job.log_dir, '/logs')
+        self.assertEqual(job.log, runner.logFile(job.job_id))
+        self.assertEqual(job.err, runner.logFile(job.job_id))
+        self.assertEqual(os.path.dirname(job.log), "/logs")
+        self.assertEqual(os.path.dirname(job.err), "/logs")
         self.assertFalse(job.completed)
         self.assertEqual(runner.log_dir,None)
+        # Terminate the job
         job.terminate()
         self.assertFalse(job.is_running)
         self.assertTrue(job.completed)
 
     def test_scheduler_job_wait(self):
-        """Wait for SchedulerJob to complete
+        """
+        SchedulerJob: wait for running job to complete
         """
         self.log_dir = tempfile.mkdtemp()
         job = SchedulerJob(
@@ -993,7 +1071,8 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_submitted_scheduler_job_wait(self):
-        """Wait for submitted SchedulerJob to complete
+        """
+        SchedulerJob: wait for submitted job to complete
         """
         self.log_dir = tempfile.mkdtemp()
         sched = SimpleScheduler(
@@ -1009,7 +1088,8 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_scheduler_job_wait_timeout_raises_exception(self):
-        """SchedulerJob raises exception if 'wait' timeout exceeded
+        """
+        SchedulerJob: raise exception if 'wait' timeout exceeded
         """
         self.log_dir = tempfile.mkdtemp()
         job = SchedulerJob(
@@ -1022,13 +1102,16 @@ class TestSchedulerJob(unittest.TestCase):
                           timeout=1)
 
     def test_restart_scheduler_job(self):
-        """Restart running SchedulerJob
+        """
+        SchedulerJob: restart running job
         """
         job = SchedulerJob(MockJobRunner(),['sleep','50'])
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,None)
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.command,"sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
         self.assertFalse(job.is_running)
         self.assertFalse(job.completed)
         initial_job_id = job.start()
@@ -1044,13 +1127,16 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_cant_restart_completed_scheduler_job(self):
-        """Can't restart a completed SchedulerJob
+        """
+        SchedulerJob: don't restart a completed job
         """
         job = SchedulerJob(MockJobRunner(),['sleep','50'])
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,None)
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.command, "sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
         job.start()
         job.terminate()
         self.assertFalse(job.is_running)
@@ -1061,13 +1147,16 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.completed)
 
     def test_restart_scheduler_job_exceed_max_tries(self):
-        """Restart running SchedulerJob fails if max attempts exceeded
+        """
+        SchedulerJob: restart fails if maximum attempts exceeded
         """
         job = SchedulerJob(MockJobRunner(),['sleep','50'])
-        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_name, "sleep")
         self.assertEqual(job.job_number,None)
         self.assertEqual(job.log_dir,None)
-        self.assertEqual(job.command,"sleep 50")
+        self.assertEqual(job.command, "sleep")
+        self.assertEqual(job.args, ['50'])
+        self.assertEqual(str(job), "sleep 50")
         self.assertFalse(job.is_running)
         self.assertFalse(job.completed)
         job_id = job.start()
