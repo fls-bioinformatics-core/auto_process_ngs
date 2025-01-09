@@ -2429,7 +2429,14 @@ class SampleQCReporter:
                     # Cellranger 8.0.0 doesn't output median
                     # reads so fall back to mean
                     value = metrics.mean_reads_per_cell
-            value = pretty_print_reads(value)
+            try:
+                # Assume that reads per cell is an
+                # integer and trap if it isn't (e.g.
+                # '---')
+                value = pretty_print_reads(int(value))
+            except ValueError:
+                # Not an integer - report as a string
+                value = str(value)
         elif field == "10x_genes_per_cell":
             value = pretty_print_reads(metrics.median_genes_per_cell)
         elif field == "10x_frac_reads_in_cell":
