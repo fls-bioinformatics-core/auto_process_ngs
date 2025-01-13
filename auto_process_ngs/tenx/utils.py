@@ -568,6 +568,13 @@ def make_multi_config_template(f,reference=None,probe_set=None,
         cellranger_version = DEFAULT_CELLRANGER_VERSION
     else:
         cellranger_version = str(cellranger_version)
+    # Major version
+    try:
+        cellranger_major_version = int(cellranger_version.split(".")[0])
+    except Exception as ex:
+        raise Exception(f"'{cellranger_version}': unable to extract "
+                        f"Cellranger major  version from version string: "
+                        f"{ex}")
     # Normalise and check supplied library type
     if library_type.startswith("CellPlex"):
         library_type = "cellplex"
@@ -605,14 +612,14 @@ def make_multi_config_template(f,reference=None,probe_set=None,
                      (probe_set if probe_set
                       else "/path/to/probe/set"))
         fp.write("#force-cells,n\n")
-        if cellranger_version.startswith("7."):
+        if cellranger_major_version == 7:
             # Cellranger 7.* targetted
             if no_bam is not None:
                 fp.write("no-bam,%s\n" % str(no_bam).lower())
             else:
                 fp.write("#no-bam,true|false\n")
-        elif cellranger_version.startswith("8."):
-            # Cellranger 8.* targetted
+        elif cellranger_major_version in (8, 9):
+            # Cellranger 8.* or 9.* targetted
             if no_bam is not None:
                 fp.write("create-bam,%s\n" % str(not no_bam).lower())
             else:
