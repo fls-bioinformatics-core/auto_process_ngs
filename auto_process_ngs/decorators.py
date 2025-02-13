@@ -14,6 +14,7 @@ Implements decorators for use with the ``AutoProcessor`` class.
 
 import time
 import logging
+from functools import wraps
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ def add_command(name,f):
         argument of the callable must be an
         AutoProcessor-like class
     """
+    @wraps(f)
     def wrapped_func(*args,**kws):
         # Wraps execution of the supplied
         # function to trap exceptions and
