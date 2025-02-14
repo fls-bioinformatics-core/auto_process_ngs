@@ -1,5 +1,5 @@
 #     mockqc.py: module providing mock Illumina QC data for testing
-#     Copyright (C) University of Manchester 2016-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2025 Peter Briggs
 #
 ########################################################################
 
@@ -462,6 +462,8 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
             metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY_7_1_0
         elif version == 8:
             metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY_8_0_0
+        elif version == 9:
+            metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY_9_0_0
         else:
             raise Exception("%s: unsupported Cellranger "
                             "version" % cellranger_version)
