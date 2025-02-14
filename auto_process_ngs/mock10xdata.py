@@ -1,5 +1,5 @@
 #     mock.py: module providing mock 10xGenomics data for testing
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
 #
 ########################################################################
 
@@ -734,6 +734,91 @@ Library,Gene Expression,Probe barcode ID,BC015,UMIs per probe barcode,"51,216,16
 Library,Gene Expression,Probe barcode ID,BC016,Cells per probe barcode,"3,661 (8.32%)"
 Library,Gene Expression,Probe barcode ID,BC016,Sample ID,JMF16
 Library,Gene Expression,Probe barcode ID,BC016,UMIs per probe barcode,"52,394,225 (8.24%)"
+"""
+
+CELLPLEX_METRICS_SUMMARY_9_0_0 = """Category,Library Type,Grouped By,Group Name,Metric Name,Metric Value
+Cells,Gene Expression,,,Cells,"1,571"
+Cells,Gene Expression,,,Confidently mapped antisense,3.7%
+Cells,Gene Expression,,,Confidently mapped to exonic regions,65.8%
+Cells,Gene Expression,,,Confidently mapped to genome,92.8%
+Cells,Gene Expression,,,Confidently mapped to intergenic regions,4.7%
+Cells,Gene Expression,,,Confidently mapped to intronic regions,22.4%
+Cells,Gene Expression,,,Confidently mapped to transcriptome,84.2%
+Cells,Gene Expression,,,Mapped to genome,96.3%
+Cells,Gene Expression,,,Mean reads per cell,"39,445"
+Cells,Gene Expression,,,Median UMI counts per cell,"6,692"
+Cells,Gene Expression,,,Median genes per cell,"2,472"
+Cells,Gene Expression,,,Number of reads from cells called from this sample,"61,968,623"
+Cells,Gene Expression,,,Total genes detected,"20,944"
+Cells,Gene Expression,Physical library ID,SC_GE,Cell-associated barcodes identified as multiplets,"1,218 (8.3%)"
+Cells,Gene Expression,Physical library ID,SC_GE,Cell-associated barcodes not assigned any CMOs,"4,345 (29.6%)"
+Cells,Gene Expression,Physical library ID,SC_GE,Cells assigned to other samples,"7,545 (51.4%)"
+Cells,Gene Expression,Physical library ID,SC_GE,Cells assigned to this sample,"1,571 (10.7%)"
+Library,Gene Expression,Fastq ID,SC_GE,Number of reads,"771,660,546"
+Library,Gene Expression,Fastq ID,SC_GE,Number of short reads skipped,0
+Library,Gene Expression,Fastq ID,SC_GE,Q30 RNA read,92.8%
+Library,Gene Expression,Fastq ID,SC_GE,Q30 UMI,95.7%
+Library,Gene Expression,Fastq ID,SC_GE,Q30 barcodes,96.2%
+Library,Gene Expression,Physical library ID,SC_GE,Cell-associated barcodes identified as multiplets,"1,218 (8.3%)"
+Library,Gene Expression,Physical library ID,SC_GE,Cell-associated barcodes not assigned any CMOs,"4,345 (29.6%)"
+Library,Gene Expression,Physical library ID,SC_GE,Cells,"14,679"
+Library,Gene Expression,Physical library ID,SC_GE,Cells assigned to a sample,"9,116 (62.1%)"
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped antisense,3.4%
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped reads in cells,96.9%
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to exonic regions,69.0%
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to genome,91.9%
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to intergenic regions,4.0%
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to intronic regions,18.9%
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to transcriptome,84.1%
+Library,Gene Expression,Physical library ID,SC_GE,Mapped to genome,95.3%
+Library,Gene Expression,Physical library ID,SC_GE,Mean reads per cell,"52,569"
+Library,Gene Expression,Physical library ID,SC_GE,Number of reads,"771,660,546"
+Library,Gene Expression,Physical library ID,SC_GE,Number of reads in the library,"771,660,546"
+Library,Gene Expression,Physical library ID,SC_GE,Sequencing saturation,69.0%
+Library,Gene Expression,Physical library ID,SC_GE,Valid UMIs,99.9%
+Library,Gene Expression,Physical library ID,SC_GE,Valid barcodes,97.6%
+Library,Multiplexing Capture,,,Cell-associated barcodes identified as multiplets,"1,218 (8.3%)"
+Library,Multiplexing Capture,,,Cell-associated barcodes not assigned any CMOs,"4,345 (29.6%)"
+Library,Multiplexing Capture,,,Cells assigned to a sample,"9,116 (62.1%)"
+Library,Multiplexing Capture,,,Estimated number of cell-associated barcodes,"14,679"
+Library,Multiplexing Capture,,,Median CMO UMI Counts per cell assigned to a sample,"2,987"
+Library,Multiplexing Capture,,,Number of samples assigned at least one cell,5
+Library,Multiplexing Capture,,,Singlet capture ratio,0.69
+Library,Multiplexing Capture,CMO Name,CMO301,CMO signal-to-noise ratio,4.25
+Library,Multiplexing Capture,CMO Name,CMO301,Cells per CMO,"1,571 (17.2%)"
+Library,Multiplexing Capture,CMO Name,CMO301,Fraction reads in cell-associated barcodes,72.4%
+Library,Multiplexing Capture,CMO Name,CMO301,Sample ID,SC1
+Library,Multiplexing Capture,CMO Name,CMO302,CMO signal-to-noise ratio,2.70
+Library,Multiplexing Capture,CMO Name,CMO302,Cells per CMO,"1,204 (13.2%)"
+Library,Multiplexing Capture,CMO Name,CMO302,Fraction reads in cell-associated barcodes,49.7%
+Library,Multiplexing Capture,CMO Name,CMO302,Sample ID,SC2
+Library,Multiplexing Capture,CMO Name,CMO303,CMO signal-to-noise ratio,3.50
+Library,Multiplexing Capture,CMO Name,CMO303,Cells per CMO,"2,487 (27.3%)"
+Library,Multiplexing Capture,CMO Name,CMO303,Fraction reads in cell-associated barcodes,71.9%
+Library,Multiplexing Capture,CMO Name,CMO303,Sample ID,SC3
+Library,Multiplexing Capture,CMO Name,CMO304,CMO signal-to-noise ratio,4.60
+Library,Multiplexing Capture,CMO Name,CMO304,Cells per CMO,"1,313 (14.4%)"
+Library,Multiplexing Capture,CMO Name,CMO304,Fraction reads in cell-associated barcodes,66.8%
+Library,Multiplexing Capture,CMO Name,CMO304,Sample ID,SC4
+Library,Multiplexing Capture,CMO Name,CMO305,CMO signal-to-noise ratio,3.34
+Library,Multiplexing Capture,CMO Name,CMO305,Cells per CMO,"2,541 (27.9%)"
+Library,Multiplexing Capture,CMO Name,CMO305,Fraction reads in cell-associated barcodes,73.0%
+Library,Multiplexing Capture,CMO Name,CMO305,Sample ID,SC5
+Library,Multiplexing Capture,Fastq ID,SC_CML,Number of reads,"204,261,166"
+Library,Multiplexing Capture,Fastq ID,SC_CML,Number of short reads skipped,0
+Library,Multiplexing Capture,Fastq ID,SC_CML,Q30 RNA read,96.9%
+Library,Multiplexing Capture,Fastq ID,SC_CML,Q30 UMI,96.4%
+Library,Multiplexing Capture,Fastq ID,SC_CML,Q30 barcodes,96.3%
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction CMO reads,97.7%
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction CMO reads usable,65.0%
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction reads from multiplets,16.0%
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction reads in cell-associated barcodes,67.0%
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction unrecognized CMO,2.3%
+Library,Multiplexing Capture,Physical library ID,SC_CML,Mean reads per cell-associated barcode,"13,915"
+Library,Multiplexing Capture,Physical library ID,SC_CML,Number of reads,"204,261,166"
+Library,Multiplexing Capture,Physical library ID,SC_CML,Sequencing saturation,29.5%
+Library,Multiplexing Capture,Physical library ID,SC_CML,Valid UMIs,100.0%
+Library,Multiplexing Capture,Physical library ID,SC_CML,Valid barcodes,99.2%
 """
 
 MULTIOME_LIBRARIES = """#Local sample\tLinked sample
