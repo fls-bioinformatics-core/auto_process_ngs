@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2025 Peter Briggs
 #
 ########################################################################
 
@@ -2195,8 +2195,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                                required=True)
             count.add_argument("--chemistry",action="store")
             count.add_argument("--force-cells",action="store",type=int)
-            if version[0] in (7,8):
-                # Cellranger 7,8: include introns on by default
+            if version[0] >= 7:
+                # Cellranger 7+: include introns on by default
                 count.add_argument("--include-introns",
                                    choices=['true','false'],
                                    default='true')
@@ -2207,8 +2207,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if version[0] >= 5:
                 count.add_argument("--r1-length",action="store")
                 count.add_argument("--r2-length",action="store")
-            if version[0] == 8:
-                # Cellranger 8: explicitly specify BAM creation
+            if version[0] >= 8:
+                # Cellranger 8+: explicitly specify BAM creation
                 count.add_argument("--create-bam",
                                    choices=['true','false'],
                                    required=True)
@@ -2460,6 +2460,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_7_1_0
             elif version[0] == 8:
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_8_0_0
+            elif version[0] == 9:
+                metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_9_0_0
             else:
                 raise Exception("%s: unsupported version" % self._version)
             for sample in config.sample_names:
