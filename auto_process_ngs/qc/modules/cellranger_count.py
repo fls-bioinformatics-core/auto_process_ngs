@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 #     cellranger_count: implements 'cellranger_count' QC module
-#     Copyright (C) University of Manchester 2024 Peter Briggs
+#     Copyright (C) University of Manchester 2024-2025 Peter Briggs
 
 """
 Implements the 'cellranger_count' QC module:
@@ -743,11 +743,14 @@ class RunCellrangerCount(PipelineTask):
                     cmd.add_args("--r1-length=26")
                     if self.args.library_type == "snRNA-seq":
                         # For single nuclei RNA-seq specify the
-                        # --include-introns for cellranger 5.0+
-                        if cellranger_major_version in (7,8):
+                        if cellranger_major_version >= 7:
+                            # Syntax is --include-introns {true|false}
+                            # for cellranger 7.0+
                             cmd.add_args("--include-introns",
                                          "true")
                         else:
+                            # Other versions use --include-introns
+                            # (no other arguments)
                             cmd.add_args("--include-introns")
                 # Additional options for cellranger 8.0+
                 if cellranger_major_version >= 8:
