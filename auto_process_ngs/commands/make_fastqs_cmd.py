@@ -316,6 +316,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         'nprocessors': nprocessors,
         'no_lane_splitting': no_lane_splitting,
         'create_empty_fastqs': create_empty_fastqs,
+        'ignore_missing_bcls': ignore_missing_bcls
     }
     for item in ('bcl_converter',
                  'nprocessors',
