@@ -435,6 +435,13 @@ def add_make_fastqs_command(cmdparser):
                               dest='create_fastq_for_index_read',
                               default=False,
                               help="also create FASTQs for index reads")
+    # Ignore missing or corrupted BCL files
+    bcl_to_fastq.add_argument("--ignore-missing-bcls", action="store_true",
+                              dest="ignore_missing_bcls", default=False,
+                              help="ignores missing or corrupt BCL files "
+                              "and assumes 'N'/'#' for missing calls "
+                              "(only applies if using bcl2fastq as the "
+                              "BCL conversion software)")
     # Number of processors
     add_nprocessors_option(bcl_to_fastq,None,
                            default_display=(
@@ -1565,6 +1572,7 @@ def make_fastqs(args):
         adapter_sequence=args.adapter_sequence,
         adapter_sequence_read2=args.adapter_sequence_read2,
         create_fastq_for_index_read=args.create_fastq_for_index_read,
+        ignore_missing_bcls=args.ignore_missing_bcls,
         find_adapters_with_sliding_window=\
         args.find_adapters_with_sliding_window,
         stats_file=args.stats_file,
