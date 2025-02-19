@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq.pipeline.py: pipelines for Fastq generation
-#     Copyright (C) University of Manchester 2020-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2020-2025 Peter Briggs
 #
 
 """
@@ -379,6 +379,7 @@ class MakeFastqs(Pipeline):
         self.add_param('find_adapters_with_sliding_window',value=False,
                        type=bool)
         self.add_param('create_empty_fastqs',value=False,type=bool)
+        self.add_param('ignore_missing_bcls',value=False,type=bool)
         self.add_param('name',type=str)
         self.add_param('stats_file',type=str)
         self.add_param('stats_full',type=str)
@@ -1249,6 +1250,7 @@ class MakeFastqs(Pipeline):
                         find_adapters_with_sliding_window=\
                         find_adapters_with_sliding_window,
                         create_empty_fastqs=self.params.create_empty_fastqs,
+                        ignore_missing_bcls=self.params.ignore_missing_bcls,
                         platform=identify_platform.output.platform,
                         bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
                         bcl2fastq_version=\
@@ -1853,8 +1855,9 @@ class MakeFastqs(Pipeline):
             primary_data_dir=None,force_copy_of_primary_data=False,
             no_lane_splitting=None,create_fastq_for_index_read=None,
             find_adapters_with_sliding_window=None,
-            create_empty_fastqs=None,name=None,stats_file=None,
-            stats_full=None,per_lane_stats=None,per_lane_sample_stats=None,
+            create_empty_fastqs=None,ignore_missing_bcls=None,
+            name=None,stats_file=None,stats_full=None,
+            per_lane_stats=None,per_lane_sample_stats=None,
             nprocessors=None,cellranger_jobmode='local',
             cellranger_mempercore=None,cellranger_maxjobs=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
@@ -1888,6 +1891,8 @@ class MakeFastqs(Pipeline):
             sequences (--find-adapters-with-sliding-window)
           create_empty_fastqs (bool): if True then create empty
             "placeholder" Fastqs if not created by bcl2fastq
+          ignore_missing_bcls (bool): if True then ignore missing
+            or corrupted BCL files
           name (str): optional identifier for output
             stats and report files
           stats_file (str): path to statistics output file
@@ -2055,6 +2060,7 @@ class MakeFastqs(Pipeline):
             'find_adapters_with_sliding_window':
             find_adapters_with_sliding_window,
             'create_empty_fastqs': create_empty_fastqs,
+            'ignore_missing_bcls': ignore_missing_bcls,
             'name': name,
             'stats_file': stats_file,
             'stats_full': stats_full,
@@ -2454,7 +2460,7 @@ class RunBcl2Fastq(PipelineTask):
     """
     def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
              r1_length=None,r2_length=None,
-             ignore_missing_bcl=False,no_lane_splitting=False,
+             ignore_missing_bcls=False,no_lane_splitting=False,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
              create_fastq_for_index_read=False,
@@ -2477,8 +2483,8 @@ class RunBcl2Fastq(PipelineTask):
           r2_length (int): if set then truncate R2 reads in
             bases mask to this length (NB ignored if bases
             mask is already set)
-          ignore_missing_bcl (bool): if True then run
-            bcl2fastq with --ignore-missing-bcl
+          ignore_missing_bcls (bool): if True then run
+            bcl2fastq with --ignore-missing-bcls
           no_lane_splitting (bool): if True then run bcl2fastq
             with --no-lane-splitting
           minimum_trimmed_read_length (int): if set then supply
@@ -2584,7 +2590,7 @@ class RunBcl2Fastq(PipelineTask):
         params = {
             'mismatches': mismatches,
             'bases_mask': bases_mask,
-            'ignore_missing_bcl': self.args.ignore_missing_bcl,
+            'ignore_missing_bcls': self.args.ignore_missing_bcls,
             'no_lane_splitting': self.args.no_lane_splitting,
             'minimum_trimmed_read_length':
             self.args.minimum_trimmed_read_length,
@@ -2629,7 +2635,7 @@ class RunBcl2Fastq(PipelineTask):
         print("%-22s: %s" % ("Create empty Fastqs",self.args.create_empty_fastqs))
         for item,desc in (('bases_mask',"Bases mask"),
                           ('mismatches',"Allowed mismatches",),
-                          ('ignore_missing_bcl',"Ignore missing bcl"),
+                          ('ignore_missing_bcls',"Ignore missing bcls"),
                           ('no_lane_splitting',"No lane splitting"),
                           ('minimum_trimmed_read_length',"Min trimmed read len"),
                           ('mask_short_adapter_reads',"Mask short adptr reads"),
