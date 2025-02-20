@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2025 Peter Briggs
 #
 ########################################################################
 #
@@ -132,7 +132,7 @@ class bcl2fastq:
     def bcl2fastq2(run_dir,sample_sheet,output_dir="Unaligned",
                    mismatches=None,
                    bases_mask=None,
-                   ignore_missing_bcl=False,
+                   ignore_missing_bcls=False,
                    no_lane_splitting=False,
                    minimum_trimmed_read_length=None,
                    mask_short_adapter_reads=None,
@@ -162,7 +162,7 @@ class bcl2fastq:
             will be derived automatically from the bases mask string)
           bases_mask: optional, specify string indicating how to treat
             each cycle within each read e.g. 'y101,I6,y101'
-          ignore_missing_bcl: optional, if True then interpret missing bcl
+          ignore_missing_bcls: optional, if True then interpret missing bcl
             files as no call (default is False)
           no_lane_splitting: optional, if True then don't split FASTQ
             files by lane (--no-lane-splitting) (default is False)
@@ -210,7 +210,7 @@ class bcl2fastq:
             if bases_mask is not None:
                 bcl2fastq_cmd.add_args('--barcode-mismatches',
                                        get_nmismatches(bases_mask))
-        if ignore_missing_bcl:
+        if ignore_missing_bcls:
             bcl2fastq_cmd.add_args('--ignore-missing-bcls')
         if no_lane_splitting:
             bcl2fastq_cmd.add_args('--no-lane-splitting')

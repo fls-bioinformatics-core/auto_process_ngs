@@ -71,7 +71,7 @@ class TestBcl2Fastq(unittest.TestCase):
             '/runs/150107_NB123000_0001_ABCX',
             'SampleSheet.csv',
             output_dir='run/bcl2fastq',
-            ignore_missing_bcl=True).command_line,
+            ignore_missing_bcls=True).command_line,
                          ['bcl2fastq',
                           '--runfolder-dir','/runs/150107_NB123000_0001_ABCX',
                           '--output-dir','run/bcl2fastq',

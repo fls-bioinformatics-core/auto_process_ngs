@@ -1118,6 +1118,8 @@ class MockBcl2fastq2Exe:
     - sliding window algorith for adapter
       trimming can be checked via
       `assert_find_adapters_with_sliding_window`
+    - ignoring missing BCL files can be checked
+      via `assert_ignore_missing_bcls`
     """
 
     @staticmethod
@@ -1129,6 +1131,7 @@ class MockBcl2fastq2Exe:
                assert_mask_short_adapter_reads=None,
                assert_adapter=None,assert_adapter2=None,
                assert_find_adapters_with_sliding_window=None,
+               assert_ignore_missing_bcls=None,
                version='2.20.0.422'):
         """
         Create a "mock" bcl2fastq executable
@@ -1176,6 +1179,10 @@ class MockBcl2fastq2Exe:
             (bool): if set then assert that
             --find-adapters-with-sliding-window
             matches the supplied boolean value
+          assert_ignore_missing_bcls (bool): if
+            set then assert that
+            --ignore-missing-bcls matches the
+            supplied boolean value
           version (str): version of bcl2fastq2
             to imitate
         """
@@ -1198,6 +1205,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                            assert_adapter=%s,
                            assert_adapter2=%s,
                            assert_find_adapters_with_sliding_window=%s,
+                           assert_ignore_missing_bcls=%s,
                            version=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    missing_fastqs,
@@ -1218,6 +1226,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                     if assert_adapter2 is not None
                     else None),
                    assert_find_adapters_with_sliding_window,
+                   assert_ignore_missing_bcls,
                    ("\"%s\"" % version
                     if version is not None
                     else None)))
@@ -1238,6 +1247,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                  assert_adapter=None,
                  assert_adapter2=None,
                  assert_find_adapters_with_sliding_window=None,
+                 assert_ignore_missing_bcls=None,
                  version=None):
         """
         Internal: configure the mock bcl2fastq2
@@ -1257,6 +1267,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
         self._assert_adapter2 = assert_adapter2
         self._assert_find_adapters_with_sliding_window = \
                                 assert_find_adapters_with_sliding_window
+        self._assert_ignore_missing_bcls = assert_ignore_missing_bcls
         self._version = version
 
     def main(self,args):
@@ -1328,6 +1339,12 @@ bcl2fastq v%s
                   args.find_adapters_with_sliding_window)
             assert(args.find_adapters_with_sliding_window ==
                    self._assert_find_adapters_with_sliding_window)
+        # Check --ignore-missing-bcls
+        if self._assert_ignore_missing_bcls is not None:
+            print("Checking --ignore-missing-bcls: %s" %
+                  args.ignore_missing_bcls)
+            assert(args.ignore_missing_bcls ==
+                   self._assert_ignore_missing_bcls)
         # Platform
         print("Platform (default): %s" % self._platform)
         # Run folder (input data)

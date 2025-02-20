@@ -53,7 +53,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 per_lane_stats_file=None,
                 analyse_barcodes=True,barcode_analysis_dir=None,
                 force_copy_of_primary_data=False,
-                create_empty_fastqs=False,runner=None,
+                create_empty_fastqs=False,
+                ignore_missing_bcls=False,runner=None,
                 icell8_swap_i1_and_i2=False,
                 icell8_reverse_complement=None,
                 cellranger_jobmode=None,
@@ -145,9 +146,12 @@ def make_fastqs(ap,protocol='standard',platform=None,
         sequence to use for read2 instead of any sequences already set
         in the samplesheet (nb will be ignored if 'trim_adapters' is
         False)
-      create_fastq_for_index_reads (boolean): if True then also create
+      create_fastq_for_index_reads (bool): if True then also create
         Fastq files for index reads (default, don't create index read
         Fastqs)
+      ignore_missing_bcls (bool): if True then tell BCL conversion
+        software to ignore missing or corrupted BCLs (default: False,
+        don't ignore missing or corrupted BCL files)
       find_adapters_with_sliding_window (boolean): if True then use
         sliding window algorithm to identify adapter sequences for
         trimming
@@ -312,6 +316,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         'nprocessors': nprocessors,
         'no_lane_splitting': no_lane_splitting,
         'create_empty_fastqs': create_empty_fastqs,
+        'ignore_missing_bcls': ignore_missing_bcls
     }
     for item in ('bcl_converter',
                  'nprocessors',
@@ -339,6 +344,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
     # Create empty Fastqs
     create_empty_fastqs = defaults['create_empty_fastqs']
+
+    # Ignore missing/corrupted BCL files
+    ignore_missing_bcls = defaults['ignore_missing_bcls']
 
     # Set up pipeline runners
     default_runner = ap.settings.general.default_runner
@@ -421,6 +429,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              find_adapters_with_sliding_window=\
                              find_adapters_with_sliding_window,
                              create_empty_fastqs=create_empty_fastqs,
+                             ignore_missing_bcls=ignore_missing_bcls,
                              stats_file=stats_file,
                              per_lane_stats=per_lane_stats_file,
                              nprocessors=nprocessors,
