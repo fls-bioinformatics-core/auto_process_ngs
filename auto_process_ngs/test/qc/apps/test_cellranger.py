@@ -300,6 +300,7 @@ PBB,CMO302,PBB
         self.assertEqual(cellranger_multi.cmdline_file,
                          os.path.join(multi_dir,"_cmdline"))
         self.assertEqual(cellranger_multi.cmdline,cmdline)
+        self.assertEqual(cellranger_multi.physical_sample,None)
         self.assertEqual(cellranger_multi.version,None)
         self.assertEqual(cellranger_multi.reference_data,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
@@ -373,11 +374,158 @@ PBB,BC002,PBB
         self.assertEqual(cellranger_multi.cmdline_file,
                          os.path.join(multi_dir,"_cmdline"))
         self.assertEqual(cellranger_multi.cmdline,cmdline)
+        self.assertEqual(cellranger_multi.physical_sample,None)
         self.assertEqual(cellranger_multi.version,None)
         self.assertEqual(cellranger_multi.reference_data,
                          "/data/refdata-cellranger-gex-GRCh38-2020-A")
         self.assertEqual(cellranger_multi.probe_set,
                          "/data/probe_set_v1.0_GRCh38-2020-A.csv")
+        self.assertEqual(cellranger_multi.cellranger_exe,
+                         "/path/to/cellranger")
+        self.assertEqual(cellranger_multi.pipeline_name,"cellranger")
+
+    def test_cellrangermulti_cellplex_physical_sample_from_args(self):
+        """
+        CellrangerMulti: check physical sample from arguments
+        """
+        # Add config.csv file
+        config_csv = os.path.join(self.project.dirn,
+                                  "10x_multi_config.csv")
+        with open(config_csv,'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,gene expression,
+PJB2_MC,/data/runs/fastqs_mc,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""")
+        # Add cellranger multi outputs
+        UpdateAnalysisProject(self.project).add_cellranger_multi_outputs(
+            config_csv)
+        # Do tests
+        multi_dir = os.path.join(self.project.qc_dir,"cellranger_multi")
+        cmdline = "/path/to/cellranger multi --id PJB --csv %s --jobmode=local --localcores=16 --localmem=48 --maxjobs=1 --jobinterval=100" % config_csv
+        with open(os.path.join(multi_dir,"_cmdline"),'wt') as fp:
+            fp.write("%s\n" % cmdline)
+        cellranger_multi = CellrangerMulti(multi_dir, sample="PB1")
+        self.assertEqual(cellranger_multi.mode,"multi")
+        self.assertEqual(cellranger_multi.dir,multi_dir)
+        self.assertEqual(cellranger_multi.sample_names,["PBA","PBB"])
+        self.assertEqual(cellranger_multi.metrics_csv('PBA'),
+                         os.path.join(multi_dir,
+                                      "outs",
+                                      "per_sample_outs",
+                                      "PBA",
+                                      "metrics_summary.csv"))
+        self.assertEqual(cellranger_multi.metrics_csv('PBB'),
+                         os.path.join(multi_dir,
+                                      "outs",
+                                      "per_sample_outs",
+                                      "PBB",
+                                      "metrics_summary.csv"))
+        self.assertTrue(isinstance(cellranger_multi.metrics('PBA'),
+                                   MultiplexSummary))
+        self.assertTrue(isinstance(cellranger_multi.metrics('PBB'),
+                                   MultiplexSummary))
+        self.assertEqual(cellranger_multi.web_summary('PBA'),
+                         os.path.join(multi_dir,
+                                      "outs",
+                                      "per_sample_outs",
+                                      "PBA",
+                                      "web_summary.html"))
+        self.assertEqual(cellranger_multi.web_summary('PBB'),
+                         os.path.join(multi_dir,
+                                      "outs",
+                                      "per_sample_outs",
+                                      "PBB",
+                                      "web_summary.html"))
+        self.assertEqual(cellranger_multi.cmdline_file,
+                         os.path.join(multi_dir,"_cmdline"))
+        self.assertEqual(cellranger_multi.cmdline,cmdline)
+        self.assertEqual(cellranger_multi.physical_sample,"PB1")
+        self.assertEqual(cellranger_multi.version,None)
+        self.assertEqual(cellranger_multi.reference_data,
+                         "/data/refdata-cellranger-gex-GRCh38-2020-A")
+        self.assertEqual(cellranger_multi.probe_set,None)
+        self.assertEqual(cellranger_multi.cellranger_exe,
+                         "/path/to/cellranger")
+        self.assertEqual(cellranger_multi.pipeline_name,"cellranger")
+
+    def test_cellrangermulti_cellplex_physical_sample_from_config(self):
+        """
+        CellrangerMulti: check physical sample from config file name
+        """
+        # Add config.csv file
+        config_csv = os.path.join(self.project.dirn,
+                                  "10x_multi_config.PB1.csv")
+        with open(config_csv,'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,gene expression,
+PJB2_MC,/data/runs/fastqs_mc,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""")
+        # Add cellranger multi outputs
+        UpdateAnalysisProject(self.project).add_cellranger_multi_outputs(
+            config_csv)
+        # Do tests
+        multi_dir = os.path.join(self.project.qc_dir,"cellranger_multi")
+        cmdline = "/path/to/cellranger multi --id PJB --csv %s --jobmode=local --localcores=16 --localmem=48 --maxjobs=1 --jobinterval=100" % config_csv
+        with open(os.path.join(multi_dir,"_cmdline"),'wt') as fp:
+            fp.write("%s\n" % cmdline)
+        cellranger_multi = CellrangerMulti(multi_dir)
+        self.assertEqual(cellranger_multi.mode,"multi")
+        self.assertEqual(cellranger_multi.dir,multi_dir)
+        self.assertEqual(cellranger_multi.sample_names,["PBA","PBB"])
+        self.assertEqual(cellranger_multi.metrics_csv('PBA'),
+                         os.path.join(multi_dir,
+                                      "outs",
+                                      "per_sample_outs",
+                                      "PBA",
+                                      "metrics_summary.csv"))
+        self.assertEqual(cellranger_multi.metrics_csv('PBB'),
+                         os.path.join(multi_dir,
+                                      "outs",
+                                      "per_sample_outs",
+                                      "PBB",
+                                      "metrics_summary.csv"))
+        self.assertTrue(isinstance(cellranger_multi.metrics('PBA'),
+                                   MultiplexSummary))
+        self.assertTrue(isinstance(cellranger_multi.metrics('PBB'),
+                                   MultiplexSummary))
+        self.assertEqual(cellranger_multi.web_summary('PBA'),
+                         os.path.join(multi_dir,
+                                      "outs",
+                                      "per_sample_outs",
+                                      "PBA",
+                                      "web_summary.html"))
+        self.assertEqual(cellranger_multi.web_summary('PBB'),
+                         os.path.join(multi_dir,
+                                      "outs",
+                                      "per_sample_outs",
+                                      "PBB",
+                                      "web_summary.html"))
+        self.assertEqual(cellranger_multi.cmdline_file,
+                         os.path.join(multi_dir,"_cmdline"))
+        self.assertEqual(cellranger_multi.cmdline,cmdline)
+        self.assertEqual(cellranger_multi.physical_sample, "PB1")
+        self.assertEqual(cellranger_multi.version,None)
+        self.assertEqual(cellranger_multi.reference_data,
+                         "/data/refdata-cellranger-gex-GRCh38-2020-A")
+        self.assertEqual(cellranger_multi.probe_set,None)
         self.assertEqual(cellranger_multi.cellranger_exe,
                          "/path/to/cellranger")
         self.assertEqual(cellranger_multi.pipeline_name,"cellranger")

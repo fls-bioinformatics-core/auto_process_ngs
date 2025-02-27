@@ -26,6 +26,7 @@ Provides the following functions:
 #######################################################################
 
 import os
+import re
 import logging
 from bcftbx.utils import walk
 from ...tenx.metrics import GexSummary
@@ -248,9 +249,14 @@ class CellrangerMulti:
     The ``CellrangerMulti`` object gives access to various
     details of the outputs (such as sample name and file
     paths).
+
+    Note that if the physical sample name is not supplied via
+    the ``sample`` argument then the class will attempt to
+    extract it from the configuration file name (assuming it's
+    of the form ``10x_multi_config.<SAMPLE>.csv``).
     """
-    def __init__(self,cellranger_multi_dir,cellranger_exe=None,
-                 version=None,reference_data=None,
+    def __init__(self, cellranger_multi_dir, cellranger_exe=None,
+                 version=None, reference_data=None, sample=None,
                  config_csv=None):
         """
         Create a new CellrangerMulti instance
@@ -262,13 +268,14 @@ class CellrangerMulti:
             generated the outputs
           version (str): the version of cellranger used
           reference_data (str): the reference dataset
+          sample (str): the physical sample name
           config_csv (str): the config.csv file used for
             running the 'multi' command
         """
         # Store path to top-level directory
         self._cellranger_multi_dir = os.path.abspath(
             cellranger_multi_dir)
-        # Identify the samples
+        # Identify the multiplexed samples
         self._samples = {}
         try:
             per_sample_outs_dir = os.path.join(self.dir,
@@ -297,6 +304,17 @@ class CellrangerMulti:
             except Exception:
                 pass
         self._config_csv = config_csv
+        # Physical sample
+        self._physical_sample = sample
+        if not self._physical_sample and self._config_csv:
+            # Try to extract sample from config file name
+            # (assuming it's of the form "10x_config.SAMPLE.cvs")
+            try:
+                self._physical_sample = re.search(
+                    "10x_multi_config.([^.]+).csv",
+                    os.path.basename(self._config_csv))[1]
+            except TypeError:
+                pass
         # Deal with additional data items
         if not cellranger_exe:
             try:
@@ -375,6 +393,13 @@ class CellrangerMulti:
         else:
             # Couldn't get the executable
             return None
+
+    @property
+    def physical_sample(self):
+        """
+        Associated physical sample name
+        """
+        return self._physical_sample
 
     @property
     def version(self):
