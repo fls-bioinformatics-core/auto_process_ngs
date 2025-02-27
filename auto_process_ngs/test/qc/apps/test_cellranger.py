@@ -20,6 +20,7 @@ from auto_process_ngs.qc.apps.cellranger import cellranger_atac_count_output
 from auto_process_ngs.qc.apps.cellranger import cellranger_arc_count_output
 from auto_process_ngs.qc.apps.cellranger import cellranger_multi_output
 from auto_process_ngs.qc.apps.cellranger import fetch_cellranger_multi_output_dirs
+from auto_process_ngs.qc.apps.cellranger import extract_path_data
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -798,3 +799,49 @@ class TestFetchCellrangerMultiOutputDirsFunction(unittest.TestCase):
         self.assertEqual(
             fetch_cellranger_multi_output_dirs(qc_dir),
             [os.path.join(qc_dir, d) for d in expected_output_dirs])
+
+class TestExtractPathDataFunction(unittest.TestCase):
+
+    def test_extract_path_data_with_version_and_refdata(self):
+        """
+        extract_path_data: version and reference data
+        """
+        self.assertEqual(extract_path_data(
+            "/qc/cellranger_multi/8.0.0/refdata-cellranger-gex-GRCh38-2020-A/",
+            "/qc/cellranger_multi/"),
+                         ("8.0.0",
+                          "refdata-cellranger-gex-GRCh38-2020-A",
+                          None))
+
+    def test_extract_path_data_with_version_refdata_sample(self):
+        """
+        extract_path_data: version, reference data and sample
+        """
+        self.assertEqual(extract_path_data(
+            "/qc/cellranger_multi/9.0.0/refdata-cellranger-gex-GRCh38-2020-A/PB1",
+            "/qc/cellranger_multi/"),
+                         ("9.0.0",
+                          "refdata-cellranger-gex-GRCh38-2020-A",
+                          "PB1"))
+
+    def test_extract_path_data_with_no_intermediate_dirs(self):
+        """
+        extract_path_data: no intermediate directories
+        """
+        self.assertEqual(extract_path_data(
+            "/qc/cellranger_multi/",
+            "/qc/cellranger_multi/"),
+                         (None,
+                          None,
+                          None))
+
+    def test_extract_path_data_with_unrecognised_arrangement(self):
+        """
+        extract_path_data: unrecognised directory arrangement
+        """
+        self.assertEqual(extract_path_data(
+            "/qc/cellranger_multi/PB1/PB2/PB3/PB4/PB5",
+            "/qc/cellranger_multi/"),
+                         (None,
+                          None,
+                          None))

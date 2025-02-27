@@ -18,6 +18,7 @@ Provides the following functions:
 - cellranger_arc_count_output: get names for cellranger-arc count output
 - cellranger_multi_output: get names for cellranger multi output
 - fetch_cellranger_multi_output_dirs: get list of cellranger multi output dirs
+- extract_path_data: extract version, reference and physical sample from path
 """
 
 #######################################################################
@@ -25,12 +26,16 @@ Provides the following functions:
 #######################################################################
 
 import os
+import logging
 from bcftbx.utils import walk
 from ...tenx.metrics import GexSummary
 from ...tenx.metrics import AtacSummary
 from ...tenx.metrics import MultiplexSummary
 from ...tenx.metrics import MultiomeSummary
 from ...tenx.cellplex import CellrangerMultiConfigCsv
+
+# Module specific logger
+logger = logging.getLogger(__name__)
 
 #######################################################################
 # Classes
@@ -664,3 +669,62 @@ def fetch_cellranger_multi_output_dirs(top_dir):
         if not prune_dir:
             multi_dirs.append(d)
     return multi_dirs
+
+def extract_path_data(multi_output_dir, top_dir):
+    """
+    Get version, refdata and sample name from output path
+
+    Attempts to extract the version, reference data and
+    physical sample name from the intermediate directory
+    names above a cellranger multi output directory.
+
+    For example: if cellranger multi outputs are stored under
+    the top-level directory "cellranger_multi", then
+    outputs from individual runs might be arranged under
+    this directory as:
+
+    cellranger_multi/8.0.0/refdata-cellranger-gex-GRCh38-2020-A/...
+
+    In this case the version would be "8.0.0", the reference
+    would be "refdata-cellranger-gex-GRCh38-2020-A", and the
+    physical sample name would not be available.
+
+    Alternatively if the arrangement is:
+
+    cellranger_multi/9.0.0/refdata-cellranger-gex-GRCh38-2020-A/PB1/...
+
+    then the version would be "9.0.0", the reference would be
+    "refdata-cellranger-gex-GRCh38-2020-A", and the physical
+    sample name would be "PB1".
+
+    Arguments:
+      multi_output_dir (str): path to the cellranger multi
+        output directory
+      top_dir (str): the top level directory for all
+        cellranger multi directories
+
+    Returns:
+      Tuple: extracted data items as a tuple of
+        (version, reference, sample)
+    """
+    # Extract version, reference (and physical sample,
+    # if present) from parent dirs
+    version = None
+    reference = None
+    sample = None
+    items = os.path.relpath(multi_output_dir, top_dir).split(os.sep)
+    if len(items) == 3:
+        # Scenario #1: version/refdata/sample
+        version, reference, sample = items
+    elif len(items) == 2:
+        # Scenario #2: version/refdata only
+        version, reference = items
+    elif len(items) == 0:
+        # Scenario #3: no intermediate dirs
+        pass
+    else:
+        # Unrecognised arrangement
+        logger.warning(f"{multi_output_dir}: can't interpret "
+                       f"intermediate dirs under {top_dir}")
+    # Return extracted items
+    return (version, reference, sample)
