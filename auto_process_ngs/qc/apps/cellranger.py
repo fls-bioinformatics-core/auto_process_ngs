@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-#     qc/cellranger: handle outputs from Cellranger variants
-#     Copyright (C) University of Manchester 2024 Peter Briggs
+#     qc/apps/cellranger: handle outputs from Cellranger variants
+#     Copyright (C) University of Manchester 2024-2025 Peter Briggs
 
 """
 Provides utility classes and functions for handline Cellranger outputs.
@@ -17,6 +17,7 @@ Provides the following functions:
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - cellranger_arc_count_output: get names for cellranger-arc count output
 - cellranger_multi_output: get names for cellranger multi output
+- fetch_cellranger_multi_output_dirs: get list of cellranger multi output dirs
 """
 
 #######################################################################
@@ -24,6 +25,7 @@ Provides the following functions:
 #######################################################################
 
 import os
+from bcftbx.utils import walk
 from ...tenx.metrics import GexSummary
 from ...tenx.metrics import AtacSummary
 from ...tenx.metrics import MultiplexSummary
@@ -622,3 +624,43 @@ def cellranger_multi_output(project,config_csv,sample_name=None,
     for f in ("tag_calls_summary.csv",):
         outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
+
+def fetch_cellranger_multi_output_dirs(top_dir):
+    """
+    Locate output directories from cellranger multi
+
+    Recursively searches the directory structure under
+    the supplied top-level directory and returns a
+    list of paths to each possible "cellranger multi"
+    output directory.
+
+    Putative output directories will contain at minimum
+    subdirectories called "outs" and "per_sample_outs".
+
+    Arguments:
+      top_dir (str): path to directory to search under
+
+    Returns:
+       List: list of paths to putative "cellranger multi"
+         output directories.
+    """
+    # Collect all paths ending with "outs"
+    outs_dirs = []
+    for f in walk(top_dir):
+        if os.path.basename(f) == "outs":
+            outs_dirs.append(f)
+    # Reduce to those which look like cellranger multi outputs
+    # i.e. have a "per_sample_outs" subdirectory, and discard
+    # "outs" part of path
+    multi_dirs = []
+    for d in sorted([os.path.dirname(f) for f in outs_dirs
+                     if os.path.isdir(os.path.join(f, "per_sample_outs"))]):
+        # Prune directories which are under other multi outputs dirs
+        prune_dir = False
+        for dd in multi_dirs:
+            if d.startswith(dd + os.sep):
+                prune_dir = True
+                break
+        if not prune_dir:
+            multi_dirs.append(d)
+    return multi_dirs

@@ -8,6 +8,7 @@ import shutil
 import tempfile
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
+from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.tenx.cellplex import CellrangerMultiConfigCsv
 from auto_process_ngs.tenx.metrics import MultiplexSummary
@@ -18,6 +19,7 @@ from auto_process_ngs.qc.apps.cellranger import cellranger_count_output
 from auto_process_ngs.qc.apps.cellranger import cellranger_atac_count_output
 from auto_process_ngs.qc.apps.cellranger import cellranger_arc_count_output
 from auto_process_ngs.qc.apps.cellranger import cellranger_multi_output
+from auto_process_ngs.qc.apps.cellranger import fetch_cellranger_multi_output_dirs
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -603,3 +605,196 @@ PBB,CMO302,PBB
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         config_csv = os.path.join(self.wd,"PJB","10x_multi_config.csv.missing")
         self.assertEqual(cellranger_multi_output(project,config_csv),[])
+
+
+class TestFetchCellrangerMultiOutputDirsFunction(unittest.TestCase):
+
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestFetchCellrangerMultiOutputDirs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_fetch_cellranger_multi_output_dirs_no_outputs(self):
+        """
+        fetch_cellranger_multi_output_dirs: no output directories
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB", ("PJB1_GEX_S1_R1_001.fastq.gz",
+                                        "PJB1_GEX_S1_R2_001.fastq.gz",
+                                        "PJB1_MC_S2_R1_001.fastq.gz",
+                                        "PJB1_MC_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Do the test
+        project = AnalysisProject(os.path.join(self.wd, "PJB"))
+        self.assertEqual(
+            fetch_cellranger_multi_output_dirs(project.dirn),
+            [])
+
+    def test_fetch_cellranger_multi_output_dirs_single_dir(self):
+        """
+        fetch_cellranger_multi_output_dirs: single output directory
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB", ("PJB1_GEX_S1_R1_001.fastq.gz",
+                                        "PJB1_GEX_S1_R2_001.fastq.gz",
+                                        "PJB1_MC_S2_R1_001.fastq.gz",
+                                        "PJB1_MC_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add qc directory
+        project = AnalysisProject(os.path.join(self.wd, "PJB"))
+        qc_dir = os.path.join(project.dirn, "qc")
+        os.mkdir(qc_dir)
+        # Add 10x multi output dir
+        MockQCOutputs.cellranger_multi(("PBA", "PBB"),
+                                       qc_dir,
+                                       config_csv=None,
+                                       prefix='cellranger_multi')
+        # Do the test
+        self.assertEqual(
+            fetch_cellranger_multi_output_dirs(qc_dir),
+            [os.path.join(qc_dir, "cellranger_multi")])
+
+    def test_fetch_cellranger_multi_output_dirs_single_dir_with_version_and_refdata(self):
+        """
+        fetch_cellranger_multi_output_dirs: single output directory (version and refdata)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB", ("PJB1_GEX_S1_R1_001.fastq.gz",
+                                        "PJB1_GEX_S1_R2_001.fastq.gz",
+                                        "PJB1_MC_S2_R1_001.fastq.gz",
+                                        "PJB1_MC_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add qc directory
+        project = AnalysisProject(os.path.join(self.wd, "PJB"))
+        qc_dir = os.path.join(project.dirn, "qc")
+        os.mkdir(qc_dir)
+        # Add 10x multi output dir with version and refdata prefix
+        MockQCOutputs.cellranger_multi(
+            ("PBA", "PBB"),
+            qc_dir,
+            config_csv=None,
+            prefix=os.path.join(
+                "cellranger_multi",
+                "8.0.0",
+                "refdata-cellranger-gex-GRCh38-2020-A"))
+        # Do the test
+        self.assertEqual(
+            fetch_cellranger_multi_output_dirs(qc_dir),
+            [os.path.join(qc_dir,
+                          "cellranger_multi",
+                          "8.0.0",
+                          "refdata-cellranger-gex-GRCh38-2020-A")])
+
+    def test_fetch_cellranger_multi_output_dirs_multiple_outputs_with_samples(self):
+        """
+        fetch_cellranger_multi_output_dirs: multiple outputs (physical samples)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB", ("PJB1_GEX_S1_R1_001.fastq.gz",
+                                        "PJB1_GEX_S1_R2_001.fastq.gz",
+                                        "PJB1_MC_S2_R1_001.fastq.gz",
+                                        "PJB1_MC_S2_R2_001.fastq.gz",
+                                        "PJB2_GEX_S3_R1_001.fastq.gz",
+                                        "PJB2_GEX_S3_R2_001.fastq.gz",
+                                        "PJB2_MC_S4_R1_001.fastq.gz",
+                                        "PJB2_MC_S4_R2_001.fastq.gz", ),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add qc directory
+        project = AnalysisProject(os.path.join(self.wd, "PJB"))
+        qc_dir = os.path.join(project.dirn, "qc")
+        os.mkdir(qc_dir)
+        # Add 10x multi output dirs for physical samples
+        expected_output_dirs = []
+        for smpl in ("PJB1", "PJB2"):
+            multi_output_dir = os.path.join("cellranger_multi", smpl)
+            MockQCOutputs.cellranger_multi(("PBA", "PBB"),
+                                           qc_dir,
+                                           config_csv=None,
+                                           prefix=multi_output_dir)
+            expected_output_dirs.append(multi_output_dir)
+        # Do the test
+        self.assertEqual(
+            fetch_cellranger_multi_output_dirs(qc_dir),
+            [os.path.join(qc_dir, d) for d in expected_output_dirs])
+
+    def test_fetch_cellranger_multi_output_dirs_multiple_outputs_with_version_and_refdata(self):
+        """
+        fetch_cellranger_multi_output_dirs: multiple outputs (versions and refdata)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB", ("PJB1_GEX_S1_R1_001.fastq.gz",
+                                        "PJB1_GEX_S1_R2_001.fastq.gz",
+                                        "PJB1_MC_S2_R1_001.fastq.gz",
+                                        "PJB1_MC_S2_R2_001.fastq.gz", ),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add qc directory
+        project = AnalysisProject(os.path.join(self.wd, "PJB"))
+        qc_dir = os.path.join(project.dirn, "qc")
+        os.mkdir(qc_dir)
+        # Add 10x multi output dirs for versions and refdata
+        expected_output_dirs = []
+        for version in ("8.0.0", "9.0.0"):
+            multi_output_dir = os.path.join(
+                "cellranger_multi",
+                version,
+                "refdata-cellranger-gex-GRCh38-2020-A")
+            MockQCOutputs.cellranger_multi(
+                ("PBA", "PBB"),
+                qc_dir,
+                config_csv=None,
+                prefix=multi_output_dir)
+            expected_output_dirs.append(multi_output_dir)
+        # Do the test
+        self.assertEqual(
+            fetch_cellranger_multi_output_dirs(qc_dir),
+            [os.path.join(qc_dir, d) for d in expected_output_dirs])
+
+    def test_fetch_cellranger_multi_output_dirs_multiple_outputs_ignores_contents_of_matching_dirs(self):
+        """
+        fetch_cellranger_multi_output_dirs: multiple outputs (ignores contents of matched dirs)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB", ("PJB1_GEX_S1_R1_001.fastq.gz",
+                                        "PJB1_GEX_S1_R2_001.fastq.gz",
+                                        "PJB1_MC_S2_R1_001.fastq.gz",
+                                        "PJB1_MC_S2_R2_001.fastq.gz",
+                                        "PJB2_GEX_S3_R1_001.fastq.gz",
+                                        "PJB2_GEX_S3_R2_001.fastq.gz",
+                                        "PJB2_MC_S4_R1_001.fastq.gz",
+                                        "PJB2_MC_S4_R2_001.fastq.gz", ),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Add qc directory
+        project = AnalysisProject(os.path.join(self.wd, "PJB"))
+        qc_dir = os.path.join(project.dirn, "qc")
+        os.mkdir(qc_dir)
+        # Add 10x multi output dirs for physical samples
+        expected_output_dirs = []
+        for smpl in ("PJB1", "PJB2"):
+            multi_output_dir = os.path.join("cellranger_multi", smpl)
+            MockQCOutputs.cellranger_multi(("PBA", "PBB"),
+                                           qc_dir,
+                                           config_csv=None,
+                                           prefix=multi_output_dir)
+            expected_output_dirs.append(multi_output_dir)
+        # Add extra "cellranger multi"-like subdirectories
+        for d in expected_output_dirs:
+            MockQCOutputs.cellranger_multi(("PBA", "PBB"),
+                                           qc_dir,
+                                           config_csv=None,
+                                           prefix=os.path.join(d,
+                                                               "outs",
+                                                               "extra"))
+        # Do the test
+        self.assertEqual(
+            fetch_cellranger_multi_output_dirs(qc_dir),
+            [os.path.join(qc_dir, d) for d in expected_output_dirs])
