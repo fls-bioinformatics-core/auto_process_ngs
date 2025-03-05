@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
 #
 
 """
@@ -113,6 +113,8 @@ from .apps.fastq_strand import Fastqstrand
 from .apps.fastq_strand import fastq_strand_output
 from .apps.cellranger import CellrangerCount
 from .apps.cellranger import CellrangerMulti
+from .apps.cellranger import extract_path_data
+from .apps.cellranger import fetch_cellranger_multi_output_dirs
 from .apps.picard import CollectInsertSizeMetrics
 from .apps.qualimap import QualimapRnaseq
 from .apps.rseqc import InferExperiment
@@ -2103,23 +2105,24 @@ class SampleQCReporter:
         # 10x multiplexing analyses
         cellranger_multi_dir = os.path.join(qc_dir,
                                             "cellranger_multi")
-        if os.path.isdir(cellranger_multi_dir):
-            # Descend into version and reference subdirs
-            for version in os.listdir(cellranger_multi_dir):
-                for reference in os.listdir(
-                        os.path.join(cellranger_multi_dir,version)):
-                    # Add the cellranger multi information
-                    try:
-                        self.cellranger_multi.append(
-                            CellrangerMulti(os.path.join(cellranger_multi_dir,
-                                                         version,
-                                                         reference),
-                                            version=version,
-                                            reference_data=reference))
-                    except Exception as ex:
-                        logger.warning("exception reading 'cellranger multi' "
-                                       "output from %s (ignored): %s" %
-                                       (cellranger_multi_dir,ex))
+        for multi_dirn in fetch_cellranger_multi_output_dirs(
+                cellranger_multi_dir):
+            # Extract version, reference and physical sample
+            # data from intermediate dir names
+            version, reference, psample = extract_path_data(
+                multi_dirn,
+                cellranger_multi_dir)
+            # Add the cellranger multi information
+            try:
+                self.cellranger_multi.append(
+                    CellrangerMulti(multi_dirn,
+                                    version=version,
+                                    reference_data=reference,
+                                    sample=psample))
+            except Exception as ex:
+                logger.warning("exception reading 'cellranger multi' "
+                               "output from %s (ignored): %s" %
+                               (multi_dirn,ex))
         # 10x multiome libraries
         multiome_libraries_file = os.path.join(
             project.dirn,
