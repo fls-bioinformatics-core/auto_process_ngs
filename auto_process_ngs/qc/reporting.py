@@ -1749,6 +1749,8 @@ class QCProject:
     - bams: sorted list of BAM file names
     - multiplexed_samples: sorted list of sample names
       for multiplexed samples (e.g. 10x CellPlex)
+    - physical_samples: sorted list of physical sample
+      names for multiplexed datasets (e.g. 10x CellPlex)
     - organisms: sorted list of organism names
     - outputs: list of QC output categories detected (see
       below for valid values)
@@ -1974,6 +1976,8 @@ class QCProject:
         self.cellranger_probe_sets = qc_outputs.cellranger_probe_sets
         # Multiplexed samples
         self.multiplexed_samples = qc_outputs.multiplexed_samples
+        # Physical samples
+        self.physical_samples = qc_outputs.physical_samples
         # QC outputs
         self.outputs = qc_outputs.outputs
         # Software versions
