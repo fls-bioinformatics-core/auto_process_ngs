@@ -647,12 +647,16 @@ class QCReport(Document):
             if 'cellranger_multi' in project.outputs:
                 # Set up fields for reporting
                 pkg = 'cellranger'
-                multiplex_analysis_fields = ['sample',
-                                             '10x_cells',
-                                             '10x_reads_per_cell',
-                                             '10x_genes_per_cell',
-                                             '10x_genes_detected',
-                                             '10x_umis_per_cell']
+                if project.physical_samples:
+                    multiplex_analysis_fields = ["physical_sample"]
+                else:
+                    multiplex_analysis_fields = []
+                multiplex_analysis_fields.extend(['sample',
+                                                  '10x_cells',
+                                                  '10x_reads_per_cell',
+                                                  '10x_genes_per_cell',
+                                                  '10x_genes_detected',
+                                                  '10x_umis_per_cell'])
                 # Add column for multiple versions
                 if len(project.software[pkg]) > 1:
                     multiplex_analysis_fields.append('10x_pipeline')
