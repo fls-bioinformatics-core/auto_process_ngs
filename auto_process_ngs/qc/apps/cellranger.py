@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-#     qc/cellranger: handle outputs from Cellranger variants
-#     Copyright (C) University of Manchester 2024 Peter Briggs
+#     qc/apps/cellranger: handle outputs from Cellranger variants
+#     Copyright (C) University of Manchester 2024-2025 Peter Briggs
 
 """
 Provides utility classes and functions for handline Cellranger outputs.
@@ -17,6 +17,8 @@ Provides the following functions:
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - cellranger_arc_count_output: get names for cellranger-arc count output
 - cellranger_multi_output: get names for cellranger multi output
+- fetch_cellranger_multi_output_dirs: get list of cellranger multi output dirs
+- extract_path_data: extract version, reference and physical sample from path
 """
 
 #######################################################################
@@ -24,11 +26,17 @@ Provides the following functions:
 #######################################################################
 
 import os
+import re
+import logging
+from bcftbx.utils import walk
 from ...tenx.metrics import GexSummary
 from ...tenx.metrics import AtacSummary
 from ...tenx.metrics import MultiplexSummary
 from ...tenx.metrics import MultiomeSummary
 from ...tenx.cellplex import CellrangerMultiConfigCsv
+
+# Module specific logger
+logger = logging.getLogger(__name__)
 
 #######################################################################
 # Classes
@@ -241,9 +249,14 @@ class CellrangerMulti:
     The ``CellrangerMulti`` object gives access to various
     details of the outputs (such as sample name and file
     paths).
+
+    Note that if the physical sample name is not supplied via
+    the ``sample`` argument then the class will attempt to
+    extract it from the configuration file name (assuming it's
+    of the form ``10x_multi_config.<SAMPLE>.csv``).
     """
-    def __init__(self,cellranger_multi_dir,cellranger_exe=None,
-                 version=None,reference_data=None,
+    def __init__(self, cellranger_multi_dir, cellranger_exe=None,
+                 version=None, reference_data=None, sample=None,
                  config_csv=None):
         """
         Create a new CellrangerMulti instance
@@ -255,13 +268,14 @@ class CellrangerMulti:
             generated the outputs
           version (str): the version of cellranger used
           reference_data (str): the reference dataset
+          sample (str): the physical sample name
           config_csv (str): the config.csv file used for
             running the 'multi' command
         """
         # Store path to top-level directory
         self._cellranger_multi_dir = os.path.abspath(
             cellranger_multi_dir)
-        # Identify the samples
+        # Identify the multiplexed samples
         self._samples = {}
         try:
             per_sample_outs_dir = os.path.join(self.dir,
@@ -290,6 +304,17 @@ class CellrangerMulti:
             except Exception:
                 pass
         self._config_csv = config_csv
+        # Physical sample
+        self._physical_sample = sample
+        if not self._physical_sample and self._config_csv:
+            # Try to extract sample from config file name
+            # (assuming it's of the form "10x_config.SAMPLE.cvs")
+            try:
+                self._physical_sample = re.search(
+                    "10x_multi_config.([^.]+).csv",
+                    os.path.basename(self._config_csv))[1]
+            except TypeError:
+                pass
         # Deal with additional data items
         if not cellranger_exe:
             try:
@@ -368,6 +393,13 @@ class CellrangerMulti:
         else:
             # Couldn't get the executable
             return None
+
+    @property
+    def physical_sample(self):
+        """
+        Associated physical sample name
+        """
+        return self._physical_sample
 
     @property
     def version(self):
@@ -622,3 +654,102 @@ def cellranger_multi_output(project,config_csv,sample_name=None,
     for f in ("tag_calls_summary.csv",):
         outputs.append(os.path.join(multi_analysis_dir,f))
     return tuple(outputs)
+
+def fetch_cellranger_multi_output_dirs(top_dir):
+    """
+    Locate output directories from cellranger multi
+
+    Recursively searches the directory structure under
+    the supplied top-level directory and returns a
+    list of paths to each possible "cellranger multi"
+    output directory.
+
+    Putative output directories will contain at minimum
+    subdirectories called "outs" and "per_sample_outs".
+
+    Arguments:
+      top_dir (str): path to directory to search under
+
+    Returns:
+       List: list of paths to putative "cellranger multi"
+         output directories.
+    """
+    # Collect all paths ending with "outs"
+    outs_dirs = []
+    for f in walk(top_dir):
+        if os.path.basename(f) == "outs":
+            outs_dirs.append(f)
+    # Reduce to those which look like cellranger multi outputs
+    # i.e. have a "per_sample_outs" subdirectory, and discard
+    # "outs" part of path
+    multi_dirs = []
+    for d in sorted([os.path.dirname(f) for f in outs_dirs
+                     if os.path.isdir(os.path.join(f, "per_sample_outs"))]):
+        # Prune directories which are under other multi outputs dirs
+        prune_dir = False
+        for dd in multi_dirs:
+            if d.startswith(dd + os.sep):
+                prune_dir = True
+                break
+        if not prune_dir:
+            multi_dirs.append(d)
+    return multi_dirs
+
+def extract_path_data(multi_output_dir, top_dir):
+    """
+    Get version, refdata and sample name from output path
+
+    Attempts to extract the version, reference data and
+    physical sample name from the intermediate directory
+    names above a cellranger multi output directory.
+
+    For example: if cellranger multi outputs are stored under
+    the top-level directory "cellranger_multi", then
+    outputs from individual runs might be arranged under
+    this directory as:
+
+    cellranger_multi/8.0.0/refdata-cellranger-gex-GRCh38-2020-A/...
+
+    In this case the version would be "8.0.0", the reference
+    would be "refdata-cellranger-gex-GRCh38-2020-A", and the
+    physical sample name would not be available.
+
+    Alternatively if the arrangement is:
+
+    cellranger_multi/9.0.0/refdata-cellranger-gex-GRCh38-2020-A/PB1/...
+
+    then the version would be "9.0.0", the reference would be
+    "refdata-cellranger-gex-GRCh38-2020-A", and the physical
+    sample name would be "PB1".
+
+    Arguments:
+      multi_output_dir (str): path to the cellranger multi
+        output directory
+      top_dir (str): the top level directory for all
+        cellranger multi directories
+
+    Returns:
+      Tuple: extracted data items as a tuple of
+        (version, reference, sample)
+    """
+    # Extract version, reference (and physical sample,
+    # if present) from parent dirs
+    version = None
+    reference = None
+    sample = None
+    items = os.path.relpath(multi_output_dir, top_dir).split(os.sep)
+    if len(items) == 3:
+        # Scenario #1: version/refdata/sample
+        version, reference, sample = items
+    elif len(items) == 2:
+        # Scenario #2: version/refdata only
+        version, reference = items
+    elif len(items) == 0:
+        # Scenario #3: no intermediate dirs
+        pass
+    else:
+        # Unrecognised arrangement
+        logger.warning(f"{multi_output_dir}: can't interpret "
+                       f"intermediate dirs under {top_dir}")
+    # Return extracted items
+    return (version, reference, sample)

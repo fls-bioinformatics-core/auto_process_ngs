@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
 #
 
 """
@@ -113,6 +113,8 @@ from .apps.fastq_strand import Fastqstrand
 from .apps.fastq_strand import fastq_strand_output
 from .apps.cellranger import CellrangerCount
 from .apps.cellranger import CellrangerMulti
+from .apps.cellranger import extract_path_data
+from .apps.cellranger import fetch_cellranger_multi_output_dirs
 from .apps.picard import CollectInsertSizeMetrics
 from .apps.qualimap import QualimapRnaseq
 from .apps.rseqc import InferExperiment
@@ -284,7 +286,10 @@ SUMMARY_FIELD_DESCRIPTIONS = {
                       'Reference dataset used for the analysis'),
     '10x_web_summary': ('HTML report','Link to the web_summary.html report'),
     'linked_sample': ('Linked sample',
-                      'Corresponding sample for single cell multiome analysis')
+                      'Corresponding sample for single cell multiome analysis'),
+    'physical_sample': ('Physical sample',
+                        'Name of physical sample associated with the '
+                        'multiplexed sample')
 }
 
 # Fields that are only applicable for biological data
@@ -642,12 +647,16 @@ class QCReport(Document):
             if 'cellranger_multi' in project.outputs:
                 # Set up fields for reporting
                 pkg = 'cellranger'
-                multiplex_analysis_fields = ['sample',
-                                             '10x_cells',
-                                             '10x_reads_per_cell',
-                                             '10x_genes_per_cell',
-                                             '10x_genes_detected',
-                                             '10x_umis_per_cell']
+                if project.physical_samples:
+                    multiplex_analysis_fields = ["physical_sample"]
+                else:
+                    multiplex_analysis_fields = []
+                multiplex_analysis_fields.extend(['sample',
+                                                  '10x_cells',
+                                                  '10x_reads_per_cell',
+                                                  '10x_genes_per_cell',
+                                                  '10x_genes_detected',
+                                                  '10x_umis_per_cell'])
                 # Add column for multiple versions
                 if len(project.software[pkg]) > 1:
                     multiplex_analysis_fields.append('10x_pipeline')
@@ -1747,6 +1756,8 @@ class QCProject:
     - bams: sorted list of BAM file names
     - multiplexed_samples: sorted list of sample names
       for multiplexed samples (e.g. 10x CellPlex)
+    - physical_samples: sorted list of physical sample
+      names for multiplexed datasets (e.g. 10x CellPlex)
     - organisms: sorted list of organism names
     - outputs: list of QC output categories detected (see
       below for valid values)
@@ -1972,6 +1983,8 @@ class QCProject:
         self.cellranger_probe_sets = qc_outputs.cellranger_probe_sets
         # Multiplexed samples
         self.multiplexed_samples = qc_outputs.multiplexed_samples
+        # Physical samples
+        self.physical_samples = qc_outputs.physical_samples
         # QC outputs
         self.outputs = qc_outputs.outputs
         # Software versions
@@ -2103,23 +2116,24 @@ class SampleQCReporter:
         # 10x multiplexing analyses
         cellranger_multi_dir = os.path.join(qc_dir,
                                             "cellranger_multi")
-        if os.path.isdir(cellranger_multi_dir):
-            # Descend into version and reference subdirs
-            for version in os.listdir(cellranger_multi_dir):
-                for reference in os.listdir(
-                        os.path.join(cellranger_multi_dir,version)):
-                    # Add the cellranger multi information
-                    try:
-                        self.cellranger_multi.append(
-                            CellrangerMulti(os.path.join(cellranger_multi_dir,
-                                                         version,
-                                                         reference),
-                                            version=version,
-                                            reference_data=reference))
-                    except Exception as ex:
-                        logger.warning("exception reading 'cellranger multi' "
-                                       "output from %s (ignored): %s" %
-                                       (cellranger_multi_dir,ex))
+        for multi_dirn in fetch_cellranger_multi_output_dirs(
+                cellranger_multi_dir):
+            # Extract version, reference and physical sample
+            # data from intermediate dir names
+            version, reference, psample = extract_path_data(
+                multi_dirn,
+                cellranger_multi_dir)
+            # Add the cellranger multi information
+            try:
+                self.cellranger_multi.append(
+                    CellrangerMulti(multi_dirn,
+                                    version=version,
+                                    reference_data=reference,
+                                    sample=psample))
+            except Exception as ex:
+                logger.warning("exception reading 'cellranger multi' "
+                               "output from %s (ignored): %s" %
+                               (multi_dirn,ex))
         # 10x multiome libraries
         multiome_libraries_file = os.path.join(
             project.dirn,
@@ -2381,6 +2395,7 @@ class SampleQCReporter:
         - 10x_reference
         - 10x_web_summary
         - linked_sample
+        - physical_sample
 
         Arguments:
           field (str): name of the field to report; if the
@@ -2396,7 +2411,12 @@ class SampleQCReporter:
         """
         if field == "sample":
             return
-        if field == "linked_sample":
+        if field == "physical_sample":
+            value = cellranger_data.physical_sample
+            if not value:
+                # No physical sample information
+                value = "-"
+        elif field == "linked_sample":
             try:
                 value = ','.join(
                     [split_sample_reference(s)[2]

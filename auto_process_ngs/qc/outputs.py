@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc/outputs: utilities to predict and check QC pipeline outputs
-#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
 #
 """
 Provides utility classes and functions for QC outputs.
@@ -81,6 +81,8 @@ class QCOutputs:
       files used with 10x pipelines
     - multiplexed_samples: sorted list of sample names
       for multiplexed samples (e.g. 10x CellPlex)
+    - physical_samples: sorted list of physical sample
+      names for multiplexed datasets (e.g. 10x CellPlex)
     - outputs: list of QC output categories detected (see
       below for valid values)
     - output_files: list of absolute paths to QC output
@@ -272,6 +274,9 @@ class QCOutputs:
                 self.cellranger_references.append(reference_data)
         self.cellranger_references = sorted(self.cellranger_references)
         self.cellranger_probe_sets = cellranger_multi.probe_sets
+        # Physical sample names for multiplexed datasets
+        self.physical_samples = sorted(cellranger_multi.physical_samples,
+                                       key=lambda s: split_sample_name(s))
         # Fastqs
         self.fastqs = sorted(list(self.fastqs))
         # BAMs
