@@ -109,6 +109,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -158,6 +159,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1'])
         self.assertEqual(qc_outputs.software,
                          { 'fastq_screen': [ '0.9.2' ],
@@ -203,6 +205,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.fastq_screens,[])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -251,6 +254,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -298,6 +302,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -345,6 +350,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -394,6 +400,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -449,6 +456,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -505,6 +513,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastq_screen': [ '0.9.2' ],
@@ -564,6 +573,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -624,6 +634,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -686,6 +697,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -747,6 +759,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -801,6 +814,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.fastq_screens,[])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -857,6 +871,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -904,6 +919,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.bams,[])
         self.assertEqual(qc_outputs.organisms,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -959,6 +975,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -1016,6 +1033,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -1074,6 +1092,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -1135,6 +1154,7 @@ class TestQCOutputs(unittest.TestCase):
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -1206,6 +1226,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_references,
                          ['/data/refdata-cellranger-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '6.1.2' ],
@@ -1273,6 +1294,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_references,
                          ['/data/refdata-cellranger-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '7.1.0' ],
@@ -1340,6 +1362,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_references,
                          ['/data/refdata-cellranger-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '8.0.0' ],
@@ -1407,6 +1430,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_references,
                          ['/data/refdata-cellranger-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '9.0.0' ],
@@ -1474,6 +1498,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_references,
                          ['/data/refdata-cellranger-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '?' ],
@@ -1540,6 +1565,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_references,
                          ['/data/refdata-cellranger-atac-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r3'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger-atac': [ '2.0.0' ],
@@ -1609,6 +1635,7 @@ class TestQCOutputs(unittest.TestCase):
                          ['/data/refdata-cellranger-2020-A',
                           '/data/refdata-cellranger-arc-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '8.0.0' ],
@@ -1681,6 +1708,7 @@ class TestQCOutputs(unittest.TestCase):
                          ['/data/refdata-cellranger-arc-2020-A',
                           '/data/refdata-cellranger-atac-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r3'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger-arc': [ '2.0.0' ],
@@ -1757,6 +1785,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '6.1.2' ],
@@ -1831,6 +1860,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '7.1.0' ],
@@ -1905,6 +1935,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '8.0.0' ],
@@ -1979,6 +2010,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '9.0.0' ],
@@ -2055,6 +2087,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '6.1.2' ],
@@ -2131,6 +2164,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '7.1.0' ],
@@ -2207,6 +2241,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '8.0.0' ],
@@ -2283,6 +2318,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_CML1','PJB_CML2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '9.0.0' ],
@@ -2355,6 +2391,7 @@ class TestQCOutputs(unittest.TestCase):
                          ['/data/probe-set-2020-A'])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['PJB_BC1','PJB_BC2'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '6.1.2' ],
@@ -2467,6 +2504,7 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
                          ['/data/refdata-cellranger-2020-A'])
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '7.1.0' ],
@@ -2581,6 +2619,7 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
                          ['/data/refdata-cellranger-2020-A'])
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '8.0.0' ],
@@ -2695,6 +2734,7 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
                          ['/data/refdata-cellranger-2020-A'])
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '9.0.0' ],
@@ -2784,6 +2824,8 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ["PJB01", "PJB02", "PJB03", "PJB04"])
+        self.assertEqual(qc_outputs.physical_samples,
+                         ["PJB1", "PJB2"])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '9.0.0' ],
@@ -2861,6 +2903,7 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
         self.assertEqual(qc_outputs.cellranger_probe_sets,[])
         self.assertEqual(qc_outputs.multiplexed_samples,
                          ['EX1'])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'cellranger': [ '7.1.0' ],
@@ -2919,6 +2962,7 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
@@ -2976,6 +3020,7 @@ PJB2_TCR,{fastq_dir},any,PJB2,VDJ-T,
                           'rRNA'])
         self.assertEqual(qc_outputs.cellranger_references,[])
         self.assertEqual(qc_outputs.multiplexed_samples,[])
+        self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
                          { 'fastqc': [ '0.11.3' ],
