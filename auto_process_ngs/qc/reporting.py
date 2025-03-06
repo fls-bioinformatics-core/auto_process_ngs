@@ -286,7 +286,10 @@ SUMMARY_FIELD_DESCRIPTIONS = {
                       'Reference dataset used for the analysis'),
     '10x_web_summary': ('HTML report','Link to the web_summary.html report'),
     'linked_sample': ('Linked sample',
-                      'Corresponding sample for single cell multiome analysis')
+                      'Corresponding sample for single cell multiome analysis'),
+    'physical_sample': ('Physical sample',
+                        'Name of physical sample associated with the '
+                        'multiplexed sample')
 }
 
 # Fields that are only applicable for biological data
@@ -2388,6 +2391,7 @@ class SampleQCReporter:
         - 10x_reference
         - 10x_web_summary
         - linked_sample
+        - physical_sample
 
         Arguments:
           field (str): name of the field to report; if the
@@ -2403,7 +2407,12 @@ class SampleQCReporter:
         """
         if field == "sample":
             return
-        if field == "linked_sample":
+        if field == "physical_sample":
+            value = cellranger_data.physical_sample
+            if not value:
+                # No physical sample information
+                value = "-"
+        elif field == "linked_sample":
             try:
                 value = ','.join(
                     [split_sample_reference(s)[2]
