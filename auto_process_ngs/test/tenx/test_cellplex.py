@@ -34,7 +34,7 @@ reference,/data/refdata-cellranger-gex-GRCh38-2020-A
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
-PJB2_MC,/data/runs/fastqs_mc,any,PJB2,Multiplexing Capture,
+PJB1_MC,/data/runs/fastqs_mc,any,PJB1,Multiplexing Capture,
 
 [samples]
 sample_id,cmo_ids,description
@@ -66,8 +66,59 @@ PBB,CMO302,PBB
                          })
         self.assertEqual(config_csv.fastq_dirs,
                          { 'PJB1_GEX': '/data/runs/fastqs_gex',
-                           'PJB2_MC': '/data/runs/fastqs_mc'
+                           'PJB1_MC': '/data/runs/fastqs_mc'
                          })
+        self.assertEqual(config_csv.physical_sample, None)
+        self.assertEqual(config_csv.pretty_print_samples(),
+                         "PBA, PBB")
+        self.assertTrue(config_csv.is_valid)
+
+    def test_cellranger_multi_config_csv_with_physical_sample(self):
+        """
+        CellrangerMultiConfigCsv: check physical sample is extracted from file name
+        """
+        with open(os.path.join(self.wd,"10x_multi_config.PJB1.csv"),'wt') as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
+PJB1_MC,/data/runs/fastqs_mc,any,PJB1,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""")
+        config_csv = CellrangerMultiConfigCsv(
+            os.path.join(self.wd,
+                         "10x_multi_config.PJB1.csv"))
+        self.assertEqual(config_csv.sample_names,['PBA','PBB'])
+        self.assertEqual(config_csv.sections,['gene-expression',
+                                              'libraries',
+                                              'samples'])
+        self.assertEqual(config_csv.reference_data_path,
+                         "/data/refdata-cellranger-gex-GRCh38-2020-A")
+        self.assertEqual(config_csv.probe_set_path,None)
+        self.assertEqual(config_csv.feature_reference_path,None)
+        self.assertEqual(config_csv.vdj_reference_path,None)
+        self.assertEqual(config_csv.feature_types,
+                         ['gene expression','multiplexing capture'])
+        self.assertEqual(config_csv.gex_libraries,
+                         ['PJB1_GEX',])
+        self.assertEqual(config_csv.gex_library('PJB1_GEX'),
+                         { 'fastqs': '/data/runs/fastqs_gex',
+                           'lanes': 'any',
+                           'library_id': 'PJB1',
+                           'feature_type': 'Gene Expression',
+                           'subsample_rate': ''
+                         })
+        self.assertEqual(config_csv.fastq_dirs,
+                         { 'PJB1_GEX': '/data/runs/fastqs_gex',
+                           'PJB1_MC': '/data/runs/fastqs_mc'
+                         })
+        self.assertEqual(config_csv.physical_sample, "PJB1")
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PBA, PBB")
         self.assertTrue(config_csv.is_valid)
@@ -119,6 +170,7 @@ PB2,BC002,PB2
                          {
                              'PJB1_Flex': '/data/runs/fastqs',
                          })
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PB1-2")
         self.assertTrue(config_csv.is_valid)
@@ -137,7 +189,7 @@ reference,/data/feature_ref.csv
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
-PJB2_MC,/data/runs/fastqs_mc,any,PJB2,Multiplexing Capture,
+PJB1_MC,/data/runs/fastqs_mc,any,PJB1,Multiplexing Capture,
 
 [samples]
 sample_id,cmo_ids,description
@@ -171,8 +223,9 @@ PBB,CMO302,PBB
                          })
         self.assertEqual(config_csv.fastq_dirs,
                          { 'PJB1_GEX': '/data/runs/fastqs_gex',
-                           'PJB2_MC': '/data/runs/fastqs_mc'
+                           'PJB1_MC': '/data/runs/fastqs_mc'
                          })
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PBA, PBB")
         self.assertTrue(config_csv.is_valid)
@@ -191,7 +244,7 @@ reference,/data/vdj_ref.csv
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
-PJB2_TCR,/data/runs/fastqs_vdj_t,any,PJB2,VDJ-T,
+PJB1_TCR,/data/runs/fastqs_vdj_t,any,PJB1,VDJ-T,
 """)
         config_csv = CellrangerMultiConfigCsv(
             os.path.join(self.wd,
@@ -218,18 +271,19 @@ PJB2_TCR,/data/runs/fastqs_vdj_t,any,PJB2,VDJ-T,
                            'subsample_rate': ''
                          })
         self.assertEqual(config_csv.libraries('VDJ-T'),
-                         ['PJB2_TCR',])
-        self.assertEqual(config_csv.library('VDJ-T','PJB2_TCR'),
+                         ['PJB1_TCR',])
+        self.assertEqual(config_csv.library('VDJ-T','PJB1_TCR'),
                          { 'fastqs': '/data/runs/fastqs_vdj_t',
                            'lanes': 'any',
-                           'library_id': 'PJB2',
+                           'library_id': 'PJB1',
                            'feature_type': 'VDJ-T',
                            'subsample_rate': ''
                          })
         self.assertEqual(config_csv.fastq_dirs,
                          { 'PJB1_GEX': '/data/runs/fastqs_gex',
-                           'PJB2_TCR': '/data/runs/fastqs_vdj_t'
+                           'PJB1_TCR': '/data/runs/fastqs_vdj_t'
                          })
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertEqual(config_csv.pretty_print_samples(),"")
         self.assertTrue(config_csv.is_valid)
 
@@ -244,7 +298,7 @@ reference,/data/refdata-cellranger-gex-GRCh38-2020-A
 [libraries]
 fastq_id,fastqs,feature_types
 PJB1_GEX,/data/runs/fastqs_gex,gene expression
-PJB2_MC,/data/runs/fastqs_mc,Multiplexing Capture
+PJB1_MC,/data/runs/fastqs_mc,Multiplexing Capture
 
 [samples]
 sample_id,cmo_ids
@@ -276,8 +330,9 @@ PBB,CMO302
                          })
         self.assertEqual(config_csv.fastq_dirs,
                          { 'PJB1_GEX': '/data/runs/fastqs_gex',
-                           'PJB2_MC': '/data/runs/fastqs_mc'
+                           'PJB1_MC': '/data/runs/fastqs_mc'
                          })
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertEqual(config_csv.pretty_print_samples(),
                          "PBA, PBB")
         self.assertTrue(config_csv.is_valid)
@@ -296,7 +351,7 @@ reference,/data/vdj_ref.csv
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
-PJB2_CML,/data/runs/fastqs_cml,any,PJB2,Multiplexing Capture,
+PJB1_CML,/data/runs/fastqs_cml,any,PJB1,Multiplexing Capture,
 
 [samples]
 PB1,CMO1,PB1
@@ -311,6 +366,7 @@ PB1,CMO3,PB1
         config_csv = CellrangerMultiConfigCsv(
             os.path.join(self.wd,
                          "10x_multi_config.csv"), strict=False)
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertFalse(config_csv.is_valid)
         self.assertEqual(len(config_csv.get_errors()), 1)
 
@@ -328,7 +384,7 @@ reference,/data/vdj_ref.csv
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
-PJB2_CML,/data/runs/fastqs_cml,any,PJB2,Multiplexing Capture,
+PJB1_CML,/data/runs/fastqs_cml,any,PJB1,Multiplexing Capture,
 
 [samples]
 PB1,CMO1|CMO2,PB1
@@ -342,6 +398,7 @@ PB2,CMO2|CMO3,PB2
         config_csv = CellrangerMultiConfigCsv(
             os.path.join(self.wd,
                          "10x_multi_config.csv"), strict=False)
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertFalse(config_csv.is_valid)
         self.assertEqual(len(config_csv.get_errors()), 1)
 
@@ -359,7 +416,7 @@ reference,/data/vdj_ref.csv
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
 PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
-PJB2_CML,/data/runs/fastqs_cml,any,PJB2,Multiplexing Capture,
+PJB1_CML,/data/runs/fastqs_cml,any,PJB1,Multiplexing Capture,
 
 [samples]
 PB1,CMO1|CMO2...,PB1
@@ -372,6 +429,7 @@ PB1,CMO1|CMO2...,PB1
         config_csv = CellrangerMultiConfigCsv(
             os.path.join(self.wd,
                          "10x_multi_config.csv"), strict=False)
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertFalse(config_csv.is_valid)
         self.assertEqual(len(config_csv.get_errors()), 1)
 
@@ -399,6 +457,7 @@ PJB2_UNKNOWN,/data/runs/fastqs_unknown,any,PJB2,Unknown,
         config_csv = CellrangerMultiConfigCsv(
             os.path.join(self.wd,
                          "10x_multi_config.csv"), strict=False)
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertFalse(config_csv.is_valid)
         self.assertEqual(len(config_csv.get_errors()), 1)
 
@@ -415,8 +474,8 @@ reference,/data/vdj_ref.csv
 
 [libraries]
 fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB1_GEX,/data/runs/fastqs,any,PJB2,Gene Expression,
-PJB1_CML,/data/runs/fastqs,any,PJB2,Multiplexing capture,
+PJB1_GEX,/data/runs/fastqs,any,PJB1,Gene Expression,
+PJB1_CML,/data/runs/fastqs,any,PJB1,Multiplexing capture,
 PJB2_GEX,/data/runs/fastqs,any,PJB2,Gene Expression,
 PJB2_CML,/data/runs/fastqs,any,PJB2,Multiplexing capture,
 """)
@@ -428,5 +487,6 @@ PJB2_CML,/data/runs/fastqs,any,PJB2,Multiplexing capture,
         config_csv = CellrangerMultiConfigCsv(
             os.path.join(self.wd,
                          "10x_multi_config.csv"), strict=False)
+        self.assertEqual(config_csv.physical_sample, None)
         self.assertFalse(config_csv.is_valid)
         self.assertEqual(len(config_csv.get_errors()), 2)
