@@ -2064,6 +2064,154 @@ PBB,CMO302,PBB
                                                         "PJB",f)),
                             "Missing %s" % f)
 
+    def test_qcpipeline_qc_modules_cellranger_count_multiple_multi_configs(self):
+        """
+        QCPipeline: 'cellranger_count' QC module (use multiple cellranger multi configs)
+        """
+        # Make mock QC executables
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 version="8.0.0")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock 10x Cellplex analysis project
+        p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                       "PJB1_GEX_S1_R2_001.fastq.gz",
+                                       "PJB1_CML_S2_R1_001.fastq.gz",
+                                       "PJB1_CML_S2_R2_001.fastq.gz",
+                                       "PJB2_GEX_S3_R1_001.fastq.gz",
+                                       "PJB2_GEX_S3_R2_001.fastq.gz",
+                                       "PJB2_CML_S4_R1_001.fastq.gz",
+                                       "PJB2_CML_S4_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Chromium 3\'v3',
+                                           'Library type': 'CellPlex' })
+        p.create(top_dir=self.wd)
+        # Add the cellranger multi config.csv files
+        with open(os.path.join(self.wd,
+                               "PJB",
+                               "10x_multi_config.PJB1.csv"),'wt') as fp:
+            fastq_dir = os.path.join(self.wd,
+                                     "PJB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2024-A
+create-bam,true
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,%s,any,PJB1,gene expression,
+PJB1_CML,%s,any,PJB1,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""" % (fastq_dir,fastq_dir))
+        with open(os.path.join(self.wd,
+                               "PJB",
+                               "10x_multi_config.PJB2.csv"),'wt') as fp:
+            fastq_dir = os.path.join(self.wd,
+                                     "PJB",
+                                     "fastqs")
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2024-A
+create-bam,true
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB2_GEX,%s,any,PJB2,gene expression,
+PJB2_CML,%s,any,PJB2,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBC,CMO303,PBC
+PBD,CMO304,PBD
+""" % (fastq_dir,fastq_dir))
+        # QC protocol
+        protocol = QCProtocol(name="cellranger_count",
+                              description="Cellranger_count test",
+                              seq_data_reads=['r2',],
+                              index_reads=['r1'],
+                              qc_modules=(
+                                  "cellranger_count(cellranger_use_multi_config=true)",))
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          protocol)
+        status = runqc.run(cellranger_transcriptomes=
+                           { 'human':
+                             '/data/refdata-gex-GRCh38-2024-A' },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check outputs
+        project_dir = os.path.join(self.wd,"PJB")
+        for f in (
+                "qc/cellranger_count",
+                "qc/cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB1_GEX/_cmdline",
+                "qc/cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB1_GEX/outs/web_summary.html",
+                "qc/cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB1_GEX/outs/metrics_summary.csv",
+                "qc/cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB2_GEX/_cmdline",
+                "qc/cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB2_GEX/outs/web_summary.html",
+                "qc/cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB2_GEX/outs/metrics_summary.csv",
+                "cellranger_count",
+                "cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB1_GEX/_cmdline",
+                "cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB1_GEX/outs/web_summary.html",
+                "cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB1_GEX/outs/metrics_summary.csv",
+                "cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB2_GEX/_cmdline",
+                "cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB2_GEX/outs/web_summary.html",
+                "cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB2_GEX/outs/metrics_summary.csv"):
+            self.assertTrue(os.path.exists(os.path.join(project_dir,f)),
+                            "%s: missing" % f)
+        for f in (
+                "qc/cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB1_CML",
+                "qc/cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB2_CML",
+                "cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB1_CML"
+                "cellranger_count/8.0.0/refdata-cellranger-gex-GRCh38-2024-A/PJB2_CML"):
+            self.assertFalse(os.path.exists(os.path.join(project_dir,f)),
+                             "%s: present" % f)
+        # Check number of cells
+        project_metadata = AnalysisProjectInfo(
+            os.path.join(self.wd,"PJB","README.info"))
+        ##self.assertEqual(project_metadata.number_of_cells,5529)
+        self.assertEqual(project_metadata.number_of_cells,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"cellranger_count")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(protocol))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.seq_data_samples,"PJB1_GEX,PJB2_GEX")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_CML_S2_R1_001.fastq.gz,"
+                         "PJB1_CML_S2_R2_001.fastq.gz,"
+                         "PJB1_GEX_S1_R1_001.fastq.gz,"
+                         "PJB1_GEX_S1_R2_001.fastq.gz,"
+                         "PJB2_CML_S4_R1_001.fastq.gz,"
+                         "PJB2_CML_S4_R2_001.fastq.gz,"
+                         "PJB2_GEX_S3_R1_001.fastq.gz,"
+                         "PJB2_GEX_S3_R2_001.fastq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
+        self.assertEqual(qc_info.cellranger_version,"8.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/data/refdata-cellranger-gex-GRCh38-2024-A")
+        self.assertEqual(qc_info.cellranger_probeset,None)
+        # Check reports
+        for f in ("qc_report.html",
+                  "qc_report.PJB.zip"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+
     def test_qcpipeline_qc_modules_cellranger_count_multi_config_no_file(self):
         """
         QCPipeline: 'cellranger_count' QC module (use cellranger multi config, no file)
