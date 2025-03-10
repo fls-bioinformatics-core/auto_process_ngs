@@ -303,17 +303,17 @@ class CellrangerMulti(QCModule):
                    envmodules=envmodules)
         check_cellranger_multi_requires.append(get_cellranger)
 
-        # Locate config.csv file for 'cellranger multi'
-        get_cellranger_multi_config = GetCellrangerMultiConfig(
-            "%s: get config file for 'cellranger multi'" %
+        # Locate config.csv files for 'cellranger multi'
+        get_cellranger_multi_configs = GetCellrangerMultiConfigs(
+            "%s: get config files for 'cellranger multi'" %
             project_name,
             project,
             qc_dir
         )
-        p.add_task(get_cellranger_multi_config,
+        p.add_task(get_cellranger_multi_configs,
                    requires=required_tasks)
         check_cellranger_multi_requires.append(
-            get_cellranger_multi_config)
+            get_cellranger_multi_configs)
 
         # Parent directory for cellranger multi outputs
         # Set to project directory unless the 'cellranger_out_dir'
@@ -330,10 +330,10 @@ class CellrangerMulti(QCModule):
             (project_name,
              project.info.library_type),
             project,
-            get_cellranger_multi_config.output.config_csvs,
-            get_cellranger_multi_config.output.samples,
-            get_cellranger_multi_config.output.reference_data_path,
-            get_cellranger_multi_config.output.probe_set_path,
+            get_cellranger_multi_configs.output.config_csvs,
+            get_cellranger_multi_configs.output.samples,
+            get_cellranger_multi_configs.output.reference_data_path,
+            get_cellranger_multi_configs.output.probe_set_path,
             cellranger_out_dir,
             qc_dir=qc_dir,
             working_dir=working_dir,
@@ -348,7 +348,7 @@ class CellrangerMulti(QCModule):
         )
         p.add_task(run_cellranger_multi,
                    requires=(get_cellranger,
-                             get_cellranger_multi_config,),
+                             get_cellranger_multi_configs,),
                    runner=cellranger_runner,
                    envmodules=envmodules)
         return run_cellranger_multi
@@ -357,7 +357,7 @@ class CellrangerMulti(QCModule):
 # Pipeline tasks
 #######################################################################
 
-class GetCellrangerMultiConfig(PipelineFunctionTask):
+class GetCellrangerMultiConfigs(PipelineFunctionTask):
     """
     Locate 'config.csv' files for cellranger multi
     """
@@ -457,7 +457,7 @@ class RunCellrangerMulti(PipelineTask):
           probe_set_path (str): path to the probe set
             reference dataset from the config.csv file
           out_dir (str): top-level directory to copy all
-            final 'count' outputs into. Outputs won't be
+            final 'multi' outputs into. Outputs won't be
             copied if no value is supplied
           qc_dir (str): top-level QC directory to put
             'count' QC outputs (e.g. metrics CSV and summary

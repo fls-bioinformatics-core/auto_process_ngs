@@ -63,7 +63,7 @@ from .modules.cellranger_atac_count import CellrangerAtacCount
 from .modules.cellranger_arc_count import CellrangerArcCount
 from .modules.cellranger_count import CellrangerCount
 from .modules.cellranger_multi import CellrangerMulti
-from .modules.cellranger_multi import GetCellrangerMultiConfig
+from .modules.cellranger_multi import GetCellrangerMultiConfigs
 from .modules.fastqc import Fastqc
 from .modules.fastq_screen import FastqScreen
 from .modules.picard_insert_size_metrics import PicardInsertSizeMetrics
@@ -638,18 +638,18 @@ class QCPipeline(Pipeline):
                 except KeyError:
                     cellranger_use_multi_config = False
                 if cellranger_use_multi_config:
-                    get_cellranger_multi_config = GetCellrangerMultiConfig(
-                        "%s: get config file for 'cellranger multi'" %
+                    get_cellranger_multi_configs = GetCellrangerMultiConfigs(
+                        "%s: get config files for 'cellranger multi'" %
                         project_name,
                         project,
                         qc_dir
                     )
-                    self.add_task(get_cellranger_multi_config,
+                    self.add_task(get_cellranger_multi_configs,
                                   requires=startup_tasks)
-                    samples = get_cellranger_multi_config.output.gex_libraries
-                    fastq_dirs = get_cellranger_multi_config.output.fastq_dirs
+                    samples = get_cellranger_multi_configs.output.gex_libraries
+                    fastq_dirs = get_cellranger_multi_configs.output.fastq_dirs
                     reference_dataset = \
-                        get_cellranger_multi_config.output.reference_data_path
+                        get_cellranger_multi_configs.output.reference_data_path
                 else:
                     samples = None
                     fastq_dirs = None
