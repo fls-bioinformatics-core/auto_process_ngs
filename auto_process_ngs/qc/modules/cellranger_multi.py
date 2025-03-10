@@ -9,6 +9,7 @@ Implements the 'cellranger_multi' QC module:
 * CellrangerMulti: core QCModule class
 * GetCellrangerMultiConfig: pipeline task to acquire multi config file
 * RunCellrangerMulti: pipeline task to run 'cellranger multi'
+* expected_outputs: helper function for handling 'cellranger multi' outputs
 
 Also imports the following pipeline tasks:
 
@@ -658,3 +659,38 @@ class RunCellrangerMulti(PipelineTask):
         self.output.cellranger_refdata.set(self.args.reference_data_path)
         self.output.cellranger_probeset.set(self.args.probe_set_path)
         self.output.cellranger_version.set(self.args.cellranger_version)
+
+#######################################################################
+# Helper functions
+#######################################################################
+
+def expected_outputs(config_csv, prefix=None):
+    """
+    Generate expected output file paths from 10x multi config
+
+    Arguments:
+      config_csv (str): path to the 10x multi config file
+        to generate the output file names for
+      prefix (str): optional path to prepend to the
+        expected file paths
+
+    Returns:
+      List: list of paths to expected output files.
+    """
+    # Load config file
+    config = CellrangerMultiConfigCsv(config_csv)
+    # Generate list of expected files
+    expected_files = ["_cmdline",]
+    for sample in config.sample_names:
+        for f in ("web_summary.html",
+                  "metrics_summary.csv"):
+            # Per-sample outputs
+            expected_files.append(os.path.join("outs",
+                                               "per_sample_outs",
+                                               sample,
+                                               f))
+    # Prepend prefix if supplied
+    if prefix:
+        expected_files = [os.path.join(prefix, f)
+                          for f in expected_files]
+    return expected_files

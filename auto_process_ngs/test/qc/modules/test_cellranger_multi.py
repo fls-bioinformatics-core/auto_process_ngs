@@ -15,6 +15,7 @@ from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.protocols import QCProtocol
 from auto_process_ngs.qc.pipeline import QCPipeline
+from auto_process_ngs.qc.modules.cellranger_multi import expected_outputs
 from ..protocols import BaseQCPipelineTestCase
 
 # Set to False to keep test output dirs
@@ -936,3 +937,91 @@ PB2,BC002,PB2
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
+
+class TestExpectedOutputs(unittest.TestCase):
+    """
+    Tests for the 'expected_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCheckCellrangerCountOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_expected_outputs(self):
+        """
+        expected_outputs: 10x multi config file (multiplexed samples)
+        """
+        # Make a 10x_multi_config.csv file
+        cf_file = os.path.join(self.wd, "10x_multi_config.csv")
+        with open(cf_file, "wt") as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2024-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/path/to/fastqs,any,PJB1,gene expression,
+PJB1_CML,/path/to/fastqs,any,PJB1,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""")
+        # Generate expected outputs
+        self.assertEqual(expected_outputs(cf_file),
+                         ["_cmdline",
+                          "outs/per_sample_outs/PBA/web_summary.html",
+                          "outs/per_sample_outs/PBA/metrics_summary.csv",
+                          "outs/per_sample_outs/PBB/web_summary.html",
+                          "outs/per_sample_outs/PBB/metrics_summary.csv"])
+
+    def test_expected_outputs_with_prefix(self):
+        """
+        expected_outputs: 10x multi config file (multiplexed samples, with prefix)
+        """
+        # Make a 10x_multi_config.csv file
+        cf_file = os.path.join(self.wd, "10x_multi_config.csv")
+        with open(cf_file, "wt") as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2024-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/path/to/fastqs,any,PJB1,gene expression,
+PJB1_CML,/path/to/fastqs,any,PJB1,Multiplexing Capture,
+
+[samples]
+sample_id,cmo_ids,description
+PBA,CMO301,PBA
+PBB,CMO302,PBB
+""")
+        # Generate expected outputs
+        self.assertEqual(expected_outputs(cf_file, prefix="PJB1"),
+                         ["PJB1/_cmdline",
+                          "PJB1/outs/per_sample_outs/PBA/web_summary.html",
+                          "PJB1/outs/per_sample_outs/PBA/metrics_summary.csv",
+                          "PJB1/outs/per_sample_outs/PBB/web_summary.html",
+                          "PJB1/outs/per_sample_outs/PBB/metrics_summary.csv"])
+
+    def test_expected_outputs_no_multiplexed_samples(self):
+        """
+        expected_outputs: 10x multi config file (no multiplexed samples)
+        """
+        # Make a 10x_multi_config.csv file
+        cf_file = os.path.join(self.wd, "10x_multi_config.csv")
+        with open(cf_file, "wt") as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2024-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/path/to/fastqs,any,PJB1,gene expression,
+PJB1_CML,/path/to/fastqs,any,PJB1,Multiplexing Capture,
+""")
+        # Generate expected outputs
+        self.assertEqual(expected_outputs(cf_file),
+                         ["_cmdline"])
