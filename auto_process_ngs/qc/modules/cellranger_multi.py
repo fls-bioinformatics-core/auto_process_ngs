@@ -212,26 +212,67 @@ class CellrangerMulti(QCModule):
           qc_outputs (AttributeDictionary): QC outputs returned
             from the 'collect_qc_outputs' method
         """
-        # Check for config file
-        cf_file = os.path.join(params.qc_dir,
-                               "10x_multi_config.csv")
-        if not os.path.exists(cf_file):
-            # No multi config file so no outputs expected
+        # Check for config files
+        config_files = [os.path.join(params.qc_dir, f)
+                        for f in os.listdir(params.qc_dir)
+                        if f.startswith("10x_multi_config.")
+                        and f.endswith(".csv")]
+        if not config_files:
+            # No multi config files so no outputs expected
             return True
-        # Get expected multiplexed sample names
-        # from config file
-        multiplexed_samples = CellrangerMultiConfigCsv(cf_file).\
-                              sample_names
-        if not multiplexed_samples:
-            # No samples to check outputs for
-            return True
-        # Check against actual multiplexed samples
-        # associated with specified version and dataset
-        return verify_10x_pipeline(('cellranger',
-                                    params.cellranger_version,
-                                    params.cellranger_refdata),
-                                   multiplexed_samples,
-                                   qc_outputs)
+        # Verification paramters
+        cellranger_version = None
+        if params.cellranger_version != "*":
+            cellranger_version = params.cellranger_version
+        cellranger_refdata = None
+        if params.cellranger_refdata != "*":
+            cellranger_refdata = params.cellranger_refdata
+        if cellranger_refdata:
+            cellranger_refdata = os.path.basename(cellranger_refdata)
+        # Locate matching cellranger multi output directories
+        cellranger_multi_dir = os.path.join(params.qc_dir, "cellranger_multi")
+        multi_dirs = {}
+        for multi_dir in fetch_cellranger_multi_output_dirs(
+                cellranger_multi_dir):
+            version, refdata, psample = extract_path_data(
+                multi_dir,
+                cellranger_multi_dir)
+            if (not cellranger_version or version == cellranger_version) and \
+               (not cellranger_refdata or refdata == cellranger_refdata):
+                try:
+                    multi_dirs[psample].append(multi_dir)
+                except KeyError:
+                    multi_dirs[psample] = [multi_dir]
+        # Verify against each config file
+        for cf_file in config_files:
+            config = CellrangerMultiConfigCsv(cf_file)
+            psample = config.physical_sample
+            multiplexed_samples = config.sample_names
+            if psample not in multi_dirs:
+                # Verification failure (no matching outputs)
+                return False
+            if not multiplexed_samples:
+                # No samples to check outputs for
+                continue
+            # Look for at least one valid output
+            verified_config = False
+            for multi_dir in multi_dirs[psample]:
+                outputs = CellrangerMultiOutputs(multi_dir)
+                output_samples = outputs.sample_names
+                missing_sample = False
+                for s in multiplexed_samples:
+                    if s not in output_samples:
+                        missing_sample = True
+                        break
+                if not missing_sample:
+                    verified_config = True
+                    break
+            if not verified_config:
+                # Verification failure (no outputs with
+                # all multiplexed samples)
+                return False
+        # No verification failures
+        return True
 
     @classmethod
     def add_to_pipeline(self,p,project_name,project,qc_dir,
