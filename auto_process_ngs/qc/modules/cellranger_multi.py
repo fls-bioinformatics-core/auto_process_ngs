@@ -421,10 +421,10 @@ class GetCellrangerMultiConfigs(PipelineFunctionTask):
         self.add_output('probe_set_path',Param(type=str))
     def setup(self):
         # Check for top-level multi config files
-        config_files = [os.path.join(self.args.project.dirn,f)
-                        for f in os.listdir(self.args.project.dirn)
-                        if f.startswith("10x_multi_config.")
-                        and f.endswith(".csv")]
+        config_files = sorted([os.path.join(self.args.project.dirn,f)
+                               for f in os.listdir(self.args.project.dirn)
+                               if f.startswith("10x_multi_config.")
+                               and f.endswith(".csv")])
         if not config_files:
             # No configs found
             print("No 10x multi config files found: nothing to do")
