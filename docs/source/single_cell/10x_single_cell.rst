@@ -154,15 +154,13 @@ also create template control files for use in subsequent QC runs:
 
  * **CellPlex and Flex**: a template
    :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`
-   file, which should be renamed and populated with information on
-   the feature types, multiplexed samples etc.
+   file, which should be copied, renamed and appropriatedly edited
+   for each physical sample in the dataset.
 
  * **Single Cell immune profiling**: a template
-   :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`,
-   which should be copied for each sample in the project with the
-   name `10x_multi_config.<SAMPLE>.csv`. Each one should then be
-   populated with information on the Fastqs, feature types etc for
-   that sample.
+   :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`
+   file, which should be copied, renamed and appropriatedly edited
+   for each physical sample in the dataset.
 
 The :doc:`run_qc <../using/run_qc>` command
 will then determine the appropriate QC protocol to use based on the
