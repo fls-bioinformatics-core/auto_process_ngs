@@ -567,7 +567,7 @@ class RunCellrangerMulti(PipelineTask):
             # Set prefix
             prefix = multi_dir
             if config.physical_sample:
-                prefix = os.path.join(prefix)
+                prefix = os.path.join(prefix, config.physical_sample)
             # Check whether outputs already exist
             for f in expected_outputs(config_csv, prefix=prefix):
                 if not os.path.exists(f):
