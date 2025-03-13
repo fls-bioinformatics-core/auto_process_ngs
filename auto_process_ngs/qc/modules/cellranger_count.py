@@ -268,7 +268,7 @@ class CellrangerCount(QCModule):
                         and f.endswith(".csv")]
             if not cf_files:
                 # No multi config files so no outputs expected
-                return True
+                return None
             # Get GEX sample names and reference dataset from
             # multi config files
             samples = []

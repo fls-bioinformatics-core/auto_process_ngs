@@ -912,15 +912,16 @@ class TestQCVerifier(unittest.TestCase):
                                      cellranger_refdata=\
                                      'refdata-cellranger-2020-A')))
         # Empty QC dir
-        # NB this will verify as True because the 10x multi CSV config
+        # NB this will verify as None because the 10x multi CSV config
         # file is missing (so no outputs are expected)
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_cellranger_multi=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module(
+        self.assertEqual(qc_verifier.verify_qc_module(
             'cellranger_multi',
-            self._create_params_dict(qc_dir=qc_dir)))
+            self._create_params_dict(qc_dir=qc_dir)),
+                         None)
 
     def test_qcverifier_verify_qc_module_cellranger_multi_multiple_samples(self):
         """
@@ -990,15 +991,16 @@ class TestQCVerifier(unittest.TestCase):
                                      cellranger_refdata=\
                                      'refdata-cellranger-2020-A')))
         # Empty QC dir
-        # NB this will verify as True because the 10x multi CSV config
+        # NB this will verify as None because the 10x multi CSV config
         # file is missing (so no outputs are expected)
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_cellranger_multi=False)
         qc_verifier = QCVerifier(qc_dir)
-        self.assertTrue(qc_verifier.verify_qc_module(
+        self.assertEqual(qc_verifier.verify_qc_module(
             'cellranger_multi',
-            self._create_params_dict(qc_dir=qc_dir)))
+            self._create_params_dict(qc_dir=qc_dir)),
+                         None)
 
     def test_qcverifier_verify_single_end(self):
         """

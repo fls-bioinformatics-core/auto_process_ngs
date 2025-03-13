@@ -219,7 +219,7 @@ class CellrangerMulti(QCModule):
                         and f.endswith(".csv")]
         if not config_files:
             # No multi config files so no outputs expected
-            return True
+            return None
         # Verification paramters
         cellranger_version = None
         if params.cellranger_version != "*":
