@@ -912,15 +912,95 @@ class TestQCVerifier(unittest.TestCase):
                                      cellranger_refdata=\
                                      'refdata-cellranger-2020-A')))
         # Empty QC dir
-        # NB this will verify as True because the 10x multi CSV config
+        # NB this will verify as None because the 10x multi CSV config
         # file is missing (so no outputs are expected)
         qc_dir = self._make_qc_dir('qc.empty',
                                    fastq_names=fastq_names,
                                    include_cellranger_multi=False)
         qc_verifier = QCVerifier(qc_dir)
+        self.assertEqual(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir)),
+                         None)
+
+    def test_qcverifier_verify_qc_module_cellranger_multi_multiple_samples(self):
+        """
+        QCVerifier: verify QC module 'cellranger_multi' (multiple samples)
+        """
+        fastq_names = ("PJB1_GEX_S1_R1_001.fastq.gz",
+                       "PJB1_GEX_S1_R2_001.fastq.gz",
+                       "PJB1_CML_S2_R1_001.fastq.gz",
+                       "PJB1_CML_S2_R2_001.fastq.gz",
+                       "PJB2_GEX_S3_R1_001.fastq.gz",
+                       "PJB2_GEX_S3_R2_001.fastq.gz",
+                       "PJB2_CML_S4_R1_001.fastq.gz",
+                       "PJB2_CML_S4_R2_001.fastq.gz",)
+        # QC dir with cellranger multi outputs
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_multi_samples={
+                                       "PJB1": ("PB1", "PB2"),
+                                       "PJB2": ("PB3", "PB4")
+                                   })
+        qc_verifier = QCVerifier(qc_dir)
+        # Implicitly match any version and reference
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_multi',
             self._create_params_dict(qc_dir=qc_dir)))
+        # Explicitly match version with any reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='8.0.0',
+                                     cellranger_refdata='*')))
+        # Explicitly match reference with any version
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='*',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
+        # Fail if version not found
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='5.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
+        # Fail if reference not found
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='7.1.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2.0.0')))
+        # Missing outputs for one sample
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_multi_samples=('PJB_CML1',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     samples=('PJB1','PJB2'),
+                                     cellranger_version='7.1.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-2020-A')))
+        # Empty QC dir
+        # NB this will verify as None because the 10x multi CSV config
+        # file is missing (so no outputs are expected)
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_multi=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertEqual(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir)),
+                         None)
 
     def test_qcverifier_verify_single_end(self):
         """
@@ -1895,12 +1975,13 @@ class TestVerifyProject(unittest.TestCase):
         verify_project: paired-end data with cellranger 'multi'
         """
         analysis_dir = self._make_analysis_project(
-            protocol='10x_CellPlex',
-            sample_names=('PJB1_GEX','PJB2_CML',),
-            seq_data_samples=('PJB1_GEX',),
+            protocol="10x_CellPlex",
+            sample_names=("PJB1_GEX", "PJB1_CML",),
+            seq_data_samples=("PJB1_GEX",),
             include_cellranger_multi=True,
-            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
+            cellranger_multi_samples=("PB1", "PB2"))
         project = AnalysisProject(analysis_dir)
+        # Should fail to verify as no cellranger count outputs
         self.assertFalse(verify_project(project))
 
     def test_verify_project_paired_end_cellranger_count_and_multi(self):
@@ -1908,15 +1989,48 @@ class TestVerifyProject(unittest.TestCase):
         verify_project: paired-end data with cellranger 'count' and 'multi'
         """
         analysis_dir = self._make_analysis_project(
-            protocol='10x_CellPlex',
-            sample_names=('PJB1_GEX','PJB2_CML',),
-            seq_data_samples=('PJB1_GEX',),
+            protocol="10x_CellPlex",
+            sample_names=("PJB1_GEX", "PJB1_CML",),
+            seq_data_samples=("PJB1_GEX",),
             include_cellranger_multi=True,
             include_cellranger_count=True,
             cellranger_pipelines=('cellranger',),
             # NB only GEX samples
-            cellranger_samples=('PJB1_GEX',),
-            cellranger_multi_samples=('PJB_CML1','PJB_CML2',))
+            cellranger_samples=("PJB1_GEX",),
+            cellranger_multi_samples=("PB1", "PB2"))
+        project = AnalysisProject(analysis_dir)
+        self.assertTrue(verify_project(project))
+
+    def test_verify_project_paired_end_cellranger_multi_multiple_samples(self):
+        """
+        verify_project: paired-end data with cellranger 'multi' (multiple samples)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol="10x_CellPlex",
+            sample_names=("PJB1_GEX", "PJB1_CML", "PJB2_GEX", "PJB2_CML"),
+            seq_data_samples=("PJB1_GEX", "PJB2_GEX"),
+            include_cellranger_multi=True,
+            cellranger_multi_samples={ "PJB1": ("PB1", "PB2"),
+                                       "PJB2": ("PB3", "PB4") })
+        project = AnalysisProject(analysis_dir)
+        # Should fail to verify as no cellranger count outputs
+        self.assertFalse(verify_project(project))
+
+    def test_verify_project_paired_end_cellranger_count_and_multi_multiple_samples(self):
+        """
+        verify_project: paired-end data with cellranger 'count' and 'multi' (multiple samples)
+        """
+        analysis_dir = self._make_analysis_project(
+            protocol="10x_CellPlex",
+            sample_names=("PJB1_GEX", "PJB1_CML", "PJB2_GEX", "PJB2_CML"),
+            seq_data_samples=("PJB1_GEX", "PJB2_GEX"),
+            include_cellranger_multi=True,
+            include_cellranger_count=True,
+            cellranger_pipelines=('cellranger',),
+            # NB only GEX samples
+            cellranger_samples=("PJB1_GEX", "PJB2_GEX"),
+            cellranger_multi_samples={ "PJB1": ("PB1", "PB2"),
+                                       "PJB2": ("PB3", "PB4") })
         project = AnalysisProject(analysis_dir)
         self.assertTrue(verify_project(project))
 

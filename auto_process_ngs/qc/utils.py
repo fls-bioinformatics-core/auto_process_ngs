@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes and functions for QC
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
 #
 """
 Provides utility classes and functions for analysis project QC.
@@ -36,6 +36,8 @@ from ..simple_scheduler import SchedulerJob
 from ..tenx.cellplex import CellrangerMultiConfigCsv
 from .apps.cellranger import CellrangerCount
 from .apps.cellranger import CellrangerMulti
+from .apps.cellranger import extract_path_data
+from .apps.cellranger import fetch_cellranger_multi_output_dirs
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -518,32 +520,44 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
             return
         # Handle outputs from 'multi'
         number_of_cells = 0
-        try:
-            multi_outs = CellrangerMulti(
-                os.path.join(qc_dir,
-                             "cellranger_multi",
-                             cellranger_version,
-                             os.path.basename(
-                                 cellranger_refdata)),
-                cellranger_exe=pipeline)
-            if multi_outs.sample_names:
-                for sample in multi_outs.sample_names:
-                    print("- %s" % sample)
-                    try:
-                        ncells = multi_outs.metrics(sample).cells
-                        print("  %d cells" % ncells)
-                        number_of_cells += ncells
-                    except Exception as ex:
-                        raise Exception("Failed to add cell count for sample "
-                                        "'%s': %s" % (sample,ex))
-            else:
-                raise Exception("No samples found under %s" %
-                                os.path.join(qc_dir,"cellranger_multi"))
-        except Exception as ex:
-            number_of_cells = None
-            logger.warning("Unable to set cell count from data in "
-                           "%s: %s" %
-                           (os.path.join(qc_dir,"cellranger_multi"),ex))
+        cellranger_multi_dir = os.path.join(qc_dir, "cellranger_multi")
+        # Loop over all 'multi' output directories
+        for multi_dir in fetch_cellranger_multi_output_dirs(
+                cellranger_multi_dir):
+            # Extract version and refdata
+            version, refdata, psample = extract_path_data(
+                multi_dir, cellranger_multi_dir)
+            if version != cellranger_version or \
+               refdata != os.path.basename(cellranger_refdata):
+                # Discard if version and/or refdata don't match
+                continue
+            # Load output data and extract individual cell counts
+            try:
+                multi_outs = CellrangerMulti(multi_dir,
+                                             cellranger_exe=pipeline)
+                if multi_outs.sample_names:
+                    # Collect cell count for each multiplexed
+                    # sample
+                    for sample in multi_outs.sample_names:
+                        print(f"- {sample}")
+                        try:
+                            ncells = multi_outs.metrics(sample).cells
+                            print(f"  {ncells} cells")
+                            number_of_cells += ncells
+                        except Exception as ex:
+                            raise Exception(f"Failed to add cell count "
+                                            f"for sample '{sample}': "
+                                            f"{ex}")
+                else:
+                    # No samples or cell counts
+                    raise Exception(f"No samples found under "
+                                    f"{multi_dir}")
+            except Exception as ex:
+                # Couldn't get cell count for at least one
+                # multiplexed sample?
+                number_of_cells = None
+                logger.warning(f"Unable to set cell count from data in "
+                               f"{multi_dir}: {ex}")
     elif source == "count":
         print("Looking for '%s count' outputs" % pipeline)
         if not os.path.exists(os.path.join(qc_dir,"cellranger_count")):

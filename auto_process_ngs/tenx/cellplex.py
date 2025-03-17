@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx/cellplex.py: utilities for handling 10xGenomics Cellplex data
-#     Copyright (C) University of Manchester 2023-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2025 Peter Briggs
 #
 
 """
@@ -57,6 +57,8 @@ class CellrangerMultiConfigCsv:
     - vdj_reference_path: path to the V(D)J-compatible reference
     - gex_libraries: list of Fastq IDs associated
       with GEX data
+    - physical_sample: physical sample name extracted from
+      the config file name if present (otherwise None)
     - is_valid: indicates whether the file appears to be valid
 
     Provides the following methods:
@@ -95,6 +97,7 @@ class CellrangerMultiConfigCsv:
         self._filen = os.path.abspath(filen)
         self._sections = []
         self._samples = {}
+        self._physical_sample = None
         self._reference_data_path = None
         self._probe_set_path = None
         self._feature_reference_path = None
@@ -109,6 +112,9 @@ class CellrangerMultiConfigCsv:
         Internal: read in data from a multiplex 'config.csv' file
         """
         logger.debug("Reading data from '%s'" % self._filen)
+        psample = ".".join(os.path.basename(self._filen).split(".")[1:-1])
+        if psample:
+            self._physical_sample = psample
         sections = set()
         cmo_list = set()
         feature_type_list = set()
@@ -276,6 +282,21 @@ class CellrangerMultiConfigCsv:
         Samples are listed in the '[samples]' section.
         """
         return sorted(list(self._samples.keys()))
+
+    @property
+    def physical_sample(self):
+        """
+        Return the physical sample from config.csv name
+
+        Physical sample name is extracted from config file
+        names of the form:
+
+        10x_multi_config[.SAMPLE].csv
+
+        If no physical sample name is present in the name
+        then returns 'None'.
+        """
+        return self._physical_sample
 
     @property
     def sections(self):

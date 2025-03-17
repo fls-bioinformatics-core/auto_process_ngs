@@ -75,7 +75,7 @@ QC module                      Details
 ``cellranger_multi``           Cell multiplexing and fixed RNA profiling
                                analyses using `cellranger`_ ``multi``
                                (requires
-                               :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`)
+                               :doc:`10x_multi_config[.SAMPLE].csv <../control_files/10x_multi_config_csv>`)
 ============================== ======================
 
 Appropriate reference data must be available (for example,

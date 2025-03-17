@@ -22,6 +22,9 @@ directories in different configurations:
 
 - make_mock_qc_dir: create and populate a mock QC directory
 
+There are also the following helper functions:
+
+- make_10x_multi_config_file: creates mock '10x_multi_config.cvs' files
 """
 
 #######################################################################
@@ -561,8 +564,11 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         'cellranger-atac' etc)
       cellranger_samples (list): list of sample names to
         produce 'cellranger count' outputs for
-      cellranger_multi_samples (list): list of multiplexed
-        sample names for 10x CellPlex
+      cellranger_multi_samples (list/dict): either a flat list
+        of multiplexed sample names for 10x CellPlex (single
+        unnamed physical sample), or a dictionary where keys
+        are physical sample names and the items are lists of
+        the associated multiplexed sample names
       cellranger_version (str): if set then specifies version of
         Cellranger to mimick
       seq_data_samples (list): list with subset of sample
@@ -775,55 +781,40 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             qc_info['cellranger_refdata'] = refdata
     # Cellranger multi
     if include_cellranger_multi:
-        # Make cellranger multi config.csv file
-        if protocol == "10x_Flex":
-            config_template = """[gene-expression]
-reference,/data/refdata-cellranger-2020-A
-probe-set,/data/probe-set-2020-A
-no-bam,true
-
-[libraries]
-fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB1_flex,{fastq_dir},any,PJB1,gene expression,
-
-[samples]
-sample_id,probe_barcode_ids,description
-PJB_BC1,BC001,BC1
-PJB_BC2,BC002,BC2
-"""
-        else:
-            config_template = """[gene-expression]
-reference,/data/refdata-cellranger-2020-A
-
-[libraries]
-fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB1_GEX,{fastq_dir},any,PJB1,gene expression,
-PJB2_MC,{fastq_dir},any,PJB2,Multiplexing Capture,
-
-[samples]
-sample_id,cmo_ids,description
-PJB_CML1,CMO301,CML1
-PJB_CML2,CMO302,CML2
-"""
-        multi_config = os.path.join(qc_dir,"10x_multi_config.csv")
-        with open(multi_config,'wt') as fp:
-            if not fastq_dir:
-                fastq_dir = os.path.join(os.path.dirname(qc_dir),
-                                         "fastqs")
-            fp.write(config_template.format(fastq_dir=fastq_dir))
-        # Cellranger version
-        version = cellranger_version
-        # Set top-level output dir
-        multi_dir = os.path.join("cellranger_multi",
-                                 version,
-                                 "refdata-cellranger-2020-A")
-        # Make outputs
-        MockQCOutputs.cellranger_multi(cellranger_multi_samples,
-                                       qc_dir,
-                                       config_csv=multi_config,
-                                       prefix=multi_dir,
-                                       cellranger_version=version)
-        qc_info['cellranger_version'] = version
+        # Check whether multiplexed samples is a list or a dictionary
+        multiplexed_samples = {}
+        try:
+            # Assume a dictionary where keys are physical samples
+            # and values are lists of associated multiplexed samples
+            for s in cellranger_multi_samples:
+                multiplexed_samples[s] = cellranger_multi_samples[s]
+        except TypeError:
+            # Not a dictionary so no physical samples
+            multiplexed_samples[None] = cellranger_multi_samples
+        # Loop over physical samples
+        for physical_sample in multiplexed_samples:
+            # Multiplexed samples for this physical sample
+            multi_samples = multiplexed_samples[physical_sample]
+            # Make cellranger multi config.csv file
+            multi_config = make_10x_multi_config_file(qc_dir, fastq_dir,
+                                                      multi_samples,
+                                                      sample=physical_sample,
+                                                      protocol=protocol)
+            # Cellranger version
+            version = cellranger_version
+            # Set top-level output dir
+            multi_dir = os.path.join("cellranger_multi",
+                                     version,
+                                     "refdata-cellranger-2020-A")
+            if physical_sample:
+                multi_dir = os.path.join(multi_dir, physical_sample)
+            # Make outputs
+            MockQCOutputs.cellranger_multi(multi_samples,
+                                           qc_dir,
+                                           config_csv=multi_config,
+                                           prefix=multi_dir,
+                                           cellranger_version=version)
+            qc_info['cellranger_version'] = version
     # Additional metadata items
     star_index = "/data/star/hg38"
     annotation_bed = "/data/annotation/hg38.bed"
@@ -841,3 +832,60 @@ PJB_CML2,CMO302,CML2
     # Write out metadata file
     qc_info.save(os.path.join(qc_dir,"qc.info"))
     return qc_dir
+
+def make_10x_multi_config_file(qc_dir, fastq_dir,
+                               multiplexed_samples,
+                               sample=None,
+                               protocol="10x_Cellplex"):
+    """
+    Helper function to make cellranger multi config.csv file
+
+    Arguments:
+      qc_dir (str): directory to create the config file
+        under
+      fastq_dir (str): path to Fastq directory
+      multiplexed_samples (list): list of multiplexed sample
+        names
+      sample (str): associated physical sample name (or None)
+      protocol (str): QC protocol (optional)
+    """
+    if protocol == "10x_Flex":
+        samples_header = "sample_id,probe_barcode_ids,description"
+        barcode_base = "BC0"
+        config_template = """[gene-expression]
+reference,/data/refdata-cellranger-2020-A
+probe-set,/data/probe-set-2020-A
+no-bam,true
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_flex,{fastq_dir},any,PJB1,gene expression,
+"""
+    else:
+        samples_header = "sample_id,cmo_ids,description"
+        barcode_base = "CMO3"
+        config_template = """[gene-expression]
+reference,/data/refdata-cellranger-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,{fastq_dir},any,PJB1,gene expression,
+PJB2_MC,{fastq_dir},any,PJB2,Multiplexing Capture,
+"""
+    if sample is None:
+        multi_config = "10x_multi_config.csv"
+    else:
+        multi_config = f"10x_multi_config.{sample}.csv"
+    multi_config = os.path.join(qc_dir, multi_config)
+    with open(multi_config, "wt") as fp:
+        # Write base config file
+        if not fastq_dir:
+            fastq_dir = os.path.join(os.path.dirname(qc_dir),
+                                     "fastqs")
+        fp.write(config_template.format(fastq_dir=fastq_dir))
+        # Add multiplexed samples, if supplied
+        if multiplexed_samples:
+            fp.write(f"\n[samples]\n{samples_header}\n")
+            for idx, smpl in enumerate(multiplexed_samples):
+                fp.write(f"{smpl},{barcode_base}{idx:02d},{smpl}\n")
+    return multi_config

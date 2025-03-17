@@ -9,6 +9,7 @@ Implements the 'cellranger_multi' QC module:
 * CellrangerMulti: core QCModule class
 * GetCellrangerMultiConfig: pipeline task to acquire multi config file
 * RunCellrangerMulti: pipeline task to run 'cellranger multi'
+* expected_outputs: helper function for handling 'cellranger multi' outputs
 
 Also imports the following pipeline tasks:
 
@@ -211,26 +212,67 @@ class CellrangerMulti(QCModule):
           qc_outputs (AttributeDictionary): QC outputs returned
             from the 'collect_qc_outputs' method
         """
-        # Check for config file
-        cf_file = os.path.join(params.qc_dir,
-                               "10x_multi_config.csv")
-        if not os.path.exists(cf_file):
-            # No multi config file so no outputs expected
-            return True
-        # Get expected multiplexed sample names
-        # from config file
-        multiplexed_samples = CellrangerMultiConfigCsv(cf_file).\
-                              sample_names
-        if not multiplexed_samples:
-            # No samples to check outputs for
-            return True
-        # Check against actual multiplexed samples
-        # associated with specified version and dataset
-        return verify_10x_pipeline(('cellranger',
-                                    params.cellranger_version,
-                                    params.cellranger_refdata),
-                                   multiplexed_samples,
-                                   qc_outputs)
+        # Check for config files
+        config_files = [os.path.join(params.qc_dir, f)
+                        for f in os.listdir(params.qc_dir)
+                        if f.startswith("10x_multi_config.")
+                        and f.endswith(".csv")]
+        if not config_files:
+            # No multi config files so no outputs expected
+            return None
+        # Verification paramters
+        cellranger_version = None
+        if params.cellranger_version != "*":
+            cellranger_version = params.cellranger_version
+        cellranger_refdata = None
+        if params.cellranger_refdata != "*":
+            cellranger_refdata = params.cellranger_refdata
+        if cellranger_refdata:
+            cellranger_refdata = os.path.basename(cellranger_refdata)
+        # Locate matching cellranger multi output directories
+        cellranger_multi_dir = os.path.join(params.qc_dir, "cellranger_multi")
+        multi_dirs = {}
+        for multi_dir in fetch_cellranger_multi_output_dirs(
+                cellranger_multi_dir):
+            version, refdata, psample = extract_path_data(
+                multi_dir,
+                cellranger_multi_dir)
+            if (not cellranger_version or version == cellranger_version) and \
+               (not cellranger_refdata or refdata == cellranger_refdata):
+                try:
+                    multi_dirs[psample].append(multi_dir)
+                except KeyError:
+                    multi_dirs[psample] = [multi_dir]
+        # Verify against each config file
+        for cf_file in config_files:
+            config = CellrangerMultiConfigCsv(cf_file)
+            psample = config.physical_sample
+            multiplexed_samples = config.sample_names
+            if psample not in multi_dirs:
+                # Verification failure (no matching outputs)
+                return False
+            if not multiplexed_samples:
+                # No samples to check outputs for
+                continue
+            # Look for at least one valid output
+            verified_config = False
+            for multi_dir in multi_dirs[psample]:
+                outputs = CellrangerMultiOutputs(multi_dir)
+                output_samples = outputs.sample_names
+                missing_sample = False
+                for s in multiplexed_samples:
+                    if s not in output_samples:
+                        missing_sample = True
+                        break
+                if not missing_sample:
+                    verified_config = True
+                    break
+            if not verified_config:
+                # Verification failure (no outputs with
+                # all multiplexed samples)
+                return False
+        # No verification failures
+        return True
 
     @classmethod
     def add_to_pipeline(self,p,project_name,project,qc_dir,
@@ -303,17 +345,17 @@ class CellrangerMulti(QCModule):
                    envmodules=envmodules)
         check_cellranger_multi_requires.append(get_cellranger)
 
-        # Locate config.csv file for 'cellranger multi'
-        get_cellranger_multi_config = GetCellrangerMultiConfig(
-            "%s: get config file for 'cellranger multi'" %
+        # Locate config.csv files for 'cellranger multi'
+        get_cellranger_multi_configs = GetCellrangerMultiConfigs(
+            "%s: get config files for 'cellranger multi'" %
             project_name,
             project,
             qc_dir
         )
-        p.add_task(get_cellranger_multi_config,
+        p.add_task(get_cellranger_multi_configs,
                    requires=required_tasks)
         check_cellranger_multi_requires.append(
-            get_cellranger_multi_config)
+            get_cellranger_multi_configs)
 
         # Parent directory for cellranger multi outputs
         # Set to project directory unless the 'cellranger_out_dir'
@@ -330,10 +372,10 @@ class CellrangerMulti(QCModule):
             (project_name,
              project.info.library_type),
             project,
-            get_cellranger_multi_config.output.config_csvs,
-            get_cellranger_multi_config.output.samples,
-            get_cellranger_multi_config.output.reference_data_path,
-            get_cellranger_multi_config.output.probe_set_path,
+            get_cellranger_multi_configs.output.config_csvs,
+            get_cellranger_multi_configs.output.samples,
+            get_cellranger_multi_configs.output.reference_data_path,
+            get_cellranger_multi_configs.output.probe_set_path,
             cellranger_out_dir,
             qc_dir=qc_dir,
             working_dir=working_dir,
@@ -348,7 +390,7 @@ class CellrangerMulti(QCModule):
         )
         p.add_task(run_cellranger_multi,
                    requires=(get_cellranger,
-                             get_cellranger_multi_config,),
+                             get_cellranger_multi_configs,),
                    runner=cellranger_runner,
                    envmodules=envmodules)
         return run_cellranger_multi
@@ -357,7 +399,7 @@ class CellrangerMulti(QCModule):
 # Pipeline tasks
 #######################################################################
 
-class GetCellrangerMultiConfig(PipelineFunctionTask):
+class GetCellrangerMultiConfigs(PipelineFunctionTask):
     """
     Locate 'config.csv' files for cellranger multi
     """
@@ -379,10 +421,10 @@ class GetCellrangerMultiConfig(PipelineFunctionTask):
         self.add_output('probe_set_path',Param(type=str))
     def setup(self):
         # Check for top-level multi config files
-        config_files = [os.path.join(self.args.project.dirn,f)
-                        for f in os.listdir(self.args.project.dirn)
-                        if f.startswith("10x_multi_config.")
-                        and f.endswith(".csv")]
+        config_files = sorted([os.path.join(self.args.project.dirn,f)
+                               for f in os.listdir(self.args.project.dirn)
+                               if f.startswith("10x_multi_config.")
+                               and f.endswith(".csv")])
         if not config_files:
             # No configs found
             print("No 10x multi config files found: nothing to do")
@@ -457,7 +499,7 @@ class RunCellrangerMulti(PipelineTask):
           probe_set_path (str): path to the probe set
             reference dataset from the config.csv file
           out_dir (str): top-level directory to copy all
-            final 'count' outputs into. Outputs won't be
+            final 'multi' outputs into. Outputs won't be
             copied if no value is supplied
           qc_dir (str): top-level QC directory to put
             'count' QC outputs (e.g. metrics CSV and summary
@@ -489,8 +531,6 @@ class RunCellrangerMulti(PipelineTask):
         self._working_dir = None
         # Samples from config.csv
         self._samples = []
-        # Whether to run cellranger multi
-        self.run_cellranger_multi = False
         # Add outputs
         self.add_output('cellranger_version',Param(type=str))
         self.add_output('cellranger_refdata',Param(type=str))
@@ -500,9 +540,6 @@ class RunCellrangerMulti(PipelineTask):
         # Check if there's anything to do
         if not self.args.config_csvs:
             print("No config file: nothing to do")
-            return
-        if len(self.args.config_csvs) > 1:
-            print("Too many config files: skipping multi analysis")
             return
         if not self.args.cellranger_exe:
             raise Exception("No cellranger executable provided")
@@ -516,104 +553,112 @@ class RunCellrangerMulti(PipelineTask):
         cellranger_package = os.path.basename(cellranger_exe)
         cellranger_version = self.args.cellranger_version
         cellranger_major_version = int(cellranger_version.split('.')[0])
-        # Expected outputs from cellranger multi
-        self._expected_files = ["_cmdline",]
-        for sample in self.args.samples:
-            for f in ("web_summary.html",
-                      "metrics_summary.csv"):
-                # Per-sample outputs
-                self._expected_files.append(os.path.join("outs",
-                                                         "per_sample_outs",
-                                                         sample,
-                                                         f))
-        # Check outputs and run cellranger if required
+        # Top-level output directory
         multi_dir = os.path.abspath(
             os.path.join(self.args.out_dir,
                          "cellranger_multi",
                          cellranger_version,
                          os.path.basename(self.args.reference_data_path)))
-        for path in self._expected_files:
-            if not os.path.exists(os.path.join(multi_dir,path)):
-                # At least one expected file is missing
-                # so we need to run 'multi'
-                self.run_cellranger_multi = True
-                break
-        if not self.run_cellranger_multi:
+        # Check final outputs from cellranger multi for each config file
+        config_files = []
+        for config_csv in self.args.config_csvs:
+            # Load config data
+            config = CellrangerMultiConfigCsv(config_csv)
+            # Set prefix
+            prefix = multi_dir
+            if config.physical_sample:
+                prefix = os.path.join(prefix, config.physical_sample)
+            # Check whether outputs already exist
+            for f in expected_outputs(config_csv, prefix=prefix):
+                if not os.path.exists(f):
+                    # At least one expected file is missing so run
+                    # 'cellranger multi' for this config file
+                    config_files.append(config_csv)
+                    break
+        if not config_files:
+            # Nothing to do
             print("Found existing outputs")
             return
-        # Create a working directory for this sample
-        work_dir = os.path.join(self._working_dir,
-                                "tmp.cellranger_multi.%s" %
-                                self.args.project.name)
-        # Build cellranger command
-        cmd = Command(cellranger_exe,
-                      "multi",
-                      "--id",self.args.project.name,
-                      "--csv",self.args.config_csvs[0])
-        # Set number of local cores
-        if self.args.cellranger_localcores:
-            localcores = self.args.cellranger_localcores
-        elif self.args.cellranger_jobmode == "local":
-            # Get number of local cores from runner
-            localcores = self.runner_nslots
-        else:
-            # Not in jobmode 'local'
-            localcores = None
-        add_cellranger_args(cmd,
-                            jobmode=self.args.cellranger_jobmode,
-                            mempercore=self.args.cellranger_mempercore,
-                            maxjobs=self.args.cellranger_maxjobs,
-                            jobinterval=self.args.cellranger_jobinterval,
-                            localcores=localcores,
-                            localmem=self.args.cellranger_localmem)
-        # Add command to task
-        print("Running %s" % cmd)
-        self.add_cmd(
-            "Run %s multi" % cellranger_exe,
-            """
-            # Create working dir
-            mkdir -p {work_dir} && cd {work_dir}
-            # Run multi analysis
-            {cellranger_multi}
-            if [ $? -ne 0 ] ; then
-              echo "Multi library analysis failed"
-              exit 1
-            fi
-            # Check expected outputs
-            ls -ltrh
-            for f in {top_level_files} ; do
-              if [ ! -e {project}/$f ] ; then
-                echo "Missing top-level file $f"
-                exit 1
-              fi
-            done
-            for s in {samples} ; do
-              for f in web_summary.html metrics_summary.csv ; do
-                if [ ! -e {project}/outs/per_sample_outs/$s/$f ] ; then
-                  echo "$s: missing outs file $f"
+        # Run 'cellranger multi' with each config file
+        for config_csv in config_files:
+            # Create a working directory for this sample
+            work_dir = f"tmp.cellranger_multi.{self.args.project.name}"
+            config = CellrangerMultiConfigCsv(config_csv)
+            if config.physical_sample:
+                work_dir = f"{work_dir}.{config.physical_sample}"
+            work_dir = os.path.join(self._working_dir, work_dir)
+            # Build cellranger command
+            cmd = Command(cellranger_exe,
+                          "multi",
+                          "--id", self.args.project.name,
+                          "--csv", config_csv)
+            # Set number of local cores
+            if self.args.cellranger_localcores:
+                localcores = self.args.cellranger_localcores
+            elif self.args.cellranger_jobmode == "local":
+                # Get number of local cores from runner
+                localcores = self.runner_nslots
+            else:
+                # Not in jobmode 'local'
+                localcores = None
+            add_cellranger_args(cmd,
+                                jobmode=self.args.cellranger_jobmode,
+                                mempercore=self.args.cellranger_mempercore,
+                                maxjobs=self.args.cellranger_maxjobs,
+                                jobinterval=self.args.cellranger_jobinterval,
+                                localcores=localcores,
+                                localmem=self.args.cellranger_localmem)
+            # Generate relative paths to expected outputs
+            expected_files = expected_outputs(config_csv)
+            # Destination for outputs
+            dest_dir = multi_dir
+            if config.physical_sample:
+                dest_dir = os.path.join(dest_dir, config.physical_sample)
+            # Add command to run "cellranger multi" in the working
+            # directory and copy outputs to the final destination
+            print("Running %s" % cmd)
+            self.add_cmd(
+                "Run %s multi" % cellranger_exe,
+                """
+                # Create working dir
+                mkdir -p {work_dir} && cd {work_dir}
+                # Run multi analysis
+                {cellranger_multi}
+                if [ $? -ne 0 ] ; then
+                  echo "Multi library analysis failed"
                   exit 1
                 fi
-              done
-            done
-            # Move outputs to final location
-            mkdir -p {dest_dir}
-            mv {project}/* {dest_dir}
-            """.format(work_dir=work_dir,
-                       cellranger_multi=str(cmd),
-                       project=self.args.project.name,
-                       samples=' '.join(self.args.samples),
-                       top_level_files=' '.join(self._expected_files),
-                       dest_dir=multi_dir))
+                # Check expected outputs
+                ls -ltrh
+                for f in {top_level_files} ; do
+                  if [ ! -e {project}/$f ] ; then
+                    echo "Missing top-level file $f"
+                    exit 1
+                  fi
+                done
+                for s in {samples} ; do
+                  for f in web_summary.html metrics_summary.csv ; do
+                    if [ ! -e {project}/outs/per_sample_outs/$s/$f ] ; then
+                      echo "$s: missing outs file $f"
+                      exit 1
+                    fi
+                  done
+                done
+                # Move outputs to final location
+                mkdir -p {dest_dir}
+                mv {project}/* {dest_dir}
+                """.format(work_dir=work_dir,
+                           cellranger_multi=str(cmd),
+                           project=self.args.project.name,
+                           samples=' '.join(config.sample_names),
+                           top_level_files=' '.join(expected_files),
+                           dest_dir=dest_dir))
     def finish(self):
         # If no config.csv then ignore and return
         if not self.args.config_csvs:
             print("No config file: cellranger multi analysis was skipped")
             return
-        elif len(self.args.config_csvs) > 1:
-            print("Too many config files: cellranger multi analysis was "
-                  "skipped")
-            return
-        # Location of final outputs
+        # Location of final outputs from cellranger multi
         multi_dir = os.path.abspath(
             os.path.join(self.args.out_dir,
                          "cellranger_multi",
@@ -621,40 +666,86 @@ class RunCellrangerMulti(PipelineTask):
                          os.path.basename(
                              self.args.reference_data_path)
             ))
-        # Copy subset of outputs to QC directory
+        # Top-level destination for QC outputs
+        qc_multi_dir = os.path.abspath(
+            os.path.join(self.args.qc_dir,
+                         "cellranger_multi",
+                         self.args.cellranger_version,
+                         os.path.basename(
+                             self.args.reference_data_path)))
+        # Copy subset of outputs to QC directory for each config file
         if self.args.qc_dir:
-            print("Copying outputs to QC directory")
-            # Build list of QC outputs to copy
-            qc_files = [f for f in self._expected_files]
-            qc_files.append(os.path.join("outs",
-                                         "config.csv"))
-            qc_files.append(os.path.join("outs",
-                                         "multi",
-                                         "multiplexing_analysis",
-                                         "tag_calls_summary.csv"))
-            # Final destination for QC outputs
-            qc_multi_dir = os.path.abspath(
-                os.path.join(self.args.qc_dir,
-                             "cellranger_multi",
-                             self.args.cellranger_version,
-                             os.path.basename(
-                                 self.args.reference_data_path)))
-            # Copy the files
-            for path in qc_files:
-                src = os.path.join(multi_dir,path)
-                if not os.path.exists(src):
-                    # File not found, note and skip
-                    print("INFO: no file '%s' found" % path)
-                    continue
-                # Determine destination and copy
-                dst = os.path.normpath(os.path.join(qc_multi_dir,
-                                                    os.path.dirname(path)))
-                print("Copying file '%s'" % path)
-                if not os.path.exists(dst):
-                    mkdirs(dst)
-                shutil.copy(src,dst)
+            for config_csv in self.args.config_csvs:
+                print(f"Copying outputs from {os.path.basename(config_csv)} "
+                      f"to QC directory")
+                # Build list of QC outputs to copy
+                qc_files = [f for f in expected_outputs(config_csv)]
+                qc_files.append(os.path.join("outs",
+                                             "config.csv"))
+                qc_files.append(os.path.join("outs",
+                                             "multi",
+                                             "multiplexing_analysis",
+                                             "tag_calls_summary.csv"))
+                # Prefix dirs
+                config = CellrangerMultiConfigCsv(config_csv)
+                prefix = multi_dir
+                if config.physical_sample:
+                    prefix = os.path.join(prefix, config.physical_sample)
+                qc_prefix = qc_multi_dir
+                if config.physical_sample:
+                    qc_prefix = os.path.join(qc_prefix,
+                                             config.physical_sample)
+                # Copy the files
+                for path in qc_files:
+                    src = os.path.join(prefix, path)
+                    if not os.path.exists(src):
+                        # File not found, note and skip
+                        print("INFO: no file '%s' found" % path)
+                        continue
+                    # Determine destination and copy
+                    dst = os.path.normpath(os.path.join(qc_prefix,
+                                                        os.path.dirname(path)))
+                    print("Copying file '%s'" % path)
+                    if not os.path.exists(dst):
+                        mkdirs(dst)
+                    shutil.copy(src, dst)
         # Set outputs
         self.output.cellranger_exe.set(self.args.cellranger_exe)
         self.output.cellranger_refdata.set(self.args.reference_data_path)
         self.output.cellranger_probeset.set(self.args.probe_set_path)
         self.output.cellranger_version.set(self.args.cellranger_version)
+
+#######################################################################
+# Helper functions
+#######################################################################
+
+def expected_outputs(config_csv, prefix=None):
+    """
+    Generate expected output file paths from 10x multi config
+
+    Arguments:
+      config_csv (str): path to the 10x multi config file
+        to generate the output file names for
+      prefix (str): optional path to prepend to the
+        expected file paths
+
+    Returns:
+      List: list of paths to expected output files.
+    """
+    # Load config file
+    config = CellrangerMultiConfigCsv(config_csv)
+    # Generate list of expected files
+    expected_files = ["_cmdline",]
+    for sample in config.sample_names:
+        for f in ("web_summary.html",
+                  "metrics_summary.csv"):
+            # Per-sample outputs
+            expected_files.append(os.path.join("outs",
+                                               "per_sample_outs",
+                                               sample,
+                                               f))
+    # Prepend prefix if supplied
+    if prefix:
+        expected_files = [os.path.join(prefix, f)
+                          for f in expected_files]
+    return expected_files

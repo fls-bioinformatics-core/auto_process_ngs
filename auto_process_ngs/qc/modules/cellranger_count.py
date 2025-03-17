@@ -261,17 +261,21 @@ class CellrangerCount(QCModule):
             from the 'collect_qc_outputs' method
         """
         if params.cellranger_use_multi_config:
-            # Take parameters from 10x_multi_config.csv
-            cf_file = os.path.join(params.qc_dir,
-                                   "10x_multi_config.csv")
-            if not os.path.exists(cf_file):
-                # No multi config file so no outputs expected
-                return True
+            # Fetch 10x_multi_config CSV files
+            cf_files = [os.path.join(params.qc_dir, f)
+                        for f in os.listdir(params.qc_dir)
+                        if f.startswith("10x_multi_config.")
+                        and f.endswith(".csv")]
+            if not cf_files:
+                # No multi config files so no outputs expected
+                return None
             # Get GEX sample names and reference dataset from
-            # multi config file
-            cf = CellrangerMultiConfigCsv(cf_file)
-            samples = cf.gex_libraries
-            cellranger_refdata = cf.reference_data_path
+            # multi config files
+            samples = []
+            for cf_file in cf_files:
+                cf = CellrangerMultiConfigCsv(cf_file)
+                samples.extend(cf.gex_libraries)
+                cellranger_refdata = cf.reference_data_path
         else:
             # Use supplied parameters
             samples = params.samples
