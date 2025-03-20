@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     protocols: define and handle QC protocols
-#     Copyright (C) University of Manchester 2022-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2022-2025 Peter Briggs
 #
 
 """
@@ -734,11 +734,12 @@ def determine_qc_protocol_from_metadata(library_type,
         protocol = "standardSE"
     # Single cell protocols
     if single_cell_platform is not None:
-        # Default/fallback
-        protocol = "singlecell"
+        # 10x Genomics
         if single_cell_platform.startswith('10xGenomics Chromium 3\'') or \
            single_cell_platform.startswith('10xGenomics Chromium GEM-X 3\'') or \
            single_cell_platform.startswith('10xGenomics Chromium Next GEM 3\''):
+            # Default for 10x
+            protocol = "singlecell"
             # 10xGenomics scRNA-seq
             if library_type == "scRNA-seq":
                 protocol = "10x_scRNAseq"
