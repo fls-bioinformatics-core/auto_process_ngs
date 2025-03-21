@@ -655,7 +655,15 @@ class QCProtocol:
         read_numbers = []
         for r in reads:
             if r.startswith('r'):
-                read_numbers.append(int(r[1:]))
+                try:
+                    read_numbers.append(int(r[1:]))
+                except ValueError:
+                    # Check for wildcard read number
+                    if r[1:] == "*":
+                        read_numbers.append("*")
+                    else:
+                        raise QCProtocolError(f"'{r}': invalid read "
+                                              "specification")
         return tuple(sorted(read_numbers))
 
     def __summarise_reads(self,rds):
