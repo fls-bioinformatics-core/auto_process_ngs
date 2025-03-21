@@ -107,8 +107,10 @@ class TestAutoProcessRunQc(unittest.TestCase):
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
             metadata={ "instrument_datestamp": "170901", },
-            project_metadata={ "AB": { "Organism": "human", },
-                               "CDE": { "Organism": "mouse", } },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "human", },
+                               "CDE": { "Library type": "ChIP-seq",
+                                        "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with reference data and polling interval
@@ -207,8 +209,10 @@ annotation_gtf = {mm10_gtf}
             'miseq',
             paired_end=False,
             metadata={ "instrument_datestamp": "170901" },
-            project_metadata={ "AB": { "Organism": "human", },
-                               "CDE": { "Organism": "mouse", } },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "human", },
+                               "CDE": { "Library type": "ChIP-seq",
+                                        "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with reference data and polling interval
@@ -345,103 +349,6 @@ annotation_gtf = {mm10_gtf}
             for qc_module in ("fastqc_r1",
                               "fastqc_r2",
                               "screens_r2",
-                              "sequence_lengths",
-                              "rseqc_genebody_coverage",
-                              "rseqc_infer_experiment",
-                              "qualimap_rnaseq",
-                              "multiqc"):
-                self.assertTrue(qc_module in qcoutputs.outputs,
-                                "Project '%s': missing output '%s'" %
-                                (p,qc_module))
-        # Check output and reports
-        for p in ("AB","CDE","undetermined"):
-            for f in ("qc",
-                      "qc_report.html",
-                      "qc_report.%s.%s.zip" % (
-                          p,
-                          '170901_M00879_0087_000000000-AGEW9'),
-                      "multiqc_report.html"):
-                self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
-                                                            p,f)),
-                                "Missing %s in project '%s'" % (f,p))
-            # Check zip file has MultiQC report
-            zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s.zip" % (
-                                        p,
-                                        '170901_M00879_0087_000000000-AGEW9'))
-            with zipfile.ZipFile(zip_file) as z:
-                multiqc = os.path.join(
-                    "qc_report.%s.%s" % (
-                        p,'170901_M00879_0087_000000000-AGEW9'),
-                    "multiqc_report.html")
-                self.assertTrue(multiqc in z.namelist())
-        # Check lane splitting for undetermined
-        qc_info = AnalysisProjectQCDirInfo(os.path.join(mockdir.dirn,
-                                                        "undetermined",
-                                                        "qc",
-                                                        "qc.info"))
-        self.assertTrue(qc_info.fastqs_split_by_lane)
-
-    def test_run_qc_single_end(self):
-        """run_qc: single-end QC run
-        """
-        # Make mock QC executables
-        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
-        MockFastQC.create(os.path.join(self.bin,"fastqc"))
-        MockStar.create(os.path.join(self.bin,"STAR"))
-        MockSamtools.create(os.path.join(self.bin,"samtools"))
-        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
-        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
-        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
-        MockQualimap.create(os.path.join(self.bin,"qualimap"))
-        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Make mock analysis directory
-        mockdir = MockAnalysisDirFactory.bcl2fastq2(
-            '170901_M00879_0087_000000000-AGEW9',
-            'miseq',
-            paired_end=False,
-            metadata={ "instrument_datestamp": "170901" },
-            project_metadata={ "AB": { "Organism": "human", },
-                               "CDE": { "Organism": "mouse", } },
-            top_dir=self.dirn)
-        mockdir.create()
-        # Settings file with reference data and polling interval
-        settings_ini = os.path.join(self.dirn,"auto_process.ini")
-        with open(settings_ini,'w') as s:
-            s.write("""[general]
-poll_interval = {poll_interval}
-
-[organism:human]
-star_index = /data/genomeIndexes/hg38/STAR
-annotation_bed = {hg38_bed}
-annotation_gtf = {hg38_gtf}
-
-[organism:mouse]
-star_index = /data/genomeIndexes/mm10/STAR
-annotation_bed = {mm10_bed}
-annotation_gtf = {mm10_gtf}
-""".format(hg38_bed=self.ref_data['hg38']['bed'],
-           hg38_gtf=self.ref_data['hg38']['gtf'],
-           mm10_bed=self.ref_data['mm10']['bed'],
-           mm10_gtf=self.ref_data['mm10']['gtf'],
-           poll_interval=POLL_INTERVAL))
-        # Make autoprocess instance
-        ap = AutoProcess(analysis_dir=mockdir.dirn,
-                         settings=Settings(settings_ini))
-        # Run the QC
-        status = run_qc(ap,
-                        fastq_screens=self.fastq_screens,
-                        run_multiqc=True,
-                        max_jobs=1)
-        self.assertEqual(status,0)
-        # Check detected outputs
-        for p in ("AB","CDE"):
-            qc_dir = os.path.join(mockdir.dirn,p,"qc")
-            qcoutputs = QCOutputs(qc_dir)
-            for qc_module in ("fastqc_r1",
-                              "screens_r1",
                               "sequence_lengths",
                               "rseqc_genebody_coverage",
                               "rseqc_infer_experiment",
@@ -1459,8 +1366,10 @@ annotation_gtf = {hg38_gtf}
             no_lane_splitting=False,
             paired_end=False,
             metadata={ "instrument_datestamp": "170901" },
-            project_metadata={ "AB": { "Organism": "human", },
-                               "CDE": { "Organism": "mouse", } },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "human", },
+                               "CDE": { "Library type": "ChIP-seq",
+                                        "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with reference data and polling interval
