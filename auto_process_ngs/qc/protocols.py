@@ -74,7 +74,7 @@ from .qc_modules import QC_MODULE_NAMES
 QC_PROTOCOLS = {
 
     "minimal": {
-        "description": "Minimal generic QC",
+        "description": "Minimal generic QC (all non-index Fastqs)",
         "reads": {
             "seq_data": ('r*',),
             "index": ()
