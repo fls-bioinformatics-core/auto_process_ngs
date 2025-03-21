@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
 #
 ########################################################################
 #
@@ -438,6 +438,7 @@ class AnalysisProject:
       to dirn)
     * fastq_dir: directory with 'active' fastq file set (full path)
     * fastqs: list of fastq files in fastq_dir
+    * read_numbers: list of read numbers from the Fastqs
     * samples: list of AnalysisSample objects generated from fastq_dir
     * multiple_fastqs: True if at least one sample has more than one fastq
       file per read associated with it
@@ -1094,6 +1095,22 @@ class AnalysisProject:
         return fastqs
 
     @property
+    def read_numbers(self):
+        """
+        List the read numbers from the Fastqs
+
+        Returns:
+          List: a list of integer read numbers from the
+            associated Fastqs; for example if there are
+            R1 and R2 reads then [1, 2] will be returned.
+        """
+        read_numbers = set()
+        for s in self.samples:
+            for n in s.read_numbers:
+                read_numbers.add(n)
+        return sorted(list(read_numbers))
+
+    @property
     def fastqs_are_symlinks(self):
         """
         Return True if Fastq files are symbolic links, False if not
@@ -1172,9 +1189,16 @@ class AnalysisSample:
     * name: name of the sample
     * fastq: list of Fastq files associated with the sample
     * paired_end: True if sample is paired end, False if not
+    * read_numbers: list of read numbers from the Fastqs
+    * fastqs_are_symlinks: True if associated Fastqs are symlinks
 
     Note that the 'fastq' list will include any index read fastqs
     (i.e. I1/I2) as well as R1/R2 fastqs.
+
+    It also provides the following methods:
+
+    * add_fastq: associates a Fastq file with the sample
+    * fastq_subset: returns a subset of associated Fastqs
 
     Arguments:
       name (str): sample name
@@ -1246,6 +1270,27 @@ class AnalysisSample:
         # Sort into dictionary order and return
         fastqs.sort()
         return fastqs
+
+    @property
+    def read_numbers(self):
+        """
+        List the read numbers from the Fastqs
+
+        Returns:
+          List: a list of integer read numbers from the
+            associated Fastqs; for example if there are
+            R1 and R2 reads then [1, 2] will be returned.
+        """
+        read_numbers = set()
+        for fastq in self.fastq:
+            fq = self.fastq_attrs(fastq)
+            if fq.is_index_read:
+                continue
+            if fq.read_number is None:
+                read_numbers.add(1)
+            else:
+                read_numbers.add(fq.read_number)
+        return sorted(list(read_numbers))
 
     @property
     def fastqs_are_symlinks(self):
