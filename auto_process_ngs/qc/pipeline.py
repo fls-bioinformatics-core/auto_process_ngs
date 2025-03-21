@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
 #
 
 """
@@ -233,6 +233,16 @@ class QCPipeline(Pipeline):
         ###################
 
         self.report("Adding project: %s" % project.name)
+
+        # Update the reads in QC protocol to handle
+        # wildcard read specification (i.e. "r*")
+        for attr in ("seq_data_reads", "index_reads"):
+            if getattr(protocol, attr) == ["r*"]:
+                # Expand wildcard to actual reads in project
+                print(f"Updating wildcard read 'r*' for '{attr} in "
+                      f"protocol...")
+                protocol.update(
+                    **{attr: [f"r{n}" for n in project.read_numbers]})
 
         # QC modules
         qc_modules = protocol.qc_modules
