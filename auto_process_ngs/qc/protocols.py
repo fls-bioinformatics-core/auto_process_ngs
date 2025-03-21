@@ -73,6 +73,19 @@ from .qc_modules import QC_MODULE_NAMES
 
 QC_PROTOCOLS = {
 
+    "minimal": {
+        "description": "Minimal generic QC",
+        "reads": {
+            "seq_data": ('r*',),
+            "index": ()
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths'
+        ]
+    },
+
     "standardSE": {
         "description": "Standard single-end data (R1 Fastqs only)",
         "reads": {
@@ -752,7 +765,9 @@ def determine_qc_protocol_from_metadata(library_type,
       String: QC protocol for the project
     """
     # Standard protocols
-    if paired_end:
+    if library_type is None or not library_type:
+        protocol = "minimal"
+    elif paired_end:
         protocol = "standardPE"
     else:
         protocol = "standardSE"

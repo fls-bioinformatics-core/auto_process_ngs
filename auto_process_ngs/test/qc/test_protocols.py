@@ -360,6 +360,16 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
     """
     Tests for determine_qc_protocol_from_metadata function
     """
+    def test_determine_qc_protocol_from_metadata_minimal(self):
+        """
+        determine_qc_protocol_from_metadata: no library type defined
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type=None,
+            single_cell_platform=None,
+            paired_end=True),
+                         "minimal")
+
     def test_determine_qc_protocol_from_metadata_standardPE(self):
         """
         determine_qc_protocol_from_metadata: standard paired-end data
@@ -766,6 +776,22 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
 
+    def test_determine_qc_protocol_minimal(self):
+        """determine_qc_protocol: no library type (minimal QC)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Library type':
+                                          "RNA-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "standardPE")
+
     def test_determine_qc_protocol_standardPE(self):
         """determine_qc_protocol: standard paired-end run
         """
@@ -773,7 +799,9 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"))
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Library type':
+                                          "RNA-seq"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
@@ -785,7 +813,9 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB2_S2_R1_001.fastq.gz",))
+                                       "PJB2_S2_R1_001.fastq.gz",),
+                                metadata={'Library type':
+                                          "RNA-seq"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
