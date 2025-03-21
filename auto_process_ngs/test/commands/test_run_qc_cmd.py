@@ -107,8 +107,10 @@ class TestAutoProcessRunQc(unittest.TestCase):
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
             metadata={ "instrument_datestamp": "170901", },
-            project_metadata={ "AB": { "Organism": "human", },
-                               "CDE": { "Organism": "mouse", } },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "human", },
+                               "CDE": { "Library type": "ChIP-seq",
+                                        "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with reference data and polling interval
@@ -207,8 +209,10 @@ annotation_gtf = {mm10_gtf}
             'miseq',
             paired_end=False,
             metadata={ "instrument_datestamp": "170901" },
-            project_metadata={ "AB": { "Organism": "human", },
-                               "CDE": { "Organism": "mouse", } },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "human", },
+                               "CDE": { "Library type": "ChIP-seq",
+                                        "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with reference data and polling interval
@@ -1459,8 +1463,10 @@ annotation_gtf = {hg38_gtf}
             no_lane_splitting=False,
             paired_end=False,
             metadata={ "instrument_datestamp": "170901" },
-            project_metadata={ "AB": { "Organism": "human", },
-                               "CDE": { "Organism": "mouse", } },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "human", },
+                               "CDE": { "Library type": "ChIP-seq",
+                                        "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with reference data and polling interval
