@@ -62,6 +62,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 
    10x Genomics single cell data <single_cell/10x_single_cell>
    Parse Evercode data <single_cell/parse>
+   Bio-Rad ddSEQ single cell data <single_cell/bio_rad>
    Takara Bio ICELL8 data <single_cell/icell8>
 
 .. _spatial-docs:
