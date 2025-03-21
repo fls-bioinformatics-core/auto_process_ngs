@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     setup_analysis_dirs_cmd.py: implement 'setup_analysis_dirs' command
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
 #
 #########################################################################
 
@@ -111,7 +111,8 @@ def setup_analysis_dirs(ap,
         if sc_platform and sc_platform != '.':
             if not sc_platform in tenx.PLATFORMS and \
                not sc_platform in icell8.PLATFORMS and \
-               not sc_platform in ('Parse Evercode',):
+               not sc_platform in ('Parse Evercode',) and \
+               not sc_platform in ('Bio-Rad ddSEQ Single Cell ATAC',):
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")
