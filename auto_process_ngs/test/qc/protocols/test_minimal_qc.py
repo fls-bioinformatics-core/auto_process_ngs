@@ -46,8 +46,8 @@ class TestQCPipeline(BaseQCPipelineTestCase):
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"minimal")
         self.assertEqual(qc_info.protocol_specification,
-                         "minimal:'Minimal generic QC':"
-                         "seq_reads=[r1,r2]:index_reads=[]:"
+                         "minimal:'Minimal generic QC (all non-index "
+                         "Fastqs)':seq_reads=[r1,r2]:index_reads=[]:"
                          "qc_modules=[fastq_screen,fastqc,"
                          "sequence_lengths]")
         self.assertEqual(qc_info.organism, None)
@@ -112,8 +112,8 @@ class TestQCPipeline(BaseQCPipelineTestCase):
             os.path.join(self.wd,"PJB","qc","qc.info"))
         self.assertEqual(qc_info.protocol,"minimal")
         self.assertEqual(qc_info.protocol_specification,
-                         "minimal:'Minimal generic QC':"
-                         "seq_reads=[r1]:index_reads=[]:"
+                         "minimal:'Minimal generic QC (all non-index "
+                         "Fastqs)':seq_reads=[r1]:index_reads=[]:"
                          "qc_modules=[fastq_screen,fastqc,"
                          "sequence_lengths]")
         self.assertEqual(qc_info.organism, None)
