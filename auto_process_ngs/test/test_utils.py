@@ -1055,6 +1055,35 @@ class TestParseVersion(unittest.TestCase):
         self.assertTrue(
             parse_version("") < parse_version("1.8.4"))
 
+class TestParseVersionRequirement(unittest.TestCase):
+    """
+    Tests for the parse_version_requirement function
+    """
+    def test_parse_version_requirement(self):
+        """
+        parse_version_requirement: extracts operator function and version string
+        """
+        # No operator
+        self.assertEqual(parse_version_requirement("2.17.1.4"),
+                         (operator.eq, "2.17.1.4"))
+        # Explicit equals
+        self.assertEqual(parse_version_requirement("=2.17.1.4"),
+                         (operator.eq, "2.17.1.4"))
+        self.assertEqual(parse_version_requirement("==2.17.1.4"),
+                         (operator.eq, "2.17.1.4"))
+        # Greater than
+        self.assertEqual(parse_version_requirement(">8.1"),
+                         (operator.gt, "8.1"))
+        # Greater than or equals
+        self.assertEqual(parse_version_requirement(">=9.0"),
+                         (operator.ge, "9.0"))
+        # Less than
+        self.assertEqual(parse_version_requirement("<3.12"),
+                         (operator.lt, "3.12"))
+        # Less than or equals
+        self.assertEqual(parse_version_requirement("<=2.7"),
+                         (operator.le, "2.7"))
+
 class TestParseSampleSheetSpec(unittest.TestCase):
     """Tests for the parse_samplesheet_spec function
     """

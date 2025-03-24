@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_ngs module
-#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2025 Peter Briggs
 #
 ########################################################################
 #
@@ -32,6 +32,7 @@ Functions:
 - get_numbered_subdir:
 - find_executables:
 - parse_version:
+- parse_version_requirement:
 - parse_samplesheet_spec:
 - pretty_print_rows:
 - pretty_print_reads: print number of reads with commas at each thousand
@@ -1013,27 +1014,7 @@ def find_executables(names,info_func,reqs=None,paths=None):
         for req in reqs.split(','):
             logger.debug("Filtering on expression: %s" % req)
             # Determine operator and version
-            req_op = None
-            req_version = None
-            for op in ('==','>=','<=','>','<'):
-                if req.startswith(op):
-                    req_op = op
-                    req_version = req[len(op):].strip()
-                    break
-            if req_version is None:
-                req_op = '=='
-                req_version = req.strip()
-            logger.debug("Required version: %s %s" % (req_op,req_version))
-            if req_op == '==':
-                op = operator.eq
-            elif req_op == '>=':
-                op = operator.ge
-            elif req_op == '>':
-                op = operator.gt
-            elif req_op == '<':
-                op = operator.lt
-            elif req_op == '<=':
-                op = operator.le
+            op, req_version = parse_version_requirement(req)
             # Filter the available executables on version
             logger.debug("Pre filter: %s" % available_exes)
             logger.debug("Versions  : %s" % [info_func(x)[2]
@@ -1102,6 +1083,65 @@ def parse_version(s):
             pass
         items.append(i)
     return tuple(items)
+
+def parse_version_requirement(req):
+    """
+    Split a version requirement string into a tuple
+
+    Version requirement strings have the general form
+
+    - [OP]VERSION
+
+    for example:
+
+    - 9.0.0 (only version 9.0.0)
+    - ==9.0.0 (only version 9.0.0)
+    - >9 (major version greater than 9)
+    - >=9 (major version equal to or greater than 9)
+
+    The possible operators are:
+
+    =, ==, >, >=, <=, <
+
+    Example use (in conjuction with the ``parse_version`` function):
+
+    >>> op, req = parse_version_requirement(">=9")
+    >>> meets_req = op(parse_version("9.1"), parse_version(req))
+    True
+
+    Arguments:
+      req (str): version requirement string
+
+    Returns:
+      Tuple: (operator, version string) where 'operator' is
+        a comparison function.
+    """
+    # Determine operator and version
+    req_op = None
+    req_version = None
+    for op in ("==", ">=", "<=", "=", ">", "<"):
+        if req.startswith(op):
+            # Extract explicit operator and required version
+            req_op = op
+            req_version = req[len(op):].strip()
+            break
+    if req_version is None:
+        # Requirement doesn't start with an operator so assume
+        # it specifies an exact match
+        req_op = '=='
+        req_version = req.strip()
+    # Get operator function
+    if req_op in ("=", "=="):
+        op = operator.eq
+    elif req_op == ">=":
+        op = operator.ge
+    elif req_op == ">":
+        op = operator.gt
+    elif req_op == "<":
+        op = operator.lt
+    elif req_op == "<=":
+        op = operator.le
+    return (op, req_version)
 
 def parse_samplesheet_spec(s):
     """
