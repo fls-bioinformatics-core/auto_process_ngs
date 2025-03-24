@@ -1044,6 +1044,82 @@ def find_executables(names,info_func,reqs=None,paths=None):
         print("%s: No packages found" % ','.join(names))
     return available_exes
 
+def check_required_version(version, required_version):
+    """
+    Checks if version meets requirement specification
+
+    The version requirement specification consists of
+    one or more requirements separated by commas, for
+    example:
+
+    * "1.0.0" - exact match to version 1.0.0
+    * ">2" - higher than version 2
+    * "2,3" - match major versions 2 or 3
+    * "==2,==3" - match major versions 2 or 3
+    * ">=3.9,<3.12" - must be version 9 or higher, but
+      less than 12
+
+    Note that all requirements must be met for the
+    specification to be met (essentially the comma
+    represents an "AND" logical operator) so e.g.
+    "2,3" would be an unsatisfiable requirement (as
+    a version cannot match both 2 and 3 simultaneously.
+
+    Arguments:
+      version (str): version string
+      required_version (str): string with comma-separated
+        version requirement specifications
+
+    Returns:
+      Boolean: True if version meets all requirements,
+        False otherwise.
+    """
+    for version_spec in required_version.split(","):
+        # Check against all version specifications
+        print(f"====> Check {version} against {version_spec}")
+        op, req = parse_version_requirement(version_spec)
+        # Match lengths of version and requirement strings
+        version_ = parse_version(version)
+        req_ = parse_version(req)
+        if len(req_) < len(version_):
+            # Trim the version to the same length as the
+            # specification
+            version_ = version_[:len(req_)]
+        else:
+            # Expand the version to the same length as
+            # the specification
+            version_ = list(version_)
+            while len(version_) < len(req_):
+                version_.append(0)
+            version_ = tuple(version_)
+        # Exact match required
+        if op == operator.eq:
+            if version_ == req_:
+                # Matches - check next requirement
+                continue
+            else:
+                # Failed check
+                return False
+        # Need to check element by element
+        passed_spec = False
+        for v1, v2 in zip(version_, req_):
+            if op(v1, v2):
+                # Requirement is met, stop checking
+                passed_spec = True
+                break
+            elif v1 != v2:
+                # Requirement is not met, stop checking
+                break
+            else:
+                # Unable to determine from this element,
+                # compare next elements
+                continue
+        if not passed_spec:
+            # Failed to meet the specification
+            return False
+    # Version passed all specifications
+    return True
+
 def parse_version(s):
     """
     Split a version string into a tuple for comparison
@@ -1062,8 +1138,12 @@ def parse_version(s):
     be used directly, instead it is used to compare
     two versions, for example:
 
-    >>> parse_version("2.17") < parse_version("1.8")
+    >>> parse_version("2.17") == parse_version("1.8")
     False
+
+    Note however that version comparisions beyond exact
+    matches are not straightforward (for example see the
+    'check_required_version' function).
 
     Arguments:
       s (str): version string
