@@ -2481,7 +2481,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_9_0_0
             else:
                 raise Exception("%s: unsupported version" % self._version)
-            for sample in config.sample_names:
+            sample_names = config.sample_names
+            if not config.sample_names:
+                # No multiplexed samples - make a single "sample"
+                # named after --id argument
+                sample_names = [args.id]
+            for sample in sample_names:
                 sample_dir = os.path.join(outs_dir,
                                           "per_sample_outs",
                                           sample)
