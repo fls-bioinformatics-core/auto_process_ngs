@@ -1315,3 +1315,24 @@ PJB1_CML,/path/to/fastqs,any,PJB1,Multiplexing Capture,
         # Generate expected outputs
         self.assertEqual(expected_outputs(cf_file),
                          ["_cmdline"])
+
+    def test_expected_outputs_no_multiplexed_samples_with_multi_id(self):
+        """
+        expected_outputs: 10x multi config file (no multiplexed samples, multi ID specified)
+        """
+        # Make a 10x_multi_config.csv file
+        cf_file = os.path.join(self.wd, "10x_multi_config.PJB.csv")
+        with open(cf_file, "wt") as fp:
+            fp.write("""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2024-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/path/to/fastqs,any,PJB1,gene expression,
+PJB1_CML,/path/to/fastqs,any,PJB1,Multiplexing Capture,
+""")
+        # Generate expected outputs
+        self.assertEqual(expected_outputs(cf_file, "PJB"),
+                         ["_cmdline",
+                          "outs/per_sample_outs/PJB/web_summary.html",
+                          "outs/per_sample_outs/PJB/metrics_summary.csv"])

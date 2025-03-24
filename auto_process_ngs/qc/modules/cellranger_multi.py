@@ -719,13 +719,16 @@ class RunCellrangerMulti(PipelineTask):
 # Helper functions
 #######################################################################
 
-def expected_outputs(config_csv, prefix=None):
+def expected_outputs(config_csv, multi_id=None, prefix=None):
     """
     Generate expected output file paths from 10x multi config
 
     Arguments:
       config_csv (str): path to the 10x multi config file
         to generate the output file names for
+      multi_id (str): optional, the ID of the multi run
+        (supplied via the --id argument), used if the config
+        file doesn't define multiplexed samples
       prefix (str): optional path to prepend to the
         expected file paths
 
@@ -736,7 +739,12 @@ def expected_outputs(config_csv, prefix=None):
     config = CellrangerMultiConfigCsv(config_csv)
     # Generate list of expected files
     expected_files = ["_cmdline",]
-    for sample in config.sample_names:
+    sample_names = config.sample_names
+    if not sample_names:
+        # No multiplexed samples
+        if multi_id:
+            sample_names = [multi_id]
+    for sample in sample_names:
         for f in ("web_summary.html",
                   "metrics_summary.csv"):
             # Per-sample outputs
