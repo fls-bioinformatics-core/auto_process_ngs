@@ -568,8 +568,12 @@ class RunCellrangerMulti(PipelineTask):
             prefix = multi_dir
             if config.physical_sample:
                 prefix = os.path.join(prefix, config.physical_sample)
+            # Set ID for cellranger multi
+            multi_id = self.args.project.name
+            if config.physical_sample:
+                multi_id = config.physical_sample
             # Check whether outputs already exist
-            for f in expected_outputs(config_csv, prefix=prefix):
+            for f in expected_outputs(config_csv, multi_id, prefix=prefix):
                 if not os.path.exists(f):
                     # At least one expected file is missing so run
                     # 'cellranger multi' for this config file
@@ -587,10 +591,14 @@ class RunCellrangerMulti(PipelineTask):
             if config.physical_sample:
                 work_dir = f"{work_dir}.{config.physical_sample}"
             work_dir = os.path.join(self._working_dir, work_dir)
+            # Set ID for cellranger multi run
+            multi_id = self.args.project.name
+            if config.physical_sample:
+                multi_id = config.physical_sample
             # Build cellranger command
             cmd = Command(cellranger_exe,
                           "multi",
-                          "--id", self.args.project.name,
+                          "--id", multi_id,
                           "--csv", config_csv)
             # Set number of local cores
             if self.args.cellranger_localcores:
@@ -609,7 +617,7 @@ class RunCellrangerMulti(PipelineTask):
                                 localcores=localcores,
                                 localmem=self.args.cellranger_localmem)
             # Generate relative paths to expected outputs
-            expected_files = expected_outputs(config_csv)
+            expected_files = expected_outputs(config_csv, multi_id)
             # Destination for outputs
             dest_dir = multi_dir
             if config.physical_sample:
@@ -631,14 +639,14 @@ class RunCellrangerMulti(PipelineTask):
                 # Check expected outputs
                 ls -ltrh
                 for f in {top_level_files} ; do
-                  if [ ! -e {project}/$f ] ; then
+                  if [ ! -e {multi_id}/$f ] ; then
                     echo "Missing top-level file $f"
                     exit 1
                   fi
                 done
                 for s in {samples} ; do
                   for f in web_summary.html metrics_summary.csv ; do
-                    if [ ! -e {project}/outs/per_sample_outs/$s/$f ] ; then
+                    if [ ! -e {multi_id}/outs/per_sample_outs/$s/$f ] ; then
                       echo "$s: missing outs file $f"
                       exit 1
                     fi
@@ -646,10 +654,10 @@ class RunCellrangerMulti(PipelineTask):
                 done
                 # Move outputs to final location
                 mkdir -p {dest_dir}
-                mv {project}/* {dest_dir}
+                mv {multi_id}/* {dest_dir}
                 """.format(work_dir=work_dir,
                            cellranger_multi=str(cmd),
-                           project=self.args.project.name,
+                           multi_id=multi_id,
                            samples=' '.join(config.sample_names),
                            top_level_files=' '.join(expected_files),
                            dest_dir=dest_dir))
@@ -678,8 +686,14 @@ class RunCellrangerMulti(PipelineTask):
             for config_csv in self.args.config_csvs:
                 print(f"Copying outputs from {os.path.basename(config_csv)} "
                       f"to QC directory")
+                # Load data for config file
+                config = CellrangerMultiConfigCsv(config_csv)
+                # Determine ID used for cellranger multi
+                multi_id = self.args.project.name
+                if config.physical_sample:
+                    multi_id = config.physical_sample
                 # Build list of QC outputs to copy
-                qc_files = [f for f in expected_outputs(config_csv)]
+                qc_files = [f for f in expected_outputs(config_csv, multi_id)]
                 qc_files.append(os.path.join("outs",
                                              "config.csv"))
                 qc_files.append(os.path.join("outs",
@@ -687,7 +701,6 @@ class RunCellrangerMulti(PipelineTask):
                                              "multiplexing_analysis",
                                              "tag_calls_summary.csv"))
                 # Prefix dirs
-                config = CellrangerMultiConfigCsv(config_csv)
                 prefix = multi_dir
                 if config.physical_sample:
                     prefix = os.path.join(prefix, config.physical_sample)
