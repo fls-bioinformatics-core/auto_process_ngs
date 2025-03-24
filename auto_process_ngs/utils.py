@@ -1008,23 +1008,13 @@ def find_executables(names,info_func,reqs=None,paths=None):
             prog_path = os.path.abspath(os.path.join(path,name))
             if bcf_utils.PathInfo(prog_path).is_executable:
                 available_exes.append(prog_path)
-    # Filter on requirement
+    # Filter on requirements
     if reqs:
-        # Loop over ranges
-        for req in reqs.split(','):
-            logger.debug("Filtering on expression: %s" % req)
-            # Determine operator and version
-            op, req_version = parse_version_requirement(req)
-            # Filter the available executables on version
-            logger.debug("Pre filter: %s" % available_exes)
-            logger.debug("Versions  : %s" % [info_func(x)[2]
-                                              for x in available_exes])
-            available_exes = list(
-                filter(lambda x: op(
-                    parse_version(info_func(x)[2]),
-                    parse_version(req_version)),
-                       available_exes))
-            logger.debug("Post filter: %s" % available_exes)
+        available_exes = list(
+            filter(
+                lambda x: check_required_version(
+                    info_func(x)[2], reqs),
+                available_exes))
         # Sort into version order, highest to lowest
         available_exes.sort(
             key=lambda x: parse_version(info_func(x)[2]),
