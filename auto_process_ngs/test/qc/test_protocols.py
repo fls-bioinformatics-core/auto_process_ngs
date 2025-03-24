@@ -1711,6 +1711,9 @@ class TestParseQCModuleSpec(unittest.TestCase):
         self.assertEqual(
             parse_qc_module_spec("module(s='\"hello\"')"),
             ('module',{ 's': '"hello"' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='\"greeting=hello\"')"),
+            ('module',{ 's': '"greeting=hello"' }))
 
     def test_parse_qc_module_spec_boolean(self):
         """
@@ -1734,3 +1737,20 @@ class TestParseQCModuleSpec(unittest.TestCase):
         self.assertEqual(
             parse_qc_module_spec("module(b='false')"),
             ('module',{ 'b': 'false' }))
+
+    def test_parse_qc_module_spec_quoted_special_characters(self):
+        """
+        parse_qc_module_spec: handle quoted special characters
+        """
+        self.assertEqual(
+            parse_qc_module_spec("module(version='>=9')"),
+            ('module',{ 'version': '>=9' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(version=\"==9\")"),
+            ('module',{ 'version': '==9' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s='semicolon;')"),
+            ('module',{ 's': 'semicolon;' }))
+        self.assertEqual(
+            parse_qc_module_spec("module(s=\";semicolon\")"),
+            ('module',{ 's': ';semicolon' }))
