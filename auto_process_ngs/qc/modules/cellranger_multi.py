@@ -221,15 +221,21 @@ class CellrangerMulti(QCModule):
             # No multi config files so no outputs expected
             return None
         # Verification paramters
-        cellranger_version = None
-        if params.cellranger_version != "*":
-            cellranger_version = params.cellranger_version
-        cellranger_refdata = None
-        if params.cellranger_refdata != "*":
-            cellranger_refdata = params.cellranger_refdata
+        cellranger_version = params.cellranger_version
+        cellranger_refdata = params.cellranger_refdata
+        if cellranger_version is None and cellranger_refdata is None:
+            # If no version and no refdata then verification is
+            # not possible
+            return None
+        # Update parameters
+        if cellranger_version == "*":
+            cellranger_version = None
+        if cellranger_refdata == "*":
+            cellranger_refdata = None
         if cellranger_refdata:
             cellranger_refdata = os.path.basename(cellranger_refdata)
-        # Locate matching cellranger multi output directories
+        # Locate and filter cellranger multi output directories based on
+        # version and refdata specification
         cellranger_multi_dir = os.path.join(params.qc_dir, "cellranger_multi")
         multi_dirs = {}
         for multi_dir in fetch_cellranger_multi_output_dirs(
@@ -251,22 +257,28 @@ class CellrangerMulti(QCModule):
             if psample not in multi_dirs:
                 # Verification failure (no matching outputs)
                 return False
-            if not multiplexed_samples:
-                # No samples to check outputs for
-                continue
-            # Look for at least one valid output
+            # Look for at least one valid output for the config
             verified_config = False
             for multi_dir in multi_dirs[psample]:
                 outputs = CellrangerMultiOutputs(multi_dir)
                 output_samples = outputs.sample_names
                 missing_sample = False
-                for s in multiplexed_samples:
-                    if s not in output_samples:
-                        missing_sample = True
+                if multiplexed_samples:
+                    # Check that output exists for each of the
+                    # multiplexed samples in the config
+                    for s in multiplexed_samples:
+                        if s not in output_samples:
+                            missing_sample = True
+                            break
+                    if not missing_sample:
+                        verified_config = True
                         break
-                if not missing_sample:
-                    verified_config = True
-                    break
+                else:
+                    # No multiplexed samples - check
+                    # for a single output
+                    if len(output_samples) == 1:
+                        verified_config = True
+                        break
             if not verified_config:
                 # Verification failure (no outputs with
                 # all multiplexed samples)
