@@ -1066,7 +1066,6 @@ def check_required_version(version, required_version):
     """
     for version_spec in required_version.split(","):
         # Check against all version specifications
-        print(f"====> Check {version} against {version_spec}")
         op, req = parse_version_requirement(version_spec)
         # Match lengths of version and requirement strings
         version_ = parse_version(version)
