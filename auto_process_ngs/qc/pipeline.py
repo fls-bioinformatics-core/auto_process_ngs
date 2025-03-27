@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
 #
 
 """
@@ -734,6 +734,14 @@ class QCPipeline(Pipeline):
             ################################
             if qc_module_name == "cellranger_multi":
 
+                # Required Cellranger version
+                try:
+                    cellranger_required_version = \
+                        qc_module_params['cellranger_required_version']
+                except KeyError:
+                    cellranger_required_version = None
+
+                # Running cellranger multi
                 run_cellranger_multi = CellrangerMulti.add_to_pipeline(
                     self,
                     project_name,
@@ -748,6 +756,7 @@ class QCPipeline(Pipeline):
                     cellranger_jobinterval=self.params.cellranger_jobinterval,
                     cellranger_localcores=self.params.cellranger_localcores,
                     cellranger_localmem=self.params.cellranger_localmem,
+                    cellranger_required_version=cellranger_required_version,
                     required_tasks=startup_tasks,
                     cellranger_runner=self.runners['cellranger_multi_runner'],
                     envmodules=self.envmodules['cellranger'],
