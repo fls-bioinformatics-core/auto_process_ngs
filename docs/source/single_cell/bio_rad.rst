@@ -19,16 +19,9 @@ or QC.
 Fastq generation
 ----------------
 
-The ``standard`` Fastq generation protocol should be used for
+The ``biorad_ddseq`` Fastq generation protocol should be used for
 Bio-Rad's ddSEQ Single-Cell ATAC-seq data when running the
 :doc:`make_fastqs <../using/make_fastqs>` command.
-
-.. note::
-
-   It is unclear whether Bio-Rad's Omnition downstream analysis
-   software requires that adapters are not trimmed. Adapter
-   trimming can be explicitly disabled using the
-   ``--no-adapter-trimming`` option of ``make_fastqs``.
 
 
 Analysis project setup and QC
