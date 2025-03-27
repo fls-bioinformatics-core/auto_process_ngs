@@ -23,6 +23,7 @@ Pipeline task classes:
 - GetReferenceDataset
 - GetBAMFile
 - ConvertGTFToBed
+- VerifyQC
 - ReportQC
 """
 
@@ -74,10 +75,10 @@ from .modules.sequence_lengths import SequenceLengths
 from .modules.strandedness import Strandedness
 from .protocols import determine_qc_protocol
 from .protocols import fetch_protocol_definition
+from .protocols import parse_qc_module_spec
 from .utils import get_bam_basename
 from .utils import get_seq_data_samples
 from .utils import set_cell_count_for_project
-from .verification import parse_qc_module_spec
 from .verification import verify_project
 
 # Module specific logger
