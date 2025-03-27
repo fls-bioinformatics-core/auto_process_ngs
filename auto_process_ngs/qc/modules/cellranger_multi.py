@@ -41,6 +41,8 @@ from ...pipeliner import PipelineFunctionTask
 from ...pipeliner import PipelineParam as Param
 from ...pipeliner import FunctionParam
 from ...pipeliner import ListParam
+from ...utils import check_required_version
+from ...utils import parse_version
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -294,7 +296,9 @@ class CellrangerMulti(QCModule):
                         cellranger_mempercore=None,
                         cellranger_jobinterval=None,
                         cellranger_localcores=None,
-                        cellranger_localmem=None,required_tasks=None,
+                        cellranger_localmem=None,
+                        cellranger_required_version=None,
+                        required_tasks=None,
                         cellranger_runner=None,
                         envmodules=None,working_dir=None):
         """
@@ -399,6 +403,7 @@ class CellrangerMulti(QCModule):
             cellranger_jobinterval=cellranger_jobinterval,
             cellranger_localcores=cellranger_localcores,
             cellranger_localmem=cellranger_localmem,
+            cellranger_required_version=cellranger_required_version
         )
         p.add_task(run_cellranger_multi,
                    requires=(get_cellranger,
@@ -494,7 +499,8 @@ class RunCellrangerMulti(PipelineTask):
              cellranger_version=None,cellranger_jobmode='local',
              cellranger_maxjobs=None,cellranger_mempercore=None,
              cellranger_jobinterval=None,cellranger_localcores=None,
-             cellranger_localmem=None,working_dir=None):
+             cellranger_localmem=None,cellranger_required_version=None,
+             working_dir=None):
         """
         Initialise the RunCellrangerMulti task.
 
@@ -538,6 +544,8 @@ class RunCellrangerMulti(PipelineTask):
             (defaults to number of slots set in runner)
           cellranger_localmem (int): maximum memory cellranger
             can request in jobmode 'local' (default: None)
+          cellranger_required_version (str): string specifying
+            the required Cellranger version (default: None)
         """
         # Internal: top-level working directory
         self._working_dir = None
@@ -558,13 +566,24 @@ class RunCellrangerMulti(PipelineTask):
         if not (self.args.out_dir or self.args.qc_dir):
             raise Exception("Need to provide at least one of "
                             "output directory and QC directory")
-        # Top-level working directory
-        self._working_dir = self.args.working_dir
         # Cellranger details
         cellranger_exe = self.args.cellranger_exe
         cellranger_package = os.path.basename(cellranger_exe)
         cellranger_version = self.args.cellranger_version
-        cellranger_major_version = int(cellranger_version.split('.')[0])
+        cellranger_major_version = int(parse_version(cellranger_version)[0])
+        # Check required version, if specified
+        if self.args.cellranger_required_version is not None:
+            required_version = self.args.cellranger_required_version
+            if not check_required_version(cellranger_version,
+                                          required_version):
+                print(f"Cellranger version {cellranger_version}: doesn't "
+                      f"meet version requirement ({required_version})")
+                # Don't run cellranger multi
+                return
+            print(f"Cellranger version {cellranger_version} meets version "
+                  f"requirements ({required_version})")
+        # Top-level working directory
+        self._working_dir = self.args.working_dir
         # Top-level output directory
         multi_dir = os.path.abspath(
             os.path.join(self.args.out_dir,
@@ -678,6 +697,14 @@ class RunCellrangerMulti(PipelineTask):
         if not self.args.config_csvs:
             print("No config file: cellranger multi analysis was skipped")
             return
+        # If version doesn't meet requirements then ignore and return
+        if self.args.cellranger_required_version:
+            if not check_required_version(
+                    self.args.cellranger_version,
+                    self.args.cellranger_required_version):
+                print(f"Cellranger version not suitable: cellranger multi "
+                      "analysis was skipped")
+                return
         # Location of final outputs from cellranger multi
         multi_dir = os.path.abspath(
             os.path.join(self.args.out_dir,
