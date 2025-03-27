@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     verification: utilities for verification of QC outputs
-#     Copyright (C) University of Manchester 2022-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2022-2025 Peter Briggs
 #
 
 """
@@ -88,6 +88,7 @@ class QCVerifier(QCOutputs):
                annotation_bed=None,annotation_gtf=None,
                cellranger_version=None,cellranger_refdata=None,
                cellranger_use_multi_config=None,
+               cellranger_required_version=None,
                seq_data_samples=None):
         """
         Verify QC outputs for Fastqs against specified protocol
@@ -109,6 +110,9 @@ class QCVerifier(QCOutputs):
             cellranger count verification will attempt to
             use data (GEX samples and reference dataset) from
             the '10x_multi_config.csv' file
+          cellranger_required_version (str): specifies which
+            versions of 10x package pipeline are required
+            (e.g. ">=9", "=7" etc)
           seq_data_samples (list): list of sample names with
             sequence (i.e. biological) data
 
@@ -151,7 +155,8 @@ class QCVerifier(QCOutputs):
             annotation_gtf=annotation_gtf,
             cellranger_version=cellranger_version,
             cellranger_refdata=cellranger_refdata,
-            cellranger_use_multi_config=cellranger_use_multi_config
+            cellranger_use_multi_config=cellranger_use_multi_config,
+            cellranger_required_version=cellranger_required_version
         )
 
         # Perform verification
