@@ -1051,7 +1051,7 @@ def parse_qc_module_spec(module_spec):
                 # Start of a new key
                 current_key = c
             elif current_value is None:
-                if c is "=":
+                if c == "=":
                     # End of key, start of a new value
                     current_value = ""
                 else:
