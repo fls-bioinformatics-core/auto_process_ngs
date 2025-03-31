@@ -9,10 +9,8 @@ Supported Python versions
 *************************
 
 The package consists predominantly of code written in Python, and the
-following versions are supported:
+following versions are officially supported:
 
-* Python 3.6
-* Python 3.7
 * Python 3.8
 
 .. _software_dependencies:
