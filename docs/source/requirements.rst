@@ -9,9 +9,14 @@ Supported Python versions
 *************************
 
 The package consists predominantly of code written in Python, and the
-following versions are officially supported:
+following versions are formally supported via continuous integration
+testing:
 
 * Python 3.8
+* Python 3.9
+* Python 3.10
+
+Other versions may also work but have not been formally tested.
 
 .. _software_dependencies:
 
