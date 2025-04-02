@@ -83,6 +83,7 @@ Protocol option          Used for
                          GEX data only (run with pooled GEX
                          and ATAC data)
 ``parse_evercode``       Parse Evercode single cell data
+``biorad_ddseq``         Bio-Rad ddSEQ single cell data
 ``icell8``               ICELL8 single-cell RNA-seq data
 ``icell8_atac``          ICELL8 single-cell ATAC-seq data
 ======================== =====================================
@@ -113,6 +114,7 @@ Fastq generation protocols should be used:
 * :doc:`10x Genomics single cell data <../single_cell/10x_single_cell>`
 * :doc:`10x Genomics spatial data <../spatial/10x_visium>`
 * :doc:`Parse Evercode single cell data <../single_cell/parse>`
+* :doc:`Bio-Rad single cell data <../single_cell/bio_rad>`
 * :doc:`ICELL single cell data <../single_cell/icell8>`
 
 .. _make_fastqs-commonly-used-options:

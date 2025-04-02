@@ -693,6 +693,23 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             paired_end=True),
                          "ParseEvercode")
 
+    def test_determine_qc_protocol_from_metadata_biorad_ddseq_atac(self):
+        """
+        determine_qc_protocol_from_metadata: Bio-Rad ddSEQ Single Cell ATAC data
+        """
+        # scATAC-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scATAC-seq",
+            single_cell_platform="Bio-Rad ddSEQ Single Cell ATAC",
+            paired_end=True),
+                         "BioRad_ddSEQ_ATAC")
+        # snATAC-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="snATAC-seq",
+            single_cell_platform="Bio-Rad ddSEQ Single Cell ATAC",
+            paired_end=True),
+                         "BioRad_ddSEQ_ATAC")
+
 class TestDetermineQCProtocolFunction(unittest.TestCase):
     """
     Tests for determine_qc_protocol function
@@ -1353,6 +1370,48 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
                          "ParseEvercode")
+
+    def test_determine_qc_protocol_biorad_ddseq_sc_atac(self):
+        """
+        determine_qc_protocol: single-cell ATAC-seq (Bio-Rad ddSEQ)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",
+                                       "PJB1_S1_I1_001.fastq.gz",
+                                       "PJB1_S1_I2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "Bio-Rad ddSEQ Single Cell ATAC",
+                                          'Library type':
+                                          "scATAC-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "BioRad_ddSEQ_ATAC")
+
+    def test_determine_qc_protocol_biorad_ddseq_sn_atac(self):
+        """
+        determine_qc_protocol: single-nuclei ATAC-seq (Bio-Rad ddSEQ)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",
+                                       "PJB1_S1_I1_001.fastq.gz",
+                                       "PJB1_S1_I2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "Bio-Rad ddSEQ Single Cell ATAC",
+                                          'Library type':
+                                          "snATAC-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "BioRad_ddSEQ_ATAC")
 
     def test_determine_qc_protocol_unknown_single_cell_platform(self):
         """determine_qc_protocol: unknown single cell platform

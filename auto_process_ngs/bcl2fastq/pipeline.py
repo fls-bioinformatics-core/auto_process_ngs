@@ -118,7 +118,8 @@ PROTOCOLS = ('standard',
              '10x_multiome',
              '10x_multiome_atac',
              '10x_multiome_gex',
-             'parse_evercode',)
+             'parse_evercode',
+             'biorad_ddseq',)
 
 # 10xGenomics protocols
 PROTOCOLS_10X = ('10x_chromium_sc',
@@ -637,6 +638,11 @@ class MakeFastqs(Pipeline):
                                     trim_adapters=False)
             elif protocol == 'parse_evercode':
                 # Parse Evercode
+                # Disable adapter trimming
+                self._update_subset(s,
+                                    trim_adapters=False)
+            elif protocol == 'biorad_ddseq':
+                # Bio-Rad ddSEQ
                 # Disable adapter trimming
                 self._update_subset(s,
                                     trim_adapters=False)
@@ -1216,7 +1222,8 @@ class MakeFastqs(Pipeline):
             # Standard protocols
             if protocol in ("standard",
                             "mirna",
-                            "parse_evercode"):
+                            "parse_evercode",
+                            "biorad_ddseq"):
 
                 if converter == "bcl2fastq":
                     # Get bcl2fastq information

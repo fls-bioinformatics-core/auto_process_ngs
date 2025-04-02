@@ -348,6 +348,22 @@ QC_PROTOCOLS = {
         ]
     },
 
+    "BioRad_ddSEQ_ATAC": {
+        "description": "Bio-Rad ddSEQ Single Cell ATAC data",
+        "reads": {
+            "seq_data": ('r1:79-118', 'r2',),
+            "index": ()
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
+            'qualimap_rnaseq'
+        ]
+    },
+
     "singlecell": {
         "description": "ICELL8 single cell RNA-seq",
         "reads": {
@@ -782,6 +798,12 @@ def determine_qc_protocol_from_metadata(library_type,
                                 "WT scRNA-seq"):
                 # Parse Evercode snRNAseq
                 protocol = "ParseEvercode"
+        # Bio-Rad ATAC
+        elif single_cell_platform == "Bio-Rad ddSEQ Single Cell ATAC":
+            if library_type in ("scATAC-seq",
+                                "snATAC-seq",):
+                # 10xGenomics scATAC-seq
+                protocol = "BioRad_ddSEQ_ATAC"
         # ICELL8
         elif single_cell_platform == "ICELL8":
             # ICELL8 data
