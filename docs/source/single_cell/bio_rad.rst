@@ -44,3 +44,30 @@ command will automatically transfer these values into the project
 metadata on creation. The :doc:`run_qc <../using/run_qc>` command
 will then determine the appropriate QC protocol to use based on the
 metadata values.
+
+Appendix: position of DNA insert sequences for QC (ddSEQ ATAC)
+--------------------------------------------------------------
+
+The Bio-Rad SureCell ATAC library configuration for R1 reads is assumed
+to look like:
+
+* 7bp barcode
+* 0-4bp "phase block"
+* Fixed sequence ``TATGCATGAC`` (10bp)
+* 7bp barcode
+* Fixed sequence ``AGTCACTGAG`` (10bp)
+* 7bp barcode
+* Fixed sequence ``TCGTCGGCAGCGTCAGATGTGTATAAGAGACAG`` (33bp)
+* DNA insert (remainder of the sequence, 40-44bp)
+
+The DNA insert in any individual read sequence is therefore expected
+to start between positions 75 and 79 (depending on the size of the
+variable length phase block sequence).
+
+For the R2 reads it is assumed to look like:
+
+* DNA insert (40bp)
+* 6bp TI adapter
+
+Based on this, for the ``BioRad_ddSEQ_ATAC`` QC protocol the mapped
+metrics are calculated using R1 positions 79-118 and all of R2.
