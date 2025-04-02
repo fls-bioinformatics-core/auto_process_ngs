@@ -866,10 +866,14 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB_CML2',
                                    ))
         qc_verifier = QCVerifier(qc_dir)
-        # Implicitly match any version and reference
-        self.assertTrue(qc_verifier.verify_qc_module(
+        # Verification not possible if no version and no reference
+        # explicitly specified
+        self.assertEqual(qc_verifier.verify_qc_module(
             'cellranger_multi',
-            self._create_params_dict(qc_dir=qc_dir)))
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version=None,
+                                     cellranger_refdata=None)),
+                         None)
         # Explicitly match version with any reference
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_multi',
@@ -883,6 +887,13 @@ class TestQCVerifier(unittest.TestCase):
                                      cellranger_version='*',
                                      cellranger_refdata=\
                                      'refdata-cellranger-2020-A')))
+        # Explicitly match reference with any version and any
+        # reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='*',
+                                     cellranger_refdata='*')))
         # Fail if version not found
         self.assertFalse(qc_verifier.verify_qc_module(
             'cellranger_multi',
@@ -897,6 +908,17 @@ class TestQCVerifier(unittest.TestCase):
                                      cellranger_version='7.1.0',
                                      cellranger_refdata=\
                                      'refdata-cellranger-2.0.0')))
+        # Verification when no multiplexed samples present
+        qc_dir = self._make_qc_dir('qc.no_multiplexed',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='8.0.0',
+                                     cellranger_refdata='*')))
         # Missing outputs for one sample
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:2],
@@ -945,10 +967,12 @@ class TestQCVerifier(unittest.TestCase):
                                        "PJB2": ("PB3", "PB4")
                                    })
         qc_verifier = QCVerifier(qc_dir)
-        # Implicitly match any version and reference
-        self.assertTrue(qc_verifier.verify_qc_module(
+        # Verification not possible if no version and no reference
+        # were explicitly supplied
+        self.assertEqual(qc_verifier.verify_qc_module(
             'cellranger_multi',
-            self._create_params_dict(qc_dir=qc_dir)))
+            self._create_params_dict(qc_dir=qc_dir)),
+                         None)
         # Explicitly match version with any reference
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_multi',
@@ -962,6 +986,13 @@ class TestQCVerifier(unittest.TestCase):
                                      cellranger_version='*',
                                      cellranger_refdata=\
                                      'refdata-cellranger-2020-A')))
+        # Explicitly match reference with any version and any
+        # reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='*',
+                                     cellranger_refdata='*')))
         # Fail if version not found
         self.assertFalse(qc_verifier.verify_qc_module(
             'cellranger_multi',
@@ -976,6 +1007,21 @@ class TestQCVerifier(unittest.TestCase):
                                      cellranger_version='7.1.0',
                                      cellranger_refdata=\
                                      'refdata-cellranger-2.0.0')))
+        # Verification when no multiplexed samples present
+        qc_dir = self._make_qc_dir('qc.no_multiplexed',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_multi=True,
+                                   cellranger_pipelines=('cellranger',),
+                                   cellranger_multi_samples={
+                                       "PJB1": (),
+                                       "PJB2": ()
+                                   })
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger_multi',
+            self._create_params_dict(qc_dir=qc_dir,
+                                     cellranger_version='8.0.0',
+                                     cellranger_refdata='*')))
         # Missing outputs for one sample
         qc_dir = self._make_qc_dir('qc.fail',
                                    fastq_names=fastq_names[:2],

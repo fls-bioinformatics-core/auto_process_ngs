@@ -1021,6 +1021,36 @@ class TestFindExecutables(unittest.TestCase):
                                           self.info_func,
                                           paths=paths),exes)
 
+class TestCheckRequiredVersion(unittest.TestCase):
+    """
+    Tests for the 'check_required_version' function
+    """
+    def test_check_required_version(self):
+        """
+        check_required_version: determines if versions match specification
+        """
+        self.assertTrue(check_required_version("2.17.1.4", ">1.8.4"))
+        self.assertTrue(check_required_version("2.17.1.4", "==2.17.1.4"))
+        self.assertTrue(check_required_version("2.17.1.4", "=2.17.1.4"))
+        self.assertTrue(check_required_version("2.17.1.4", "2.17.1.4"))
+        self.assertTrue(check_required_version("1.8.4", "<2.17.1.4"))
+        self.assertTrue(check_required_version("10.0", ">9.1"))
+        self.assertTrue(check_required_version("1.10", ">1.9.rc1"))
+        self.assertTrue(check_required_version("9.0.0", "9"))
+        self.assertTrue(check_required_version("9.1.0", "9"))
+        self.assertTrue(check_required_version("9.0.0", ">8"))
+        self.assertTrue(check_required_version("9.0.0", ">=9,<=12"))
+        self.assertTrue(check_required_version("9.0.1", "==9.0"))
+        self.assertTrue(check_required_version("9.1.1", ">9.0.2"))
+        self.assertTrue(check_required_version("9.0.2", "<9.1.1"))
+        self.assertTrue(check_required_version("9.0.2", "<9.1.1"))
+        self.assertFalse(check_required_version("8.0.0", "9"))
+        self.assertFalse(check_required_version("9.0.0", "<=8"))
+        self.assertFalse(check_required_version("8.0.0", ">=9,<=12"))
+        self.assertFalse(check_required_version("9.0.1", ">9.0"))
+        self.assertFalse(check_required_version("9.0.0", "==9.1.0"))
+        self.assertFalse(check_required_version("9.0", "==9.0.1"))
+
 class TestParseVersion(unittest.TestCase):
     """Tests for the parse_version function
     """
@@ -1034,26 +1064,41 @@ class TestParseVersion(unittest.TestCase):
         self.assertEqual(parse_version("1.9.rc1"),
                          (1,9,"rc1"))
 
-    def test_compare_versions(self):
-        """parse_version compares versions correctly
-        """
-        self.assertTrue(
-            parse_version("2.17.1.4") > parse_version("1.8.4"))
-        self.assertTrue(
-            parse_version("2.17.1.4") == parse_version("2.17.1.4"))
-        self.assertTrue(
-            parse_version("1.8.4") < parse_version("2.17.1.4"))
-        self.assertTrue(
-            parse_version("10.0") > parse_version("9.1"))
-        self.assertTrue(
-            parse_version("1.10") > parse_version("1.9.rc1"))
-
     def test_handle_empty_version(self):
         """parse_version handles empty version
         """
         self.assertEqual(parse_version(""),(-99999,))
         self.assertTrue(
             parse_version("") < parse_version("1.8.4"))
+
+class TestParseVersionRequirement(unittest.TestCase):
+    """
+    Tests for the parse_version_requirement function
+    """
+    def test_parse_version_requirement(self):
+        """
+        parse_version_requirement: extracts operator function and version string
+        """
+        # No operator
+        self.assertEqual(parse_version_requirement("2.17.1.4"),
+                         (operator.eq, "2.17.1.4"))
+        # Explicit equals
+        self.assertEqual(parse_version_requirement("=2.17.1.4"),
+                         (operator.eq, "2.17.1.4"))
+        self.assertEqual(parse_version_requirement("==2.17.1.4"),
+                         (operator.eq, "2.17.1.4"))
+        # Greater than
+        self.assertEqual(parse_version_requirement(">8.1"),
+                         (operator.gt, "8.1"))
+        # Greater than or equals
+        self.assertEqual(parse_version_requirement(">=9.0"),
+                         (operator.ge, "9.0"))
+        # Less than
+        self.assertEqual(parse_version_requirement("<3.12"),
+                         (operator.lt, "3.12"))
+        # Less than or equals
+        self.assertEqual(parse_version_requirement("<=2.7"),
+                         (operator.le, "2.7"))
 
 class TestParseSampleSheetSpec(unittest.TestCase):
     """Tests for the parse_samplesheet_spec function

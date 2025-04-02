@@ -264,7 +264,7 @@ QC_PROTOCOLS = {
             'cellranger_count(cellranger_use_multi_config=True;'
                              'set_cell_count=false;'
                              'set_metadata=False)',
-            #'cellranger_multi'
+            'cellranger_multi(cellranger_required_version=">=9")'
         ]
     },
 
@@ -1039,23 +1039,73 @@ def parse_qc_module_spec(module_spec):
     # Extract the module name and associated parameter list
     name = items[0]
     params = {}
+    # Extract the key-value pairs from the parameters
     try:
-        for item in items[1].rstrip(')').split(';'):
-            key,value = item.split('=')
-            if value[0] in ('\'','"'):
-                # Quoted string
-                if value[-1] == value[-1]:
-                    value = value[1:-1]
-            elif value in ('True','true'):
-                # Boolean true
-                value = True
-            elif value in ('False','false'):
-                # Boolean false
-                value = False
-            params[key] = value
+        current_key = None
+        current_value = None
+        param_str = items[1].rstrip(')')
+        value_quote = None
+        # Need to handle string character-by-character
+        for c in param_str:
+            if current_key is None:
+                # Start of a new key
+                current_key = c
+            elif current_value is None:
+                if c == "=":
+                    # End of key, start of a new value
+                    current_value = ""
+                else:
+                    # Still processing the key
+                    current_key += c
+            elif not current_value and not value_quote:
+                # First character in new value
+                if c in ("'", "\""):
+                    # Value is quoted
+                    value_quote = c
+                # Store full value (including quotes)
+                current_value = c
+            else:
+                # Inside a value string
+                if value_quote:
+                    # Inside a quoted string
+                    if c == value_quote:
+                        # End of the quoted string
+                        value_quote = None
+                    # Append to current value (including quotes)
+                    current_value += c
+                elif c == ";":
+                    # End of value, store extracted
+                    # key-value pair
+                    params[current_key] = current_value
+                    # Reset for next pair
+                    current_key = None
+                    current_value = None
+                else:
+                    # Still part of current value
+                    current_value += c
+        # Store any final key-value pair
+        if current_key and current_value:
+            params[current_key] = current_value
+        else:
+            # Encountered an error
+            raise Exception(f"Error parsing parameters: {param_str}")
     except IndexError:
+        # No closing ")"
         pass
-    return (name,params)
+    # Post-process values
+    for key in params:
+        value = params[key]
+        if value[0] in ("'", "\"") and value[0] == value[-1]:
+            # Strip quotes
+            value = value[1:-1]
+        elif value in ("True", "true"):
+            # Boolean true
+            value = True
+        elif value in ("False", "false"):
+            # Boolean false
+            value = False
+        params[key] = value
+    return (name, params)
 
 ######################################################################
 # Custom exceptions

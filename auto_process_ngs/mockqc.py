@@ -809,7 +809,17 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             if physical_sample:
                 multi_dir = os.path.join(multi_dir, physical_sample)
             # Make outputs
-            MockQCOutputs.cellranger_multi(multi_samples,
+            if multi_samples:
+                # Mimick multiplexed sample outputs
+                multi_samples_ = multi_samples
+            else:
+                # Mimick single 'pseduo-sample' output
+                # when there are no multiplexed samples
+                if physical_sample:
+                    multi_samples_ = (physical_sample,)
+                else:
+                    multi_samples_ = (project_name,)
+            MockQCOutputs.cellranger_multi(multi_samples_,
                                            qc_dir,
                                            config_csv=multi_config,
                                            prefix=multi_dir,

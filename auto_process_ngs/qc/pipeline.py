@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
 #
 
 """
@@ -23,6 +23,7 @@ Pipeline task classes:
 - GetReferenceDataset
 - GetBAMFile
 - ConvertGTFToBed
+- VerifyQC
 - ReportQC
 """
 
@@ -74,10 +75,10 @@ from .modules.sequence_lengths import SequenceLengths
 from .modules.strandedness import Strandedness
 from .protocols import determine_qc_protocol
 from .protocols import fetch_protocol_definition
+from .protocols import parse_qc_module_spec
 from .utils import get_bam_basename
 from .utils import get_seq_data_samples
 from .utils import set_cell_count_for_project
-from .verification import parse_qc_module_spec
 from .verification import verify_project
 
 # Module specific logger
@@ -734,6 +735,14 @@ class QCPipeline(Pipeline):
             ################################
             if qc_module_name == "cellranger_multi":
 
+                # Required Cellranger version
+                try:
+                    cellranger_required_version = \
+                        qc_module_params['cellranger_required_version']
+                except KeyError:
+                    cellranger_required_version = None
+
+                # Running cellranger multi
                 run_cellranger_multi = CellrangerMulti.add_to_pipeline(
                     self,
                     project_name,
@@ -748,6 +757,7 @@ class QCPipeline(Pipeline):
                     cellranger_jobinterval=self.params.cellranger_jobinterval,
                     cellranger_localcores=self.params.cellranger_localcores,
                     cellranger_localmem=self.params.cellranger_localmem,
+                    cellranger_required_version=cellranger_required_version,
                     required_tasks=startup_tasks,
                     cellranger_runner=self.runners['cellranger_multi_runner'],
                     envmodules=self.envmodules['cellranger'],
