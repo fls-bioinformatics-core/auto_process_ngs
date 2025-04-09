@@ -73,6 +73,19 @@ from .qc_modules import QC_MODULE_NAMES
 
 QC_PROTOCOLS = {
 
+    "minimal": {
+        "description": "Minimal generic QC (all non-index Fastqs)",
+        "reads": {
+            "seq_data": ('r*',),
+            "index": ()
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths'
+        ]
+    },
+
     "standardSE": {
         "description": "Standard single-end data (R1 Fastqs only)",
         "reads": {
@@ -655,7 +668,15 @@ class QCProtocol:
         read_numbers = []
         for r in reads:
             if r.startswith('r'):
-                read_numbers.append(int(r[1:]))
+                try:
+                    read_numbers.append(int(r[1:]))
+                except ValueError:
+                    # Check for wildcard read number
+                    if r[1:] == "*":
+                        read_numbers.append("*")
+                    else:
+                        raise QCProtocolError(f"'{r}': invalid read "
+                                              "specification")
         return tuple(sorted(read_numbers))
 
     def __summarise_reads(self,rds):
@@ -744,7 +765,9 @@ def determine_qc_protocol_from_metadata(library_type,
       String: QC protocol for the project
     """
     # Standard protocols
-    if paired_end:
+    if library_type is None or not library_type:
+        protocol = "minimal"
+    elif paired_end:
         protocol = "standardPE"
     else:
         protocol = "standardSE"
