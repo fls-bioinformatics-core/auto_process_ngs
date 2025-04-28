@@ -753,7 +753,7 @@ def determine_qc_protocol_from_metadata(library_type,
         # 10x Genomics
         if single_cell_platform.startswith('10xGenomics Chromium 3\'') or \
            single_cell_platform.startswith('10xGenomics Chromium GEM-X 3\'') or \
-           single_cell_platform.startswith('10xGenomics Chromium Next GEM 3\''):
+           single_cell_platform.startswith('10xGenomics Chromium Next GEM'):
             # Default for 10x
             protocol = "singlecell"
             # 10xGenomics scRNA-seq
