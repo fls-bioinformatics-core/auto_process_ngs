@@ -25,9 +25,10 @@ LIBRARIES = {
     "10xGenomics Chromium GEM-X 3'*": (
         "scRNA-seq",
     ),
-    "10xGenomics Chromium Next GEM 3'v*": (
+    "10xGenomics Chromium Next GEM*": (
         "scRNA-seq",
         "CellPlex scRNA-seq",
+        "Flex",
     ),
     "10xGenomics Chromium*": (
         "scRNA-seq",
