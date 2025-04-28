@@ -486,7 +486,7 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
     if single_cell_platform:
         if single_cell_platform.startswith("10xGenomics Chromium 3'") or \
            single_cell_platform.startswith("10xGenomics Chromium GEM-X 3'") or \
-           single_cell_platform.startswith("10xGenomics Chromium Next GEM 3'") or \
+           single_cell_platform.startswith("10xGenomics Chromium Next GEM") or \
            single_cell_platform.startswith("10xGenomics Chromium 5'"):
             pipeline = "cellranger"
         elif single_cell_platform == "10xGenomics Single Cell ATAC":
