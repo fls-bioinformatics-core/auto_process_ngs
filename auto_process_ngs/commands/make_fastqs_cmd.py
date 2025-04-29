@@ -66,6 +66,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_ignore_dual_index=False,
                 spaceranger_rc_i2_override=None,
                 max_jobs=None,max_cores=None,batch_limit=None,
+                enable_conda=None,conda_env_dir=None,
                 verbose=False,working_dir=None):
     """
     Create and summarise FASTQ files
@@ -206,6 +207,10 @@ def make_fastqs(ap,protocol='standard',platform=None,
          exceed this limit
       working_dir (str): path to a working directory (defaults to
          temporary directory in the current directory)
+      enable_conda (bool): if True then use conda to resolve
+        dependencies declared on tasks in the pipeline
+      conda_env_dir (str): path to non-default directory for conda
+        environments
       verbose (bool): if True then report additional information for
          pipeline diagnostics
     """
@@ -385,6 +390,12 @@ def make_fastqs(ap,protocol='standard',platform=None,
             except KeyError:
                 envmodules[envmod] = None
 
+    # Conda dependency resolution
+    if enable_conda is None:
+        enable_conda = ap.settings.conda.enable_conda
+    if conda_env_dir is None:
+        conda_env_dir = ap.settings.conda.env_dir
+
     # Other pipeline settings
     poll_interval = ap.settings.general.poll_interval
 
@@ -442,6 +453,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              cellranger_localcores=cellranger_localcores,
                              cellranger_localmem=cellranger_localmem,
                              runners=runners,
+                             enable_conda=enable_conda,
+                             conda_env_dir=conda_env_dir,
                              envmodules=envmodules,
                              log_dir=ap.log_dir,
                              log_file=pipeline_log,
