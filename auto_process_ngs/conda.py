@@ -326,11 +326,17 @@ def make_conda_env_name(*pkgs):
 
     The name consists of components of the form
     "NAME[@VERSION]" for each package specification
-    "NAME[=VERSION]" (e.g. 'star=2.4.2a' becomes
-    'star@2.4.2a').
+    "NAME[=VERSION]" (e.g. "star=2.4.2a" becomes
+    "star@2.4.2a").
 
-    Components are joined by '+' and are sorted by package
+    Components are joined by "+" and are sorted by package
     name (regardless of the order they are supplied in).
+
+    Channel prefixes (e.g "CHANNEL::NAME[=VERSION]")
+    are also incorporated into the name, by replacing
+    the '::' with an underscore (e.g.
+    "bih-cubi::bcl2fastq2=2.20.04.7" becomes
+    "bih-cubi_bcl2fastq2@2.20.04.7").
 
     Arguments:
       pkgs (list): list of conda package specifiers
@@ -339,4 +345,6 @@ def make_conda_env_name(*pkgs):
       String: environment name constructed from package
         list.
     """
-    return '+'.join(sorted([str(p) for p in pkgs])).replace('=','@')
+    return "+".join(sorted([str(p) for p in pkgs]))\
+              .replace("=","@")\
+              .replace("::","_")

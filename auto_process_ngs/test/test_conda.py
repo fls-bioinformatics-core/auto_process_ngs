@@ -224,3 +224,10 @@ class TestMakeCondaEnvName(unittest.TestCase):
         self.assertEqual(make_conda_env_name("bowtie=1.2.3",
                                              "fastq-screen=0.14.0"),
                          "bowtie@1.2.3+fastq-screen@0.14.0")
+
+    def test_make_conda_env_name_replace_channel_prefix(self):
+        """
+        make_conda_env_name: replace channel prefix ('::') in package name
+        """
+        self.assertEqual(make_conda_env_name("bih-cubi::bcl2fastq2"),
+                         "bih-cubi_bcl2fastq2")
