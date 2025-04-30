@@ -11,6 +11,7 @@ PLATFORMS = (
     "10xGenomics Chromium 3'v3.1",
     "10xGenomics Chromium 5'",
     "10xGenomics Chromium GEM-X 3'v4",
+    "10xGenomics Chromium Next GEM",
     "10xGenomics Chromium Next GEM 3'v3.1",
     "10xGenomics Single Cell ATAC",
     "10xGenomics Visium",
@@ -24,9 +25,10 @@ LIBRARIES = {
     "10xGenomics Chromium GEM-X 3'*": (
         "scRNA-seq",
     ),
-    "10xGenomics Chromium Next GEM 3'v*": (
+    "10xGenomics Chromium Next GEM*": (
         "scRNA-seq",
         "CellPlex scRNA-seq",
+        "Flex",
     ),
     "10xGenomics Chromium*": (
         "scRNA-seq",
