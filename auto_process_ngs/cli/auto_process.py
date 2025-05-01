@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/auto_process.py: command line interface for auto_process_ngs
-#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2025 Peter Briggs
 #
 #########################################################################
 #
@@ -616,6 +616,21 @@ def add_make_fastqs_command(cmdparser):
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
+    # Conda options
+    enable_conda = ("yes" if __settings.conda.enable_conda else "no")
+    conda_env_dir = __settings.conda.env_dir
+    conda = p.add_argument_group("Conda dependency resolution")
+    conda.add_argument('--enable-conda',choices=["yes","no"],
+                       dest="enable_conda",default=enable_conda,
+                       help="use conda to resolve task dependencies; can "
+                       "be 'yes' or 'no' (default: %s)" %
+                       ("yes" if enable_conda else "no"))
+    conda.add_argument('--conda-env-dir',action='store',
+                       dest="conda_env_dir",default=conda_env_dir,
+                       help="specify directory for conda enviroments "
+                       "(default: %s)" % ('temporary directory'
+                                          if not conda_env_dir else
+                                          conda_env_dir))
     # Job control options
     job_control = p.add_argument_group("Job control options")
     job_control.add_argument('-j','--maxjobs',type=int,action='store',
@@ -1590,6 +1605,8 @@ def make_fastqs(args):
         max_jobs=args.max_jobs,
         max_cores=args.max_cores,
         batch_limit=args.max_batches,
+        enable_conda=(args.enable_conda == 'yes'),
+        conda_env_dir=args.conda_env_dir,
         working_dir=args.working_dir,
         verbose=args.verbose)
 

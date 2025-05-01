@@ -1871,7 +1871,8 @@ class MakeFastqs(Pipeline):
             cellranger_localmem=None,working_dir=None,log_dir=None,
             log_file=None,batch_size=None,batch_limit=None,max_jobs=1,
             max_slots=None,poll_interval=5,runners=None,
-            default_runner=None,envmodules=None,verbose=False):
+            default_runner=None,enable_conda=False,conda=None,
+            conda_env_dir=None,envmodules=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -1956,6 +1957,11 @@ class MakeFastqs(Pipeline):
             'cellranger_atac_mkfastq'
           default_runner (JobRunner): optional default
             job runner to use
+          enable_conda (bool): if True then enable use of
+            conda environments to satisfy task dependencies
+          conda (str): path to conda
+          conda_env_dir (str): path to non-default
+            directory for conda environments
           verbose (bool): if True then report additional
             information for diagnostics
         """
@@ -2099,6 +2105,9 @@ class MakeFastqs(Pipeline):
                               max_slots=max_slots,
                               runners=runners,
                               default_runner=default_runner,
+                              enable_conda=enable_conda,
+                              conda=conda,
+                              conda_env_dir=conda_env_dir,
                               envmodules=envmodules,
                               verbose=verbose)
 
