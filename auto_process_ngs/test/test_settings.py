@@ -405,7 +405,8 @@ star_index = missing
         # Load settings
         s = GenericSettings(
             settings = {
-                "general": { "max_concurrent_jobs": int, },
+                "general": { "max_concurrent_jobs": int,
+                             "max_cpus": int, },
                 "organism:*": { "star_index": str, },
             },
             defaults = {
@@ -417,6 +418,7 @@ star_index = missing
                          f"""Settings from {settings_file}
 [general]
    max_concurrent_jobs = 8
+   max_cpus = <Not set>
 [organism:human]
    star_index = missing""")
 
@@ -436,7 +438,8 @@ star_index = missing
         # Load settings
         s = GenericSettings(
             settings = {
-                "general": { "max_concurrent_jobs": int, },
+                "general": { "max_concurrent_jobs": int,
+                             "max_cpus": int, },
                 "organism:*": { "star_index": str, },
             },
             # No defaults
@@ -446,6 +449,7 @@ star_index = missing
                          f"""Settings from {settings_file}
 [general]
    max_concurrent_jobs = <Not set>
+   max_cpus = <Not set>
 [organism:human]
    star_index = missing""")
 
@@ -466,6 +470,36 @@ star_index = missing
         self.assertEqual(s.report_settings(),
                          """[general]
    max_concurrent_jobs = 8""")
+
+    def test_report_settings_ignore_wildcards(self):
+        """
+        GenericSettings: check 'report_settings'
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'wt') as s:
+            s.write("""[templates]
+default = run_id,run_name
+full = run_id,run_name,datestamp,instrument
+
+[organism:human]
+star_index = /mnt/data/star/hg38
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "templates": { "*": str, },
+                "organism:*": { "star_index": str, },
+            },
+            settings_file=settings_file
+        )
+        self.assertEqual(s.report_settings(),
+                         f"""Settings from {settings_file}
+[templates]
+   default = run_id,run_name
+   full = run_id,run_name,datestamp,instrument
+[organism:human]
+   star_index = /mnt/data/star/hg38""")
 
 
 class TestGenericSettingsResolveUndefined(unittest.TestCase):
@@ -851,7 +885,8 @@ env_dir = /scratch/$USER/conda_envs
 
 
 class TestSettings(unittest.TestCase):
-    """Tests for the Settings class
+    """
+    Tests for the Settings class
     """
     def setUp(self):
         # Create a temp working dir
@@ -862,8 +897,77 @@ class TestSettings(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.dirn)
 
+    def test_default_settings(self):
+        """
+        Settings: default settings (no .ini file)
+        """
+        s = Settings()
+        # General settings
+        self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
+        self.assertEqual(s.general.max_concurrent_jobs,12)
+        self.assertEqual(s.general.max_cores,None)
+        self.assertEqual(s.general.max_batches,None)
+        self.assertEqual(s.general.poll_interval,5.0)
+        # Modulefiles
+        self.assertEqual(s.modulefiles.make_fastqs,None)
+        self.assertEqual(s.modulefiles.run_qc,None)
+        self.assertEqual(s.modulefiles.publish_qc,None)
+        self.assertEqual(s.modulefiles.process_icell8,None)
+        self.assertEqual(s.modulefiles.bcl2fastq,None)
+        self.assertEqual(s.modulefiles.bcl_convert,None)
+        self.assertEqual(s.modulefiles.cellranger_mkfastq,None)
+        self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
+        self.assertEqual(s.modulefiles.cellranger_arc_mkfastq,None)
+        self.assertEqual(s.modulefiles.spaceranger_mkfastq,None)
+        self.assertEqual(s.modulefiles.fastqc,None)
+        self.assertEqual(s.modulefiles.fastq_screen,None)
+        self.assertEqual(s.modulefiles.cellranger,None)
+        self.assertEqual(s.modulefiles.report_qc,None)
+        # Conda
+        self.assertEqual(s.conda.enable_conda,False)
+        self.assertEqual(s.conda.env_dir,None)
+        # BCL conversion software
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl2fastq>=2.20')
+        self.assertEqual(s.bcl_conversion.nprocessors,None)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
+        # Fastq_stats
+        self.assertEqual(s.fastq_stats.nprocessors,None)
+        # Job-specific runners
+        self.assertTrue(isinstance(s.runners.bcl2fastq,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.bcl_convert,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.barcode_analysis,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.fastqc,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.fastq_screen,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.merge_fastqs,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.picard,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.qualimap,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.rseqc,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.rsync,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.star,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.stats,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.cellranger_count,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.cellranger_mkfastq,
+                                   SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.cellranger_multi,SimpleJobRunner))
+        # Legacy runners no longer in config file
+        self.assertTrue(isinstance(s.runners.cellranger,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.qc,SimpleJobRunner))
+        # Archiving
+        self.assertEqual(s.archive.dirn,None)
+        self.assertEqual(s.archive.log,None)
+        self.assertEqual(s.archive.group,None)
+        self.assertEqual(s.archive.chmod,None)
+        # QC reporting
+        self.assertEqual(s.qc_web_server.dirn,None)
+        self.assertEqual(s.qc_web_server.url,None)
+        # Metadata
+        self.assertEqual(s.metadata.default_data_source,None)
+
     def test_sample_settings_file(self):
-        """Settings: load from sample file
+        """
+        Settings: load from sample file
         """
         sample_settings_file = os.path.join(get_config_dir(),
                                             'auto_process.ini.sample')
@@ -934,7 +1038,8 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.metadata.default_data_source,None)
 
     def test_partial_settings_file(self):
-        """Settings: load a partial auto_process.ini file
+        """
+        Settings: load a partial auto_process.ini file
         """
         # Partial file
         partial_settings_file = os.path.join(self.dirn,
@@ -966,157 +1071,9 @@ nprocessors = 8
         # Fastq_stats
         self.assertEqual(s.fastq_stats.nprocessors,8)
 
-    def test_get_item(self):
-        """Settings: get_item fetches a value
-        """
-        sample_settings_file = os.path.join(get_config_dir(),
-                                            'auto_process.ini.sample')
-        s = Settings(sample_settings_file)
-        max_concurrent_jobs = s.general.max_concurrent_jobs
-        self.assertEqual(s['general'].max_concurrent_jobs,
-                         max_concurrent_jobs)
-
-    def test_contains(self):
-        """Settings: 'in' works for checking if section is defined
-        """
-        # Partial file
-        partial_settings_file = os.path.join(self.dirn,
-                                             "auto_process.ini")
-        with open(partial_settings_file,'w') as s:
-            s.write("""[general]
-max_concurrent_jobs = 12
-
-[organism:human]
-star_index = /data/hg38/star_index
-""")
-        # Load settings
-        s = Settings(partial_settings_file)
-        # Check that sections are located
-        self.assertTrue("general" in s)
-        self.assertTrue("organisms" in s)
-        # Check that section with subsection is located
-        self.assertTrue("organism:human" in s)
-        # Check that parameters can be located
-        self.assertTrue("general.max_concurrent_jobs" in s)
-        self.assertTrue("organism:human.star_index" in s)
-        # Check that missing sections, subsections and parameters
-        # are not located
-        self.assertFalse("missing" in s)
-        self.assertFalse("organism:missing" in s)
-        self.assertFalse("organism:human.missing" in s)
-
-    def test_add_section(self):
-        """Settings: add_section creates new section
-        """
-        # Empty file
-        empty_settings_file = os.path.join(self.dirn,
-                                           "auto_process.ini")
-        with open(empty_settings_file,'wt') as s:
-            s.write("")
-        s = Settings(empty_settings_file)
-        # Arbitrary section name
-        self.assertFalse("new_section" in s)
-        s.add_section("new_section")
-        self.assertTrue("new_section" in s)
-        # Arbitrary section and subsection
-        self.assertFalse("new_section2" in s)
-        self.assertFalse("new_section2:subsection" in s)
-        s.add_section("new_section2:subsection")
-        self.assertTrue("new_section2" in s)
-        self.assertTrue("new_section2:subsection" in s)
-        # Special case: organism
-        self.assertFalse("organism:human" in s)
-        s.add_section("organism:human")
-        self.assertTrue("organism:human" in s)
-
-    def test_set_item(self):
-        """Settings: 'set' updates a value
-        """
-        # Partial file
-        partial_settings_file = os.path.join(self.dirn,
-                                             "auto_process.ini")
-        with open(partial_settings_file,'wt') as s:
-            s.write("""[general]
-max_concurrent_jobs = None
-
-[organism:human]
-""")
-        # Load settings
-        s = Settings(partial_settings_file)
-        s.set("general.max_concurrent_jobs",8)
-        self.assertEqual(s['general'].max_concurrent_jobs,8)
-        s.set("organism:human.star_index","/data/hg38/star_index")
-        self.assertEqual(s['organisms']['human']['star_index'],
-                         "/data/hg38/star_index")
-
-    def test_save_raw(self):
-        """
-        Settings: test saving "raw" settings file
-        """
-        # Settings content
-        content = """[general]
-default_runner = SimpleJobRunner(join_logs=True)
-max_concurrent_jobs = 12
-poll_interval = 5.0
-
-[modulefiles]
-bcl2fastq = apps/bcl2fastq/2.20.0.422
-cellranger = apps/cellranger/6.1.2
-
-[conda]
-enable_conda = True
-env_dir = $HOME/qc_conda_envs
-
-[organism:human]
-star_index = /data/indexes/hg38
-
-[organism:mouse]
-star_index = /data/indexes/mm10
-
-[sequencer:A01234]
-platform = novaseq6000
-model = NovaSeq 6000
-
-[sequencer:NB543201]
-platform = nextseq
-model = NextSeq 500
-
-[runners]
-bcl2fastq = SimpleJobRunner(nslots=8 join_logs=True)
-star = SimpleJobRunner(nslots=18 join_logs=True)
-"""
-        # Settings file
-        settings_file = os.path.join(self.dirn,"auto_process.ini")
-        with open(settings_file,'wt') as s:
-            s.write(content)
-        # Load settings
-        s = Settings(settings_file,resolve_undefined=False)
-        # Save to new file
-        saved_settings_file = os.path.join(self.dirn,"auto_process.ini.bak")
-        s.save(out_file=saved_settings_file)
-        # Compare with original
-        self.assertTrue(os.path.exists(saved_settings_file))
-        self.assertEqual(open(settings_file,'rt').read().rstrip(),
-                         open(saved_settings_file,'rt').read().rstrip())
-
-    def test_preserve_option_case(self):
-        """Settings: case of option names is preserved
-        """
-        # Settings file
-        settings_file = os.path.join(self.dirn,"auto_process.ini")
-        with open(settings_file,'w') as s:
-            s.write("""[sequencers]
-SN7001251 = hiseq
-""")
-        # Load settings
-        s = Settings(settings_file)
-        # Check case of option
-        self.assertTrue('SN7001251' in s.sequencers)
-        self.assertEqual(s.sequencers['SN7001251']['platform'],'hiseq')
-        self.assertEqual(s.sequencers.SN7001251.platform,'hiseq')
-
     def test_conda_settings(self):
-        """Settings: check conda options are set correctly
+        """
+        Settings: check conda options are set correctly
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1132,7 +1089,8 @@ env_dir = /scratch/conda_envs
         self.assertEqual(s.conda.env_dir,"/scratch/conda_envs")
 
     def test_conda_env_dir(self):
-        """Settings: check conda env dir expands env variable
+        """
+        Settings: check conda env dir expands env variable
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1214,7 +1172,8 @@ max_zip_size = 5G
         self.assertEqual(s.destination['zips']['hard_links'],False)
 
     def test_sequencer_definitions(self):
-        """Settings: handle 'sequencer:...' sections
+        """
+        Settings: handle 'sequencer:...' sections
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1238,7 +1197,8 @@ model = "NextSeq 500"
         self.assertEqual(s.sequencers['NB110920']['model'],"NextSeq 500")
 
     def test_legacy_sequencer_definitions(self):
-        """Settings: handle 'sequencers' section (no 'sequencer:...'s)
+        """
+        Settings: handle legacy 'sequencers' section (no 'sequencer:...'s)
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1258,7 +1218,8 @@ NB110920 = nextseq
         self.assertEqual(s.sequencers['NB110920']['model'],None)
 
     def test_mixed_sequencer_definitions(self):
-        """Settings: handle mixture of 'sequencer:...' & 'sequencers' sections
+        """
+        Settings: handle mixture of 'sequencer:...' & legacy 'sequencers' sections
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1285,7 +1246,8 @@ model = "HiSeq 4000"
         self.assertEqual(s.sequencers['NB110920']['model'],None)
 
     def test_sequencer_definitions_fails_if_platform_not_set(self):
-        """Settings: fail to load if 'sequencer:...' section missing 'platform'
+        """
+        Settings: fail to load if 'sequencer:...' section missing 'platform'
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1299,7 +1261,8 @@ model = "HiSeq 2500"
                           settings_file)
 
     def test_organism_definitions(self):
-        """Settings: handle 'organism:...' sections
+        """
+        Settings: handle 'organism:...' sections
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1368,7 +1331,8 @@ cellranger_probe_set = /data/10x/Probe_Set_v1.0_mm10-2020-A.csv
                          '/data/10x/Probe_Set_v1.0_mm10-2020-A.csv')
 
     def test_legacy_organism_definitions(self):
-        """Settings: handle sections for specific indices (no 'organism:...' sections)
+        """
+        Settings: handle sections for specific indices (no 'organism:...' sections)
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1427,7 +1391,8 @@ mouse = /data/10x/refdata-cellranger-arc-mm10-2020-A-2.0.0
         self.assertEqual(s.organisms['mouse']['cellranger_probe_set'],None)
 
     def test_mixed_organism_definitions(self):
-        """Settings: handle mixture of 'organism:...' and index sections
+        """
+        Settings: handle mixture of 'organism:...' and index sections
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1505,7 +1470,8 @@ human = /data/10x/refdata-cellranger-arc-GRCh38-2020-A-2.0.0
                          '/data/10x/Probe_Set_v1.0_mm10-2020-A.csv')
 
     def test_screen_definitions(self):
-        """Settings: handle 'screen:...' sections
+        """
+        Settings: handle 'screen:...' sections
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1531,7 +1497,8 @@ conf_file = /data/fastq_screen/model_organisms.conf
                          "model_organisms,other_organisms")
 
     def test_legacy_fastq_screen_naming_setting(self):
-        """Settings: handle 'use_legacy_screen_names' setting
+        """
+        Settings: handle 'use_legacy_screen_names' setting
         """
         # Settings file without 'use_legacy_screen_names'
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1564,7 +1531,8 @@ use_legacy_screen_names = True
         self.assertEqual(s.qc.use_legacy_screen_names,True)
 
     def test_legacy_illumina_qc_modulefile_setting(self):
-        """Settings: handle legacy 'illumina_qc' modulefile setting
+        """
+        Settings: handle legacy 'illumina_qc' modulefile setting
         """
         # Settings file with 'illumina_qc' only
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1595,7 +1563,8 @@ fastq_screen = apps/fastq_screen/0.14.0
                          'apps/fastq_screen/0.14.0')
 
     def test_legacy_runner_settings(self):
-        """Settings: handle legacy runner settings
+        """
+        Settings: handle legacy runner settings
         """
         # Settings file with 'qc' and 'cellranger' runners only
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1651,7 +1620,8 @@ cellranger_multi = SimpleJobRunner(nslots=12)
                          'SimpleJobRunner(nslots=12 join_logs=True)')
 
     def test_legacy_bcl2fastq_settings_no_bcl_conversion(self):
-        """Settings: handle legacy 'bcl2fastq' section (no 'bcl_conversion' settings)
+        """
+        Settings: handle legacy 'bcl2fastq' section (no 'bcl_conversion' settings)
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1672,7 +1642,8 @@ create_empty_fastqs = false
         self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
 
     def test_legacy_platform_settings_no_bcl_conversion(self):
-        """Settings: handle legacy 'platform:...' section (no 'bcl_conversion' settings)
+        """
+        Settings: handle legacy 'platform:...' section (no 'bcl_conversion' settings)
         """
         # Settings file
         settings_file = os.path.join(self.dirn,"auto_process.ini")
@@ -1723,6 +1694,7 @@ no_lane_splitting = true
         self.assertEqual(s.platform['nextseq'].nprocessors,8)
         self.assertEqual(s.platform['nextseq'].no_lane_splitting,True)
         self.assertEqual(s.platform['nextseq'].create_empty_fastqs,None)
+
 
 class TestFetchReferenceData(unittest.TestCase):
     """
