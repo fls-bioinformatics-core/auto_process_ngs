@@ -61,6 +61,7 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.utils import AttributeDictionary
 from fnmatch import fnmatch
 from .config import Config
+from .config import NullValue
 from .config import NoSectionError
 
 # Module specific logger
@@ -70,6 +71,711 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # Classes
 #######################################################################
+
+class GenericSettings:
+    """
+    Base class for handling .ini configuration files
+
+    Arguments:
+      settings (dict): mapping of section names to
+        dictionaries defining parameters names and types
+      defaults (dict): dictionary of fully qualified
+        parameter names mapped to default settings
+      fallbacks (dict): dictionary of fully qualified
+        parameter names mapped to fallback parameters
+      legacy (dict): dictionary of fully qualified parameter
+        names mapped to "legacy" fallback parameter names
+      expand_vars (list): list of fully qualified parameter
+        names where the values can be expanded by
+        substituting environment variables
+      aliases (dict): dictionary defining "aliases" for
+        section names
+      settings_file (str): path to an .ini format file
+        to load values from
+      resolve_undefined (bool): if True (default) then
+        assign values to "null" parameters by checking
+        fallback parameters and default values
+    """
+    def __init__(self, settings, defaults={}, fallbacks={},
+                 legacy={}, expand_vars=[], aliases={},
+                 settings_file=None, resolve_undefined=True):
+        self._settings = settings
+        self._defaults = defaults
+        self._fallbacks = fallbacks
+        self._legacy_fallbacks = legacy
+        self._expand_vars = expand_vars
+        self._aliases = aliases
+        self._sections = []
+        self._settings_file = None
+        # Null value indicates no setting assigned
+        self.nullvalue = NullValue()
+        # Build the initial structure with all parameters
+        # assigned to 'null'
+        self._create_sections(self._settings)
+        # Load data from file
+        if settings_file:
+            self._settings_file = os.path.abspath(settings_file)
+            self._load_from_file(self._settings_file, self._settings)
+        # Sort out legacy parameters
+        self._legacy_settings = {}
+        for p in self._legacy_fallbacks:
+            legacy_param = self._legacy_fallbacks[p]
+            section, param = legacy_param.split(".")
+            if section not in self._legacy_settings:
+                self._legacy_settings[section] = {}
+            # Get the type from the current parameter definition
+            param_type = self._fetch_parameter_type(p)
+            self._legacy_settings[section][param] = param_type
+        if self._legacy_settings and self._settings_file:
+            # Load legacy settings into a separate object
+            self._legacy = GenericSettings(
+                self._legacy_settings,
+                settings_file=self._settings_file,
+                resolve_undefined=False)
+        else:
+            # No legacy settings
+            self._legacy = None
+        # Set defaults
+        if resolve_undefined:
+            self.resolve_undefined_params()
+
+    def __getitem__(self,section):
+        """
+        Implement __getitem__ to enable s[SECTION]
+        """
+        return getattr(self, self.section_name(section))
+
+    def __contains__(self, item):
+        """
+        Implement __contains__ to enable 'SECTION[:SUBSECTION][.NAME] in s'
+        """
+        # Break up item into section, subsection and name
+        section, subsection, name = self._split_parameter(item)
+        # Get the internal name for the section
+        section = self.section_name(section)
+        # Check for existence of item components
+        if section not in self._sections:
+            # Section not found
+            return False
+        s = getattr(self, section)
+        if subsection is not None:
+            if subsection not in getattr(self, section):
+                # Subsection not found
+                return False
+            s = getattr(self, section)[subsection]
+        if name is not None and name != self.nullvalue:
+            # Return existence or otherwise of attr
+            return name in s
+        else:
+            # All checks passed
+            return True
+
+    def _split_parameter(self, p):
+        """
+        Split paramter into section, subsection and name
+
+        Parameter should be of the form
+        ``SECTION[:SUBSECTION][.NAME]``.
+
+        Missing elements are returned as ``None``.
+
+        Arguments:
+          p (str): parameter to split
+
+        Returns:
+          Tuple: tuple of (SECTION, SUBSECTION, NAME).
+        """
+        try:
+            section, name = p.split('.')
+        except ValueError:
+            section = p
+            name = None
+        try:
+            section, subsection = section.split(':')
+        except ValueError:
+            subsection = None
+        return (section, subsection, name)
+
+    def set(self, param, value):
+        """
+        Update a configuration parameter value
+
+        NB parameters are referenced by the names that
+        appear in the config file (rather than the
+        internal representation within the Settings
+        instance).
+
+        Arguments:
+          param (str): an identifier of the form
+            SECTION[:SUBSECTION].NAME which specifies the
+            parameter to update
+          value (str): the new value of the parameter
+        """
+        section, subsection, name = self._split_parameter(param)
+        if subsection:
+            section = self.section_name(section)
+            getattr(self, section)[subsection][name] = value
+            logger.debug("set: %s:%s.%s -> %r" % (section,
+                                                  subsection,
+                                                  name,
+                                                  value))
+        else:
+            getattr(self, section)[name] = value
+            logger.debug("set: %s.%s -> %r" % (section,
+                                               name,
+                                               value))
+
+    def _create_sections(self, settings, sections=None):
+        """
+        Create the sections defined in the settings
+
+        Builds the initial (empty) structure with the values
+        for all parameters assigned to 'null'
+
+        Arguments:
+          settings (dict):mapping of section names to
+            dictionaries defining parameters names and
+            types
+        """
+        for param in settings:
+            section, subsection, name = self._split_parameter(param)
+            self._add_section(section)
+            if param == section:
+                for var in settings[param]:
+                    self[section][var] = self.nullvalue
+
+    def _add_section(self, section):
+        """
+        Add a new section
+
+        Arguments:
+          section (str): an identifier of the form
+            SECTION[:SUBSECTION] which specifies the
+            section to add
+        """
+        section, subsection, name = self._split_parameter(section)
+        if subsection:
+            section = self.section_name(section)
+            if section not in self._sections:
+                self._add_section(section)
+            if subsection not in self[section]:
+                getattr(self, section)[subsection] = AttributeDictionary()
+        else:
+            if section not in self._sections:
+                self._sections.append(section)
+                setattr(self, section, AttributeDictionary())
+            for alias in self._aliases:
+                # FIXME only needs to be done once when
+                # FIXME section is first added?
+                if section == self._aliases[alias]:
+                    setattr(self, alias, self[section])
+
+    def _load_from_file(self, settings_file, settings):
+        """
+        Load settings data from .ini file
+
+        Arguments:
+          settings_file (str): path to the .ini file
+          settings (dict):mapping of section names to
+            dictionaries defining parameters names and
+            types
+        """
+        logger.debug(f"Loading values from '{settings_file}'")
+        config = Config()
+        self.nullvalue = config.nullvalue
+        config.read(settings_file)
+        for name in settings:
+            logger.debug(f"- loading data for section '{name}'")
+            if name.endswith(":*"):
+                # Handle pseudo-sections e.g. [organism:human]
+                section = name.split(":")[0]
+                for conf in filter(lambda x: x.startswith(name[:-1]),
+                                   config.sections()):
+                    # Look up matching settings in the data file
+                    subsection = conf.split(":")[1]
+                    if subsection not in self[section]:
+                        # Add new subsection
+                        self[section][subsection] = AttributeDictionary()
+                    for var in settings[name]:
+                        # For all parameters defined in the settings
+                        # instance, look for matching values in the
+                        # configuration file
+                        type = settings[name][var]
+                        self[section][subsection][var] = self.update_value(
+                            config.get(conf, var), type)
+            else:
+                # Handle standard sections with no subsections
+                for var in settings[name]:
+                    # For all parameters defined in the settings
+                    # instance, look for matching values in the
+                    # configuration file
+                    logger.debug(f"-- locating data for parameter '{var}'")
+                    type = settings[name][var]
+                    if var != "*":
+                        logger.debug(f"-- setting '{name}.{var}'")
+                        self[name][var] = self.update_value(
+                            config.get(name, var), type)
+                    else:
+                        # Special case: new settings are added
+                        # for all parameters in the equivalent
+                        # section in the configuration file
+                        try:
+                            for param, value in config.items(name):
+                                getattr(self, name)[param] = \
+                                    self.update_value(value)
+                        except NoSectionError:
+                            logger.debug(f"{name}: no section in config file")
+
+    def has_subsections(self, section):
+        """
+        Check if section contains subsections
+
+        Arguments:
+          section (str): name of the section to check
+        """
+        for item in getattr(self, section):
+            if not isinstance(getattr(self, section)[item],
+                              AttributeDictionary):
+                return False
+        return True
+
+    def fetch_value(self, param):
+        """
+        Return the value stored against a parameter
+
+        NB parameters are referenced by the names that
+        appear in the config file (rather than the
+        internal representation within the Settings
+        instance).
+
+        Arguments:
+          param (str): parameter name of the form
+            SECTION[:SUBSECTION][.NAME]
+        """
+        # Break up param into section, subsection and attr
+        section, subsection, name = self._split_parameter(param)
+        # Get the internal name for the section
+        section = self.section_name(section)
+        if subsection is None:
+            s = getattr(self,section)
+        else:
+            s = getattr(self,section)[subsection]
+        return s[name]
+
+    def list_params(self,pattern=None,exclude_undefined=False):
+        """
+        Return (yield) all the stored parameters
+
+        NB parameters are referenced by the names that
+        appear in the config file (rather than the
+        internal representation within the Settings
+        instance).
+
+        Arguments:
+          pattern (str): optional glob-style pattern;
+            if supplied then only parameters matching
+            the pattern will be returned
+          exclude_undefined (bool): if True then only
+            undefined parameters (i.e. those with null
+            values) will be returned
+
+        Yields:
+          String: parameter names of the form
+            SECTION[:SUBSECTION][.NAME]
+        """
+        if pattern:
+            if '.' not in pattern:
+                pattern += '.*'
+        for section in self._sections:
+            if not self.has_subsections(section):
+                name = self.section_name(section)
+                values = getattr(self, section)
+                for v in values:
+                    param = "%s.%s" % (name, v)
+                    if pattern and not fnmatch(param, pattern):
+                        continue
+                    if exclude_undefined and \
+                       self.fetch_value(param) == self.nullvalue:
+                        continue
+                    else:
+                        yield param
+            else:
+                subsections = getattr(self, section)
+                for subsection in subsections:
+                    name = f"{self.section_name(section)}:{subsection}"
+                    values = getattr(self,section)[subsection]
+                    for v in values:
+                        param = "%s.%s" % (name, v)
+                        if pattern and not fnmatch(param,pattern):
+                            continue
+                        if exclude_undefined and \
+                           self.fetch_value(param) == self.nullvalue:
+                            continue
+                        else:
+                            yield param
+
+    def resolve_undefined_params(self):
+        """
+        Set non-null values for all parameters which are null
+
+        Resolution comprises the following stages:
+
+        - Legacy parameters: if a parameter is unset (i.e. null)
+          and has a "legacy" fallback defined, then it will be
+          set to the value of the legacy parameter;
+        - Fallback parameters: if a parameter is unset and
+          has a standard fallback defined, then it will be set
+          to the value of the fallback;
+        - Default paramaters: if a parameter is unset after the
+          fallbacks are exhausted but has a defined default, then
+          it will be set to the default value.
+
+        A final round of checking fallback parameters is then
+        performed, in cases fallbacks that were previously unset
+        have been assigned a default value.
+
+        Any parameters that are still undefined at this point
+        are then assigned the value of 'None'.
+        """
+        logger.debug(f"Resolving undefined values")
+        # Legacy fallback resolution
+        if self._legacy:
+            self._resolve_fallbacks(self._legacy_fallbacks,
+                                    self._legacy)
+        # Initial round of fallback resolution
+        self._resolve_fallbacks(self._fallbacks)
+        # Populate incomplete subsections
+        self._populate_subsections()
+        # Set defaults
+        self._resolve_defaults(self._defaults)
+        # Second round of fallback resolution
+        # (in case fallbacks which were previously unset
+        # are now set to their defaults)
+        self._resolve_fallbacks(self._fallbacks)
+        # Set remaining undefined parameters to 'None'
+        for param in self.list_params():
+            if self.fetch_value(param) == self.nullvalue:
+                logger.debug(f"Updating undefined parameter '{param}' "
+                             "to None")
+                self.set(param, None)
+        # Expand variables
+        for param in self._expand_vars:
+            value = self.fetch_value(param)
+            if value:
+                self.set(param,os.path.expandvars(value))
+
+    def _resolve_fallbacks(self, fallbacks, source_settings=None):
+        """
+        Set values for unset parameters to fallback values
+
+        Arguments:
+          fallbacks (dict): dictionary mapping parameters
+            to their fallbacks
+          source_settings (GenericSettings): source to get
+            fallback values from (default: self)
+        """
+        logger.debug("Resolving fallbacks")
+        if source_settings is None:
+            source_settings = self
+        logger.debug(f"Fallbacks: {fallbacks}")
+        logger.debug(f"Source settings: {list(source_settings.list_params())}")
+        for param in fallbacks:
+            fallback_param = fallbacks[param]
+            if not ("*" in fallback_param and
+                    "*" in param):
+                # Isn't a transformation, skip
+                continue
+            logger.debug(f"- fallback for '{param}' is '{fallback_param}'")
+            # Expand the wildcard to get a list of actual
+            # fallback parameters
+            for p in source_settings.list_params(fallback_param):
+                if "*" in p:
+                    # Ignore unexpanded wildcards
+                    # FIXME can this happen?
+                    continue
+                # Transform the fallback parameter into the
+                # actual parameter
+                transformed_param = self.transform_parameter(p,
+                                                             fallback_param,
+                                                             param)
+                logger.debug(f"- transformed '{p}' to '{transformed_param}'")
+                if transformed_param not in self or \
+                   self.fetch_value(transformed_param) == self.nullvalue:
+                    # Ensure the subsection is present
+                    section, subsection, name = self._split_parameter(
+                        transformed_param)
+                    self._add_section(f"{section}:{subsection}")
+                    # Add/update the parameter
+                    value = source_settings.fetch_value(p)
+                    self.set(transformed_param, value)
+                    logger.debug(
+                        f"- '{transformed_param}' now set to "
+                        f"'{self[self.section_name(section)][subsection][name]}'")
+        # Deal with standard fallbacks
+        fallback_params = {}
+        for param in fallbacks:
+            # Make expanded set of fallback params by resolving
+            # any wildcards
+            for p in self.list_params(param):
+                fallback_params[p] = fallbacks[param]
+        for param in fallback_params:
+            if param not in self or self.fetch_value(param) == self.nullvalue:
+                # Handle specific parameter
+                logger.debug(f"- checking fallbacks for {param}")
+                tried_params = set()
+                fallback_param = fallback_params[param]
+                while fallback_param and fallback_param not in tried_params:
+                    try:
+                        value = source_settings.fetch_value(fallback_param)
+                    except AttributeError:
+                        logger.warning(f"Fallback '{fallback_param}' not "
+                                       f"found")
+                        value = self.nullvalue
+                    if value != self.nullvalue:
+                        self.set(param, value)
+                        logger.debug(f"- '{param}' now set to "
+                                     f"'{self.fetch_value(param)}'")
+                        fallback_param = None
+                    elif fallback_param in fallback_params:
+                        tried_params.add(fallback_param)
+                        fallback_param = fallback_params[fallback_param]
+                    else:
+                        fallback_param = None
+
+    def _resolve_defaults(self, defaults):
+        """
+        Set values of unset parameters to their defaults
+
+        Arguments:
+          defaults (dict): dictionary mapping parameters
+            to their default values
+        """
+        for param in defaults:
+            for p in self.list_params(pattern=param):
+                if self.fetch_value(p) == self.nullvalue:
+                    default_value = defaults[param]
+                    logger.debug(f"updating '%s' with default value %r" %
+                                 (p, default_value))
+                    param_type = self._fetch_parameter_type(p)
+                    self.set(p, self.update_value(default_value,
+                                                  param_type))
+
+    def _populate_subsections(self):
+        """
+        Adds missing parameters to incomplete wildcard sections
+
+        Updates sections defined with wildcard subsections
+        (e.g. 'organism:*:...') by adding any missing
+        parameters.
+        """
+        # Fully populate wildcard sections
+        logger.debug("Populating incomplete wildcard sections")
+        for s in self._settings:
+            section, subsection, name = self._split_parameter(s)
+            if subsection == "*":
+                section = s.split(":")[0]
+                for name in self[section]:
+                    if name == "*":
+                        # Skip wildcard name
+                        continue
+                    for var in self._settings[f"{section}:*"]:
+                        if f"{section}:{name}.{var}" not in self:
+                            logger.debug(f"- adding missing "
+                                         f"{section}:{name}.{var}")
+                            self.set(f"{section}:{name}.{var}",
+                                     self.nullvalue)
+
+    def _fetch_parameter_type(self, param):
+        """
+        Fetch the type assigned to a parameter
+        """
+        section, subsection, name = self._split_parameter(param)
+        if subsection:
+            try:
+                return self._settings[f"{section}:{subsection}"][name]
+            except KeyError:
+                return self._settings[f"{section}:*"][name]
+        else:
+             return self._settings[section][name]
+
+    def save(self, out_file=None, exclude_undefined=True):
+        """
+        Save the current configuration to the config file
+
+        If no config file was specified on initialisation then
+        this method doesn't do anything.
+
+        Arguments:
+          out_file (str): specify output file (default:
+            overwrite initial config file)
+          exclude_undefined (bool): if True then parameters
+            with null values will not be written to the
+            output config file (default)
+        """
+        if not out_file:
+            out_file = self._settings_file
+        if out_file:
+            out_file = os.path.abspath(out_file)
+            config = Config()
+            # Output sections with defined parameters
+            for param in self.list_params(exclude_undefined=exclude_undefined):
+                section, subsection, name = self._split_parameter(param)
+                if name == "*":
+                    # Skip wild-card definitions
+                    continue
+                if subsection:
+                    section = f"{self.section_name(section)}:{subsection}"
+                else:
+                    section = self.section_name(section)
+                if not config.has_section(section):
+                    config.add_section(section)
+                value = self.fetch_value(param)
+                if exclude_undefined and value == self.nullvalue:
+                    continue
+                config.set(section, name, str(value))
+            # Ensure user-defined sections (i.e. '[section:name]')
+            # are output, even if they don't contain any defined
+            # parameters
+            for section in self._sections:
+                if self.has_subsections(section):
+                    for subsection in getattr(self, section):
+                        name = f"{self.section_name(section)}:{subsection}"
+                        if not config.has_section(name):
+                            config.add_section(name)
+            with open(out_file,'wt') as fp:
+                config.write(fp)
+        else:
+            logger.warning("No output file, nothing saved")
+
+    def report_settings(self, exclude_undefined=False):
+        """
+        Report the settings read from the config file
+
+        Arguments:
+          exclude_undefined (bool): if True then parameters
+            with null values will not be shown (default: show
+            all parameters)
+
+        Returns:
+          String: report of the settings.
+        """
+        if exclude_undefined:
+            exclude_value = self.nullvalue
+        else:
+            exclude_value = None
+        text = []
+        if self._settings_file:
+            text.append("Settings from %s" % self._settings_file)
+        else:
+            logger.warning("No settings file found, reporting built-in "
+                           "defaults")
+        for param in self.list_params(exclude_undefined=exclude_undefined):
+            section, subsection, name = self._split_parameter(param)
+            if subsection:
+                content = show_dictionary(
+                        getattr(self, section)[subsection],
+                        exclude_value=exclude_value)
+                if content:
+                    text.append(f"[{section}:{subsection}]")
+                    text.append(content)
+            else:
+                content = show_dictionary(
+                    getattr(self, section),
+                    exclude_value=exclude_value)
+                if content:
+                    text.append(f"[{section}]")
+                    text.append(content)
+        return '\n'.join(text)
+
+    def update_value(self, value, param_type=None):
+        """
+        Update raw value by stripping quotes and converting to type
+
+        'None' values are converted to "null"; other non-null
+        values will have any surrounding quotes removed and
+        then are converted to type.
+
+        Boolean values will also have 'yes' and 'True' converted
+        to True and 'no' and 'False' converted to False.
+
+        Arguments:
+          value (object): raw value
+          param_type (function): type conversion function
+        """
+        if value is None:
+            # Set None to null
+            value = self.nullvalue
+        elif value != self.nullvalue:
+            # Strip quotes
+            if str(value)[0] in ("\"'"):
+                if str(value)[0] == str(value)[-1]:
+                    value = str(value)[1:-1]
+            # Handle non-null values
+            if param_type is bool:
+                # Special handling of boolean types
+                if str(value).lower() in ("true", "yes"):
+                    value = True
+                elif str(value).lower() in ("false", "no"):
+                    value = False
+                else:
+                    raise TypeError(f"{value}: invalid value for boolean")
+            elif param_type:
+                # All other types
+                value = param_type(value)
+        return value
+
+    def section_name(self, name):
+        """
+        Return the internal name for a section
+        """
+        try:
+            return self._aliases[name]
+        except KeyError:
+            return name
+
+    def transform_parameter(self, param, source_pattern, target_pattern):
+        """
+        Transforms parameter by mapping from a source to a target pattern
+
+        Given a parameter, map this to another parameter using a
+        source pattern (e.g. ``section.*``) and a target pattern
+        (e.g. ``new_section:*.value``).
+
+        The value in the ``*`` wildcard position in the target is
+        replaced by that in the wildcard position from the source
+        (e.g. transforming ``section.name`` to
+        ``new_section:name.value``).
+
+        Arguments:
+          param (str): fully-qualified source paramter name to
+            transform
+          source_pattern (str): pattern for source parameter
+          target_pattern (str): pattern to use for transformation
+
+        Returns:
+           String: transformed parameter name.
+        """
+        # Break the parameter up into components
+        section, param = param.split(".")
+        try:
+            section, subsection = section.split(":")
+        except ValueError:
+            subsection = None
+        # Identify wildcard in source pattern
+        if ":*." in source_pattern:
+            # Matches subsection
+            sub = subsection
+        elif ".*" in source_pattern:
+            # Matches trailing parameter
+            sub = param
+        # Substitute wildcard into the target_pattern
+        section, param = target_pattern.split(".")
+        if ":*" in section:
+            section = section.split(":")[0]
+            return f"{section}:{sub}.{param}"
+        elif param == "*":
+            return f"{section}.{sub}"
+
 
 class Settings:
     """
