@@ -204,3 +204,10 @@ class TestNullValue(unittest.TestCase):
         NullValue: check __bool__
         """
         self.assertFalse(bool(NullValue()))
+
+    def test_nullvalue_is_empty(self):
+        """
+        NullValue: check if it's empty
+        """
+        if NullValue():
+            self.assertFail("should test as False")
