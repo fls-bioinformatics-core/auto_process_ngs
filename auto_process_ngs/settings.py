@@ -885,6 +885,7 @@ class Settings(GenericSettings):
                              "nprocessors_statistics": int },
                 "10xgenomics": { "cellranger_jobmode": str,
                                  "cellranger_maxjobs": int,
+                                 "cellranger_mempercore": int,
                                  "cellranger_jobinterval": int,
                                  "cellranger_localmem": int,
                                  "cellranger_localcores": int },
