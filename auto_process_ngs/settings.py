@@ -2214,3 +2214,20 @@ def show_dictionary(d,indent='   ',exclude_value=None,
                                    (d[key] if d[key] is not None
                                     else '<Not set>')))
     return '\n'.join(text)
+
+def jobrunner(runner):
+    """
+    Implement a 'type' function for JobRunner instances
+
+    Arguments:
+      runner (object): JobRunner instance or string
+        definition
+
+    Returns:
+      JobRunner: instance created from the supplied
+        definition.
+    """
+    if not isinstance(runner, BaseJobRunner):
+        return fetch_runner(runner)
+    else:
+        return runner
