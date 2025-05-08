@@ -669,22 +669,39 @@ class GenericSettings:
         else:
             logger.warning("No settings file found, reporting built-in "
                            "defaults")
+        reported = set()
         for param in self.list_params(exclude_undefined=exclude_undefined):
             section, subsection, name = self._split_parameter(param)
             if subsection:
+                # Handle subsection
+                sname = f"{section}:{subsection}"
+                if sname in reported:
+                    # Already reported, skip
+                    continue
+                # Generate content
                 content = show_dictionary(
                         getattr(self, section)[subsection],
                         exclude_value=exclude_value)
                 if content:
-                    text.append(f"[{section}:{subsection}]")
+                    text.append(f"[{sname}]")
                     text.append(content)
+                # Add to set of reported sections
+                reported.add(sname)
             else:
+                # Handle standard section
+                sname = f"{section}"
+                if sname in reported:
+                    # Already reported, skip
+                    continue
+                # Generate content
                 content = show_dictionary(
                     getattr(self, section),
                     exclude_value=exclude_value)
                 if content:
-                    text.append(f"[{section}]")
+                    text.append(f"[{sname}]")
                     text.append(content)
+                # Add to set of reported sections
+                reported.add(sname)
         return '\n'.join(text)
 
     def update_value(self, value, param_type=None):
@@ -777,7 +794,286 @@ class GenericSettings:
             return f"{section}.{sub}"
 
 
-class Settings:
+class Settings(GenericSettings):
+    """
+    Handle local settings for ``auto_process`` parameters
+
+    Defines a set of configuration parameters and provides
+    an interface for loading and accessing local settings
+    defined in an ``.ini`` file.
+
+    If a config file isn't explicitly specified then the
+    instance will will attempt to locate one by searching
+    various locations (as defined within the
+    ``locate_settings_file`` function) first using the
+    name ``auto_process.ini``, then with the legacy name
+    ``settings.ini``.
+
+    If a config file still cannot be found then the
+    parameters will be set to any default values defined
+    within the ``Settings`` class.
+
+    Arguments:
+      settings_file (str): optional, path to .ini file to
+        load parameters from
+      resolve_undefined (bool): if True (default) then
+        assign values to "null" parameters by checking
+        fallback parameters and default values
+    """
+
+    def __init__(self, settings_file=None, resolve_undefined=True):
+        GenericSettings.__init__(
+            self,
+            # Define the sections, parameters and types
+            settings = {
+                "general": { "default_runner": jobrunner,
+                             "max_concurrent_jobs": int,
+                             "max_cores": int,
+                             "max_batches": int,
+                             "poll_interval": float },
+                "modulefiles": {
+                    'make_fastqs': str,
+                    'bcl2fastq': str,
+                    'bcl_convert': str,
+                    'cellranger_mkfastq': str,
+                    'cellranger_atac_mkfastq': str,
+                    'cellranger_arc_mkfastq': str,
+                    'spaceranger_mkfastq': str,
+                    'run_qc': str,
+                    'publish_qc': str,
+                    'process_icell8': str,
+                    'fastqc': str,
+                    'fastq_screen': str,
+                    'fastq_strand': str,
+                    'cellranger': str,
+                    'report_qc': str,
+                    'cutadapt': str },
+                "conda": { "enable_conda": bool,
+                           "env_dir": str },
+                "bcl_conversion": { "bcl_converter": str,
+                                    "nprocessors": int,
+                                    "no_lane_splitting": bool,
+                                    "create_empty_fastqs": bool },
+                "qc": { "nprocessors": int,
+                        "fastq_screens": str,
+                        #"fastq_screen_subset": int,
+                        "fastq_subset_size": int,
+                        "split_undetermined_fastqs": bool,
+                        "use_legacy_screen_names": bool },
+                "screen:*": { "conf_file": str },
+                "organism:*": { "star_index": str,
+                                "bowtie_index": str,
+                                "cellranger_reference": str,
+                                "annotation_bed": str,
+                                "annotation_gtf": str,
+                                "cellranger_premrna_reference": str,
+                                "cellranger_atac_reference": str,
+                                "cellranger_arc_reference": str,
+                                "cellranger_probe_set": str },
+                "sequencer:*": { "platform": str,
+                                 "model": str },
+                "platform:*": {  "bcl_converter": str,
+                                 "nprocessors": int,
+                                 "no_lane_splitting": bool,
+                                 "create_empty_fastqs": bool },
+                "metadata": { "default_data_source": str },
+                "icell8" : { "aligner": str,
+                             "batch_size": int,
+                             "mammalian_conf_file": str,
+                             "contaminants_conf_file": str,
+                             "nprocessors_contaminant_filter": int,
+                             "nprocessors_statistics": int },
+                "10xgenomics": { "cellranger_jobmode": str,
+                                 "cellranger_maxjobs": int,
+                                 "cellranger_jobinterval": int,
+                                 "cellranger_localmem": int,
+                                 "cellranger_localcores": int },
+                "fastq_stats": { "nprocessors": int },
+                "runners": { 'barcode_analysis': jobrunner,
+                             'bcl2fastq': jobrunner,
+                             'bcl_convert': jobrunner,
+                             'cellranger': jobrunner,
+                             'cellranger_count': jobrunner,
+                             'cellranger_mkfastq': jobrunner,
+                             'cellranger_multi': jobrunner,
+                             'fastqc': jobrunner,
+                             'fastq_screen': jobrunner,
+                             'icell8': jobrunner,
+                             'icell8_contaminant_filter': jobrunner,
+                             'icell8_statistics': jobrunner,
+                             'icell8_report': jobrunner,
+                             'merge_fastqs': jobrunner,
+                             'picard': jobrunner,
+                             'publish_qc': jobrunner,
+                             'qc': jobrunner,
+                             'qualimap': jobrunner,
+                             'rseqc': jobrunner,
+                             'rsync': jobrunner,
+                             'star': jobrunner,
+                             'stats': jobrunner },
+                "archive": { "dirn": str,
+                             "log": str,
+                             "group": str,
+                             "chmod": str },
+                "qc_web_server": { "dirn": str,
+                                   "url": str,
+                                   "use_hierarchy": bool,
+                                   "exclude_zip_files": bool },
+                "reporting_templates": { "*": str },
+                "destination:*": { "directory": str,
+                                   "subdir": str,
+                                   "zip_fastqs": bool,
+                                   "max_zip_size": str,
+                                   "readme_template": str,
+                                   "url": str,
+                                   "include_downloader": bool,
+                                   "include_qc_report": bool,
+                                   "hard_links": bool }
+            },
+            # Aliases for sections
+            aliases = { "organisms": "organism",
+                        "screens": "screen",
+                        "sequencers": "sequencer" },
+            # Default values
+            defaults =  {
+                "general.default_runner": "SimpleJobRunner",
+                "general.max_concurrent_jobs": 12,
+                "general.poll_interval": 5,
+                "conda.enable_conda": False,
+                "bcl_conversion.bcl_converter": "bcl2fastq>=2.20",
+                "bcl_conversion.no_lane_splitting": False,
+                "bcl_conversion.create_empty_fastqs": False,
+                "destination:*.include_qc_report": False,
+                "destination:*.hard_links": False,
+                "destination:*.zip_fastqs": False,
+                "destination:*.include_downloader": False,
+                "icell8.batch_size": 5000000,
+                "qc.fastq_subset_size": 100000,
+                "qc.split_undetermined_fastqs": True,
+                "qc.use_legacy_screen_names": False,
+                "qc_web_server.use_hierarchy": False,
+                "qc_web_server.exclude_zip_files": False,
+                "10xgenomics.cellranger_jobmode": "local",
+                "10xgenomics.cellranger_maxjobs": 24,
+                "10xgenomics.cellranger_mempercore": 5,
+                "10xgenomics.cellranger_jobinterval": 100,
+                "10xgenomics.cellranger_localmem": 5,
+                "10xgenomics.cellranger_localcores": 1 },
+            # Fallbacks
+            fallbacks = {
+                "runners.*": "general.default_runner" },
+            # Legacy fallbacks
+            legacy = {
+                # Legacy bcl conversion parameters
+                "bcl_conversion.bcl_converter": "bcl2fastq.default_version",
+                "bcl_conversion.nprocessors": "bcl2fastq.nprocessors",
+                "bcl_conversion.no_lane_splitting":
+                "bcl2fastq.no_lane_splitting",
+                "bcl_conversion.create_empty_fastqs":
+                "bcl2fastq.create_empty_fastqs",
+                # Legacy module files
+                "modulefiles.fastqc": "modulefiles.illumina_qc",
+                "modulefiles.fastq_screen": "modulefiles.illumina_qc",
+                # Legacy platform settings
+                "platform:*.bcl_converter": "platform:*.bcl2fastq",
+                # Legacy QC subsetting
+                "qc.fastq_subset_size": "qc.fastq_screen_subset",
+                # Legacy organism-specific reference data
+                "organism:*.star_index": "fastq_strand_indexes.*",
+                "organism:*.cellranger_reference":
+                "10xgenomics_transcriptomes.*",
+                "organism:*.cellranger_premrna_reference":
+                "10xgenomics_premrna_references.*",
+                "organism:*.cellranger_atac_reference":
+                "10xgenomics_atac_genome_references.*",
+                "organism:*.cellranger_arc_reference":
+                "10xgenomics_multiome_references.*",
+                # Legacy sequencers
+                "sequencer:*.platform": "sequencers.*",
+                # Legacy runners
+                "runners.cellranger_mkfastq": "runners.cellranger",
+                "runners.cellranger_count": "runners.cellranger",
+                "runners.cellranger_multi": "runners.cellranger_count",
+                "runners.fastqc": "runners.qc",
+                "runners.fastq_screen": "runners.qc",
+                "runners.picard": "runners.qc",
+                "runners.qualimap": "runners.qc",
+                "runners.rseqc": "runners.qc",
+                "runners.star": "runners.qc" },
+            # Parameters where variables can be expanded
+            # e.g. $HOME/auto_process -> /home/user/auto_process
+            expand_vars = ["conda.env_dir"],
+            settings_file=self._find_config(settings_file),
+            resolve_undefined=resolve_undefined)
+        # Post-process
+        self._check_sequencer_platforms()
+        self._update_default_bcl_converter()
+        self._update_platform_bcl_converter()
+
+    def _find_config(self, settings_file=None):
+        """
+        Locate settings file to load values from
+
+        Arguments:
+          settings_file (str): if set then use this
+            as the settings file; otherwise attempt
+            locate a file by searching the default
+            locations
+        """
+        if settings_file is None:
+            # Look for default
+            settings_file = locate_settings_file(
+                name="auto_process.ini",
+                create_from_sample=False)
+            if settings_file is None:
+                # Fallback to old name
+                settings_file = locate_settings_file(
+                    name="settings.ini",
+                    create_from_sample=False)
+        return settings_file
+
+    def _check_sequencer_platforms(self):
+        """
+        Check 'platform' set for all defined sequencers
+
+        Raises ``Exception`` if any sequencer doesn't have
+        a defined ``platform`` parameter.
+        """
+        for sequencer in self.sequencers:
+            if not self.sequencers[sequencer].platform:
+                raise Exception(f"{sequencer}: platform not set")
+
+    def _update_default_bcl_converter(self):
+        """
+        Update default 'bcl_conversion.bcl_converter'
+
+        If the default BCL converter was set from a legacy
+        fallback then it will probably be of the form e.g.
+        ">=2.0". If so then the value will be updated to
+        prepend the value with ``bcl2fastq``.
+        """
+        default_bcl_converter = self.bcl_conversion.bcl_converter
+        if default_bcl_converter and default_bcl_converter[0] in ("><="):
+            self.set(f"bcl_conversion.bcl_converter",
+                     f"bcl2fastq{default_bcl_converter}")
+
+    def _update_platform_bcl_converter(self):
+        """
+        Update 'platform:*.bcl_converter' for legacy platforms
+
+        If the BCL converter for any platform was set from a
+        legacy fallback then it will probably be of the form
+        e.g. ">=2.0". If so then the value will be updated to
+        prepend the value with ``bcl2fastq``.
+        """
+        for platform in self.platform:
+            bcl_converter = self.platform[platform].bcl_converter
+            if bcl_converter and bcl_converter[0] in ("><="):
+                self.set(f"platform:{platform}.bcl_converter",
+                         f"bcl2fastq{bcl_converter}")
+
+
+class Settings_:
     """
     Load parameter values from an external config file
 
@@ -1886,11 +2182,14 @@ def fetch_reference_data(s,name):
     refdata = dict()
     for organism in s.organisms:
         data_item = s.organisms[organism][name]
+        print(f"fetch_reference_data: {organism}/{name} = {data_item}")
+        print("%r" % data_item)
         if data_item:
             refdata[organism] = data_item
     return refdata
 
-def show_dictionary(d,indent='   ',exclude_value=None):
+def show_dictionary(d,indent='   ',exclude_value=None,
+                    exclude_wildcards=True):
     """
     Print the contents of a dictionary
 
@@ -1899,9 +2198,14 @@ def show_dictionary(d,indent='   ',exclude_value=None):
       exclude_value (object): optional, if not 'None'
         then don't include entries which match this
         value
+      exclude_wildcards (bool): optional, if True
+        (default) then don't include keys which are
+        wildcards (i.e. "*")
     """
     text = []
     for key in d:
+        if exclude_wildcards and key == "*":
+            continue
         if exclude_value is not None and d[key] is exclude_value:
             continue
         text.append("%s%s = %s" % (indent,
