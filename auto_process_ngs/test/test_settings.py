@@ -11,6 +11,845 @@ from auto_process_ngs.settings import *
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
+class TestGenericSettings(unittest.TestCase):
+    """
+    Tests for the GenericSettings class core functionality
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestGenericSettings')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
+
+    def test_get_item(self):
+        """
+        GenericSettings: get_item fetches a value
+        """
+        sample_settings_file = os.path.join(get_config_dir(),
+                                            'auto_process.ini.sample')
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, }
+            },
+            settings_file = sample_settings_file
+        )
+        max_concurrent_jobs = s.general.max_concurrent_jobs
+        self.assertEqual(s['general'].max_concurrent_jobs,
+                         max_concurrent_jobs)
+
+    def test_contains(self):
+        """
+        GenericSettings: check for section using 'in'
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[general]
+max_concurrent_jobs = 12
+
+[organism:human]
+star_index = /data/hg38/star_index
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, },
+                "organism:*": { "star_index": str, },
+            },
+            settings_file=settings_file
+        )
+        # Check that sections are located
+        self.assertTrue("general" in s)
+        self.assertTrue("organism" in s)
+        # Check that section with subsection is located
+        self.assertTrue("organism:human" in s)
+        # Check that parameters can be located
+        self.assertTrue("general.max_concurrent_jobs" in s)
+        self.assertTrue("organism:human.star_index" in s)
+        # Check that missing sections, subsections and parameters
+        # are not located
+        self.assertFalse("missing" in s)
+        self.assertFalse("organism:missing" in s)
+        self.assertFalse("organism:human.missing" in s)
+
+    def test_set_item(self):
+        """
+        GenericSettings: 'set' updates a value
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'wt') as s:
+            s.write("""[general]
+max_concurrent_jobs = None
+
+[organism:human]
+star_index = missing
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, },
+                "organism:*": { "star_index": str, },
+            },
+            defaults = {
+                "general.max_concurrent_jobs": 8,
+            },
+            settings_file=settings_file
+        )
+        s.set("general.max_concurrent_jobs", 8)
+        self.assertEqual(s['general'].max_concurrent_jobs, 8)
+        s.set("organism:human.star_index","/data/hg38/star_index")
+        self.assertEqual(s['organism']['human']['star_index'],
+                         "/data/hg38/star_index")
+
+    def test_user_defined_subsections(self):
+        """
+        GenericSettings: handle user-defined [NAME:*] subsections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[destination:webserver]
+directory = /mnt/www/data
+subdir = random_bin
+readme_template = README.webserver.template
+url = https://our.data.com/data
+include_downloader = true
+include_qc_report = true
+hard_links = true
+
+[destination:local]
+directory = /mnt/shared
+subdir = run_id
+
+[destination:zips]
+directory = /mnt/www/zipped
+subdir = run_id
+zip_fastqs = true
+max_zip_size = 5G
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "destination:*": {
+                    "directory": str,
+                    "subdir": str,
+                    "url": str,
+                    "readme_template": str,
+                    "include_downloader": bool,
+                    "include_qc_report": bool,
+                    "hard_links": bool,
+                    "zip_fastqs": bool,
+                    "max_zip_size": str,
+                },
+            },
+            defaults = {
+                "destination:*.subdir": "run_id",
+                "destination:*.include_downloader": False,
+                "destination:*.include_qc_report": False,
+                "destination:*.hard_links": False,
+                "destination:*.zip_fastqs": False,
+            },
+            settings_file=settings_file
+        )
+        # Check destination settings
+        self.assertTrue('webserver' in s.destination)
+        self.assertEqual(s.destination['webserver']['directory'],
+                         '/mnt/www/data')
+        self.assertEqual(s.destination['webserver']['subdir'],'random_bin')
+        self.assertEqual(s.destination['webserver']['url'],
+                         'https://our.data.com/data')
+        self.assertEqual(s.destination['webserver']['readme_template'],
+                         'README.webserver.template')
+        self.assertEqual(s.destination['webserver']['include_downloader'],
+                         True)
+        self.assertEqual(s.destination['webserver']['include_qc_report'],
+                         True)
+        self.assertEqual(s.destination['webserver']['hard_links'],True)
+        self.assertEqual(s.destination['webserver']['zip_fastqs'],False)
+        self.assertEqual(s.destination['webserver']['max_zip_size'],None)
+        self.assertTrue('local' in s.destination)
+        self.assertEqual(s.destination['local']['directory'],'/mnt/shared')
+        self.assertEqual(s.destination['local']['subdir'],'run_id')
+        self.assertEqual(s.destination['local']['url'],None)
+        self.assertEqual(s.destination['local']['readme_template'],None)
+        self.assertEqual(s.destination['local']['include_downloader'],False)
+        self.assertEqual(s.destination['local']['include_qc_report'],False)
+        self.assertEqual(s.destination['local']['hard_links'],False)
+        self.assertEqual(s.destination['local']['zip_fastqs'],False)
+        self.assertEqual(s.destination['local']['max_zip_size'],None)
+        self.assertTrue('zips' in s.destination)
+        self.assertEqual(s.destination['zips']['directory'],'/mnt/www/zipped')
+        self.assertEqual(s.destination['zips']['subdir'],'run_id')
+        self.assertEqual(s.destination['zips']['url'],None)
+        self.assertEqual(s.destination['zips']['readme_template'],None)
+        self.assertEqual(s.destination['zips']['include_downloader'],False)
+        self.assertEqual(s.destination['zips']['include_qc_report'],False)
+        self.assertEqual(s.destination['zips']['hard_links'],False)
+        self.assertEqual(s.destination['zips']['zip_fastqs'],True)
+        self.assertEqual(s.destination['zips']['max_zip_size'],'5G')
+
+    def test_section_with_user_defined_parameters(self):
+        """
+        GenericSettings: section with user-defined parameters
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[sequencers]
+SN7001250 = hiseq
+NB10920 = nextseq
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "sequencers": { "*": str, },
+            },
+            settings_file=settings_file
+        )
+        # Check sequencer settings
+        self.assertTrue('SN7001250' in s.sequencers)
+        self.assertEqual(s.sequencers['SN7001250'], "hiseq")
+        self.assertTrue('NB10920' in s.sequencers)
+        self.assertEqual(s.sequencers['NB10920'], "nextseq")
+
+    def test_section_with_user_defined_parameters_preserve_case(self):
+        """
+        GenericSettings: section with user-defined parameters (preserves case)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[sequencers]
+sn7001250 = hiseq
+Nb10920 = nextseq
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "sequencers": { "*": str, },
+            },
+            settings_file=settings_file
+        )
+        # Check sequencer settings
+        self.assertTrue('sn7001250' in s.sequencers)
+        self.assertEqual(s.sequencers['sn7001250'], "hiseq")
+        self.assertTrue('Nb10920' in s.sequencers)
+        self.assertEqual(s.sequencers['Nb10920'], "nextseq")
+
+    def test_strip_quotes_from_values(self):
+        """
+        GenericSettings: strip quotes from values
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'wt') as s:
+            s.write("""[general]
+max_concurrent_jobs = '12'
+data_source = The "Bailey" Lab
+weird_quotes = "mismatched'
+
+[organism:human]
+star_index = "/data/hg38/star_index"
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "general": {
+                    "max_concurrent_jobs": int,
+                    "data_source": str,
+                    "weird_quotes": str, },
+                "organism:*": { "star_index": str, },
+            },
+            settings_file=settings_file
+        )
+        self.assertEqual(s['general'].max_concurrent_jobs, 12)
+        self.assertEqual(s['general'].data_source, "The \"Bailey\" Lab")
+        self.assertEqual(s['general'].weird_quotes, "\"mismatched'")
+        self.assertEqual(s['organism']['human']['star_index'],
+                         "/data/hg38/star_index")
+
+    def test_section_aliases(self):
+        """
+        GenericSettings: aliases for sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[general]
+max_jobs = 24
+
+[sequencer:SN7001250]
+platform = hiseq
+
+[sequencer:NB110920]
+platform = nextseq
+""")
+        # Load settings (no aliases)
+        s = GenericSettings(
+            settings = {
+                "general": {
+                    "max_jobs": int, },
+                "sequencer:*": {
+                    "platform": str, },
+            },
+            settings_file=settings_file
+        )
+        self.assertEqual(s.general.max_jobs, 24)
+        self.assertEqual(s.sequencer["SN7001250"].platform, "hiseq")
+        self.assertEqual(s.sequencer["NB110920"].platform, "nextseq")
+        self.assertFalse("generic" in s)
+        self.assertFalse("sequencers" in s)
+        # Load settings and use aliases
+        s = GenericSettings(
+            settings = {
+                "general": {
+                    "max_jobs": int, },
+                "sequencer:*": {
+                    "platform": str, },
+            },
+            aliases = {
+                "generic": "general",
+                "sequencers": "sequencer",
+            },
+            settings_file=settings_file
+        )
+        self.assertTrue("generic" in s)
+        self.assertTrue("sequencers" in s)
+        self.assertEqual(s.generic.max_jobs, 24)
+        self.assertEqual(s.sequencers["SN7001250"].platform, "hiseq")
+        self.assertEqual(s.sequencers["NB110920"].platform, "nextseq")
+
+    def test_save_raw_settings_to_file(self):
+        """
+        GenericSettings: save "raw" settings to file
+        """
+        # Settings content
+        content = """[general]
+max_concurrent_jobs = 12
+poll_interval = 5.0
+
+[modulefiles]
+bcl2fastq = apps/bcl2fastq/2.20.0.422
+cellranger = apps/cellranger/6.1.2
+
+[organism:human]
+star_index = /data/indexes/hg38
+
+[organism:mouse]
+star_index = /data/indexes/mm10
+
+[sequencer:A01234]
+platform = novaseq6000
+model = NovaSeq 6000
+
+[sequencer:NB543201]
+platform = nextseq
+model = NextSeq 500
+"""
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'wt') as s:
+            s.write(content)        # Load settings
+        s = GenericSettings(
+            settings = {
+                "general": {
+                    "max_concurrent_jobs": int,
+                    "poll_interval": float,
+                },
+                "modulefiles": {
+                    "bcl2fastq": str,
+                    "cellranger": str,
+                    "illumina_qc": str,
+                },
+                "organism:*": {
+                    "star_index": str,
+                    "bowtie_index": str,
+                    "cellranger_refdata": str,
+                },
+                "sequencer:*": {
+                    "platform": str,
+                    "model": str,
+                }
+            },
+            settings_file=settings_file,
+            resolve_undefined=False)
+        # Save to new file
+        raw_settings_file = os.path.join(self.dirn, "raw_settings.ini")
+        s.save(out_file=raw_settings_file)
+        self.assertTrue(os.path.exists(raw_settings_file))
+        # Compare with original
+        with open(settings_file, "rt") as fp:
+            print(fp.read())
+        with open(raw_settings_file, "rt") as fp:
+            print(fp.read())
+        self.assertEqual(open(settings_file,'rt').read().rstrip(),
+                         open(raw_settings_file,'rt').read().rstrip())
+
+    def test_report_settings(self):
+        """
+        GenericSettings: check 'report_settings'
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'wt') as s:
+            s.write("""[general]
+max_concurrent_jobs = None
+
+[organism:human]
+star_index = missing
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, },
+                "organism:*": { "star_index": str, },
+            },
+            defaults = {
+                "general.max_concurrent_jobs": 8,
+            },
+            settings_file=settings_file
+        )
+        self.assertEqual(s.report_settings(),
+                         f"""Settings from {settings_file}
+[general]
+   max_concurrent_jobs = 8
+[organism:human]
+   star_index = missing""")
+
+    def test_report_settings_exclude_undefined(self):
+        """
+        GenericSettings: check 'report_settings' (exclude undefined parameters)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'wt') as s:
+            s.write("""[general]
+max_concurrent_jobs = None
+
+[organism:human]
+star_index = missing
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, },
+                "organism:*": { "star_index": str, },
+            },
+            # No defaults
+            settings_file=settings_file
+        )
+        self.assertEqual(s.report_settings(exclude_undefined=True),
+                         f"""Settings from {settings_file}
+[general]
+   max_concurrent_jobs = <Not set>
+[organism:human]
+   star_index = missing""")
+
+    def test_report_settings_no_settings_file(self):
+        """
+        GenericSettings: check 'report_settings' (no settings file)
+        """
+        # Default settings only
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, },
+                "organism:*": { "star_index": str, },
+            },
+            defaults = {
+                "general.max_concurrent_jobs": 8,
+            }
+        )
+        self.assertEqual(s.report_settings(),
+                         """[general]
+   max_concurrent_jobs = 8""")
+
+
+class TestGenericSettingsResolveUndefined(unittest.TestCase):
+    """
+    Tests for the GenericSettings class resolving undefined parameters
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestGenericSettings')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
+
+    def test_defaults(self):
+        """
+        GenericSettings: default values
+        """
+        # Create simple settings instance
+        s = GenericSettings(
+            settings = {
+                "general": { "max_jobs": int,
+                             "poll_interval": float },
+                "conda": { "enable_conda": bool,
+                           "env_dir": str },
+                "sequencer:*": { "platform": str },
+            },
+            defaults = {
+                "general.max_jobs": 12,
+                "general.poll_interval": 0.5,
+                "conda.enable_conda": False
+            }
+        )
+        # Check defaults
+        self.assertEqual(s.general.max_jobs, 12)
+        self.assertEqual(s.general.poll_interval, 0.5)
+        self.assertFalse(s.conda.enable_conda)
+        self.assertEqual(s.conda.env_dir, None)
+        self.assertTrue(not s.sequencer)
+
+    def test_defaults_with_wildcard(self):
+        """
+        GenericSettings: default values using wildcard
+        """
+        # Create simple settings instance
+        s = GenericSettings(
+            settings = {
+                "general": { "max_jobs": int,
+                             "poll_interval": float },
+                "conda": { "enable_conda": bool,
+                           "env_dir": str },
+                "runners": { "bcl2fastq": str,
+                             "fastqc": str,
+                             "fastq_screen": str },
+            },
+            defaults = {
+                "general.max_jobs": 12,
+                "general.poll_interval": 0.5,
+                "conda.enable_conda": False,
+                "runners.*": "SimpleJobRunner",
+            }
+        )
+        # Check defaults
+        self.assertEqual(s.general.max_jobs, 12)
+        self.assertEqual(s.general.poll_interval, 0.5)
+        self.assertFalse(s.conda.enable_conda)
+        self.assertEqual(s.conda.env_dir, None)
+        self.assertEqual(s.runners.bcl2fastq, "SimpleJobRunner")
+        self.assertEqual(s.runners.fastqc, "SimpleJobRunner")
+        self.assertEqual(s.runners.fastq_screen, "SimpleJobRunner")
+
+    def test_dont_resolve_undefined_values(self):
+        """
+        GenericSettings: disable resolution of undefined values
+        """
+        # Create simple settings instance
+        s = GenericSettings(
+            settings = {
+                "general": { "max_jobs": int,
+                             "poll_interval": float },
+                "conda": { "enable_conda": bool,
+                           "env_dir": str },
+                "sequencer:*": { "platform": str },
+            },
+            defaults = {
+                "general.max_jobs": 12,
+                "general.poll_interval": 0.5,
+                "conda.enable_conda": False
+            },
+            resolve_undefined=False
+        )
+        # Check defaults weren't applied
+        self.assertEqual(s.general.max_jobs, s.nullvalue)
+        self.assertEqual(s.general.poll_interval, s.nullvalue)
+        self.assertEqual(s.conda.enable_conda, s.nullvalue)
+        self.assertEqual(s.conda.env_dir, s.nullvalue)
+        self.assertTrue(not s.sequencer)
+
+    def test_use_fallback_for_unset_parameter(self):
+        """
+        GenericSettings: use fallback for unset parameter
+        """
+        # Settings file with fallback defined
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file, "wt") as s:
+            s.write("""[general]
+num_cpus = 24
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "general": {
+                    "num_cpus": int,
+                },
+                "processing": {
+                    "num_cpus": int,
+                }
+            },
+            fallbacks = {
+                "processing.num_cpus": "general.num_cpus",
+            },
+            defaults = {
+                "general.num_cpus": 12,
+            },
+            settings_file = settings_file
+        )
+        # Check resolved values
+        self.assertEqual(s.general.num_cpus, 24)
+        self.assertEqual(s.processing.num_cpus, 24)
+
+    def test_use_fallback_to_default(self):
+        """
+        GenericSettings: fallback to unset parameter with default
+        """
+        # Settings with fallback to an unset parameter
+        # which has a default
+        s = GenericSettings(
+            settings = {
+                "general": {
+                    "num_cpus": int,
+                },
+                "processing": {
+                    "num_cpus": int,
+                }
+            },
+            fallbacks = {
+                "processing.num_cpus": "general.num_cpus",
+            },
+            defaults = {
+                "general.num_cpus": 12,
+            }
+        )
+        # Check resolved values
+        self.assertEqual(s.general.num_cpus, 12)
+        self.assertEqual(s.processing.num_cpus, 12)
+
+    def test_use_fallback_with_wildcard(self):
+        """
+        GenericSettings: use fallback with wildcard
+        """
+        # Settings file with fallback defined
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file, "wt") as s:
+            s.write("""[general]
+default_runner = SimpleJobRunner
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "general": {
+                    "default_runner": str
+                },
+                "runners": {
+                    "bcl2fastq": str,
+                    "fastqc": str,
+                    "fastq_screen": str
+                }
+            },
+            fallbacks = {
+                "runners.*": "general.default_runner"
+            },
+            settings_file=settings_file
+        )
+        # Check fallback value is used instead of default
+        self.assertEqual(s.general.default_runner, "SimpleJobRunner")
+        self.assertEqual(s.runners.bcl2fastq, "SimpleJobRunner")
+        self.assertEqual(s.runners.fastqc, "SimpleJobRunner")
+        self.assertEqual(s.runners.fastq_screen, "SimpleJobRunner")
+        # Settings file without fallback
+        s = GenericSettings(
+            settings = {
+                "general": {
+                    "default_runner": str
+                },
+                "runners": {
+                    "bcl2fastq": str,
+                    "fastqc": str,
+                    "fastq_screen": str
+                }
+            },
+            defaults = {
+                "general.default_runner": "SimpleJobRunner"
+            },
+            settings_file=settings_file
+        )
+        # Check default value is used instead of fallback
+        self.assertEqual(s.general.default_runner, "SimpleJobRunner")
+        self.assertEqual(s.runners.bcl2fastq, None)
+        self.assertEqual(s.runners.fastqc, None)
+        self.assertEqual(s.runners.fastq_screen, None)
+
+
+class TestGenericSettingsLegacyFallbacks(unittest.TestCase):
+    """
+    Tests for the GenericSettings class handling legacy fallbacks
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestGenericSettings')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
+
+    def test_use_legacy_fallback_for_unset_parameter(self):
+        """
+        GenericSettings: use legacy fallback for unset parameter
+        """
+        # Settings file with legacy fallback defined
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file, "wt") as s:
+            s.write("""[legacy]
+ncores = 12
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "processing": {
+                    "num_cpus": int,
+                }
+            },
+            legacy = {
+                "processing.num_cpus": "legacy.ncores",
+            },
+            defaults = {
+                "processing.num_cpus": 24,
+            },
+            settings_file=settings_file
+        )
+        # Check fallback value is used instead of default
+        self.assertEqual(s.processing.num_cpus, 12)
+        # Settings without source file (so fallback not set)
+        s = GenericSettings(
+            settings = {
+                "processing": {
+                    "num_cpus": int,
+                }
+            },
+            legacy = {
+                "processing.num_cpus": "legacy.ncores",
+            },
+            defaults = {
+                "processing.num_cpus": 24,
+            }
+        )
+        # Check default value is used instead of fallback
+        self.assertEqual(s.processing.num_cpus, 24)
+
+    def test_use_legacy_fallback_with_wildcards(self):
+        """
+        GenericSettings: use legacy fallback with wildcards
+        """
+        # Settings file with legacy fallback defined
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file, "wt") as s:
+            s.write("""[fasta_files]
+human = /data/hg19.fasta
+mouse = /data/mm10.fasta
+
+[star_indexes]
+mouse = /data/mm10_star_index
+fly = /data/dm6_star_index
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "organism:*": {
+                    "fasta": str,
+                    "star_index": str,
+                }
+            },
+            legacy = {
+                "organism:*.fasta": "fasta_files.*",
+                "organism:*.star_index": "star_indexes.*"
+            },
+            settings_file=settings_file
+        )
+        # Check fallbacks have been transformed to correct values
+        self.assertEqual(s.organism["human"].fasta, "/data/hg19.fasta")
+        self.assertEqual(s.organism["mouse"].fasta, "/data/mm10.fasta")
+        self.assertEqual(s.organism["mouse"].star_index,
+                         "/data/mm10_star_index")
+        self.assertEqual(s.organism["fly"].star_index,
+                         "/data/dm6_star_index")
+
+    def test_use_legacy_fallback_with_wildcards_and_aliases(self):
+        """
+        GenericSettings: use legacy fallback with wildcards and aliases
+        """
+        # Settings file with legacy fallback defined
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file, "wt") as s:
+            s.write("""[fasta_files]
+human = /data/hg19.fasta
+mouse = /data/mm10.fasta
+
+[star_indexes]
+mouse = /data/mm10_star_index
+fly = /data/dm6_star_index
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "organism:*": {
+                    "fasta": str,
+                    "star_index": str,
+                }
+            },
+            aliases = {
+                "organisms": "organism"
+            },
+            legacy = {
+                "organism:*.fasta": "fasta_files.*",
+                "organism:*.star_index": "star_indexes.*"
+            },
+            settings_file=settings_file
+        )
+        # Check fallbacks have been transformed to correct values
+        self.assertEqual(s.organisms["human"].fasta, "/data/hg19.fasta")
+        self.assertEqual(s.organisms["mouse"].fasta, "/data/mm10.fasta")
+        self.assertEqual(s.organisms["mouse"].star_index,
+                         "/data/mm10_star_index")
+        self.assertEqual(s.organisms["fly"].star_index,
+                         "/data/dm6_star_index")
+
+
+class TestGenericSettingsExpandVars(unittest.TestCase):
+    """
+    Tests for the GenericSettings class expanding env variables
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestGenericSettings')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
+
+    def test_expand_environment_variables(self):
+        """
+        GenericSettings: check environment variables are expanded
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[conda]
+env_dir = /scratch/$USER/conda_envs
+""")
+        # Load settings
+        s = GenericSettings(
+            settings = {
+                "conda": { "env_dir": str, },
+            },
+            expand_vars = [ "conda.env_dir" ],
+            settings_file=settings_file)
+        # Check conda settings
+        self.assertEqual(s.conda.env_dir,os.path.join("/scratch",
+                                                      os.environ['USER'],
+                                                      "conda_envs"))
+
+
 class TestSettings(unittest.TestCase):
     """Tests for the Settings class
     """
