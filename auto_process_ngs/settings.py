@@ -1,53 +1,167 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2025 Peter Briggs
 #
-#########################################################################
-#
-# settings.py
-#
-#########################################################################
 
 """
-Classes and functions for handling the collection of configuration settings
-for automated processing.
+Classes and functions for handling the collection of configuration
+settings for automated processing from 'ini'-style files.
 
-The settings are stored in a '.ini'-formatted file (by default called
-'auto_process.ini'; this file can be created by making a copy of the
-'auto_process.ini.sample' file).
+The core class is called ``GenericSettings`` and provides the base
+functionality for defining and handling arbitrary configuration files.
+This should be subclassed to handle specific configurations, by
+defining parameters in different sections along with their types and
+default values (as required).
+
+For example, a simple ``.ini`` file could look like:
+
+::
+
+    [general]
+    max_cores = 12
+    #max_jobs = 24
+    #poll_interval = 0.5
+
+A simple settings subclass to handle this might look like:
+
+::
+
+    class SimpleSettings(GenericSettings):
+        def __init__(self, settings_file):
+            GenericSettings.__init__(
+                self,
+                settings = {
+                    "general": { "max_cores": int,
+                                 "max_jobs": int,
+                                 "poll_interval": float },
+                },
+                defaults = {
+                    "general.max_cores": 8,
+                    "general.max_jobs": 24,
+                    "general.poll_interval": 0.5 },
+                settings_file = settings_file)
+
+The values of the parameters can then be accessed either via a chain
+of attributes, for example:
+
+>>> s.general.max_cores
+12
+
+or via keys, for example:
+
+>>> s["general"]["max_cores"]
+12
+
+To update values programmatically after they have been set, use the
+``set`` method with the fully-qualified parameter name, for example:
+
+>>> s.set("general.max_cores", 8)
+
+To print the values of all parameters use the ``report_settings``
+method:
+
+>>> s.report_settings()
+
+and to write the settings back to file use the ``save`` method:
+
+>>> s.save()
+
+More advanced configuration settings can also be defined, including
+named and user-defined subsections, and user-defined parameters.
+
+Named subsections, for example:
+
+::
+
+    [general:cores]
+    max_cores = 12
+
+    [general:jobs]
+    #max_jobs = 24
+    #poll_interval = 0.5
+
+could be handled using by:
+
+::
+
+    class SimpleSettings(GenericSettings):
+        def __init__(self, settings_file):
+            GenericSettings.__init__(
+                self,
+                settings = {
+                    "general:cores": { "max_cores": int },
+                    "general:jobs": { "max_jobs": int,
+                                      "poll_interval": float },
+                },
+                defaults = {
+                    "general:cores.max_cores": 8,
+                    "general:jobs.max_jobs": 24,
+                    "general:jobs.poll_interval": 0.5 },
+                settings_file = settings_file)
+
+User-defined subsections can be managed using a wild card for the
+section name, for example:
+
+::
+
+    [organism:human]
+    fasta = /data/hg38.fasta
+
+    [organism:mouse]
+    fasta = /data/mm10.fasta
+
+could be handled by:
+
+::
+
+    class SimpleSettings(GenericSettings):
+        def __init__(self, settings_file):
+            GenericSettings.__init__(
+                self,
+                settings = {
+                    "organism:*": { "fasta": str },
+                },
+                settings_file = settings_file)
+
+Alternatively a section can include user-defined parameters in a
+similar way:
+
+::
+
+    [templates]
+    default = "a,b,c"
+    mine = "d,e,f"
+
+::
+
+    class SimpleSettings(GenericSettings):
+        def __init__(self, settings_file):
+            GenericSettings.__init__(
+                self,
+                settings = {
+                    "templates": { "*": str },
+                },
+                settings_file = settings_file)
+
+Optionally it is also possible to specify "fallbacks" (parameters
+from which other unassigned parameters should take their values)
+and legacy parameters (deprecated parameters which can be used to
+supply values to other paramters, as a mechanism for backwards
+compatibility).
+
+The ``Settings`` class is built using the ``GenericSettings`` class
+specifically to handle the ``auto_process.ini`` configuration file
+(by default called 'auto_process.ini').
 
 The simplest usage example is:
 
 >>> from settings import Settings
 >>> s = Settings()
 
-The values of the configuration parameters can then be accessed using
-e.g.
-
->>> s.general.max_concurrent_jobs
-4
-
-To print the values of all parameters use
-
->>> s.report_settings()
-
-To import values from a non-standard named file use e.g.
-
->>> s = Settings('my_auto_process.ini')
-
 The 'locate_settings_file' function is used implicitly to locate the
-settings file if none is given; it can also automatically create a settings
-file if none is found but there is a sample version on the search path.
-
-To update values once the settings have been read in do e.g.
-
->>> s.set('general.max_concurrent_jobs',4)
-
-To update the configuration file use the save method e.g.
-
->>> s.save()
-
+settings file if none is given; it can also automatically create a
+settings file if none is found.
 """
 
 #######################################################################
