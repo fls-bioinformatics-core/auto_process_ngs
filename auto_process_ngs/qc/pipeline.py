@@ -1877,9 +1877,8 @@ class RunMultiQC(PipelineTask):
         # MultiQC report file
         project = self.args.project
         qc_base = os.path.basename(self.args.qc_dir)
-        self.multiqc_report = os.path.join(project.dirn,
-                                           "multi%s_report.html" %
-                                           qc_base)
+        self.multiqc_report = os.path.join(os.path.dirname(self.args.qc_dir),
+                                           f"multi{qc_base}_report.html")
         # Report title
         if project.info.run is None:
             title = "%s" % project.name
@@ -1889,13 +1888,14 @@ class RunMultiQC(PipelineTask):
         if self.args.fastq_dir is not None:
             title = "%s (%s)" % (title,self.args.fastq_dir)
         # Add the command
+        multiqc_cmd = Command("multiqc",
+                              "--title",title,
+                              "--filename",self.multiqc_report,
+                              "--force",
+                              self.args.qc_dir)
         self.add_cmd(PipelineCommandWrapper(
             "Run MultiQC",
-            "multiqc",
-            "--title",title,
-            "--filename",self.multiqc_report,
-            "--force",
-            self.args.qc_dir))
+            *multiqc_cmd.command_line))
     def finish(self):
         # Check report was generated
         if not os.path.exists(self.multiqc_report):
@@ -1947,7 +1947,8 @@ class ReportQC(PipelineTask):
         else:
             out_file = self.args.report_html
         if not os.path.isabs(out_file):
-            out_file = os.path.join(project.dirn,out_file)
+            out_file = os.path.join(os.path.dirname(self.args.qc_dir),
+                                    out_file)
         if project.info.run is None:
             title = "%s" % project.name
         else:
