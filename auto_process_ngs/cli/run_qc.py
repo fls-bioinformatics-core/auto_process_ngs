@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/run_qc.py: command line interface for standalone QC pipeline
-#     Copyright (C) University of Manchester 2017-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2025 Peter Briggs
 #
 #########################################################################
 #
@@ -957,13 +957,15 @@ def main():
     qc_info_file = os.path.join(qc_dir,"qc.info")
 
     # Output file name
-    if args.filename is None:
-        out_file = "%s_report.html" % os.path.basename(qc_dir)
-    else:
+    if args.filename:
+        # Handle setting output report name explicitly
         out_file = args.filename
-    if not os.path.isabs(out_file):
-        out_file = os.path.join(out_dir,out_file)
-    print("Output report: %s" % out_file)
+        if not os.path.isabs(out_file):
+            out_file = os.path.join(out_dir, out_file)
+        print("Output report: %s" % out_file)
+    else:
+        # Use the defaults
+        out_file = None
 
     # Build and populate a temporary project directory
     announce("Building temporary project directory")

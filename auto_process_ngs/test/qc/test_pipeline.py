@@ -695,6 +695,71 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                                         "PJB",f)),
                             "Missing %s" % f)
 
+    def test_qcpipeline_reporting_only_with_multiqc_no_qc_modules_custom_out_dir(self):
+        """
+        QCPipeline: reporting only (no QC modules, include MultiQC, custom out dir)
+        """
+        # Make mock QC executables
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Custom output dirs
+        out_dir = os.path.join(self.wd, "custom")
+        os.mkdir(out_dir)
+        qc_dir = os.path.join(out_dir, "qc")
+        # QC protocol
+        protocol = QCProtocol(name="no_qc_modules",
+                              description="No QC modules",
+                              seq_data_reads=['r1','r2',],
+                              index_reads=None,
+                              qc_modules=())
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          protocol,
+                          qc_dir=qc_dir,
+                          multiqc=True)
+        status = runqc.run(poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(os.path.join(qc_dir, "qc.info"))
+        self.assertEqual(qc_info.protocol,"no_qc_modules")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(protocol))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fastq.gz,"
+                         "PJB1_S1_R2_001.fastq.gz,"
+                         "PJB2_S2_R1_001.fastq.gz,"
+                         "PJB2_S2_R2_001.fastq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.star_index,None)
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,None)
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        self.assertEqual(qc_info.cellranger_probeset,None)
+        # Check reports
+        for f in ("qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(out_dir, f)),
+                            "Missing %s" % f)
+
     def test_qcpipeline_verify_fastqs_with_valid_fastqs(self):
         """
         QCPipeline: verify Fastqs with valid files
