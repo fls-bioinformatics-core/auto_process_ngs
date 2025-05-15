@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq/utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2025 Peter Briggs
 #
 ########################################################################
 #
@@ -437,7 +437,8 @@ def get_required_samplesheet_format(bcl2fastq_version):
         raise NotImplementedError('unknown version: %s' %
                                   bcl2fastq_version)
 
-def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
+def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
+                   i1=None,i2=None):
     """
     Get bases mask string
 
@@ -446,12 +447,20 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
     which are index reads), and optionally updates this using the
     barcode information in the sample sheet file.
 
+    The lengths of the read and index sequences can also be set
+    explicitly via the appropriate options. (If the index sequence
+    length is explicitly set then they will not be modified from
+    the indexes which appear in the sample sheet, even if one was
+    supplied.)
+
     Arguments:
       run_info_xml: name and path of RunInfo.xml file from the
         sequencing run
       sample_sheet_file: (optional) path to sample sheet file
       r1 (int): length to truncate R1 reads to
       r2 (int): length to truncate R2 reads to
+      i1 (int): length to truncate I1 index sequences to
+      i2 (int): length to truncate I2 index sequences to
 
     Returns:
       Bases mask string e.g. 'y101,I6'.
@@ -460,27 +469,42 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
     bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
     print("Bases mask: %s (from RunInfo.xml)" % bases_mask)
     # Truncate reads if specified
-    if not (r1 is None and r2 is None):
+    if not (r1 is None and r2 is None and i1 is None and i2 is None) :
         lengths = (r1,r2)
         reads = []
         read_number = 0
+        index_lengths = (i1,i2)
+        indices = []
+        index_number = 0
         for read in bases_mask.split(','):
             if read.upper().startswith('I'):
-                # Ignore index reads
-                reads.append(read)
-                continue
-            read_number += 1
-            rlen = lengths[read_number-1]
-            if rlen is not None:
-                # Truncated length specified
-                read_length = int(read[1:])
-                if rlen < read_length:
-                    new_read = "y%dn%d" % (rlen,read_length-rlen)
+                # Handle index read
+                index_number += 1
+                ilen = index_lengths[index_number-1]
+                if ilen is not None:
+                    # Truncated length specified
+                    read_length = int(read[1:])
+                    if ilen < read_length:
+                        new_read = "I%dn%d" % (ilen,read_length-ilen)
+                    else:
+                        new_read = read
+                    reads.append(new_read)
                 else:
-                    new_read = read
-                reads.append(new_read)
+                    reads.append(read)
             else:
-                reads.append(read)
+                # Handle non-index read
+                read_number += 1
+                rlen = lengths[read_number-1]
+                if rlen is not None:
+                    # Truncated length specified
+                    read_length = int(read[1:])
+                    if rlen < read_length:
+                        new_read = "y%dn%d" % (rlen,read_length-rlen)
+                    else:
+                        new_read = read
+                    reads.append(new_read)
+                else:
+                    reads.append(read)
         bases_mask = ','.join(reads)
         print("Bases mask: %s (updated to truncate reads)" % bases_mask)
     # Update bases mask from sample sheet if supplied
@@ -491,11 +515,12 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None):
             example_barcode = ""
         if barcode_is_10xgenomics(example_barcode):
             print("Bases mask: barcode is 10xGenomics sample set ID")
-        else:
+        elif (i1 is None and i2 is None):
+            # Update the index masking from the sample sheet
             bases_mask = IlluminaData.fix_bases_mask(bases_mask,
                                                      example_barcode)
-        print("Bases mask: %s (updated for barcode sequence '%s')" %
-              (bases_mask,example_barcode))
+            print("Bases mask: %s (updated for barcode sequence '%s')" %
+                  (bases_mask,example_barcode))
     return bases_mask
 
 def bases_mask_is_valid(bases_mask):

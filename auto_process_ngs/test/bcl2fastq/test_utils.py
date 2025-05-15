@@ -1292,6 +1292,136 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,i
         self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
                          "y101,nnnnnnnn,nnnnnnnn,y101")
 
+    def test_get_bases_mask_single_index_truncate_index_reads(self):
+        """get_bases_mask: handle single index (truncate index reads)
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y76,I10,y76", 4, 12))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTAATTC,AB,
+AB2,AB2,,,D702,ATTCAGCGTG,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask (no truncation)
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet),
+                         "y76,I10,y76")
+        # Truncate I1 index
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet, i1=8),
+                         "y76,I8n2,y76")
+        # Truncate R1, R2 and I1 index
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet, i1=8,
+                                        r1=40, r2=50),
+                         "y40n36,I8n2,y50n26")
+        # "Truncate" I1 index to same length as actual sequence
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i1=10),
+                         "y76,I10,y76")
+        # "Truncate" I1 index to longer length than actual sequence
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i1=12),
+                         "y76,I10,y76")
+
+    def test_get_bases_mask_dual_index_truncate_index_reads(self):
+        """get_bases_mask: handle dual index (truncate index reads)
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description
+1,AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+2,AB2,AB2,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+3,AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+4,AB2,AB2,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+5,CD1,CD1,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+6,CD2,CD2,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+7,CD1,CD1,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+8,CD2,CD2,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
+                         "y101,I8,I8,y101")
+        # Truncate I1 index
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i1=6),
+                         "y101,I6n2,I8,y101")
+        # "Truncate" I1 index (same length as actual index)
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i1=8),
+                         "y101,I8,I8,y101")
+        # "Truncate" I1 index (longer length than actual index)
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i1=10),
+                         "y101,I8,I8,y101")
+        # Truncate I2 index
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i2=6),
+                         "y101,I8,I6n2,y101")
+        # "Truncate" I2 index (same length as actual index)
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i2=8),
+                         "y101,I8,I8,y101")
+        # "Truncate" I2 index (longer length than actual index)
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i2=10),
+                         "y101,I8,I8,y101")
+        # Truncate I1 and I2 indexes
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i1=6, i2=6),
+                         "y101,I6n2,I6n2,y101")
+        # Truncate R1, R2 and I1 & I2 indexes
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        r1=26, r2=90, i1=6, i2=6),
+                         "y26n75,I6n2,I6n2,y90n11")
+
     def test_get_bases_mask_10xgenomics_sample_set(self):
         """get_bases_mask: handle 10xGenomics sample set IDs
         """
@@ -1505,6 +1635,61 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
         # "Truncate" R1 and R2 reads to longer lengths than actual reads
         self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
                                         r1=77,r2=77),
+                         "y76,I6,y76")
+
+    def test_get_bases_mask_truncate_i1_index_10x(self):
+        """get_bases_mask: truncate I1 index (10x Genomics index)
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.nextseq("171020_NB500968_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,4/24/2018
+Workflow,GenerateFASTQ
+Application,NextSeq FASTQ Only
+Assay,Nextera XT v2 Set A
+Description,
+Chemistry,Default
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+SL1,SL1,,,N701,SI-GA-A2,SL,
+SL2,SL2,,,N702,SI-GA-B2,SL,
+SL3,SL3,,,N703,SI-GA-C2,SL,
+SL4,SL4,,,N704,SI-GA-D2,SL,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Truncate I1 index & R1 and R2 reads in bases mask
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        r1=26, r2=50, i1=5),
+                         "y26n50,I5n1,y50n26")
+        # Truncate I1 index & R1 read only
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        r1=26, i1=5),
+                         "y26n50,I5n1,y76")
+        # Truncate I1 index & R2 read only
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        r2=26, i1=5),
+                         "y76,I5n1,y26n50")
+        # "Truncate" I1 index to same length as actual sequence
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i1=6),
+                         "y76,I6,y76")
+        # "Truncate" I1 index to longer lengths than actual sequence
+        self.assertEqual(get_bases_mask(run_info_xml, sample_sheet,
+                                        i1=7),
                          "y76,I6,y76")
 
     def test_get_bases_mask_single_index_no_sample_sheet(self):
