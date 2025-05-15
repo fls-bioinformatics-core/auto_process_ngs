@@ -447,6 +447,12 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
     which are index reads), and optionally updates this using the
     barcode information in the sample sheet file.
 
+    The lengths of the read and index sequences can also be set
+    explicitly via the appropriate options. (If the index sequence
+    length is explicitly set then they will not be modified from
+    the indexes which appear in the sample sheet, even if one was
+    supplied.)
+
     Arguments:
       run_info_xml: name and path of RunInfo.xml file from the
         sequencing run
