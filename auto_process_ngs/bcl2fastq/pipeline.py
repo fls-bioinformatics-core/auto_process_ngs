@@ -3433,15 +3433,14 @@ class Run10xMkfastq(PipelineTask):
         if self.pkg in ('cellranger',
                         'spaceranger'):
             # scRNA-seq and Visium
+            # Update indexes to 10bp as well as applying user-defined
+            # read lengths
             if self.args.bases_mask == "auto":
-                if self.args.r1_length or self.args.r2_length:
-                    # Get explicit bases mask including truncation
-                    bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                                r1=self.args.r1_length,
-                                                r2=self.args.r2_length)
-                else:
-                    # Leave external pipeline to set bases mask
-                    bases_mask = None
+                bases_mask = get_bases_mask(illumina_run.runinfo_xml,
+                                            r1=self.args.r1_length,
+                                            r2=self.args.r2_length,
+                                            i1=10,
+                                            i2=10)
             else:
                 bases_mask = self.args.bases_mask
         elif self.pkg == "cellranger-atac":
