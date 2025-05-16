@@ -869,7 +869,7 @@ def main():
         cellranger_mempercore = None
         cellranger_jobinterval = None
         cellranger_localcores = min(max_cores,16)
-        cellranger_localmem = max_mem
+        cellranger_localmem = cellranger_localcores*mempercore
         print("-- Cellranger localcores: %d" % cellranger_localcores)
         print("-- Cellranger localmem  : %.1f Gbs" % cellranger_localmem)
         # Set up local runners
