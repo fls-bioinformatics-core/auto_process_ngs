@@ -855,11 +855,7 @@ def main():
                               int(math.ceil(4.0/mempercore)*2))
         print("-- Threads for QC: %s" % nthreads)
         print("-- Threads for STAR: %s" % nthreads_star)
-        if nthreads_star*mempercore < 32.0:
-            logger.warning("Insufficient memory for STAR?")
         print("-- Cores for Qualimap: %s" % ncores_qualimap)
-        if ncores_qualimap*mempercore < 8.0:
-            logger.warning("Insufficient memory for Qualimap?")
         # Remove limit on number of jobs
         print("-- Set maximum no of jobs to 'unlimited'")
         max_jobs = None
@@ -872,6 +868,17 @@ def main():
         cellranger_localmem = cellranger_localcores*mempercore
         print("-- Cellranger localcores: %d" % cellranger_localcores)
         print("-- Cellranger localmem  : %.1f Gbs" % cellranger_localmem)
+        # Warn if resources seem to be insufficient for
+        # specific programs
+        if nthreads_star*mempercore < 32.0:
+            print(f"Warning: insufficient memory for STAR? "
+                  f" ({nthreads_star*mempercore:.1f} < 32G)")
+        if ncores_qualimap*mempercore < 8.0:
+            print("Warning: insufficient memory for Qualimap?"
+                  f" ({ncores_qualimap*mempercore:.1f} < 8G)")
+        if cellranger_localmem < 64.0:
+            print("Warning: insufficient memory for Cellranger?"
+                  f" ({cellranger_localmem:.1f} < 64G)")
         # Set up local runners
         default_runner = SimpleJobRunner()
         runners = {
