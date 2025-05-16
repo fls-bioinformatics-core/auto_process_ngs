@@ -169,10 +169,11 @@ def add_pipeline_options(p,fastq_subset_size,default_nthreads):
                             "to 0 to use all reads)" % fastq_subset_size)
     qc_options.add_argument('-t','--threads',action='store',
                             dest="nthreads",type=int,default=None,
-                            help="number of threads to use for QC script "
-                            "(default: %s)" % ('taken from job runner'
-                                               if not default_nthreads
-                                               else default_nthreads,))
+                            help="number of threads to use for multicore "
+                            "jobs (default: %s; ignored when using "
+                            "--local)" % ('taken from job runners'
+                                          if not default_nthreads
+                                          else default_nthreads,))
 
 def add_reference_data_options(p):
     """
@@ -830,6 +831,9 @@ def main():
         # Used local runners and set defaults according to
         # resources available on local system
         print("Running locally: overriding settings in configuration")
+        if args.nthreads:
+            # Warn if nthreads was set on command line
+            print("Number of threads set but is ignored in 'local' mode")
         local_env = get_execution_environment()
         if not max_cores:
             max_cores = local_env.max_cores
@@ -849,13 +853,6 @@ def main():
                               int(math.ceil(4.0/mempercore)*2))
         ncores_qualimap = min(max_cores,
                               int(math.ceil(4.0/mempercore)*2))
-        # Override if nthreads was explicitly set
-        # on the command line
-        if args.nthreads:
-            nthreads = args.nthreads
-            nthreads_star = args.nthreads
-            ncores_picard = args.nthreads
-            ncores_qualimap = args.nthreads
         print("-- Threads for QC: %s" % nthreads)
         print("-- Threads for STAR: %s" % nthreads_star)
         if nthreads_star*mempercore < 32.0:
