@@ -561,31 +561,41 @@ def get_execution_environment():
     - 'max_mem': maximum available memory (Gb)
     - 'mem_per_core': memory per core (Gb)
 
-    Available cores is the number of CPUs, or the
-    value of 'NSLOTS' if set. Available memory is
-    the proportion of total memory scaled by the
-    number of available cores. Memory per core
-    is the total memory divided by the total number
-    of CPUs.
+    Available cores is the number of CPUs, or (for
+    compute cluster nodes) the number of available
+    CPUs assigned (obtained via the value of the
+    appropriate environment variable e.g. 'NSLOTS'
+    for Grid Engine, 'SLURM_NTASKS" for Slurm).
+
+    Available memory is the proportion of total
+    memory scaled by the number of available cores.
+    Memory per core is the total memory divided by
+    the total number of CPUs.
 
     Returns:
       AttributeDictionary: elements are 'cpu_count',
         'total_mem', 'nslots', 'max_cores', 'max_mem'
         and 'mem_per_core'
     """
-    # Get numbers of cores
+    # Get count of total CPUs (not all may be available)
     cpu_count = psutil.cpu_count()
-    try:
-        # If NSLOTS is set in the environment
-        # then assume we're running on an SGE
-        # node and this sets the maximum number
-        # of available cores
-        max_cores = int(os.environ['NSLOTS'])
-        nslots = max_cores
-    except KeyError:
+    # Check to see if we're on a cluster system
+    max_cores = None
+    nslots = None
+    for var in ("SLURM_NTASKS", "NSLOTS"):
+        try:
+            # If VAR is set in the environment
+            # then assume we're running on a
+            # cluster and use this to set the
+            # maximum number of available cores
+            max_cores = int(os.environ[var])
+            nslots = max_cores
+            break
+        except KeyError:
+            pass
+    if max_cores is None:
         # Set limit from local machine
         max_cores = cpu_count
-        nslots = None
     # Get total memory (in Gbs)
     total_mem = float(psutil.virtual_memory().total)/(1024.0**3)
     # Memory per core
