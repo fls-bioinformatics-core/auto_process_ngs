@@ -848,9 +848,9 @@ def main():
         # Set the default threads for different jobs
         nthreads = min(max_cores,8)
         nthreads_star = min(max_cores,
-                                int(math.ceil(32.0/mempercore)))
+                            int(math.ceil(32.0/mempercore)))
         ncores_picard = min(max_cores,
-                              int(math.ceil(4.0/mempercore)*2))
+                            int(math.ceil(4.0/mempercore)*2))
         ncores_qualimap = min(max_cores,
                               int(math.ceil(4.0/mempercore)*2))
         print("-- Threads for QC: %s" % nthreads)
