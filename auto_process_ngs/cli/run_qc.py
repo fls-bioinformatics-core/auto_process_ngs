@@ -169,10 +169,11 @@ def add_pipeline_options(p,fastq_subset_size,default_nthreads):
                             "to 0 to use all reads)" % fastq_subset_size)
     qc_options.add_argument('-t','--threads',action='store',
                             dest="nthreads",type=int,default=None,
-                            help="number of threads to use for QC script "
-                            "(default: %s)" % ('taken from job runner'
-                                               if not default_nthreads
-                                               else default_nthreads,))
+                            help="number of threads to use for multicore "
+                            "jobs (default: %s; ignored when using "
+                            "--local)" % ('taken from job runners'
+                                          if not default_nthreads
+                                          else default_nthreads,))
 
 def add_reference_data_options(p):
     """
@@ -561,31 +562,41 @@ def get_execution_environment():
     - 'max_mem': maximum available memory (Gb)
     - 'mem_per_core': memory per core (Gb)
 
-    Available cores is the number of CPUs, or the
-    value of 'NSLOTS' if set. Available memory is
-    the proportion of total memory scaled by the
-    number of available cores. Memory per core
-    is the total memory divided by the total number
-    of CPUs.
+    Available cores is the number of CPUs, or (for
+    compute cluster nodes) the number of available
+    CPUs assigned (obtained via the value of the
+    appropriate environment variable e.g. 'NSLOTS'
+    for Grid Engine, 'SLURM_NTASKS" for Slurm).
+
+    Available memory is the proportion of total
+    memory scaled by the number of available cores.
+    Memory per core is the total memory divided by
+    the total number of CPUs.
 
     Returns:
       AttributeDictionary: elements are 'cpu_count',
         'total_mem', 'nslots', 'max_cores', 'max_mem'
         and 'mem_per_core'
     """
-    # Get numbers of cores
+    # Get count of total CPUs (not all may be available)
     cpu_count = psutil.cpu_count()
-    try:
-        # If NSLOTS is set in the environment
-        # then assume we're running on an SGE
-        # node and this sets the maximum number
-        # of available cores
-        max_cores = int(os.environ['NSLOTS'])
-        nslots = max_cores
-    except KeyError:
+    # Check to see if we're on a cluster system
+    max_cores = None
+    nslots = None
+    for var in ("SLURM_NTASKS", "NSLOTS"):
+        try:
+            # If VAR is set in the environment
+            # then assume we're running on a
+            # cluster and use this to set the
+            # maximum number of available cores
+            max_cores = int(os.environ[var])
+            nslots = max_cores
+            break
+        except KeyError:
+            pass
+    if max_cores is None:
         # Set limit from local machine
         max_cores = cpu_count
-        nslots = None
     # Get total memory (in Gbs)
     total_mem = float(psutil.virtual_memory().total)/(1024.0**3)
     # Memory per core
@@ -820,6 +831,9 @@ def main():
         # Used local runners and set defaults according to
         # resources available on local system
         print("Running locally: overriding settings in configuration")
+        if args.nthreads:
+            # Warn if nthreads was set on command line
+            print("Number of threads set but is ignored in 'local' mode")
         local_env = get_execution_environment()
         if not max_cores:
             max_cores = local_env.max_cores
@@ -834,25 +848,14 @@ def main():
         # Set the default threads for different jobs
         nthreads = min(max_cores,8)
         nthreads_star = min(max_cores,
-                                int(math.ceil(32.0/mempercore)))
+                            int(math.ceil(32.0/mempercore)))
         ncores_picard = min(max_cores,
-                              int(math.ceil(4.0/mempercore)*2))
+                            int(math.ceil(4.0/mempercore)*2))
         ncores_qualimap = min(max_cores,
                               int(math.ceil(4.0/mempercore)*2))
-        # Override if nthreads was explicitly set
-        # on the command line
-        if args.nthreads:
-            nthreads = args.nthreads
-            nthreads_star = args.nthreads
-            ncores_picard = args.nthreads
-            ncores_qualimap = args.nthreads
         print("-- Threads for QC: %s" % nthreads)
         print("-- Threads for STAR: %s" % nthreads_star)
-        if nthreads_star*mempercore < 32.0:
-            logger.warning("Insufficient memory for STAR?")
         print("-- Cores for Qualimap: %s" % ncores_qualimap)
-        if ncores_qualimap*mempercore < 8.0:
-            logger.warning("Insufficient memory for Qualimap?")
         # Remove limit on number of jobs
         print("-- Set maximum no of jobs to 'unlimited'")
         max_jobs = None
@@ -862,9 +865,20 @@ def main():
         cellranger_mempercore = None
         cellranger_jobinterval = None
         cellranger_localcores = min(max_cores,16)
-        cellranger_localmem = max_mem
+        cellranger_localmem = cellranger_localcores*mempercore
         print("-- Cellranger localcores: %d" % cellranger_localcores)
         print("-- Cellranger localmem  : %.1f Gbs" % cellranger_localmem)
+        # Warn if resources seem to be insufficient for
+        # specific programs
+        if nthreads_star*mempercore < 32.0:
+            print(f"Warning: insufficient memory for STAR? "
+                  f" ({nthreads_star*mempercore:.1f} < 32G)")
+        if ncores_qualimap*mempercore < 8.0:
+            print("Warning: insufficient memory for Qualimap?"
+                  f" ({ncores_qualimap*mempercore:.1f} < 8G)")
+        if cellranger_localmem < 64.0:
+            print("Warning: insufficient memory for Cellranger?"
+                  f" ({cellranger_localmem:.1f} < 64G)")
         # Set up local runners
         default_runner = SimpleJobRunner()
         runners = {
