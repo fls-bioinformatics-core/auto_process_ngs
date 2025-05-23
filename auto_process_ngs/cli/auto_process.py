@@ -1644,8 +1644,14 @@ def run_qc(args):
     protocols = {}
     if args.protocols:
         for protocol in args.protocols:
-            project, qc_protocol = protocol.split("=")
-            protocols[project] = qc_protocol
+            try:
+                idx = protocol.index("=")
+                project = protocol[:idx]
+                qc_protocol = protocol[idx+1:]
+                protocols[project] = qc_protocol
+            except ValueError:
+                raise Exception(f"'{protocol}': invalid syntax for "
+                                f"specifying QC protocol for project")
     # Fastq screens
     if __settings.qc.fastq_screens:
         fastq_screens = dict()
