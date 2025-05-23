@@ -321,7 +321,8 @@ class general:
 
     @staticmethod
     def rsync(source,target,dry_run=False,mirror=False,chmod=None,
-              prune_empty_dirs=False,extra_options=None):
+              prune_empty_dirs=False,escape_spaces=True,
+              extra_options=None):
         """Generate Command instance for 'rsync' command
 
         Create a Command instance to run the 'rsync' command line, to
@@ -344,6 +345,8 @@ class general:
             files e.g. chmod='u+rwX,g+rwX,o-w
           prune_empty_dirs: optional, don't include empty target
             directories i.e. -m option
+          escape_spaces: optional, if True then add '\' in front of
+            spaces in file name paths to escape them (default)
           extra_options: optional, a list of additional rsync options to be
             added to the command (e.g. --include and --exclude filter
             patterns)
@@ -374,10 +377,11 @@ class general:
         if extra_options is not None:
             rsync_cmd.add_args(*extra_options)
         # Escape spaces in source and target, if required
-        if ' ' in source:
-            source = source.replace(' ','\ ')
-        if ' ' in target:
-            target = target.replace(' ','\ ')
+        if escape_spaces:
+            if ' ' in source:
+                source = source.replace(' ','\ ')
+            if ' ' in target:
+                target = target.replace(' ','\ ')
         # Make rsync command
         rsync_cmd.add_args(source,target)
         return rsync_cmd
