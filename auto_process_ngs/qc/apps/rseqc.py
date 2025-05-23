@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc/rseqc: utilities for handling RSeQC outputs
-#     Copyright (C) University of Manchester 2024 Peter Briggs
+#     Copyright (C) University of Manchester 2024-2025 Peter Briggs
 #
 """
 Provides utility classes and functions for handling RSeQC outputs.
@@ -32,10 +32,14 @@ logger = logging.getLogger(__name__)
 """
 Example output from infer_experiment.py:
 
-This is PairEnd Data
-Fraction of reads failed to determine: 0.0172
-Fraction of reads explained by "1++,1--,2+-,2-+": 0.4903
-Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
+> This is PairEnd Data
+> Fraction of reads failed to determine: 0.0172
+> Fraction of reads explained by "1++,1--,2+-,2-+": 0.4903
+> Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
+
+Example output for poor data:
+
+> Unknown Data type
 """
 
 class InferExperiment(object):
@@ -50,12 +54,13 @@ class InferExperiment(object):
 
     - log_file (str): path to the source log file
     - paired_end (bool): True if data are paired, False
-      if data are single end
+      if data are single end, None for unknown data type
     - forward (float): fraction of 'forward' aligned reads
     - reverse (float): fraction of 'reverse' aligned reads
     - unstranded (float): fraction of aligned reads neither
       'forward' nor 'reverse'
-
+    - known_data_type (bool): True if data type could be
+      identified, False if not
     """
     def __init__(self,infer_experiment_log):
         """
@@ -71,6 +76,7 @@ class InferExperiment(object):
         self._unstranded = None
         self._forward = None
         self._reverse = None
+        self._unknown = False
         # Process the log contents
         with open(self._infer_experiment_log,'rt') as fp:
             for line in fp:
@@ -87,6 +93,9 @@ class InferExperiment(object):
                 elif line.startswith("Fraction of reads explained by \"1+-,1-+,2++,2--\":") or \
                      line.startswith("Fraction of reads explained by \"+-,-+\":"):
                     self._reverse = float(line.split()[-1])
+                elif line == "Unknown Data type":
+                    self._unknown = True
+                    break
                 else:
                     pass
 
@@ -124,6 +133,13 @@ class InferExperiment(object):
         Fraction of aligned reads neither 'forward' nor 'reverse'
         """
         return self._unstranded
+
+    @property
+    def unknown(self):
+        """
+        True if data type could be identified, False if not
+        """
+        return self._unknown
 
 #######################################################################
 # Functions
