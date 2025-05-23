@@ -1443,3 +1443,89 @@ annotation_gtf = {mm10_gtf}
                                                         "qc",
                                                         "qc.info"))
         self.assertFalse(qc_info.fastqs_split_by_lane)
+
+    def test_run_qc_specify_qc_protocol(self):
+        """run_qc: specify QC protocol for a project
+        """
+        # Make mock QC executables
+        MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
+        MockFastQC.create(os.path.join(self.bin,"fastqc"))
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
+        MockQualimap.create(os.path.join(self.bin,"qualimap"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901", },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "human", },
+                               "CDE": { "Library type": "ChIP-seq",
+                                        "Organism": "mouse", } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Settings file with reference data and polling interval
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = {poll_interval}
+
+[organism:human]
+star_index = /data/hg38/star_index
+annotation_bed = {hg38_bed}
+annotation_gtf = {hg38_gtf}
+
+[organism:mouse]
+star_index = /data/mm10/star_index
+annotation_bed = {mm10_bed}
+annotation_gtf = {mm10_gtf}
+""".format(hg38_bed=self.ref_data['hg38']['bed'],
+           hg38_gtf=self.ref_data['hg38']['gtf'],
+           mm10_bed=self.ref_data['mm10']['bed'],
+           mm10_gtf=self.ref_data['mm10']['gtf'],
+           poll_interval=POLL_INTERVAL))
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=Settings(settings_ini))
+        # Run the QC
+        status = run_qc(ap,
+                        protocols={ "CDE": "minimal" },
+                        fastq_screens=self.fastq_screens,
+                        run_multiqc=True,
+                        max_jobs=1)
+        self.assertEqual(status,0)
+        # Check output and reports
+        for p in ("AB","CDE","undetermined"):
+            for f in ("qc",
+                      "qc_report.html",
+                      "qc_report.%s.%s.zip" % (
+                          p,
+                          '170901_M00879_0087_000000000-AGEW9'),
+                      "multiqc_report.html"):
+                self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
+                                                            p,f)),
+                                "Missing %s in project '%s'" % (f,p))
+            # Check zip file has MultiQC report
+            zip_file = os.path.join(mockdir.dirn,p,
+                                    "qc_report.%s.%s.zip" % (
+                                        p,
+                                        '170901_M00879_0087_000000000-AGEW9'))
+            with zipfile.ZipFile(zip_file) as z:
+                multiqc = os.path.join(
+                    "qc_report.%s.%s" % (
+                        p,'170901_M00879_0087_000000000-AGEW9'),
+                    "multiqc_report.html")
+                self.assertTrue(multiqc in z.namelist())
+        # Check QC protocol for "CDE"
+        qc_info = AnalysisProjectQCDirInfo(os.path.join(mockdir.dirn,
+                                                        "CDE",
+                                                        "qc",
+                                                        "qc.info"))
+        self.assertTrue(qc_info.protocol_specification.startswith("minimal:"))

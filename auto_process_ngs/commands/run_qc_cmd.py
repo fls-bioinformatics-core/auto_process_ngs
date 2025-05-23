@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc_cmd.py: implement auto process run_qc command
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
 #
 #########################################################################
 
@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def run_qc(ap,projects=None,fastq_screens=None,
-           fastq_subset=100000,nthreads=None,
-           runner=None,fastq_dir=None,qc_dir=None,
-           cellranger_exe=None,
+def run_qc(ap,projects=None,protocols=None,
+           fastq_screens=None,fastq_subset=100000,
+           nthreads=None,runner=None,fastq_dir=None,
+           qc_dir=None,cellranger_exe=None,
            cellranger_chemistry='auto',
            cellranger_force_cells=None,
            cellranger_transcriptomes=None,
@@ -55,6 +55,11 @@ def run_qc(ap,projects=None,fastq_screens=None,
       projects (str): specify a pattern to match one or more
         projects to run the QC for (default is to run QC for all
         projects)
+      protocols (dict): mapping of project names to QC protocols;
+        where a project name appears the specified protocol will
+        be used, otherwise the QC protocol will be determined
+        automatically from the project metadata (default is for
+        protocols to be automatically determined for all projects)
       fastq_screens (dict): mapping of Fastq screen names to
         corresponding conf files, to use for contaminant screens
       fastq_subset (int): maximum size of subset of reads to use
@@ -129,6 +134,9 @@ def run_qc(ap,projects=None,fastq_screens=None,
     if len(projects) == 0:
         logger.warning("No projects found for QC analysis")
         return 1
+    # Specific QC protocols
+    if protocols is None:
+        protocols = {}
     # Set up dictionaries for indices and reference data
     # STAR indexes
     star_indexes = fetch_reference_data(ap.settings,'star_index')
@@ -233,7 +241,10 @@ def run_qc(ap,projects=None,fastq_screens=None,
     runqc = QCPipeline()
     for project in projects:
         # Determine and fetch the QC protocol
-        qc_protocol = determine_qc_protocol(project)
+        try:
+            qc_protocol = protocols[project.name]
+        except KeyError:
+            qc_protocol = determine_qc_protocol(project)
         protocol = fetch_protocol_definition(qc_protocol)
         # Set up splitting of Fastqs by lane
         split_lanes = False
