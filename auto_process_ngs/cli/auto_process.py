@@ -746,6 +746,12 @@ def add_run_qc_command(cmdparser):
                    "Fastq files to run the QC on.")
     # QC pipeline options
     qc_options = p.add_argument_group('QC options')
+    qc_options.add_argument('--protocol',action='append',
+                            dest='protocols',
+                            help="specify QC protocol for a project using "
+                            "the format 'PROJECTNAME=QCPROTOCOL' (overrides "
+                            "the automatic protocol determination for "
+                            "that project)")
     qc_options.add_argument('--fastq_subset',action='store',
                             dest='subset',type=int,
                             default=fastq_subset_size,
@@ -1634,6 +1640,12 @@ def run_qc(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
+    # QC protocols
+    protocols = {}
+    if args.protocols:
+        for protocol in args.protocols:
+            project, qc_protocol = protocol.split("=")
+            protocols[project] = qc_protocol
     # Fastq screens
     if __settings.qc.fastq_screens:
         fastq_screens = dict()
@@ -1660,6 +1672,7 @@ def run_qc(args):
         runner = None
     # Do the run_qc step
     retcode = d.run_qc(projects=args.project_pattern,
+                       protocols=protocols,
                        fastq_screens=fastq_screens,
                        fastq_subset=args.subset,
                        nthreads=args.nthreads,
