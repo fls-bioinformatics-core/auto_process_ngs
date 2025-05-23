@@ -22,18 +22,31 @@ can be used to run the QC pipeline on an arbitrary subdirectory.
 QC protocols
 ------------
 
+QC protocols define sets of "QC modules" to be run by the QC
+pipeline (see below), as well as "sequence data reads" (reads that
+contain biological data) and "index data reads" (reads that
+contain index data).
+
 The QC pipeline protocol used for each project will differ slightly
 depending on the nature of the data within that project:
 
 .. include:: auto/qc_protocols.rst
 
-The protocol is determined automatically for each project, based
-on the metadata.
+By default the protocol is determined automatically for each project,
+based on the metadata associated with that project.
 
-In turn each protocol defines a set of "QC modules" that are run
-by the QC pipeline, as well as "sequence data reads" (reads that
-contain biological data) and "index data reads" (reads that
-contain index data).
+.. note::
+
+   The automatic protocol assignment can be overridden on a
+   per-project basis using the ``--protocol`` option:
+
+   ::
+
+      auto_process.py run_qc --protocol PROJECT=QCPROTOCOL ...
+
+   The ``--protocol`` option can be specified multiple times
+   (once for each project where the protocol should be set
+   explicitly)
 
 ----------
 QC modules
