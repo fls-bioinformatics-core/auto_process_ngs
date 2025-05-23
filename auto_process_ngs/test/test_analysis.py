@@ -386,6 +386,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.dirn,dirn)
         self.assertEqual(project.samples,[])
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [])
         self.assertEqual(project.fastq_dir,None)
         self.assertEqual(project.info.library_type,None)
         self.assertEqual(project.info.single_cell_platform,None)
@@ -419,6 +420,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.dirn,dirn)
         self.assertEqual(project.samples,[])
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [])
         self.assertEqual(project.fastq_dir,None)
         self.assertEqual(project.info.library_type,"scRNA-seq")
         self.assertEqual(project.info.single_cell_platform,"ICELL8")
@@ -444,6 +446,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
@@ -467,6 +470,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertTrue(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
@@ -491,6 +495,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1, 2])
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
@@ -515,6 +520,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertEqual(project.samples[0].name,'PJB1-B')
         self.assertTrue(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1, 2])
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.fastq_dir,
@@ -538,6 +544,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertEqual(project.samples[0].name,'PJB1-B')
         self.assertTrue(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1, 2])
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.fastq_dir,
@@ -558,6 +565,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
@@ -580,6 +588,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -603,6 +612,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PeterBriggs')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PeterBriggs')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -626,6 +636,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -648,6 +659,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.fastq_dir,
@@ -675,6 +687,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1, 2])
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PB02')
@@ -709,6 +722,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -725,6 +739,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
@@ -760,6 +775,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -773,6 +789,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
@@ -808,6 +825,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
@@ -823,6 +841,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -992,6 +1011,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -1011,6 +1031,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
@@ -1039,6 +1060,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -1166,6 +1188,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(unpickled.name,'PJB')
         self.assertTrue(os.path.isdir(unpickled.dirn))
         self.assertFalse(unpickled.multiple_fastqs)
+        self.assertEqual(unpickled.read_numbers, [1])
         self.assertFalse(unpickled.info.paired_end)
         self.assertEqual(unpickled.info.primary_fastq_dir,'fastqs')
         self.assertEqual(unpickled.info.samples,'2 samples (PJB1-A, PJB1-B)')
@@ -1216,6 +1239,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -1296,6 +1320,7 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.name,'PJB1-A')
         self.assertEqual(sample.fastq,[])
         self.assertFalse(sample.paired_end)
+        self.assertEqual(sample.read_numbers, [])
         self.assertEqual(str(sample),'PJB1-A')
 
     def test_single_end_analysis_sample(self):
@@ -1309,6 +1334,7 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq_subset(read_number=1),[fq])
         self.assertEqual(sample.fastq_subset(read_number=2),[])
         self.assertFalse(sample.paired_end)
+        self.assertEqual(sample.read_numbers, [1])
         self.assertEqual(str(sample),'PJB1-B')
 
     def test_single_end_analysis_sample_multiple_fastqs(self):
@@ -1324,6 +1350,7 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq_subset(read_number=1),[fq_l1,fq_l2])
         self.assertEqual(sample.fastq_subset(read_number=2),[])
         self.assertFalse(sample.paired_end)
+        self.assertEqual(sample.read_numbers, [1])
         self.assertEqual(str(sample),'PJB1-B')
 
     def test_paired_end_analysis_sample(self):
@@ -1338,6 +1365,8 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq,[fq_r1,fq_r2])
         self.assertEqual(sample.fastq_subset(read_number=1),[fq_r1])
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_r2])
+        self.assertEqual(sample.read_numbers, [1, 2])
+        self.assertEqual(str(sample),'PJB1-B')
 
     def test_paired_end_analysis_sample_index_read_fastq(self):
         """Check AnalysisSample class with index read fastqs
@@ -1354,6 +1383,7 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq_subset(read_number=1),[fq_l1_r1,])
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_l1_r2,])
         self.assertTrue(sample.paired_end)
+        self.assertEqual(sample.read_numbers, [1, 2])
         self.assertEqual(str(sample),'PJB1-B')
 
     def test_paired_end_analysis_sample_multiple_fastqs(self):
@@ -1374,6 +1404,7 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq_subset(read_number=1),[fq_l1_r1,fq_l2_r1])
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_l1_r2,fq_l2_r2])
         self.assertTrue(sample.paired_end)
+        self.assertEqual(sample.read_numbers, [1, 2])
         self.assertEqual(str(sample),'PJB1-B')
 
     def test_analysis_sample_non_canonical_fastq_naming(self):
@@ -1395,6 +1426,7 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq_subset(read_number=1),[fq_r1])
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_r2])
         self.assertTrue(sample.paired_end)
+        self.assertEqual(sample.read_numbers, [1, 2])
         self.assertEqual(str(sample),'PJB1-B')
 
 class TestRunIdFunction(unittest.TestCase):

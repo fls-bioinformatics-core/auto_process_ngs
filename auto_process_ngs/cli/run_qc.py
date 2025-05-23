@@ -1010,10 +1010,23 @@ def main():
     if args.biological_samples:
         project_metadata['biological_samples'] = args.biological_samples
 
+    # Update library type if an organism was supplied
+    # to avoid "minimal" QC protocol being set
+    if project_metadata['organism'] and not project_metadata['library_type']:
+        project_metadata['library_type'] = "unknown"
+
     # Import extra files specified by the user
     for f in list(inputs.extra_files):
         print("Importing %s" % f)
         os.symlink(f,os.path.join(project_dir,os.path.basename(f)))
+
+    # Report the metadata
+    print("Dataset metadata for input to QC:")
+    for item in ("organism",
+                 "library_type",
+                 "single_cell_platform",
+                 "biological_samples"):
+        print(f"-- {item:20s}: {project_metadata[item]}")
 
     # Save out metadata to temporary project dir
     info_file = os.path.join(project_dir,"README.info")
@@ -1035,12 +1048,15 @@ def main():
     if args.qc_protocol:
         # Protocol name supplied on command line
         qc_protocol = args.qc_protocol
+        print(f"Supplied QC protocol: {qc_protocol}")
     elif args.custom_protocol_spec:
         # Explicit protocol specification
         qc_protocol = args.custom_protocol_spec
+        print(f"Supplied QC protocol: {qc_protocol}")
     else:
         # Determine default protocol from project
         qc_protocol = determine_qc_protocol(project)
+        print(f"Default QC protocol : {qc_protocol}")
         if os.path.exists(qc_info_file):
             # Override from existing metadata
             qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
@@ -1048,6 +1064,7 @@ def main():
                 qc_protocol = qc_info.protocol_specification
             elif qc_info.protocol:
                 qc_protocol = qc_info.protocol
+            print(f"Updated from QC info: {qc_protocol}")
     try:
         protocol = fetch_protocol_definition(qc_protocol)
     except Exception as ex:
@@ -1082,7 +1099,7 @@ def main():
         protocol.description = "Custom protocol"
 
     # Report final protocol
-    print("QC protocol: %s" % protocol)
+    print(f"Final QC protocol   : {protocol}")
 
     # Set working directory for pipeline
     working_dir = args.working_dir
