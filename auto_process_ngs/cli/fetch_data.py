@@ -99,6 +99,14 @@ def main():
     print(f"Destination: {dst}")
     dst_exists = os.path.exists(dst)
 
+    # Check there's something to transfer
+    if not fileops.exists(src):
+        if remote_src:
+            logger.error(f"Source doesn't exist (or can't be reached)")
+        else:
+            logger.error(f"Source doesn't exist")
+        return 1
+
     # Check source and destination compatibility
     if dst_exists:
         if src_is_dir and not os.path.isdir(dst):
