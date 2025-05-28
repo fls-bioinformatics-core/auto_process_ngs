@@ -678,3 +678,29 @@ class TestUnzipCommand(unittest.TestCase):
                           '-d',
                           '/there/unpacked',
                           '/there/myarchive.zip'])
+
+class TestQuoteSapces(unittest.TestCase):
+    """Tests for the 'quote_spaces' function
+    """
+    def test_quote_spaces_no_spaces(self):
+        """
+        fileops.quote_spaces: no spaces in any arguments
+        """
+        self.assertEqual(quote_spaces(["no", "spaces", "here"]),
+                         ["no", "spaces", "here"])
+
+    def test_quote_spaces_with_spaces(self):
+        """
+        fileops.quote_spaces: arguments with spaces
+        """
+        self.assertEqual(quote_spaces(["some", "spaces here", "and here"]),
+                         ["some", "\"spaces here\"", "\"and here\""])
+
+    def test_quote_spaces_spaces_in_quoted_arguments(self):
+        """
+        fileops.quote_spaces: spaces in quoted arguments
+        """
+        self.assertEqual(quote_spaces(["some", "\"quoted spaces\"", "here"]),
+                         ["some", "\"quoted spaces\"", "here"])
+        self.assertEqual(quote_spaces(["different", "'quoted spaces'", "here"]),
+                         ["different", "'quoted spaces'", "here"])
