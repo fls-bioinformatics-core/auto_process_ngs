@@ -93,6 +93,10 @@ def main():
     remote_src = Location(src).is_remote
     src_is_dir = fileops.isdir(src)
     print(f"Source     : {src}")
+    if src_is_dir:
+        print(f"           : (directory)")
+    if remote_src:
+        print(f"           : (remote)")
 
     # Destination
     dst = os.path.abspath(args.dst)
@@ -120,6 +124,7 @@ def main():
         # Rsync contents to a temporary dir
         # FIXME probably only want to do this for remote
         # FIXME sources in future
+        print("Copying directory")
         with tempfile.TemporaryDirectory() as d:
             # Do rsync
             print(f"Temporary directory: {d}")
@@ -148,6 +153,7 @@ def main():
             copy_dir_contents(d, dst)
     else:
         # File copy
+        print("Copying file")
         # Rsync file to a temporary dir
         with tempfile.TemporaryDirectory() as d:
             print(f"Temporary directory: {d}")
