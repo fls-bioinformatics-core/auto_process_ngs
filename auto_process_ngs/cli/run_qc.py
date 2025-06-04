@@ -655,13 +655,14 @@ def build_10x_multi_config(multi_config_file, fastq_dir, libraries,
                      f"reference,{vdj_reference}\n\n")
         # Libraries section
         fp.write(f"[libraries]\n"
-                 f"fastq_id,fastqs,lanes,physical_library_id,feature_types\n")
+                 f"fastq_id,fastqs,lanes,physical_library_id,"
+                 f"feature_types,subsample_rate\n")
         for fastq_id in sorted(libraries.keys()):
             fp.write(f"{fastq_id},"
                      f"{fastq_dir},"
                      f"any,"
                      f"{fastq_id},"
-                     f"{libraries[fastq_id]}\n")
+                     f"{libraries[fastq_id]},\n")
 
 def announce(title):
     """
