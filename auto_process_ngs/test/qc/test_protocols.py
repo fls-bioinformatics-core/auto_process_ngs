@@ -390,6 +390,41 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             paired_end=False),
                          "standardSE")
 
+    def test_determine_qc_protocol_from_metadata_wgs(self):
+        """
+        determine_qc_protocol_from_metadata: WGS data
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="WGS",
+            single_cell_platform=None,
+            paired_end=False),
+                         "minimal")
+
+    def test_determine_qc_protocol_from_metadata_dna_seq(self):
+        """
+        determine_qc_protocol_from_metadata: DNA-seq data
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="DNA-seq",
+            single_cell_platform=None,
+            paired_end=False),
+                         "minimal")
+
+    def test_determine_qc_protocol_from_metadata_crispr(self):
+        """
+        determine_qc_protocol_from_metadata: CRISPR data
+        """
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CRISPR",
+            single_cell_platform=None,
+            paired_end=False),
+                         "minimal")
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="CRISPR-Cas9",
+            single_cell_platform=None,
+            paired_end=False),
+                         "minimal")
+
     def test_determine_qc_protocol_from_metadata_icell8(self):
         """
         determine_qc_protocol_from_metadata: ICELL8 data

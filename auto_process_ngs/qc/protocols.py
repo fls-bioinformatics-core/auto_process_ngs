@@ -767,6 +767,9 @@ def determine_qc_protocol_from_metadata(library_type,
     # Standard protocols
     if library_type is None or not library_type:
         protocol = "minimal"
+    elif library_type in ("DNA-seq", "WGS") or \
+         library_type.startswith("CRISPR"):
+        protocol = "minimal"
     elif paired_end:
         protocol = "standardPE"
     else:
