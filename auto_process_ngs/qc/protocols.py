@@ -406,6 +406,116 @@ QC_PROTOCOLS = {
     },
 }
 
+# Map metadata to protocols
+
+QC_PROTOCOL_ASSIGNMENTS = (
+    # Default (no library)
+    { "protocol": "minimal" },
+    # Default paired end
+    { "paired_end": True,
+      "library_type": "*",
+      "protocol": "standardPE"
+    },
+    # Default single end
+    { "paired_end": False,
+      "library_type": "*",
+      "protocol": "standardSE"
+    },
+    # DNA-seq or WGS
+    { "library_type": "DNA-seq|WGS",
+      "protocol": "minimal"
+    },
+    # CRISPR and variants
+    { "library_type": "CRISPR*",
+      "protocol": "minimal"
+    },
+    # 10x Chromium 3'
+    { "single_cell_platform": "10xGenomics Chromium 3'*|10xGenomics Chromium GEM-X 3'*|10xGenomics Chromium Next GEM*",
+      "library_type": "scRNA-seq",
+      "protocol": "10x_scRNAseq"
+    },
+    { "single_cell_platform": "10xGenomics Chromium 3'*|10xGenomics Chromium GEM-X 3'*|10xGenomics Chromium Next GEM*",
+      "library_type": "snRNA-seq",
+      "protocol": "10x_snRNAseq"
+    },
+    # 10x CellPlex
+    { "single_cell_platform": "10xGenomics Chromium 3'*|10xGenomics Chromium GEM-X 3'*|10xGenomics Chromium Next GEM*",
+      "library_type": "CellPlex|CellPlex scRNA-seq|CellPlex snRNA-seq",
+      "protocol": "10x_CellPlex"
+    },
+    # 10x Flex
+    { "single_cell_platform": "10xGenomics Chromium 3'*|10xGenomics Chromium GEM-X 3'*|10xGenomics Chromium Next GEM*",
+      "library_type": "Flex",
+      "protocol": "10x_Flex"
+    },
+    # 10x Chromium 3'
+    { "single_cell_platform": "10xGenomics Chromium 5'*",
+      "library_type": "Single Cell Immune Profiling",
+      "protocol": "10x_ImmuneProfiling"
+    },
+    # 10x ATAC
+    { "single_cell_platform": "10xGenomics Single Cell ATAC",
+      "library_type": "scATAC-seq|snATAC-seq",
+      "protocol": "10x_scATAC"
+    },
+    # 10x Multiome
+    { "single_cell_platform": "10xGenomics Single Cell Multiome",
+      "library_type": "ATAC",
+      "protocol": "10x_Multiome_ATAC"
+    },
+    { "single_cell_platform": "10xGenomics Single Cell Multiome",
+      "library_type": "GEX",
+      "protocol": "10x_Multiome_GEX"
+    },
+    # Default 10x
+    { "single_cell_platform": "10xGenomics Chromium*",
+      "protocol": "singlecell"
+    },
+    # Parse
+    { "single_cell_platform": "Parse Evercode",
+      "library_type": "scRNA-seq|snRNA-seq|TCR|TCR scRNA-seq|WT|WT scRNA-seq",
+      "protocol": "ParseEvercode"
+    },
+    # Bio-Rad
+    { "single_cell_platform": "Bio-Rad ddSEQ Single Cell ATAC",
+      "library_type": "scATAC-seq|snATAC-seq",
+      "protocol": "BioRad_ddSEQ_ATAC"
+    },
+    # 10x Visium PEX
+    { "single_cell_platform": "10xGenomics Visium*|10xGenomics CytAssist Visium",
+      "library_type": "FFPE Spatial PEX|FFPE Spatial Protein Expression",
+      "protocol": "10x_Visium_PEX"
+    },
+    # 10x Visium GEX (fresh frozen)
+    # Special case (GEX with 90bp insert in R2)
+    { "single_cell_platform": "10xGenomics Visium",
+      "library_type": "Fresh Frozen Spatial GEX|Fresh Frozen Spatial Gene Expression",
+      "protocol": "10x_Visium_GEX_90bp_insert"
+    },
+    # 10x Visium GEX
+    # Default (GEX with 50bp insert in R2)
+    { "single_cell_platform": "10xGenomics Visium*|10xGenomics CytAssist Visium",
+      "library_type": "*",
+      "protocol": "10x_Visium_GEX"
+    },
+    # 10x Visium GEX
+    # Legacy
+    { "single_cell_platform": "10xGenomics Visium|10xGenomics CytAssist Visium",
+      "library_type": "Spatial RNA-seq",
+      "protocol": "10x_Visium_legacy"
+    },
+    # ICELL8 ATAC
+    { "single_cell_platform": "ICELL8",
+      "library_type": "scATAC-seq|snATAC-seq",
+      "protocol": "ICELL8_scATAC"
+    },
+    # ICELL8 GEX (default)
+    { "single_cell_platform": "ICELL8",
+      "protocol": "singlecell"
+    },
+)
+
+
 #######################################################################
 # Classes
 #######################################################################
@@ -756,6 +866,19 @@ def determine_qc_protocol_from_metadata(library_type,
     """
     Determine the QC protocol from metadata values
 
+    Assignment is performed by matching the supplied metadata
+    against the assignment definitions in
+    QC_PROTOCOL_ASSIGMENTS, and scoring each one according to
+    how well it is considered to match. The protocol with
+    the highest score is returned.
+
+    Scoring is weighted so that exact matches are more
+    significant than partial matches, and partial matches are
+    more significant than wildcard matches. Also matches to
+    single cell platform are more significant than matches to
+    library type, and library type is more significant than
+    endedness.
+
     Arguments:
       library_type (str): library or application
       single_cell_platform (str): single cell platform (or None)
@@ -764,105 +887,67 @@ def determine_qc_protocol_from_metadata(library_type,
     Return:
       String: QC protocol for the project
     """
-    # Standard protocols
-    if library_type is None or not library_type:
-        protocol = "minimal"
-    elif library_type in ("DNA-seq", "WGS") or \
-         library_type.startswith("CRISPR"):
-        protocol = "minimal"
-    elif paired_end:
-        protocol = "standardPE"
-    else:
-        protocol = "standardSE"
-    # Single cell protocols
-    if single_cell_platform is not None:
-        # 10x Genomics
-        if single_cell_platform.startswith('10xGenomics Chromium 3\'') or \
-           single_cell_platform.startswith('10xGenomics Chromium GEM-X 3\'') or \
-           single_cell_platform.startswith('10xGenomics Chromium Next GEM'):
-            # Default for 10x
-            protocol = "singlecell"
-            # 10xGenomics scRNA-seq
-            if library_type == "scRNA-seq":
-                protocol = "10x_scRNAseq"
-            # 10xGenomics snRNA-seq
-            elif library_type == "snRNA-seq":
-                protocol = "10x_snRNAseq"
-            # 10xGenomics CellPlex (cell multiplexing)
-            elif library_type in ("CellPlex",
-                                  "CellPlex scRNA-seq",
-                                  "CellPlex snRNA-seq"):
-                protocol = "10x_CellPlex"
-            # 10xGenomics Flex (fixed RNA profiling)
-            elif library_type == "Flex":
-                protocol = "10x_Flex"
-        # 10x single cell immune profiling
-        elif single_cell_platform.startswith('10xGenomics Chromium 5\''):
-            if library_type == "Single Cell Immune Profiling":
-                protocol = "10x_ImmuneProfiling"
-        # 10x ATAC
-        elif single_cell_platform == "10xGenomics Single Cell ATAC":
-            if library_type in ("scATAC-seq",
-                                "snATAC-seq",):
-                # 10xGenomics scATAC-seq
-                protocol = "10x_scATAC"
-        # 10x Multiome ATAC+GEX
-        elif single_cell_platform == "10xGenomics Single Cell Multiome":
-            if library_type == "ATAC":
-                # 10xGenomics single cell Multiome ATAC
-                protocol = "10x_Multiome_ATAC"
-            elif library_type == "GEX":
-                # 10xGenomics single cell Multiome gene expression
-                protocol = "10x_Multiome_GEX"
-        # Parse Evercode
-        elif single_cell_platform == 'Parse Evercode':
-            if library_type in ("scRNA-seq",
-                                "snRNA-seq",
-                                "TCR",
-                                "TCR scRNA-seq",
-                                "WT",
-                                "WT scRNA-seq"):
-                # Parse Evercode snRNAseq
-                protocol = "ParseEvercode"
-        # Bio-Rad ATAC
-        elif single_cell_platform == "Bio-Rad ddSEQ Single Cell ATAC":
-            if library_type in ("scATAC-seq",
-                                "snATAC-seq",):
-                # 10xGenomics scATAC-seq
-                protocol = "BioRad_ddSEQ_ATAC"
-        # ICELL8
-        elif single_cell_platform == "ICELL8":
-            # ICELL8 data
-            if library_type in ("scATAC-seq",
-                                "snATAC-seq",):
-                # ICELL8 scATAC-seq
-                protocol = "ICELL8_scATAC"
-            else:
-                # Assume scRNA-seq
-                protocol = "singlecell"
-        # Visium/spatial data
-        elif single_cell_platform in ("10xGenomics Visium",
-                                      "10xGenomics Visium (CytAssist)",
-                                      "10xGenomics CytAssist Visium"):
-            if library_type.lower() in ("ffpe spatial pex",
-                                        "ffpe spatial protein expression"):
-                # Spatial protein expression
-                protocol = "10x_Visium_PEX"
-            elif library_type.lower() in \
-                 ("fresh frozen spatial gene expression",
-                  "fresh frozen spatial gex") \
-                  and single_cell_platform == "10xGenomics Visium":
-                # Special case (GEX with 90bp insert in R2)
-                protocol = "10x_Visium_GEX_90bp_insert"
-            elif library_type.lower() == "spatial rna-seq" and \
-                 single_cell_platform in ("10xGenomics Visium",
-                                          "10xGenomics CytAssist Visium"):
-                # Legacy spatial RNA-seq
-                protocol = "10x_Visium_legacy"
-            else:
-                # Default (GEX with 50bp insert in R2)
-                protocol = "10x_Visium_GEX"
-    return protocol
+    protocols = []
+    for defn in QC_PROTOCOL_ASSIGNMENTS:
+        # Score for how well assignment definition matches
+        score = 0
+        # Paired end
+        if "paired_end" in defn:
+            if paired_end != defn["paired_end"]:
+                continue
+            # Matching endedness has the lowest weighting
+            score += 1
+        # Library type
+        if "library_type" in defn:
+            if library_type is None or not library_type:
+                continue
+            matched_library = False
+            libraries = [x.lower() for x in defn["library_type"].split("|")]
+            for library in libraries:
+                if (library.endswith("*") and
+                    library_type.lower().startswith(library[:-1])) or \
+                    library_type.lower() == library:
+                    # Matching library has higher weighting than
+                    # endedness
+                    matched_library = True
+                    if library == "*":
+                        score += 2
+                    elif library.endswith("*"):
+                        score += 4
+                    else:
+                        score += 6
+                    break
+            if not matched_library:
+                continue
+        # Single cell platform
+        if "single_cell_platform" in defn:
+            if single_cell_platform is None or not single_cell_platform:
+                continue
+            matched_platform = False
+            platforms = [x.lower()
+                         for x in defn["single_cell_platform"].split("|")]
+            for platform in platforms:
+                if (platform.endswith("*") and
+                    single_cell_platform.lower().startswith(platform[:-1])) or \
+                    single_cell_platform.lower() == platform:
+                    # Matching platform has the highest weighting
+                    # (i.e. scores more than library or endedness)
+                    matched_platform = True
+                    if platform == "*":
+                        score += 4
+                    elif platform.endswith("*"):
+                        score += 6
+                    else:
+                        score += 8
+                    break
+            if not matched_platform:
+                continue
+        # Possible protocol match
+        protocols.append({ "protocol": defn["protocol"],
+                           "score": score })
+    # Sort protocols by score
+    protocols = sorted(protocols, key=lambda x: x["score"], reverse=True)
+    return protocols[0]["protocol"]
 
 def determine_qc_protocol(project):
     """
