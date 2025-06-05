@@ -282,12 +282,18 @@ class RunQualimapRnaseq(PipelineTask):
             # Qualimap sequencing protocol can be
             # 'strand-specific-forward', 'strand-specific-reverse',
             # or 'non-strand-specific'
-            if reverse > forward and reverse > unstranded:
-                seq_protocol = "strand-specific-reverse"
-            elif forward > reverse and forward > unstranded:
-                seq_protocol = "strand-specific-forward"
-            else:
+            if unstranded > forward and unstranded > reverse:
                 seq_protocol = "non-strand-specific"
+            else:
+                ratio = forward/(reverse + 0.001)
+                if ratio < 0.2:
+                    seq_protocol = "strand-specific-reverse"
+                elif ratio > 5:
+                    seq_protocol = "strand-specific-forward"
+                else:
+                    seq_protocol = "non-strand-specific"
+            print(f"-- {bam_name}: {seq_protocol} "
+                  f"(F{forward:.1f}|R{reverse:.1f}|U{unstranded:.1f})")
             # Run Qualimap
             self.add_cmd("Run qualimap rnaseq on %s" %
                          os.path.basename(bam),
