@@ -1695,6 +1695,46 @@ no_lane_splitting = true
         self.assertEqual(s.platform['nextseq'].no_lane_splitting,True)
         self.assertEqual(s.platform['nextseq'].create_empty_fastqs,None)
 
+    def test_platform_settings_legacy_fallback_bcl_converter(self):
+        """Settings: handle 'bcl_converter' legacy fallback in 'platform:...'
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[bcl_conversion]
+bcl_converter = bcl-convert=3.7.5
+nprocessors = 16
+
+[platform:nextseq]
+bcl_converter = bcl2fastq>=2.20
+nprocessors = 8
+no_lane_splitting = true
+
+[platform:miseq]
+bcl2fastq = None
+nprocessors = None
+no_lane_splitting = False
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check bcl_conversion settings
+        self.assertEqual(s.bcl_conversion.bcl_converter,
+                         'bcl-convert=3.7.5')
+        self.assertEqual(s.bcl_conversion.nprocessors,16)
+        self.assertEqual(s.bcl_conversion.no_lane_splitting,False)
+        self.assertEqual(s.bcl_conversion.create_empty_fastqs,False)
+        # Check platform-specific options
+        self.assertEqual(s.platform['nextseq'].bcl_converter,
+                         'bcl2fastq>=2.20')
+        self.assertEqual(s.platform['nextseq'].nprocessors,8)
+        self.assertEqual(s.platform['nextseq'].no_lane_splitting,True)
+        self.assertEqual(s.platform['nextseq'].create_empty_fastqs,None)
+        # Check platform-specific options
+        self.assertEqual(s.platform['miseq'].bcl_converter,None)
+        self.assertEqual(s.platform['miseq'].nprocessors,None)
+        self.assertEqual(s.platform['miseq'].no_lane_splitting,False)
+        self.assertEqual(s.platform['miseq'].create_empty_fastqs,None)
+
 
 class TestFetchReferenceData(unittest.TestCase):
     """

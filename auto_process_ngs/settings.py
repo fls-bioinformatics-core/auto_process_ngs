@@ -473,7 +473,11 @@ class GenericSettings:
         if subsection is None:
             s = getattr(self,section)
         else:
-            s = getattr(self,section)[subsection]
+            try:
+                s = getattr(self,section)[subsection]
+            except KeyError as ex:
+                print(f"Exception fetching '{param}': {ex}")
+                raise ex
         return s[name]
 
     def list_params(self,pattern=None,exclude_undefined=False):
@@ -628,6 +632,10 @@ class GenericSettings:
         # Deal with standard fallbacks
         fallback_params = {}
         for param in fallbacks:
+            # Skip parameters which require transformation
+            if "*" in fallbacks[param] and "*" in param:
+                # Isn't a standard fallback
+                continue
             # Make expanded set of fallback params by resolving
             # any wildcards
             for p in self.list_params(param):
