@@ -978,7 +978,6 @@ class Settings(GenericSettings):
                                     "create_empty_fastqs": bool },
                 "qc": { "nprocessors": int,
                         "fastq_screens": str,
-                        #"fastq_screen_subset": int,
                         "fastq_subset_size": int,
                         "split_undetermined_fastqs": bool,
                         "use_legacy_screen_names": bool },
