@@ -892,15 +892,19 @@ class TestSettings(unittest.TestCase):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestSettings')
         # Disable AUTO_PROCESS_CONF env variable
-        self.auto_process_conf_env = os.environ["AUTO_PROCESS_CONF"]
-        os.environ["AUTO_PROCESS_CONF"] = ''
+        if "AUTO_PROCESS_CONF" in os.environ:
+            self.auto_process_conf_env = os.environ["AUTO_PROCESS_CONF"]
+            os.environ["AUTO_PROCESS_CONF"] = ''
+        else:
+            self.auto_process_conf_env = None
 
     def tearDown(self):
         # Remove the temporary test directory
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.dirn)
         # Restore AUTO_PROCESS_CONF env variable
-        os.environ["AUTO_PROCESS_CONF"] = self.auto_process_conf_env
+        if self.auto_process_conf_env is not None:
+            os.environ["AUTO_PROCESS_CONF"] = self.auto_process_conf_env
 
     def test_default_settings(self):
         """
