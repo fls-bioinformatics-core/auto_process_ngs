@@ -164,9 +164,10 @@ class TestReportQCFunction(unittest.TestCase):
         # Add QC outputs
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
-        UpdateAnalysisProject(project).add_qc_outputs()
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_multiqc=False)
         # Do reporting
-        self.assertEqual(report_qc(project),0)
+        self.assertEqual(report_qc(project, multiqc=True), 0)
         # Check output and reports
         for f in ("qc_report.html",
                   "qc_report.PJB.zip",
@@ -187,14 +188,15 @@ class TestReportQCFunction(unittest.TestCase):
         # Add QC outputs
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
-        UpdateAnalysisProject(project).add_qc_outputs()
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_multiqc=False)
         # Remove an output
         os.remove(os.path.join(self.wd,
                                "PJB",
                                "qc",
                                "PJB1_S1_R1_001_fastqc.html"))
         # Do reporting
-        self.assertEqual(report_qc(project),1)
+        self.assertEqual(report_qc(project, multiqc=True), 1)
         # Check output and reports
         for f in ("qc_report.html",
                   "qc_report.PJB.zip",
@@ -215,7 +217,7 @@ class TestReportQCFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         # Do reporting
-        self.assertEqual(report_qc(project),1)
+        self.assertEqual(report_qc(project, multiqc=True), 1)
         # Check output and reports
         for f in ("qc_report.html",
                   "qc_report.PJB.zip",
