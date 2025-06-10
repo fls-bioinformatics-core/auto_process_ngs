@@ -9,6 +9,7 @@ import os
 from bcftbx.utils import mkdirs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
@@ -140,6 +141,9 @@ class TestReportQCFunction(unittest.TestCase):
         self.pwd = os.getcwd()
         # Store original PATH
         self.path = os.environ['PATH']
+        # Make mock MultiQC
+        MockMultiQC.create(os.path.join(self.bin, "multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin, os.environ['PATH'])
         # Move to working dir
         os.chdir(self.wd)
 
