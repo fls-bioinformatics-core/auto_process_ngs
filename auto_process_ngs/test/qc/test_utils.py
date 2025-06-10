@@ -226,6 +226,68 @@ class TestReportQCFunction(unittest.TestCase):
                                                         "PJB",f)),
                             "Found %s (should be missing)" % f)
 
+    def test_report_qc_specify_output_dir_qc_dir_outside_project_dir(self):
+        """
+        report_qc: specify output directory (QC dir outside project)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Add QC outputs
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_multiqc=False)
+        # Make an alternative output directory
+        out_dir = os.path.join(self.wd, "outs")
+        os.mkdir(out_dir)
+        # Move the QC directory into the output directory
+        os.rename(os.path.join(self.wd, "PJB", "qc"),
+                  os.path.join(out_dir, "qc"))
+        # Do reporting
+        self.assertEqual(report_qc(project,
+                                   qc_dir=os.path.join(out_dir, "qc"),
+                                   out_dir=out_dir,
+                                   multiqc=True), 0)
+        # Check output and reports
+        for f in ("qc_report.html",
+                  "multiqc_report.html",
+                  "qc_report.PJB.zip"):
+            self.assertTrue(os.path.exists(os.path.join(out_dir, f)),
+                            "Missing %s" % f)
+
+    def test_report_qc_specify_output_directory_no_zip(self):
+        """
+        report_qc: specify the output directory (no ZIP)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Add QC outputs
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_multiqc=False)
+        # Make an alternative output directory
+        out_dir = os.path.join(self.wd, "outs")
+        os.mkdir(out_dir)
+        # Do reporting
+        self.assertEqual(report_qc(project,
+                                   zip_outputs=False,
+                                   out_dir=out_dir,
+                                   multiqc=True), 0)
+        # Check output and reports
+        for f in ("qc_report.html",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(out_dir, f)),
+                            "Missing %s" % f)
+
 class TestGetBamBasename(unittest.TestCase):
     """
     Tests for the 'get_bam_basename' function
