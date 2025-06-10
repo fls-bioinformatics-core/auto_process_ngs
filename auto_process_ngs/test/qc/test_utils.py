@@ -9,6 +9,7 @@ import os
 from bcftbx.utils import mkdirs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
@@ -140,6 +141,9 @@ class TestReportQCFunction(unittest.TestCase):
         self.pwd = os.getcwd()
         # Store original PATH
         self.path = os.environ['PATH']
+        # Make mock MultiQC
+        MockMultiQC.create(os.path.join(self.bin, "multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin, os.environ['PATH'])
         # Move to working dir
         os.chdir(self.wd)
 
@@ -164,9 +168,10 @@ class TestReportQCFunction(unittest.TestCase):
         # Add QC outputs
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
-        UpdateAnalysisProject(project).add_qc_outputs()
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_multiqc=False)
         # Do reporting
-        self.assertEqual(report_qc(project),0)
+        self.assertEqual(report_qc(project, multiqc=True), 0)
         # Check output and reports
         for f in ("qc_report.html",
                   "qc_report.PJB.zip",
@@ -187,14 +192,15 @@ class TestReportQCFunction(unittest.TestCase):
         # Add QC outputs
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
-        UpdateAnalysisProject(project).add_qc_outputs()
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_multiqc=False)
         # Remove an output
         os.remove(os.path.join(self.wd,
                                "PJB",
                                "qc",
                                "PJB1_S1_R1_001_fastqc.html"))
         # Do reporting
-        self.assertEqual(report_qc(project),1)
+        self.assertEqual(report_qc(project, multiqc=True), 1)
         # Check output and reports
         for f in ("qc_report.html",
                   "qc_report.PJB.zip",
@@ -215,7 +221,7 @@ class TestReportQCFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         # Do reporting
-        self.assertEqual(report_qc(project),1)
+        self.assertEqual(report_qc(project, multiqc=True), 1)
         # Check output and reports
         for f in ("qc_report.html",
                   "qc_report.PJB.zip",
@@ -223,6 +229,68 @@ class TestReportQCFunction(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Found %s (should be missing)" % f)
+
+    def test_report_qc_specify_output_dir_qc_dir_outside_project_dir(self):
+        """
+        report_qc: specify output directory (QC dir outside project)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Add QC outputs
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_multiqc=False)
+        # Make an alternative output directory
+        out_dir = os.path.join(self.wd, "outs")
+        os.mkdir(out_dir)
+        # Move the QC directory into the output directory
+        os.rename(os.path.join(self.wd, "PJB", "qc"),
+                  os.path.join(out_dir, "qc"))
+        # Do reporting
+        self.assertEqual(report_qc(project,
+                                   qc_dir=os.path.join(out_dir, "qc"),
+                                   out_dir=out_dir,
+                                   multiqc=True), 0)
+        # Check output and reports
+        for f in ("qc_report.html",
+                  "multiqc_report.html",
+                  "qc_report.PJB.zip"):
+            self.assertTrue(os.path.exists(os.path.join(out_dir, f)),
+                            "Missing %s" % f)
+
+    def test_report_qc_specify_output_directory_no_zip(self):
+        """
+        report_qc: specify the output directory (no ZIP)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Add QC outputs
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            include_multiqc=False)
+        # Make an alternative output directory
+        out_dir = os.path.join(self.wd, "outs")
+        os.mkdir(out_dir)
+        # Do reporting
+        self.assertEqual(report_qc(project,
+                                   zip_outputs=False,
+                                   out_dir=out_dir,
+                                   multiqc=True), 0)
+        # Check output and reports
+        for f in ("qc_report.html",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(out_dir, f)),
+                            "Missing %s" % f)
 
 class TestGetBamBasename(unittest.TestCase):
     """

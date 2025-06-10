@@ -1164,6 +1164,7 @@ def main():
                   qc_dir=qc_dir,
                   qc_protocol=args.qc_protocol,
                   report_html=out_file,
+                  out_dir=out_dir,
                   zip_outputs=True,
                   multiqc=(not args.no_multiqc),
                   force=True,

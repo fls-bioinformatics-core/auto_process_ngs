@@ -101,7 +101,7 @@ def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
 
 def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
               report_html=None,zip_outputs=True,multiqc=False,
-              force=False,runner=None,log_dir=None,
+              out_dir=None,force=False,runner=None,log_dir=None,
               suppress_warning=False):
     """
     Generate report for the QC run for a project
@@ -121,6 +121,10 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         archive with the report and QC outputs
       multiqc (bool): if True then also generate MultiQC
         report
+      out_dir (str): optional, path to the output
+        directory to write the reports to (defaults
+        to the project directory, ignored if report
+        HTML file name is explicitly provided)
       force (bool): if True then force generation of
         QC report even if verification fails
       runner (JobRunner): optional, job runner to use
@@ -147,6 +151,11 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         log_dir = os.path.join(project.dirn,"logs")
         if not os.path.isdir(log_dir):
             log_dir = None
+    # Output directory for reports
+    if out_dir is None:
+        out_dir = project.dirn
+    else:
+        out_dir = os.path.abspath(out_dir)
     # Sort out runners
     if runner is None:
         runner = Settings().general.default_runner
@@ -211,7 +220,7 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
             multiqc_report = os.path.join(os.path.dirname(report_html),
                                           multiqc_report)
         else:
-            multiqc_report = os.path.join(project.dirn, multiqc_report)
+            multiqc_report = os.path.join(out_dir, multiqc_report)
         # Build MultiQC command
         multiqc_cmd = Command(
             "multiqc",
@@ -257,7 +266,7 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
     else:
         out_file = report_html
     if not os.path.isabs(out_file):
-        out_file = os.path.join(project.dirn,out_file)
+        out_file = os.path.join(out_dir, out_file)
     report_cmd = Command(
         "reportqc.py",
         "--filename",out_file,
