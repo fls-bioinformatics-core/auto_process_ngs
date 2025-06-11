@@ -281,7 +281,7 @@ def listdir(path):
         list_cmd = applications.general.ssh_command(
             path.user,
             path.server,
-            list_cmd.command_line)
+            quote_spaces(list_cmd.command_line))
     retval,output = list_cmd.subprocess_check_output()
     return output.rstrip('\n').split('\n')
 
@@ -306,7 +306,7 @@ def exists(path):
         test_cmd = applications.general.ssh_command(
             path.user,
             path.server,
-            test_cmd.command_line)
+            quote_spaces(test_cmd.command_line))
     retval,output = test_cmd.subprocess_check_output()
     return (retval == 0)
 
@@ -330,7 +330,7 @@ def isdir(path):
         test_cmd = applications.general.ssh_command(
             path.user,
             path.server,
-            test_cmd.command_line)
+            quote_spaces(test_cmd.command_line))
     retval,output = test_cmd.subprocess_check_output()
     return (retval == 0)
 
@@ -416,7 +416,7 @@ def disk_usage(path):
         df_cmd = applications.general.ssh_command(
             path.user,
             path.server,
-            df_cmd.command_line)
+            quote_spaces(df_cmd.command_line))
         retval,output = df_cmd.subprocess_check_output()
         # Process the output
         # df output looks like e.g.:
@@ -655,3 +655,30 @@ def unzip_command(zip_file,dest):
             zip_file.server,
             unzip_cmd.command_line)
     return unzip_cmd
+
+########################################################################
+# Utility functions
+#########################################################################
+
+def quote_spaces(args):
+    """
+    Wraps double quotes around unquoted arguments containing spaces
+
+    Arguments:
+      args (list): list of arguments
+
+    Returns:
+      List: version of input list with any unquoted arguments which
+        contained spaces now enclosed in double quotes.
+    """
+    new_args = []
+    for arg in args:
+        if (str(arg).startswith("\"") and str(arg).endswith("\"")) or \
+           (str(arg).startswith("'") and str(arg).endswith("'")) or \
+           " " not in str(arg):
+            # Already quoted or doesn't have spaces
+            new_args.append(arg)
+        else:
+            # Contains spaces and not quoted
+            new_args.append(f"\"{arg}\"")
+    return new_args
