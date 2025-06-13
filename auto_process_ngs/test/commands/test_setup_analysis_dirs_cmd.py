@@ -1214,6 +1214,64 @@ AB\tAB1\tAlan Brown\tSingle Cell Immune Profiling\t10xGenomics Chromium 5'\tMous
                 self.assertFalse(os.path.exists(template_multi_config_file),
                                  "Found %s" % template_multi_config_file)
 
+    def test_setup_analysis_dirs_biorad_ddseq_single_cell_rnaseq(self):
+        """
+        setup_analysis_dirs: create new analysis dir for Bio-Rad ddSEQ Single Cell 3' RNA-Seq
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '250321_A01899_0263_AHVHGMDRX',
+            'novaseq6000',
+            metadata={ "instrument_datestamp": "250321",
+                "processing_software": {
+                    "bcl2fastq" : (
+                        "/usr/local/bcl2fastq/2.20/bcl2fastq",
+                        "bcl2fastq",
+                        "2.20"
+                    )
+                }
+            },
+            reads=('R1','R2'),
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq")))
+        print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq","AB")))
+        # Add required metadata to 'projects.info'
+        projects_info = os.path.join(mockdir.dirn,"projects.info")
+        with open(projects_info,"w") as fp:
+            fp.write(
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+AB\tAB1\tAlan Brown\tscRNA-seq\tBio-Rad ddSEQ Single Cell 3' RNA-Seq\tMouse\tAudrey Benson\t1% PhiX
+""")
+        # Expected data
+        projects = {
+            "AB": ["AB1_S1_R1_001.fastq.gz",
+                   "AB1_S1_R2_001.fastq.gz",],
+            "undetermined": ["Undetermined_S0_R1_001.fastq.gz",]
+        }
+        # Check project dirs don't exist
+        for project in projects:
+            project_dir_path = os.path.join(mockdir.dirn,project)
+            self.assertFalse(os.path.exists(project_dir_path))
+        # Setup the project dirs
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        setup_analysis_dirs(ap)
+        # Check project dirs and contents
+        for project in projects:
+            project_dir_path = os.path.join(mockdir.dirn,project)
+            self.assertTrue(os.path.exists(project_dir_path))
+            # Check README.info file
+            readme_file = os.path.join(project_dir_path,
+                                       "README.info")
+            self.assertTrue(os.path.exists(readme_file))
+            # Check Fastqs
+            fastqs_dir = os.path.join(project_dir_path,
+                                      "fastqs")
+            self.assertTrue(os.path.exists(fastqs_dir))
+            for fq in projects[project]:
+                fastq = os.path.join(fastqs_dir,fq)
+                self.assertTrue(os.path.exists(fastq))
+
     def test_setup_analysis_dirs_biorad_ddseq_single_cell_atac(self):
         """
         setup_analysis_dirs: create new analysis dir for Bio-Rad ddSEQ Single Cell ATAC

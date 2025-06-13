@@ -112,7 +112,8 @@ def setup_analysis_dirs(ap,
             if not sc_platform in tenx.PLATFORMS and \
                not sc_platform in icell8.PLATFORMS and \
                not sc_platform in ('Parse Evercode',) and \
-               not sc_platform in ('Bio-Rad ddSEQ Single Cell ATAC',):
+               not sc_platform in ('Bio-Rad ddSEQ Single Cell ATAC',) and \
+               not sc_platform in ('Bio-Rad ddSEQ Single Cell 3\' RNA-Seq',):
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")
