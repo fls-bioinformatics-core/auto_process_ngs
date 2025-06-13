@@ -4,11 +4,9 @@ Processing Bio-Rad ddSEQ single cell data
 Background
 ----------
 
-Bio-Rad provides ddSEQ Single-Cell ATAC-seq and ddSEQ Single-Cell 3'
-RNA-seq kits. This document outlines using the ``auto-process-ngs``
-pipeline to perform Fastq generation and QC for ddSEQ Single-Cell
-ATAC-seq data (there is no support currently for ddSEQ single cell
-RNA-seq data).
+Bio-Rad provides ddSEQ Single-Cell 3' RNA-seq and ddSEQ Single-Cell
+ATAC-seq kits. This document outlines using the ``auto-process-ngs``
+pipeline to perform Fastq generation and QC for these data.
 
 Requirements
 ------------
@@ -20,8 +18,8 @@ Fastq generation
 ----------------
 
 The ``biorad_ddseq`` Fastq generation protocol should be used for
-Bio-Rad's ddSEQ Single-Cell ATAC-seq data when running the
-:doc:`make_fastqs <../using/make_fastqs>` command.
+Bio-Rad's ddSEQ Single-Cell RNA-Seq and ATAC-seq data when running
+the :doc:`make_fastqs <../using/make_fastqs>` command.
 
 
 Analysis project setup and QC
@@ -33,11 +31,12 @@ for the Parse Evercode project(s) in the ``projects.info`` control file.
 
 The following values are valid options:
 
-===================================== =================================
-Single cell platform                  Library types
-===================================== =================================
-``Bio-Rad ddSEQ Single Cell ATAC``    ``scATAC-seq``, ``snATAC-seq``
-===================================== =================================
+========================================  ==============================
+Single cell platform                      Library types
+========================================  ==============================
+``Bio-Rad ddSEQ Single Cell 3' RNA-Seq``  ``scRNA-seq``, ``snRNA-seq``
+``Bio-Rad ddSEQ Single Cell ATAC``        ``scATAC-seq``, ``snATAC-seq``
+========================================= ==============================
 
 Running the :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
 command will automatically transfer these values into the project
