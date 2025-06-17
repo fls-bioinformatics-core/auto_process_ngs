@@ -132,6 +132,7 @@ Single cell platform                      Library types
 ``10xGenomics Chromium 3'v2``             ``scRNA-seq``, ``snRNA-seq``
                                           ``CellPlex``,
                                           ``CellPlex scRNA-seq``, ``Flex``
+``10xGenomics Chromium GEM-X``            ``Flex``
 ``10xGenomics Chromium GEM-X 3'v4``       ``scRNA-seq``
 ``10xGenomics Chromium Next GEM``         ``scRNA-seq``,
                                           ``CellPlex scRNA-seq``, ``Flex``
