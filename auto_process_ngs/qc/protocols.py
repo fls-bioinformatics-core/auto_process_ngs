@@ -824,11 +824,17 @@ def determine_qc_protocol_from_metadata(library_type,
                                 "WT scRNA-seq"):
                 # Parse Evercode snRNAseq
                 protocol = "ParseEvercode"
+        # Bio-Rad RNA-Seq
+        elif single_cell_platform == "Bio-Rad ddSEQ Single Cell 3' RNA-Seq":
+            if library_type in ("scRNA-seq",
+                                "snRNA-seq",):
+                # Bio-Rad ddSeq RNA-Seq
+                protocol = "minimal"
         # Bio-Rad ATAC
         elif single_cell_platform == "Bio-Rad ddSEQ Single Cell ATAC":
             if library_type in ("scATAC-seq",
                                 "snATAC-seq",):
-                # 10xGenomics scATAC-seq
+                # Bio-Rad ddSeq ATAC
                 protocol = "BioRad_ddSEQ_ATAC"
         # ICELL8
         elif single_cell_platform == "ICELL8":

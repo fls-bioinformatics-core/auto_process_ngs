@@ -781,6 +781,23 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             paired_end=True),
                          "ParseEvercode")
 
+    def test_determine_qc_protocol_from_metadata_biorad_ddseq_rnaseq(self):
+        """
+        determine_qc_protocol_from_metadata: Bio-Rad ddSEQ Single Cell 3' RNA-Seq data
+        """
+        # scRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="scRNA-seq",
+            single_cell_platform="Bio-Rad ddSEQ Single Cell 3' RNA-Seq",
+            paired_end=True),
+                         "minimal")
+        # snRNA-seq
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="snRNA-seq",
+            single_cell_platform="Bio-Rad ddSEQ Single Cell 3' RNA-Seq",
+            paired_end=True),
+                         "minimal")
+
     def test_determine_qc_protocol_from_metadata_biorad_ddseq_atac(self):
         """
         determine_qc_protocol_from_metadata: Bio-Rad ddSEQ Single Cell ATAC data
