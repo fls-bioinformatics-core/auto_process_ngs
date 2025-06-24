@@ -155,6 +155,9 @@ LANE_SUBSET_ATTRS = (
     'bcl_converter',
 )
 
+# Conda package for Bcl2fastq
+BCL2FASTQ_CONDA_PKG = "bih-cubi::bcl2fastq2=2.20.0.422"
+
 ######################################################################
 # Pipeline classes
 ######################################################################
@@ -2325,6 +2328,9 @@ class GetBcl2Fastq(PipelineFunctionTask):
           bcl2fastq_info (tuple): tuple consisting of
             (exe,package,version)
         """
+        # Conda dependencies
+        self.conda(BCL2FASTQ_CONDA_PKG)
+        # Outputs
         self.add_output('bcl2fastq_exe',Param(type=str))
         self.add_output('bcl2fastq_package',Param(type=str))
         self.add_output('bcl2fastq_version',Param(type=str))
@@ -2535,6 +2541,8 @@ class RunBcl2Fastq(PipelineTask):
           missing_fastqs: list of Fastqs missing after
             Fastq generation
         """
+        # Conda dependencies
+        self.conda(BCL2FASTQ_CONDA_PKG)
         # Internal variables
         self.supported_versions = ('1.8','2.17','2.20',)
         self.tmp_out_dir = None
@@ -3388,6 +3396,8 @@ class Run10xMkfastq(PipelineTask):
               Fastq generation
 
         """
+        # Conda dependencies
+        self.conda(BCL2FASTQ_CONDA_PKG)
         # Internal variables
         self.pkg = None
         self.tmp_out_dir = None
