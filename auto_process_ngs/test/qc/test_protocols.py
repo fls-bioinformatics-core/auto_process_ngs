@@ -564,6 +564,17 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             paired_end=True),
                          "10x_scRNAseq")
 
+    def test_determine_qc_protocol_from_metadata_10xchromium_gemx(self):
+        """
+        determine_qc_protocol_from_metadata: 10xGenomics Chromium GEM-X data
+        """
+        # Flex
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Flex",
+            single_cell_platform="10xGenomics Chromium GEM-X",
+            paired_end=True),
+                         "10x_Flex")
+
     def test_determine_qc_protocol_from_metadata_10xchromium_next_gem(self):
         """
         determine_qc_protocol_from_metadata: 10xGenomics Chromium Next GEM data
