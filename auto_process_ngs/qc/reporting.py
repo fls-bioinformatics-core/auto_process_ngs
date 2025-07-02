@@ -517,10 +517,13 @@ class QCReport(Document):
                 expected_outputs = None
             # Fields to report in summary table
             if not summary_fields:
-                summary_fields = self._get_summary_fields(project,
-                                                          expected_outputs)
+                project_summary_fields = self._get_summary_fields(
+                    project,
+                    expected_outputs)
+            else:
+                project_summary_fields = summary_fields
             print("Reporting summary fields:")
-            for f in summary_fields:
+            for f in project_summary_fields:
                 print("- %s" % f)
             # Attributes to report for each sample
             if report_attrs is None:
@@ -573,12 +576,13 @@ class QCReport(Document):
                                   "per-lane metrics")
             # Create a new summary table
             summary_table = self.add_summary_table(project,
-                                                   summary_fields,
+                                                   project_summary_fields,
                                                    section=project_summary)
             # Report each sample
             for sample in project.samples:
                 self.report_sample(project,sample,report_attrs,
-                                   summary_table,summary_fields)
+                                   summary_table,
+                                   project_summary_fields)
             # Report single library analyses
             if self.use_single_library_table:
                 for single_library in ('cellranger_count',
