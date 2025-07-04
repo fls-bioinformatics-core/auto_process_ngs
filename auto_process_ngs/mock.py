@@ -1310,7 +1310,8 @@ bcl2fastq v%s
         # Check bases mask
         if self._assert_bases_mask:
             print("Checking bases mask: %s" % args.use_bases_mask)
-            assert(args.use_bases_mask == self._assert_bases_mask)
+            assert(args.use_bases_mask.upper() ==
+                   self._assert_bases_mask.upper())
         # Check --no-lane-splitting
         if self._assert_no_lane_splitting is not None:
             print("Checking --no-lane-splitting: %s" % args.no_lane_splitting)
@@ -2261,7 +2262,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         # Check bases mask
         if self._assert_bases_mask:
             print("Checking bases mask: %s" % args.use_bases_mask)
-            assert(args.use_bases_mask == self._assert_bases_mask)
+            assert(args.use_bases_mask.upper() ==
+                   self._assert_bases_mask.upper())
         # Check --include-introns
         if self._assert_include_introns is not None:
             print("Checking --include-introns")
