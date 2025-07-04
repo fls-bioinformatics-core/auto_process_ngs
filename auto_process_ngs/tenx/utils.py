@@ -138,25 +138,15 @@ def get_bases_mask_10x_atac(runinfo_xml):
     Returns:
       String: 10xGenomics scATAC-seq bases mask string
     """
-    bases_mask = get_bases_mask(runinfo_xml).lower().split(',')
     # Check there are four reads defined
+    bases_mask = get_bases_mask(runinfo_xml).split(',')
     if len(bases_mask) != 4:
         raise Exception("Bases mask '%s' should have 4 reads "
                         "defined (has %d)" % (bases_mask,
                                               len(bases_mask)))
-    # First read
-    r1_mask = bases_mask[0]
-    # Update first index to restrict to 8 bases
-    num_cycles = int(bases_mask[1][1:])
-    if num_cycles < 8:
-        raise Exception("Index read < 8 bases")
-    i1_mask = "I8%s" % ('n'*(num_cycles-8),)
-    # Update second index to second read
-    r2_mask = bases_mask[2].replace('i','y')
-    # Keep last read as is
-    r3_mask = bases_mask[3]
-    # Reassemble and return
-    return ','.join((r1_mask,i1_mask,r2_mask,r3_mask,))
+    # Regenerate bases mask
+    # I1: truncate to 8 bases
+    return get_bases_mask(runinfo_xml, i1=8)
 
 def get_bases_mask_10x_multiome(runinfo_xml,library):
     """
