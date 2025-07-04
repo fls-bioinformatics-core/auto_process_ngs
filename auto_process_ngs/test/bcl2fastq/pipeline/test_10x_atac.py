@@ -49,7 +49,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger-atac"),
                                  version="1.2.0",
-                                 assert_bases_mask="Y101,I8,I8,Y101")
+                                 assert_bases_mask="Y101,I8,Y8,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -150,7 +150,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger-atac"),
                                  version="2.0.0",
-                                 assert_bases_mask="Y101,I8,I8,Y101")
+                                 assert_bases_mask="Y101,I8,Y8,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -249,7 +249,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger-atac"),
-                                 assert_bases_mask="Y101,I8,I8,Y101")
+                                 assert_bases_mask="Y101,I8,Y8,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Set up mock outputs in analysis directory to mimic
