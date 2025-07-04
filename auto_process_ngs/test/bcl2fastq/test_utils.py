@@ -1752,6 +1752,32 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
         # Check the bases mask
         self.assertEqual(get_bases_mask(run_info_xml),"y101,I8,I8,y101")
 
+    def test_get_bases_mask_dual_index_override_template(self):
+        """get_bases_mask: override default read types
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,
+                                        override_template="RIRR"),
+                         "y101,I8,y8,y101")
+
+    def test_get_bases_mask_dual_index_override_template_and_truncate(self):
+        """get_bases_mask: override default read types and truncate reads
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,
+                                        r1=59,
+                                        r3=90,
+                                        override_template="RIRR"),
+                         "y59n42,I8,y8,y90n11")
+
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 

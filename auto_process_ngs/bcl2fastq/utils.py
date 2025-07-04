@@ -438,7 +438,7 @@ def get_required_samplesheet_format(bcl2fastq_version):
                                   bcl2fastq_version)
 
 def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
-                   r3=None,i1=None,i2=None):
+                   r3=None,i1=None,i2=None,override_template=None):
     """
     Get bases mask string
 
@@ -453,6 +453,12 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
     the indexes which appear in the sample sheet, even if one was
     supplied.)
 
+    If 'override_template' is supplied then it should a string
+    specifying whether each read is a sequence ('R') or an index
+    ('I'). For example if the initial bases mask is 'y50,I8,I24,y90'
+    then the template 'RIRR' will convert this to 'y50,I8,y24,y90'.
+    The template is applied before truncation.
+
     Arguments:
       run_info_xml: name and path of RunInfo.xml file from the
         sequencing run
@@ -462,6 +468,8 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
       r3 (int): length to truncate R3 reads to
       i1 (int): length to truncate I1 index sequences to
       i2 (int): length to truncate I2 index sequences to
+      override_template (str): string specify type of each read
+        (either 'R' for sequence or 'I' for index)
 
     Returns:
       Bases mask string e.g. 'y101,I6'.
@@ -469,6 +477,22 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
     # Get initial bases mask
     bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
     print("Bases mask: %s (from RunInfo.xml)" % bases_mask)
+    # Apply override template
+    if override_template:
+        bases_mask = bases_mask.split(",")
+        if len(override_template) != len(bases_mask):
+            raise Exception("Inconsistent template and mask lengths")
+        for i in range(len(override_template)):
+            template = override_template[i].upper()
+            if template == "R":
+                read_type = "y"
+            elif template == "I":
+                read_type = "I"
+            else:
+                raise Exception(f"'{override_template}: bad template")
+            bases_mask[i] = f"{read_type}{bases_mask[i][1:]}"
+        bases_mask = ",".join(bases_mask)
+        print(f"Bases mask: {bases_mask} (updated from template)")
     # Truncate reads if specified
     if not (r1 is None and r2 is None and r3 is None and
             i1 is None and i2 is None):
