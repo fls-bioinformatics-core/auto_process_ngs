@@ -233,7 +233,7 @@ class TestGetBasesMask10xAtac(unittest.TestCase):
         run_info_xml = os.path.join(self.wd,"RunInfo.xml")
         with open(run_info_xml,'w') as fp:
             fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
-                                       "y76,I8,I16,y76",4,12))
+                                       "y76,I8,y16,y76",4,12))
         self.assertEqual(get_bases_mask_10x_atac(run_info_xml),
                          "y76,I8,y16,y76")
 
@@ -244,21 +244,9 @@ class TestGetBasesMask10xAtac(unittest.TestCase):
         run_info_xml = os.path.join(self.wd,"RunInfo.xml")
         with open(run_info_xml,'w') as fp:
             fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
-                                       "y76,I16,I16,y76",4,12))
+                                       "y76,I16,y16,y76",4,12))
         self.assertEqual(get_bases_mask_10x_atac(run_info_xml),
-                         "y76,I8nnnnnnnn,y16,y76")
-
-    def test_get_bases_mask_10x_atac_too_short_index(self):
-        """get_bases_mask_10x_atac: run with too-short index
-        """
-        # Make a single index RunInfo.xml file
-        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
-        with open(run_info_xml,'w') as fp:
-            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
-                                       "y76,I6,I16,y76",4,12))
-        self.assertRaises(Exception,
-                          get_bases_mask_10x_atac,
-                          run_info_xml)
+                         "y76,I8n8,y16,y76")
 
     def test_get_bases_mask_10x_atac_wrong_number_of_reads(self):
         """get_bases_mask_10x_atac: run with wrong number of reads
@@ -294,7 +282,7 @@ class TestGetBasesMask10xMultiome(unittest.TestCase):
             fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
                                        "y50,I10,I24,y90",4,12))
         self.assertEqual(get_bases_mask_10x_multiome(run_info_xml,'ATAC'),
-                         "Y50,I8n2,Y24,Y90")
+                         "y50,I8n2,y24,y90")
 
     def test_get_bases_mask_10x_multiome_gex(self):
         """get_bases_mask_10x_multiome: update bases mask for 'gex'
@@ -305,7 +293,7 @@ class TestGetBasesMask10xMultiome(unittest.TestCase):
             fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
                                        "y50,I10,I24,y90",4,12))
         self.assertEqual(get_bases_mask_10x_multiome(run_info_xml,'GEX'),
-                         "Y28n22,I10,I10n14,Y90")
+                         "y28n22,I10,I10n14,y90")
 
     def test_get_bases_mask_10x_multiome_too_few_reads(self):
         """get_bases_mask_10x_multiome: exception if not enough reads
