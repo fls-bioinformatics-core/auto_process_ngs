@@ -438,7 +438,7 @@ def get_required_samplesheet_format(bcl2fastq_version):
                                   bcl2fastq_version)
 
 def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
-                   i1=None,i2=None):
+                   r3=None,i1=None,i2=None):
     """
     Get bases mask string
 
@@ -459,6 +459,7 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
       sample_sheet_file: (optional) path to sample sheet file
       r1 (int): length to truncate R1 reads to
       r2 (int): length to truncate R2 reads to
+      r3 (int): length to truncate R3 reads to
       i1 (int): length to truncate I1 index sequences to
       i2 (int): length to truncate I2 index sequences to
 
@@ -469,8 +470,9 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None,r1=None,r2=None,
     bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
     print("Bases mask: %s (from RunInfo.xml)" % bases_mask)
     # Truncate reads if specified
-    if not (r1 is None and r2 is None and i1 is None and i2 is None) :
-        lengths = (r1,r2)
+    if not (r1 is None and r2 is None and r3 is None and
+            i1 is None and i2 is None):
+        lengths = (r1,r2,r3)
         reads = []
         read_number = 0
         index_lengths = (i1,i2)

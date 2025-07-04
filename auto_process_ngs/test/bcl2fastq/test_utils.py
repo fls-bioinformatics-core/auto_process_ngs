@@ -1637,6 +1637,46 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
                                         r1=77,r2=77),
                          "y76,I6,y76")
 
+    def test_get_bases_mask_10x_index_truncate_r1_r2_r3_reads(self):
+        """get_bases_mask: truncate R1, R3 and R3 reads (10x Genomics index)
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml, "wt") as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y59,I10,y24,y90",4,12))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,4/24/2018
+Workflow,GenerateFASTQ
+Application,NextSeq FASTQ Only
+Assay,Nextera XT v2 Set A
+Description,
+Chemistry,Default
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+SL1,SL1,,,N701,SI-GA-A2,SL,
+SL2,SL2,,,N702,SI-GA-B2,SL,
+SL3,SL3,,,N703,SI-GA-C2,SL,
+SL4,SL4,,,N704,SI-GA-D2,SL,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet, "wt") as fp:
+            fp.write(sample_sheet_content)
+        # Truncate R1, R2 and R3 reads in bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=50,r2=24,r3=49),
+                         "y50n9,I10,y24,y49n41")
+
     def test_get_bases_mask_truncate_i1_index_10x(self):
         """get_bases_mask: truncate I1 index (10x Genomics index)
         """
