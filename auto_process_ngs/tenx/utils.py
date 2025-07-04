@@ -193,63 +193,25 @@ def get_bases_mask_10x_multiome(runinfo_xml,library):
       String: 10xGenomics single cell multiome bases mask
         string for the specified library type.
     """
-    # Normalise the library type
-    library = library.lower()
     # Get initial bases mask from RunInfo.xml
-    bases_mask = get_bases_mask(runinfo_xml).lower().split(',')
+    bases_mask = get_bases_mask(runinfo_xml).split(',')
     # Check there are four reads defined
     if len(bases_mask) != 4:
         raise Exception("Bases mask '%s' should have 4 reads "
                         "defined (has %d)" % (bases_mask,
                                               len(bases_mask)))
-    # Update bases mask
+    # Regenerate bases mask
+    library = library.lower()
     if library == "atac":
-        # First read: keep all bases
-        r1_mask = "Y" + bases_mask[0][1:]
-        # Update first index to restrict to 8 bases
-        num_cycles = int(bases_mask[1][1:])
-        if num_cycles < 8:
-            raise Exception("I1 read < 8 bases")
-        i1_mask = "I8"
-        if num_cycles > 8:
-            i1_mask += "n%s" % (num_cycles-8)
-        # Update second read
-        num_cycles = int(bases_mask[2][1:])
-        if num_cycles < 24:
-            raise Exception("R2 read < 24 bases")
-        r2_mask = "Y24"
-        if num_cycles > 24:
-            r2_mask += "n%s" % (num_cycles-24)
-        # Keep last read as is
-        r3_mask = "Y" + bases_mask[3][1:]
-        # Reassemble and return
-        return ','.join((r1_mask,i1_mask,r2_mask,r3_mask,))
+        # R1,R3: unchanged
+        # R2: truncate to 24 bases
+        # I1: truncate to 8 bases
+        return get_bases_mask(runinfo_xml, i1=8, r2=24)
     elif library == "gex":
-        # First read: keep first 28 bases
-        num_cycles = int(bases_mask[0][1:])
-        if num_cycles < 28:
-            raise Exception("R1 read < 28 bases")
-        r1_mask = "Y28"
-        if num_cycles > 28:
-            r1_mask += "n%s" % (num_cycles-28)
-        # Update first index to restrict to 10 bases
-        num_cycles = int(bases_mask[1][1:])
-        if num_cycles < 10:
-            raise Exception("I1 read < 10 bases")
-        i1_mask = "I10"
-        if num_cycles >10:
-            i1_mask += "n%s" % (num_cycles-10)
-        # Update second index to restrict to 10 bases
-        num_cycles = int(bases_mask[2][1:])
-        if num_cycles < 10:
-            raise Exception("I2 read < 10 bases")
-        i2_mask = "I10"
-        if num_cycles >10:
-            i2_mask += "n%s" % (num_cycles-10)
-        # Keep last read as is
-        r2_mask = "Y" + bases_mask[3][1:]
-        # Reassemble and return
-        return ','.join((r1_mask,i1_mask,i2_mask,r2_mask,))
+        # R1: truncate to 28 bases
+        # I1,I2: truncate to 10 bases each
+        # R2: unchanged
+        return get_bases_mask(runinfo_xml, r1=28, i1=10, i2=10)
     else:
         raise Exception("Unknown library type: '%s'" % library)
 
