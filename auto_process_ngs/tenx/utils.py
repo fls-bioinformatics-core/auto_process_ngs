@@ -193,14 +193,14 @@ def get_bases_mask_10x_multiome(runinfo_xml,library):
     # Regenerate bases mask
     library = library.lower()
     if library == "atac":
-        # R1,R3: unchanged
+        # Convert I2 to R2
         # R2: truncate to 24 bases
         # I1: truncate to 8 bases
-        return get_bases_mask(runinfo_xml, i1=8, r2=24)
+        return get_bases_mask(runinfo_xml, i1=8, r2=24,
+                              override_template="RIRR")
     elif library == "gex":
         # R1: truncate to 28 bases
         # I1,I2: truncate to 10 bases each
-        # R2: unchanged
         return get_bases_mask(runinfo_xml, r1=28, i1=10, i2=10)
     else:
         raise Exception("Unknown library type: '%s'" % library)

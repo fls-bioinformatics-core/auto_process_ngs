@@ -280,7 +280,7 @@ class TestGetBasesMask10xMultiome(unittest.TestCase):
         run_info_xml = os.path.join(self.wd,"RunInfo.xml")
         with open(run_info_xml,'w') as fp:
             fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
-                                       "y50,I10,y24,y90",4,12))
+                                       "y50,I10,I24,y90",4,12))
         self.assertEqual(get_bases_mask_10x_multiome(run_info_xml,'ATAC'),
                          "y50,I8n2,y24,y90")
 
