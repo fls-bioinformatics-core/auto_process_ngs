@@ -485,18 +485,22 @@ def add_make_fastqs_command(cmdparser):
                           dest="no_adapter_trimming",default=False,
                           help="turn off adapter trimming even if "
                           "adapter sequences are supplied")
-    # Standard/mirna options
-    standard = p.add_argument_group('Standard/miRNA options')
+    # Read truncation options
+    standard = p.add_argument_group('Read truncation options')
     standard.add_argument('--r1-length',action="store",
                           dest="r1_length",default=None,type=int,
                           help="truncate R1 reads to R1_LENGTH  (ignored if "
-                          "--use-bases-mask is explicitly set; only "
-                          "applies to 'standard' and 'miRNA' protocols)")
+                          "--use-bases-mask is explicitly set)")
     standard.add_argument('--r2-length',action="store",
                           dest="r2_length",default=None,type=int,
                           help="truncate R2 reads to R2_LENGTH (ignored if "
-                          "--use-bases-mask is explicitly set; only "
-                          "applies to 'standard' and 'miRNA' protocols)")
+                          "--use-bases-mask is explicitly set, or if there "
+                          "is no R2 read)")
+    standard.add_argument('--r3-length',action="store",
+                          dest="r3_length",default=None,type=int,
+                          help="truncate R3 reads to R3_LENGTH (ignored if "
+                          "--use-bases-mask is explicitly set, or if there "
+                          "is no R3 read)")
     # 10x Genomics options
     default_cellranger_localcores = __settings['10xgenomics'].\
                                     cellranger_localcores
@@ -1542,7 +1546,7 @@ def make_fastqs(args):
                 elif key == 'rc_i2_override':
                     key = 'spaceranger_rc_i2_override'
                 # Convert values where appropriate
-                if key in ('r1_length' ,'r2_length'):
+                if key in ('r1_length' ,'r2_length', 'r3_length'):
                     # Convert integer values
                     value = int(value)
                 else:
@@ -1581,6 +1585,7 @@ def make_fastqs(args):
         bases_mask=args.bases_mask,
         r1_length=args.r1_length,
         r2_length=args.r2_length,
+        r3_length=args.r3_length,
         lanes=only_include_lanes,lane_subsets=lane_subsets,
         icell8_well_list=args.icell8_well_list,
         icell8_swap_i1_and_i2=args.icell8_swap_i1_and_i2,

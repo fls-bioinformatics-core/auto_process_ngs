@@ -158,8 +158,8 @@ reference.
 
 .. _make_fastqs-truncating-read-lengths:
 
-Truncating R1/R2 read lengths and setting bases mask
-----------------------------------------------------
+Truncating R1/R2/R3 read lengths and setting bases mask
+-------------------------------------------------------
 
 In some cases it may be desirable to truncate the lengths of the
 non-index reads, most typically for the R1 and/or R2 sequences.
@@ -182,17 +182,20 @@ via the ``--lanes`` option, for example:
 
    auto_process.py make_fastqs --lanes=1-2:standard:r1_length=28
 
+.. note::
+
+   For datasets which define an R3 read (for example, 10x
+   Genomics single cell ATAC data), the ``--r3-length`` option
+   is available to explicitly truncate the length of the R3
+   reads (with an ``r3_length=...`` option available for lane
+   subsets).
 
 .. note::
 
-   The ``--r1-length`` and ``--r2-length`` options are only
-   applied for the ``standard``, ``mirna``, ``10x_chromium``
-   and ``10x_visium`` protocols; they are ignored for other
-   protocols.
-
-   The options operate by adjusting the bases mask used to
-   match the required length, so if a bases mask is explicitly
-   provided then these options will also not be applied.
+   The read truncation options operate by adjusting the bases
+   mask used to match the required length, so if a bases mask
+   is explicitly provided then these options will also not be
+   applied.
 
    Alternatively (or in scenarios where more complicated
    read manipulations are required), the bases mask can be
@@ -333,11 +336,8 @@ Option                                Description
 ===================================== ==================================
 ``bases_mask=BASES_MASK``             Set bases mask
 ``r1_length=LENGTH``                  Truncate R1 reads to ``LENGTH``
-                                      (``standard`` and ``mirna``
-                                      protocols only)
 ``r2_length=LENGTH``                  Truncate R2 reads to ``LENGTH``
-                                      (``standard`` and ``mirna``
-                                      protocols only)
+``r3_length=LENGTH``                  Truncate R3 reads to ``LENGTH``
 ``trim_adapters=yes|no``              Turn adapter trimming on or off
 ``adapter=SEQUENCE``                  Set adapter sequence for trimming
 ``adapter_read2=SEQUENCE``            Set read2 adapter sequence
