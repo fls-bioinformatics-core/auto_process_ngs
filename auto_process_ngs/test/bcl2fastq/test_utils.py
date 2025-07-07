@@ -1778,6 +1778,29 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
                                         override_template="RIRR"),
                          "y59n42,I8,y8,y90n11")
 
+    def test_get_bases_mask_10x_multiome_atac(self):
+        """get_bases_mask: handle 10x single cell multiome ATAC run
+        """
+        # Make a single index RunInfo.xml file with R3 read
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml, "wt") as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y50,I10,I24,y90",4,12))
+        self.assertEqual(get_bases_mask(run_info_xml, i1=8, r2=24,
+                                        override_template="RIRR"),
+                         "y50,I8n2,y24,y90")
+
+    def test_get_bases_mask_10x_multiome_gex(self):
+        """get_bases_mask: handle 10x single cell multiome GEX run
+        """
+        # Make a dual index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml, "wt") as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y50,I10,I24,y90",4,12))
+        self.assertEqual(get_bases_mask(run_info_xml, r1=28, i1=10, i2=10),
+                         "y28n22,I10,I10n14,y90")
+
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 

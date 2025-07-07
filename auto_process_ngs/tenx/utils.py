@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx/utils.py: utility functions for handling 10xGenomics data
-#     Copyright (C) University of Manchester 2023-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2025 Peter Briggs
 #
 
 """
@@ -11,8 +11,6 @@ pipelines:
 - flow_cell_id
 - has_10x_indices
 - has_chromium_sc_indices
-- get_bases_mask_10x_atac
-- get_bases_mask_10x_multiome
 - cellranger_info
 - spaceranger_info
 - make_qc_summary_html
@@ -30,7 +28,6 @@ import json
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import split_run_name_full
 from bcftbx.utils import find_program
-from ..bcl2fastq.utils import get_bases_mask
 from ..command import Command
 from ..docwriter import Document
 from ..docwriter import List
@@ -114,96 +111,6 @@ def has_chromium_sc_indices(sample_sheet):
     Maintained for backwards compatibility
     """
     return has_10x_indices(sample_sheet)
-
-def get_bases_mask_10x_atac(runinfo_xml):
-    """
-    Acquire a bases mask for 10xGenomics scATAC-seq
-
-    Generates an initial bases mask based on the run
-    contents, and then updates this so that:
-
-    1. Only the first 8 bases of the first index read
-       are actually used, and
-    2. The second index read is converted to a data
-       read.
-
-    For example: if the initial bases mask is
-    'Y50,I16,I16,Y50' then the scATAC-seq bases mask
-    will be 'Y50,I8nnnnnnnn,Y16,Y50'.
-
-    Arguments:
-      runinfo_xml (str): path to the RunInfo.xml for
-        the sequencing run
-
-    Returns:
-      String: 10xGenomics scATAC-seq bases mask string
-    """
-    # Check there are four reads defined
-    bases_mask = get_bases_mask(runinfo_xml).split(',')
-    if len(bases_mask) != 4:
-        raise Exception("Bases mask '%s' should have 4 reads "
-                        "defined (has %d)" % (bases_mask,
-                                              len(bases_mask)))
-    # Regenerate bases mask
-    # I1: truncate to 8 bases
-    return get_bases_mask(runinfo_xml, i1=8)
-
-def get_bases_mask_10x_multiome(runinfo_xml,library):
-    """
-    Return bases mask for 10xGenomics single cell multiome
-
-    Generates an initial bases mask based on the run
-    contents, and then updates this based on the library
-    type (either 'atac' or 'gex').
-
-    For ATAC data: the template bases mask is
-    "Y*,I8n*,Y24,Y*" (keeping all of read 1, first 8 bases
-    of read 2, all 24 bases of read 3, and all of read 4).
-
-    For example: if the initial bases mask is
-    'Y50,I10,Y24,Y90' then the single cell multiome ATAC
-    bases mask will be 'Y50,I8n2,Y24,Y90'.
-
-    For GEX data: the template bases mask is
-    "Y28n*,I10,I10n*,Y*" (keeping first 28 bases of read 1,
-    all 10 bases of read 2, first 10 bases of read 3, and
-    all of read 4).
-
-    For example: if the initial bases mask is
-    'Y50,I10,Y24,Y90' then the single cell multiome GEX
-    bases mask will be 'Y28n22,I10,I10n14,Y90'.
-
-    Arguments:
-      runinfo_xml (str): path to the RunInfo.xml for
-        the sequencing run
-      library (str): library type to set bases mask for
-        (either 'atac' or 'gex')
-
-    Returns:
-      String: 10xGenomics single cell multiome bases mask
-        string for the specified library type.
-    """
-    # Get initial bases mask from RunInfo.xml
-    bases_mask = get_bases_mask(runinfo_xml).split(',')
-    # Check there are four reads defined
-    if len(bases_mask) != 4:
-        raise Exception("Bases mask '%s' should have 4 reads "
-                        "defined (has %d)" % (bases_mask,
-                                              len(bases_mask)))
-    # Regenerate bases mask
-    library = library.lower()
-    if library == "atac":
-        # Convert I2 to R2
-        # R2: truncate to 24 bases
-        # I1: truncate to 8 bases
-        return get_bases_mask(runinfo_xml, i1=8, r2=24,
-                              override_template="RIRR")
-    elif library == "gex":
-        # R1: truncate to 28 bases
-        # I1,I2: truncate to 10 bases each
-        return get_bases_mask(runinfo_xml, r1=28, i1=10, i2=10)
-    else:
-        raise Exception("Unknown library type: '%s'" % library)
 
 def make_qc_summary_html(json_file,html_file):
     """
