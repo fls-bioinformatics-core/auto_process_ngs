@@ -5,7 +5,7 @@ Scripts and utilities for automatic processing & management of NGS sequencing
 data from Illumina sequencers, developed within the Bioinformatics Core Facility
 (BCF) at the University of Manchester (UoM).
 
-Full documentation is available at http://auto_process_ngs.readthedocs.org.
+Full documentation is available at https://auto-process-ngs.readthedocs.io.
 
 Overview
 ********
