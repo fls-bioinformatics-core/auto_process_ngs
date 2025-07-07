@@ -664,18 +664,6 @@ class MakeFastqs(Pipeline):
 
         # Perform checks for subsets
         for s in self.subsets:
-            if s['protocol'] in ('10x_atac',
-                                 '10x_multiome',
-                                 '10x_multiome_atac',
-                                 '10x_multiome_gex'):
-                # Check read truncation wasn't requested
-                if s['r1_length'] or s['r2_length'] or s['r3_length']:
-                    errmsg = "%s: read truncation was specified " \
-                             "but cannot be applied " % s['protocol']
-                    if s['lanes']:
-                        errmsg += " lanes %s" % s['lanes']
-                    errmsg += " (set bases mask manually instead)"
-                    raise Exception(errmsg)
             if s['protocol'] == 'icell8_atac':
                 # ICELL8 ATAC
                 # Check well list file is defined
