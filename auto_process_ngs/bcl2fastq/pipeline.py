@@ -91,8 +91,6 @@ from ..qc.apps.seqlens import get_sequence_lengths
 from ..tenx.utils import add_cellranger_args
 from ..tenx.utils import cellranger_info
 from ..tenx.utils import spaceranger_info
-from ..tenx.utils import get_bases_mask_10x_atac
-from ..tenx.utils import get_bases_mask_10x_multiome
 from ..tenx.utils import make_qc_summary_html
 from ..utils import Location
 from ..utils import find_executables
@@ -143,6 +141,7 @@ LANE_SUBSET_ATTRS = (
     'find_adapters_with_sliding_window',
     'r1_length',
     'r2_length',
+    'r3_length',
     'no_lane_splitting',
     'tenx_filter_single_index',
     'tenx_filter_dual_index',
@@ -219,7 +218,7 @@ class MakeFastqs(Pipeline):
                  spaceranger_rc_i2_override=None,
                  icell8_atac_swap_i1_and_i2=None,
                  icell8_atac_reverse_complement=None,
-                 r1_length=None,r2_length=None,
+                 r1_length=None,r2_length=None,r3_length=None,
                  lanes=None,trim_adapters=True,fastq_statistics=True,
                  analyse_barcodes=True,lane_subsets=None):
         """
@@ -274,6 +273,9 @@ class MakeFastqs(Pipeline):
             this length (ignored if not using bcl2fastq or
             bclconvert, or if bases mask is set)
           r2_length (int): if specified then truncate R2 reads to
+            this length (ignored if not using bcl2fastq or
+            bclconvert, or if bases mask is set)
+          r3_length (int): if specified then truncate R3 reads to
             this length (ignored if not using bcl2fastq or
             bclconvert, or if bases mask is set)
           trim_adapters (bool): if True (default) then perform
@@ -352,6 +354,7 @@ class MakeFastqs(Pipeline):
         self._bases_mask = bases_mask
         self._r1_length = r1_length
         self._r2_length = r2_length
+        self._r3_length = r3_length
         self._adapter_sequence = adapter_sequence
         self._adapter_sequence_read2 = adapter_sequence_read2
         self._minimum_trimmed_read_length = minimum_trimmed_read_length
@@ -497,6 +500,7 @@ class MakeFastqs(Pipeline):
                 bases_mask=self._bases_mask,
                 r1_length=self._r1_length,
                 r2_length=self._r2_length,
+                r3_length=self._r3_length,
                 trim_adapters=self._trim_adapters,
                 minimum_trimmed_read_length=\
                 self._minimum_trimmed_read_length,
@@ -660,18 +664,6 @@ class MakeFastqs(Pipeline):
 
         # Perform checks for subsets
         for s in self.subsets:
-            if s['protocol'] in ('10x_atac',
-                                 '10x_multiome',
-                                 '10x_multiome_atac',
-                                 '10x_multiome_gex'):
-                # Check read truncation wasn't requested
-                if s['r1_length'] or s['r2_length']:
-                    errmsg = "%s: read truncation was specified " \
-                             "but cannot be applied " % s['protocol']
-                    if s['lanes']:
-                        errmsg += " lanes %s" % s['lanes']
-                    errmsg += " (set bases mask manually instead)"
-                    raise Exception(errmsg)
             if s['protocol'] == 'icell8_atac':
                 # ICELL8 ATAC
                 # Check well list file is defined
@@ -1110,6 +1102,7 @@ class MakeFastqs(Pipeline):
             bases_mask = subset['bases_mask']
             r1_length = subset['r1_length']
             r2_length = subset['r2_length']
+            r3_length = subset['r3_length']
 
             ###################
             # Adapter trimming
@@ -1631,6 +1624,7 @@ class MakeFastqs(Pipeline):
                     bases_mask=bases_mask,
                     r1_length=r1_length,
                     r2_length=r2_length,
+                    r3_length=r3_length,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
@@ -1741,6 +1735,9 @@ class MakeFastqs(Pipeline):
                     "Get bases mask for 10xGenomics multiome",
                     fetch_primary_data.output.run_dir,
                     bases_mask,
+                    r1_length=r1_length,
+                    r2_length=r2_length,
+                    r3_length=r3_length,
                     protocol=protocol
                 )
                 self.add_task(get_bases_mask)
@@ -3272,7 +3269,8 @@ class GetBasesMask10xMultiome(PipelineTask):
     """
     Sets the bases mask string for 10x Genomics single cell multiome
     """
-    def init(self,run_dir,bases_mask,protocol):
+    def init(self,run_dir,bases_mask,protocol,r1_length=None,
+             r2_length=None,r3_length=None):
         """
         Initialise the GetBasesMask10xMultiome task
 
@@ -3283,6 +3281,13 @@ class GetBasesMask10xMultiome(PipelineTask):
             (if set then will passed directly to
             output)
           protocol (str): protocol being used
+          r1_length (int): optional, truncate R1 reads
+            to this length (ignored if bases mask is set)
+          r2_length (int): optional, truncate R2 reads
+            to this length (ignored if bases mask is set)
+          r3_length (int): optional, truncate R3 reads
+            to this length (ignored if bases mask is set,
+            or there is no R3 read)
 
         Outputs:
           bases_mask (str): bases mask to use in
@@ -3301,13 +3306,33 @@ class GetBasesMask10xMultiome(PipelineTask):
                                   "10x_multiome_gex"):
             # Load input data
             illumina_run = IlluminaRun(self.args.run_dir)
+            # Set the user-defined read lengths
+            r1_length = self.args.r1_length
+            r2_length = self.args.r2_length
+            r3_length = self.args.r3_length
             # Get library type
             library_type = self.args.protocol.split('_')[-1]
             print("Explicitly setting bases mask for '%s'" % library_type)
-            # Get updated bases mask
-            bases_mask = get_bases_mask_10x_multiome(
-                illumina_run.runinfo_xml,
-                library=library_type)
+            if library_type == "atac":
+                # Convert I2 to R2, truncate R2 to 24 bases
+                # and truncate I1 to 8 bases
+                if r2_length is None:
+                    r2_length = 24
+                bases_mask = get_bases_mask(illumina_run.runinfo_xml,
+                                            r1=r1_length,
+                                            r2=r2_length,
+                                            r3=r3_length,
+                                            i1=8,
+                                            override_template="RIRR")
+            elif library_type == "gex":
+                # Truncate R1 to 28 bases and I1 and I2 to
+                # 10 bases
+                if r1_length is None:
+                    r1_length = 28
+                bases_mask = get_bases_mask(illumina_run.runinfo_xml,
+                                            r1=r1_length,
+                                            r2=r2_length,
+                                            i1=10, i2=10)
             print("Updated bases mask: %s" % bases_mask)
         self.output.bases_mask.set(bases_mask)
 
@@ -3316,7 +3341,7 @@ class Run10xMkfastq(PipelineTask):
     Runs 10xGenomics 'mkfastq' to generate Fastqs
     """
     def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
-             r1_length=None,r2_length=None,
+             r1_length=None,r2_length=None,r3_length=None,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
              filter_single_index=None,filter_dual_index=None,
@@ -3337,6 +3362,15 @@ class Run10xMkfastq(PipelineTask):
           sample_sheet (str): path to input samplesheet file
           bases_mask (str): if set then use this as an
             alternative bases mask setting
+          r1_length (int): if specified then truncate R1 reads to
+            this length (ignored if not using bcl2fastq or
+            bclconvert, or if bases mask is set)
+          r2_length (int): if specified then truncate R2 reads to
+            this length (ignored if not using bcl2fastq or
+            bclconvert, or if bases mask is set)
+          r3_length (int): if specified then truncate R3 reads to
+            this length (ignored if not using bcl2fastq or
+            bclconvert, or if bases mask is set)
           minimum_trimmed_read_length (int): if set then supply
             to cellranger via --minimum-trimmed-read-length
           mask_short_adapter_reads (int): if set then supply to
@@ -3450,29 +3484,23 @@ class Run10xMkfastq(PipelineTask):
                 bases_mask = 'auto'
             if bases_mask == 'auto':
                 # Update bases mask to only use first 8 bases from
-                # first index e.g. I8nnnnnnnn and convert second index
-                # to read e.g. Y16
-                print("Determining bases mask from RunInfo.xml")
-                bases_mask = get_bases_mask_10x_atac(illumina_run.runinfo_xml)
-                print("Bases mask: %s (updated for 10x scATAC-seq)" %
-                      bases_mask)
+                # first index (e.g. I8n2) and convert second index
+                # to read (e.g. I16 -> Y16)
+                bases_mask = get_bases_mask(illumina_run.runinfo_xml,
+                                            r1=self.args.r1_length,
+                                            r2=self.args.r2_length,
+                                            r3=self.args.r3_length,
+                                            i1=8,
+                                            override_template="RIRR")
                 if not bases_mask_is_valid(bases_mask):
                     raise Exception("Invalid bases mask: '%s'" %
                                     bases_mask)
-            # Stop if automated trimming was specified
-            if self.args.r1_length or self.args.r2_length:
-                raise Exception("%s: unable to apply supplied read "
-                                "truncation to bases mask" % self.pkg)
         elif self.pkg == "cellranger-arc":
             # 10x multiome
             if self.args.bases_mask == "auto":
                 bases_mask = None
             else:
                 bases_mask = self.args.bases_mask
-            # Stop if automated trimming was specified
-            if self.args.r1_length or self.args.r2_length:
-                raise Exception("%s: unable to apply supplied read "
-                                "truncation to bases mask" % self.pkg)
         else:
             raise Exception("%s: unsupported 10xGenomics package" %
                             self.pkg)

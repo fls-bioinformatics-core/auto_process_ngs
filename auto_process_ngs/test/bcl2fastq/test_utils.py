@@ -1637,6 +1637,46 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
                                         r1=77,r2=77),
                          "y76,I6,y76")
 
+    def test_get_bases_mask_10x_index_truncate_r1_r2_r3_reads(self):
+        """get_bases_mask: truncate R1, R3 and R3 reads (10x Genomics index)
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml, "wt") as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y59,I10,y24,y90",4,12))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,4/24/2018
+Workflow,GenerateFASTQ
+Application,NextSeq FASTQ Only
+Assay,Nextera XT v2 Set A
+Description,
+Chemistry,Default
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+SL1,SL1,,,N701,SI-GA-A2,SL,
+SL2,SL2,,,N702,SI-GA-B2,SL,
+SL3,SL3,,,N703,SI-GA-C2,SL,
+SL4,SL4,,,N704,SI-GA-D2,SL,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet, "wt") as fp:
+            fp.write(sample_sheet_content)
+        # Truncate R1, R2 and R3 reads in bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet,
+                                        r1=50,r2=24,r3=49),
+                         "y50n9,I10,y24,y49n41")
+
     def test_get_bases_mask_truncate_i1_index_10x(self):
         """get_bases_mask: truncate I1 index (10x Genomics index)
         """
@@ -1711,6 +1751,55 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
             fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
         # Check the bases mask
         self.assertEqual(get_bases_mask(run_info_xml),"y101,I8,I8,y101")
+
+    def test_get_bases_mask_dual_index_override_template(self):
+        """get_bases_mask: override default read types
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,
+                                        override_template="RIRR"),
+                         "y101,I8,y8,y101")
+
+    def test_get_bases_mask_dual_index_override_template_and_truncate(self):
+        """get_bases_mask: override default read types and truncate reads
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,
+                                        r1=59,
+                                        r3=90,
+                                        override_template="RIRR"),
+                         "y59n42,I8,y8,y90n11")
+
+    def test_get_bases_mask_10x_multiome_atac(self):
+        """get_bases_mask: handle 10x single cell multiome ATAC run
+        """
+        # Make a single index RunInfo.xml file with R3 read
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml, "wt") as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y50,I10,I24,y90",4,12))
+        self.assertEqual(get_bases_mask(run_info_xml, i1=8, r2=24,
+                                        override_template="RIRR"),
+                         "y50,I8n2,y24,y90")
+
+    def test_get_bases_mask_10x_multiome_gex(self):
+        """get_bases_mask: handle 10x single cell multiome GEX run
+        """
+        # Make a dual index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml, "wt") as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y50,I10,I24,y90",4,12))
+        self.assertEqual(get_bases_mask(run_info_xml, r1=28, i1=10, i2=10),
+                         "y28n22,I10,I10n14,y90")
 
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
