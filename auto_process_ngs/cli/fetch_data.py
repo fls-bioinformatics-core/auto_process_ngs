@@ -21,7 +21,8 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
-def copy_dir_contents(src, dst, replace_spaces=True, flatten=False):
+def copy_dir_contents(src, dst, replace_spaces=True, flatten=False,
+                      overwrite=False):
     """
     Copy the contents of one directory into another
 
@@ -34,6 +35,10 @@ def copy_dir_contents(src, dst, replace_spaces=True, flatten=False):
       flatten (bool): if True then don't replicate
         the source directory structure (default is
         to retain the directory structure)
+      overwrite (bool): if True then replace (i.e.
+        overwrite) existing destination files if an
+        imported file has the same name (default is
+        to skip existing files)
     """
     for f in bcf_utils.walk(src):
         if f == src:
@@ -51,16 +56,23 @@ def copy_dir_contents(src, dst, replace_spaces=True, flatten=False):
             ff = ff.replace(" ","_")
         ff = os.path.join(dst, ff)
         if os.path.exists(ff):
-            # Skip existing files
-            logger.warning(f"{ff}: file with this name already exists, "
-                           f"skipping")
-        else:
-            print(f"{os.path.relpath(ff, dst)}")
-            if os.path.isdir(f):
-                os.mkdir(ff)
+            if os.path.isdir(ff):
+                # Always skip existing directories
+                continue
+            if not overwrite:
+                # Skip existing files
+                logger.warning(f"{ff}: file with this name already "
+                               f"exists, skipping")
+                continue
             else:
-                # Copy the file directly
-                shutil.copyfile(f, ff, follow_symlinks=False)
+                # Overwrite existing file
+                logger.warning(f"{ff}: overwriting existing file")
+        print(f"{os.path.relpath(ff, dst)}")
+        if os.path.isdir(f):
+            os.mkdir(ff)
+        else:
+            # Copy the file directly
+            shutil.copyfile(f, ff, follow_symlinks=False)
 
 # Main function
 
@@ -82,19 +94,20 @@ def main():
     p.add_argument('--flatten', action='store_true',
                    help="copy files without replicating the source "
                    "directory structure")
-    # FIXME add support for overwriting files at the destination
-    ##p.add_argument('--overwrite', action='store_true',
-    ##               help="overwrite existing files (default is to skip "
-    ##               "existing files)")
+    p.add_argument('--overwrite', action='store_true',
+                   help="overwrite existing files (default is to skip "
+                   "existing files)")
     p.add_argument('--runner',action='store',
                    help="specify the job runner to use for executing "
                    "'rsync' operations (defaults to job runner defined "
                    "for copying in config file [%s])" % default_runner)
     p.add_argument("src", metavar="SOURCE",
                    help="source data (file or directory) to copy; can "
-                   "be on a local or remote file system")
+                   "be on a local or remote file system. NB if source is "
+                   "a directory then the contents are copied (not the "
+                   "top-level directory)")
     p.add_argument("dst", metavar="DEST",
-                   help="destination on local file system")
+                   help="destination directory on local file system")
     args = p.parse_args()
 
     # Source
@@ -136,49 +149,60 @@ def main():
     # Fetch the data
     if src_is_dir:
         # Directory copy
-        # Rsync contents to a temporary dir
-        # FIXME probably only want to do this for remote
-        # FIXME sources in future
         print("Copying directory contents")
-        with tempfile.TemporaryDirectory() as d:
-            # Do rsync
-            print(f"Temporary directory: {d}")
-            if src.endswith("/"):
-                rsync_src = src
-            else:
-                rsync_src = src + "/"
-            rsync = applications.general.rsync(rsync_src, d,
-                                               escape_spaces=False)
-            print(f"Running {rsync.command_line}")
-            # Run rsync command via job runner
-            rsync_job = SchedulerJob(runner,
-                                     rsync.command_line,
-                                     name="rsync_data",
-                                     working_dir=d,
-                                     log_dir=d)
-            job_id = rsync_job.start()
-            rsync_job.wait()
-            with open(rsync_job.log, "rt") as fp:
-                output = fp.read()
-            if rsync_job.err:
-                with open(rsycn_job.err, "rt") as fp:
-                    output += fp.read()
-            if rsync_job.exit_code != 0:
-                # Rsync didn't complete successfully
-                logger.error(f"Error running rsync: {output}")
-                return 1
-            else:
-                print(f"Rsync ok: {output}")
-            os.remove(rsync_job.log)
-            if rsync_job.err:
-                os.remove(rsync_job.err)
+        if remote_src:
+            # Source is remote directory
+            # Rsync contents to a temporary dir
+            with tempfile.TemporaryDirectory() as d:
+                # Do rsync
+                print(f"Temporary directory: {d}")
+                if src.endswith("/"):
+                    rsync_src = src
+                else:
+                    rsync_src = src + "/"
+                    rsync = applications.general.rsync(rsync_src, d,
+                                                       escape_spaces=False)
+                print(f"Running {rsync.command_line}")
+                # Run rsync command via job runner
+                rsync_job = SchedulerJob(runner,
+                                         rsync.command_line,
+                                         name="rsync_data",
+                                         working_dir=d,
+                                         log_dir=d)
+                job_id = rsync_job.start()
+                rsync_job.wait()
+                with open(rsync_job.log, "rt") as fp:
+                    output = fp.read()
+                if rsync_job.err:
+                    with open(rsycn_job.err, "rt") as fp:
+                        output += fp.read()
+                if rsync_job.exit_code != 0:
+                    # Rsync didn't complete successfully
+                    logger.error(f"Error running rsync: {output}")
+                    return 1
+                else:
+                    print(f"Rsync ok: {output}")
+                os.remove(rsync_job.log)
+                if rsync_job.err:
+                    os.remove(rsync_job.err)
+                # Make final directory if it doesn't exist
+                if not os.path.exists(dst):
+                    os.mkdir(dst)
+                    print(f"Made destination directory '{dst}'")
+                # Copy the contents to final location
+                print(f"Copying into '{dst}'")
+                copy_dir_contents(d, dst, flatten=args.flatten,
+                                  overwrite=args.overwrite)
+        else:
+            # Source is local directory
+            # Do direct copy
             # Make final directory if it doesn't exist
             if not os.path.exists(dst):
                 os.mkdir(dst)
-                print(f"Made destination directory '{dst}'") 
-            # Copy the contents to final location
+                print(f"Made destination directory '{dst}'")
             print(f"Copying into '{dst}'")
-            copy_dir_contents(d, dst, flatten=args.flatten)
+            copy_dir_contents(src, dst, flatten=args.flatten,
+                              overwrite=args.overwrite)
     else:
         # File copy
         print("Copying file")
