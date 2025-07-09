@@ -11,7 +11,9 @@ from .. import applications
 from .. import fileops
 from .. import get_version
 from ..settings import Settings
+from ..simple_scheduler import SchedulerJob
 from ..utils import Location
+from bcftbx.JobRunner import fetch_runner
 import bcftbx.utils as bcf_utils
 
 # Logging
@@ -76,11 +78,10 @@ def main():
     ##p.add_argument('--overwrite', action='store_true',
     ##               help="overwrite existing files (default is to skip "
     ##               "existing files)")
-    # FIXME add support for running rsync via a job runner
-    ##p.add_argument('--runner',action='store',
-    ##               help="specify the job runner to use for executing "
-    ##               "'rsync' operations (defaults to job runner defined "
-    ##               "for copying in config file [%s])" % default_runner)
+    p.add_argument('--runner',action='store',
+                   help="specify the job runner to use for executing "
+                   "'rsync' operations (defaults to job runner defined "
+                   "for copying in config file [%s])" % default_runner)
     p.add_argument("src", metavar="SOURCE",
                    help="source data (file or directory) to copy; can "
                    "be on a local or remote file system")
@@ -118,13 +119,19 @@ def main():
                          f"not")
             return 1
 
+    # Get runner for rsync and copy jobs
+    if args.runner:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = default_runner
+
     # Fetch the data
     if src_is_dir:
         # Directory copy
         # Rsync contents to a temporary dir
         # FIXME probably only want to do this for remote
         # FIXME sources in future
-        print("Copying directory")
+        print("Copying directory contents")
         with tempfile.TemporaryDirectory() as d:
             # Do rsync
             print(f"Temporary directory: {d}")
@@ -135,15 +142,28 @@ def main():
             rsync = applications.general.rsync(rsync_src, d,
                                                escape_spaces=False)
             print(f"Running {rsync.command_line}")
-            # FIXME run rsync locally for now
-            # FIXME but should use a runner
-            retcode, output = rsync.subprocess_check_output()
-            if retcode != 0:
+            # Run rsync command via job runner
+            rsync_job = SchedulerJob(runner,
+                                     rsync.command_line,
+                                     name="rsync_data",
+                                     working_dir=d,
+                                     log_dir=d)
+            job_id = rsync_job.start()
+            rsync_job.wait()
+            with open(rsync_job.log, "rt") as fp:
+                output = fp.read()
+            if rsync_job.err:
+                with open(rsycn_job.err, "rt") as fp:
+                    output += fp.read()
+            if rsync_job.exit_code != 0:
                 # Rsync didn't complete successfully
                 logger.error(f"Error running rsync: {output}")
                 return 1
             else:
                 print(f"Rsync ok: {output}")
+            os.remove(rsync_job.log)
+            if rsync_job.err:
+                os.remove(rsync_job.err)
             # Make final directory if it doesn't exist
             if not os.path.exists(dst):
                 os.mkdir(dst)
