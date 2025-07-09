@@ -21,7 +21,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
-def copy_dir_contents(src, dst, replace_spaces=True):
+def copy_dir_contents(src, dst, replace_spaces=True, flatten=False):
     """
     Copy the contents of one directory into another
 
@@ -31,13 +31,22 @@ def copy_dir_contents(src, dst, replace_spaces=True):
       replace_spaces (bool): if True (default) then
         replace spaces in source names with
         underscores in the destination names
+      flatten (bool): if True then don't replicate
+        the source directory structure (default is
+        to retain the directory structure)
     """
     for f in bcf_utils.walk(src):
         if f == src:
             # Don't try to copy the top-level dir
             continue
         # Make destination name
-        ff = os.path.relpath(f, src)
+        if flatten:
+            if os.path.isdir(f):
+                # Ignore directories when flattening
+                continue
+            ff = os.path.basename(f)
+        else:
+            ff = os.path.relpath(f, src)
         if replace_spaces:
             ff = ff.replace(" ","_")
         ff = os.path.join(dst, ff)
@@ -70,10 +79,9 @@ def main():
         "locations to the local system")
     p.add_argument('--version', action='version',
                    version=("%%(prog)s %s" % get_version()))
-    # FIXME add support for flattening directory structure
-    ##p.add_argument('--flatten', action='store_true',
-    ##               help="copy files without replicating the source "
-    ##               "directory structure")
+    p.add_argument('--flatten', action='store_true',
+                   help="copy files without replicating the source "
+                   "directory structure")
     # FIXME add support for overwriting files at the destination
     ##p.add_argument('--overwrite', action='store_true',
     ##               help="overwrite existing files (default is to skip "
@@ -170,7 +178,7 @@ def main():
                 print(f"Made destination directory '{dst}'") 
             # Copy the contents to final location
             print(f"Copying into '{dst}'")
-            copy_dir_contents(d, dst)
+            copy_dir_contents(d, dst, flatten=args.flatten)
     else:
         # File copy
         print("Copying file")
