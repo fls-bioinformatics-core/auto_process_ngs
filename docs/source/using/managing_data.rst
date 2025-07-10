@@ -5,6 +5,7 @@ These additional tasks are not really part of the automated processing, but
 the utilities for performing them are currently part of the same package so
 they are outlined here.
 
+ * :ref:`fetch_data`
  * :ref:`manage_fastqs`
  * :ref:`transfer_data`
  * :ref:`download_fastqs`
@@ -14,6 +15,52 @@ they are outlined here.
 There are no specific utilities for exporting Fastqs to a Galaxy data
 library, but suggestions on how to do this can be found in the section
 :ref:`exporting_to_galaxy`.
+
+.. _fetch_data:
+
+``fetch_data.py``: import files and directories
+***********************************************
+
+The ``fetch_data.py`` utility can be used to copy arbitrary files and
+directories onto the local system. As part of this it will also replace
+spaces in path names with underscores (for example if copying data
+from a Windows-based system to Linux system).
+
+.. note::
+
+   The initial use case for this utility is to copy image files for 10x
+   Genomics Visium datasets into the ``Visium_images`` subdirectory of
+   the project directory.
+
+General usage is:
+
+::
+
+   fetch_data.py SOURCE_DIR LOCAL_DIR
+
+which will import the contents of the directory ``SOURCE_DIR`` and
+put them into ``LOCAL_DIR``. By default the directory structure of the
+imported data is preserved, but the ``--flatten`` option can be
+used to copy files without the intermediate subdirectories.
+
+If an existing file is found in the destination with the same name as
+an imported file that the copy is skipped for that file; specifying the
+``--overwrite`` option means that the existing file will be replaced
+with the imported version.
+
+``SOURCE_DIR`` can either be a local directory, or a directory on a
+remote server. The syntax ``[USER@]HOST:DIR`` can be used to specify
+a remote source.
+
+A single file can also be imported:
+
+::
+
+   fetch_data.py SOURCE_FILE DEST
+
+which will copy ``SOURCE_FILE`` into directory ``DEST`` (if ``DEST``
+is an existing directory), or copy and rename as file ``DEST`` (if
+``DEST`` doesn't exist).
 
 .. _manage_fastqs:
 
