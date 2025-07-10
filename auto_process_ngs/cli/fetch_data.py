@@ -214,6 +214,9 @@ def main():
         print(f"           : (remote)")
 
     # Destination
+    if Location(args.dst).is_remote:
+        logger.error(f"'{args.dst}': destination must be a local path")
+        return 1
     dst = os.path.abspath(args.dst)
     print(f"Destination: {dst}")
     dst_exists = os.path.exists(dst)
