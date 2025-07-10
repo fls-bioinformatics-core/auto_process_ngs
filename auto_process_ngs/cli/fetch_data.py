@@ -252,7 +252,7 @@ def main():
         print("Copying directory contents")
         if remote_src:
             # Rsync remote source to local temporary dir
-            with tempfile.TemporaryDirectory() as d:
+            with tempfile.TemporaryDirectory(dir=os.getcwd()) as d:
                 # Do rsync
                 print(f"Using temporary directory: {d}")
                 if src.endswith("/"):
@@ -279,7 +279,7 @@ def main():
         print("Copying file")
         if remote_src:
             # Rsync remote file to local temporary dir
-            with tempfile.TemporaryDirectory() as d:
+            with tempfile.TemporaryDirectory(dir=os.getcwd()) as d:
                 print(f"Using temporary directory: {d}")
                 # Do rsync
                 status = run_rsync(src, d, runner, d)
