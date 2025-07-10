@@ -60,7 +60,7 @@ def run_command(cmd, runner, working_dir=None):
         os.remove(job.err)
     if job.exit_code != 0:
         # Job didn't complete successfully
-        logger.error(f"Error running {command}: {job.exit_code}")
+        logger.error(f"Error running {cmd}: {job.exit_code}")
     return job.exit_code
 
 def run_rsync(src, dst, runner, working_dir):
