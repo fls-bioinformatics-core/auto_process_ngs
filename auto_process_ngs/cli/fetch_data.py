@@ -21,6 +21,63 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
+
+def run_command(cmd, runner, working_dir=None):
+    """
+    Run a command
+
+    Given a Command instance, execute that comamnd using
+    the specified job runner.
+
+    Arguments:
+      cmd (Command): the command line to be executed
+      runner (JobRunner): the job runner to use
+      working_dir (str): path to the working directory
+        (or None to default to CWD)
+
+    Returns:
+      Integer: exit code from the job.
+    """
+    if working_dir is None:
+        working_dir = os.getcwd()
+    # Run command using job runner
+    job = SchedulerJob(runner,
+                       cmd.command_line,
+                       name=cmd.command,
+                       working_dir=working_dir,
+                       log_dir=working_dir)
+    job_id = job.start()
+    job.wait()
+    # Echo stdout and stderr and remove logs
+    with open(job.log, "rt") as fp:
+        output = fp.read()
+        print(f"STDOUT:\n{output}")
+        os.remove(job.log)
+    if job.err:
+        with open(job.err, "rt") as fp:
+            output = fp.read()
+            print(f"STDERR:\n{output}")
+        os.remove(job.err)
+    if job.exit_code != 0:
+        # Job didn't complete successfully
+        logger.error(f"Error running {command}: {job.exit_code}")
+    return job.exit_code
+
+def run_rsync(src, dst, runner, working_dir):
+    """
+    Run 'rsync' command to copy files and directories
+
+    Arguments:
+      src (str): path of source directory
+      dst (str): path of destination directory
+      runner (JobRunner): the job runner to use
+      working_dir (str): path to the working directory
+        (or None to default to CWD)
+    """
+    rsync = applications.general.rsync(src, dst, escape_spaces=False)
+    print(f"Running {rsync.command_line}")
+    return run_command(rsync, runner, working_dir=working_dir)
+
 def copy_dir_contents(src, dst, replace_spaces=True, flatten=False,
                       overwrite=False):
     """
@@ -74,10 +131,46 @@ def copy_dir_contents(src, dst, replace_spaces=True, flatten=False,
             # Copy the file directly
             shutil.copyfile(f, ff, follow_symlinks=False)
 
+def copy_file(src, dst, replace_spaces=True, overwrite=False):
+    """
+    Copy a file
+
+    Arguments:
+      src (str): path of source file
+      dst (str): path of destination (can be an
+        existing directory or a new file)
+      replace_spaces (bool): if True (default) then
+        replace spaces in source name with
+        underscores in the destination name
+      overwrite (bool): if True then replace (i.e.
+        overwrite) existing destination file if the
+        imported file has the same name (default is
+        to skip existing file)
+    """
+    if os.path.isdir(dst):
+        # Copy into directory preserving file name
+        f = os.path.basename(src)
+        if replace_spaces:
+            f = f.replace(" ","_")
+        dst = os.path.join(dst, f)
+        if os.path.exists(dst):
+            if not overwrite:
+                # Skip existing file
+                logger.warning(f"{dst}: file with this name already "
+                               f"exists, skipping")
+                return
+            else:
+                # Overwrite existing file
+                logger.warning(f"{dst}: overwriting existing file")
+    # Copy file
+    print(f"{os.path.basename(dst)}")
+    shutil.copyfile(src, dst)
+
 # Main function
 
 def main():
     """
+    Implements the 'fetch_data.py' CLI utility
     """
     # Load configuration
     settings = Settings()
@@ -148,47 +241,26 @@ def main():
 
     # Fetch the data
     if src_is_dir:
+        # Make final directory if it doesn't exist
+        if not os.path.exists(dst):
+            os.mkdir(dst)
+            print(f"Made destination directory '{dst}'")
         # Directory copy
         print("Copying directory contents")
         if remote_src:
-            # Source is remote directory
-            # Rsync contents to a temporary dir
+            # Rsync remote source to local temporary dir
             with tempfile.TemporaryDirectory() as d:
                 # Do rsync
-                print(f"Temporary directory: {d}")
+                print(f"Using temporary directory: {d}")
                 if src.endswith("/"):
                     rsync_src = src
                 else:
                     rsync_src = src + "/"
-                    rsync = applications.general.rsync(rsync_src, d,
-                                                       escape_spaces=False)
-                print(f"Running {rsync.command_line}")
-                # Run rsync command via job runner
-                rsync_job = SchedulerJob(runner,
-                                         rsync.command_line,
-                                         name="rsync_data",
-                                         working_dir=d,
-                                         log_dir=d)
-                job_id = rsync_job.start()
-                rsync_job.wait()
-                with open(rsync_job.log, "rt") as fp:
-                    output = fp.read()
-                if rsync_job.err:
-                    with open(rsycn_job.err, "rt") as fp:
-                        output += fp.read()
-                if rsync_job.exit_code != 0:
-                    # Rsync didn't complete successfully
-                    logger.error(f"Error running rsync: {output}")
+                status = run_rsync(rsync_src, d, runner, d)
+                if status != 0:
+                    # Rsync job failed
+                    logger.error(f"rsyncing directory contents failed")
                     return 1
-                else:
-                    print(f"Rsync ok: {output}")
-                os.remove(rsync_job.log)
-                if rsync_job.err:
-                    os.remove(rsync_job.err)
-                # Make final directory if it doesn't exist
-                if not os.path.exists(dst):
-                    os.mkdir(dst)
-                    print(f"Made destination directory '{dst}'")
                 # Copy the contents to final location
                 print(f"Copying into '{dst}'")
                 copy_dir_contents(d, dst, flatten=args.flatten,
@@ -196,37 +268,25 @@ def main():
         else:
             # Source is local directory
             # Do direct copy
-            # Make final directory if it doesn't exist
-            if not os.path.exists(dst):
-                os.mkdir(dst)
-                print(f"Made destination directory '{dst}'")
             print(f"Copying into '{dst}'")
             copy_dir_contents(src, dst, flatten=args.flatten,
                               overwrite=args.overwrite)
     else:
         # File copy
         print("Copying file")
-        # Rsync file to a temporary dir
-        with tempfile.TemporaryDirectory() as d:
-            print(f"Temporary directory: {d}")
-            # Do rsync
-            rsync = applications.general.rsync(src, d,
-                                               escape_spaces=False)
-            print(f"Running {rsync.command_line}")
-            retcode, output = rsync.subprocess_check_output()
-            if retcode != 0:
-                # Rsync didn't complete successfully
-                logger.error(f"Error running rsync: {output}")
-                return 1
-            else:
-                print(f"Rsync ok: {output}")
-            # Copy file to final location
-            f = os.path.basename(Location(src).path)
-            if os.path.isdir(dst):
-                print(f"{f}")
-                shutil.copyfile(os.path.join(d, f),
-                                os.path.join(dst, f))
-            else:
-                print(f"{os.path.basename(dst)}")
-                shutil.copyfile(os.path.join(d, f), dst)
-
+        if remote_src:
+            # Rsync remote file to local temporary dir
+            with tempfile.TemporaryDirectory() as d:
+                print(f"Using temporary directory: {d}")
+                # Do rsync
+                status = run_rsync(src, d, runner, d)
+                if status != 0:
+                    # Rsync job failed
+                    logger.error(f"rsyncing file failed")
+                    return 1
+                # Copy file to final location
+                src = os.path.join(d, os.path.basename(Location(src).path))
+                copy_file(src, dst, overwrite=args.overwrite)
+        else:
+            # Local copy
+            copy_file(src, dst, overwrite=args.overwrite)
