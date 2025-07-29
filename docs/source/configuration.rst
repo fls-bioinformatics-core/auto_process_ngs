@@ -495,22 +495,26 @@ Specifying BCL to Fastq conversion software and options
 The ``[bcl_conversion]`` section sets the default settings for BCL
 to Fastq generation:
 
-======================= ==============================================
-``bcl_converter``       Specify the BCL conversion software to be used
-                        when processing data from this platform; see
-			below for more information
-``nprocessors``         Optionally, specify the number of processors
-                        to use when performing the BCL to Fastq
-			conversion (deprecated, it is recommended to
-			set this implicitly via the job runners - see
-			:ref:`setting_number_of_cpus`)
-``no_lane_splitting``   Specify whether to merge Fastqs for the same
-                        sample across lanes (set to ``true``) or not
-			(set to ``false``)
-``create_empty_fastqs`` Specify whether to create "empty" placeholder
-                        Fastqs for samples where demultiplexing failed
-			to assign any reads
-======================= ==============================================
+=========================== ==============================================
+``bcl_converter``           Specify the BCL conversion software to be used
+                            when processing data from this platform; see
+                            below for more information
+``nprocessors``             Optionally, specify the number of processors
+                            to use when performing the BCL to Fastq
+                            conversion (deprecated, it is recommended to
+                            set this implicitly via the job runners - see
+			    :ref:`setting_number_of_cpus`)
+``no_lane_splitting``       Specify whether to merge Fastqs for the same
+                            sample across lanes (set to ``true``) or not
+                            (set to ``false``)
+``create_empty_fastqs``     Specify whether to create "empty" placeholder
+                            Fastqs for samples where demultiplexing failed
+                            to assign any reads
+``use_conda_for_bcl2fastq`` Specify whether to use ``conda`` packages to
+                            resolve dependencies for ``bcl2fastq``
+                            (defaults to ``false`` i.e. don't use
+                            ``conda`` packages)
+=========================== ==============================================
 
 .. note::
 
