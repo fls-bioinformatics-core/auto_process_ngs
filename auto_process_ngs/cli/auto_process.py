@@ -1618,6 +1618,8 @@ def make_fastqs(args):
         batch_limit=args.max_batches,
         enable_conda=(args.enable_conda == 'yes'),
         conda_env_dir=args.conda_env_dir,
+        use_conda_for_bcl2fastq=\
+        __settings.bcl_conversion.use_conda_for_bcl2fastq,
         working_dir=args.working_dir,
         verbose=args.verbose)
 
