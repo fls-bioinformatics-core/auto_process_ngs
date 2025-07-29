@@ -67,6 +67,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 spaceranger_rc_i2_override=None,
                 max_jobs=None,max_cores=None,batch_limit=None,
                 enable_conda=None,conda_env_dir=None,
+                use_conda_for_bcl2fastq=None,
                 verbose=False,working_dir=None):
     """
     Create and summarise FASTQ files
@@ -211,6 +212,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
         dependencies declared on tasks in the pipeline
       conda_env_dir (str): path to non-default directory for conda
         environments
+      use_conda_for_bcl2fastq (bool): if True then use conda
+        packages for 'bcl2fastq' dependency resolution (NB ignored
+        unless 'enable_conda' is also True)
       verbose (bool): if True then report additional information for
          pipeline diagnostics
     """
@@ -456,6 +460,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              runners=runners,
                              enable_conda=enable_conda,
                              conda_env_dir=conda_env_dir,
+                             use_conda_for_bcl2fastq=use_conda_for_bcl2fastq,
                              envmodules=envmodules,
                              log_dir=ap.log_dir,
                              log_file=pipeline_log,
