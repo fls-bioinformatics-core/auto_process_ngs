@@ -36,6 +36,7 @@
 ;no_lane_splitting = False
 ;create_empty_fastqs = False
 ;nprocessors = None
+;use_conda_for_bcl2fastq = False
 
 # Sequencers and platforms
 # Define a 'sequencer:INSTRUMENT' section for
