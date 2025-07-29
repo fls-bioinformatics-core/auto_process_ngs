@@ -154,8 +154,8 @@ LANE_SUBSET_ATTRS = (
     'bcl_converter',
 )
 
-# Conda package for Bcl2fastq
-BCL2FASTQ_CONDA_PKG = "bih-cubi::bcl2fastq2=2.20.0.422"
+# Conda packages for Bcl2fastq
+BCL2FASTQ_CONDA_PKGS = "bih-cubi::bcl2fastq2=2.20.0.422"
 
 ######################################################################
 # Pipeline classes
@@ -394,6 +394,7 @@ class MakeFastqs(Pipeline):
         self.add_param('per_lane_sample_stats',type=str)
         self.add_param('seq_len_stats',type=str)
         self.add_param('nprocessors',type=int)
+        self.add_param('bcl2fastq_conda_pkgs',type=str)
         self.add_param('cellranger_jobmode',value='local',type=str)
         self.add_param('cellranger_mempercore',type=int)
         self.add_param('cellranger_maxjobs',type=int)
@@ -1228,7 +1229,8 @@ class MakeFastqs(Pipeline):
                         # exist
                         get_bcl2fastq = GetBcl2Fastq(
                             "Get information on bcl2fastq",
-                            require_version=converter_version)
+                            require_version=converter_version,
+                            conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                         self.add_task(get_bcl2fastq,
                                       envmodules=self.envmodules['bcl2fastq'])
                     # Run standard bcl2fastq
@@ -1258,7 +1260,8 @@ class MakeFastqs(Pipeline):
                         bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
                         bcl2fastq_version=\
                         get_bcl2fastq.output.bcl2fastq_version,
-                        skip_bcl2fastq=final_output_exists)
+                        skip_bcl2fastq=final_output_exists,
+                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                     # Add the Fastq generation task to the pipeline
                     self.add_task(make_fastqs,
                                   runner=self.runners['bcl2fastq_runner'],
@@ -1431,7 +1434,8 @@ class MakeFastqs(Pipeline):
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
                         "Get information on bcl2fastq",
-                        require_version=converter_version)
+                        require_version=converter_version,
+                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1463,7 +1467,8 @@ class MakeFastqs(Pipeline):
                     platform=identify_platform.output.platform,
                     bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
                     bcl2fastq_version=get_bcl2fastq.output.bcl2fastq_version,
-                    skip_bcl2fastq=final_output_exists)
+                    skip_bcl2fastq=final_output_exists,
+                    conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                 self.add_task(make_fastqs,
                               runner=self.runners['bcl2fastq_runner'],
                               envmodules=self.envmodules['bcl2fastq'],
@@ -1487,7 +1492,8 @@ class MakeFastqs(Pipeline):
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
                         "Get information on bcl2fastq",
-                        require_version=converter_version)
+                        require_version=converter_version,
+                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1517,7 +1523,8 @@ class MakeFastqs(Pipeline):
                     create_empty_fastqs=self.params.create_empty_fastqs,
                     bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
                     bcl2fastq_version=get_bcl2fastq.output.bcl2fastq_version,
-                    skip_bcl2fastq=skip_bcl2fastq)
+                    skip_bcl2fastq=skip_bcl2fastq,
+                    conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                 self.add_task(run_bcl2fastq,
                               runner=self.runners['bcl2fastq_runner'],
                               envmodules=self.envmodules['bcl2fastq'],
@@ -1545,7 +1552,8 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x is None:
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger",
-                        require_version=converter_version)
+                        require_version=converter_version,
+                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                     self.add_task(get_bcl2fastq_for_10x,
                                   envmodules=\
                                   self.envmodules['cellranger_mkfastq'])
@@ -1588,7 +1596,8 @@ class MakeFastqs(Pipeline):
                     bcl2fastq_exe=get_bcl2fastq_for_10x.output.bcl2fastq_exe,
                     bcl2fastq_version=\
                     get_bcl2fastq_for_10x.output.bcl2fastq_version,
-                    skip_mkfastq=final_output_exists
+                    skip_mkfastq=final_output_exists,
+                    conda_pkgs=self.params.bcl2fastq_conda_pkgs
                 )
                 self.add_task(make_fastqs,
                               runner=self.runners['cellranger_runner'],
@@ -1601,7 +1610,8 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_atac is None:
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-atac",
-                        require_version=converter_version)
+                        require_version=converter_version,
+                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                     self.add_task(get_bcl2fastq_for_10x_atac,
                                   envmodules=\
                                   self.envmodules['cellranger_atac_mkfastq'])
@@ -1645,7 +1655,8 @@ class MakeFastqs(Pipeline):
                     get_bcl2fastq_for_10x_atac.output.bcl2fastq_exe,
                     bcl2fastq_version=\
                     get_bcl2fastq_for_10x_atac.output.bcl2fastq_version,
-                    skip_mkfastq=final_output_exists
+                    skip_mkfastq=final_output_exists,
+                    conda_pkgs=self.params.bcl2fastq_conda_pkgs
                 )
                 self.add_task(make_fastqs,
                               runner=self.runners['cellranger_runner'],
@@ -1659,7 +1670,8 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_visium is None:
                     get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
                         "Get information on bcl2fastq for spaceranger",
-                        require_version=converter_version)
+                        require_version=converter_version,
+                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                     self.add_task(get_bcl2fastq_for_10x_visium,
                                   envmodules=\
                                   self.envmodules['spaceranger_mkfastq'])
@@ -1703,7 +1715,8 @@ class MakeFastqs(Pipeline):
                     get_bcl2fastq_for_10x_visium.output.bcl2fastq_exe,
                     bcl2fastq_version=\
                     get_bcl2fastq_for_10x_visium.output.bcl2fastq_version,
-                    skip_mkfastq=final_output_exists
+                    skip_mkfastq=final_output_exists,
+                    conda_pkgs=self.params.bcl2fastq_conda_pkgs
                 )
                 self.add_task(make_fastqs,
                               runner=self.runners['spaceranger_runner'],
@@ -1719,7 +1732,8 @@ class MakeFastqs(Pipeline):
                 if get_bcl2fastq_for_10x_multiome is None:
                     get_bcl2fastq_for_10x_multiome = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-arc",
-                        require_version=converter_version)
+                        require_version=converter_version,
+                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
                     self.add_task(get_bcl2fastq_for_10x_multiome,
                                   envmodules=\
                                   self.envmodules['cellranger_arc_mkfastq'])
@@ -1773,7 +1787,8 @@ class MakeFastqs(Pipeline):
                     get_bcl2fastq_for_10x_multiome.output.bcl2fastq_exe,
                     bcl2fastq_version=\
                     get_bcl2fastq_for_10x_multiome.output.bcl2fastq_version,
-                    skip_mkfastq=final_output_exists
+                    skip_mkfastq=final_output_exists,
+                    conda_pkgs=self.params.bcl2fastq_conda_pkgs
                 )
                 self.add_task(make_fastqs,
                               runner=self.runners['cellranger_runner'],
@@ -1871,8 +1886,9 @@ class MakeFastqs(Pipeline):
             cellranger_localmem=None,working_dir=None,log_dir=None,
             log_file=None,batch_size=None,batch_limit=None,max_jobs=1,
             max_slots=None,poll_interval=5,runners=None,
-            default_runner=None,enable_conda=False,conda=None,
-            conda_env_dir=None,envmodules=None,verbose=False):
+            default_runner=None,use_conda_for_bcl2fastq=False,
+            enable_conda=False,conda=None,conda_env_dir=None,
+            envmodules=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -1957,6 +1973,10 @@ class MakeFastqs(Pipeline):
             'cellranger_atac_mkfastq'
           default_runner (JobRunner): optional default
             job runner to use
+          use_conda_for_bcl2fastq (bool): if True then use
+            conda packages for 'bcl2fastq' dependency
+            resolution (NB ignored unless 'enable_conda' is
+            also True)
           enable_conda (bool): if True then enable use of
             conda environments to satisfy task dependencies
           conda (str): path to conda
@@ -2058,6 +2078,12 @@ class MakeFastqs(Pipeline):
         if runners is None:
             runners = dict()
 
+        # Bcl2fastq conda dependencies
+        if use_conda_for_bcl2fastq:
+            bcl2fastq_conda_pkgs = BCL2FASTQ_CONDA_PKGS
+        else:
+            bcl2fastq_conda_pkgs = None
+
         # Parameters
         analysis_dir = os.path.abspath(analysis_dir)
         params = {
@@ -2081,6 +2107,7 @@ class MakeFastqs(Pipeline):
             'per_lane_sample_stats': per_lane_sample_stats,
             'seq_len_stats': seq_len_stats,
             'nprocessors': nprocessors,
+            'bcl2fastq_conda_pkgs': bcl2fastq_conda_pkgs,
             'cellranger_jobmode': cellranger_jobmode,
             'cellranger_mempercore': cellranger_mempercore,
             'cellranger_maxjobs': cellranger_maxjobs,
@@ -2308,7 +2335,7 @@ class GetBcl2Fastq(PipelineFunctionTask):
     """
     Get information on the bcl2fastq executable
     """
-    def init(self,require_version=None):
+    def init(self,require_version=None,conda_pkgs=None):
         """
         Initialise the GetBcl2Fastq task
 
@@ -2317,6 +2344,8 @@ class GetBcl2Fastq(PipelineFunctionTask):
             string of the form '1.8.4' or '>2.0', explicitly
             specifying the version of bcl2fastq to use. If
             not set then no version check will be made
+          conda_pkgs (str): comma-separated list of conda
+            dependencies to use
 
         Outputs:
           bcl2fastq_exe (str): path to the bcl2fastq executable
@@ -2325,14 +2354,17 @@ class GetBcl2Fastq(PipelineFunctionTask):
           bcl2fastq_info (tuple): tuple consisting of
             (exe,package,version)
         """
-        # Conda dependencies
-        self.conda(BCL2FASTQ_CONDA_PKG)
         # Outputs
         self.add_output('bcl2fastq_exe',Param(type=str))
         self.add_output('bcl2fastq_package',Param(type=str))
         self.add_output('bcl2fastq_version',Param(type=str))
         self.add_output('bcl2fastq_info',Param())
     def setup(self):
+        if self.args.conda_pkgs:
+            print("Adding required conda packages:")
+            for pkg in self.args.conda_pkgs.split(","):
+                print(f"- {pkg}")
+                self.conda(pkg)
         if self.args.require_version:
             print("Requires bcl2fastq version %s" %
                   self.args.require_version)
@@ -2486,7 +2518,7 @@ class RunBcl2Fastq(PipelineTask):
              find_adapters_with_sliding_window=False,nprocessors=None,
              create_empty_fastqs=False,
              platform=None,bcl2fastq_exe=None,bcl2fastq_version=None,
-             skip_bcl2fastq=False):
+             skip_bcl2fastq=False,conda_pkgs=None):
         """
         Initialise the RunBcl2Fastq task
 
@@ -2531,6 +2563,8 @@ class RunBcl2Fastq(PipelineTask):
           skip_bcl2fastq (bool): if True then sets the output
             parameters but finishes before actually running
             bcl2fastq
+          conda_pkgs (str): comma-separated list of conda
+            dependencies to use
 
         Outputs:
           bases_mask: actual bases mask used
@@ -2538,8 +2572,6 @@ class RunBcl2Fastq(PipelineTask):
           missing_fastqs: list of Fastqs missing after
             Fastq generation
         """
-        # Conda dependencies
-        self.conda(BCL2FASTQ_CONDA_PKG)
         # Internal variables
         self.supported_versions = ('1.8','2.17','2.20',)
         self.tmp_out_dir = None
@@ -2548,6 +2580,11 @@ class RunBcl2Fastq(PipelineTask):
         self.add_output('mismatches',Param(type='int'))
         self.add_output('missing_fastqs',list())
     def setup(self):
+        if self.args.conda_pkgs:
+            print("Adding required conda packages:")
+            for pkg in self.args.conda_pkgs.split(","):
+                print(f"- {pkg}")
+                self.conda(pkg)
         # Load input data
         illumina_run = IlluminaRun(self.args.run_dir,
                                    platform=self.args.platform)
@@ -3359,7 +3396,7 @@ class Run10xMkfastq(PipelineTask):
              create_empty_fastqs=False,platform=None,
              pkg_exe=None,pkg_version=None,
              bcl2fastq_exe=None,bcl2fastq_version=None,
-             skip_mkfastq=False):
+             skip_mkfastq=False,conda_pkgs=None):
         """
         Initialise the Run10xMkfastq task
 
@@ -3424,14 +3461,14 @@ class Run10xMkfastq(PipelineTask):
             bcl2fastq package
           skip_mkfastq (bool): if True then skip running
             the 'mkfastq' step within the task
+          conda_pkgs (str): comma-separated list of conda
+            dependencies to use
 
         Outputs:
             missing_fastqs: list of Fastqs missing after
               Fastq generation
 
         """
-        # Conda dependencies
-        self.conda(BCL2FASTQ_CONDA_PKG)
         # Internal variables
         self.pkg = None
         self.tmp_out_dir = None
@@ -3442,6 +3479,11 @@ class Run10xMkfastq(PipelineTask):
         # Outputs
         self.add_output('missing_fastqs',list())
     def setup(self):
+        if self.args.conda_pkgs:
+            print("Adding required conda packages:")
+            for pkg in self.args.conda_pkgs.split(","):
+                print(f"- {pkg}")
+                self.conda(pkg)
         # 10xGenomics software package
         if not self.args.pkg_exe:
             raise Exception("No 10xGenomics executable provided")
