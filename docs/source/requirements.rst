@@ -30,7 +30,7 @@ third-party software packages which must be installed separately:
 =================== ================== ===================
 Pipeline stage      Software packages  Notes
 =================== ================== ===================
-make_fastqs         `bcl2fastq 2.17`_  2.17+ recommended
+make_fastqs (+)     `bcl2fastq 2.17`_  2.17+ recommended
 make_fastqs         `bcl-convert`_     Alternative to ``bcl2fastq``
 make_fastqs         `cellranger`_      10xGenomics Chromium single-cell RNA-seq data only
 make_fastqs         `cellranger-atac`_ 10xGenomics Chromium single-cell ATAC-seq data only
@@ -80,6 +80,10 @@ the programs provided by these packages must be available on the
 :ref:`environment_modules` can be used to help manage this.
 Alternatively many of these packages can be obtained from the
 `bioconda project <https://bioconda.github.io/>`_.
+
+(+) only needs to be installed if :ref:`conda_dependency_resolution`
+and the ``use_conda_for_bcl2fastq`` option (in the ``bcl_conversion``
+section) haven't been enabled in the configuration.
 
 ..  note::
 
