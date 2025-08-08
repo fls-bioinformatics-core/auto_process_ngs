@@ -332,6 +332,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap._save_metadata = True
     ap.save_data()
     # Print basic info about the run
+    print(f"---- Setup completed: run details: ----")
     print(f"Run ID            : {ap.run_id}")
     print(f"Platform          : {ap.metadata.platform}")
     print(f"Flow cell mode    : {ap.metadata.flow_cell_mode}")
@@ -340,6 +341,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     print(f"Sample sheet      : {ap.params.sample_sheet}")
     # Print summary of expected outputs and warnings
     if ap.params.sample_sheet is not None:
+        print(f"---- Expected outputs from sample sheet: ----")
         sample_sheet_data = SampleSheet(ap.params.sample_sheet)
         print(summarise_outputs(sample_sheet=sample_sheet_data))
         check_and_warn(sample_sheet=sample_sheet_data)
