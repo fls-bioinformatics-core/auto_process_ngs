@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
-#     Copyright (C) University of Manchester 2017-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2025 Peter Briggs
 #
 #########################################################################
 
@@ -15,6 +15,8 @@ import logging
 from ..analysis import AnalysisDir
 from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisDirParameters
+from ..command import Command
+from ..commands.report_cmd import report_concise
 from .. import applications
 from .. import fileops
 from .. import simple_scheduler
@@ -33,8 +35,8 @@ logger = logging.getLogger(__name__)
 
 def archive(ap,archive_dir=None,platform=None,year=None,
             perms=None,group=None,include_bcl2fastq=False,
-            read_only_fastqs=True,runner=None,
-            final=False,force=False,dry_run=False):
+            read_only_fastqs=True,runner=None,final=False,
+            logging_file=None,force=False,dry_run=False):
     """
     Copy an analysis directory and contents to an archive area
 
@@ -100,6 +102,9 @@ def archive(ap,archive_dir=None,platform=None,year=None,
       final (bool): if True then finalize the archive by
         moving the '.pending' temporary archive to the final
         location
+      logging_file (str): specify the path to a "logging file"
+        to add details of the run to using the 'log_seq_data.sh'
+        when data is moved to the final location
       force (bool): if True then do archiving even if there are
         errors (e.g. key metadata items not set, permission error
         when setting group etc); otherwise abort archiving
@@ -150,6 +155,12 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     if not fileops.exists(archive_dir):
         raise OSError("Archive directory '%s' doesn't exist" %
                       archive_dir)
+    # Logging file
+    if logging_file is not None:
+        logging_file = os.path.abspath(logging_file)
+        if not os.path.isdir(os.path.dirname(logging_file)):
+            raise OSError(f"Parent dir for logging file "
+                          f"'{logging_file}' doesn't exist")
     # Determine target directory
     if not is_staging:
         final_dest = analysis_dir
@@ -504,6 +515,22 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         if not dry_run:
             fileops.rename(os.path.join(archive_dir,staging),
                            os.path.join(archive_dir,final_dest))
+        # Add to logging file
+        if logging_file is not None:
+            print(f"Adding details to logging file: {logging_file}")
+            run_details = report_concise(ap)
+            log_data_cmd = Command("log_seq_data.sh",
+                                   logging_file,
+                                   "-u",
+                                   os.path.join(archive_dir,final_dest),
+                                   run_details)
+            if not dry_run:
+                print(f"Running {log_data_cmd}")
+                status = log_data_cmd.run_subprocess()
+                if status != 0:
+                    logger.warning(f"Logging run to {logging_file} failed "
+                                   "(ignored)")
+                    retval = status
     # Report usage of target filesystem
     usage = fileops.disk_usage(archive_dir)
     print("Usage of archive: %s available (of %s) (%s%% in use)" %
