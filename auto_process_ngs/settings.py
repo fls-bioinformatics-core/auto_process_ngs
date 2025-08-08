@@ -162,6 +162,11 @@ The simplest usage example is:
 The 'locate_settings_file' function is used implicitly to locate the
 settings file if none is given; it can also automatically create a
 settings file if none is found.
+
+Two 'type' functions are also included:
+
+- 'jobrunner': returns a JobRunner instance
+- 'path': returns a string with variables expanded
 """
 
 #######################################################################
@@ -1385,3 +1390,22 @@ def jobrunner(runner):
         return fetch_runner(runner)
     else:
         return runner
+
+def path(p):
+    """
+    Implement a 'type' function for paths
+
+    Converts to a string and expands any variables
+    in the resulting path
+
+    Arguments:
+      p (str): path definition (can include shell
+        variables)
+
+    Returns:
+      String: version of input path with any shell
+        variables expanded to their values.
+    """
+    if p is not None:
+        p = os.path.expandvars(str(p))
+    return p
