@@ -965,9 +965,9 @@ class TestSettings(unittest.TestCase):
         self.assertTrue(isinstance(s.runners.qc,SimpleJobRunner))
         # Archiving
         self.assertEqual(s.archive.dirn,None)
-        self.assertEqual(s.archive.log,None)
         self.assertEqual(s.archive.group,None)
         self.assertEqual(s.archive.chmod,None)
+        self.assertEqual(s.archive.logging_file,None)
         # QC reporting
         self.assertEqual(s.qc_web_server.dirn,None)
         self.assertEqual(s.qc_web_server.url,None)

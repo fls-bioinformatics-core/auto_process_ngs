@@ -144,9 +144,9 @@
 # - dirn is the top-level directory in the form [[user@]host:]path
 ;[archive]
 ;dirn = None
-;log = None
 ;group = None
 ;chmod = None
+;logging_file = None
 
 # Settings for uploading QC reports
 # - dirn should be a directory in the form [[user@]host:]path
