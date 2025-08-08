@@ -80,8 +80,9 @@ or using the ``--logging_file`` option of the ``archive`` command,
 then an entry for the run will be added to this file automatically
 when it is archived to its final location.
 
-The logging is performed by the ``log_seq_data.sh`` utility script,
-which is part of the ``genomics-bcftbx`` package.
+The logging is performed by the
+`log_seq_data.sh <https://genomics-bcftbx.readthedocs.io/en/latest/usage/general_utils.html#logging-details-of-sequencing-runs`_
+utility script, which is part of the ``genomics-bcftbx`` package.
 
 ---------------------
 Archiving failed runs
