@@ -2780,6 +2780,10 @@ class PipelineTask:
         - 'end_date': text string describing the end time
         - 'end_time': end date as number of seconds from
           same zero time as 'start_time'
+        - 'stdout_start_time': earliest creation time
+          of stdout files (seconds from zero time)
+        - 'stdout_end_time': latest modification time
+          of stdout files (seconds from zero time)
 
         Note the information is extracted from log files
         output by each job run by the task. There will be
@@ -2796,9 +2800,23 @@ class PipelineTask:
             # No information available if task hasn't completed
             return audit_info
         # Extract raw data from the stdout files
+        stdout_start_ts = None
+        stdout_end_ts = None
         for f in self._stdout_files:
             jobid = None
             if f is not None and os.path.exists(f):
+                # Timestamps on output files
+                ts_start = float(int(os.path.getctime(f)))
+                if stdout_start_ts is None:
+                    stdout_start_ts = ts_start
+                else:
+                    stdout_start_ts = min(stdout_start_ts, ts_start)
+                ts_end = float(int(os.path.getmtime(f)))
+                if stdout_end_ts is None:
+                    stdout_end_ts = ts_end
+                else:
+                    stdout_end_ts = min(stdout_end_ts, ts_end)
+                # Information within the file
                 with open(f,'r') as fp:
                     for line in fp:
                         line = line.rstrip()
@@ -2827,6 +2845,9 @@ class PipelineTask:
                             # by job runner
                             nslots = int(line.split(" ")[-1])
                             audit_info[jobid]["nslots"] = nslots
+                # Store stdout file timestamps
+                audit_info[jobid]["stdout_start_time"] = stdout_start_ts
+                audit_info[jobid]["stdout_end_time"] = stdout_end_ts
         return audit_info
 
     def invoke(self,f,args=None,kws=None):
