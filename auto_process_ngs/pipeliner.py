@@ -2038,10 +2038,13 @@ class Pipeline:
                 compute_time_by_nslots[nslots] += compute_time
         self.report(f"Compute summary: {ncompute_jobs} compute jobs")
         for nslots in sorted(list(compute_time_by_nslots.keys())):
-            self.report(f"- {nslots:2d}-core jobs: "
-                        f"{ncompute_jobs_by_nslots[nslots]} jobs taking "
-                        f"{compute_time_by_nslots[nslots]}s total")
-        self.report(f"Total compute time {compute_time_total}s")
+            self.report(
+                f"- {nslots:2d}-core jobs: "
+                f"{ncompute_jobs_by_nslots[nslots]} jobs taking "
+                f"{compute_time_by_nslots[nslots]}s total "
+                f"[{format_compute_time(compute_time_by_nslots[nslots])}]")
+        self.report(f"Total compute time {compute_time_total}s"
+                    f"[{format_compute_time(compute_time_total)}]")
         if njobs_missing_audit_info:
             self.report(f"WARNING unable to acquire audit information "
                         f"for {njobs_missing_audit_info} job(s)")
