@@ -39,6 +39,7 @@ internal use:
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
 - resolve_parameter: get the value of arbitrary parameter or object
+- format_compute_time: pretty-print times from compute auditing
 
 Overview
 --------
@@ -4633,6 +4634,35 @@ def report_text(s,head=None,tail=None,prefix=None,
             report_text('\n'.join(lines[-tail:]),
                         prefix=prefix,
                         reportf=reportf)
+
+def format_compute_time(secs):
+    """
+    Format compute time into days, hours, minutes & seconds
+
+    Arguments:
+      secs (float): time interval in seconds
+
+    Returns:
+      String: compute time expressed as days, hours, minutes
+        and seconds (e.g. "4d 12h 6m 14.0s")
+    """
+    if secs >= 60.0:
+        mins = int(secs/60)
+        secs = secs - float(mins)*60.0
+    else:
+        mins = 0
+    if mins >= 60.0:
+        hours = int(mins/60)
+        mins = mins - hours*60
+    else:
+        hours = 0
+    if hours >= 24.0:
+        days = int(hours/24)
+        hours = hours - days*24
+    else:
+        days = 0
+    return " ".join([f"{days}d", f"{hours}h",
+                     f"{mins}m", f"{float(secs):.1f}s"])
 
 def collect_files(dirn,pattern):
     """
