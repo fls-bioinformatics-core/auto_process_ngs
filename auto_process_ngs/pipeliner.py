@@ -2009,11 +2009,25 @@ class Pipeline:
         compute_time_total = 0
         ncompute_jobs_by_nslots = {}
         compute_time_by_nslots = {}
+        njobs_missing_audit_info = 0
         for id_ in self._task_audit_info:
+            ncompute_jobs += 1
             try:
-                ncompute_jobs += 1
-                compute_time = (self._task_audit_info[id_]["end_time"] -
-                                self._task_audit_info[id_]["start_time"])
+                start_time = self._task_audit_info[id_]["start_time"]
+            except KeyError:
+                self.report(f"{id_}: missing start time")
+                start_time = self._task_audit_info[id_]["stdout_start_time"]
+            try:
+                end_time = self._task_audit_info[id_]["end_time"]
+            except KeyError:
+                self.report(f"{id_}: missing end time")
+                end_time = self._task_audit_info[id_]["stdout_end_time"]
+            if start_time is None or end_time is None:
+                self.report(f"Unable to get start and/or end time for "
+                            f"compute job {id_}")
+                njobs_missing_audit_info += 1
+            else:
+                compute_time = (end_time - start_time)
                 compute_time_total += compute_time
                 nslots = self._task_audit_info[id_]["nslots"]
                 if nslots not in ncompute_jobs_by_nslots:
@@ -2021,16 +2035,15 @@ class Pipeline:
                     compute_time_by_nslots[nslots] = 0
                 ncompute_jobs_by_nslots[nslots] += 1
                 compute_time_by_nslots[nslots] += compute_time
-            except KeyError as ex:
-                self.report(
-                    f"Missing data item in auditing data for compute job "
-                    f"{id_} {self._task_audit_info[id_]}: {ex}")
         self.report(f"Compute summary: {ncompute_jobs} compute jobs")
         for nslots in sorted(list(compute_time_by_nslots.keys())):
             self.report(f"- {nslots:2d}-core jobs: "
                         f"{ncompute_jobs_by_nslots[nslots]} jobs taking "
                         f"{compute_time_by_nslots[nslots]}s total")
         self.report(f"Total compute time {compute_time_total}s")
+        if njobs_missing_audit_info:
+            self.report(f"WARNING unable to acquire audit information "
+                        f"for {njobs_missing_audit_info} job(s)")
 
     def run(self,working_dir=None,tasks_work_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,sched=None,default_runner=None,
