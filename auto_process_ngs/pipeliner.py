@@ -39,6 +39,7 @@ internal use:
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
 - resolve_parameter: get the value of arbitrary parameter or object
+- format_compute_time: pretty-print times from compute auditing
 
 Overview
 --------
@@ -2009,11 +2010,25 @@ class Pipeline:
         compute_time_total = 0
         ncompute_jobs_by_nslots = {}
         compute_time_by_nslots = {}
+        njobs_missing_audit_info = 0
         for id_ in self._task_audit_info:
+            ncompute_jobs += 1
             try:
-                ncompute_jobs += 1
-                compute_time = (self._task_audit_info[id_]["end_time"] -
-                                self._task_audit_info[id_]["start_time"])
+                start_time = self._task_audit_info[id_]["start_time"]
+            except KeyError:
+                self.report(f"{id_}: missing start time")
+                start_time = self._task_audit_info[id_]["stdout_start_time"]
+            try:
+                end_time = self._task_audit_info[id_]["end_time"]
+            except KeyError:
+                self.report(f"{id_}: missing end time")
+                end_time = self._task_audit_info[id_]["stdout_end_time"]
+            if start_time is None or end_time is None:
+                self.report(f"Unable to get start and/or end time for "
+                            f"compute job {id_}")
+                njobs_missing_audit_info += 1
+            else:
+                compute_time = (end_time - start_time)
                 compute_time_total += compute_time
                 nslots = self._task_audit_info[id_]["nslots"]
                 if nslots not in ncompute_jobs_by_nslots:
@@ -2021,16 +2036,18 @@ class Pipeline:
                     compute_time_by_nslots[nslots] = 0
                 ncompute_jobs_by_nslots[nslots] += 1
                 compute_time_by_nslots[nslots] += compute_time
-            except KeyError as ex:
-                self.report(
-                    f"Missing data item in auditing data for compute job "
-                    f"{id_} {self._task_audit_info[id_]}: {ex}")
         self.report(f"Compute summary: {ncompute_jobs} compute jobs")
         for nslots in sorted(list(compute_time_by_nslots.keys())):
-            self.report(f"- {nslots:2d}-core jobs: "
-                        f"{ncompute_jobs_by_nslots[nslots]} jobs taking "
-                        f"{compute_time_by_nslots[nslots]}s total")
-        self.report(f"Total compute time {compute_time_total}s")
+            self.report(
+                f"- {nslots:2d}-core jobs: "
+                f"{ncompute_jobs_by_nslots[nslots]} jobs taking "
+                f"{compute_time_by_nslots[nslots]}s total "
+                f"[{format_compute_time(compute_time_by_nslots[nslots])}]")
+        self.report(f"Total compute time {compute_time_total}s"
+                    f"[{format_compute_time(compute_time_total)}]")
+        if njobs_missing_audit_info:
+            self.report(f"WARNING unable to acquire audit information "
+                        f"for {njobs_missing_audit_info} job(s)")
 
     def run(self,working_dir=None,tasks_work_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,sched=None,default_runner=None,
@@ -2780,6 +2797,10 @@ class PipelineTask:
         - 'end_date': text string describing the end time
         - 'end_time': end date as number of seconds from
           same zero time as 'start_time'
+        - 'stdout_start_time': earliest creation time
+          of stdout files (seconds from zero time)
+        - 'stdout_end_time': latest modification time
+          of stdout files (seconds from zero time)
 
         Note the information is extracted from log files
         output by each job run by the task. There will be
@@ -2796,9 +2817,23 @@ class PipelineTask:
             # No information available if task hasn't completed
             return audit_info
         # Extract raw data from the stdout files
+        stdout_start_ts = None
+        stdout_end_ts = None
         for f in self._stdout_files:
             jobid = None
             if f is not None and os.path.exists(f):
+                # Timestamps on output files
+                ts_start = float(int(os.path.getctime(f)))
+                if stdout_start_ts is None:
+                    stdout_start_ts = ts_start
+                else:
+                    stdout_start_ts = min(stdout_start_ts, ts_start)
+                ts_end = float(int(os.path.getmtime(f)))
+                if stdout_end_ts is None:
+                    stdout_end_ts = ts_end
+                else:
+                    stdout_end_ts = min(stdout_end_ts, ts_end)
+                # Information within the file
                 with open(f,'r') as fp:
                     for line in fp:
                         line = line.rstrip()
@@ -2827,6 +2862,9 @@ class PipelineTask:
                             # by job runner
                             nslots = int(line.split(" ")[-1])
                             audit_info[jobid]["nslots"] = nslots
+                # Store stdout file timestamps
+                audit_info[jobid]["stdout_start_time"] = stdout_start_ts
+                audit_info[jobid]["stdout_end_time"] = stdout_end_ts
         return audit_info
 
     def invoke(self,f,args=None,kws=None):
@@ -4599,6 +4637,35 @@ def report_text(s,head=None,tail=None,prefix=None,
             report_text('\n'.join(lines[-tail:]),
                         prefix=prefix,
                         reportf=reportf)
+
+def format_compute_time(secs):
+    """
+    Format compute time into days, hours, minutes & seconds
+
+    Arguments:
+      secs (float): time interval in seconds
+
+    Returns:
+      String: compute time expressed as days, hours, minutes
+        and seconds (e.g. "4d 12h 6m 14.0s")
+    """
+    if secs >= 60.0:
+        mins = int(secs/60)
+        secs = secs - float(mins)*60.0
+    else:
+        mins = 0
+    if mins >= 60.0:
+        hours = int(mins/60)
+        mins = mins - hours*60
+    else:
+        hours = 0
+    if hours >= 24.0:
+        days = int(hours/24)
+        hours = hours - days*24
+    else:
+        days = 0
+    return " ".join([f"{days}d", f"{hours}h",
+                     f"{mins}m", f"{float(secs):.1f}s"])
 
 def collect_files(dirn,pattern):
     """

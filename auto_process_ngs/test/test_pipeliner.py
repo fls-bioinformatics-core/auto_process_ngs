@@ -32,6 +32,7 @@ from auto_process_ngs.pipeliner import PathExistsParam
 from auto_process_ngs.pipeliner import FunctionParam
 from auto_process_ngs.pipeliner import PipelineError
 from auto_process_ngs.pipeliner import report_text
+from auto_process_ngs.pipeliner import format_compute_time
 from auto_process_ngs.pipeliner import resolve_parameter
 from auto_process_ngs.pipeliner import make_conda_env
 from auto_process_ngs.pipeliner import check_conda_env
@@ -4152,6 +4153,23 @@ and blank lines
                     tail=3,
                     reportf=write_output)
         self.assertEqual(output.getvalue(),input_text)
+
+class TestFormatComputeTime(unittest.TestCase):
+
+    def test_format_compute_time(self):
+        """
+        format_compute_time: check time is correctly formatted
+        """
+        self.assertEqual(format_compute_time(32), "0d 0h 0m 32.0s")
+        self.assertEqual(format_compute_time(60), "0d 0h 1m 0.0s")
+        self.assertEqual(format_compute_time(92), "0d 0h 1m 32.0s")
+        self.assertEqual(format_compute_time(392), "0d 0h 6m 32.0s")
+        self.assertEqual(format_compute_time(3632), "0d 1h 0m 32.0s")
+        self.assertEqual(format_compute_time(54000), "0d 15h 0m 0.0s")
+        self.assertEqual(format_compute_time(54015), "0d 15h 0m 15.0s")
+        self.assertEqual(format_compute_time(55215), "0d 15h 20m 15.0s")
+        self.assertEqual(format_compute_time(86429), "1d 0h 0m 29.0s")
+        self.assertEqual(format_compute_time(141629), "1d 15h 20m 29.0s")
 
 class TestResolveParameter(unittest.TestCase):
 
