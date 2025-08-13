@@ -223,6 +223,9 @@ is possible to include additional files:
  * Outputs from 10xGenomics pipelines (e.g. ``cellranger count``)
    packaged into a ``tgz`` archive (specify the
    ``--include_10x_outputs`` option)
+ * ``.cloupe`` files from 10xGenomics pipeline outputs collected
+   into a ``.zip`` archive (specify the ``--include_cloupe_files``
+   option)
  * Image files in the ``Visium_images`` subdirectory of 10xGenomics
    Visium datasets packaged into a ``tgz`` archive (specify the
    ``--include_visium_images`` option)
