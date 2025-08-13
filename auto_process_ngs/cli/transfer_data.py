@@ -13,6 +13,7 @@ import os
 import re
 import argparse
 import time
+import shutil
 from random import shuffle
 from datetime import date
 from fnmatch import fnmatch
@@ -20,6 +21,7 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
 from bcftbx.utils import format_file_size
+from bcftbx.utils import walk
 from ..analysis import AnalysisDir
 from ..analysis import AnalysisProject
 from ..command import Command
@@ -39,6 +41,9 @@ from .. import get_version
 import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
+
+CELLRANGER_DIRS = ("cellranger_count",
+                   "cellranger_multi")
 
 def get_templates_dir():
     """
@@ -140,6 +145,9 @@ def main():
     sp.add_argument('--include_10x_outputs',action='store_true',
                     help="copy outputs from 10xGenomics pipelines (e.g. "
                     "'cellranger count') to the final location")
+    sp.add_argument('--include_cloupe_files',action='store_true',
+                    help="copy .cloupe files output from 10xGenomics "
+                    "pipelines to the final location")
     sp.add_argument('--include_visium_images', action='store_true',
                     help="copy images for 10x Genomics Visium projects "
                     "to the final location")
@@ -224,6 +232,7 @@ def main():
 
     # Additional artefacts
     include_10x_outputs = bool(args.include_10x_outputs)
+    include_cloupe_files = bool(args.include_cloupe_files)
     include_visium_images = bool(args.include_visium_images)
 
     # Check at least one artefact is being transferred
@@ -369,8 +378,7 @@ def main():
         print("Locating outputs from 10xGenomics pipelines for "
               "inclusion")
         cellranger_dirs = list()
-        for d in ('cellranger_count',
-                  'cellranger_multi',):
+        for d in CELLRANGER_DIRS:
             cellranger_dir = os.path.join(project.dirn,d)
             if os.path.isdir(cellranger_dir):
                 print("... found %s" % cellranger_dir)
@@ -380,6 +388,24 @@ def main():
             return 1
     else:
         cellranger_dirs = None
+
+    # Locate 10xGenomics .cloupe files
+    if include_cloupe_files:
+        print("Locating .cloupe files in 10xGenomics outputs")
+        cloupe_files = list()
+        for cellranger_dir in CELLRANGER_DIRS:
+            cellranger_dir = os.path.join(project.dirn, cellranger_dir)
+            if not os.path.isdir(cellranger_dir):
+                continue
+            for f in walk(cellranger_dir):
+                if f.endswith(".cloupe") and f.split(os.sep)[-2] == "outs":
+                    print("... found %s" % os.path.relpath(f, project.dirn))
+                    cloupe_files.append(f)
+        if not cloupe_files:
+            logger.error("No .cloupe files found")
+            return 1
+    else:
+        cloupe_files = None
 
     # Locate Visium images
     if include_visium_images:
@@ -680,6 +706,45 @@ def main():
                                     wd=working_dir,
                                     wait_for=(targz_job.job_name,))
             check_jobs[copy_job.name] = copy_job
+
+    # Collect 10xGenomics .cloupe files
+    if cloupe_files:
+        print("Collecting .cloupe files")
+        cloupe_dir = os.path.join(working_dir, "10x_cloupe_files")
+        os.mkdir(cloupe_dir)
+        for f in cloupe_files:
+            # Construct a name based on relative path
+            relpath = os.path.relpath(os.path.dirname(f), project.dirn).\
+                split(os.sep)
+            try:
+                relpath.remove("outs")
+            except ValueError:
+                pass
+            # Copy into working dir
+            ff = os.path.join(cloupe_dir, f"{'-'.join(relpath)}.cloupe")
+            shutil.copy(f, ff)
+            print(f"...copied {os.path.basename(ff)}")
+        # Make ZIP archive for cloupe files
+        zip_file = os.path.join(working_dir, "10x_cloupe_files.zip")
+        zip_cmd = Command("zip",
+                          "-r",
+                          zip_file,
+                          "10x_cloupe_files")
+        print("Running %s" % zip_cmd)
+        zip_job = sched.submit(zip_cmd.command_line,
+                               name="zip_10x_cloupes_zip.%s" % job_id,
+                               wd=working_dir)
+        check_jobs[zip_job.name] = zip_job
+        # Copy ZIP archive
+        copy_cmd = copy_command(zip_file,
+                                os.path.join(target_dir,
+                                             os.path.basename(zip_file)))
+        print("Running %s" % copy_cmd)
+        copy_job = sched.submit(copy_cmd.command_line,
+                                name="copy_10x_cloupes_zip.%s" % job_id,
+                                wd=working_dir,
+                                wait_for=(zip_job.name,))
+        check_jobs[copy_job.name] = copy_job
 
     # Tar and copy Visium images
     if visium_images_dir:
