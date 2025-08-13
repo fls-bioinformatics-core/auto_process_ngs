@@ -223,6 +223,9 @@ is possible to include additional files:
  * Outputs from 10xGenomics pipelines (e.g. ``cellranger count``)
    packaged into a ``tgz`` archive (specify the
    ``--include_10x_outputs`` option)
+ * Image files in the ``Visium_images`` subdirectory of 10xGenomics
+   Visium datasets packaged into a ``tgz`` archive (specify the
+   ``--include_visium_images`` option)
 
 Hard linking Fastqs
 -------------------

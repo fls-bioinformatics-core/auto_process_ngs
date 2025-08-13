@@ -140,6 +140,9 @@ def main():
     sp.add_argument('--include_10x_outputs',action='store_true',
                     help="copy outputs from 10xGenomics pipelines (e.g. "
                     "'cellranger count') to the final location")
+    sp.add_argument('--include_visium_images', action='store_true',
+                    help="copy images for 10x Genomics Visium projects "
+                    "to the final location")
     sp.add_argument('--include_downloader',action='store_true',
                    help="copy the 'download_fastqs.py' utility to the "
                     "final location")
@@ -221,12 +224,14 @@ def main():
 
     # Additional artefacts
     include_10x_outputs = bool(args.include_10x_outputs)
+    include_visium_images = bool(args.include_visium_images)
 
     # Check at least one artefact is being transferred
     if not (include_fastqs or
             include_downloader or
             include_qc_report or
             include_10x_outputs or
+            include_visium_images or
             readme_template):
         logger.error("No artefacts specified for transfer")
         return 1
@@ -375,6 +380,19 @@ def main():
             return 1
     else:
         cellranger_dirs = None
+
+    # Locate Visium images
+    if include_visium_images:
+        print("Locating Visium images for inclusion")
+        visium_images_dir = os.path.join(project.dirn, "Visium_images")
+        if os.path.isdir(visium_images_dir) and \
+           len(os.listdir(visium_images_dir)) > 0:
+            print("... found %s" % visium_images_dir)
+        else:
+            logger.error("No Visium images found")
+            return 1
+    else:
+        visium_images_dir = None
 
     # Determine subdirectory
     if subdir == "random_bin":
@@ -662,6 +680,42 @@ def main():
                                     wd=working_dir,
                                     wait_for=(targz_job.job_name,))
             check_jobs[copy_job.name] = copy_job
+
+    # Tar and copy Visium images
+    if visium_images_dir:
+        print(f"Tar gzipping and copying '{visium_images_dir}'")
+        # Tar & gzip data
+        targz = os.path.join(working_dir,
+                             "%s.%s.%s.tgz" % (
+                                 os.path.basename(visium_images_dir),
+                                 project_name,
+                                 project.info.run))
+        targz_cmd = Command("tar",
+                            "czvf",
+                            targz,
+                            "-C",
+                            os.path.dirname(visium_images_dir),
+                            os.path.basename(visium_images_dir))
+        print("Running %s" % targz_cmd)
+        targz_job = sched.submit(targz_cmd.command_line,
+                                 name="targz_visium_images.%s.%s" % (
+                                     job_id,
+                                     os.path.basename(visium_images_dir)),
+                                 wd=working_dir)
+        check_jobs[targz_job.name] = targz_job
+        # Copy the targz file
+        copy_cmd = copy_command(targz,
+                                os.path.join(target_dir,
+                                             os.path.basename(targz)))
+        print("Running %s" % copy_cmd)
+        copy_job = sched.submit(copy_cmd.command_line,
+                                name="copy_visium_images.%s.%s" % (
+                                    job_id,
+                                    os.path.basename(visium_images_dir)),
+                                runner=SimpleJobRunner(),
+                                wd=working_dir,
+                                wait_for=(targz_job.job_name,))
+        check_jobs[copy_job.name] = copy_job
 
     # Wait for scheduler jobs to complete
     sched.wait()
