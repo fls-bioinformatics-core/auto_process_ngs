@@ -61,6 +61,112 @@ def get_templates_dir():
     else:
         return None
 
+
+class TransferData:
+    """
+    Class for handling workflow for data transfer
+
+    Wraps the "SimpleScheduler" class and provides the
+    following methods:
+
+    - run_job: runs a "Command" instance
+    - wait: blocks until specified jobs (or all jobs)
+      have completed
+    - finish: checks the exit status of all jobs
+
+    Arguments:
+      runner (JobRunner): the default job runner to use
+        when executing jobs
+      working_dir (str): path to the working directory
+      poll_interval (int): polling interval for
+        scheduler
+    """
+
+    def __init__(self, runner, working_dir, poll_interval):
+        print("Initialising job handler...")
+        self._working_dir = working_dir
+        self._runner = runner
+        self._sched = SimpleScheduler(
+            runner=self._runner,
+            reporter=TransferDataSchedulerReporter(),
+            poll_interval=poll_interval)
+        self._sched.start()
+        self._check_jobs = {}
+
+    def run_job(self, name, cmd, runner=None, wait_for=None):
+        """
+        Submits the specified command to the scheduler
+
+        Arguments:
+          name (str): name for the command
+          cmd (Command): the command to run
+          runner (JobRunner): optional, job runner to use
+          wait_for (list): optional, list of jobs to wait for
+            before scheduling this command
+
+        Returns:
+          SchedulerJob: a SchedulerJob instance for the submitted
+            job.
+        """
+        print(f"Running '{cmd}'")
+        if runner is None:
+            runner = self._runner
+        if wait_for:
+            wait_for_ = []
+            for job in wait_for:
+                wait_for_.append(job.job_name)
+            wait_for = wait_for_
+        job = self._sched.submit(cmd.command_line,
+                                 name=name,
+                                 runner=runner,
+                                 wd=self._working_dir,
+                                 wait_for=wait_for)
+        self._check_jobs[job.name] = job
+        return job
+
+    def wait(self, *jobs):
+        """
+        Block until specified jobs have completed.
+
+        If one or more jobs are supplied then wait for those
+        jobs to complete before returning; otherwise wait for
+        all jobs currently scheduled to complete.
+
+        Arguments:
+          jobs (list): optional list of SchedulerJobs
+            to wait for (otherwise wait for all jobs)
+        """
+        if not jobs:
+            print("Waiting for all scheduled jobs to complete...")
+            self._sched.wait()
+        else:
+            print(f"Waiting for jobs:")
+            for job in jobs:
+                print(f"...{job.job_name}")
+                job.wait()
+        print("All jobs completed")
+
+    def finish(self):
+        """
+        Wait for all jobs then check and return status
+
+        Returns:
+          Integer: status code (0 for success, 1 if any
+            of the jobs failed).
+        """
+        self.wait()
+        print("Finishing: checking jobs...")
+        status = 0
+        for name in self._check_jobs:
+            if self._check_jobs[name].exit_code != 0:
+                logger.warning(f"'{name}': job failed")
+                status = 1
+        if status != 0:
+            logger.error("some transfer operations did not complete "
+                         "successfully (see warnings above)")
+        return status
+
+
 class TransferDataSchedulerReporter(SchedulerReporter):
     """
     Custom reporter for scheduler
@@ -533,14 +639,9 @@ def main():
         # No README
         readme_file = None
 
-    # Start a scheduler to run jobs
-    sched = SimpleScheduler(runner=runner,
-                            reporter=TransferDataSchedulerReporter(),
-                            poll_interval=settings.general.poll_interval)
-    sched.start()
-
-    # List of jobs to check at the end
-    check_jobs = {}
+    # Make a job handler
+    td = TransferData(runner, working_dir,
+                      settings.general.poll_interval)
 
     # Transfer Fastqs
     if include_fastqs:
@@ -560,11 +661,7 @@ def main():
                               project_name,
                               "copy",
                               target_dir)
-            print("Running %s" % copy_cmd)
-            copy_job = sched.submit(copy_cmd.command_line,
-                                    name="copy_fastqs.%s" % job_id,
-                                    wd=working_dir)
-            check_jobs[copy_job.name] = copy_job
+            td.run_job(f"copy_fastqs.{job_id}", copy_cmd)
         else:
             # Build command to zip Fastqs
             zip_cmd = Command("manage_fastqs.py")
@@ -580,12 +677,9 @@ def main():
             zip_cmd.add_args(analysis_dir.analysis_dir,
                              project_name,
                              "zip")
-            print("Running %s" % zip_cmd)
-            zip_job = sched.submit(zip_cmd.command_line,
-                                   name="zip_fastqs.%s" % job_id,
-                                   wd=working_dir)
-            zip_job.wait()
-            check_jobs[zip_job.name] = zip_job
+            zip_job = td.run_job(f"zip_fastqs.{job_id}", zip_cmd)
+            # Wait for ZIP files to be generated
+            td.wait(zip_job)
             # Rename ZIP file(s) and move to final location
             run_number = str(analysis_dir.metadata.run_number)
             if analysis_dir.metadata.analysis_number is not None:
@@ -602,71 +696,53 @@ def main():
                 if f == "%s.chksums" % project_name:
                     # Assume it's the checksum file
                     # Copy to final location
-                    copy_cmd = copy_command(os.path.join(working_dir,f),
-                                            os.path.join(target_dir,
-                                                         "%s.checksums" %
-                                                         final_zip_basename))
-                    copy_job = sched.submit(copy_cmd.command_line,
-                                            name="copy_checksums.%s" % job_id,
-                                            runner=SimpleJobRunner(),
-                                            wd=working_dir)
-                    check_jobs[copy_job.name] = copy_job
+                    td.run_job(f"copy_checksums.{job_id}",
+                               copy_command(
+                                   os.path.join(working_dir,f),
+                                   os.path.join(target_dir,
+                                                "%s.checksums" %
+                                                final_zip_basename)),
+                               runner=SimpleJobRunner())
                 elif f.endswith(".zip") and \
                    f.startswith("%s." % project_name):
                     # Assume it's ZIP output from packaging process
                     final_zip = "%s%s" % (final_zip_basename,
                                           f[len(project_name):])
                     # Copy to final location
-                    copy_cmd = copy_command(
-                        os.path.join(working_dir,f),
-                        os.path.join(target_dir,final_zip))
                     job_ix += 1
-                    copy_job = sched.submit(
-                        copy_cmd.command_line,
-                        name="copy_zipped_fastqs.%s.%s" % (job_ix,job_id),
-                        wd=working_dir,
-                        wait_for=(zip_job.job_name,))
-                    check_jobs[copy_job.name] = copy_job
+                    td.run_job(f"copy_zipped_fastqs.{job_ix}.{job_id}",
+                               copy_command(
+                                   os.path.join(working_dir, f),
+                                   os.path.join(target_dir, final_zip)))
 
     # Copy README
     if readme_file is not None:
         print("Copying README file")
-        copy_cmd = copy_command(readme_file,
-                                os.path.join(target_dir,"README"))
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy_readme.%s" % job_id,
-                                runner=SimpleJobRunner(),
-                                wd=working_dir)
-        check_jobs[copy_job.name] = copy_job
+        td.run_job(f"copy_readme.{job_id}",
+                   copy_command(readme_file,
+                                os.path.join(target_dir,"README")),
+                   runner=SimpleJobRunner())
 
     # Copy download_fastqs.py
     if downloader:
         print("Copying downloader")
-        copy_cmd = copy_command(downloader,
-                                os.path.join(
-                                    target_dir,
-                                    os.path.basename(downloader)))
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy_downloader.%s" % job_id,
-                                runner=SimpleJobRunner(),
-                                wd=working_dir)
-        check_jobs[copy_job.name] = copy_job
+        td.run_job(f"copy_downloader.{job_id}",
+                   copy_command(downloader,
+                                os.path.join(target_dir,
+                                             os.path.basename(downloader))),
+                   runner=SimpleJobRunner())
 
     # Copy QC reports
     if qc_zips:
         for qc_zip in qc_zips:
             print("Copying '%s'" % os.path.basename(qc_zip))
-            copy_cmd = copy_command(
-                qc_zip,
-                os.path.join(target_dir,os.path.basename(qc_zip)),
-                link=hard_links)
-            copy_job = sched.submit(copy_cmd.command_line,
-                                    name="copy_qc_zip.%s.%s" %
-                                    (job_id,
-                                     os.path.basename(qc_zip)),
-                                    runner=SimpleJobRunner(),
-                                    wd=working_dir)
-            check_jobs[copy_job.name] = copy_job
+            td.run_job(
+                f"copy_qc_zip.{job_id}.{os.path.basename(qc_zip)}",
+                copy_command(qc_zip,
+                             os.path.join(target_dir,
+                                          os.path.basename(qc_zip)),
+                             link=hard_links),
+                runner=SimpleJobRunner())
 
     # Tar and copy 10xGenomics outputs
     if cellranger_dirs:
@@ -680,32 +756,21 @@ def main():
                                          cellranger_dir),
                                      project_name,
                                      project.info.run))
-            targz_cmd = Command("tar",
-                                "czvf",
-                                targz,
-                                "-C",
-                                os.path.dirname(cellranger_dir),
-                                os.path.basename(cellranger_dir))
-            print("Running %s" % targz_cmd)
-            targz_job = sched.submit(targz_cmd.command_line,
-                                     name="targz_10x_output.%s.%s" % (
-                                         job_id,
-                                         os.path.basename(cellranger_dir)),
-                                     wd=working_dir)
-            check_jobs[targz_job.name] = targz_job
+            targz_job = td.run_job(
+                f"targz_10x_output.{job_id}.{os.path.basename(cellranger_dir)}",
+                Command("tar",
+                        "czvf",
+                        targz,
+                        "-C",
+                        os.path.dirname(cellranger_dir),
+                        os.path.basename(cellranger_dir)))
             # Copy the targz file
-            copy_cmd = copy_command(targz,
-                                    os.path.join(target_dir,
-                                                 os.path.basename(targz)))
-            print("Running %s" % copy_cmd)
-            copy_job = sched.submit(copy_cmd.command_line,
-                                    name="copy_10x_tgz.%s.%s" % (
-                                        job_id,
-                                        os.path.basename(cellranger_dir)),
-                                    runner=SimpleJobRunner(),
-                                    wd=working_dir,
-                                    wait_for=(targz_job.job_name,))
-            check_jobs[copy_job.name] = copy_job
+            td.run_job(
+                f"copy_10x_tgz.{job_id}.{os.path.basename(cellranger_dir)}",
+                copy_command(targz,
+                             os.path.join(target_dir,
+                                          os.path.basename(targz))),
+                wait_for=(targz_job,))
 
     # Collect 10xGenomics .cloupe files
     if cloupe_files:
@@ -726,25 +791,18 @@ def main():
             print(f"...copied {os.path.basename(ff)}")
         # Make ZIP archive for cloupe files
         zip_file = os.path.join(working_dir, "10x_cloupe_files.zip")
-        zip_cmd = Command("zip",
-                          "-r",
-                          zip_file,
-                          "10x_cloupe_files")
-        print("Running %s" % zip_cmd)
-        zip_job = sched.submit(zip_cmd.command_line,
-                               name="zip_10x_cloupes_zip.%s" % job_id,
-                               wd=working_dir)
-        check_jobs[zip_job.name] = zip_job
+        zip_job = td.run_job(f"zip_10x_cloupes_zip.{job_id}",
+                             Command("zip",
+                                     "-r",
+                                     zip_file,
+                                     "10x_cloupe_files"),
+                             runner=SimpleJobRunner())
         # Copy ZIP archive
-        copy_cmd = copy_command(zip_file,
-                                os.path.join(target_dir,
-                                             os.path.basename(zip_file)))
-        print("Running %s" % copy_cmd)
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy_10x_cloupes_zip.%s" % job_id,
-                                wd=working_dir,
-                                wait_for=(zip_job.name,))
-        check_jobs[copy_job.name] = copy_job
+        td.run_job(f"copy_10x_cloupes_zip.{job_id}",
+                         copy_command(zip_file,
+                                      os.path.join(target_dir,
+                                                   os.path.basename(zip_file))),
+                         wait_for=(zip_job,))
 
     # Tar and copy Visium images
     if visium_images_dir:
@@ -755,57 +813,35 @@ def main():
                                  os.path.basename(visium_images_dir),
                                  project_name,
                                  project.info.run))
-        targz_cmd = Command("tar",
-                            "czvf",
-                            targz,
-                            "-C",
-                            os.path.dirname(visium_images_dir),
-                            os.path.basename(visium_images_dir))
-        print("Running %s" % targz_cmd)
-        targz_job = sched.submit(targz_cmd.command_line,
-                                 name="targz_visium_images.%s.%s" % (
-                                     job_id,
-                                     os.path.basename(visium_images_dir)),
-                                 wd=working_dir)
-        check_jobs[targz_job.name] = targz_job
+        targz_job = td.run_job(
+            f"targz_visium_images.{job_id}.{os.path.basename(visium_images_dir)}",
+            Command("tar",
+                    "czvf",
+                    targz,
+                    "-C",
+                    os.path.dirname(visium_images_dir),
+                    os.path.basename(visium_images_dir)))
         # Copy the targz file
-        copy_cmd = copy_command(targz,
-                                os.path.join(target_dir,
-                                             os.path.basename(targz)))
-        print("Running %s" % copy_cmd)
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy_visium_images.%s.%s" % (
-                                    job_id,
-                                    os.path.basename(visium_images_dir)),
-                                runner=SimpleJobRunner(),
-                                wd=working_dir,
-                                wait_for=(targz_job.job_name,))
-        check_jobs[copy_job.name] = copy_job
+        td.run_job(
+            f"copy_visium_images.{job_id}.{os.path.basename(visium_images_dir)}",
+            copy_command(targz, os.path.join(target_dir,
+                                             os.path.basename(targz))),
+            runner=SimpleJobRunner(),
+            wait_for=(targz_job,))
 
-    # Wait for scheduler jobs to complete
-    sched.wait()
+    # Wait for jobs to complete
+    td.wait()
 
     # Update the permissions once everything else has copied
     print("Update permissions to read-write")
-    permissions_cmd = set_permissions_command("u+rwX,g+rwX,o=rX",
-                                              target_dir)
-    print("Running %s" % permissions_cmd)
-    permissions_job = sched.submit(permissions_cmd.command_line,
-                                   name="set_permissions.%s" % job_id,
-                                   runner=SimpleJobRunner(),
-                                   wd=working_dir)
-    permissions_job.wait()
-    check_jobs[permissions_job.name] = permissions_job
+    td.run_job(f"set_permissions.{job_id}",
+               set_permissions_command("u+rwX,g+rwX,o=rX", target_dir),
+               runner=SimpleJobRunner())
+    td.wait()
 
-    # Check all jobs completed successfully
-    status = 0
-    for name in check_jobs:
-        if check_jobs[name].exit_code != 0:
-            logger.warning("'%s': operation failed" % name)
-            status = 1
+    # Finish and check all jobs completed successfully
+    status = td.finish()
     if status != 0:
-        logger.error("some transfer operations did not complete "
-                     "successfully (see warnings above)")
         return 1
     else:
         print("Files now at %s" % target_dir)
