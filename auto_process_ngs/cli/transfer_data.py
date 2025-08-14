@@ -865,3 +865,4 @@ def main(argv=None):
                 url = os.path.join(url,subdir)
             print("URL: %s" % url)
         print("Done")
+        return 0
