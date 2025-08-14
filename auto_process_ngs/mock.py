@@ -912,13 +912,15 @@ class UpdateAnalysisProject(DirectoryUpdater):
                     reference_data_path,
                     prefix="cellranger_count")
             else:
-                MockQCOutputs.cellranger_count(
-                    sample.name,
-                    self._project.qc_dir,
-                    cellranger=cellranger,
-                    reference_data_path=
-                    reference_data_path,
-                    prefix=prefix)
+                for dirn in (self._project.dirn, self._project.qc_dir):
+                    # Put outputs in project directory and QC dir
+                    MockQCOutputs.cellranger_count(
+                        sample.name,
+                        dirn,
+                        cellranger=cellranger,
+                        reference_data_path=
+                        reference_data_path,
+                        prefix=prefix)
         # Build ZIP archive
         if legacy:
             analysis_dir = os.path.basename(self._parent_dir())
@@ -982,10 +984,12 @@ class UpdateAnalysisProject(DirectoryUpdater):
             sample_names = [s for s in config.sample_names]
             reference_data_path = config.reference_data_path
         # Add outputs
-        MockQCOutputs.cellranger_multi(sample_names,
-                                       self._project.qc_dir,
-                                       config_csv=config_csv,
-                                       prefix=prefix)
+        for dirn in (self._project.dirn, self._project.qc_dir):
+            # Put outputs in project directory and QC dir
+            MockQCOutputs.cellranger_multi(sample_names,
+                                           dirn,
+                                           config_csv=config_csv,
+                                           prefix=prefix)
         # Update cellranger reference data in qc.info
         qc_info = self._project.qc_info(self._project.qc_dir)
         qc_info['cellranger_refdata'] = reference_data_path
