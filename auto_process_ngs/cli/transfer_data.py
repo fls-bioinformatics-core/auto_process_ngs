@@ -9,6 +9,7 @@
 #
 #########################################################################
 
+import sys
 import os
 import re
 import argparse
@@ -186,9 +187,22 @@ class TransferDataSchedulerReporter(SchedulerReporter):
 
 # Main function
 
-def main():
+def main(argv=None):
     """
+    Run the 'transfer_data' utility
+
+    Arguments:
+      argv (list): optional, command line arguments to
+        process (otherwise take arguments from
+        'sys.argv')
+
+    Returns:
+      Integer: 0 on success, 1 on failure.
     """
+    # Command line arguments
+    if argv is None:
+        argv = sys.argv[1:]
+
     # Load configuration
     settings = Settings()
 
@@ -283,7 +297,7 @@ def main():
                    "subdirectory in a project) to copy Fastqs from")
 
     # Process command line
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     # Flag for Fastq transfer
     include_fastqs = not args.no_fastqs
