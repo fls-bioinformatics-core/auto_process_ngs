@@ -520,3 +520,86 @@ poll_interval = 0.5
         for f in os.listdir(target_dir):
             self.assertTrue(f in expected_files,
                             f"'{f}': present, but not expected")
+
+    def test_transfer_data_include_downloader(self):
+        """
+        transfer_data: include downloader utility
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901",
+                       "run_number": "89" },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "Human" } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a target directory
+        target_dir = os.path.join(self.dirn, "shared")
+        os.makedirs(target_dir)
+        # Do data transfer (--include_downloader)
+        self.assertEqual(transfer_data(
+            [target_dir,
+             os.path.join(mockdir.dirn, "AB"),
+             "--include_downloader"]), 0)
+        # Check transferred artefacts
+        print(os.listdir(target_dir))
+        expected_files = ("AB1_S1_R1_001.fastq.gz",
+                          "AB1_S1_R2_001.fastq.gz",
+                          "AB2_S2_R2_001.fastq.gz",
+                          "AB2_S2_R1_001.fastq.gz",
+                          "AB.chksums",
+                          "download_fastqs.py")
+        for f in expected_files:
+            self.assertTrue(os.path.exists(os.path.join(target_dir, f)),
+                            f"'{f}': missing, should be present")
+        for f in os.listdir(target_dir):
+            self.assertTrue(f in expected_files,
+                            f"'{f}': present, but not expected")
+
+    def test_transfer_data_include_readme_from_template(self):
+        """
+        transfer_data: include README file generated from template
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901",
+                       "run_number": "89" },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "Human" } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a target directory
+        target_dir = os.path.join(self.dirn, "shared")
+        os.makedirs(target_dir)
+        # Make a README template
+        readme_template = os.path.join(self.dirn, "README.template")
+        with open(readme_template, "wt") as fp:
+            fp.write("FASTQs from %PLATFORM% run #%RUN_NUMBER% "
+                     "(datestamped %DATESTAMP%)\n")
+        # Do data transfer (--readme TEMPLATE_FILE)
+        self.assertEqual(transfer_data(
+            [target_dir,
+             os.path.join(mockdir.dirn, "AB"),
+             "--readme", readme_template ]), 0)
+        # Check transferred artefacts
+        print(os.listdir(target_dir))
+        expected_files = ("AB1_S1_R1_001.fastq.gz",
+                          "AB1_S1_R2_001.fastq.gz",
+                          "AB2_S2_R2_001.fastq.gz",
+                          "AB2_S2_R1_001.fastq.gz",
+                          "AB.chksums",
+                          "README")
+        for f in expected_files:
+            self.assertTrue(os.path.exists(os.path.join(target_dir, f)),
+                            f"'{f}': missing, should be present")
+        for f in os.listdir(target_dir):
+            self.assertTrue(f in expected_files,
+                            f"'{f}': present, but not expected")
+        # Check README contents
+        expected_readme = "FASTQs from MISEQ run #89 (datestamped 170901)\n"
+        with open(os.path.join(target_dir, "README"), "rt") as fp:
+            self.assertEqual(fp.read(), expected_readme)
