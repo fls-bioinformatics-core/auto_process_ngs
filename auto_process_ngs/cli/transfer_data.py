@@ -25,6 +25,7 @@ from bcftbx.utils import format_file_size
 from bcftbx.utils import walk
 from ..analysis import AnalysisDir
 from ..analysis import AnalysisProject
+from ..analysis import AnalysisFastq
 from ..command import Command
 from ..simple_scheduler import SimpleScheduler
 from ..simple_scheduler import SchedulerReporter
@@ -155,8 +156,8 @@ class TransferData:
           Integer: status code (0 for success, 1 if any
             of the jobs failed).
         """
-        self.wait()
-        print("Finishing: checking jobs...")
+        print("Finishing...")
+        self._sched.wait()
         status = 0
         for name in self._check_jobs:
             if self._check_jobs[name].exit_code != 0:
@@ -355,6 +356,23 @@ def main(argv=None):
     include_cloupe_files = bool(args.include_cloupe_files)
     include_visium_images = bool(args.include_visium_images)
 
+    # Report settings
+    print("================= Transfer settings =================")
+    print(f"Source project       : {args.project}")
+    print(f"Target dir           : {target_dir}")
+    print(f"Subdir               : {subdir}")
+    print(f"Web URL              : {weburl}")
+    print(f"README template      : {readme_template}")
+    print(f"Include Fastqs       : {include_fastqs}")
+    print(f"Include QC report    : {include_qc_report}")
+    print(f"Include 10x outputs  : {include_10x_outputs}")
+    print(f"Include .cloupe files: {include_visium_images}")
+    print(f"Include Visium images: {include_visium_images}")
+    print(f"Include downloader   : {include_downloader}")
+    print(f"Hard link Fastqs     : {hard_links}")
+    print(f"Zip Fastqs           : {zip_fastqs}")
+    print(f"Max ZIP size         : {max_zip_size}")
+
     # Check at least one artefact is being transferred
     if not (include_fastqs or
             include_downloader or
@@ -389,14 +407,18 @@ def main(argv=None):
                      (project.name,fastq_dir,ex))
         return 1
 
-    # Report
+    # Examine source project
+    print("================= Source project =================")
     print("Transferring data from '%s' (%s)" % (project.name,
                                                 project.dirn))
-    print("Fastqs in %s" % project.fastq_dir)
 
-    # Summarise samples and Fastqs
+    # Locate Fastqs
+    print("Looking for Fastqs")
+    print(f"...examining {project.fastq_dir}")
     samples = set()
     nfastqs = 0
+    nindex_fastqs = 0
+    lanes = set()
     fsize = 0
     for sample in project.samples:
         fqs = []
@@ -410,135 +432,114 @@ def main(argv=None):
                 # doesn't match so skip
                 continue
             fqs.append(fq)
+            fq_attrs = AnalysisFastq(fq)
+            if fq_attrs.lane_number:
+                lanes.add(fq_attrs.lane_number)
+            if fq_attrs.is_index_read:
+                nindex_fastqs += 1
         if fqs:
             samples.add(sample.name)
             for fq in fqs:
                 fsize += os.lstat(fq).st_size
                 nfastqs += 1
     nsamples = len(samples)
-    if nsamples == 0:
-        # No samples found
-        logging.error("No samples found")
-        return 1
-    dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
-                                if project.info.single_cell_platform else '',
-                                project.info.library_type)
-    endedness = "paired-end" if project.info.paired_end else "single-end"
-    print("%s with %d Fastqs from %d %s sample%s totalling %s" %
-          (dataset,
-           nfastqs,
-           nsamples,
-           endedness,
-           's' if nsamples != 1 else '',
-           format_file_size(fsize)))
+    if nfastqs:
+        print(f"...found {nfastqs} Fastqs ({nsamples} samples, "
+              f"{len(lanes)} lanes, {nindex_fastqs} index reads) "
+              f"[{format_file_size(fsize)}]")
+
+    # QC reports
+    print("Locating for QC reports")
+    qc_zips = list()
+    # Check QC directories and look for zipped reports
+    for qc_dir in project.qc_dirs:
+        # Get the associated Fastq set
+        # NB only compare the basename of the Fastq dir
+        # in case full paths weren't updated
+        fq_set = os.path.basename(project.qc_info(qc_dir).fastq_dir)
+        if fq_set == os.path.basename(project.fastq_dir):
+            for qc_base in ("%s_report.%s.%s" %
+                            (qc_dir,project.name,project.info.run),
+                            "%s_report.%s.%s" %
+                            (qc_dir,project.name,
+                             os.path.basename(
+                                 analysis_dir.analysis_dir)),):
+                qc_zip = os.path.join(project.dirn,
+                                      "%s.zip" % qc_base)
+                if os.path.exists(qc_zip):
+                    qc_zips.append(qc_zip)
+                    print(f"...found {qc_zip}")
+
+    # 10xGenomics outputs
+    print("Looking for 10xGenomics pipeline outputs")
+    cellranger_dirs = list()
+    for d in CELLRANGER_DIRS:
+        cellranger_dir = os.path.join(project.dirn,d)
+        if os.path.isdir(cellranger_dir):
+            cellranger_dirs.append(cellranger_dir)
+            print(f"...found {cellranger_dir}")
+    fsize_10x_outputs = 0
+    for cellranger_dir in cellranger_dirs:
+        for f in walk(cellranger_dir):
+            fsize_10x_outputs += os.lstat(f).st_size
+    if cellranger_dirs:
+        print(f"...found {len(cellranger_dirs)} 10x pipeline outputs "
+              f"[{format_file_size(fsize_10x_outputs)}]")
+
+    # Locate 10xGenomics .cloupe files
+    print("Looking for 10xGenomics .cloupe files")
+    cloupe_files = list()
+    for cellranger_dir in CELLRANGER_DIRS:
+        cellranger_dir = os.path.join(project.dirn, cellranger_dir)
+        if not os.path.isdir(cellranger_dir):
+            continue
+        for f in walk(cellranger_dir):
+            if f.endswith(".cloupe") and f.split(os.sep)[-2] == "outs":
+                cloupe_files.append(f)
+                print(f"...found {f}")
+    if cloupe_files:
+        print("...found {len(cloupe_files)} .cloupe files")
+
+    # Locate Visium images
+    print("Looking for Visium images")
+    visium_images_dir = os.path.join(project.dirn, "Visium_images")
+    fsize_visium_images = 9
+    if os.path.isdir(visium_images_dir) and \
+       len(os.listdir(visium_images_dir)) > 0:
+        print(f"...found {visium_images_dir}")
+        for f in walk(visium_images_dir):
+            fsize_visium_images += os.lstat(f).st_size
+        print(f"...found Visium images "
+              f"[{format_file_size(fsize_visium_images)}]")
+    else:
+        visium_images_dir = None
 
     # Check target dir
+    print("================= Target location =================")
+
+    # Check "base" target dir exists
     if not Location(target_dir).is_remote:
         target_dir = os.path.abspath(target_dir)
     if not exists(target_dir):
-        print("'%s': target directory not found" % target_dir)
+        print("'%s': base target directory not found" % target_dir)
         return
     else:
-        print("Target directory %s" % target_dir)
+        print("Base target directory %s" % target_dir)
 
-    # Check hard links are possible
+    # Check if hard links are possible
     if hard_links:
         if Location(target_dir).is_remote:
-            print("'%s': hard links requested but target directory "
-                  "is on a remote filesystem" % target_dir)
-            return
+            logger.error("'%s': hard links requested but target directory "
+                         "is on a remote filesystem" % target_dir)
+            return 1
         else:
             if os.lstat(project.fastq_dir).st_dev != \
                os.lstat(target_dir).st_dev:
-                print("'%s': hard links requested but target directory "
-                  "is on a different filesystem" % target_dir)
-                return
-
-    # Locate downloader
-    if include_downloader:
-        print("Locating downloader for inclusion")
-        downloader = find_program("download_fastqs.py")
-        if downloader is None:
-            logging.error("Unable to locate download_fastqs.py")
-            return 1
-        print("... found %s" % downloader)
-    else:
-        downloader = None
-
-    # Locate zipped QC report
-    if include_qc_report:
-        print("Locating zipped QC reports for inclusion")
-        qc_zips = list()
-        # Check QC directories and look for zipped reports
-        for qc_dir in project.qc_dirs:
-            # Get the associated Fastq set
-            # NB only compare the basename of the Fastq dir
-            # in case full paths weren't updated
-            fq_set = os.path.basename(project.qc_info(qc_dir).fastq_dir)
-            if fq_set == os.path.basename(project.fastq_dir):
-                for qc_base in ("%s_report.%s.%s" %
-                                (qc_dir,project.name,project.info.run),
-                                "%s_report.%s.%s" %
-                                (qc_dir,project.name,
-                                 os.path.basename(
-                                     analysis_dir.analysis_dir)),):
-                    qc_zip = os.path.join(project.dirn,
-                                          "%s.zip" % qc_base)
-                    if os.path.exists(qc_zip):
-                        print("... found %s" % qc_zip)
-                        qc_zips.append(qc_zip)
-        if not qc_zips:
-            logger.error("No zipped QC reports found")
-            return 1
-    else:
-        qc_zips = None
-
-    # Locate 10xGenomics outputs
-    if include_10x_outputs:
-        print("Locating outputs from 10xGenomics pipelines for "
-              "inclusion")
-        cellranger_dirs = list()
-        for d in CELLRANGER_DIRS:
-            cellranger_dir = os.path.join(project.dirn,d)
-            if os.path.isdir(cellranger_dir):
-                print("... found %s" % cellranger_dir)
-                cellranger_dirs.append(cellranger_dir)
-        if not cellranger_dirs:
-            logger.error("No outputs from 10xGenomics pipelines found")
-            return 1
-    else:
-        cellranger_dirs = None
-
-    # Locate 10xGenomics .cloupe files
-    if include_cloupe_files:
-        print("Locating .cloupe files in 10xGenomics outputs")
-        cloupe_files = list()
-        for cellranger_dir in CELLRANGER_DIRS:
-            cellranger_dir = os.path.join(project.dirn, cellranger_dir)
-            if not os.path.isdir(cellranger_dir):
-                continue
-            for f in walk(cellranger_dir):
-                if f.endswith(".cloupe") and f.split(os.sep)[-2] == "outs":
-                    print("... found %s" % os.path.relpath(f, project.dirn))
-                    cloupe_files.append(f)
-        if not cloupe_files:
-            logger.error("No .cloupe files found")
-            return 1
-    else:
-        cloupe_files = None
-
-    # Locate Visium images
-    if include_visium_images:
-        print("Locating Visium images for inclusion")
-        visium_images_dir = os.path.join(project.dirn, "Visium_images")
-        if os.path.isdir(visium_images_dir) and \
-           len(os.listdir(visium_images_dir)) > 0:
-            print("... found %s" % visium_images_dir)
-        else:
-            logger.error("No Visium images found")
-            return 1
-    else:
-        visium_images_dir = None
+                logger.error("'%s': hard links requested but target "
+                             "directory is on a different filesystem" %
+                             target_dir)
+                return 1
+        print("Hard linking is ok")
 
     # Determine subdirectory
     if subdir == "random_bin":
@@ -560,9 +561,9 @@ def main(argv=None):
         if subdir is None:
             print("Failed to locate empty subdirectory")
             return
-        print("... found '%s'" % subdir)
+        print("Using subdirectory '%s'" % subdir)
         # Update target dir
-        target_dir = os.path.join(target_dir,subdir)
+        target_dir = os.path.join(target_dir, subdir)
     elif subdir == "run_id":
         # Construct subdirectory name based on the
         # run ID
@@ -574,17 +575,98 @@ def main(argv=None):
             datestamp=analysis_dir.metadata.instrument_datestamp,
             run_number=run_number,
             project=project.name)
-        # Check it doesn't already exist
-        if exists(os.path.join(target_dir,subdir)):
-            logger.error("'%s': subdirectory already exists" % subdir)
-            return
         print("Using subdirectory '%s'" % subdir)
         # Update target dir
-        target_dir = os.path.join(target_dir,subdir)
+        target_dir = os.path.join(target_dir, subdir)
+        # Check it doesn't already exist
+        if exists(target_dir):
+            logger.error("'%s': directory already exists" % target_dir)
+            return
+    print(f"Final target directory: {target_dir}")
 
-    # Make target directory
-    if not exists(target_dir):
-        mkdir(target_dir)
+    # Check artefacts for inclusion
+    print("Checking artefacts requested for inclusion")
+
+    # Include Fastqs
+    if include_fastqs:
+        if nfastqs:
+            print("...Fastq files")
+        else:
+            logger.error("No Fastqs found")
+            return 1
+
+    # Include zipped QC reports
+    if include_qc_report:
+        if qc_zips:
+            print("...QC reports")
+        else:
+            logger.error("No zipped QC reports found")
+            return 1
+    else:
+        qc_zips = None
+
+    # Include 10xGenomics outputs
+    if include_10x_outputs:
+        if cellranger_dirs:
+            print("...10xGenomics pipeline outputs")
+        else:
+            logger.error("No outputs from 10xGenomics pipelines found")
+            return 1
+    else:
+        cellranger_dirs = None
+
+    # Include 10xGenomics .cloupe files
+    if include_cloupe_files:
+        if cloupe_files:
+            print("...10xGenomics .cloupe files")
+        else:
+            logger.error("No .cloupe files found")
+            return 1
+    else:
+        cloupe_files = None
+
+    # Include Visium images
+    if include_visium_images:
+        if visium_images_dir:
+            print("...10xGenomics Visium images")
+        else:
+            logger.error("No Visium images found")
+            return 1
+    else:
+        visium_images_dir = None
+
+    # README template
+    if readme_template:
+        # Check that template file exists
+        print("Locating README template")
+        template = None
+        for filen in (readme_template,
+                      os.path.join(get_templates_dir(),
+                                   readme_template),):
+            if os.path.exists(filen):
+                template = filen
+                break
+        if template is None:
+            logger.error("'%s': template file not found" %
+                         readme_template)
+            return 1
+        else:
+            readme_template = template
+        print("... found %s" % readme_template)
+
+    # Locate downloader
+    if include_downloader:
+        print("Locating downloader script")
+        downloader = find_program("download_fastqs.py")
+        if downloader is None:
+            logging.error("Unable to locate download_fastqs.py")
+            return 1
+        print("... found %s" % downloader)
+    else:
+        downloader = None
+
+    # Transfer the data
+    print("================= Transferring data =================")
 
     # Get runner for copy job
     if args.runner:
@@ -604,24 +686,12 @@ def main(argv=None):
     mkdir(working_dir)
     print("Created working dir %s" % working_dir)
 
+    # Make target directory
+    if not exists(target_dir):
+        mkdir(target_dir)
+
     # Construct the README
     if readme_template:
-        # Check that template file exists
-        print("Locating README template")
-        template = None
-        for filen in (readme_template,
-                      os.path.join(get_templates_dir(),
-                                   readme_template),):
-            if os.path.exists(filen):
-                template = filen
-                break
-        if template is None:
-            logger.error("'%s': template file not found" %
-                         readme_template)
-            return 1
-        else:
-            readme_template = template
-        print("... found %s" % readme_template)
         # Read in template
         with open(readme_template,'rt') as fp:
             readme = fp.read()
@@ -856,13 +926,43 @@ def main(argv=None):
     # Finish and check all jobs completed successfully
     status = td.finish()
     if status != 0:
+        logger.error(f"{target_dir}: transfer did not complete "
+                     "successfully")
         return 1
-    else:
-        print("Files now at %s" % target_dir)
-        if weburl:
-            url = weburl
-            if subdir is not None:
-                url = os.path.join(url,subdir)
-            print("URL: %s" % url)
-        print("Done")
-        return 0
+
+    # Summarise transfer
+    print("================= Transfer complete =================")
+    dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
+                                if project.info.single_cell_platform else '',
+                                project.info.library_type)
+    endedness = "paired-end" if project.info.paired_end else "single-end"
+    summary = [dataset]
+    if nfastqs:
+        summary.append("-- %d Fastq%s from %d %s sample%s totalling %s" %
+                       (nfastqs,
+                        's' if nfastqs != 1 else '',
+                        nsamples,
+                        endedness,
+                        's' if nsamples != 1 else '',
+                        format_file_size(fsize)))
+    if cellranger_dirs:
+        summary.append("-- %d 10x Genomics output director%s totalling %s" %
+                       (len(cellranger_dirs),
+                        'ies' if len(cellranger_dirs) != 1 else 'y',
+                        format_file_size(fsize_10x_outputs)))
+    if cloupe_files:
+        summary.append("-- %d 10x Genomics '.cloupe' file%s" %
+                       (len(cloupe_files),
+                        's' if len(cloupe_files) != 1 else ''))
+    if visium_images_dir:
+        summary.append("-- Visium images totalling %s" %
+                       format_file_size(fsize_visium_images))
+    print("\n".join(summary))
+    print("Files now at %s" % target_dir)
+    if weburl:
+        url = weburl
+        if subdir is not None:
+            url = os.path.join(url,subdir)
+        print("URL: %s" % url)
+    print("Done")
+    return 0
