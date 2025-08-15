@@ -965,8 +965,7 @@ def main(argv=None):
                         format_file_size(fsize)))
     if cellranger_dirs:
         summary.append("-- 10x Genomics output director%s totalling %s" %
-                       (len(cellranger_dirs),
-                        'ies' if len(cellranger_dirs) != 1 else 'y',
+                       ('ies' if len(cellranger_dirs) != 1 else 'y',
                         format_file_size(fsize_10x_outputs)))
     if cloupe_files:
         summary.append("-- %d 10x Genomics '.cloupe' file%s" %
