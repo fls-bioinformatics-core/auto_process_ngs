@@ -750,7 +750,8 @@ def main(argv=None):
         summary.append("-- Visium images totalling %s" %
                        format_file_size(fsize_visium_images))
     with open(os.path.join(working_dir, "transfer_data.info"), "wt") as fp:
-        fp.write(f"{'\n'.join(summary)}\n")
+        summary_text = "\n".join(summary)
+        fp.write(f"{summary_text}\n")
         fp.write(f"Target directory: {target_dir}\n")
         if weburl:
             fp.write(f"URL: {url}")
