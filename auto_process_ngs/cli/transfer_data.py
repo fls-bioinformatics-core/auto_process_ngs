@@ -942,7 +942,9 @@ def main(argv=None):
 
     # Summarise transfer
     print("================= Transfer complete =================")
-    run = "%s run #%s (datestamped %s, run ID %s)" % (
+    run = "%s%s run #%s (datestamped %s, run ID %s)" % (
+        f"{analysis_dir.metadata.source} "
+        if analysis_dir.metadata.source else "",
         analysis_dir.metadata.sequencer_model,
         analysis_dir.metadata.run_number,
         analysis_dir.metadata.instrument_datestamp,
