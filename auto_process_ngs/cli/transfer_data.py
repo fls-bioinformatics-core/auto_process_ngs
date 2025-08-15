@@ -492,7 +492,7 @@ def main(argv=None):
         for f in walk(cellranger_dir):
             fsize_10x_outputs += os.lstat(f).st_size
     if cellranger_dirs:
-        print(f"...found {len(cellranger_dirs)} 10x pipeline outputs "
+        print(f"...found {len(cellranger_dirs)} 10x pipeline output dirs "
               f"[{format_file_size(fsize_10x_outputs)}]")
 
     # Locate 10xGenomics .cloupe files
@@ -507,7 +507,7 @@ def main(argv=None):
                 cloupe_files.append(f)
                 print(f"...found {f}")
     if cloupe_files:
-        print("...found {len(cloupe_files)} .cloupe files")
+        print(f"...found {len(cloupe_files)} '.cloupe' files")
 
     # Locate Visium images
     print("Looking for Visium images")
@@ -518,7 +518,7 @@ def main(argv=None):
         print(f"...found {visium_images_dir}")
         for f in walk(visium_images_dir):
             fsize_visium_images += os.lstat(f).st_size
-        print(f"...found Visium images "
+        print(f"...found Visium images directory "
               f"[{format_file_size(fsize_visium_images)}]")
     else:
         visium_images_dir = None
@@ -962,7 +962,7 @@ def main(argv=None):
                         's' if nsamples != 1 else '',
                         format_file_size(fsize)))
     if cellranger_dirs:
-        summary.append("-- %d 10x Genomics output director%s totalling %s" %
+        summary.append("-- 10x Genomics output director%s totalling %s" %
                        (len(cellranger_dirs),
                         'ies' if len(cellranger_dirs) != 1 else 'y',
                         format_file_size(fsize_10x_outputs)))
