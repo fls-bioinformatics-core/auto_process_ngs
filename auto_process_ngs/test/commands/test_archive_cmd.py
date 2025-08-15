@@ -86,6 +86,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check that staging dir exists
@@ -154,6 +155,7 @@ poll_interval = 0.5
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
                          group=new_group,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check that staging dir exists
@@ -208,6 +210,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check that final dir exists
@@ -280,6 +283,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check that final dir exists
@@ -357,6 +361,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check that final dir exists
@@ -412,6 +417,94 @@ poll_interval = 0.5
             self.assertTrue(os.access(fq,os.R_OK))
             self.assertFalse(os.access(fq,os.W_OK))
 
+    def test_archive_to_final_with_logging_file(self):
+        """
+        archive: test copying to final archive dir updates logging file
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        os.makedirs(final_dir)
+        self.assertTrue(os.path.isdir(final_dir))
+        self.assertEqual(len(os.listdir(final_dir)),0)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        # Logging file path
+        logging_file = os.path.join(self.dirn, "SEQ_DATA.log")
+        # Do archiving op
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=False,
+                         logging_file=logging_file,
+                         final=True)
+        self.assertEqual(status,0)
+        # Check that final dir exists
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.exists(final_archive_dir))
+        self.assertEqual(len(os.listdir(final_dir)),1)
+        # Check contents
+        dirs = ("AB","CDE","logs","undetermined")
+        for d in dirs:
+            d = os.path.join(final_archive_dir,d)
+            self.assertTrue(os.path.exists(d))
+        files = ("auto_process.info",
+                 "custom_SampleSheet.csv",
+                 "metadata.info",
+                 "projects.info",
+                 "SampleSheet.orig.csv")
+        for f in files:
+            f = os.path.join(final_archive_dir,f)
+            self.assertTrue(os.path.exists(f))
+        # Check paths are updated
+        archived_ap = AutoProcess(analysis_dir=final_archive_dir,
+                                  settings=self.settings)
+        self.assertEqual(archived_ap.params.analysis_dir,
+                         final_archive_dir)
+        # Check run ID and reference
+        self.assertEqual(archived_ap.metadata.run_id,
+                         "MISEQ_170901#87")
+        self.assertEqual(archived_ap.metadata.run_reference_id,
+                         "MISEQ_170901#87")
+        # Check that Fastqs are not writable
+        for project in ("AB","CDE","undetermined"):
+            fq_dir = os.path.join(final_archive_dir,
+                                  project,
+                                  "fastqs")
+            self.assertTrue(os.path.exists(fq_dir))
+            fqs = os.listdir(fq_dir)
+            self.assertTrue(len(fqs) > 0)
+            for fq in fqs:
+                fq = os.path.join(fq_dir,fq)
+                self.assertTrue(os.access(fq,os.R_OK))
+                self.assertTrue(os.access(fq,os.W_OK))
+        # Check that run appears in logging file
+        self.assertTrue(os.path.isfile(logging_file),
+                        f"Logging file '{logging_file}' not found")
+        with open(logging_file, "rt") as fp:
+            run_is_logged = False
+            for line in fp:
+                if line.startswith(final_archive_dir):
+                    # Run is in logging file
+                    run_is_logged = True
+                    break
+            self.assertTrue(run_is_logged,
+                            f"Run not logged in '{logging_file}'")
+
     def test_archive_to_final_via_staging(self):
         """archive: test copying to staging then final archive dir
         """
@@ -440,6 +533,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check that staging dir exists
@@ -457,6 +551,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         self.assertFalse(os.path.exists(staging_dir))
@@ -531,6 +626,7 @@ poll_interval = 0.5
                           archive_dir=archive_dir,
                           year='2017',platform='miseq',
                           read_only_fastqs=False,
+                          logging_file=None,
                           final=False)
         staging_dir = os.path.join(
             final_dir,
@@ -545,6 +641,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         self.assertTrue(os.path.exists(final_archive_dir))
@@ -602,6 +699,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check that staging dir exists
@@ -619,6 +717,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         self.assertFalse(os.path.exists(staging_dir))
@@ -666,6 +765,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check that staging dir exists
@@ -683,6 +783,7 @@ poll_interval = 0.5
                          archive_dir=archive_dir,
                          platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         self.assertFalse(os.path.exists(staging_dir))
@@ -769,6 +870,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check that final dir exists
@@ -867,6 +969,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check that final dir exists
@@ -930,6 +1033,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check that final dir exists
@@ -1010,6 +1114,7 @@ ABM4,CMO304,ABM4
                           archive_dir=archive_dir,
                           year='2017',platform='miseq',
                           read_only_fastqs=False,
+                          logging_file=None,
                           final=False)
         self.assertFalse(os.path.exists(staging_dir))
         # Final archiving attempt should fail
@@ -1019,6 +1124,7 @@ ABM4,CMO304,ABM4
                           archive_dir=archive_dir,
                           year='2017',platform='miseq',
                           read_only_fastqs=False,
+                          logging_file=None,
                           final=True)
         self.assertFalse(os.path.exists(final_archive_dir))
         # Make "YEAR" level in archive dir
@@ -1030,6 +1136,7 @@ ABM4,CMO304,ABM4
                           archive_dir=archive_dir,
                           year='2017',platform='miseq',
                           read_only_fastqs=False,
+                          logging_file=None,
                           final=False)
         self.assertFalse(os.path.exists(staging_dir))
         # Final archiving attempt should fail
@@ -1039,6 +1146,7 @@ ABM4,CMO304,ABM4
                           archive_dir=archive_dir,
                           year='2017',platform='miseq',
                           read_only_fastqs=False,
+                          logging_file=None,
                           final=True)
         self.assertFalse(os.path.exists(final_archive_dir))
 
@@ -1082,6 +1190,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=False,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check that staging dir exists
@@ -1149,6 +1258,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check that final dir exists
@@ -1216,6 +1326,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=False,
                          force=True)
         self.assertEqual(status,0)
@@ -1267,6 +1378,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=True,
                          force=True)
         self.assertEqual(status,0)
@@ -1335,6 +1447,7 @@ ABM4,CMO304,ABM4
                           archive_dir=archive_dir,
                           year='2017',platform='miseq',
                           read_only_fastqs=True,
+                          logging_file=None,
                           final=False,
                           force=True)
         # Check that staging dir exists
@@ -1371,6 +1484,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check staging dir
@@ -1417,6 +1531,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check final dir
@@ -1482,6 +1597,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check staging dir
@@ -1499,6 +1615,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check final dir
@@ -1554,6 +1671,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Check staging dir
@@ -1571,6 +1689,7 @@ ABM4,CMO304,ABM4
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
                          read_only_fastqs=True,
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check final dir
@@ -1613,6 +1732,7 @@ ABM4,CMO304,ABM4
         status = archive(ap,
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
+                         logging_file=None,
                          final=False)
         self.assertEqual(status,0)
         # Attempt to finalise archive
@@ -1622,6 +1742,7 @@ ABM4,CMO304,ABM4
                           ap,
                           archive_dir=archive_dir,
                           year='2017',platform='miseq',
+                          logging_file=None,
                           final=True)
         # Add fake image file to 'Visium_images'
         with open(os.path.join(mockdir.dirn,"AB","Visium_images",
@@ -1631,6 +1752,7 @@ ABM4,CMO304,ABM4
         status = archive(ap,
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
+                         logging_file=None,
                          final=True)
         self.assertEqual(status,0)
         # Check that final dir exists
@@ -1670,6 +1792,7 @@ ABM4,CMO304,ABM4
         status = archive(ap,
                          archive_dir=archive_dir,
                          year='2017',platform='miseq',
+                         logging_file=None,
                          final=True,
                          force=True)
         self.assertEqual(status,0)

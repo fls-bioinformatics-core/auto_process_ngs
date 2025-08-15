@@ -64,6 +64,27 @@ and the final location would be
    /mnt/archive/2018/miseq/180817_M00123_0001_000000000-BV1X2_analysis
 
 ---------------------
+Logging archived runs
+---------------------
+
+If a run logging file is defined either within the config file, for
+example:
+
+::
+
+   [archive]
+   ...
+   logging_file = /data/archive/runs/SEQ_DATA.log
+
+or using the ``--logging_file`` option of the ``archive`` command,
+then an entry for the run will be added to this file automatically
+when it is archived to its final location.
+
+The logging is performed by the
+`log_seq_data.sh <https://genomics-bcftbx.readthedocs.io/en/latest/usage/general_utils.html#logging-details-of-sequencing-runs`_
+utility script, which is part of the ``genomics-bcftbx`` package.
+
+---------------------
 Archiving failed runs
 ---------------------
 

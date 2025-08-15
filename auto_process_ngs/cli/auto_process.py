@@ -985,6 +985,10 @@ def add_archive_command(cmdparser):
                    "PERMISSIONS should be a string recognised by the "
                    "'chmod' command (e.g. 'o-rwX') (default: %s)" %
                    default_chmod)
+    p.add_argument("--logging_file", action="store",
+                   default=__settings.archive.logging_file,
+                   help="log run details to LOGGING_FILE on final archive "
+                   f"(default: {__settings.archive.logging_file})")
     p.add_argument('--final',action='store_true',dest='final',
                    default=False,
                    help="copy data to final archive location (default is "
@@ -1758,6 +1762,7 @@ def archive(args):
                         group=args.group,
                         perms=args.permissions,
                         final=args.final,
+                        logging_file=args.logging_file,
                         force=args.force,
                         dry_run=args.dry_run,
                         runner=runner)
