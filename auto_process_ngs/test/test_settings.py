@@ -1032,6 +1032,9 @@ class TestSettings(unittest.TestCase):
         self.assertTrue(isinstance(s.runners.cellranger_mkfastq,
                                    SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.cellranger_multi,SimpleJobRunner))
+        # Command-specific runners
+        self.assertTrue(isinstance(s.runners.publish_qc,SimpleJobRunner))
+        self.assertTrue(isinstance(s.runners.transfer_data,SimpleJobRunner))
         # Legacy runners no longer in config file
         self.assertTrue(isinstance(s.runners.cellranger,SimpleJobRunner))
         self.assertTrue(isinstance(s.runners.qc,SimpleJobRunner))

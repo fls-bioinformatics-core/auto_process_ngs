@@ -1033,7 +1033,8 @@ class Settings(GenericSettings):
                              'rseqc': jobrunner,
                              'rsync': jobrunner,
                              'star': jobrunner,
-                             'stats': jobrunner },
+                             'stats': jobrunner,
+                             'transfer_data': jobrunner },
                 "archive": { "dirn": str,
                              "log": str,
                              "group": str,
@@ -1123,7 +1124,8 @@ class Settings(GenericSettings):
                 "runners.picard": "runners.qc",
                 "runners.qualimap": "runners.qc",
                 "runners.rseqc": "runners.qc",
-                "runners.star": "runners.qc" },
+                "runners.star": "runners.qc",
+                "runners.transfer_data": "runners.rsync" },
             # Parameters where variables can be expanded
             # e.g. $HOME/auto_process -> /home/user/auto_process
             expand_vars = ["conda.env_dir"],

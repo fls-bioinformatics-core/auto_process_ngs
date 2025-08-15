@@ -131,6 +131,7 @@
 ;stats = SimpleJobRunner
 ;publish_qc = SimpleJobRunner
 ;rsync = SimpleJobRunner
+;transfer_data = SimpleJobRunner
 ;cellranger_mkfastq = SimpleJobRunner
 ;cellranger_count = SimpleJobRunner
 ;cellranger_multi = SimpleJobRunner
