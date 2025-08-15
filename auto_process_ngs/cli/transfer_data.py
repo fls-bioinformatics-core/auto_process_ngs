@@ -281,8 +281,12 @@ def main(argv=None):
     sp.add_argument('--runner',action='store',
                     help="specify the job runner to use for executing "
                     "the checksumming, Fastq copy and tar gzipping "
-                    "operations (defaults to job runner defined for "
-                    "copying in config file [%s])" % default_runner)
+                    "operations (defaults to the 'transfer_data' job "
+                    "runner defined in config file [%s])" %
+                    default_runner)
+    sp.add_argument('--dry-run', action='store_true',
+                    help="report what would be done but don't actually "
+                    "transfer any data")
     p.add_argument('dest',action='store',metavar="DEST",
                    help="destination to copy Fastqs to; can be the "
                    "name of a destination defined in the configuration "
@@ -350,6 +354,7 @@ def main(argv=None):
         weburl = args.weburl
     if args.link:
         hard_links = args.link
+    dry_run = bool(args.dry_run)
 
     # Additional artefacts
     include_10x_outputs = bool(args.include_10x_outputs)
@@ -372,6 +377,7 @@ def main(argv=None):
     print(f"Hard link Fastqs     : {hard_links}")
     print(f"Zip Fastqs           : {zip_fastqs}")
     print(f"Max ZIP size         : {max_zip_size}")
+    print(f"Dry run              : {dry_run}")
 
     # Check at least one artefact is being transferred
     if not (include_fastqs or
@@ -682,6 +688,11 @@ def main(argv=None):
         print("... found %s" % downloader)
     else:
         downloader = None
+
+    # Stop if running in "dry run" mode
+    if dry_run:
+        print("Dry run: stopping without transferring data")
+        return 0
 
     # Transfer the data
     print("================= Transferring data =================")
