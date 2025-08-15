@@ -424,6 +424,7 @@ def main(argv=None):
     nfastqs = 0
     nindex_fastqs = 0
     lanes = set()
+    reads = set()
     fsize = 0
     for sample in project.samples:
         fqs = []
@@ -442,11 +443,14 @@ def main(argv=None):
                 lanes.add(fq_attrs.lane_number)
             if fq_attrs.is_index_read:
                 nindex_fastqs += 1
+            elif fq_attrs.read_number:
+                reads.add(fq_attrs.read_number)
         if fqs:
             samples.add(sample.name)
             for fq in fqs:
                 fsize += os.lstat(fq).st_size
                 nfastqs += 1
+    paired_end = (len(reads) > 1)
     nsamples = len(samples)
     if nfastqs:
         print(f"...found {nfastqs} Fastqs ({nsamples} samples, "
@@ -947,7 +951,7 @@ def main(argv=None):
     dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
                                 if project.info.single_cell_platform else '',
                                 project.info.library_type)
-    endedness = "paired-end" if project.info.paired_end else "single-end"
+    endedness = "paired-end" if paired_end else "single-end"
     summary = [run, dataset]
     if nfastqs:
         summary.append("-- %d Fastq%s from %d %s sample%s totalling %s" %
