@@ -734,7 +734,8 @@ def main(argv=None):
         readme_file = None
 
     # Make a job handler
-    td = TransferData(runner, working_dir,
+    td = TransferData(SimpleJobRunner(),
+                      working_dir,
                       settings.general.poll_interval)
 
     # Transfer Fastqs
@@ -755,7 +756,8 @@ def main(argv=None):
                               project_name,
                               "copy",
                               target_dir)
-            td.run_job(f"copy_fastqs.{job_id}", copy_cmd)
+            td.run_job(f"copy_fastqs.{job_id}", copy_cmd,
+                       runner=runner)
         else:
             # Build command to zip Fastqs
             zip_cmd = Command("manage_fastqs.py")
@@ -771,7 +773,8 @@ def main(argv=None):
             zip_cmd.add_args(analysis_dir.analysis_dir,
                              project_name,
                              "zip")
-            zip_job = td.run_job(f"zip_fastqs.{job_id}", zip_cmd)
+            zip_job = td.run_job(f"zip_fastqs.{job_id}", zip_cmd,
+                                 runner=runner)
             # Wait for ZIP files to be generated
             td.wait(zip_job)
             # Rename ZIP file(s) and move to final location
@@ -795,8 +798,7 @@ def main(argv=None):
                                    os.path.join(working_dir,f),
                                    os.path.join(target_dir,
                                                 "%s.checksums" %
-                                                final_zip_basename)),
-                               runner=SimpleJobRunner())
+                                                final_zip_basename)))
                 elif f.endswith(".zip") and \
                    f.startswith("%s." % project_name):
                     # Assume it's ZIP output from packaging process
@@ -807,15 +809,15 @@ def main(argv=None):
                     td.run_job(f"copy_zipped_fastqs.{job_ix}.{job_id}",
                                copy_command(
                                    os.path.join(working_dir, f),
-                                   os.path.join(target_dir, final_zip)))
+                                   os.path.join(target_dir, final_zip)),
+                               runner=runner)
 
     # Copy README
     if readme_file is not None:
         print("Copying README file")
         td.run_job(f"copy_readme.{job_id}",
                    copy_command(readme_file,
-                                os.path.join(target_dir,"README")),
-                   runner=SimpleJobRunner())
+                                os.path.join(target_dir,"README")))
 
     # Copy download_fastqs.py
     if downloader:
@@ -823,8 +825,7 @@ def main(argv=None):
         td.run_job(f"copy_downloader.{job_id}",
                    copy_command(downloader,
                                 os.path.join(target_dir,
-                                             os.path.basename(downloader))),
-                   runner=SimpleJobRunner())
+                                             os.path.basename(downloader))))
 
     # Copy QC reports
     if qc_zips:
@@ -835,8 +836,7 @@ def main(argv=None):
                 copy_command(qc_zip,
                              os.path.join(target_dir,
                                           os.path.basename(qc_zip)),
-                             link=hard_links),
-                runner=SimpleJobRunner())
+                             link=hard_links))
 
     # Tar and copy 10xGenomics outputs
     if cellranger_dirs:
@@ -857,14 +857,16 @@ def main(argv=None):
                         targz,
                         "-C",
                         os.path.dirname(cellranger_dir),
-                        os.path.basename(cellranger_dir)))
+                        os.path.basename(cellranger_dir)),
+                runner=runner)
             # Copy the targz file
             td.run_job(
                 f"copy_10x_tgz.{job_id}.{os.path.basename(cellranger_dir)}",
                 copy_command(targz,
                              os.path.join(target_dir,
                                           os.path.basename(targz))),
-                wait_for=(targz_job,))
+                wait_for=(targz_job,),
+                runner=runner)
 
     # Collect 10xGenomics .cloupe files
     if cloupe_files:
@@ -889,14 +891,14 @@ def main(argv=None):
                              Command("zip",
                                      "-r",
                                      zip_file,
-                                     "10x_cloupe_files"),
-                             runner=SimpleJobRunner())
+                                     "10x_cloupe_files"))
         # Copy ZIP archive
         td.run_job(f"copy_10x_cloupes_zip.{job_id}",
                          copy_command(zip_file,
                                       os.path.join(target_dir,
                                                    os.path.basename(zip_file))),
-                         wait_for=(zip_job,))
+                         wait_for=(zip_job,),
+                         runner=runner)
 
     # Tar and copy Visium images
     if visium_images_dir:
@@ -914,13 +916,13 @@ def main(argv=None):
                     targz,
                     "-C",
                     os.path.dirname(visium_images_dir),
-                    os.path.basename(visium_images_dir)))
+                    os.path.basename(visium_images_dir)),
+            runner=runner)
         # Copy the targz file
         td.run_job(
             f"copy_visium_images.{job_id}.{os.path.basename(visium_images_dir)}",
             copy_command(targz, os.path.join(target_dir,
                                              os.path.basename(targz))),
-            runner=SimpleJobRunner(),
             wait_for=(targz_job,))
 
     # Wait for jobs to complete
@@ -929,8 +931,7 @@ def main(argv=None):
     # Update the permissions once everything else has copied
     print("Update permissions to read-write")
     td.run_job(f"set_permissions.{job_id}",
-               set_permissions_command("u+rwX,g+rwX,o=rX", target_dir),
-               runner=SimpleJobRunner())
+               set_permissions_command("u+rwX,g+rwX,o=rX", target_dir))
     td.wait()
 
     # Finish and check all jobs completed successfully
