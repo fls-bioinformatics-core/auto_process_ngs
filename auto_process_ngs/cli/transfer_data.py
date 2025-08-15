@@ -593,6 +593,15 @@ def main(argv=None):
             return
     print(f"Final target directory: {target_dir}")
 
+    # Web URL
+    if weburl:
+        url = weburl
+        if subdir is not None:
+            weburl = os.path.join(url, subdir)
+        print(f"URL: %s" % url)
+    else:
+        url = None
+
     # Check artefacts for inclusion
     print("Checking artefacts requested for inclusion")
 
@@ -696,6 +705,45 @@ def main(argv=None):
                                                       int(time.time())))
     mkdir(working_dir)
     print("Created working dir %s" % working_dir)
+
+    # Create a summary and write to file
+    summary = []
+    summary.append("%s%s run #%s (datestamped %s, run ID %s)" %
+                   (f"{analysis_dir.metadata.source} "
+                    if analysis_dir.metadata.source else "",
+                    analysis_dir.metadata.sequencer_model,
+                    analysis_dir.metadata.run_number,
+                    analysis_dir.metadata.instrument_datestamp,
+                    analysis_dir.run_id))
+    summary.append("%s%s dataset" %
+                   ("%s " % project.info.single_cell_platform
+                    if project.info.single_cell_platform else '',
+                    project.info.library_type))
+    if nfastqs:
+        summary.append("-- %d Fastq%s from %d %s sample%s totalling %s" %
+                       (nfastqs,
+                        's' if nfastqs != 1 else '',
+                        nsamples,
+                        "paired-end" if paired_end else "single-end",
+                        's' if nsamples != 1 else '',
+                        format_file_size(fsize)))
+    if cellranger_dirs:
+        summary.append("-- 10x Genomics output director%s totalling %s" %
+                       ('ies' if len(cellranger_dirs) != 1 else 'y',
+                        format_file_size(fsize_10x_outputs)))
+    if cloupe_files:
+        summary.append("-- %d 10x Genomics '.cloupe' file%s" %
+                       (len(cloupe_files),
+                        's' if len(cloupe_files) != 1 else ''))
+    if visium_images_dir:
+        summary.append("-- Visium images totalling %s" %
+                       format_file_size(fsize_visium_images))
+    with open(os.path.join(working_dir, "transfer_data.info"), "wt") as fp:
+        fp.write(f"{'\n'.join(summary)}\n")
+        fp.write(f"Target directory: {target_dir}\n")
+        if weburl:
+            fp.write(f"URL: {url}")
+    print("Written dataset transfer summary file")
 
     # Make target directory
     if not exists(target_dir):
@@ -944,44 +992,9 @@ def main(argv=None):
 
     # Summarise transfer
     print("================= Transfer complete =================")
-    run = "%s%s run #%s (datestamped %s, run ID %s)" % (
-        f"{analysis_dir.metadata.source} "
-        if analysis_dir.metadata.source else "",
-        analysis_dir.metadata.sequencer_model,
-        analysis_dir.metadata.run_number,
-        analysis_dir.metadata.instrument_datestamp,
-        analysis_dir.run_id
-    )
-    dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
-                                if project.info.single_cell_platform else '',
-                                project.info.library_type)
-    endedness = "paired-end" if paired_end else "single-end"
-    summary = [run, dataset]
-    if nfastqs:
-        summary.append("-- %d Fastq%s from %d %s sample%s totalling %s" %
-                       (nfastqs,
-                        's' if nfastqs != 1 else '',
-                        nsamples,
-                        endedness,
-                        's' if nsamples != 1 else '',
-                        format_file_size(fsize)))
-    if cellranger_dirs:
-        summary.append("-- 10x Genomics output director%s totalling %s" %
-                       ('ies' if len(cellranger_dirs) != 1 else 'y',
-                        format_file_size(fsize_10x_outputs)))
-    if cloupe_files:
-        summary.append("-- %d 10x Genomics '.cloupe' file%s" %
-                       (len(cloupe_files),
-                        's' if len(cloupe_files) != 1 else ''))
-    if visium_images_dir:
-        summary.append("-- Visium images totalling %s" %
-                       format_file_size(fsize_visium_images))
     print("\n".join(summary))
     print("Files now at %s" % target_dir)
     if weburl:
-        url = weburl
-        if subdir is not None:
-            url = os.path.join(url,subdir)
         print("URL: %s" % url)
     print("Done")
     return 0
