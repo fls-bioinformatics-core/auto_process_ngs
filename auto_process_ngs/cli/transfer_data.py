@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
 #
 #########################################################################
 #
