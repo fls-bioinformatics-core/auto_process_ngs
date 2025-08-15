@@ -207,8 +207,8 @@ def main(argv=None):
     # Load configuration
     settings = Settings()
 
-    # Collect defaults
-    default_runner = settings.runners.rsync
+    # Default runner for large copy jobs
+    default_runner = settings.runners.transfer_data
 
     # Get pre-defined destinations
     destinations = [name for name in settings.destination]
