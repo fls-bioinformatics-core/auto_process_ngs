@@ -603,3 +603,64 @@ poll_interval = 0.5
         expected_readme = "FASTQs from MISEQ run #89 (datestamped 170901)\n"
         with open(os.path.join(target_dir, "README"), "rt") as fp:
             self.assertEqual(fp.read(), expected_readme)
+
+    def test_transfer_data_specify_web_url(self):
+        """
+        transfer_data: specify web URL
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901",
+                       "run_number": "89" },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "Human" } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a target directory
+        target_dir = os.path.join(self.dirn, "shared")
+        os.makedirs(target_dir)
+        # Do data transfer (--weburl URL)
+        self.assertEqual(transfer_data(
+            [target_dir,
+             os.path.join(mockdir.dirn, "AB"),
+             "--weburl", "https://bcf.manchester.ac.uk/data" ]), 0)
+        # Check transferred artefacts
+        print(os.listdir(target_dir))
+        expected_files = ("AB1_S1_R1_001.fastq.gz",
+                          "AB1_S1_R2_001.fastq.gz",
+                          "AB2_S2_R2_001.fastq.gz",
+                          "AB2_S2_R1_001.fastq.gz",
+                          "AB.chksums")
+        for f in expected_files:
+            self.assertTrue(os.path.exists(os.path.join(target_dir, f)),
+                            f"'{f}': missing, should be present")
+        for f in os.listdir(target_dir):
+            self.assertTrue(f in expected_files,
+                            f"'{f}': present, but not expected")
+
+    def test_transfer_data_dry_run(self):
+        """
+        transfer_data: do dry run only
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901",
+                       "run_number": "89" },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "Human" } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a target directory
+        target_dir = os.path.join(self.dirn, "shared")
+        os.makedirs(target_dir)
+        # Do data transfer (--dry-run)
+        self.assertEqual(transfer_data(
+            [target_dir,
+             os.path.join(mockdir.dirn, "AB"),
+             "--dry-run" ]), 0)
+        # Check nothing was transferred
+        self.assertEqual(len(os.listdir(target_dir)), 0)
