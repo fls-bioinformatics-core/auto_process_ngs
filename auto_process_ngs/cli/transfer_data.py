@@ -677,18 +677,19 @@ def main(argv=None):
     # Transfer the data
     print("================= Transferring data =================")
 
-    # Get runner for copy job
-    if args.runner:
-        runner = fetch_runner(args.runner)
-    else:
-        runner = default_runner
-
     # Set identifier for jobs
     job_id = "%s%s" % (project_name,
                        (".%s" % fastq_dir
                         if fastq_dir is not None
                         else ''))
     print(f"Using identifier '{job_id}'")
+
+    # Get runner for copy job
+    if args.runner:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = default_runner
+    print(f"Using '{runner}' for large copy/archive jobs")
 
     # Set the working directory
     working_dir = os.path.abspath("transfer.%s.%s" % (job_id,
