@@ -409,8 +409,13 @@ def main(argv=None):
 
     # Examine source project
     print("================= Source project =================")
-    print("Transferring data from '%s' (%s)" % (project.name,
-                                                project.dirn))
+    print(f"Project   : {project.name}")
+    print(f"Project directory  : {project.dirn}")
+    print(f"Parent analysis dir: {analysis_dir.analysis_dir}")
+    print(f"Run ID    : {analysis_dir.run_id}")
+    print(f"Sequencer : {analysis_dir.metadata.sequencer_model}")
+    print(f"Run number: {analysis_dir.metadata.run_number}")
+    print(f"Datestamp : {analysis_dir.metadata.instrument_datestamp}")
 
     # Locate Fastqs
     print("Looking for Fastqs")
@@ -679,6 +684,7 @@ def main(argv=None):
                        (".%s" % fastq_dir
                         if fastq_dir is not None
                         else ''))
+    print(f"Using identifier '{job_id}'")
 
     # Set the working directory
     working_dir = os.path.abspath("transfer.%s.%s" % (job_id,
@@ -932,11 +938,17 @@ def main(argv=None):
 
     # Summarise transfer
     print("================= Transfer complete =================")
+    run = "%s run #%s (datestamped %s, run ID %s)" % (
+        analysis_dir.metadata.sequencer_model,
+        analysis_dir.metadata.run_number,
+        analysis_dir.metadata.instrument_datestamp,
+        analysis_dir.run_id
+    )
     dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
                                 if project.info.single_cell_platform else '',
                                 project.info.library_type)
     endedness = "paired-end" if project.info.paired_end else "single-end"
-    summary = [dataset]
+    summary = [run, dataset]
     if nfastqs:
         summary.append("-- %d Fastq%s from %d %s sample%s totalling %s" %
                        (nfastqs,
