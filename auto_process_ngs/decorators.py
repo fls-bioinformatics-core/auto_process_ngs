@@ -85,6 +85,9 @@ def add_command(name,f):
             ret = 1
         else:
             print("[%s] %s: finished" % (timestamp(),name))
+        if ret is None:
+            # Assume success
+            ret = 0
         return ret
     def timestamp():
         # Return the current time
