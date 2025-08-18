@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
 #
 #########################################################################
 
@@ -331,8 +331,17 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap._save_params = True
     ap._save_metadata = True
     ap.save_data()
+    # Print basic info about the run
+    print(f"---- Setup completed: run details: ----")
+    print(f"Run ID            : {ap.run_id}")
+    print(f"Platform          : {ap.metadata.platform}")
+    print(f"Flow cell mode    : {ap.metadata.flow_cell_mode}")
+    print(f"Run configuration : {ap.metadata.run_configuration}")
+    print(f"Default bases mask: {ap.metadata.default_bases_mask}")
+    print(f"Sample sheet      : {ap.params.sample_sheet}")
     # Print summary of expected outputs and warnings
     if ap.params.sample_sheet is not None:
+        print(f"---- Expected outputs from sample sheet: ----")
         sample_sheet_data = SampleSheet(ap.params.sample_sheet)
         print(summarise_outputs(sample_sheet=sample_sheet_data))
         check_and_warn(sample_sheet=sample_sheet_data)
