@@ -1041,7 +1041,6 @@ class Settings(GenericSettings):
                              'stats': jobrunner,
                              'transfer_data': jobrunner },
                 "archive": { "dirn": str,
-                             "log": str,
                              "group": str,
                              "chmod": str,
                              "logging_file": path },
