@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     simple_scheduler.py: provide basic scheduler capability
-#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2025 Peter Briggs
 #
 ########################################################################
 #
@@ -107,8 +107,7 @@ class SimpleScheduler(threading.Thread):
 
         """
 
-        threading.Thread.__init__(self)
-        self.setDaemon(1)
+        threading.Thread.__init__(self, daemon=True)
         # Default job runner
         if runner is None:
             runner = JobRunner.SimpleJobRunner()
