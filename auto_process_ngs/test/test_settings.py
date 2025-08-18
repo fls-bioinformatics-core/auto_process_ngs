@@ -1040,7 +1040,7 @@ class TestSettings(unittest.TestCase):
         self.assertTrue(isinstance(s.runners.qc,SimpleJobRunner))
         # Archiving
         self.assertEqual(s.archive.dirn,None)
-        self.assertEqual(s.archive.log,None)
+        self.assertEqual(s.archive.logging_file,None)
         self.assertEqual(s.archive.group,None)
         self.assertEqual(s.archive.chmod,None)
         # QC reporting
