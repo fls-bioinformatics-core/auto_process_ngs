@@ -217,7 +217,8 @@ Runner name                   Used for
                               after Fastq generation (e.g.
 			      ``fastq_statistics.py``)
 ``rsync``                     Running commands for transferring data
-                              (e.g. copying primary data for Fastq
+                              within the processing pipeline (e.g
+                              copying primary data for Fastq
                               generation, archiving etc)
 ``fastqc``                    Running ``FastQC`` in the QC pipeline
 ``fastq_screen``              Running ``FastqScreen`` in the QC pipeline
@@ -229,6 +230,8 @@ Runner name                   Used for
 ``rseqc``                     Running ``RSeQC`` ``geneBody_coverage.py``
                               in the QC pipeline
 ``publish_qc``                Running jobs for QC publication
+``transfer_data``             Running computationally-intensive jobs in
+                              the ``transfer_data.py`` utility
 ``icell8``                    Default runner for commands in the ICELL8
                               processing pipeline
 ``icell8_contaminant_filter`` Running the contaminant filtering in the

@@ -160,6 +160,16 @@ For example:
 
 where ``webserver`` is a pre-defined destination.
 
+A job runner can be specified in the configuration file to use for
+computationally-intensive operations (for example copying large files
+or creating archives), by setting the ``transfer_data`` runner (see
+:ref:`job_runners`). If this isn't set then the ``rsync`` runner will
+be used instead.
+
+The ``--dry-run`` option can be used to check what the utility will
+do without actually performing any operations.
+
+
 Schemes for dymanic subdirectory specification
 ----------------------------------------------
 

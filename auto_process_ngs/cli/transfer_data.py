@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
 #
 #########################################################################
 #
@@ -9,6 +9,7 @@
 #
 #########################################################################
 
+import sys
 import os
 import re
 import argparse
@@ -24,6 +25,7 @@ from bcftbx.utils import format_file_size
 from bcftbx.utils import walk
 from ..analysis import AnalysisDir
 from ..analysis import AnalysisProject
+from ..analysis import AnalysisFastq
 from ..command import Command
 from ..simple_scheduler import SimpleScheduler
 from ..simple_scheduler import SchedulerReporter
@@ -61,6 +63,112 @@ def get_templates_dir():
     else:
         return None
 
+
+class TransferData:
+    """
+    Class for handling workflow for data transfer
+
+    Wraps the "SimpleScheduler" class and provides the
+    following methods:
+
+    - run_job: runs a "Command" instance
+    - wait: blocks until specified jobs (or all jobs)
+      have completed
+    - finish: checks the exit status of all jobs
+
+    Arguments:
+      runner (JobRunner): the default job runner to use
+        when executing jobs
+      working_dir (str): path to the working directory
+      poll_interval (int): polling interval for
+        scheduler
+    """
+
+    def __init__(self, runner, working_dir, poll_interval):
+        print("Initialising job handler...")
+        self._working_dir = working_dir
+        self._runner = runner
+        self._sched = SimpleScheduler(
+            runner=self._runner,
+            reporter=TransferDataSchedulerReporter(),
+            poll_interval=poll_interval)
+        self._sched.start()
+        self._check_jobs = {}
+
+    def run_job(self, name, cmd, runner=None, wait_for=None):
+        """
+        Submits the specified command to the scheduler
+
+        Arguments:
+          name (str): name for the command
+          cmd (Command): the command to run
+          runner (JobRunner): optional, job runner to use
+          wait_for (list): optional, list of jobs to wait for
+            before scheduling this command
+
+        Returns:
+          SchedulerJob: a SchedulerJob instance for the submitted
+            job.
+        """
+        print(f"Running '{cmd}'")
+        if runner is None:
+            runner = self._runner
+        if wait_for:
+            wait_for_ = []
+            for job in wait_for:
+                wait_for_.append(job.job_name)
+            wait_for = wait_for_
+        job = self._sched.submit(cmd.command_line,
+                                 name=name,
+                                 runner=runner,
+                                 wd=self._working_dir,
+                                 wait_for=wait_for)
+        self._check_jobs[job.name] = job
+        return job
+
+    def wait(self, *jobs):
+        """
+        Block until specified jobs have completed.
+
+        If one or more jobs are supplied then wait for those
+        jobs to complete before returning; otherwise wait for
+        all jobs currently scheduled to complete.
+
+        Arguments:
+          jobs (list): optional list of SchedulerJobs
+            to wait for (otherwise wait for all jobs)
+        """
+        if not jobs:
+            print("Waiting for all scheduled jobs to complete...")
+            self._sched.wait()
+        else:
+            print(f"Waiting for jobs:")
+            for job in jobs:
+                print(f"...{job.job_name}")
+                job.wait()
+        print("All jobs completed")
+
+    def finish(self):
+        """
+        Wait for all jobs then check and return status
+
+        Returns:
+          Integer: status code (0 for success, 1 if any
+            of the jobs failed).
+        """
+        print("Finishing...")
+        self._sched.wait()
+        status = 0
+        for name in self._check_jobs:
+            if self._check_jobs[name].exit_code != 0:
+                logger.warning(f"'{name}': job failed")
+                status = 1
+        if status != 0:
+            logger.error("some transfer operations did not complete "
+                         "successfully (see warnings above)")
+        return status
+
+
 class TransferDataSchedulerReporter(SchedulerReporter):
     """
     Custom reporter for scheduler
@@ -80,14 +188,27 @@ class TransferDataSchedulerReporter(SchedulerReporter):
 
 # Main function
 
-def main():
+def main(argv=None):
     """
+    Run the 'transfer_data' utility
+
+    Arguments:
+      argv (list): optional, command line arguments to
+        process (otherwise take arguments from
+        'sys.argv')
+
+    Returns:
+      Integer: 0 on success, 1 on failure.
     """
+    # Command line arguments
+    if argv is None:
+        argv = sys.argv[1:]
+
     # Load configuration
     settings = Settings()
 
-    # Collect defaults
-    default_runner = settings.runners.rsync
+    # Default runner for large copy jobs
+    default_runner = settings.runners.transfer_data
 
     # Get pre-defined destinations
     destinations = [name for name in settings.destination]
@@ -160,8 +281,12 @@ def main():
     sp.add_argument('--runner',action='store',
                     help="specify the job runner to use for executing "
                     "the checksumming, Fastq copy and tar gzipping "
-                    "operations (defaults to job runner defined for "
-                    "copying in config file [%s])" % default_runner)
+                    "operations (defaults to the 'transfer_data' job "
+                    "runner defined in config file [%s])" %
+                    default_runner)
+    sp.add_argument('--dry-run', action='store_true',
+                    help="report what would be done but don't actually "
+                    "transfer any data")
     p.add_argument('dest',action='store',metavar="DEST",
                    help="destination to copy Fastqs to; can be the "
                    "name of a destination defined in the configuration "
@@ -177,7 +302,7 @@ def main():
                    "subdirectory in a project) to copy Fastqs from")
 
     # Process command line
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     # Flag for Fastq transfer
     include_fastqs = not args.no_fastqs
@@ -229,11 +354,30 @@ def main():
         weburl = args.weburl
     if args.link:
         hard_links = args.link
+    dry_run = bool(args.dry_run)
 
     # Additional artefacts
     include_10x_outputs = bool(args.include_10x_outputs)
     include_cloupe_files = bool(args.include_cloupe_files)
     include_visium_images = bool(args.include_visium_images)
+
+    # Report settings
+    print("================= Transfer settings =================")
+    print(f"Source project       : {args.project}")
+    print(f"Target dir           : {target_dir}")
+    print(f"Subdir               : {subdir}")
+    print(f"Web URL              : {weburl}")
+    print(f"README template      : {readme_template}")
+    print(f"Include Fastqs       : {include_fastqs}")
+    print(f"Include QC report    : {include_qc_report}")
+    print(f"Include 10x outputs  : {include_10x_outputs}")
+    print(f"Include .cloupe files: {include_visium_images}")
+    print(f"Include Visium images: {include_visium_images}")
+    print(f"Include downloader   : {include_downloader}")
+    print(f"Hard link Fastqs     : {hard_links}")
+    print(f"Zip Fastqs           : {zip_fastqs}")
+    print(f"Max ZIP size         : {max_zip_size}")
+    print(f"Dry run              : {dry_run}")
 
     # Check at least one artefact is being transferred
     if not (include_fastqs or
@@ -269,14 +413,24 @@ def main():
                      (project.name,fastq_dir,ex))
         return 1
 
-    # Report
-    print("Transferring data from '%s' (%s)" % (project.name,
-                                                project.dirn))
-    print("Fastqs in %s" % project.fastq_dir)
+    # Examine source project
+    print("================= Source project =================")
+    print(f"Project   : {project.name}")
+    print(f"Project directory  : {project.dirn}")
+    print(f"Parent analysis dir: {analysis_dir.analysis_dir}")
+    print(f"Run ID    : {analysis_dir.run_id}")
+    print(f"Sequencer : {analysis_dir.metadata.sequencer_model}")
+    print(f"Run number: {analysis_dir.metadata.run_number}")
+    print(f"Datestamp : {analysis_dir.metadata.instrument_datestamp}")
 
-    # Summarise samples and Fastqs
+    # Locate Fastqs
+    print("Looking for Fastqs")
+    print(f"...examining {project.fastq_dir}")
     samples = set()
     nfastqs = 0
+    nindex_fastqs = 0
+    lanes = set()
+    reads = set()
     fsize = 0
     for sample in project.samples:
         fqs = []
@@ -290,135 +444,117 @@ def main():
                 # doesn't match so skip
                 continue
             fqs.append(fq)
+            fq_attrs = AnalysisFastq(fq)
+            if fq_attrs.lane_number:
+                lanes.add(fq_attrs.lane_number)
+            if fq_attrs.is_index_read:
+                nindex_fastqs += 1
+            elif fq_attrs.read_number:
+                reads.add(fq_attrs.read_number)
         if fqs:
             samples.add(sample.name)
             for fq in fqs:
                 fsize += os.lstat(fq).st_size
                 nfastqs += 1
+    paired_end = (len(reads) > 1)
     nsamples = len(samples)
-    if nsamples == 0:
-        # No samples found
-        logging.error("No samples found")
-        return 1
-    dataset = "%s%s dataset" % ("%s " % project.info.single_cell_platform
-                                if project.info.single_cell_platform else '',
-                                project.info.library_type)
-    endedness = "paired-end" if project.info.paired_end else "single-end"
-    print("%s with %d Fastqs from %d %s sample%s totalling %s" %
-          (dataset,
-           nfastqs,
-           nsamples,
-           endedness,
-           's' if nsamples != 1 else '',
-           format_file_size(fsize)))
+    if nfastqs:
+        print(f"...found {nfastqs} Fastqs ({nsamples} samples, "
+              f"{len(lanes)} lanes, {nindex_fastqs} index reads) "
+              f"[{format_file_size(fsize)}]")
+
+    # QC reports
+    print("Locating for QC reports")
+    qc_zips = list()
+    # Check QC directories and look for zipped reports
+    for qc_dir in project.qc_dirs:
+        # Get the associated Fastq set
+        # NB only compare the basename of the Fastq dir
+        # in case full paths weren't updated
+        fq_set = os.path.basename(project.qc_info(qc_dir).fastq_dir)
+        if fq_set == os.path.basename(project.fastq_dir):
+            for qc_base in ("%s_report.%s.%s" %
+                            (qc_dir,project.name,project.info.run),
+                            "%s_report.%s.%s" %
+                            (qc_dir,project.name,
+                             os.path.basename(
+                                 analysis_dir.analysis_dir)),):
+                qc_zip = os.path.join(project.dirn,
+                                      "%s.zip" % qc_base)
+                if os.path.exists(qc_zip):
+                    qc_zips.append(qc_zip)
+                    print(f"...found {qc_zip}")
+
+    # 10xGenomics outputs
+    print("Looking for 10xGenomics pipeline outputs")
+    cellranger_dirs = list()
+    for d in CELLRANGER_DIRS:
+        cellranger_dir = os.path.join(project.dirn,d)
+        if os.path.isdir(cellranger_dir):
+            cellranger_dirs.append(cellranger_dir)
+            print(f"...found {cellranger_dir}")
+    fsize_10x_outputs = 0
+    for cellranger_dir in cellranger_dirs:
+        for f in walk(cellranger_dir):
+            fsize_10x_outputs += os.lstat(f).st_size
+    if cellranger_dirs:
+        print(f"...found {len(cellranger_dirs)} 10x pipeline output dirs "
+              f"[{format_file_size(fsize_10x_outputs)}]")
+
+    # Locate 10xGenomics .cloupe files
+    print("Looking for 10xGenomics .cloupe files")
+    cloupe_files = list()
+    for cellranger_dir in CELLRANGER_DIRS:
+        cellranger_dir = os.path.join(project.dirn, cellranger_dir)
+        if not os.path.isdir(cellranger_dir):
+            continue
+        for f in walk(cellranger_dir):
+            if f.endswith(".cloupe") and f.split(os.sep)[-2] == "outs":
+                cloupe_files.append(f)
+                print(f"...found {f}")
+    if cloupe_files:
+        print(f"...found {len(cloupe_files)} '.cloupe' files")
+
+    # Locate Visium images
+    print("Looking for Visium images")
+    visium_images_dir = os.path.join(project.dirn, "Visium_images")
+    fsize_visium_images = 9
+    if os.path.isdir(visium_images_dir) and \
+       len(os.listdir(visium_images_dir)) > 0:
+        print(f"...found {visium_images_dir}")
+        for f in walk(visium_images_dir):
+            fsize_visium_images += os.lstat(f).st_size
+        print(f"...found Visium images directory "
+              f"[{format_file_size(fsize_visium_images)}]")
+    else:
+        visium_images_dir = None
 
     # Check target dir
+    print("================= Target location =================")
+
+    # Check "base" target dir exists
     if not Location(target_dir).is_remote:
         target_dir = os.path.abspath(target_dir)
     if not exists(target_dir):
-        print("'%s': target directory not found" % target_dir)
+        print("'%s': base target directory not found" % target_dir)
         return
     else:
-        print("Target directory %s" % target_dir)
+        print("Base target directory %s" % target_dir)
 
-    # Check hard links are possible
+    # Check if hard links are possible
     if hard_links:
         if Location(target_dir).is_remote:
-            print("'%s': hard links requested but target directory "
-                  "is on a remote filesystem" % target_dir)
-            return
+            logger.error("'%s': hard links requested but target directory "
+                         "is on a remote filesystem" % target_dir)
+            return 1
         else:
             if os.lstat(project.fastq_dir).st_dev != \
                os.lstat(target_dir).st_dev:
-                print("'%s': hard links requested but target directory "
-                  "is on a different filesystem" % target_dir)
-                return
-
-    # Locate downloader
-    if include_downloader:
-        print("Locating downloader for inclusion")
-        downloader = find_program("download_fastqs.py")
-        if downloader is None:
-            logging.error("Unable to locate download_fastqs.py")
-            return 1
-        print("... found %s" % downloader)
-    else:
-        downloader = None
-
-    # Locate zipped QC report
-    if include_qc_report:
-        print("Locating zipped QC reports for inclusion")
-        qc_zips = list()
-        # Check QC directories and look for zipped reports
-        for qc_dir in project.qc_dirs:
-            # Get the associated Fastq set
-            # NB only compare the basename of the Fastq dir
-            # in case full paths weren't updated
-            fq_set = os.path.basename(project.qc_info(qc_dir).fastq_dir)
-            if fq_set == os.path.basename(project.fastq_dir):
-                for qc_base in ("%s_report.%s.%s" %
-                                (qc_dir,project.name,project.info.run),
-                                "%s_report.%s.%s" %
-                                (qc_dir,project.name,
-                                 os.path.basename(
-                                     analysis_dir.analysis_dir)),):
-                    qc_zip = os.path.join(project.dirn,
-                                          "%s.zip" % qc_base)
-                    if os.path.exists(qc_zip):
-                        print("... found %s" % qc_zip)
-                        qc_zips.append(qc_zip)
-        if not qc_zips:
-            logger.error("No zipped QC reports found")
-            return 1
-    else:
-        qc_zips = None
-
-    # Locate 10xGenomics outputs
-    if include_10x_outputs:
-        print("Locating outputs from 10xGenomics pipelines for "
-              "inclusion")
-        cellranger_dirs = list()
-        for d in CELLRANGER_DIRS:
-            cellranger_dir = os.path.join(project.dirn,d)
-            if os.path.isdir(cellranger_dir):
-                print("... found %s" % cellranger_dir)
-                cellranger_dirs.append(cellranger_dir)
-        if not cellranger_dirs:
-            logger.error("No outputs from 10xGenomics pipelines found")
-            return 1
-    else:
-        cellranger_dirs = None
-
-    # Locate 10xGenomics .cloupe files
-    if include_cloupe_files:
-        print("Locating .cloupe files in 10xGenomics outputs")
-        cloupe_files = list()
-        for cellranger_dir in CELLRANGER_DIRS:
-            cellranger_dir = os.path.join(project.dirn, cellranger_dir)
-            if not os.path.isdir(cellranger_dir):
-                continue
-            for f in walk(cellranger_dir):
-                if f.endswith(".cloupe") and f.split(os.sep)[-2] == "outs":
-                    print("... found %s" % os.path.relpath(f, project.dirn))
-                    cloupe_files.append(f)
-        if not cloupe_files:
-            logger.error("No .cloupe files found")
-            return 1
-    else:
-        cloupe_files = None
-
-    # Locate Visium images
-    if include_visium_images:
-        print("Locating Visium images for inclusion")
-        visium_images_dir = os.path.join(project.dirn, "Visium_images")
-        if os.path.isdir(visium_images_dir) and \
-           len(os.listdir(visium_images_dir)) > 0:
-            print("... found %s" % visium_images_dir)
-        else:
-            logger.error("No Visium images found")
-            return 1
-    else:
-        visium_images_dir = None
+                logger.error("'%s': hard links requested but target "
+                             "directory is on a different filesystem" %
+                             target_dir)
+                return 1
+        print("Hard linking is ok")
 
     # Determine subdirectory
     if subdir == "random_bin":
@@ -440,9 +576,9 @@ def main():
         if subdir is None:
             print("Failed to locate empty subdirectory")
             return
-        print("... found '%s'" % subdir)
+        print("Using subdirectory '%s'" % subdir)
         # Update target dir
-        target_dir = os.path.join(target_dir,subdir)
+        target_dir = os.path.join(target_dir, subdir)
     elif subdir == "run_id":
         # Construct subdirectory name based on the
         # run ID
@@ -454,37 +590,76 @@ def main():
             datestamp=analysis_dir.metadata.instrument_datestamp,
             run_number=run_number,
             project=project.name)
-        # Check it doesn't already exist
-        if exists(os.path.join(target_dir,subdir)):
-            logger.error("'%s': subdirectory already exists" % subdir)
-            return
         print("Using subdirectory '%s'" % subdir)
         # Update target dir
-        target_dir = os.path.join(target_dir,subdir)
+        target_dir = os.path.join(target_dir, subdir)
+        # Check it doesn't already exist
+        if exists(target_dir):
+            logger.error("'%s': directory already exists" % target_dir)
+            return
+    print(f"Final target directory: {target_dir}")
 
-    # Make target directory
-    if not exists(target_dir):
-        mkdir(target_dir)
-
-    # Get runner for copy job
-    if args.runner:
-        runner = fetch_runner(args.runner)
+    # Web URL
+    if weburl:
+        url = weburl
+        if subdir is not None:
+            weburl = os.path.join(url, subdir)
+        print(f"URL: %s" % url)
     else:
-        runner = default_runner
+        url = None
 
-    # Set identifier for jobs
-    job_id = "%s%s" % (project_name,
-                       (".%s" % fastq_dir
-                        if fastq_dir is not None
-                        else ''))
+    # Check artefacts for inclusion
+    print("Checking artefacts requested for inclusion")
 
-    # Set the working directory
-    working_dir = os.path.abspath("transfer.%s.%s" % (job_id,
-                                                      int(time.time())))
-    mkdir(working_dir)
-    print("Created working dir %s" % working_dir)
+    # Include Fastqs
+    if include_fastqs:
+        if nfastqs:
+            print("...Fastq files")
+        else:
+            logger.error("No Fastqs found")
+            return 1
 
-    # Construct the README
+    # Include zipped QC reports
+    if include_qc_report:
+        if qc_zips:
+            print("...QC reports")
+        else:
+            logger.error("No zipped QC reports found")
+            return 1
+    else:
+        qc_zips = None
+
+    # Include 10xGenomics outputs
+    if include_10x_outputs:
+        if cellranger_dirs:
+            print("...10xGenomics pipeline outputs")
+        else:
+            logger.error("No outputs from 10xGenomics pipelines found")
+            return 1
+    else:
+        cellranger_dirs = None
+
+    # Include 10xGenomics .cloupe files
+    if include_cloupe_files:
+        if cloupe_files:
+            print("...10xGenomics .cloupe files")
+        else:
+            logger.error("No .cloupe files found")
+            return 1
+    else:
+        cloupe_files = None
+
+    # Include Visium images
+    if include_visium_images:
+        if visium_images_dir:
+            print("...10xGenomics Visium images")
+        else:
+            logger.error("No Visium images found")
+            return 1
+    else:
+        visium_images_dir = None
+
+    # README template
     if readme_template:
         # Check that template file exists
         print("Locating README template")
@@ -502,6 +677,92 @@ def main():
         else:
             readme_template = template
         print("... found %s" % readme_template)
+
+    # Locate downloader
+    if include_downloader:
+        print("Locating downloader script")
+        downloader = find_program("download_fastqs.py")
+        if downloader is None:
+            logging.error("Unable to locate download_fastqs.py")
+            return 1
+        print("... found %s" % downloader)
+    else:
+        downloader = None
+
+    # Stop if running in "dry run" mode
+    if dry_run:
+        print("Dry run: stopping without transferring data")
+        return 0
+
+    # Transfer the data
+    print("================= Transferring data =================")
+
+    # Set identifier for jobs
+    job_id = "%s%s" % (project_name,
+                       (".%s" % fastq_dir
+                        if fastq_dir is not None
+                        else ''))
+    print(f"Using identifier '{job_id}'")
+
+    # Get runner for copy job
+    if args.runner:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = default_runner
+    print(f"Using '{runner}' for large copy/archive jobs")
+
+    # Set the working directory
+    working_dir = os.path.abspath("transfer.%s.%s" % (job_id,
+                                                      int(time.time())))
+    mkdir(working_dir)
+    print("Created working dir %s" % working_dir)
+
+    # Create a summary and write to file
+    summary = []
+    summary.append("%s%s run #%s (datestamped %s, run ID %s)" %
+                   (f"{analysis_dir.metadata.source} "
+                    if analysis_dir.metadata.source else "",
+                    analysis_dir.metadata.sequencer_model,
+                    analysis_dir.metadata.run_number,
+                    analysis_dir.metadata.instrument_datestamp,
+                    analysis_dir.run_id))
+    summary.append("%s%s dataset" %
+                   ("%s " % project.info.single_cell_platform
+                    if project.info.single_cell_platform else '',
+                    project.info.library_type))
+    if nfastqs:
+        summary.append("-- %d Fastq%s from %d %s sample%s totalling %s" %
+                       (nfastqs,
+                        's' if nfastqs != 1 else '',
+                        nsamples,
+                        "paired-end" if paired_end else "single-end",
+                        's' if nsamples != 1 else '',
+                        format_file_size(fsize)))
+    if cellranger_dirs:
+        summary.append("-- 10x Genomics output director%s totalling %s" %
+                       ('ies' if len(cellranger_dirs) != 1 else 'y',
+                        format_file_size(fsize_10x_outputs)))
+    if cloupe_files:
+        summary.append("-- %d 10x Genomics '.cloupe' file%s" %
+                       (len(cloupe_files),
+                        's' if len(cloupe_files) != 1 else ''))
+    if visium_images_dir:
+        summary.append("-- Visium images totalling %s" %
+                       format_file_size(fsize_visium_images))
+    with open(os.path.join(working_dir, "transfer_data.info"), "wt") as fp:
+        summary_text = "\n".join(summary)
+        fp.write(f"{summary_text}\n")
+        fp.write(f"Target directory: {target_dir}\n")
+        if weburl:
+            fp.write(f"URL: {url}")
+    print("Written dataset transfer summary file")
+
+    # Make target directory
+    if not exists(target_dir):
+        mkdir(target_dir)
+
+    # Construct the README
+    if readme_template:
         # Read in template
         with open(readme_template,'rt') as fp:
             readme = fp.read()
@@ -533,14 +794,10 @@ def main():
         # No README
         readme_file = None
 
-    # Start a scheduler to run jobs
-    sched = SimpleScheduler(runner=runner,
-                            reporter=TransferDataSchedulerReporter(),
-                            poll_interval=settings.general.poll_interval)
-    sched.start()
-
-    # List of jobs to check at the end
-    check_jobs = {}
+    # Make a job handler
+    td = TransferData(SimpleJobRunner(),
+                      working_dir,
+                      settings.general.poll_interval)
 
     # Transfer Fastqs
     if include_fastqs:
@@ -560,11 +817,8 @@ def main():
                               project_name,
                               "copy",
                               target_dir)
-            print("Running %s" % copy_cmd)
-            copy_job = sched.submit(copy_cmd.command_line,
-                                    name="copy_fastqs.%s" % job_id,
-                                    wd=working_dir)
-            check_jobs[copy_job.name] = copy_job
+            td.run_job(f"copy_fastqs.{job_id}", copy_cmd,
+                       runner=runner)
         else:
             # Build command to zip Fastqs
             zip_cmd = Command("manage_fastqs.py")
@@ -580,12 +834,10 @@ def main():
             zip_cmd.add_args(analysis_dir.analysis_dir,
                              project_name,
                              "zip")
-            print("Running %s" % zip_cmd)
-            zip_job = sched.submit(zip_cmd.command_line,
-                                   name="zip_fastqs.%s" % job_id,
-                                   wd=working_dir)
-            zip_job.wait()
-            check_jobs[zip_job.name] = zip_job
+            zip_job = td.run_job(f"zip_fastqs.{job_id}", zip_cmd,
+                                 runner=runner)
+            # Wait for ZIP files to be generated
+            td.wait(zip_job)
             # Rename ZIP file(s) and move to final location
             run_number = str(analysis_dir.metadata.run_number)
             if analysis_dir.metadata.analysis_number is not None:
@@ -602,71 +854,50 @@ def main():
                 if f == "%s.chksums" % project_name:
                     # Assume it's the checksum file
                     # Copy to final location
-                    copy_cmd = copy_command(os.path.join(working_dir,f),
-                                            os.path.join(target_dir,
-                                                         "%s.checksums" %
-                                                         final_zip_basename))
-                    copy_job = sched.submit(copy_cmd.command_line,
-                                            name="copy_checksums.%s" % job_id,
-                                            runner=SimpleJobRunner(),
-                                            wd=working_dir)
-                    check_jobs[copy_job.name] = copy_job
+                    td.run_job(f"copy_checksums.{job_id}",
+                               copy_command(
+                                   os.path.join(working_dir,f),
+                                   os.path.join(target_dir,
+                                                "%s.checksums" %
+                                                final_zip_basename)))
                 elif f.endswith(".zip") and \
                    f.startswith("%s." % project_name):
                     # Assume it's ZIP output from packaging process
                     final_zip = "%s%s" % (final_zip_basename,
                                           f[len(project_name):])
                     # Copy to final location
-                    copy_cmd = copy_command(
-                        os.path.join(working_dir,f),
-                        os.path.join(target_dir,final_zip))
                     job_ix += 1
-                    copy_job = sched.submit(
-                        copy_cmd.command_line,
-                        name="copy_zipped_fastqs.%s.%s" % (job_ix,job_id),
-                        wd=working_dir,
-                        wait_for=(zip_job.job_name,))
-                    check_jobs[copy_job.name] = copy_job
+                    td.run_job(f"copy_zipped_fastqs.{job_ix}.{job_id}",
+                               copy_command(
+                                   os.path.join(working_dir, f),
+                                   os.path.join(target_dir, final_zip)),
+                               runner=runner)
 
     # Copy README
     if readme_file is not None:
         print("Copying README file")
-        copy_cmd = copy_command(readme_file,
-                                os.path.join(target_dir,"README"))
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy_readme.%s" % job_id,
-                                runner=SimpleJobRunner(),
-                                wd=working_dir)
-        check_jobs[copy_job.name] = copy_job
+        td.run_job(f"copy_readme.{job_id}",
+                   copy_command(readme_file,
+                                os.path.join(target_dir,"README")))
 
     # Copy download_fastqs.py
     if downloader:
         print("Copying downloader")
-        copy_cmd = copy_command(downloader,
-                                os.path.join(
-                                    target_dir,
-                                    os.path.basename(downloader)))
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy_downloader.%s" % job_id,
-                                runner=SimpleJobRunner(),
-                                wd=working_dir)
-        check_jobs[copy_job.name] = copy_job
+        td.run_job(f"copy_downloader.{job_id}",
+                   copy_command(downloader,
+                                os.path.join(target_dir,
+                                             os.path.basename(downloader))))
 
     # Copy QC reports
     if qc_zips:
         for qc_zip in qc_zips:
             print("Copying '%s'" % os.path.basename(qc_zip))
-            copy_cmd = copy_command(
-                qc_zip,
-                os.path.join(target_dir,os.path.basename(qc_zip)),
-                link=hard_links)
-            copy_job = sched.submit(copy_cmd.command_line,
-                                    name="copy_qc_zip.%s.%s" %
-                                    (job_id,
-                                     os.path.basename(qc_zip)),
-                                    runner=SimpleJobRunner(),
-                                    wd=working_dir)
-            check_jobs[copy_job.name] = copy_job
+            td.run_job(
+                f"copy_qc_zip.{job_id}.{os.path.basename(qc_zip)}",
+                copy_command(qc_zip,
+                             os.path.join(target_dir,
+                                          os.path.basename(qc_zip)),
+                             link=hard_links))
 
     # Tar and copy 10xGenomics outputs
     if cellranger_dirs:
@@ -680,32 +911,23 @@ def main():
                                          cellranger_dir),
                                      project_name,
                                      project.info.run))
-            targz_cmd = Command("tar",
-                                "czvf",
-                                targz,
-                                "-C",
-                                os.path.dirname(cellranger_dir),
-                                os.path.basename(cellranger_dir))
-            print("Running %s" % targz_cmd)
-            targz_job = sched.submit(targz_cmd.command_line,
-                                     name="targz_10x_output.%s.%s" % (
-                                         job_id,
-                                         os.path.basename(cellranger_dir)),
-                                     wd=working_dir)
-            check_jobs[targz_job.name] = targz_job
+            targz_job = td.run_job(
+                f"targz_10x_output.{job_id}.{os.path.basename(cellranger_dir)}",
+                Command("tar",
+                        "czvf",
+                        targz,
+                        "-C",
+                        os.path.dirname(cellranger_dir),
+                        os.path.basename(cellranger_dir)),
+                runner=runner)
             # Copy the targz file
-            copy_cmd = copy_command(targz,
-                                    os.path.join(target_dir,
-                                                 os.path.basename(targz)))
-            print("Running %s" % copy_cmd)
-            copy_job = sched.submit(copy_cmd.command_line,
-                                    name="copy_10x_tgz.%s.%s" % (
-                                        job_id,
-                                        os.path.basename(cellranger_dir)),
-                                    runner=SimpleJobRunner(),
-                                    wd=working_dir,
-                                    wait_for=(targz_job.job_name,))
-            check_jobs[copy_job.name] = copy_job
+            td.run_job(
+                f"copy_10x_tgz.{job_id}.{os.path.basename(cellranger_dir)}",
+                copy_command(targz,
+                             os.path.join(target_dir,
+                                          os.path.basename(targz))),
+                wait_for=(targz_job,),
+                runner=runner)
 
     # Collect 10xGenomics .cloupe files
     if cloupe_files:
@@ -726,25 +948,18 @@ def main():
             print(f"...copied {os.path.basename(ff)}")
         # Make ZIP archive for cloupe files
         zip_file = os.path.join(working_dir, "10x_cloupe_files.zip")
-        zip_cmd = Command("zip",
-                          "-r",
-                          zip_file,
-                          "10x_cloupe_files")
-        print("Running %s" % zip_cmd)
-        zip_job = sched.submit(zip_cmd.command_line,
-                               name="zip_10x_cloupes_zip.%s" % job_id,
-                               wd=working_dir)
-        check_jobs[zip_job.name] = zip_job
+        zip_job = td.run_job(f"zip_10x_cloupes_zip.{job_id}",
+                             Command("zip",
+                                     "-r",
+                                     zip_file,
+                                     "10x_cloupe_files"))
         # Copy ZIP archive
-        copy_cmd = copy_command(zip_file,
-                                os.path.join(target_dir,
-                                             os.path.basename(zip_file)))
-        print("Running %s" % copy_cmd)
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy_10x_cloupes_zip.%s" % job_id,
-                                wd=working_dir,
-                                wait_for=(zip_job.name,))
-        check_jobs[copy_job.name] = copy_job
+        td.run_job(f"copy_10x_cloupes_zip.{job_id}",
+                         copy_command(zip_file,
+                                      os.path.join(target_dir,
+                                                   os.path.basename(zip_file))),
+                         wait_for=(zip_job,),
+                         runner=runner)
 
     # Tar and copy Visium images
     if visium_images_dir:
@@ -755,63 +970,43 @@ def main():
                                  os.path.basename(visium_images_dir),
                                  project_name,
                                  project.info.run))
-        targz_cmd = Command("tar",
-                            "czvf",
-                            targz,
-                            "-C",
-                            os.path.dirname(visium_images_dir),
-                            os.path.basename(visium_images_dir))
-        print("Running %s" % targz_cmd)
-        targz_job = sched.submit(targz_cmd.command_line,
-                                 name="targz_visium_images.%s.%s" % (
-                                     job_id,
-                                     os.path.basename(visium_images_dir)),
-                                 wd=working_dir)
-        check_jobs[targz_job.name] = targz_job
+        targz_job = td.run_job(
+            f"targz_visium_images.{job_id}.{os.path.basename(visium_images_dir)}",
+            Command("tar",
+                    "czvf",
+                    targz,
+                    "-C",
+                    os.path.dirname(visium_images_dir),
+                    os.path.basename(visium_images_dir)),
+            runner=runner)
         # Copy the targz file
-        copy_cmd = copy_command(targz,
-                                os.path.join(target_dir,
-                                             os.path.basename(targz)))
-        print("Running %s" % copy_cmd)
-        copy_job = sched.submit(copy_cmd.command_line,
-                                name="copy_visium_images.%s.%s" % (
-                                    job_id,
-                                    os.path.basename(visium_images_dir)),
-                                runner=SimpleJobRunner(),
-                                wd=working_dir,
-                                wait_for=(targz_job.job_name,))
-        check_jobs[copy_job.name] = copy_job
+        td.run_job(
+            f"copy_visium_images.{job_id}.{os.path.basename(visium_images_dir)}",
+            copy_command(targz, os.path.join(target_dir,
+                                             os.path.basename(targz))),
+            wait_for=(targz_job,))
 
-    # Wait for scheduler jobs to complete
-    sched.wait()
+    # Wait for jobs to complete
+    td.wait()
 
     # Update the permissions once everything else has copied
     print("Update permissions to read-write")
-    permissions_cmd = set_permissions_command("u+rwX,g+rwX,o=rX",
-                                              target_dir)
-    print("Running %s" % permissions_cmd)
-    permissions_job = sched.submit(permissions_cmd.command_line,
-                                   name="set_permissions.%s" % job_id,
-                                   runner=SimpleJobRunner(),
-                                   wd=working_dir)
-    permissions_job.wait()
-    check_jobs[permissions_job.name] = permissions_job
+    td.run_job(f"set_permissions.{job_id}",
+               set_permissions_command("u+rwX,g+rwX,o=rX", target_dir))
+    td.wait()
 
-    # Check all jobs completed successfully
-    status = 0
-    for name in check_jobs:
-        if check_jobs[name].exit_code != 0:
-            logger.warning("'%s': operation failed" % name)
-            status = 1
+    # Finish and check all jobs completed successfully
+    status = td.finish()
     if status != 0:
-        logger.error("some transfer operations did not complete "
-                     "successfully (see warnings above)")
+        logger.error(f"{target_dir}: transfer did not complete "
+                     "successfully")
         return 1
-    else:
-        print("Files now at %s" % target_dir)
-        if weburl:
-            url = weburl
-            if subdir is not None:
-                url = os.path.join(url,subdir)
-            print("URL: %s" % url)
-        print("Done")
+
+    # Summarise transfer
+    print("================= Transfer complete =================")
+    print("\n".join(summary))
+    print("Files now at %s" % target_dir)
+    if weburl:
+        print("URL: %s" % url)
+    print("Done")
+    return 0

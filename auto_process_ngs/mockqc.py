@@ -407,7 +407,8 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
                       % reference_data_path
             metrics_data = mock10xdata.METRICS_SUMMARY
             cellranger_output_files = ("web_summary.html",
-                                       "metrics_summary.csv")
+                                       "metrics_summary.csv",
+                                       "cloupe.cloupe")
         elif cellranger == 'cellranger-atac':
             if not version:
                 version = '2.0.0'
@@ -415,7 +416,8 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
                       % reference_data_path
             metrics_data = mock10xdata.ATAC_SUMMARY_2_0_0
             cellranger_output_files = ("web_summary.html",
-                                       "summary.csv")
+                                       "summary.csv",
+                                       "cloupe.cloupe")
         elif cellranger == 'cellranger-arc':
             if not version:
                 version = '2.0.0'
@@ -423,7 +425,8 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
                       % reference_data_path
             metrics_data = mock10xdata.MULTIOME_SUMMARY_2_0_0
             cellranger_output_files = ("web_summary.html",
-                                       "summary.csv")
+                                       "summary.csv",
+                                       "cloupe.cloupe")
         # Create and populate the directory for the sample
         sample_dir = os.path.join(qc_dir,
                                   prefix,
