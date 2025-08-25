@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2024 Peter Briggs
 #
 """
 Module providing utility classes and functions for building simple
@@ -719,7 +719,9 @@ The strategy can be set explicitly at runtime by setting the
 ``exit_on_failure`` argument of the pipeline ``run`` method
 to one of the values defined in the ``PipelineFailure`` class.
 
-For example::
+For example:
+
+::
 
     from pipeliner import PipelineFailure
     ...
@@ -727,6 +729,20 @@ For example::
     ...
     # Run pipeline in 'deferred' mode
     ppl.run(exit_on_failure=PipelineFailure.DEFERRED)
+
+It is also possible in this mode to force individual tasks to
+run, even when a task that they depend on (either implicitly or
+explicitly) has failed, by specifying the ``always_run``
+argument as ``True`` when adding the task to the pipeline.
+
+For example:
+
+::
+
+   ppl.add_task(final_report,requires=(...),always_run=True)
+
+(The ``always_run`` argument has no effect in the 'immediate'
+failure mode.)
 
 Note that regardless of how the failures are handled the
 pipeline will always return exit code 1 when one or more
@@ -1623,7 +1639,7 @@ class Pipeline:
             self._scheduler.stop()
             self._scheduler = None
 
-    def add_task(self,task,requires=(),**kws):
+    def add_task(self,task,requires=(),always_run=False,**kws):
         """
         Add a task to the pipeline
 
@@ -1633,6 +1649,9 @@ class Pipeline:
           requires (List): list or tuple of task instances
             which need to complete before this task will
             start
+          always_run (Bool): set to 'True' to force the
+            task to execute even if a preceeding task
+            has failed (default: 'False')
           kws (Dictionary): a dictionary of keyword-value
             pairs which will be passed to the task at
             run time (see the ``run`` method of
@@ -1643,6 +1662,8 @@ class Pipeline:
             task.requires(req)
             if req.id() not in self.task_list():
                 self.add_task(req,())
+        if always_run:
+            task.always_run(True)
         return task
 
     def add_param(self,name,value=None,type=None):
@@ -2324,7 +2345,7 @@ class Pipeline:
                     run_task = reduce(lambda x,y: x and
                                       (y not in self._running) and
                                       y.completed and
-                                      (y.exit_code == 0),
+                                      (y.exit_code == 0 or task.always_run()),
                                       requirements,True)
                 if run_task:
                     if verbose:
@@ -2421,23 +2442,54 @@ class Pipeline:
                 elif self._exit_on_failure == PipelineFailure.DEFERRED:
                     # Remove any tasks waiting on the failures
                     # but defer pipeline termination
-                    for task in failed:
-                        self.report("Task failed: '%s' (%s)" %
-                                    (task.name(),task.id()))
-                        task.report_failure(verbose=verbose)
-                        dependent_tasks = self.get_dependent_tasks(
-                            task.id())
+                    failed_ids = set([f.id() for f in failed])
+                    remove_ids = set()
+                    # Identify tasks to be removed but don't actually
+                    # drop them yet
+                    removed_at_least_one = True
+                    while removed_at_least_one:
+                        # Keep checking while each iteration identifies at
+                        # least one more task for removal (as this may
+                        # result in further removals subsequently)
+                        removed_at_least_one = False
+                        for t in self._pending:
+                            # See if each task has any immediate dependencies
+                            # on failed or removed tasks
+                            task,requires,kws = t
+                            if task.always_run():
+                                # Don't remove this task as it's marked to
+                                # always be run
+                                continue
+                            if task.id() in remove_ids:
+                                # Already scheduled for removal
+                                continue
+                            for required_task in requires:
+                                # Check if parent task depends on any
+                                # that failed or which are scheduled
+                                # for removal
+                                if required_task.id() in failed_ids or \
+                                   required_task.id() in remove_ids:
+                                    remove_ids.add(task.id())
+                                    removed_at_least_one = True
+                                    break
+                        # Update the pending tasks by performing
+                        # the removal operations
                         pending = []
                         for t in self._pending:
-                            if t[0].id() in dependent_tasks:
+                            task,requires,kws = t
+                            if task.id() in remove_ids:
                                 msg = "-- removing dependent task '%s'" \
-                                      % t[0].name()
+                                      % task.name()
                                 if verbose:
-                                    msg += " (%s)" % t[0].id()
+                                    msg += " (%s)" % task.id()
                                 self.report(msg)
-                                self._removed.append(t[0])
                             else:
-                                pending.append(t)
+                                # Update the requirements for the
+                                # task and add back into 'pending'
+                                for req in requires:
+                                    if req.id() in remove_ids:
+                                        task.drop_required_task(req.id())
+                                pending.append(self.get_task(task.id()))
                         self._pending = pending
                     self._failed.extend(failed)
                     self.report("There are failed tasks but pipeline exit "
@@ -2541,6 +2593,7 @@ class PipelineTask:
         self._commands = []
         self._scripts = []
         self._required_task_ids = []
+        self._always_run = False
         self._task_name = "%s.%s" % (sanitize_name(self._name),
                                      uuid.uuid4())
         self._completed = False
@@ -3218,12 +3271,32 @@ class PipelineTask:
             self._required_task_ids.append(task_id)
         self._required_task_ids = sorted(self._required_task_ids)
 
+    def drop_required_task(self,task_id):
+        """
+        Remove task ID from list of requirements
+
+        Arguments:
+          task_id (str): UUID of the task to be added
+            as a requirement
+        """
+        if task_id in self._required_task_ids:
+            self._required_task_ids.remove(task_id)
+        self._required_task_ids = sorted(self._required_task_ids)
+
     @property
     def required_task_ids(self):
         """
         Return the task IDs for tasks required by this task
         """
         return self._required_task_ids
+
+    def always_run(self,b=None):
+        """
+        Get and set the 'always_run' flag for this task
+        """
+        if b is not None:
+            self._always_run = bool(b)
+        return self._always_run
 
     def add_output(self,name,value):
         """
