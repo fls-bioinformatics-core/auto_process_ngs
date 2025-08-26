@@ -1156,6 +1156,10 @@ class Settings(GenericSettings):
             # Look for default
             settings_file = locate_settings_file(
                 name="auto_process.ini",
+                env_vars=["AUTO_PROCESS_CONF"],
+                paths=[os.getcwd(),
+                       get_config_dir(),
+                       get_install_dir()],
                 create_from_sample=False)
             if settings_file is None:
                 # Fallback to old name
@@ -1252,86 +1256,91 @@ def get_config_dir():
     else:
         return None
 
-def locate_settings_file(name="auto_process.ini",
-                         env_vars=["AUTO_PROCESS_CONF"],
+def locate_settings_file(name,
+                         env_vars=None,
+                         paths=None,
                          create_from_sample=False):
     """
     Locate configuration settings file
 
-    Look for a configuration settings file (default name
-    'auto_process.ini'). The search path is:
+    Look for a configuration settings file with the specified
+    name, first checking locations pointed at by the specified
+    environment variables listed in 'env_vars' followed by the
+    specified paths listed in 'paths', and returning the first
+    match.
 
-    1. file specified by the AUTO_PROCESS_CONF environment
-       variable (if it exists)
-    2. current directory
-    3. 'config' subdir of installation location
-    4. top-level installation location
+    Environment variables and paths are checked in the order
+    supplied.
 
-    The first file with a matching name is returned.
+    If no match is found but one of the paths includes a
+    sample configuration file (indicated by having the suffix
+    '.sample' appended to the name) and 'create_from_sample'
+    is True, then a new configuration file will be created
+    in that location based on the contents of the sample file.
 
-    If no matching file is located but one of the locations
-    contains a file with the correct name ending in
-    '.sample', and if the 'create_from_sample' argument is
-    set, then use this to make a settings file in the same
-    location.
+    Example usage:
 
-    Returns the path to a settings file, or None if one isn't
-    found.
+    >>> cf = locate_settings_file("auto_process.ini",
+    ...                           env_vars=["AUTO_PROCESS_CONF"],
+    ...                           paths=[os.getcwd(),
+    ...                                  get_config_dir(),
+    ...                                  get_install_dir()])
 
     Arguments:
-      name (str): name of .ini file to locate (default:
-        "auto_process.ini")
+      name (str): name of .ini file to locate
       env_vars (list): list of environment variables to
-        check for config files (default:
-        ["AUTO_PROCESS_CONF"])
+        check for config files
+      paths (list): list of directories to search for
+        config files (default: current directory)
       create_from_sample (bool): if True then attempt to
         create a new settings file from a sample file,
         if located (default: False)
+
+    Returns:
+      String: path to the configuration file (None if one isn't
+        found).
     """
     # Check environment variables
-    for var in env_vars:
-        try:
-            settings_file = os.environ[var]
-            if os.path.exists(settings_file):
-                return settings_file
-        except KeyError:
-            pass
-    # Check locations
-    install_dir = get_install_dir()
-    config_dir = get_config_dir()
-    config_file_dirs = (os.getcwd(),
-                        config_dir,
-                        install_dir,)
+    if env_vars:
+        for var in env_vars:
+            try:
+                settings_file = os.environ[var]
+                if os.path.exists(settings_file):
+                    return settings_file
+            except KeyError:
+                pass
+    # Check paths
     settings_file = None
     sample_settings_file = None
-    for path in config_file_dirs:
-        settings_file = os.path.join(path,name)
+    if paths is None:
+        paths = [os.getcwd()]
+    for path in paths:
+        settings_file = os.path.join(path, name)
         if os.path.exists(settings_file):
             # Located settings file
             break
         # No settings file here, look for a sample version
         if sample_settings_file is None:
-            sample_settings_file = settings_file + '.sample'
+            sample_settings_file = settings_file + ".sample"
             if not os.path.exists(sample_settings_file):
                 sample_settings_file = None
         # Reset settings file to keep looking
         settings_file = None
     # No settings file found anywhere on search path
     if settings_file is None:
-        logger.debug("No local settings file found in %s" %
-                     ', '.join(config_file_dirs))
+        logger.debug(f"No local settings file found in "
+                     f"{', '.join(paths)}")
         if sample_settings_file is not None and create_from_sample:
             logger.warning("Attempting to make a copy from sample "
                            "settings file")
             settings_file = os.path.splitext(sample_settings_file)[0]
             try:
-                with open(settings_file,'w') as fp:
+                with open(settings_file, "wt") as fp:
                     with open(sample_settings_file,'r') as fpp:
                         fp.write(fpp.read())
-                logger.warning("Created new file %s" % settings_file)
+                logger.warning(f"Created new file {settings_file}")
             except Exception as ex:
-                raise Exception("Failed to create %s: %s" %
-                                (settings_file,ex))
+                raise Exception(f"Failed to create {settings_file}: {ex}")
     # Finish
     return settings_file
 
