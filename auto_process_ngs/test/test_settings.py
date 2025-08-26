@@ -1783,7 +1783,7 @@ class TestLocateSettingsFile(unittest.TestCase):
         os.chdir(self.dirn)
         settings_file = "testing.ini"
         with open(settings_file, "wt") as fp:
-            print(";empty config file\n")
+            fp.write(";empty config file\n")
         self.assertEqual(locate_settings_file("testing.ini"),
                          os.path.join(self.dirn, settings_file))
 
@@ -1793,7 +1793,7 @@ class TestLocateSettingsFile(unittest.TestCase):
         """
         settings_file = os.path.join(self.dirn, "testing.ini")
         with open(settings_file, "wt") as fp:
-            print(";empty config file\n")
+            fp.write(";empty config file\n")
         self.assertEqual(locate_settings_file("testing.ini",
                                               env_vars=["TEST_SETTINGS_INI"]),
                          None)
@@ -1809,7 +1809,7 @@ class TestLocateSettingsFile(unittest.TestCase):
         os.chdir(self.dirn)
         settings_file = os.path.join(self.dirn, "testing.ini")
         with open(settings_file + ".sample", "wt") as fp:
-            print(";empty config file\n")
+            fp.write(";empty config file\n")
         self.assertEqual(locate_settings_file("testing.ini"), None)
         self.assertEqual(locate_settings_file("testing.ini",
                                               create_from_sample=True),
