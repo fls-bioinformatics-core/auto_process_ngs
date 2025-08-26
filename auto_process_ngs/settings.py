@@ -1252,7 +1252,9 @@ def get_config_dir():
     else:
         return None
 
-def locate_settings_file(name='auto_process.ini',create_from_sample=False):
+def locate_settings_file(name="auto_process.ini",
+                         env_vars=["AUTO_PROCESS_CONF"],
+                         create_from_sample=False):
     """
     Locate configuration settings file
 
@@ -1276,14 +1278,24 @@ def locate_settings_file(name='auto_process.ini',create_from_sample=False):
     Returns the path to a settings file, or None if one isn't
     found.
 
+    Arguments:
+      name (str): name of .ini file to locate (default:
+        "auto_process.ini")
+      env_vars (list): list of environment variables to
+        check for config files (default:
+        ["AUTO_PROCESS_CONF"])
+      create_from_sample (bool): if True then attempt to
+        create a new settings file from a sample file,
+        if located (default: False)
     """
-    # Check for environment variable
-    try:
-        settings_file = os.environ['AUTO_PROCESS_CONF']
-        if os.path.exists(settings_file):
-            return settings_file
-    except KeyError:
-        pass
+    # Check environment variables
+    for var in env_vars:
+        try:
+            settings_file = os.environ[var]
+            if os.path.exists(settings_file):
+                return settings_file
+        except KeyError:
+            pass
     # Check locations
     install_dir = get_install_dir()
     config_dir = get_config_dir()

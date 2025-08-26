@@ -1748,6 +1748,74 @@ no_lane_splitting = False
         self.assertEqual(s.platform['miseq'].create_empty_fastqs,None)
 
 
+class TestLocateSettingsFile(unittest.TestCase):
+    """
+    Tests for the 'locate_settings_file' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix="TestLocateSettingsFile")
+        # Store env vars
+        self.env_vars = { var:os.environ[var] for var in os.environ }
+        # Store cwd
+        self.cwd = os.getcwd()
+
+    def tearDown(self):
+        # Return to cwd
+        os.chdir(self.cwd)
+        # Restore env vars
+        for var in self.env_vars:
+            os.environ[var] = self.env_vars[var]
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
+
+    def test_locate_settings_file_doesnt_exist(self):
+        """
+        locate_settings_file: no matching settings file
+        """
+        self.assertEqual(locate_settings_file("doesnt_exist.ini"), None)
+
+    def test_locate_settings_file_in_current_dir(self):
+        """
+        locate_settings_file: .ini file in current dir
+        """
+        os.chdir(self.dirn)
+        settings_file = "testing.ini"
+        with open(settings_file, "wt") as fp:
+            print(";empty config file\n")
+        self.assertEqual(locate_settings_file("testing.ini"),
+                         os.path.join(self.dirn, settings_file))
+
+    def test_locate_settings_file_from_env_var(self):
+        """
+        locate_settings_file: .ini file from environment variable
+        """
+        settings_file = os.path.join(self.dirn, "testing.ini")
+        with open(settings_file, "wt") as fp:
+            print(";empty config file\n")
+        self.assertEqual(locate_settings_file("testing.ini",
+                                              env_vars=["TEST_SETTINGS_INI"]),
+                         None)
+        os.environ["TEST_SETTINGS_INI"] = settings_file
+        self.assertEqual(locate_settings_file("testing.ini",
+                                              env_vars=["TEST_SETTINGS_INI"]),
+                         settings_file)
+
+    def test_locate_settings_file_create_from_sample(self):
+        """
+        locate_settings_file: create .ini file from sample
+        """
+        os.chdir(self.dirn)
+        settings_file = os.path.join(self.dirn, "testing.ini")
+        with open(settings_file + ".sample", "wt") as fp:
+            print(";empty config file\n")
+        self.assertEqual(locate_settings_file("testing.ini"), None)
+        self.assertEqual(locate_settings_file("testing.ini",
+                                              create_from_sample=True),
+                         settings_file)
+
+
 class TestFetchReferenceData(unittest.TestCase):
     """
     Tests for the 'fetch_reference_data' function
