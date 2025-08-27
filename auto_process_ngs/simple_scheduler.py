@@ -338,6 +338,10 @@ class SimpleScheduler(threading.Thread):
           SchedulerJob instance for the submitted job.
 
         """
+        # Scheduler must be active
+        if not self.__active:
+            raise Exception("Scheduler is not active, unable to "
+                            "schedule a job")
         # Use default runner if none explicitly specified
         if runner is None:
             runner = self.default_runner
