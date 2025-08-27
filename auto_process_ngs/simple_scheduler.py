@@ -274,7 +274,7 @@ class SimpleScheduler(threading.Thread):
             while self.__active and not self.is_empty():
                 time.sleep(self.__poll_interval)
         except KeyboardInterrupt:
-            print("KeyboardInterrupt")
+            print("KeyboardInterrupt: stopping scheduler")
             self.stop()
             print("Finished")
 
