@@ -932,9 +932,9 @@ class Settings(GenericSettings):
     If a config file isn't explicitly specified then the
     instance will will attempt to locate one by searching
     various locations (as defined within the
-    ``locate_settings_file`` function) first using the
-    name ``auto_process.ini``, then with the legacy name
-    ``settings.ini``.
+    ``locate_auto_process_settings_file`` function) first
+    using the name ``auto_process.ini``, then with the
+    legacy name ``settings.ini``.
 
     If a config file still cannot be found then the
     parameters will be set to any default values defined
@@ -1153,16 +1153,12 @@ class Settings(GenericSettings):
         """
         if settings_file is None:
             # Look for default
-            settings_file = locate_settings_file(
+            settings_file = locate_auto_process_settings_file(
                 name="auto_process.ini",
-                env_vars=["AUTO_PROCESS_CONF"],
-                paths=[os.getcwd(),
-                       get_config_dir(),
-                       get_install_dir()],
                 create_from_sample=False)
             if settings_file is None:
                 # Fallback to old name
-                settings_file = locate_settings_file(
+                settings_file = locate_auto_process_settings_file(
                     name="settings.ini",
                     create_from_sample=False)
         return settings_file
@@ -1342,6 +1338,34 @@ def locate_settings_file(name,
                 raise Exception(f"Failed to create {settings_file}: {ex}")
     # Finish
     return settings_file
+
+def locate_auto_process_settings_file(name="auto_process.ini",
+                                      create_from_sample=False):
+    """
+    Locate configuration settings file for 'auto_process_ngs'
+
+    Wraps the 'locate_settings_file' function with environment
+    variables and search path specific to the 'auto_process_ngs'
+    package.
+
+    Arguments:
+      name (str): base name of configuration file (default:
+        "auto_process.ini")
+      create_from_sample (bool): if True then create a new
+        configuration file from sample version, if found
+        (default: False, don't create new file)
+
+    Returns:
+      String: path to the configuration file (None if one isn't
+        found).
+    """
+    return locate_settings_file(
+        name=name,
+        env_vars=["AUTO_PROCESS_CONF"],
+        paths=[os.getcwd(),
+               get_config_dir(),
+               get_install_dir()],
+        create_from_sample=create_from_sample)
 
 def fetch_reference_data(s,name):
     """
