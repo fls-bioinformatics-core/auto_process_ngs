@@ -1264,7 +1264,9 @@ class TestSchedulerReporter(unittest.TestCase):
             fp=fp,
             group_end=u"Group completed: #%(group_id)d: \"%(group_name)s\""
         )
-        group = SchedulerGroup('test',1,SimpleScheduler(poll_interval=0.01))
+        sched = SimpleScheduler(poll_interval=0.01)
+        sched.start()
+        group = SchedulerGroup('test',1,sched)
         job = group.add(['sleep','50'],name='sleep',wait_for=[])
         group.close()
         job.terminate()

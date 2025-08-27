@@ -106,8 +106,8 @@ class SimpleScheduler(threading.Thread):
             submit jobs (default is to submit in random order)
 
         """
-
-        threading.Thread.__init__(self, daemon=True)
+        # Flag controlling whether scheduler is active
+        self.__active = False
         # Default job runner
         if runner is None:
             runner = JobRunner.SimpleJobRunner()
@@ -148,14 +148,14 @@ class SimpleScheduler(threading.Thread):
         self.__enable_error_check = True
         self.__last_error_check_time = 0.0
         self.__error_check_interval = 60.0
-        # Flag controlling whether scheduler is active
-        self.__active = False
         # Default reporter
         if reporter is None:
             reporter = default_scheduler_reporter()
         self.__reporter = reporter
         # Stop scheduler on exit
         atexit.register(cleanup_atexit,self)
+        # Start thread
+        threading.Thread.__init__(self, daemon=True)
 
     def stop(self):
         """Stop the scheduler and terminate running jobs
@@ -271,10 +271,10 @@ class SimpleScheduler(threading.Thread):
 
         """
         try:
-            while not self.is_empty():
+            while self.__active and not self.is_empty():
                 time.sleep(self.__poll_interval)
         except KeyboardInterrupt:
-            print("KeyboardInterrupt")
+            print("KeyboardInterrupt: stopping scheduler")
             self.stop()
             print("Finished")
 
@@ -338,6 +338,10 @@ class SimpleScheduler(threading.Thread):
           SchedulerJob instance for the submitted job.
 
         """
+        # Scheduler must be active
+        if not self.__active:
+            raise Exception("Scheduler is not active, unable to "
+                            "schedule a job")
         # Use default runner if none explicitly specified
         if runner is None:
             runner = self.default_runner
