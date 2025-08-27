@@ -603,7 +603,7 @@ def main(argv=None):
     if weburl:
         url = weburl
         if subdir is not None:
-            weburl = os.path.join(url, subdir)
+            url = os.path.join(url, subdir)
         print(f"URL: %s" % url)
     else:
         url = None
