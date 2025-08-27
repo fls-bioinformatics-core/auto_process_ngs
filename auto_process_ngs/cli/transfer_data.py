@@ -94,6 +94,7 @@ class TransferData:
             poll_interval=poll_interval)
         self._sched.start()
         self._check_jobs = {}
+        self._active = True
 
     def run_job(self, name, cmd, runner=None, wait_for=None):
         """
@@ -110,6 +111,9 @@ class TransferData:
           SchedulerJob: a SchedulerJob instance for the submitted
             job.
         """
+        if not self._active:
+            logger.warning("handler not active, cannot run job")
+            return
         print(f"Running '{cmd}'")
         if runner is None:
             runner = self._runner
@@ -118,13 +122,17 @@ class TransferData:
             for job in wait_for:
                 wait_for_.append(job.job_name)
             wait_for = wait_for_
-        job = self._sched.submit(cmd.command_line,
-                                 name=name,
-                                 runner=runner,
-                                 wd=self._working_dir,
-                                 wait_for=wait_for)
-        self._check_jobs[job.name] = job
-        return job
+        try:
+            job = self._sched.submit(cmd.command_line,
+                                     name=name,
+                                     runner=runner,
+                                     wd=self._working_dir,
+                                     wait_for=wait_for)
+            self._check_jobs[job.name] = job
+            return job
+        except Exception as ex:
+            logger.error(f"unable to submit job: {ex}")
+            self._active = False
 
     def wait(self, *jobs):
         """
@@ -138,6 +146,8 @@ class TransferData:
           jobs (list): optional list of SchedulerJobs
             to wait for (otherwise wait for all jobs)
         """
+        if not self._active:
+            return 0
         if not jobs:
             print("Waiting for all scheduled jobs to complete...")
             self._sched.wait()
@@ -157,6 +167,8 @@ class TransferData:
             of the jobs failed).
         """
         print("Finishing...")
+        if not self._active:
+            return 1
         self._sched.wait()
         status = 0
         for name in self._check_jobs:
@@ -166,6 +178,7 @@ class TransferData:
         if status != 0:
             logger.error("some transfer operations did not complete "
                          "successfully (see warnings above)")
+        self._active = False
         return status
 
 
