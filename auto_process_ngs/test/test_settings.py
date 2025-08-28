@@ -2,6 +2,7 @@
 # Tests for settings.py module
 #######################################################################
 
+import os
 import unittest
 import tempfile
 import shutil
