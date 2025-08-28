@@ -445,6 +445,13 @@ class GenericSettings:
                         except NoSectionError:
                             logger.debug(f"{name}: no section in config file")
 
+    @property
+    def settings_file(self):
+        """
+        Return path to settings file
+        """
+        return self._settings_file
+
     def has_subsections(self, section):
         """
         Check if section contains subsections

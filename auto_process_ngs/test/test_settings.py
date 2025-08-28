@@ -414,6 +414,7 @@ star_index = missing
             },
             settings_file=settings_file
         )
+        self.assertEqual(s.settings_file, settings_file)
         self.assertEqual(s.report_settings(),
                          f"""Settings from {settings_file}
 [general]
@@ -445,6 +446,7 @@ star_index = missing
             # No defaults
             settings_file=settings_file
         )
+        self.assertEqual(s.settings_file, settings_file)
         self.assertEqual(s.report_settings(exclude_undefined=True),
                          f"""Settings from {settings_file}
 [general]
@@ -467,6 +469,7 @@ star_index = missing
                 "general.max_concurrent_jobs": 8,
             }
         )
+        self.assertEqual(s.settings_file, None)
         self.assertEqual(s.report_settings(),
                          """[general]
    max_concurrent_jobs = 8""")
