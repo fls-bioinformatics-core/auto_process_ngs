@@ -448,7 +448,7 @@ class GenericSettings:
     @property
     def settings_file(self):
         """
-        Return path to settings file
+        Return path to settings file as a string
         """
         return self._settings_file
 

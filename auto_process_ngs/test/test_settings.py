@@ -6,6 +6,7 @@ import os
 import unittest
 import tempfile
 import shutil
+from pathlib import Path
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from auto_process_ngs.settings import *
 
@@ -40,6 +41,40 @@ class TestGenericSettings(unittest.TestCase):
         max_concurrent_jobs = s.general.max_concurrent_jobs
         self.assertEqual(s['general'].max_concurrent_jobs,
                          max_concurrent_jobs)
+
+    def test_settings_file_property(self):
+        """
+        GenericSettings: check the 'settings_file' property
+        """
+        # No settings file
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, },
+            }
+        )
+        self.assertEqual(s.settings_file, None)
+        # Make a config file
+        settings_file = os.path.join(self.dirn, "settings.ini")
+        with open(settings_file, "wt") as s:
+            s.write("""[general]
+max_concurrent_jobs = 12
+""")
+        # Settings file path supplied as string
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, },
+            },
+            settings_file = settings_file
+        )
+        self.assertEqual(s.settings_file, settings_file)
+        # Settings file path supplied as Path
+        s = GenericSettings(
+            settings = {
+                "general": { "max_concurrent_jobs": int, },
+            },
+            settings_file = Path(self.dirn).joinpath("settings.ini")
+        )
+        self.assertEqual(s.settings_file, settings_file)
 
     def test_contains(self):
         """
