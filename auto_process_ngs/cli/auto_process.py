@@ -83,7 +83,7 @@ from ..commands.report_cmd import ReportingMode
 from ..commands.samplesheet_cmd import SampleSheetOperation
 from ..samplesheet_utils import predict_outputs
 from ..settings import Settings
-from ..settings import locate_settings_file
+from ..settings import locate_auto_process_settings_file
 from ..tenx import CELLRANGER_ASSAY_CONFIGS
 from ..utils import paginate
 from ..utils import parse_samplesheet_spec
@@ -1256,10 +1256,11 @@ def config(args):
     """
     if args.init:
         # Create new settings file and reload
-        settings_file = locate_settings_file(create_from_sample=True)
+        settings_file = locate_auto_process_settings_file(
+            create_from_sample=True)
     elif args.key_value or args.new_section:
         # Use an existing file, if present
-        settings_file = locate_settings_file()
+        settings_file = locate_auto_process_settings_file()
         if settings_file is None:
             raise Exception("Unable to locate a settings file; use "
                             "--init to create one")
