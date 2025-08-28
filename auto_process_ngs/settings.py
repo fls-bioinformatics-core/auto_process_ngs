@@ -593,6 +593,17 @@ class GenericSettings:
             value = self.fetch_value(param)
             if value:
                 self.set(param,os.path.expandvars(value))
+        # Remove wildcard values (i.e. parameters and subsections
+        # called "*")
+        for param in [self._split_parameter(p) for p in self.list_params()]:
+            section, subsection, name = param
+            if name == "*":
+                if subsection:
+                    del(self[section][subsection][name])
+                else:
+                    del(self[section][name])
+            if subsection == "*":
+                del(self[section][subsection])
 
     def _resolve_fallbacks(self, fallbacks, source_settings=None):
         """

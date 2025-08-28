@@ -211,6 +211,8 @@ NB10920 = nextseq
             settings_file=settings_file
         )
         # Check sequencer settings
+        self.assertEqual([x for x in s.sequencers],
+                         ["SN7001250", "NB10920"])
         self.assertTrue('SN7001250' in s.sequencers)
         self.assertEqual(s.sequencers['SN7001250'], "hiseq")
         self.assertTrue('NB10920' in s.sequencers)
