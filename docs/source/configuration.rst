@@ -47,6 +47,20 @@ To change the settings, either use the ``--set`` options, for example
 
 or simply edit the ``auto_process.ini`` file by hand using a text editor.
 
+.. note::
+
+   Generally "path-like" parameters can be configured with values
+   which include shell special characters (e.g. ``~`` for the user's
+   home directory) and environment variables (e.g. ``$HOME``), for
+   example:
+
+   ::
+
+      [archive]
+      logging_file = $HOME/SEQ_DATA.log
+
+   These will thenbe expanded to their full values when the
+   configuration file is loaded at runtime.
 
 .. note::
 
