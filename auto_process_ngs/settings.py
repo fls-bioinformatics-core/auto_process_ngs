@@ -1149,9 +1149,6 @@ class Settings(GenericSettings):
                 "runners.rseqc": "runners.qc",
                 "runners.star": "runners.qc",
                 "runners.transfer_data": "runners.rsync" },
-            # Parameters where variables can be expanded
-            # e.g. $HOME/auto_process -> /home/user/auto_process
-            expand_vars = ["conda.env_dir"],
             settings_file=self._find_config(settings_file),
             resolve_undefined=resolve_undefined)
         # Post-process
