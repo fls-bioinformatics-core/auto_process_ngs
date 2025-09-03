@@ -1223,43 +1223,79 @@ class Settings(GenericSettings):
 # Functions
 #######################################################################
 
-def get_install_dir():
+def get_install_dir(file_path, sentry_file=None):
     """
-    Return location of top-level directory of installation
+    Return location of top-level dir of an installation
 
-    This is a directory one or more level above the location of this
-    module which contains a 'config' subdir with an
-    'auto_process.ini.sample' file, for example: if this file is
-    located in
+    Given the path to a Python module file (typically from the
+    ``__file__`` variable within a module), attempts to return
+    the path to the top-level installation directory.
 
-    /opt/auto_process/lib/python3.6/site-packages/auto_process_ngs
+    This is assumed to be a directory one or more levels above
+    the location of the supplied file path, which contains a
+    ``config`` subdir (optionally the ``config`` directory must
+    also contain a file with the supplied ``sentry_file`` name).
 
-    then each level will be searched until a matching 'config' dir is
-    located.
+    For example: if the file for this module is located in:
 
-    If it can't be located then the directory of this module is
-    returned.
+    ::
 
+        /opt/auto_process/lib/python3.6/site-packages/auto_process_ngs
+
+    then the function can be called with this module using:
+
+    >>> d = get_config_dir(__file__, sentry_file="auto_process.ini.sample")
+
+    and each level will be searched until a matching ``config``
+    directory is located which contains an ``auto_process.ini.sample``
+    file.
+
+    If a match can't be found then the directory of this module
+    is returned.
+
+    Arguments:
+      file_path (str): path to installed file for calling module
+      sample_ini_file (str): optional, name of file that must
+        be found in the ``config`` directory
     """
-    path = os.path.dirname(__file__)
+    file_path = os.path.abspath(file_path)
+    path = file_path
     while path != os.sep:
-        if os.path.isdir(os.path.join(path,'config')) and \
-           os.path.isfile(os.path.join(path,'config',
-                                       'auto_process.ini.sample')):
+        if os.path.isdir(os.path.join(path, "config")):
+            if sentry_file and not os.path.isfile(
+                    os.path.join(path, "config", sentry_file)):
+                continue
             logger.debug("Found install dir: %s" % path)
             return os.path.abspath(os.path.normpath(path))
         path = os.path.dirname(path)
-    return os.path.dirname(__file__)
+    # Failed to locate suitable directory
+    if os.path.isfile(file_path):
+        return os.path.dirname(file_path)
+    else:
+        return file_path
 
-def get_config_dir():
+def get_config_dir(file_path, sentry_file=None):
     """
     Return location of config directory
 
-    Returns the path to the 'config' directory, or None if it doesn't
-    exist.
+    Given the path to a Python module file (typically from the
+    ``__file__`` variable within a module), attempts to return
+    the path to the ``config`` directory (optionally the
+    ``config`` directory must also contain a file with the supplied
+    ``sentry_file`` name).
 
+    Returns:
+      String: path to the ``config`` directory (or None if it isn't
+        found).
+
+    Argument:
+      file_path (str): path to installed file for calling module
+      sample_ini_file (str): optional, name of file that must
+        be found in the ``config`` directory
     """
-    path = os.path.join(get_install_dir(),'config')
+    path = os.path.join(get_install_dir(file_path,
+                                        sentry_file=sentry_file),
+                        "config")
     logger.debug("Putative config dir: %s" % path)
     if os.path.isdir(path):
         return path

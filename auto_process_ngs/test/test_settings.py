@@ -30,8 +30,8 @@ class TestGenericSettings(unittest.TestCase):
         """
         GenericSettings: get_item fetches a value
         """
-        sample_settings_file = os.path.join(get_config_dir(),
-                                            'auto_process.ini.sample')
+        sample_settings_file = os.path.join(get_config_dir(__file__),
+                                            "auto_process.ini.sample")
         s = GenericSettings(
             settings = {
                 "general": { "max_concurrent_jobs": int, }
@@ -1019,8 +1019,8 @@ class TestSettings(unittest.TestCase):
         """
         Settings: load from sample file
         """
-        sample_settings_file = os.path.join(get_config_dir(),
-                                            'auto_process.ini.sample')
+        sample_settings_file = os.path.join(get_config_dir(__file__),
+                                            "auto_process.ini.sample")
         self.assertTrue(os.path.isfile(sample_settings_file),
                         "Missing sample file %s" % sample_settings_file)
         s = Settings(sample_settings_file)
