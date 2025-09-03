@@ -1414,8 +1414,8 @@ def locate_auto_process_settings_file(name="auto_process.ini",
         name=name,
         env_vars=["AUTO_PROCESS_CONF"],
         paths=[os.getcwd(),
-               get_config_dir(),
-               get_install_dir()],
+               get_config_dir(__file__, "auto_process.ini.sample"),
+               get_install_dir(__file__, "auto_process.ini.sample")],
         create_from_sample=create_from_sample)
 
 def fetch_reference_data(s,name):
