@@ -3904,7 +3904,8 @@ def get_static_dir():
 
     """
     try:
-        path = os.path.join(get_install_dir(),"static")
+        path = os.path.join(get_install_dir(__file__),
+                            "static")
         if os.path.isdir(path):
             return path
     except Exception:
