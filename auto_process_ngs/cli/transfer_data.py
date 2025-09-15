@@ -55,7 +55,7 @@ def get_templates_dir():
     it doesn't exist.
 
     """
-    path = get_config_dir()
+    path = get_config_dir(__file__)
     path = os.path.join(os.path.dirname(path),"templates")
     logging.debug("Putative templates dir: %s" % path)
     if os.path.isdir(path):
