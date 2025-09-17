@@ -1114,6 +1114,9 @@ class MakeFastqs(Pipeline):
             r1_length = subset['r1_length']
             r2_length = subset['r2_length']
             r3_length = subset['r3_length']
+            i1_length = subset['i1_length']
+            i2_length = subset['i2_length']
+            override_template = subset['override_template']
 
             ###################
             # Adapter trimming
@@ -1230,6 +1233,21 @@ class MakeFastqs(Pipeline):
                             "biorad_ddseq"):
 
                 if converter == "bcl2fastq":
+                    # Get bases mask
+                    get_bases_mask = GetBasesMask(
+                        "Get bases mask for bcl2fastq",
+                        run_dir=fetch_primary_data.output.run_dir,
+                        sample_sheet=
+                        make_sample_sheet.output.custom_sample_sheet,
+                        bases_mask=bases_mask,
+                        r1_length=r1_length,
+                        r2_length=r2_length,
+                        r3_length=r3_length,
+                        i1_length=i1_length,
+                        i2_length=i2_length,
+                        override_template=override_template)
+                    self.add_task(get_bases_mask)
+
                     # Get bcl2fastq information
                     if get_bcl2fastq is None:
                         # Create a new task only if one doesn't already
@@ -1248,7 +1266,7 @@ class MakeFastqs(Pipeline):
                         fetch_primary_data.output.run_dir,
                         fastq_out_dir,
                         make_sample_sheet.output.custom_sample_sheet,
-                        bases_mask=bases_mask,
+                        bases_mask=get_bases_mask.output.bases_mask,
                         r1_length=r1_length,
                         r2_length=r2_length,
                         minimum_trimmed_read_length=\
@@ -1275,6 +1293,20 @@ class MakeFastqs(Pipeline):
                                   envmodules=self.envmodules['bcl2fastq'],
                                   requires=(restore_backup,))
                 elif converter == "bcl-convert":
+                    # Get bases mask
+                    get_bases_mask = GetBasesMask(
+                        "Get bases mask for bclconvert",
+                        run_dir=fetch_primary_data.output.run_dir,
+                        sample_sheet=
+                        make_sample_sheet.output.custom_sample_sheet,
+                        bases_mask=bases_mask,
+                        r1_length=r1_length,
+                        r2_length=r2_length,
+                        r3_length=r3_length,
+                        i1_length=i1_length,
+                        i2_length=i2_length,
+                        override_template=override_template)
+                    self.add_task(get_bases_mask)
                     # Get BCL Convert information
                     if get_bclconvert is None:
                         # Create a new task only if one doesn't already
@@ -1333,7 +1365,7 @@ class MakeFastqs(Pipeline):
                                 fastq_lane_out_dir,
                                 make_sample_sheet.output.custom_sample_sheet,
                                 lane=lane,
-                                bases_mask=bases_mask,
+                                bases_mask=get_bases_mask.output.bases_mask,
                                 r1_length=r1_length,
                                 r2_length=r2_length,
                                 minimum_trimmed_read_length=\
@@ -1392,7 +1424,7 @@ class MakeFastqs(Pipeline):
                             fetch_primary_data.output.run_dir,
                             tmp_fastq_out_dir,
                             make_sample_sheet.output.custom_sample_sheet,
-                            bases_mask=bases_mask,
+                            bases_mask=get_bases_mask.output.bases_mask,
                             r1_length=r1_length,
                             r2_length=r2_length,
                             minimum_trimmed_read_length=\
