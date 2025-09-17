@@ -18,6 +18,7 @@ Pipeline task classes:
 - GetBcl2Fastq
 - GetBclConvert
 - RestoreBackupDirectory
+- GetBasesMask
 - RunBcl2Fastq
 - GetBasesMaskIcell8
 - GetBasesMaskIcell8Atac
@@ -2510,6 +2511,65 @@ class RestoreBackupDirectory(PipelineTask):
                 print("Backup located but restore skipped")
         else:
             print("Not found, skipped restore")
+
+class GetBasesMask(PipelineTask):
+    """
+    Sets the bases mask string for bcl2fastq
+    """
+    def init(self, run_dir, sample_sheet=None, bases_mask="auto",
+             r1_length=None, r2_length=None, r3_length=None,
+             i1_length=None, i2_length=None,
+             override_template=None):
+        """
+        Initialise the GetBasesMask task
+
+        Arguments:
+          run_dir (str): path to the directory with
+            data from the sequencer run
+          sample_sheet (str): path to input samplesheet file
+          bases_mask (str): input bases mask string
+            (if set then will passed directly to
+            output)
+          r1_length (int): optional, truncate R1 reads
+            to this length (ignored if bases mask is set)
+          r2_length (int): optional, truncate R2 reads
+            to this length (ignored if bases mask is set)
+          r3_length (int): optional, truncate R3 reads
+            to this length (ignored if bases mask is set,
+            or there is no R3 read)
+          i1_length (int): optional, truncate I1 indexes
+            to this length (ignored if bases mask is set)
+          i2_length (int): optional, truncate I2 indexes
+            to this length (ignored if bases mask is set)
+          override_template (str): optional, set template
+            for read types (e.g. 'RIIR') (ignored if bases
+            mask is set)
+
+        Outputs:
+          bases_mask (str): bases mask to use in bcl2fastq
+        """
+        self.add_output("bases_mask", Param(type='str'))
+    def setup(self):
+        # Check if explicit bases mask already supplied
+        if self.args.bases_mask != "auto":
+            bases_mask = self.args.bases_mask
+        else:
+            bases_mask = None
+            # Load input data
+            illumina_run = IlluminaRun(self.args.run_dir)
+            # Fetch bases mask
+            bases_mask = get_bases_mask(illumina_run.runinfo_xml,
+                                        self.args.sample_sheet,
+                                        r1=self.args.r1_length,
+                                        r2=self.args.r2_length,
+                                        r3=self.args.r3_length,
+                                        i1=self.args.i1_length,
+                                        i2=self.args.i2_length,
+                                        override_template=
+                                        self.args.override_template)
+        # Set output bases mask value
+        print(f"Bases mask: {bases_mask}")
+        self.output.bases_mask.set(bases_mask)
 
 class RunBcl2Fastq(PipelineTask):
     """
