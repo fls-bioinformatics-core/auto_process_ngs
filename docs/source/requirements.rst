@@ -48,9 +48,6 @@ run_qc              `cellranger-atac`_ 10xGenomics single-cell ATAC-seq data onl
 run_qc              `cellranger-arc`_  10xGenomics Multiome ATAC + GEX data
 run_qc (*)          `multiqc`_
 run_qc (*)          `seqtk`_           Required for protocols mapping subsequences of reads (e.g. ``10x_Flex``)
-process_icell8      `cutadapt`_
-process_icell8      `fastq_screen`_
-process_icell8      `bowtie2`_         Required by fastq_screen
 =================== ================== ===================
 
 .. _bcl2fastq 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
@@ -63,14 +60,12 @@ process_icell8      `bowtie2`_         Required by fastq_screen
 .. _fastqc:  http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
 .. _bowtie: http://bowtie-bio.sourceforge.net/index.shtml
-.. _bowtie2: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
 .. _STAR: https://github.com/alexdobin/STAR
 .. _picard: https://gatk.broadinstitute.org/hc/en-us/articles/360037055772-CollectInsertSizeMetrics-Picard-
 .. _rseqc: http://rseqc.sourceforge.net/#
 .. _qualimap: http://qualimap.conesalab.org/doc_html/command_line.html#rna-seq-qc
 .. _multiqc: http://multiqc.info/
 .. _seqtk: https://github.com/lh3/seqtk
-.. _cutadapt: http://cutadapt.readthedocs.io
 
 (*) indicates packages that only need to be installed if
 :ref:`conda_dependency_resolution` hasn't been enabled in the
@@ -104,7 +99,6 @@ The following ``auto_process`` stages require additional reference
 data:
 
 * :ref:`auto_process_reference_data_run_qc`
-* :ref:`auto_process_reference_data_icell8`
 
 .. _auto_process_reference_data_run_qc:
 
@@ -342,29 +336,6 @@ For example:
    [organism: mouse]
    annotation_bed = /data/genomeIndexes/mm10/annotation/gencode.vM25.annotation.bed
    annotation_gtf = /data/genomeIndexes/mm10/annotation/gencode.vM25.annotation.gtf
-  
-.. _auto_process_reference_data_icell8:
-
---------------------------------------
-process_icell8 (contaminant filtering)
---------------------------------------
-
-The contaminant filtering stage of ``process_icell8`` needs
-two ``fastq_screen`` conf files to be set up, one containing
-``bowtie`` indexes for "mammalian" genomes (typically human
-and mouse) and another containing indexes for "contaminant"
-genomes (yeast, E.coli, UniVec7, PhiX, mycoplasma, and
-adapter sequences).
-
-These can be defined in the ``icell8`` section of the
-``auto_process.ini`` file, for example::
-
-  [icell8]
-  mammalian_conf_file = /data/icell8/mammalian_genomes.conf
-  contaminants_conf_file = /data/icell8/contaminant_genomes.conf
-
-or else must be specified using the relevant command line
-options.
 
 .. _build_indexes:
 

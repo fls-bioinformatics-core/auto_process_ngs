@@ -116,8 +116,9 @@ Field name                Associated value
                           project (e.g. ``RNA-seq``)
 ``library_type``          Alias for ``application``
 ``single_cell_platform``  Name of the single-cell platform
-                          (e.g. ``ICELL8``), or empty field
-			  if not a single-cell project
+                          (e.g. ``10xGenomics Chromium 3'``),
+                          or empty field if not a single cell
+                          project
 ``flow_cell_mode``        The flow cell mode stored in the
                           run metadata
 ``organism``              Organism(s) associated with the

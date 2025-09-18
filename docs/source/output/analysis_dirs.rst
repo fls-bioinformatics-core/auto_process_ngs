@@ -182,7 +182,6 @@ The most commonly used metadata items are listed in the table below:
    ``Library type``         The type of experiment (e.g. ``RNA-seq``)
    ``Single cell platform`` Single cell platform, if applicable
    ``Number of cells``      Number of cells (single cell only)
-   ``ICELL8 well list``     Well list file (ICELL8 only)
    ``Paired_end``           Whether the data are single- or paired-
                             end
    ``Primary fastqs``       Subdirectory holding the 'primary' set of
@@ -219,19 +218,6 @@ subdirectory of the project directory.
 However some analyses may have more than one sets of
 associated Fastqs, and in these cases there will be multiple
 subdirectories (each of which contains one of these sets).
-
-For example, ICELL8 single cell projects typically have two
-or three sets of Fastqs:
-
-* ``fastqs.samples`` are the Fastqs after filtering and QC,
-  with the reads assigned to samples according to the
-  well list file
-* ``fastqs.barcodes`` are the Fastqs after filtering and
-  QC, with the reads assigned to barcodes according to the
-  well list file
-* (if present) ``fastqs`` are the original Fastq files
-  produced by the BCL to Fastq conversion, without any
-  additional filtering or QC
 
 The project metadata file includes the item ``Primary fastqs``
 which indicates which of the Fastq sets is the principal

@@ -88,7 +88,6 @@ see:
 
  * :doc:`../single_cell/10x_single_cell`
  * :doc:`../single_cell/parse`
- * :doc:`../single_cell/icell8`
  * :doc:`../spatial/10x_visium`
 
 .. note::

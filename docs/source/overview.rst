@@ -123,15 +123,21 @@ Illumina sequencers:
 
 Earlier versions have been used on GAIIx and HISeq 2000/2500.
 
-===============================
-Supported single-cell platforms
-===============================
+=========================================
+Supported single cell & spatial platforms
+=========================================
 
-The pipeline supports handling data from the Takara Bio SMARTer
-ICELL8 and 10xGenomics Chromium single-call RNA-seq platforms:
+To varying degrees the pipeline supports handling data from a
+number of single cell platforms:
 
-* :doc:`Handling ICELL8 scRNA-seq data <single_cell/icell8>`
-* :doc:`Handling 10xGenomics Chromium scRNA-seq data <single_cell/10xgenomics>`
+* :doc:`Handling 10x Genomics single cell data <single_cell/10x_single_cell>`
+* :doc:`Handling Parse single cell data <single_cell/parse>`
+* :doc:`Handling BioRad single cell data <single_cell/bio_rad>`
+
+The pipeline also has limited support for the following spatial
+platforms:
+
+* :doc:`Handling 10x Genomics Visium data <spatial/10x_visium>`
 
 .. _run_and_fastq_naming_conventions:
 
