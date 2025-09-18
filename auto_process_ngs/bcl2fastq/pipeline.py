@@ -619,37 +619,96 @@ class MakeFastqs(Pipeline):
                                     create_fastq_for_index_read=True)
             elif protocol == '10x_chromium_sc':
                 # 10xGenomics Chromium SC
-                # Disable adapter trimming
+                # -- truncate I1 and I2 to 10 bases
+                # -- minimum trimmed read length 8bp
+                # -- minimum masked read length 8bp
+                # -- no lane splitting
+                # -- create Fastqs for index read
+                # -- disable adapter trimming
                 self._update_subset(s,
+                                    i1_length=10,
+                                    i2_length=10,
+                                    minimum_trimmed_read_length=8,
+                                    mask_short_adapter_reads=8,
+                                    no_lane_splitting=True,
+                                    create_fastq_for_index_read=True,
                                     trim_adapters=False)
             elif protocol == '10x_atac':
                 # 10xGenomics ATAC-seq
-                # Disable adapter trimming
+                # -- convert I2 to R2
+                # -- truncate I1 to 8 bases
+                # -- enable filter single index
+                # -- no lane splitting
+                # -- create Fastqs for index read
+                # -- disable adapter trimming
                 self._update_subset(s,
+                                    i1_length=8,
+                                    override_template="RIRR",
+                                    tenx_filter_single_index=True,
+                                    no_lane_splitting=True,
+                                    create_fastq_for_index_read=True,
                                     trim_adapters=False)
             elif protocol == '10x_visium':
                 # 10xGenomics Visium
-                # Disable adapter trimming
+                # -- truncate I1 and I2 to 10 bases
+                # -- minimum trimmed read length 8bp
+                # -- minimum masked read length 8bp
+                # -- no lane splitting
+                # -- create Fastqs for index read
+                # -- disable adapter trimming
                 self._update_subset(s,
+                                    i1_length=10,
+                                    i2_length=10,
+                                    minimum_trimmed_read_length=8,
+                                    mask_short_adapter_reads=8,
+                                    no_lane_splitting=True,
+                                    create_fastq_for_index_read=True,
                                     trim_adapters=False)
             elif protocol == '10x_multiome':
                 # 10xGenomics multiome
-                # Disable adapter trimming
+                # -- set bases mask to "auto"
+                # -- no lane splitting
+                # -- create Fastqs for index read
+                # -- disable adapter trimming
                 self._update_subset(s,
+                                    bases_mask="auto",
+                                    no_lane_splitting=True,
+                                    create_fastq_for_index_read=True,
                                     trim_adapters=False)
             elif protocol == '10x_multiome_atac':
                 # 10xGenomics multiome (ATAC)
-                # Disable adapter trimming and enable filter
-                # single index
+                # -- convert I2 to R2
+                # -- truncate R2 to 24 bases (if not explicitly set)
+                # -- truncate I1 to 8 bases
+                # -- enable filter single index
+                # -- no lane splitting
+                # -- create Fastqs for index read
+                # -- disable adapter trimming
                 self._update_subset(s,
+                                    r2_length=(24 if not s["r2_length"]
+                                               else s["r2_length"]),
+                                    i1_length=8,
+                                    override_template="RIRR",
                                     tenx_filter_single_index=True,
+                                    no_lane_splitting=True,
+                                    create_fastq_for_index_read=True,
                                     trim_adapters=False)
             elif protocol == '10x_multiome_gex':
                 # 10xGenomics multiome (GEX)
-                # Disable adapter trimming and enable filter
-                # dual index
+                # -- truncate I1 and I2 to 10 bases
+                # -- truncate R1 to 28 bases (if not explicitly set)
+                # -- enable filter dual index
+                # -- no lane splitting
+                # -- create Fastqs for index read
+                # -- disable adapter trimming
                 self._update_subset(s,
+                                    r1_length=(28 if not s["r1_length"]
+                                               else s["r1_length"]),
+                                    i1_length=10,
+                                    i2_length=10,
                                     tenx_filter_dual_index=True,
+                                    no_lane_splitting=True,
+                                    create_fastq_for_index_read=True,
                                     trim_adapters=False)
             elif protocol == 'parse_evercode':
                 # Parse Evercode
@@ -1587,6 +1646,18 @@ class MakeFastqs(Pipeline):
 
             # 10x RNA-seq
             if protocol == "10x_chromium_sc":
+                # Get bases mask
+                get_bases_mask = GetBasesMask(
+                    "Get bases mask for cellranger",
+                    run_dir=fetch_primary_data.output.run_dir,
+                    bases_mask=bases_mask,
+                    r1_length=r1_length,
+                    r2_length=r2_length,
+                    r3_length=r3_length,
+                    i1_length=i1_length,
+                    i2_length=i2_length,
+                    override_template=override_template)
+                self.add_task(get_bases_mask)
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x is None:
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
@@ -1615,7 +1686,7 @@ class MakeFastqs(Pipeline):
                     fastq_out_dir,
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
-                    bases_mask=bases_mask,
+                    bases_mask=get_bases_mask.output.bases_mask,
                     r1_length=r1_length,
                     r2_length=r2_length,
                     minimum_trimmed_read_length=\
@@ -1645,6 +1716,18 @@ class MakeFastqs(Pipeline):
 
             # 10x ATAC-seq
             if protocol == "10x_atac":
+                # Get bases mask
+                get_bases_mask = GetBasesMask(
+                    "Get bases mask for cellranger-atac",
+                    run_dir=fetch_primary_data.output.run_dir,
+                    bases_mask=bases_mask,
+                    r1_length=r1_length,
+                    r2_length=r2_length,
+                    r3_length=r3_length,
+                    i1_length=i1_length,
+                    i2_length=i2_length,
+                    override_template=override_template)
+                self.add_task(get_bases_mask)
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_atac is None:
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
@@ -1673,7 +1756,7 @@ class MakeFastqs(Pipeline):
                     fastq_out_dir,
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
-                    bases_mask=bases_mask,
+                    bases_mask=get_bases_mask.output.bases_mask,
                     r1_length=r1_length,
                     r2_length=r2_length,
                     r3_length=r3_length,
@@ -1705,6 +1788,18 @@ class MakeFastqs(Pipeline):
 
             # 10x Visium
             if protocol == "10x_visium":
+                # Get bases mask
+                get_bases_mask = GetBasesMask(
+                    "Get bases mask for spaceranger",
+                    run_dir=fetch_primary_data.output.run_dir,
+                    bases_mask=bases_mask,
+                    r1_length=r1_length,
+                    r2_length=r2_length,
+                    r3_length=r3_length,
+                    i1_length=i1_length,
+                    i2_length=i2_length,
+                    override_template=override_template)
+                self.add_task(get_bases_mask)
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_visium is None:
                     get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
@@ -1733,7 +1828,7 @@ class MakeFastqs(Pipeline):
                     fastq_out_dir,
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
-                    bases_mask=bases_mask,
+                    bases_mask=get_bases_mask.output.bases_mask,
                     r1_length=r1_length,
                     r2_length=r2_length,
                     minimum_trimmed_read_length=\
@@ -1767,6 +1862,24 @@ class MakeFastqs(Pipeline):
             if protocol in ("10x_multiome",
                             "10x_multiome_atac",
                             "10x_multiome_gex"):
+                # Get bases mask
+                if protocol == "10x_multiome":
+                    # Cellranger-arc determines mask implicitly
+                    multiome_bases_mask = None
+                else:
+                    # Determine mask explicitly
+                    get_bases_mask = GetBasesMask(
+                        "Get bases mask for cellranger-arc",
+                        run_dir=fetch_primary_data.output.run_dir,
+                        bases_mask=bases_mask,
+                        r1_length=r1_length,
+                        r2_length=r2_length,
+                        r3_length=r3_length,
+                        i1_length=i1_length,
+                        i2_length=i2_length,
+                        override_template=override_template)
+                    self.add_task(get_bases_mask)
+                    multiome_bases_mask = get_bases_mask.output.bases_mask
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_multiome is None:
                     get_bcl2fastq_for_10x_multiome = GetBcl2Fastq(
@@ -1786,17 +1899,6 @@ class MakeFastqs(Pipeline):
                     self.add_task(get_cellranger_arc,
                                   envmodules=\
                                   self.envmodules['cellranger_arc_mkfastq'])
-                # Get bases mask
-                get_bases_mask = GetBasesMask10xMultiome(
-                    "Get bases mask for 10xGenomics multiome",
-                    fetch_primary_data.output.run_dir,
-                    bases_mask,
-                    r1_length=r1_length,
-                    r2_length=r2_length,
-                    r3_length=r3_length,
-                    protocol=protocol
-                )
-                self.add_task(get_bases_mask)
                 # Run cellranger mkfastq
                 make_fastqs = Run10xMkfastq(
                     "Run cellranger-arc mkfastq%s" %
@@ -1806,7 +1908,7 @@ class MakeFastqs(Pipeline):
                     fastq_out_dir,
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
-                    bases_mask=get_bases_mask.output.bases_mask,
+                    bases_mask=multiome_bases_mask,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
