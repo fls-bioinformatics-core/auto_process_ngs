@@ -601,14 +601,14 @@ class TestProjectMetadataFile(unittest.TestCase):
         metadata.update_project('Charlie',
                                 user="Charlie Percival",
                                 library_type="scRNA-seq",
-                                sc_platform="ICell8")
+                                sc_platform="10xGenomics Chromium 3'")
         # Check the data has been updated
         self.assertTrue("Charlie" in metadata)
         project = metadata.lookup("Charlie")
         self.assertEqual(project[1],"C1,C2")
         self.assertEqual(project[2],"Charlie Percival")
         self.assertEqual(project[3],"scRNA-seq")
-        self.assertEqual(project[4],"ICell8")
+        self.assertEqual(project[4],"10xGenomics Chromium 3'")
         self.assertEqual(project[5],"Yeast")
         self.assertEqual(project[6],"Marley")
         # Update the samples
@@ -620,7 +620,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(project[1],"C01,C02")
         self.assertEqual(project[2],"Charlie Percival")
         self.assertEqual(project[3],"scRNA-seq")
-        self.assertEqual(project[4],"ICell8")
+        self.assertEqual(project[4],"10xGenomics Chromium 3'")
         self.assertEqual(project[5],"Yeast")
         self.assertEqual(project[6],"Marley")
 
@@ -702,7 +702,6 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.library_type,None)
         self.assertEqual(info.single_cell_platform,None)
         self.assertEqual(info.number_of_cells,None)
-        self.assertEqual(info.icell8_well_list,None)
         self.assertEqual(info.paired_end,None)
         self.assertEqual(info.primary_fastq_dir,None)
         self.assertEqual(info.samples,None)

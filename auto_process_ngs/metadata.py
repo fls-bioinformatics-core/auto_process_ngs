@@ -414,7 +414,6 @@ class AnalysisProjectInfo(MetadataDict):
     library_type: the library type e.g. 'RNA-seq'
     single_cell_platform: the single cell preparation platform
     number of cells: number of cells in single cell projects
-    ICELL8 well list: well list file for ICELL8 single cell projects
     paired_end: True if the data is paired end, False if not
     primary_fastq_dir: the primary subdir with FASTQ files
     samples: textual description of the samples in the project
@@ -443,7 +442,6 @@ class AnalysisProjectInfo(MetadataDict):
                                   'library_type':'Library type',
                                   'single_cell_platform':'Single cell platform',
                                   'number_of_cells':'Number of cells',
-                                  'icell8_well_list':'ICELL8 well list',
                                   'paired_end':'Paired_end',
                                   'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
@@ -461,7 +459,6 @@ class AnalysisProjectInfo(MetadataDict):
                                   'library_type',
                                   'single_cell_platform',
                                   'number_of_cells',
-                                  'icell8_well_list',
                                   'paired_end',
                                   'primary_fastq_dir',
                                   'samples',
@@ -482,7 +479,7 @@ class ProjectMetadataFile(TabFile.TabFile):
     Samples: list/description of sample names
     User: name(s) of the associated user(s)
     Library: the library type
-    Single cell platform: single-cell preparation platform (e.g. 'ICELL8')
+    Single cell platform: single-cell preparation platform
     Organism: name(s) of the organism(s)
     PI: name(s) of the associated principal investigator(s)
     Comments: free text containing additional information
