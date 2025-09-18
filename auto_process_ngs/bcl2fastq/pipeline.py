@@ -3694,47 +3694,6 @@ class Run10xMkfastq(PipelineTask):
         self.mkfastq_out_dir = "%s%s" % (illumina_run.runinfo.flowcell,
                                          lanes_suffix)
         self.mro_file = "__%s.mro" % self.mkfastq_out_dir
-        # Set bases mask
-        if self.pkg in ('cellranger',
-                        'spaceranger'):
-            # scRNA-seq and Visium
-            # Update indexes to 10bp as well as applying user-defined
-            # read lengths
-            if self.args.bases_mask == "auto":
-                bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                            r1=self.args.r1_length,
-                                            r2=self.args.r2_length,
-                                            i1=10,
-                                            i2=10)
-            else:
-                bases_mask = self.args.bases_mask
-        elif self.pkg == "cellranger-atac":
-            # scATAC-seq
-            bases_mask = self.args.bases_mask
-            if bases_mask is None:
-                bases_mask = 'auto'
-            if bases_mask == 'auto':
-                # Update bases mask to only use first 8 bases from
-                # first index (e.g. I8n2) and convert second index
-                # to read (e.g. I16 -> Y16)
-                bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                            r1=self.args.r1_length,
-                                            r2=self.args.r2_length,
-                                            r3=self.args.r3_length,
-                                            i1=8,
-                                            override_template="RIRR")
-                if not bases_mask_is_valid(bases_mask):
-                    raise Exception("Invalid bases mask: '%s'" %
-                                    bases_mask)
-        elif self.pkg == "cellranger-arc":
-            # 10x multiome
-            if self.args.bases_mask == "auto":
-                bases_mask = None
-            else:
-                bases_mask = self.args.bases_mask
-        else:
-            raise Exception("%s: unsupported 10xGenomics package" %
-                            self.pkg)
         # Check if outputs already exist
         if os.path.exists(self.args.out_dir):
             print("Output directory %s already exists" %
@@ -3742,7 +3701,7 @@ class Run10xMkfastq(PipelineTask):
             return
         # Set up parameters
         params = {
-            'bases_mask': bases_mask,
+            'bases_mask': self.args.bases_mask,
             'lanes': (','.join([str(l) for l in self.lanes])
                       if self.lanes else 'all'),
             'minimum_trimmed_read_length':
@@ -3816,8 +3775,9 @@ class Run10xMkfastq(PipelineTask):
         if self.lanes:
             mkfastq_cmd.add_args("--lanes",
                                  ','.join([str(l) for l in self.lanes]))
-        if bases_mask:
-            mkfastq_cmd.add_args("--use-bases-mask=%s" % bases_mask)
+        if self.args.bases_mask:
+            mkfastq_cmd.add_args("--use-bases-mask=%s" %
+                                 self.args.bases_mask)
         if self.args.minimum_trimmed_read_length:
             mkfastq_cmd.add_args('--minimum-trimmed-read-length',
                                  self.args.minimum_trimmed_read_length)
