@@ -591,7 +591,8 @@ class MakeFastqs(Pipeline):
                                     "10xGenomics barcodes" % protocol)
             else:
                 # Standard barcodes
-                if protocol in PROTOCOLS_10X:
+                if protocol in PROTOCOLS_10X and \
+                   protocol not in ("10x_chromium_sc", "10x_visium"):
                     raise Exception("Protocol '%s': needs 10xGenomics "
                                     "barcodes ('%s' not valid)" %
                                     (protocol,masked_index))
@@ -1150,6 +1151,9 @@ class MakeFastqs(Pipeline):
             protocol = subset['protocol']
             self.report("- Protocol: %s" % protocol)
 
+            # 10x indexes in sample sheet?
+            has_10x_indexes = (subset['masked_index'] == "__10X__")
+
             #########################
             # BCL to Fastq converter
             #########################
@@ -1285,10 +1289,12 @@ class MakeFastqs(Pipeline):
             self.add_task(restore_backup)
 
             # Standard protocols
-            if protocol in ("standard",
-                            "mirna",
-                            "parse_evercode",
-                            "biorad_ddseq"):
+            if (protocol in ("standard",
+                             "mirna",
+                             "parse_evercode",
+                             "biorad_ddseq")
+                or (protocol in ("10x_chromium_sc", "10x_visium")
+                    and not has_10x_indexes)):
 
                 if converter == "bcl2fastq":
                     # Get bases mask
@@ -1638,7 +1644,7 @@ class MakeFastqs(Pipeline):
                     requires=(run_bcl2fastq,))
 
             # 10x RNA-seq
-            if protocol == "10x_chromium_sc":
+            if protocol == "10x_chromium_sc" and has_10x_indexes:
                 # Get bases mask
                 get_bases_mask = GetBasesMask(
                     "Get bases mask for cellranger",
@@ -1775,7 +1781,7 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
 
             # 10x Visium
-            if protocol == "10x_visium":
+            if protocol == "10x_visium" and has_10x_indexes:
                 # Get bases mask
                 get_bases_mask = GetBasesMask(
                     "Get bases mask for spaceranger",
