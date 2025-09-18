@@ -18,7 +18,6 @@ import logging
 import bcftbx.IlluminaData as IlluminaData
 from .. import analysis
 from .. import tenx
-from .. import icell8
 from ..utils import normalise_organism_name
 
 # Module specific logger
@@ -110,7 +109,6 @@ def setup_analysis_dirs(ap,
         sc_platform = line['SC_Platform']
         if sc_platform and sc_platform != '.':
             if not sc_platform in tenx.PLATFORMS and \
-               not sc_platform in icell8.PLATFORMS and \
                not sc_platform in ('Parse Evercode',) and \
                not sc_platform in ('Bio-Rad ddSEQ Single Cell ATAC',) and \
                not sc_platform in ('Bio-Rad ddSEQ Single Cell 3\' RNA-Seq',):
@@ -275,44 +273,6 @@ def setup_analysis_dirs(ap,
             print("-- making 'Visium_images' directory")
             d = os.path.join(project.dirn,"Visium_images")
             os.mkdir(d)
-        # Copy in additional data files
-        if single_cell_platform == "ICELL8 ATAC":
-            # Copy across the ATAC report files
-            for f in ("icell8_atac_stats.xlsx",
-                      "icell8_atac_stats.json"):
-                f = os.path.join(illumina_data.unaligned_dir,
-                                 "Reports",f)
-                print("-- copying %s to %s" % (os.path.basename(f),
-                                               project.dirn))
-                try:
-                    shutil.copy2(f,project.dirn)
-                except Exception as ex:
-                    logger.warning("Failed to copy %s to project '%s': %s"
-                                   % (f,project_name,ex))
-            # Copy extra files and set additional metadata
-            try:
-                json_file = os.path.join(project.dirn,
-                                         "icell8_atac_stats.json")
-                with open(json_file,'r') as fp:
-                    json_data = json.load(fp)
-                    json_summary = json_data['summary']
-                    # Well list file
-                    well_list = json_summary['well_list_file']
-                    print("-- copying %s to %s" % (os.path.basename(well_list),
-                                                   project.dirn))
-                    shutil.copy2(well_list,project.dirn)
-                    project.info['icell8_well_list'] = \
-                                os.path.basename(well_list)
-                    # Cell counts
-                    number_of_cells = \
-                                json_summary['number_of_barcodes_with_reads']
-                    print("-- setting cell count for project '%s': %s" %
-                          (project_name,number_of_cells))
-                    project.info['number_of_cells'] = number_of_cells
-                    project.info.save()
-            except Exception as ex:
-                logger.warning("Failed to finish setup for project '%s': "
-                               "%s" % (project_name,ex))
     # Tell us how many were made
     print("Created %d project%s" % (n_projects,
                                     's' if n_projects != 1 else ''))
