@@ -2788,21 +2788,10 @@ class RunBcl2Fastq(PipelineTask):
         # Load input data
         illumina_run = IlluminaRun(self.args.run_dir,
                                    platform=self.args.platform)
-        # Set bases mask
-        if self.args.bases_mask == "auto":
-            print("Setting bases mask from RunInfo.xml")
-            bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                        self.args.sample_sheet,
-                                        r1=self.args.r1_length,
-                                        r2=self.args.r2_length)
-        else:
-            bases_mask = self.args.bases_mask
-        if not bases_mask_is_valid(bases_mask):
-            raise Exception("Invalid bases mask: '%s'" %
-                            bases_mask)
-        self.output.bases_mask.set(bases_mask)
+        # Bases mask
+        self.output.bases_mask.set(self.args.bases_mask)
         # Check sample sheet for collisions and set mismatches
-        mismatches = get_nmismatches(bases_mask)
+        mismatches = get_nmismatches(self.args.bases_mask)
         while mismatches >= 0:
             if check_barcode_collisions(self.args.sample_sheet,
                                         mismatches):
@@ -2847,7 +2836,7 @@ class RunBcl2Fastq(PipelineTask):
         # Set up parameters
         params = {
             'mismatches': mismatches,
-            'bases_mask': bases_mask,
+            'bases_mask': self.args.bases_mask,
             'ignore_missing_bcls': self.args.ignore_missing_bcls,
             'no_lane_splitting': self.args.no_lane_splitting,
             'minimum_trimmed_read_length':
@@ -3021,22 +3010,12 @@ class RunBclConvert(PipelineTask):
         # Load input data
         illumina_run = IlluminaRun(self.args.run_dir,
                                    platform=self.args.platform)
-        # Set bases mask
-        if self.args.bases_mask == "auto":
-            print("Setting bases mask from RunInfo.xml")
-            bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                        self.args.sample_sheet,
-                                        r1=self.args.r1_length,
-                                        r2=self.args.r2_length)
-        else:
-            bases_mask = self.args.bases_mask
-        if not bases_mask_is_valid(bases_mask):
-            raise Exception("Invalid bases mask: '%s'" %
-                            bases_mask)
-        self.output.bases_mask.set(bases_mask)
+        # Bases mask
+        self.output.bases_mask.set(self.args.bases_mask)
         # Check sample sheet for collisions and set mismatches
         # NB BCL Convert sets one mismatch value per index
-        mismatches = get_nmismatches(bases_mask,multi_index=True)
+        mismatches = get_nmismatches(self.args.bases_mask,
+                                     multi_index=True)
         updated_mismatches = []
         for ix,nmismatches in enumerate(mismatches,start=1):
             while nmismatches >= 0:
@@ -3077,11 +3056,11 @@ class RunBclConvert(PipelineTask):
                             "version %s" % self.args.bclconvert_version)
         # Write an updated sample sheet with the required settings
         sample_sheet = SampleSheet(self.args.sample_sheet)
-        if bases_mask:
+        if self.args.bases_mask:
             # Convert bases mask to OverrideCycles format
             # (convert delimiters from comma to semi-colon)
             sample_sheet.settings['OverrideCycles'] = \
-                convert_bases_mask_to_override_cycles(bases_mask)
+                convert_bases_mask_to_override_cycles(self.args.bases_mask)
         if mismatches:
             # Mismatches are set independently for index1 and index2
             for ix,nmismatches in enumerate(mismatches):
