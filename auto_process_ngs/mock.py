@@ -649,7 +649,6 @@ class UpdateAnalysisProject(DirectoryUpdater):
 
     - add_fastq_set
     - add_qc_outputs
-    - add_icell8_outputs
     - add_cellranger_count_outputs
     - add_cellranger_multi_outputs
 
@@ -833,40 +832,6 @@ class UpdateAnalysisProject(DirectoryUpdater):
             zip_file.add(self._project.qc_dir)
             zip_file.close()
         # Reload the project
-        self._reload_project()
-
-    def add_icell8_outputs(self):
-        """
-        Add mock ICell8 outputs to the project
-        """
-        self.add_file("icell8_processing.html")
-        self.add_subdir("stats")
-        self.add_file(os.path.join("stats","icell8_stats.tsv"))
-        self.add_file(os.path.join("stats","icell8_stats.xlsx"))
-        self.add_subdir("icell8_processing_data")
-        for png in ("poly_g_dist.png",
-                    "read_dist.png",
-                    "reads_per_stage.png",
-                    "samples.png"):
-            self.add_file(os.path.join("icell8_processing_data",
-                                       png))
-        # Build ZIP archive
-        analysis_dir = os.path.basename(self._parent_dir())
-        icell8_zip = os.path.join(self._project.dirn,
-                                  "icell8_processing.%s.%s.zip" %
-                                  (self._project.name,
-                                   analysis_dir))
-        zip_file = ZipArchive(icell8_zip,
-                              relpath=self._project.dirn,
-                              prefix="icell8_processing.%s.%s" %
-                              (self._project.name,
-                               analysis_dir))
-        zip_file.add_file(os.path.join(self._project.dirn,
-                                       "icell8_processing.html"))
-        zip_file.add(os.path.join(self._project.dirn,"stats"))
-        zip_file.add(os.path.join(self._project.dirn,
-                                  "icell8_processing_data"))
-        zip_file.close()
         self._reload_project()
 
     def add_cellranger_count_outputs(self,qc_dir=None,cellranger='cellranger',
