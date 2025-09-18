@@ -32,7 +32,6 @@ from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import AttributeDictionary
 from .. import get_version
 from .. import tenx
-from .. import icell8
 from ..analysis import AnalysisProject
 from ..analysis import AnalysisFastq
 from ..analysis import locate_project_info_file
@@ -404,7 +403,6 @@ def display_info(s):
     # Single cell platforms
     sc_platforms = [p for p in tenx.PLATFORMS]
     sc_platforms.append('Parse Evercode')
-    sc_platforms.extend([p for p in icell8.PLATFORMS])
     print("\nSingle cell platforms:")
     if sc_platforms:
         for name in sc_platforms:
