@@ -18,6 +18,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -47,7 +48,8 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
-                                 version='1.1.0')
+                                 version='1.1.0',
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -117,6 +119,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -146,7 +149,8 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
-                                 version='1.3.1')
+                                 version='1.3.1',
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -215,6 +219,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -244,7 +249,8 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
-                                 version='2.1.1')
+                                 version='2.1.1',
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -313,6 +319,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -342,7 +349,8 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
-                                 version='3.0.0')
+                                 version='3.0.0',
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -411,6 +419,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -441,7 +450,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
                                  version='3.0.0',
-                                 assert_bases_mask="y28n48,I6,y50n26")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -449,7 +458,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_visium",
                        r1_length=28,
-                       r2_length=50)
+                       r2_length=90)
         status = p.run(analysis_dir,
                        poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
@@ -512,6 +521,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -613,6 +623,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn

@@ -18,6 +18,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -35,9 +36,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,A001,SI-GA-A1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -47,7 +48,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
-                                 version="5.0.1")
+                                 version="5.0.1",
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -117,6 +119,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -146,7 +149,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
-                                 version="6.0.0")
+                                 version="6.0.0",
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -215,6 +219,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -244,7 +249,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
-                                 version="7.0.0")
+                                 version="7.0.0",
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -313,6 +319,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -342,7 +349,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
-                                 version="8.0.0")
+                                 version="8.0.0",
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -411,6 +419,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -440,7 +449,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
-                                 version="9.0.0")
+                                 version="9.0.0",
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -509,6 +519,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         # Rename the run directory
@@ -539,7 +550,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
-                                              "cellranger"))
+                                              "cellranger"),
+                                 assert_bases_mask="Y101,I10,I10,Y101")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -608,6 +620,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -638,7 +651,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
                                  version="8.0.0",
-                                 assert_bases_mask="y28n48,I6,y50n26")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -646,7 +659,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_chromium_sc",
                        r1_length=28,
-                       r2_length=50)
+                       r2_length=90)
         status = p.run(analysis_dir,
                        poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
@@ -709,6 +722,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y101,I10,I10,y101",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
