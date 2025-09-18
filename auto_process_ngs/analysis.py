@@ -452,9 +452,8 @@ class AnalysisProject:
     * PI: PI name
     * library_type: library type, either None or e.g. 'RNA-seq' etc
     * single_cell_platform: single cell prep platform, either None or
-      'ICell8' etc
+      '10xGenomics Chromium 3'' etc
     * number of cells: number of cells in single cell projects
-    * ICELL8 well list: well list file for ICELL8 single cell projects
     * organism: organism, either None or e.g. 'Human' etc
     * platform: sequencing platform, either None or e.g. 'miseq' etc
     * comments: additional comments, either None or else string of text
@@ -490,7 +489,7 @@ class AnalysisProject:
       library_type (str): optional, specify library type e.g.
         'RNA-seq', 'miRNA' etc
       single_cell_platform (str): optional, specify single cell
-        preparation platform e.g. 'Icell8', '10xGenomics' etc
+        preparation platform e.g. '10xGenomics'
       organism (str): optional, specify organism e.g. 'Human',
         'Mouse' etc (separate multiple organisms with ';',
         use '?' if organism is not known)

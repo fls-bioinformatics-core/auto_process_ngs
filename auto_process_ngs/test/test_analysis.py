@@ -392,7 +392,6 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.info.single_cell_platform,None)
         self.assertEqual(project.info.organism,None)
         self.assertEqual(project.info.number_of_cells,None)
-        self.assertEqual(project.info.icell8_well_list,None)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.platform,None)
         self.assertEqual(project.info.sequencer_model,None)
@@ -410,7 +409,8 @@ class TestAnalysisProject(unittest.TestCase):
                                   user="Peter Briggs",
                                   PI="Alan Dale",
                                   library_type="scRNA-seq",
-                                  single_cell_platform="ICELL8",
+                                  single_cell_platform=\
+                                  "10xGenomics Chromium 3'",
                                   organism="Mouse",
                                   run="200911_NB700125_0020_AHXXXXX",
                                   comments="This is a test",
@@ -423,10 +423,10 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.read_numbers, [])
         self.assertEqual(project.fastq_dir,None)
         self.assertEqual(project.info.library_type,"scRNA-seq")
-        self.assertEqual(project.info.single_cell_platform,"ICELL8")
+        self.assertEqual(project.info.single_cell_platform,
+                         "10xGenomics Chromium 3'")
         self.assertEqual(project.info.organism,"Mouse")
         self.assertEqual(project.info.number_of_cells,None)
-        self.assertEqual(project.info.icell8_well_list,None)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.platform,"nextseq")
         self.assertEqual(project.info.sequencer_model,"NextSeq 500")
@@ -1972,7 +1972,8 @@ class TestCopyAnalysisProject(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz",),
                                 metadata={ 'Library type': 'scRNA-seq',
                                            'Organism': 'Human',
-                                           'Single cell platform': 'ICELL8',
+                                           'Single cell platform':
+                                           '10xGenomics Chromium 3\'',
                                            'Platform': 'nextseq',
                                            'Sequencer model': 'NextSeq 500',
                                            'Comments': 'This is a test' })
