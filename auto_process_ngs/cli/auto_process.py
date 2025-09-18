@@ -126,8 +126,8 @@ def add_setup_command(cmdparser):
     p.add_argument('-f','--file',action='append',dest='extra_files',
                    metavar="FILE",default=None,
                    help="Additional file(s) to copy into new analysis "
-                   "directory (e.g. ICELL8 well list). FILE can be a "
-                   "local or remote file, or a URL")
+                   "directory. FILE can be a local or remote file, or a "
+                   "URL")
     p.add_argument('--fastq-dir',action='store',dest='unaligned_dir',
                    default=None,
                    help="Import fastq.gz files from FASTQ_DIR (which should "
@@ -374,7 +374,7 @@ def add_make_fastqs_command(cmdparser):
                               metavar="CONVERTER",
                               default=None,
                               help="explicitly set BCL conversion software "
-                              "to use for non-10xGenomics/non-ICELL8 runs "
+                              "to use for non-10xGenomics runs "
                               "(either 'bcl2fastq' or 'bcl-convert'; can "
                               "also include a version specifier e.g. "
                               "'bcl2fastq>=2.0'). Default: %s (may be "
@@ -575,24 +575,6 @@ def add_make_fastqs_command(cmdparser):
                              "(Workflow A) / older NovaSeq Reagent Kits. "
                              "If unset then workflow will be determined "
                              "automatically (recommended)")
-    # ICELL8 options
-    icell8 = p.add_argument_group('ICELL8 options (ICELL8 data only)')
-    icell8.add_argument("--well-list",
-                        dest="icell8_well_list",
-                        default=None,
-                        help="specify ICELL8 well list file")
-    icell8.add_argument('--swap-i1-and-i2',
-                        action='store_true',
-                        dest="icell8_swap_i1_and_i2",
-                        help="swap supplied I1 and I2 Fastqs when matching "
-                        "ATAC barcodes against well list")
-    icell8.add_argument('--reverse-complement',
-                        choices=['i1','i2','both'],
-                        dest="icell8_reverse_complement",
-                        default=None,
-                        help="can be 'i1','i2', or 'both'; reverse complement "
-                        "the specified indices from the well list when "
-                        "matching ATAC barcodes against well list")
     # Statistics
     statistics = p.add_argument_group('Statistics generation')
     statistics.add_argument('--stats-file',action='store',
@@ -937,9 +919,9 @@ def add_publish_qc_command(cmdparser):
                            "--force to update all reports)")
     qcreports.add_argument('--legacy',action='store_true',
                            dest='legacy_mode',default=False,
-                           help="legacy mode: include links to MultiQC, "
-                           "'cellranger count' and ICELL8 reports in the "
-                           "top-level index page")
+                           help="legacy mode: include links to MultiQC "
+                           "and 'cellranger count' reports in the top-level "
+                           "index page")
     advanced = p.add_argument_group('Advanced/debugging options')
     add_runner_option(advanced)
     add_debug_option(advanced)
@@ -1543,11 +1525,6 @@ def make_fastqs(args):
                 # directly so update those
                 if key == 'use_bases_mask':
                     key = 'bases_mask'
-                elif key == 'well_list':
-                    key = 'icell8_well_list'
-                elif key in ('swap_i1_and_i2',
-                             'reverse_complement'):
-                    key = "icell8_atac_%s" % key
                 elif key == 'rc_i2_override':
                     key = 'spaceranger_rc_i2_override'
                 # Convert values where appropriate
@@ -1592,9 +1569,6 @@ def make_fastqs(args):
         r2_length=args.r2_length,
         r3_length=args.r3_length,
         lanes=only_include_lanes,lane_subsets=lane_subsets,
-        icell8_well_list=args.icell8_well_list,
-        icell8_swap_i1_and_i2=args.icell8_swap_i1_and_i2,
-        icell8_reverse_complement=args.icell8_reverse_complement,
         platform=args.platform,
         no_lane_splitting=no_lane_splitting,
         trim_adapters=(not args.no_adapter_trimming),
