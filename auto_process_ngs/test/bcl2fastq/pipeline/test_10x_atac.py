@@ -36,9 +36,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-NA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-NA-A1,A001,SI-NA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-NA-B1,A005,SI-NA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -137,9 +137,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-NA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-NA-A1,A001,SI-NA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-NA-B1,A005,SI-NA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:

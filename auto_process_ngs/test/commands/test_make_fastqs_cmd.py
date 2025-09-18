@@ -290,42 +290,6 @@ poll_interval = 0.01
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
-    def test_make_fastqs_standard_protocol_exception_for_chromium_sc_indices(self):
-        """make_fastqs: standard protocol with Chromium SC indices raises exception
-        """
-        # Sample sheet with 10xGenomics Chromium SC indices
-        samplesheet_chromium_sc_indices = """[Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
-smpl3,smpl3,,,A006,SI-GA-C1,10xGenomics,
-smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
-"""
-        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
-        with open(sample_sheet,'w') as fp:
-            fp.write(samplesheet_chromium_sc_indices)
-        # Create mock source data
-        illumina_run = MockIlluminaRun(
-            "171020_NB500968_00002_AHGXXXX",
-            "nextseq",
-            top_dir=self.wd)
-        illumina_run.create()
-        # Create mock bcl2fastq
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Do the test
-        ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
-        self.assertTrue(ap.params.sample_sheet is not None)
-        self.assertRaises(Exception,
-                          make_fastqs,
-                          ap,
-                          protocol="standard")
-
-    #@unittest.skip("Skipped")
     def test_make_fastqs_standard_protocol_stores_bases_mask(self):
         """make_fastqs: standard protocol stores supplied bases mask
         """
@@ -542,18 +506,19 @@ ICELL8_ATAC\tUnassigned-Sample1,Unassigned-Sample2\t.\t.\t.\t.\t.\t.
 """)
 
     #@unittest.skip("Skipped")
-    def test_make_fastqs_10x_chromium_sc_protocol(self):
-        """make_fastqs: 10x_chromium_sc protocol
+    def test_make_fastqs_10x_chromium_sc_protocol_10x_indices(self):
         """
-        # Sample sheet with 10xGenomics Chromium SC indices
-        samplesheet_chromium_sc_indices = """[Data]
+        make_fastqs: 10x_chromium_sc protocol (10x indices)
+        """
+        # Sample sheet with 10xGenomics indices
+        samplesheet_10x_indices = """[Data]
 Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
 smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
 smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
-            fp.write(samplesheet_chromium_sc_indices)
+            fp.write(samplesheet_10x_indices)
         # Create mock source data
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
@@ -565,6 +530,73 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_NB500968_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        make_fastqs(ap,protocol="10x_chromium_sc")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_NB500968_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_NB500968_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_NB500968_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs_10x_chromium_sc"),
+                       "bcl2fastq",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_make_fastqs_10x_chromium_sc_protocol_illumina_indices(self):
+        """
+        make_fastqs: 10x_chromium_sc protocol (Illumina indices)
+        """
+        # Sample sheet with standard (non-10xGenomics Chromium SC) indices
+        samplesheet_illumina_indices = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,GATCTACT,10xGenomics,
+smpl2,smpl2,,,A005,CTTAGGAC,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_illumina_indices)
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
@@ -1031,46 +1063,6 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
-
-    #@unittest.skip("Skipped")
-    def test_make_fastqs_10x_chromium_sc_protocol_exception_for_standard_indices(self):
-        """make_fastqs: 10x_chromium_sc protocol without Chromium SC indices raises exception
-        """
-        # Sample sheet with standard (non-10xGenomics Chromium SC) indices
-        samplesheet_standard_indices = """[Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,GATCTACT,10xGenomics,
-smpl2,smpl2,,,A005,CTTAGGAC,10xGenomics,
-"""
-        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
-        with open(sample_sheet,'w') as fp:
-            fp.write(samplesheet_standard_indices)
-        # Create mock source data
-        illumina_run = MockIlluminaRun(
-            "171020_NB500968_00002_AHGXXXX",
-            "nextseq",
-            top_dir=self.wd)
-        illumina_run.create()
-        # Create mock bcl2fastq and cellranger
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"))
-        MockCellrangerExe.create(os.path.join(self.bin,
-                                              "cellranger"))
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Do the test
-        ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
-        self.assertTrue(ap.params.sample_sheet is not None)
-        self.assertEqual(ap.params.bases_mask,"auto")
-        self.assertTrue(ap.params.primary_data_dir is None)
-        self.assertFalse(ap.params.acquired_primary_data)
-        self.assertRaises(Exception,
-                          make_fastqs,
-                          ap,
-                          protocol="10x_chromium_sc")
 
     #unittest.skip("Skipped")
     def test_make_fastqs_parse_evercode_protocol(self):

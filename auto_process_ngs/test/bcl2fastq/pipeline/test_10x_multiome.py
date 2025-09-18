@@ -18,6 +18,7 @@ class TestMakeFastqs(BaseMakeFastqsTestCase):
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y50,I10,I24,y90",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -35,9 +36,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,A005,SI-GA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -48,7 +49,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "cellranger-arc"),
                                  version="1.0.0",
-                                 multiome_data="GEX")
+                                 multiome_data="GEX",
+                                 assert_bases_mask=None)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -118,6 +120,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y50,I10,I24,y90",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -135,9 +138,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,A005,SI-GA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -148,7 +151,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "cellranger-arc"),
                                  version="1.0.0",
-                                 multiome_data="ATAC")
+                                 multiome_data="ATAC",
+                                 assert_bases_mask=None)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -218,6 +222,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y50,I10,I24,y90",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -235,9 +240,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,A005,SI-GA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -248,7 +253,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "cellranger-arc"),
                                  version="2.0.0",
-                                 multiome_data="GEX")
+                                 multiome_data="GEX",
+                                 assert_bases_mask=None)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -317,6 +323,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         illumina_run = MockIlluminaRun(
             "171020_NB500968_00002_AHGXXXX",
             "nextseq",
+            bases_mask="y50,I10,I24,y90",
             top_dir=self.wd)
         illumina_run.create()
         run_dir = illumina_run.dirn
@@ -334,9 +341,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,A005,SI-GA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -347,7 +354,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "cellranger-arc"),
                                  version="2.0.0",
-                                 multiome_data="ATAC")
+                                 multiome_data="ATAC",
+                                 assert_bases_mask=None)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -434,9 +442,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,A005,SI-GA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -447,7 +455,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "cellranger-arc"),
                                  version="2.0.0",
                                  multiome_data="ATAC",
-                                 assert_bases_mask="Y50,I8n2,Y24,Y90",
+                                 assert_bases_mask="Y50,I8N2,Y24,Y90",
                                  assert_filter_single_index=True)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -535,9 +543,9 @@ ReverseComplement,0
 Adapter,CTGTCTCTTATACACATCT
 
 [Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,A005,SI-GA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -548,7 +556,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "cellranger-arc"),
                                  version="2.0.0",
                                  multiome_data="GEX",
-                                 assert_bases_mask="Y28n22,I10,I10n14,Y90",
+                                 assert_bases_mask="Y28N22,I10,I10N14,Y90",
                                  assert_filter_dual_index=True)
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
