@@ -111,17 +111,14 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
 
     - QC report for standard QC
 
-    Also if a project comprises ICELL8 or 10xGenomics Chromium
-    data:
+    Also if a project comprises 10xGenomics data:
 
-    - ICELL8 processing reports, or
     - 'cellranger count' reports for each sample
 
     In 'legacy' mode, the top-level report will also contain
     explicit links for each project for the following (where
     appropriate):
 
-    - ICELL8 processing reports
     - cellranger count outputs
     - MultiQC report
 
@@ -390,14 +387,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     qc_artefacts['multiqc_report'] = multiqc_report
                 else:
                     print("...%s: no MultiQC report" % qc_dir)
-                # ICELL8 pipeline report
-                icell8_zip = os.path.join(project.dirn,
-                                          "icell8_processing.%s.%s.zip" %
-                                          (project.name,
-                                           os.path.basename(ap.analysis_dir)))
-                if os.path.exists(icell8_zip):
-                    print("...%s: found ICELL8 pipeline report" % project.name)
-                    project_qc[project.name]['icell8_zip'] = icell8_zip
         # Cellranger count report
         if legacy:
             cellranger_zip = os.path.join(project.dirn,
@@ -719,48 +708,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 except AttributeError:
                     # No MultiQC report
                     pass
-            # ICELL8 pipeline report
-            try:
-                icell8_zip = project_qc[project.name].icell8_zip
-                try:
-                    # Copy and unzip ICELL8 report
-                    copy_job = sched.submit(
-                        fileops.copy_command(icell8_zip,dirn),
-                        name="copy.icell8_report.%s" % project.name,
-                        log_dir=ap.log_dir)
-                    unzip_job = sched.submit(
-                        fileops.unzip_command(os.path.join(
-                            dirn,
-                            os.path.basename(icell8_zip)),
-                                              fileops.Location(dirn).path),
-                        name="unzip.icell8_report.%s" % project.name,
-                        log_dir=ap.log_dir,
-                        wait_for=(copy_job.name,))
-                    sched.wait()
-                    # Check the jobs completed ok
-                    if copy_job.exit_status or unzip_job.exit_status:
-                        raise Exception("copy and/or unzip job failed")
-                    if exclude_zip_files:
-                        print("Removing %s from server" % icell8_zip)
-                        fileops.remove_file(os.path.join(
-                            dirn,
-                            os.path.basename(icell8_zip)))
-                    # Append info to the index page
-                    report_html.add(
-                        Link("[ICELL8 processing]",
-                             "icell8_processing.%s.%s/"
-                             "icell8_processing.html" %
-                             (project.name,
-                              os.path.basename(ap.analysis_dir))))
-                    if not exclude_zip_files:
-                        report_html.add(
-                            Link("[ZIP]",
-                                 os.path.basename(icell8_zip)))
-                except Exception as ex:
-                    print("Failed to copy ICELL8 report: %s" % ex)
-            except AttributeError:
-                # No ICELL8 report
-                pass
             # Cellranger count reports
             try:
                 cellranger_zip = project_qc[project.name].cellranger_zip
