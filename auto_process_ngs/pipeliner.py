@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2025 Peter Briggs
 #
 """
 Module providing utility classes and functions for building simple
@@ -1927,8 +1927,13 @@ class Pipeline:
         # lists of the required task ids as values
         required = dict()
         for task_id in self.task_list():
-            required[task_id] = [t.id()
-                                 for t in self.get_task(task_id)[1]]
+            try:
+                required[task_id] = [t.id()
+                                     for t in self.get_task(task_id)[1]]
+            except KeyError as ex:
+                raise PipelineError(f"Error ranking tasks: task with ID "
+                                    f"'{task_id}' wasn't added to the "
+                                    f"pipeline?")
         # Rank the task ids
         ranks = list()
         while required:
