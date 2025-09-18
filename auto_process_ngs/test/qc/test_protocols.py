@@ -425,23 +425,6 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             paired_end=False),
                          "minimal")
 
-    def test_determine_qc_protocol_from_metadata_icell8(self):
-        """
-        determine_qc_protocol_from_metadata: ICELL8 data
-        """
-        # Non-ATAC ICELL8
-        self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="any",
-            single_cell_platform="ICELL8",
-            paired_end=True),
-                         "singlecell")
-        # ATAC
-        self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="scATAC-seq",
-            single_cell_platform="ICELL8",
-            paired_end=True),
-                         "ICELL8_scATAC")
-
     def test_determine_qc_protocol_from_metadata_10xchromium3(self):
         """
         determine_qc_protocol_from_metadata: 10xGenomics Chromium 3' data
@@ -885,22 +868,6 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "standardSE")
 
-    def test_determine_qc_protocol_icell8(self):
-        """determine_qc_protocol: single-cell run (ICELL8)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"),
-                                metadata={'Single cell platform':
-                                          "ICELL8"})
-        p.create(top_dir=self.wd)
-        project = AnalysisProject("PJB",
-                                  os.path.join(self.wd,"PJB"))
-        self.assertEqual(determine_qc_protocol(project),
-                         "singlecell")
-
     def test_determine_qc_protocol_10xchromium3(self):
         """determine_qc_protocol: single-cell run (10xGenomics Chromium 3')
         """
@@ -1182,24 +1149,6 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
                          "10x_scATAC")
-
-    def test_determine_qc_protocol_icell8_atac_seq(self):
-        """determine_qc_protocol: single-cell ATAC-seq (ICELL8)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"),
-                                metadata={'Single cell platform':
-                                          "ICELL8",
-                                          'Library type':
-                                          "scATAC-seq"})
-        p.create(top_dir=self.wd)
-        project = AnalysisProject("PJB",
-                                  os.path.join(self.wd,"PJB"))
-        self.assertEqual(determine_qc_protocol(project),
-                         "ICELL8_scATAC")
 
     def test_determine_qc_protocol_10x_visium_spatial_rnaseq_legacy(self):
         """determine_qc_protocol: 10xGenomics Visium spatial RNA-seq (legacy)
