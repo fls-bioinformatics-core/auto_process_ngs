@@ -1249,6 +1249,25 @@ class MakeFastqs(Pipeline):
                 adapter_read2=adapter_sequence_read2)
             self.add_task(make_sample_sheet)
 
+            #####################
+            # Generate bases mask
+            #####################
+            get_bases_mask = GetBasesMask(
+                "Generate bases mask%s" % (" for lanes %s" %
+                                           ','.join([str(x)  for x in lanes])
+                                           if lanes else ""),
+                run_dir=fetch_primary_data.output.run_dir,
+                sample_sheet=
+                make_sample_sheet.output.custom_sample_sheet,
+                bases_mask=bases_mask,
+                r1_length=r1_length,
+                r2_length=r2_length,
+                r3_length=r3_length,
+                i1_length=i1_length,
+                i2_length=i2_length,
+                override_template=override_template)
+            self.add_task(get_bases_mask)
+
             # Construct a name for the output directory
             if lanes and len(self.subsets) > 1:
                 # If lanes were specified and there are multiple
@@ -1297,21 +1316,6 @@ class MakeFastqs(Pipeline):
                     and not has_10x_indexes)):
 
                 if converter == "bcl2fastq":
-                    # Get bases mask
-                    get_bases_mask = GetBasesMask(
-                        "Get bases mask for bcl2fastq",
-                        run_dir=fetch_primary_data.output.run_dir,
-                        sample_sheet=
-                        make_sample_sheet.output.custom_sample_sheet,
-                        bases_mask=bases_mask,
-                        r1_length=r1_length,
-                        r2_length=r2_length,
-                        r3_length=r3_length,
-                        i1_length=i1_length,
-                        i2_length=i2_length,
-                        override_template=override_template)
-                    self.add_task(get_bases_mask)
-
                     # Get bcl2fastq information
                     if get_bcl2fastq is None:
                         # Create a new task only if one doesn't already
@@ -1355,20 +1359,6 @@ class MakeFastqs(Pipeline):
                                   envmodules=self.envmodules['bcl2fastq'],
                                   requires=(restore_backup,))
                 elif converter == "bcl-convert":
-                    # Get bases mask
-                    get_bases_mask = GetBasesMask(
-                        "Get bases mask for bclconvert",
-                        run_dir=fetch_primary_data.output.run_dir,
-                        sample_sheet=
-                        make_sample_sheet.output.custom_sample_sheet,
-                        bases_mask=bases_mask,
-                        r1_length=r1_length,
-                        r2_length=r2_length,
-                        r3_length=r3_length,
-                        i1_length=i1_length,
-                        i2_length=i2_length,
-                        override_template=override_template)
-                    self.add_task(get_bases_mask)
                     # Get BCL Convert information
                     if get_bclconvert is None:
                         # Create a new task only if one doesn't already
@@ -1645,18 +1635,6 @@ class MakeFastqs(Pipeline):
 
             # 10x RNA-seq
             if protocol == "10x_chromium_sc" and has_10x_indexes:
-                # Get bases mask
-                get_bases_mask = GetBasesMask(
-                    "Get bases mask for cellranger",
-                    run_dir=fetch_primary_data.output.run_dir,
-                    bases_mask=bases_mask,
-                    r1_length=r1_length,
-                    r2_length=r2_length,
-                    r3_length=r3_length,
-                    i1_length=i1_length,
-                    i2_length=i2_length,
-                    override_template=override_template)
-                self.add_task(get_bases_mask)
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x is None:
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
@@ -1713,18 +1691,6 @@ class MakeFastqs(Pipeline):
 
             # 10x ATAC-seq
             if protocol == "10x_atac":
-                # Get bases mask
-                get_bases_mask = GetBasesMask(
-                    "Get bases mask for cellranger-atac",
-                    run_dir=fetch_primary_data.output.run_dir,
-                    bases_mask=bases_mask,
-                    r1_length=r1_length,
-                    r2_length=r2_length,
-                    r3_length=r3_length,
-                    i1_length=i1_length,
-                    i2_length=i2_length,
-                    override_template=override_template)
-                self.add_task(get_bases_mask)
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_atac is None:
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
@@ -1782,18 +1748,6 @@ class MakeFastqs(Pipeline):
 
             # 10x Visium
             if protocol == "10x_visium" and has_10x_indexes:
-                # Get bases mask
-                get_bases_mask = GetBasesMask(
-                    "Get bases mask for spaceranger",
-                    run_dir=fetch_primary_data.output.run_dir,
-                    bases_mask=bases_mask,
-                    r1_length=r1_length,
-                    r2_length=r2_length,
-                    r3_length=r3_length,
-                    i1_length=i1_length,
-                    i2_length=i2_length,
-                    override_template=override_template)
-                self.add_task(get_bases_mask)
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_visium is None:
                     get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
@@ -1859,18 +1813,7 @@ class MakeFastqs(Pipeline):
                     # Cellranger-arc determines mask implicitly
                     multiome_bases_mask = None
                 else:
-                    # Determine mask explicitly
-                    get_bases_mask = GetBasesMask(
-                        "Get bases mask for cellranger-arc",
-                        run_dir=fetch_primary_data.output.run_dir,
-                        bases_mask=bases_mask,
-                        r1_length=r1_length,
-                        r2_length=r2_length,
-                        r3_length=r3_length,
-                        i1_length=i1_length,
-                        i2_length=i2_length,
-                        override_template=override_template)
-                    self.add_task(get_bases_mask)
+                    # Use explicitly determined mask
                     multiome_bases_mask = get_bases_mask.output.bases_mask
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_multiome is None:
