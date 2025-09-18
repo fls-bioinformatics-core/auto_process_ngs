@@ -310,7 +310,7 @@ def report_summary(ap):
     - Researcher (aka user)
     - PI
     - Application (aka library type)
-    - Single cell prep platform (e.g. ICell8)
+    - Single cell prep platform (e.g. 10xGenomics Chromium 3')
     - Organism
     - Number of samples
 
