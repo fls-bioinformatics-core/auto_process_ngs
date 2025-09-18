@@ -26,7 +26,6 @@ Pipeline task classes:
 - DemultiplexIcell8Atac
 - MergeFastqs
 - MergeFastqDirs
-- GetBasesMask10xMultiome
 - Run10xMkfastq
 - FastqStatistics
 - SeqLengthStatistics
