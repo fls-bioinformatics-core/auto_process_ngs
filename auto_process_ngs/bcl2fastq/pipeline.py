@@ -1326,8 +1326,6 @@ class MakeFastqs(Pipeline):
                         fastq_out_dir,
                         make_sample_sheet.output.custom_sample_sheet,
                         bases_mask=get_bases_mask.output.bases_mask,
-                        r1_length=r1_length,
-                        r2_length=r2_length,
                         minimum_trimmed_read_length=\
                         minimum_trimmed_read_length,
                         mask_short_adapter_reads=\
@@ -1425,8 +1423,6 @@ class MakeFastqs(Pipeline):
                                 make_sample_sheet.output.custom_sample_sheet,
                                 lane=lane,
                                 bases_mask=get_bases_mask.output.bases_mask,
-                                r1_length=r1_length,
-                                r2_length=r2_length,
                                 minimum_trimmed_read_length=\
                                 minimum_trimmed_read_length,
                                 mask_short_adapter_reads=\
@@ -1484,8 +1480,6 @@ class MakeFastqs(Pipeline):
                             tmp_fastq_out_dir,
                             make_sample_sheet.output.custom_sample_sheet,
                             bases_mask=get_bases_mask.output.bases_mask,
-                            r1_length=r1_length,
-                            r2_length=r2_length,
                             minimum_trimmed_read_length=\
                             minimum_trimmed_read_length,
                             mask_short_adapter_reads=\
@@ -1687,8 +1681,6 @@ class MakeFastqs(Pipeline):
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
                     bases_mask=get_bases_mask.output.bases_mask,
-                    r1_length=r1_length,
-                    r2_length=r2_length,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
@@ -1757,9 +1749,6 @@ class MakeFastqs(Pipeline):
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
                     bases_mask=get_bases_mask.output.bases_mask,
-                    r1_length=r1_length,
-                    r2_length=r2_length,
-                    r3_length=r3_length,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
@@ -1829,8 +1818,6 @@ class MakeFastqs(Pipeline):
                     make_sample_sheet.output.custom_sample_sheet,
                     platform=identify_platform.output.platform,
                     bases_mask=get_bases_mask.output.bases_mask,
-                    r1_length=r1_length,
-                    r2_length=r2_length,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
@@ -2701,16 +2688,18 @@ class GetBasesMask(PipelineTask):
                                         i2=self.args.i2_length,
                                         override_template=
                                         self.args.override_template)
-        # Set output bases mask value
+        # Validate
         print(f"Bases mask: {bases_mask}")
+        if not bases_mask_is_valid(bases_mask):
+            raise Exception(f"Invalid bases mask: '{bases_mask}'")
+        # Set output bases mask value
         self.output.bases_mask.set(bases_mask)
 
 class RunBcl2Fastq(PipelineTask):
     """
     Run bcl2fastq to generate Fastqs from sequencing data
     """
-    def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
-             r1_length=None,r2_length=None,
+    def init(self,run_dir,out_dir,sample_sheet,bases_mask=None,
              ignore_missing_bcls=False,no_lane_splitting=False,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
@@ -2726,14 +2715,8 @@ class RunBcl2Fastq(PipelineTask):
           run_dir (str): path to the source sequencing data
           out_dir (str): output directory for bcl2fastq
           sample_sheet (str): path to input samplesheet file
-          bases_mask (str): if set then use this as an
-            alternative bases mask setting
-          r1_length (int): if set then truncate R1 reads in
-            bases mask to this length (NB ignored if bases
-            mask is already set)
-          r2_length (int): if set then truncate R2 reads in
-            bases mask to this length (NB ignored if bases
-            mask is already set)
+          bases_mask (str): if set then use this as the bases
+            mask setting
           ignore_missing_bcls (bool): if True then run
             bcl2fastq with --ignore-missing-bcls
           no_lane_splitting (bool): if True then run bcl2fastq
@@ -2939,8 +2922,7 @@ class RunBclConvert(PipelineTask):
     """
     Run BCL Convert to generate Fastqs from sequencing data
     """
-    def init(self,run_dir,out_dir,sample_sheet,lane=None,
-             bases_mask='auto',r1_length=None,r2_length=None,
+    def init(self,run_dir,out_dir,sample_sheet,lane=None,bases_mask=None,
              ignore_missing_bcl=False,no_lane_splitting=False,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
@@ -2957,14 +2939,8 @@ class RunBclConvert(PipelineTask):
           sample_sheet (str): path to input samplesheet file
           lane (int): optional, run bcl-convert on a single lane
             with --bcl-only-lane
-          bases_mask (str): if set then use this as an
-            alternative bases mask setting
-          r1_length (int): if set then truncate R1 reads in
-            bases mask to this length (NB ignored if bases
-            mask is already set)
-          r2_length (int): if set then truncate R2 reads in
-            bases mask to this length (NB ignored if bases
-            mask is already set)
+          bases_mask (str): if set then use this as the bases
+            mask setting
           no_lane_splitting (bool): if True then run bcl-convert
             with --no-lane-splitting
           minimum_trimmed_read_length (int): if set then supply
@@ -3489,83 +3465,12 @@ class DemultiplexIcell8Atac(PipelineTask):
             print("Moving output to final location: %s" % self.args.out_dir)
             os.rename(bcl2fastq_dir,self.args.out_dir)
 
-class GetBasesMask10xMultiome(PipelineTask):
-    """
-    Sets the bases mask string for 10x Genomics single cell multiome
-    """
-    def init(self,run_dir,bases_mask,protocol,r1_length=None,
-             r2_length=None,r3_length=None):
-        """
-        Initialise the GetBasesMask10xMultiome task
-
-        Arguments:
-          run_dir (str): path to the directory with
-            data from the sequencer run
-          bases_mask (str): input bases mask string
-            (if set then will passed directly to
-            output)
-          protocol (str): protocol being used
-          r1_length (int): optional, truncate R1 reads
-            to this length (ignored if bases mask is set)
-          r2_length (int): optional, truncate R2 reads
-            to this length (ignored if bases mask is set)
-          r3_length (int): optional, truncate R3 reads
-            to this length (ignored if bases mask is set,
-            or there is no R3 read)
-
-        Outputs:
-          bases_mask (str): bases mask to use in
-            CellRanger-ARC for processing these data
-        """
-        self.add_output("bases_mask",Param(type='str'))
-    def setup(self):
-        # Check if explicit bases mask already supplied
-        if self.args.bases_mask == "auto":
-            bases_mask = None
-        else:
-            bases_mask = self.args.bases_mask
-        # Update bases mask for ATAC or GEX protocols
-        if bases_mask is None and \
-           self.args.protocol in ("10x_multiome_atac",
-                                  "10x_multiome_gex"):
-            # Load input data
-            illumina_run = IlluminaRun(self.args.run_dir)
-            # Set the user-defined read lengths
-            r1_length = self.args.r1_length
-            r2_length = self.args.r2_length
-            r3_length = self.args.r3_length
-            # Get library type
-            library_type = self.args.protocol.split('_')[-1]
-            print("Explicitly setting bases mask for '%s'" % library_type)
-            if library_type == "atac":
-                # Convert I2 to R2, truncate R2 to 24 bases
-                # and truncate I1 to 8 bases
-                if r2_length is None:
-                    r2_length = 24
-                bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                            r1=r1_length,
-                                            r2=r2_length,
-                                            r3=r3_length,
-                                            i1=8,
-                                            override_template="RIRR")
-            elif library_type == "gex":
-                # Truncate R1 to 28 bases and I1 and I2 to
-                # 10 bases
-                if r1_length is None:
-                    r1_length = 28
-                bases_mask = get_bases_mask(illumina_run.runinfo_xml,
-                                            r1=r1_length,
-                                            r2=r2_length,
-                                            i1=10, i2=10)
-            print("Updated bases mask: %s" % bases_mask)
-        self.output.bases_mask.set(bases_mask)
 
 class Run10xMkfastq(PipelineTask):
     """
     Runs 10xGenomics 'mkfastq' to generate Fastqs
     """
-    def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
-             r1_length=None,r2_length=None,r3_length=None,
+    def init(self,run_dir,out_dir,sample_sheet,bases_mask,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
              filter_single_index=None,filter_dual_index=None,
@@ -3584,17 +3489,7 @@ class Run10xMkfastq(PipelineTask):
             data from the sequencer run
           out_dir (str): output directory for cellranger
           sample_sheet (str): path to input samplesheet file
-          bases_mask (str): if set then use this as an
-            alternative bases mask setting
-          r1_length (int): if specified then truncate R1 reads to
-            this length (ignored if not using bcl2fastq or
-            bclconvert, or if bases mask is set)
-          r2_length (int): if specified then truncate R2 reads to
-            this length (ignored if not using bcl2fastq or
-            bclconvert, or if bases mask is set)
-          r3_length (int): if specified then truncate R3 reads to
-            this length (ignored if not using bcl2fastq or
-            bclconvert, or if bases mask is set)
+          bases_mask (str): bases mask string
           minimum_trimmed_read_length (int): if set then supply
             to cellranger via --minimum-trimmed-read-length
           mask_short_adapter_reads (int): if set then supply to
