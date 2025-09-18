@@ -571,8 +571,9 @@ class AutoProcess:
         if self.analysis_dir is None:
             return
         if not os.path.exists(self.analysis_dir):
-            logging.warning("Analysis dir '%s' not found" %
-                            self.analysis_dir)
+            if not ignore_errors:
+                logging.warning("Analysis dir '%s' not found" %
+                                self.analysis_dir)
             return
         try:
             logging.debug("Saving parameters to file")
@@ -595,6 +596,8 @@ class AutoProcess:
           ignore_errors (bool): if True then don't raise an
             exception on error
         """
+        if self.analysis_dir is None and ignore_errors:
+            return
         try:
             tmp_dir = os.path.join(self.analysis_dir,'tmp')
             if os.path.isdir(tmp_dir):
