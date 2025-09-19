@@ -1428,8 +1428,6 @@ def fetch_reference_data(s,name):
     refdata = dict()
     for organism in s.organisms:
         data_item = s.organisms[organism][name]
-        print(f"fetch_reference_data: {organism}/{name} = {data_item}")
-        print("%r" % data_item)
         if data_item:
             refdata[organism] = data_item
     return refdata
