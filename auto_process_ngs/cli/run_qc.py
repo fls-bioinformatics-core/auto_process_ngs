@@ -490,21 +490,18 @@ def process_inputs(input_list):
         for ff in glob.glob(os.path.abspath(f)):
             if not os.path.exists(ff):
                 # Input not found
-                logger.fatal("%s: input not found" % ff)
-                sys.exit(1)
+                raise Exception(f"{ff}: input not found")
             elif os.path.isdir(ff) and len(input_list) > 1:
                 # Can only be a single directory
-                logger.fatal("Input must be a single directory, or a list of "
-                             "Fastqs")
-                sys.exit(1)
+                raise Exception("Input must be a single directory, or a "
+                                "list of Fastqs")
             else:
                 inputs.append(ff)
     # Get list of Fastqs from directory
     if len(inputs) == 1 and os.path.isdir(inputs[0]):
         dir_path = inputs[0]
         if not os.path.isdir(dir_path):
-            logger.fatal("%s: directory not found" % dir_path)
-            sys.exit(1)
+            raise Exception(f"{dir_path}: directory not found")
         # See if directory contains Fastqs
         inputs = [os.path.join(dir_path,f)
                   for f in os.listdir(inputs[0])
@@ -520,8 +517,7 @@ def process_inputs(input_list):
             master_fastq_dir = dir_path
         # Check we have some Fastqs
         if not inputs:
-            logger.fatal("%s: no Fastqs found" % dir_path)
-            sys.exit(1)
+            raise Exception(f"{dir_path}: no Fastqs found")
         # Look for project metadata
         info_file = locate_project_info_file(dir_path)
         # Look for extra files
@@ -730,7 +726,11 @@ def main(argv=None):
 
     # Deal with inputs
     announce("Locating inputs")
-    inputs = process_inputs(args.inputs)
+    try:
+        inputs = process_inputs(args.inputs)
+    except Exception as ex:
+        logger.fatal(ex)
+        return 1
     # Filter out index reads
     inputs.fastqs = [fq for fq in inputs.fastqs
                      if not fastq_attrs(fq).is_index_read]
