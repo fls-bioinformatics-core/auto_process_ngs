@@ -167,10 +167,10 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane, read_number)
                                 metadata={ 'Organism': 'Human' })
         project_dir = p.create(top_dir=self.dirn)
         # Implicit output and QC directories
-        out_dir = os.path.join(project_dir, "fastqs")
+        out_dir = project_dir
         qc_dir = os.path.join(out_dir, "qc")
         # Run the QC
-        self.assertEqual(run_qc([os.path.join(project_dir, "fastqs"),]), 0)
+        self.assertEqual(run_qc([project_dir,]), 0)
         # Check output and reports
         for f in ("qc",
                   "qc_report.html",
@@ -275,7 +275,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         out_dir = os.path.join(self.dirn, "fastqs")
         qc_dir = os.path.join(out_dir, "qc")
         # Run the QC
-        self.assertEqual(run_qc([os.path.join(fastq_dir),]), 0)
+        self.assertEqual(run_qc([fastq_dir,]), 0)
         # Check output and reports
         for f in ("qc",
                   "qc_report.html",
@@ -325,7 +325,7 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         out_dir = os.path.join(self.dirn, "fastqs")
         qc_dir = os.path.join(out_dir, "qc")
         # Run the QC
-        self.assertEqual(run_qc([os.path.join(fastq_dir),
+        self.assertEqual(run_qc([fastq_dir,
                                  "--organism", "Human"]), 0)
         # Check output and reports
         for f in ("qc",
