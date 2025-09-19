@@ -649,7 +649,22 @@ def cleanup_atexit(tmp_project_dir):
 
 # Main program
 
-def main():
+def main(argv=None):
+    """
+    Run the 'run_qc' utility
+
+    Arguments:
+      argv (list): optional, command line arguments to
+        process (otherwise take arguments from
+        'sys.argv')
+
+    Returns:
+      Integer: 0 on success, 1 on failure.
+    """
+    # Command line arguments
+    if argv is None:
+        argv = sys.argv[1:]
+
     # Get configuration settings
     settings = Settings()
 
@@ -689,13 +704,13 @@ def main():
     add_deprecated_options(p)
 
     # Parse the command line
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     # Check for deprecated and unsupported options
     if args.fastq_screen_subset:
         logger.fatal("'--fastq_screen_subset' is redundant; use "
                      "'--fastq_subset' instead")
-        sys.exit(1)
+        return 1
     if args.force:
         logger.warning("'--force' option is redundant; HTML report "
                        "generation will always be attempted (even "
@@ -721,7 +736,7 @@ def main():
                      if not fastq_attrs(fq).is_index_read]
     if not inputs.fastqs:
         logger.fatal("No Fastqs found")
-        sys.exit(1)
+        return 1
 
     # Check Fastq names are compatible with lane splitting
     if args.split_fastqs_by_lane:
@@ -731,7 +746,7 @@ def main():
                 logger.fatal("Can only split Fastqs by lane for "
                              "Fastqs with canonical Illumina-style "
                              "names")
-                sys.exit(1)
+                return 1
 
     # Report what was found
     for fqs in group_fastqs_by_name(inputs.fastqs,fastq_attrs=fastq_attrs):
@@ -964,7 +979,7 @@ def main():
         if not args.update:
             logger.fatal("QC directory already exists (use --update to "
                          "run QC anyway)")
-            sys.exit(1)
+            return 1
         print("Output QC directory already exists, updating")
     qc_info_file = os.path.join(qc_dir,"qc.info")
 
@@ -1068,7 +1083,7 @@ def main():
     except Exception as ex:
         logger.fatal("Unable to get QC protocol for '%s': %s" %
                      (qc_protocol,ex))
-        sys.exit(1)
+        return 1
 
     # Adjust protocol
     custom_seq_reads = None
@@ -1190,4 +1205,4 @@ def main():
     print("QC output directory: %s" % qc_dir)
     print("Exit status        : %s" % status)
     # Finish and return exit code from pipeline
-    sys.exit(status)
+    return status
