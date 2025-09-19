@@ -1154,6 +1154,7 @@ def main(argv=None):
                        cellranger_reference_dataset=\
                        cellranger_reference_dataset,
                        cellranger_out_dir=out_dir,
+                       poll_interval=settings.general.poll_interval,
                        max_jobs=max_jobs,
                        max_slots=max_cores,
                        batch_size=args.batch_size,
