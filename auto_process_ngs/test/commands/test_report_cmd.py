@@ -140,7 +140,7 @@ Summary of data in 'bcl2fastq' dir:
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8",
+                        "Single cell platform": "10xGenomics Chromium 3'",
                         "Number of cells": 1311
                         },
                 "CDE": { "User": "Charles David Edwards",
@@ -170,7 +170,7 @@ Summary of data in 'bcl2fastq' dir:
   User    : Alison Bell
   PI      : Audrey Bower
   Library : scRNA-seq
-  SC Plat.: ICELL8
+  SC Plat.: 10xGenomics Chromium 3'
   Organism: Human
   Dir     : AB
   #samples: 2
@@ -848,7 +848,7 @@ class TestReportConcise(unittest.TestCase):
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8",
+                        "Single cell platform": "10xGenomics Chromium 3'",
                         "Number of cells": 1311 },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
@@ -861,7 +861,7 @@ class TestReportConcise(unittest.TestCase):
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
         self.assertEqual(report_concise(ap),
-                         "Paired end: 'AB': Alison Bell, Human ICELL8 scRNA-seq (PI: Audrey Bower) (2 samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
+                         "Paired end: 'AB': Alison Bell, Human 10xGenomics Chromium 3' scRNA-seq (PI: Audrey Bower) (2 samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
 
     def test_report_concise_10x_cellplex(self):
         """report: report 10xGenomics CellPlex run in 'concise' mode
@@ -1238,7 +1238,7 @@ Additional notes/comments:
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8",
+                        "Single cell platform": "10xGenomics Chromium 3'",
                         "Number of cells": 1311 },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
@@ -1263,8 +1263,8 @@ Bcl2fastq : bcl2fastq 2.17.1.14
 Cellranger: cellranger 3.0.1
 
 2 projects:
-- 'AB':  Alison Bell           Human scRNA-seq (ICELL8) 2 samples/1311 cells (PI Audrey Bower)           
-- 'CDE': Charles David Edwards Mouse ChIP-seq           2 samples            (PI Colin Delaney Eccleston)
+- 'AB':  Alison Bell           Human scRNA-seq (10xGenomics Chromium 3') 2 samples/1311 cells (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq                            2 samples            (PI Colin Delaney Eccleston)
 
 Additional notes/comments:
 - CDE: Repeat of previous run
@@ -1899,7 +1899,7 @@ MISEQ_170901#87\tCharles David Edwards\ttesting_87
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8",
+                        "Single cell platform": "10xGenomics Chromium 3'",
                         "Number of cells": 1311,
                         "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
@@ -1913,7 +1913,7 @@ MISEQ_170901#87\tCharles David Edwards\ttesting_87
         # Make autoprocess instance and set required metadata
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate projects report
-        expected = """MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tscRNA-seq\tICELL8\tHuman\tMISEQ\t2\t1311\tyes\tAB1-2
+        expected = """MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tscRNA-seq\t10xGenomics Chromium 3'\tHuman\tMISEQ\t2\t1311\tyes\tAB1-2
 MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
 """
         for o,e in zip(report_projects(ap).split('\n'),
@@ -2332,7 +2332,7 @@ class TestFetchValueFunction(unittest.TestCase):
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8",
+                        "Single cell platform": "10xGenomics Chromium 3'",
                         "Number of cells": 1311,
                         "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
@@ -2370,7 +2370,8 @@ class TestFetchValueFunction(unittest.TestCase):
         self.assertEqual(fetch_value(ap,project,'platform'),'MISEQ')
         self.assertEqual(fetch_value(ap,project,'no_of_samples'),'2')
         self.assertEqual(fetch_value(ap,project,'#samples'),'2')
-        self.assertEqual(fetch_value(ap,project,'single_cell_platform'),'ICELL8')
+        self.assertEqual(fetch_value(ap,project,'single_cell_platform'),
+                         "10xGenomics Chromium 3'")
         self.assertEqual(fetch_value(ap,project,'no_of_cells'),'1311')
         self.assertEqual(fetch_value(ap,project,'#cells'),'1311')
         self.assertEqual(fetch_value(ap,project,'paired_end'),'yes')

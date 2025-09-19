@@ -172,8 +172,6 @@ METADATA_FIELD_DESCRIPTIONS = {
     'cellranger_reference': 'Cellranger reference datasets',
     'cellranger_probe_set': 'Cellranger probe set',
     'multiqc': 'MultiQC report',
-    'icell8_stats': 'ICELL8 statistics',
-    'icell8_report': 'ICELL8 processing report',
 }
 
 # Software package names
@@ -856,10 +854,6 @@ class QCReport(Document):
                          'number_of_cells',):
                 metadata_items.insert(metadata_items.index('organism'),
                                       item)
-        if 'icell8_stats' in self.outputs:
-            metadata_items.append('icell8_stats')
-        if 'icell8_report' in self.outputs:
-            metadata_items.append('icell8_report')
         if self.multi_project:
             metadata_items[metadata_items.index('run_id')] = 'project_id'
         # Make table with one column per project
@@ -1286,15 +1280,6 @@ class QCReport(Document):
                         multiqc_report = "multi%s_report.html" \
                                          % os.path.basename(project.qc_dir)
                         value = Link(multiqc_report)
-                    elif item == 'icell8_stats':
-                        value = Link("icell8_stats.xlsx",
-                                     os.path.join(project_data_dir,
-                                                  "stats",
-                                                  "icell8_stats.xlsx"))
-                    elif item == 'icell8_report':
-                        value = Link("icell8_processing.html",
-                                     os.path.join(project_data_dir,
-                                                  "icell8_processing.html"))
                     else:
                         raise Exception("Unrecognised item to report: '%s'"
                                         % item)
@@ -1793,7 +1778,7 @@ class QCProject:
     General properties about the project:
 
     - is_single_cell: True if the project has single cell
-        data (10xGenomics, ICELL8 etc)
+        data (10xGenomics, Parse etc)
 
     Arguments:
       project (AnalysisProject): project to report QC for

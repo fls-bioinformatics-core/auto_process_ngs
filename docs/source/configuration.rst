@@ -246,12 +246,6 @@ Runner name                   Used for
 ``publish_qc``                Running jobs for QC publication
 ``transfer_data``             Running computationally-intensive jobs in
                               the ``transfer_data.py`` utility
-``icell8``                    Default runner for commands in the ICELL8
-                              processing pipeline
-``icell8_contaminant_filter`` Running the contaminant filtering in the
-                              ICELL8 pipeline
-``icell8_statistics``         Generating statistics for ICELL8 data
-``icell8_report``             Reporting on the ICELL8 pipeline
 ============================= =========================================
 
 The following runners are supported but deprecated:
@@ -305,8 +299,6 @@ Section            Setting                            Overrides runner
 ``bcl_conversion`` ``nprocessors``                    ``bcl2fastq``/``bcl_convert``
 ``fastq_stats``    ``nprocessors``                    ``stats``
 ``qc``             ``nprocessors``                    ``qc``
-``icell8``         ``nprocessors_contaminant_filter`` ``icell8_contaminant_filter``
-``icell8``         ``nprocessors_statistics``         ``icell8_statistics``
 ``10xgenomics``    ``cellranger_localcores``          ``cellranger`` (*)
 ================== ================================== =====================
 
@@ -425,7 +417,6 @@ These can be defined for the following stages:
  * ``make_fastqs``
  * ``run_qc``
  * ``publish_qc``
- * ``process_icell8``
 
 (see :ref:`software_dependencies` for details of what software is required
 for each of these stages.)

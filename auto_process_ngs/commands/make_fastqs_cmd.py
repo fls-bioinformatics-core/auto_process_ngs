@@ -38,7 +38,6 @@ BCL2FASTQ_DEFAULTS = {
 def make_fastqs(ap,protocol='standard',platform=None,
                 unaligned_dir=None,sample_sheet=None,
                 name=None,lanes=None,lane_subsets=None,
-                icell8_well_list=None,
                 nprocessors=None,bcl_converter=None,
                 bases_mask=None,r1_length=None,r2_length=None,
                 r3_length=None,no_lane_splitting=None,
@@ -55,8 +54,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 force_copy_of_primary_data=False,
                 create_empty_fastqs=False,
                 ignore_missing_bcls=False,runner=None,
-                icell8_swap_i1_and_i2=False,
-                icell8_reverse_complement=None,
                 cellranger_jobmode=None,
                 cellranger_mempercore=None,
                 cellranger_maxjobs=None,
@@ -111,8 +108,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
         to override the defaults for this lane. Lanes not in a subset
         will still be processed unless excluded via the 'lanes'
         keyword
-      icell8_well_list (str): well list file for ICELL8 platforms
-        (required for ICELL8 processing protocols)
       nprocessors (int) : number of processors to use
       generate_stats (bool): if True then (re)generate statistics file
         for fastqs
@@ -172,13 +167,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
         (must have completed with zero exit status)
       runner (JobRunner): (optional) specify a non-default job runner
         to use for fastq generation
-      icell8_swap_i1_and_i2 (bool): if True then swap I1 and I2 reads
-        when matching to barcodes in the ICELL8 well list (ICELL8 ATAC
-        data only)
-      icell8_reverse_complement (str): one of 'i1', 'i2', 'both', or
-        None; if set then the specified index reads will be reverse
-        complemented when matching to barcodes in the ICELL8 well list
-        (ICELL8 ATAC data only)
       cellranger_jobmode (str): (optional) job mode to run cellranger in
         (10xGenomics Chromium SC data only)
       cellranger_mempercore (int): (optional) memory assumed per core
@@ -364,7 +352,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
         'barcode_analysis_runner': ap.settings.runners.barcode_analysis,
         'bcl2fastq_runner': ap.settings.runners.bcl2fastq,
         'bclconvert_runner': ap.settings.runners.bcl_convert,
-        'demultiplex_icell8_atac_runner': ap.settings.runners.bcl2fastq,
         'cellranger_runner': ap.settings.runners.cellranger_mkfastq,
         'cellranger_atac_runner': ap.settings.runners.cellranger_mkfastq,
         'cellranger_arc_runner': ap.settings.runners.cellranger_mkfastq,
@@ -413,7 +400,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              r3_length=r3_length,
                              bcl_converter=bcl_converter,
                              platform=platform,
-                             icell8_well_list=icell8_well_list,
                              minimum_trimmed_read_length=\
                              minimum_trimmed_read_length,
                              mask_short_adapter_reads=\
@@ -423,10 +409,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              adapter_sequence_read2,
                              spaceranger_rc_i2_override=\
                              spaceranger_rc_i2_override,
-                             icell8_atac_swap_i1_and_i2=\
-                             icell8_swap_i1_and_i2,
-                             icell8_atac_reverse_complement=\
-                             icell8_reverse_complement,
                              lane_subsets=lane_subsets,
                              lanes=lanes,
                              trim_adapters=trim_adapters,

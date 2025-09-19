@@ -105,8 +105,6 @@ class QCOutputs:
     - 'rseqc_genebody_coverage'
     - 'rseqc_infer_experiment'
     - 'qualimap_rnaseq'
-    - 'icell8_stats'
-    - 'icell8_report'
     - 'cellranger_count'
     - 'cellranger_multi'
     - 'cellranger-atac_count'
@@ -229,7 +227,6 @@ class QCOutputs:
             self._add_qc_outputs(m.collect_qc_outputs(qcdir))
         # Non-QC module outputs
         for qc_data in (
-                self._collect_icell8(self.qc_dir),
                 self._collect_extra_outputs(self.qc_dir),):
             self._add_qc_outputs(qc_data)
         # Fastq screens
@@ -392,48 +389,6 @@ class QCOutputs:
         # Tags
         for tag in data.tags:
             self.outputs.add(tag)
-
-    def _collect_icell8(self,qc_dir):
-        """
-        Collect information on ICell8 reports
-
-        Returns an AttributeDictionary with the following
-        attributes:
-
-        - name: set to 'icell8'
-        - software: dictionary of software and versions
-        - fastqs: list of associated Fastq names
-        - output_files: list of associated output files
-        - tags: list of associated output classes
-
-        Arguments:
-          qc_dir (str): top-level directory to look under.
-        """
-        output_files = list()
-        tags = set()
-        # Look for ICELL8 outputs
-        icell8_top_dir = os.path.dirname(qc_dir)
-        print("Checking for ICELL8 reports in %s/stats" %
-              icell8_top_dir)
-        icell8_stats_xlsx = os.path.join(icell8_top_dir,
-                                         "stats",
-                                         "icell8_stats.xlsx")
-        if os.path.exists(icell8_stats_xlsx):
-            tags.add("icell8_stats")
-            output_files.append(icell8_stats_xlsx)
-        icell8_report_html = os.path.join(icell8_top_dir,
-                                          "icell8_processing.html")
-        if os.path.exists(icell8_report_html):
-            tags.add("icell8_report")
-            output_files.append(icell8_report_html)
-        # Return collected information
-        return AttributeDictionary(
-            name='icell8',
-            software={},
-            fastqs=[],
-            output_files=output_files,
-            tags=sorted(list(tags))
-        )
 
     def _collect_extra_outputs(self,qc_dir):
         """

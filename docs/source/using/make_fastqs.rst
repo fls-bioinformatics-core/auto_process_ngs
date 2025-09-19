@@ -84,8 +84,6 @@ Protocol option          Used for
                          and ATAC data)
 ``parse_evercode``       Parse Evercode single cell data
 ``biorad_ddseq``         Bio-Rad ddSEQ single cell data
-``icell8``               ICELL8 single-cell RNA-seq data
-``icell8_atac``          ICELL8 single-cell ATAC-seq data
 ======================== =====================================
 
 Typically the ``standard`` protocol is sufficient for most types of
@@ -115,7 +113,6 @@ Fastq generation protocols should be used:
 * :doc:`10x Genomics spatial data <../spatial/10x_visium>`
 * :doc:`Parse Evercode single cell data <../single_cell/parse>`
 * :doc:`Bio-Rad single cell data <../single_cell/bio_rad>`
-* :doc:`ICELL single cell data <../single_cell/icell8>`
 
 .. _make_fastqs-commonly-used-options:
 
@@ -260,7 +257,7 @@ protocols in a single sequencing run, for example:
   characteristics (e.g. different lengths) to those in
   other lanes
 * Some lanes contain standard samples whilst others contain
-  10xGenomics or ICELL8 single-cell samples
+  single cell or spatial samples
 
 ``make_fastqs`` is able to process these in a single run provided
 that:
@@ -353,12 +350,6 @@ Option                                Description
 ``spaceranger_rc_i2_override=BOOL``   Set ``--rc-i2-override`` option
                                       for ``spaceranger`` (can be
                                       either ``true`` or ``false``)
-``icell8_well_list=FILE``             Well list file (``icell8`` and
-                                      ``icell8_atac`` protocols only)
-``icell8_atac_swap_i1_and_i2=yes|no`` Turn I1/I2 swapping on or off
-                                      (``icell8_atac`` protocol only)
-``icell8_atac_reverse_complement``    Set reverse complementing option
-                                      (``icell8_atac`` protocol only)
 ``analyse_barcodes=yes|no``           Turn barcode analysis on or off
 ===================================== ==================================
 

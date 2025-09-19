@@ -378,7 +378,7 @@ QC_PROTOCOLS = {
     },
 
     "singlecell": {
-        "description": "ICELL8 single cell RNA-seq",
+        "description": "Generic single cell RNA-seq",
         "reads": {
             "seq_data": ('r2',),
             "index": ('r1',)
@@ -389,19 +389,6 @@ QC_PROTOCOLS = {
             'sequence_lengths',
             'rseqc_genebody_coverage',
             'qualimap_rnaseq'
-        ]
-    },
-
-    "ICELL8_scATAC": {
-        "description": "ICELL8 single cell ATAC-seq",
-        "reads": {
-            "seq_data": ('r1','r2',),
-            "index": ()
-        },
-        "qc_modules": [
-            'fastqc',
-            'fastq_screen',
-            'sequence_lengths',
         ]
     },
 }
@@ -836,16 +823,6 @@ def determine_qc_protocol_from_metadata(library_type,
                                 "snATAC-seq",):
                 # Bio-Rad ddSeq ATAC
                 protocol = "BioRad_ddSEQ_ATAC"
-        # ICELL8
-        elif single_cell_platform == "ICELL8":
-            # ICELL8 data
-            if library_type in ("scATAC-seq",
-                                "snATAC-seq",):
-                # ICELL8 scATAC-seq
-                protocol = "ICELL8_scATAC"
-            else:
-                # Assume scRNA-seq
-                protocol = "singlecell"
         # Visium/spatial data
         elif single_cell_platform in ("10xGenomics Visium",
                                       "10xGenomics Visium (CytAssist)",

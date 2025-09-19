@@ -20,10 +20,7 @@ Pipeline task classes:
 - RestoreBackupDirectory
 - GetBasesMask
 - RunBcl2Fastq
-- GetBasesMaskIcell8
-- GetBasesMaskIcell8Atac
 - Get10xPackage
-- DemultiplexIcell8Atac
 - MergeFastqs
 - MergeFastqDirs
 - Run10xMkfastq
@@ -72,8 +69,6 @@ from ..bcl2fastq.utils import make_custom_sample_sheet
 from ..bcl2fastq.utils import convert_bases_mask_to_override_cycles
 from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
-from ..icell8.utils import get_bases_mask_icell8
-from ..icell8.utils import get_bases_mask_icell8_atac
 from ..samplesheet_utils import barcode_is_10xgenomics
 from ..samplesheet_utils import SampleSheetLinter
 from ..pipeliner import Pipeline
@@ -108,8 +103,6 @@ logger = logging.getLogger(__name__)
 
 PROTOCOLS = ('standard',
              'mirna',
-             'icell8',
-             'icell8_atac',
              '10x_chromium_sc',
              '10x_atac',
              '10x_visium',
@@ -149,9 +142,6 @@ LANE_SUBSET_ATTRS = (
     'tenx_filter_single_index',
     'tenx_filter_dual_index',
     'spaceranger_rc_i2_override',
-    'icell8_well_list',
-    'icell8_atac_swap_i1_and_i2',
-    'icell8_atac_reverse_complement',
     'analyse_barcodes',
     'masked_index',
     'bcl_converter',
@@ -217,13 +207,10 @@ class MakeFastqs(Pipeline):
     """
     def __init__(self,run_dir,sample_sheet,protocol='standard',
                  bases_mask="auto",bcl_converter='bcl2fastq',
-                 platform=None,icell8_well_list=None,
-                 minimum_trimmed_read_length=None,
+                 platform=None,minimum_trimmed_read_length=None,
                  mask_short_adapter_reads=None,
                  adapter_sequence=None,adapter_sequence_read2=None,
                  spaceranger_rc_i2_override=None,
-                 icell8_atac_swap_i1_and_i2=None,
-                 icell8_atac_reverse_complement=None,
                  r1_length=None,r2_length=None,r3_length=None,
                  lanes=None,trim_adapters=True,fastq_statistics=True,
                  analyse_barcodes=True,lane_subsets=None):
@@ -245,8 +232,6 @@ class MakeFastqs(Pipeline):
             "bcl2fastq>=2.20") which must also be satisfied
           platform (str): optionally specify the platform for
             the sequencer run (e.g. 'miseq', 'nextseq' etc)
-          icell8_well_list (str): optionally specify path to a
-            well list file for ICELL8 data
           minimum_trimmed_read_length (int): optionally specify
             the minimum length of reads after adapter trimming;
             trimmed reads shorter than this length will be
@@ -267,12 +252,6 @@ class MakeFastqs(Pipeline):
             (False specifies forward strand workflow A was used,
             True that it was reverse complement workflow B)
             (overrides automatic detection)
-          icell8_atac_swap_i1_and_i2 (bool): if True then
-            swap the I1 and I2 indexes when demultiplexing ICELL8
-            ATAC data
-          icell8_atac_reverse_complement (str): whether to reverse
-            complement I1, I2, or both, when demultiplexing ICELL8
-            ATAC data
           lanes (list): if set then specifies a list of lanes to
             include; all other lanes will be excluded
           r1_length (int): if specified then truncate R1 reads to
@@ -350,10 +329,6 @@ class MakeFastqs(Pipeline):
                 adapter_sequence_read2 = sample_sheet.settings['AdapterRead2']
             except KeyError:
                 adapter_sequence_read2 = ""
-
-        # ICELL8 well list
-        if icell8_well_list:
-            icell8_well_list = os.path.abspath(icell8_well_list)
         
         # Defaults
         self._bcl_converter = bcl_converter
@@ -366,10 +341,6 @@ class MakeFastqs(Pipeline):
         self._minimum_trimmed_read_length = minimum_trimmed_read_length
         self._mask_short_adapter_reads = mask_short_adapter_reads
         self._spaceranger_rc_i2_override = spaceranger_rc_i2_override
-        self._icell8_well_list = icell8_well_list
-        self._icell8_atac_swap_i1_and_i2 = icell8_atac_swap_i1_and_i2
-        self._icell8_atac_reverse_complement = \
-                                icell8_atac_reverse_complement
         self._trim_adapters = bool(trim_adapters)
         self._fastq_statistics = bool(fastq_statistics)
         self._analyse_barcodes = bool(analyse_barcodes)
@@ -421,7 +392,6 @@ class MakeFastqs(Pipeline):
         self.add_runner('bcl2fastq_runner')
         self.add_runner('bclconvert_runner')
         self.add_runner('barcode_analysis_runner')
-        self.add_runner('demultiplex_icell8_atac_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('cellranger_atac_runner')
         self.add_runner('cellranger_arc_runner')
@@ -527,11 +497,6 @@ class MakeFastqs(Pipeline):
                 tenx_filter_dual_index=None,
                 spaceranger_rc_i2_override=\
                 self._spaceranger_rc_i2_override,
-                icell8_well_list=self._icell8_well_list,
-                icell8_atac_swap_i1_and_i2=\
-                self._icell8_atac_swap_i1_and_i2,
-                icell8_atac_reverse_complement=\
-                self._icell8_atac_reverse_complement,
                 analyse_barcodes=self._analyse_barcodes
             )
 
@@ -607,16 +572,6 @@ class MakeFastqs(Pipeline):
                 self._update_subset(s,
                                     minimum_trimmed_read_length=10,
                                     mask_short_adapter_reads=0)
-            elif protocol == 'icell8':
-                # ICELL8 protocol
-                # Set minimum trimmed read length and turn off masking
-                self._update_subset(s,
-                                    minimum_trimmed_read_length=21,
-                                    mask_short_adapter_reads=0)
-            elif protocol == 'icell8_atac':
-                # ICELL8 single-cell ATAC-seq
-                self._update_subset(s,
-                                    create_fastq_for_index_read=True)
             elif protocol == '10x_chromium_sc':
                 # 10xGenomics Chromium SC
                 # -- truncate I1 and I2 to 10 bases
@@ -731,15 +686,6 @@ class MakeFastqs(Pipeline):
                                     **{ kw: s[kw] for kw in s
                                         if (kw != 'lanes' and
                                             kw != 'protocol') })
-
-        # Perform checks for subsets
-        for s in self.subsets:
-            if s['protocol'] == 'icell8_atac':
-                # ICELL8 ATAC
-                # Check well list file is defined
-                if not s['icell8_well_list']:
-                    raise Exception("No ICELL8 well list assigned for "
-                                    "lanes %s" % s['lanes'])
 
         # Reset lanes for single subset which implicitly
         # includes all lanes in the run
@@ -1228,13 +1174,6 @@ class MakeFastqs(Pipeline):
             filter_dual_index = subset['tenx_filter_dual_index']
             spaceranger_rc_i2_override = \
                 subset['spaceranger_rc_i2_override']
-
-            #########
-            # ICELL8
-            #########
-            well_list = subset['icell8_well_list']
-            swap_i1_and_i2 = subset['icell8_atac_swap_i1_and_i2']
-            reverse_complement = subset['icell8_atac_reverse_complement']
             
             ###################
             # Make samplesheet
@@ -1513,125 +1452,6 @@ class MakeFastqs(Pipeline):
                                       runner=
                                       self.runners['merge_fastqs_runner'],
                                       requires=(bcl_convert,))
-            # ICELL8 RNA-seq
-            if protocol == "icell8":
-                # Get bcl2fastq information
-                if get_bcl2fastq is None:
-                    # Create a new task only if one doesn't already
-                    # exist
-                    get_bcl2fastq = GetBcl2Fastq(
-                        "Get information on bcl2fastq",
-                        require_version=converter_version,
-                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
-                    self.add_task(get_bcl2fastq,
-                                  envmodules=self.envmodules['bcl2fastq'])
-                # Get ICELL8 bases mask
-                get_bases_mask = GetBasesMaskIcell8(
-                    "Get bases mask for ICELL8",
-                    fetch_primary_data.output.run_dir,
-                    make_sample_sheet.output.custom_sample_sheet)
-                self.add_task(get_bases_mask)
-                # Run standard bcl2fastq
-                make_fastqs = RunBcl2Fastq(
-                    "Run bcl2fastq%s" % (" for lanes %s" %
-                                         ','.join([str(x) for x in lanes])
-                                         if lanes else ""),
-                    fetch_primary_data.output.run_dir,
-                    fastq_out_dir,
-                    make_sample_sheet.output.custom_sample_sheet,
-                    bases_mask=get_bases_mask.output.bases_mask,
-                    minimum_trimmed_read_length=\
-                    minimum_trimmed_read_length,
-                    mask_short_adapter_reads=\
-                    mask_short_adapter_reads,
-                    nprocessors=self.params.nprocessors,
-                    no_lane_splitting=self.params.no_lane_splitting,
-                    create_fastq_for_index_read=\
-                    create_fastq_for_index_read,
-                    find_adapters_with_sliding_window=\
-                    find_adapters_with_sliding_window,
-                    create_empty_fastqs=self.params.create_empty_fastqs,
-                    platform=identify_platform.output.platform,
-                    bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
-                    bcl2fastq_version=get_bcl2fastq.output.bcl2fastq_version,
-                    skip_bcl2fastq=final_output_exists,
-                    conda_pkgs=self.params.bcl2fastq_conda_pkgs)
-                self.add_task(make_fastqs,
-                              runner=self.runners['bcl2fastq_runner'],
-                              envmodules=self.envmodules['bcl2fastq'],
-                              requires=(restore_backup,))
-
-            # ICELL8 ATAC-seq
-            if protocol == "icell8_atac":
-                # Parameter to indicate if bcl2fastq needs to run
-                skip_bcl2fastq = FunctionParam(
-                    lambda x,y: x or y,
-                    final_output_exists,
-                    PathExistsParam(fastq_out_dir))
-                
-                # Temporary dir for intermediate Fastqs
-                tmp_bcl2fastq_dir = PathJoinParam(
-                    self.params.WORKING_DIR,
-                    "bcl2fastq.icell8_atac%s" % lanes_id)
-                # Get bcl2fastq information
-                if get_bcl2fastq is None:
-                    # Create a new task only if one doesn't already
-                    # exist
-                    get_bcl2fastq = GetBcl2Fastq(
-                        "Get information on bcl2fastq",
-                        require_version=converter_version,
-                        conda_pkgs=self.params.bcl2fastq_conda_pkgs)
-                    self.add_task(get_bcl2fastq,
-                                  envmodules=self.envmodules['bcl2fastq'])
-                # Get ICELL8 bases mask
-                get_bases_mask = GetBasesMaskIcell8Atac(
-                    "Get bases mask for ICELL8",
-                    fetch_primary_data.output.run_dir)
-                self.add_task(get_bases_mask)
-                # Run standard bcl2fastq
-                run_bcl2fastq = RunBcl2Fastq(
-                    "Run bcl2fastq%s" % (" for lanes %s" %
-                                         ','.join([str(x) for x in lanes])
-                                         if lanes else ""),
-                    fetch_primary_data.output.run_dir,
-                    tmp_bcl2fastq_dir,
-                    make_sample_sheet.output.custom_sample_sheet,
-                    bases_mask=get_bases_mask.output.bases_mask,
-                    minimum_trimmed_read_length=\
-                    minimum_trimmed_read_length,
-                    mask_short_adapter_reads=\
-                    mask_short_adapter_reads,
-                    nprocessors=self.params.nprocessors,
-                    no_lane_splitting=self.params.no_lane_splitting,
-                    create_fastq_for_index_read=\
-                    create_fastq_for_index_read,
-                    find_adapters_with_sliding_window=\
-                    find_adapters_with_sliding_window,
-                    create_empty_fastqs=self.params.create_empty_fastqs,
-                    bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
-                    bcl2fastq_version=get_bcl2fastq.output.bcl2fastq_version,
-                    skip_bcl2fastq=skip_bcl2fastq,
-                    conda_pkgs=self.params.bcl2fastq_conda_pkgs)
-                self.add_task(run_bcl2fastq,
-                              runner=self.runners['bcl2fastq_runner'],
-                              envmodules=self.envmodules['bcl2fastq'],
-                              requires=(restore_backup,))
-                # Demultiplex ICELL8 ATAC Fastqs
-                make_fastqs = DemultiplexIcell8Atac(
-                    "Demultiplex ICELL8 ATAC fastqs%s" %
-                    (" for lanes %s" % ','.join([str(x) for x in lanes])
-                     if lanes else ""),
-                    tmp_bcl2fastq_dir,
-                    fastq_out_dir,
-                    well_list,
-                    nprocessors=self.params.nprocessors,
-                    swap_i1_and_i2=swap_i1_and_i2,
-                    reverse_complement=reverse_complement,
-                    skip_demultiplex=final_output_exists)
-                self.add_task(
-                    make_fastqs,
-                    runner=self.runners['demultiplex_icell8_atac_runner'],
-                    requires=(run_bcl2fastq,))
 
             # 10x RNA-seq
             if protocol == "10x_chromium_sc" and has_10x_indexes:
@@ -2039,7 +1859,6 @@ class MakeFastqs(Pipeline):
             instances; valid names are 'rsync_runner,
             'bcl2fastq_runner', 'bclconvert_runner',
             'barcode_analysis_runner', 'merge_fastqs_runner',
-            'demultiplex_icell8_atac_runner',
             'cellranger_runner', 'cellranger_atac_runner',
             'cellranger_arc_runner', 'spaceranger_runner',
             'default'
@@ -3135,61 +2954,6 @@ class RunBclConvert(PipelineTask):
             print("Moving output to final location: %s" % self.args.out_dir)
             os.rename(self.tmp_out_dir,self.args.out_dir)
 
-class GetBasesMaskIcell8(PipelineTask):
-    """
-    Set the bases mask for ICELL8 RNA-seq data
-    """
-    def init(self,run_dir,sample_sheet):
-        """
-        Initialise the GetBasesMaskIcell8 task
-
-        Arguments:
-          run_dir (str): path to the directory with
-            data from the sequencer run
-          sample_sheet (str): path to the sample sheet
-            file to be used for processing these data
-
-        Outputs:
-          bases_mask (str): bases mask to use in
-            bcl2fastq for processing these data
-        """
-        self.add_output("bases_mask",Param(type='str'))
-    def setup(self):
-        # Reset the default bases mask
-        bases_mask = IlluminaRunInfo(
-            IlluminaRun(self.args.run_dir).runinfo_xml).bases_mask
-        print("Initial bases_mask  : %s" % bases_mask)
-        bases_mask = get_bases_mask_icell8(bases_mask,
-                                           sample_sheet=self.args.sample_sheet)
-        print("Corrected for ICELL8: %s" % bases_mask)
-        self.output.bases_mask.set(bases_mask)
-
-class GetBasesMaskIcell8Atac(PipelineTask):
-    """
-    Set the bases mask for ICELL8 ATAC-seq data
-    """
-    def init(self,run_dir):
-        """
-        Initialise the GetBasesMaskIcell8Atac task
-
-        Arguments:
-          run_dir (str): path to the directory with
-            data from the sequencer run
-          sample_sheet (str): path to the sample sheet
-            file to be used for processing these data
-
-        Outputs:
-          bases_mask (str): bases mask to use in
-            bcl2fastq for processing these data
-        """
-        self.add_output("bases_mask",Param(type='str'))
-    def setup(self):
-        # Get the bases mask
-        bases_mask = get_bases_mask_icell8_atac(
-            IlluminaRun(self.args.run_dir).runinfo_xml)
-        print("Bases mask for ICELL8 ATAC: %s" % bases_mask)
-        self.output.bases_mask.set(bases_mask)
-
 class Get10xPackage(PipelineFunctionTask):
     """
     Get information on 10xGenomics software package
@@ -3261,158 +3025,6 @@ class Get10xPackage(PipelineFunctionTask):
         print("Package exe    : %s" % package_exe)
         print("Package name   : %s" % package_name)
         print("Package version: %s" % package_version)
-
-class DemultiplexIcell8Atac(PipelineTask):
-    """
-    Runs 'demultiplex_icell8_atac.py' to generate Fastqs
-    """
-    def init(self,fastq_dir,out_dir,well_list,
-             nprocessors=None,swap_i1_and_i2=False,
-             reverse_complement=None,
-             skip_demultiplex=False):
-        """
-        Initialise the DemultiplexIcell8Atac task
-
-        Arguments:
-          fastq_dir (str): path to directory with
-            Fastq files to demultiplex
-          out_dir (str): path to output directory
-          well_list (str): path to well list file
-            to use for demultiplexing samples
-          swap_i1_and_i2 (bool): if True then
-            swap the I1 and I2 indexes when
-            demultiplexing
-          reverse_complement (str): whether to
-            reverse complement I1, I2, or both,
-            when demultiplexing
-          skip_demultiplex (bool): if True then
-            skip running the demultiplexing
-        """
-        # Internal variables
-        self.tmp_out_dirs = {}
-        self.illumina_data = None
-        # Outputs
-        # NB 'missing_fastqs' is a dummy output
-        # included for compatibility with other
-        # tasks in the pipeline
-        self.add_output('missing_fastqs',list())
-    def setup(self):
-        # Check if demultiplexing should be skipped
-        if self.args.skip_demultiplex:
-            print("Skipping demultiplexing")
-            return
-        # Check if outputs already exist
-        if os.path.exists(self.args.out_dir):
-            print("Output directory %s already exists" %
-                  self.args.out_dir)
-            return
-        # Collect Fastqs from bcl2fastq
-        self.illumina_data = IlluminaData(
-            os.path.dirname(self.args.fastq_dir),
-            os.path.basename(self.args.fastq_dir))
-        fastqs = []
-        for project in self.illumina_data.projects:
-            for sample in project.samples:
-                for fq in sample.fastq:
-                    fastqs.append(os.path.join(sample.dirn,fq))
-        if not fastqs:
-            raise Exception("No Fastqs found")
-        # Check well list
-        if not self.args.well_list:
-            raise Exception("No well list file supplied")
-        # Number of processors
-        if self.args.nprocessors:
-            nprocessors = self.args.nprocessors
-        else:
-            nprocessors = self.runner_nslots
-        # Report settings
-        for desc,param in (("Fastq dir",self.args.fastq_dir),
-                           ("Well list file",self.args.well_list),
-                           ("Output dir",self.args.out_dir),
-                           ("Nprocessors",nprocessors),
-                           ("Swap I1/I2",self.args.swap_i1_and_i2),
-                           ("Reverse complement",
-                            self.args.reverse_complement)):
-            print("%-22s: %s" % (desc,param))
-        # Do demultiplexing into samples based on well list
-        for fqs in group_fastqs_by_name(fastqs):
-            # Get sample name and lane from Fastq name
-            illumina_fq = IlluminaFastq(fqs[0])
-            name = "%s%s" % (illumina_fq.sample_name,
-                             (".L%03d" % illumina_fq.lane_number
-                              if illumina_fq.lane_number else ""))
-            # Set up temporary output dir
-            tmp_out_dir = os.path.abspath("demultiplex_icell8_atac.%s.work"
-                                          % name)
-            # Build demultiplexer command
-            demultiplex_cmd = Command('demultiplex_icell8_atac.py',
-                                      '--mode=samples',
-                                      '--output-dir',tmp_out_dir,
-                                      '--update-read-headers',
-                                      '-n',nprocessors)
-            if self.args.swap_i1_and_i2:
-                demultiplex_cmd.add_args('--swap-i1-i2')
-            if self.args.reverse_complement:
-                demultiplex_cmd.add_args('--reverse-complement=%s' %
-                                         self.args.reverse_complement)
-            demultiplex_cmd.add_args('--unassigned',
-                                     "Unassigned-%s" %
-                                     illumina_fq.sample_name)
-            demultiplex_cmd.add_args(self.args.well_list)
-            demultiplex_cmd.add_args(*fqs)
-            print("Running %s" % demultiplex_cmd)
-            self.add_cmd(PipelineCommandWrapper(
-                "Demultiplex ICELL8 ATAC Fastqs",
-                *demultiplex_cmd.command_line))
-            # Store the temporary output dir
-            self.tmp_out_dirs[name] = tmp_out_dir
-    def finish(self):
-        if self.tmp_out_dirs:
-            # Build bcl2fastq-style output directory
-            bcl2fastq_dir = os.path.abspath("%s.work" %
-                                            os.path.basename(self.args.out_dir))
-            print("Building output dir: %s" % bcl2fastq_dir)
-            for d in ('Stats','Reports',):
-                mkdirs(os.path.join(bcl2fastq_dir,d))
-            project = self.illumina_data.projects[0]
-            mkdirs(os.path.join(bcl2fastq_dir,project.name))
-            # Loop over samples
-            for name in self.tmp_out_dirs:
-                # Directory with demultiplexed Fastqs
-                tmp_out_dir = self.tmp_out_dirs[name]
-                print("Collecting Fastqs from %s:" % tmp_out_dir)
-                # Copy (hard link) fastqs
-                for fq in [f for f in os.listdir(tmp_out_dir)
-                           if f.endswith(".fastq.gz")]:
-                    print("-- %s" % fq)
-                    os.link(os.path.join(tmp_out_dir,fq),
-                            os.path.join(bcl2fastq_dir,
-                                         project.name,fq))
-                # Copy the reports and JSON file
-                print("Collecting reports from %s:" % tmp_out_dir)
-                for f in ('icell8_atac_stats.xlsx',
-                          'icell8_atac_stats.json'):
-                    print("-- %s" % f)
-                    if len(self.tmp_out_dirs) > 1:
-                        ff = "%s.%s%s" % (os.path.splitext(f)[0],
-                                          name,
-                                          os.path.splitext(f)[1])
-                    else:
-                        ff = f
-                    os.link(os.path.join(tmp_out_dir,f),
-                            os.path.join(bcl2fastq_dir,'Reports',ff))
-            # Copy "undetermined" Fastqs to top level
-            print("Collecting 'undetermined' Fastqs from %s:" %
-                  self.args.fastq_dir)
-            for fq in [f for f in os.listdir(self.args.fastq_dir)
-                       if f.startswith("Undetermined_S0_")]:
-                print("-- %s" % fq)
-                os.link(os.path.join(self.args.fastq_dir,fq),
-                        os.path.join(bcl2fastq_dir,fq))
-            # Move outputs to final location
-            print("Moving output to final location: %s" % self.args.out_dir)
-            os.rename(bcl2fastq_dir,self.args.out_dir)
-
 
 class Run10xMkfastq(PipelineTask):
     """

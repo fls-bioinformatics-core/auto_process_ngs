@@ -172,20 +172,18 @@ An arbitrary number can be assigned to the analysis using the
 Specifying additional files
 ***************************
 
-For some types of data (e.g. ICELL8 runs) additional files
-may be required for processing or downstream analysis (e.g.
-well list files).
-
-In these cases the ``-f``/``--file`` option of the ``setup``
-command can be used to specify one or more additional files
-which will be copied into the analysis directory.
+If additional files are required for processing or downstream
+analysis (e.g. well list files) then the ``-f``/``--file``
+option of the ``setup`` command can be used to specify one or
+more additional files which will be copied into the analysis
+directory.
 
 For example:
 
 ::
 
    auto_process.py setup \
-      --file /mnt/data/icell8/Well_List_01234.txt \
+      --file WTA_probe_allocation.xlsx \
       /mnt/data/seqruns/180817_M00123_0001_000000000-BV1X2
 
 Files can be either be local or on a remote system, or can be

@@ -219,16 +219,10 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,TM2,TM1,,,N701,TAAGGCGA,S517,GCGTAAGA,TM,
 3,CD3,CD3,,,N701,GTGAAACG,S503,TCTTTCCC,CD,
 4,EF4,EF4,,A1,N701,TAAGGCGA,S501,TAGATCGC,EF,
-5,GH5,GH5,,A3,N703,AGGCAGAA,S501,TAGATCGC,GH,
-6,IJB6,IJ6,,F3,N703,AGGCAGAA,S506,ACTGCATA,IJ,
+5,GH5,GH5,,,N701,SI-GA-A2,S503,,GH,
+6,IJ6,IJ6,,,N701,SI-GA-A1,S502,,IJ,
 7,KL7,KL7,,,N701,SI-GA-A1,S502,,KL,
 8,MN8,MN8,,,N701,SI-GA-A1,S503,,MN,
-""")
-        # Well list file
-        well_list = os.path.join(self.wd,"WellList.txt")
-        with open(well_list,'wt') as fp:
-            fp.write("""Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
-0	57	True	True	Smpl1	TAACCAAG+TAAGGCGA	Good	1	0	105		33		3465		1		1	1	1	1	10	10	A1		img1.tif	img2.tif
 """)
         # Create mock bcl2fastq and cellranger
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
@@ -246,7 +240,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                                                  "bcl2fastq"),
                                     lanes=(1,2,3,4,5,6,7,8),
                                     sample_sheet=sample_sheet)
-        for lanes in ((1,2,3),(4,),(5,),(6,),(7,),(8,)):
+        for lanes in ((1,2,3),(4,),(5,6,),(7,8,)):
             lanes_id = ''.join([str(l) for l in lanes])
             dirn = os.path.join(self.wd,"analysis.L%s" % lanes_id)
             make_mock_bcl2fastq2_output(os.path.join(dirn,"bcl2fastq"),
@@ -277,11 +271,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        lane_subsets=(
                            subset(lanes=(1,2,3,),protocol="standard"),
                            subset(lanes=(4,),protocol="mirna"),
-                           subset(lanes=(5,),protocol="icell8"),
-                           subset(lanes=(6,),protocol="icell8_atac",
-                                  icell8_well_list=well_list),
-                           subset(lanes=(7,),protocol="10x_chromium_sc"),
-                           subset(lanes=(8,),protocol="10x_atac")),
+                           subset(lanes=(5,6,),protocol="10x_chromium_sc"),
+                           subset(lanes=(7,8,),protocol="10x_atac")),
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
                        poll_interval=POLL_INTERVAL)
@@ -317,10 +308,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        "bcl2fastq",
                        "save.bcl2fastq.L123",
                        "save.bcl2fastq.L4",
-                       "save.bcl2fastq.L5",
-                       "save.bcl2fastq.L6",
-                       "save.bcl2fastq.L7",
-                       "save.bcl2fastq.L8",):
+                       "save.bcl2fastq.L56",
+                       "save.bcl2fastq.L78",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -369,16 +358,10 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,TM2,TM1,,,N701,TAAGGCGA,S517,GCGTAAGA,TM,
 3,CD3,CD3,,,N701,GTGAAACG,S503,TCTTTCCC,CD,
 4,EF4,EF4,,A1,N701,TAAGGCGA,S501,TAGATCGC,EF,
-5,GH5,GH5,,A3,N703,AGGCAGAA,S501,TAGATCGC,GH,
-6,IJB6,IJ6,,F3,N703,AGGCAGAA,S506,ACTGCATA,IJ,
+5,GH5,GH5,,,N701,SI-GA-A2,S503,,GH,
+6,IJ6,IJ6,,,N701,SI-GA-A1,S502,,IJ,
 7,KL7,KL7,,,N701,SI-GA-A1,S502,,KL,
 8,MN8,MN8,,,N701,SI-GA-A1,S503,,MN,
-""")
-        # Well list file
-        well_list = os.path.join(self.wd,"WellList.txt")
-        with open(well_list,'wt') as fp:
-            fp.write("""Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
-0	57	True	True	Smpl1	TAACCAAG+TAAGGCGA	Good	1	0	105		33		3465		1		1	1	1	1	10	10	A1		img1.tif	img2.tif
 """)
         # Create mock bcl2fastq
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
@@ -393,7 +376,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         # output from a previous incomplete pipeline run
         analysis_dir = os.path.join(self.wd,"analysis")
         os.mkdir(analysis_dir)
-        for lanes in ((1,2,3,),(4,),(5,),(6,),(7,),(8,)):
+        for lanes in ((1,2,3,),(4,),(5,6,),(7,8,)):
             lanes_id = ''.join([str(l) for l in lanes])
             dirn = os.path.join(self.wd,"analysis.L%s" % lanes_id)
             make_mock_bcl2fastq2_output(os.path.join(dirn,"bcl2fastq"),
@@ -424,11 +407,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        lane_subsets=(
                            subset(lanes=(1,2,3,),protocol="standard"),
                            subset(lanes=(4,),protocol="mirna"),
-                           subset(lanes=(5,),protocol="icell8"),
-                           subset(lanes=(6,),protocol="icell8_atac",
-                                  icell8_well_list=well_list),
-                           subset(lanes=(7,),protocol="10x_chromium_sc"),
-                           subset(lanes=(8,),protocol="10x_atac")),
+                           subset(lanes=(5,6,),protocol="10x_chromium_sc"),
+                           subset(lanes=(7,8,),protocol="10x_atac")),
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
                        poll_interval=POLL_INTERVAL)
@@ -464,10 +444,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                        "bcl2fastq",
                        "save.bcl2fastq.L123",
                        "save.bcl2fastq.L4",
-                       "save.bcl2fastq.L5",
-                       "save.bcl2fastq.L6",
-                       "save.bcl2fastq.L7",
-                       "save.bcl2fastq.L8",):
+                       "save.bcl2fastq.L56",
+                       "save.bcl2fastq.L78",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -782,12 +760,11 @@ class TestSubsetFunction(unittest.TestCase):
         self.assertEqual(s['protocol'],"standard")
         # Multiple parameters
         s = subset([1,2],
-                   protocol="icell8",
-                   icell8_well_list="/files/well_list.txt")
+                   protocol="10x_atac",
+                   trim_adapters=False)
         self.assertEqual(s['lanes'],[1,2])
-        self.assertEqual(s['protocol'],"icell8")
-        self.assertEqual(s['icell8_well_list'],
-                         "/files/well_list.txt")
+        self.assertEqual(s['protocol'],"10x_atac")
+        self.assertEqual(s['trim_adapters'], False)
 
     def test_subset_setting_unrecognised_parameter_raises_keyerror(self):
         """
