@@ -490,21 +490,18 @@ def process_inputs(input_list):
         for ff in glob.glob(os.path.abspath(f)):
             if not os.path.exists(ff):
                 # Input not found
-                logger.fatal("%s: input not found" % ff)
-                sys.exit(1)
+                raise Exception(f"{ff}: input not found")
             elif os.path.isdir(ff) and len(input_list) > 1:
                 # Can only be a single directory
-                logger.fatal("Input must be a single directory, or a list of "
-                             "Fastqs")
-                sys.exit(1)
+                raise Exception("Input must be a single directory, or a "
+                                "list of Fastqs")
             else:
                 inputs.append(ff)
     # Get list of Fastqs from directory
     if len(inputs) == 1 and os.path.isdir(inputs[0]):
         dir_path = inputs[0]
         if not os.path.isdir(dir_path):
-            logger.fatal("%s: directory not found" % dir_path)
-            sys.exit(1)
+            raise Exception(f"{dir_path}: directory not found")
         # See if directory contains Fastqs
         inputs = [os.path.join(dir_path,f)
                   for f in os.listdir(inputs[0])
@@ -520,8 +517,7 @@ def process_inputs(input_list):
             master_fastq_dir = dir_path
         # Check we have some Fastqs
         if not inputs:
-            logger.fatal("%s: no Fastqs found" % dir_path)
-            sys.exit(1)
+            raise Exception(f"{dir_path}: no Fastqs found")
         # Look for project metadata
         info_file = locate_project_info_file(dir_path)
         # Look for extra files
@@ -649,7 +645,22 @@ def cleanup_atexit(tmp_project_dir):
 
 # Main program
 
-def main():
+def main(argv=None):
+    """
+    Run the 'run_qc' utility
+
+    Arguments:
+      argv (list): optional, command line arguments to
+        process (otherwise take arguments from
+        'sys.argv')
+
+    Returns:
+      Integer: 0 on success, 1 on failure.
+    """
+    # Command line arguments
+    if argv is None:
+        argv = sys.argv[1:]
+
     # Get configuration settings
     settings = Settings()
 
@@ -689,13 +700,13 @@ def main():
     add_deprecated_options(p)
 
     # Parse the command line
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     # Check for deprecated and unsupported options
     if args.fastq_screen_subset:
         logger.fatal("'--fastq_screen_subset' is redundant; use "
                      "'--fastq_subset' instead")
-        sys.exit(1)
+        return 1
     if args.force:
         logger.warning("'--force' option is redundant; HTML report "
                        "generation will always be attempted (even "
@@ -715,13 +726,17 @@ def main():
 
     # Deal with inputs
     announce("Locating inputs")
-    inputs = process_inputs(args.inputs)
+    try:
+        inputs = process_inputs(args.inputs)
+    except Exception as ex:
+        logger.fatal(ex)
+        return 1
     # Filter out index reads
     inputs.fastqs = [fq for fq in inputs.fastqs
                      if not fastq_attrs(fq).is_index_read]
     if not inputs.fastqs:
         logger.fatal("No Fastqs found")
-        sys.exit(1)
+        return 1
 
     # Check Fastq names are compatible with lane splitting
     if args.split_fastqs_by_lane:
@@ -731,7 +746,7 @@ def main():
                 logger.fatal("Can only split Fastqs by lane for "
                              "Fastqs with canonical Illumina-style "
                              "names")
-                sys.exit(1)
+                return 1
 
     # Report what was found
     for fqs in group_fastqs_by_name(inputs.fastqs,fastq_attrs=fastq_attrs):
@@ -964,7 +979,7 @@ def main():
         if not args.update:
             logger.fatal("QC directory already exists (use --update to "
                          "run QC anyway)")
-            sys.exit(1)
+            return 1
         print("Output QC directory already exists, updating")
     qc_info_file = os.path.join(qc_dir,"qc.info")
 
@@ -1068,7 +1083,7 @@ def main():
     except Exception as ex:
         logger.fatal("Unable to get QC protocol for '%s': %s" %
                      (qc_protocol,ex))
-        sys.exit(1)
+        return 1
 
     # Adjust protocol
     custom_seq_reads = None
@@ -1139,6 +1154,7 @@ def main():
                        cellranger_reference_dataset=\
                        cellranger_reference_dataset,
                        cellranger_out_dir=out_dir,
+                       poll_interval=settings.general.poll_interval,
                        max_jobs=max_jobs,
                        max_slots=max_cores,
                        batch_size=args.batch_size,
@@ -1190,4 +1206,4 @@ def main():
     print("QC output directory: %s" % qc_dir)
     print("Exit status        : %s" % status)
     # Finish and return exit code from pipeline
-    sys.exit(status)
+    return status
