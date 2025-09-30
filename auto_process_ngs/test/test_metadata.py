@@ -154,8 +154,31 @@ chat\tawight
         metadata['chat'] = None
         self.assertEqual(metadata.null_items(),['chat'])
 
-    def test_undefined_items_in_file(self):
-        """Check handling of additional undefined items in file
+    def test_undefined_items_in_file_strict(self):
+        """Check strict handling of additional undefined items in file
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'})
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file,strict=True)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertFalse("chit_chat" in metadata)
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+
+    def test_undefined_items_in_file_non_strict(self):
+        """Check non-strict handling of additional undefined items in file
         """
         # Set up a metadata dictionary
         metadata = MetadataDict(attributes={'salutation':'salutation',
@@ -173,6 +196,7 @@ chat\tawight
         metadata.load(self.metadata_file,strict=False)
         self.assertEqual(metadata.salutation,'hello')
         self.assertEqual(metadata.valediction,'goodbye')
+        self.assertTrue("chit_chat" in metadata)
         self.assertEqual(metadata.chit_chat,'stuff')
         self.assertEqual(metadata.keys_in_file(),
                          ['salutation','valediction'])
