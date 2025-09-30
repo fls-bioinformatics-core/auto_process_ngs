@@ -68,7 +68,7 @@ class TestReportInfo(unittest.TestCase):
         mockdir.create()
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -152,7 +152,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create()
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -223,7 +223,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -287,7 +287,7 @@ ABM4,CMO304,ABM4
 """ % (fastq_dir,fastq_dir))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -393,7 +393,7 @@ ABM4,CMO304,ABM4
 """ % (fastq_dir,fastq_dir))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -500,7 +500,7 @@ ABF4,BC004,ABF4
 """.format(fastq_dir=fastq_dir))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : NOVASEQ_240213#87
 Directory    : %s
 Platform     : novaseq
@@ -582,7 +582,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create()
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -653,7 +653,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -693,7 +693,7 @@ No analysis projects found""" % mockdir.dirn
         mockdir.create()
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -764,7 +764,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
