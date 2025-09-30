@@ -713,8 +713,16 @@ class TestAnalysisProjectInfo(unittest.TestCase):
     """Tests for the AnalysisDirMetadata class
     """
 
-    def test_create_analysis_project_info(self):
-        """Check creation of an empty AnalysisProjectInfo object
+    def setUp(self):
+        self.project_info_file = None
+
+    def tearDown(self):
+        if self.project_info_file is not None:
+            os.remove(self.project_info_file)
+
+    def test_analysis_project_info_create_empty_instance(self):
+        """
+        AnalysisProjectInfo: create an empty instance
         """
         info = AnalysisProjectInfo()
         self.assertEqual(info.name,None)
@@ -732,4 +740,71 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.biological_samples,None)
         self.assertEqual(info.multiplexed_samples,None)
         self.assertEqual(info.sequencer_model,None)
+        self.assertEqual(info.comments,None)
+
+    def test_analysis_project_info_read_from_file(self):
+        """
+        AnalysisProjectInfo: read from file
+        """
+        project_metadata = {
+            "User": "Alison Bell",
+            "Library type": "RNA-seq",
+            "Organism": "Human",
+            "PI": "Audrey Bower",
+            "Sequencer model": "MiSeq"
+        }
+        self.project_info_file = tempfile.mkstemp()[1]
+        with open(self.project_info_file, "wt") as fp:
+            for item in project_metadata:
+                fp.write(f"{item}\t{project_metadata[item]}\n")
+        info = AnalysisProjectInfo(self.project_info_file)
+        self.assertEqual(info.name,None)
+        self.assertEqual(info.run,None)
+        self.assertEqual(info.platform,None)
+        self.assertEqual(info.user, "Alison Bell")
+        self.assertEqual(info.PI, "Audrey Bower")
+        self.assertEqual(info.organism, "Human")
+        self.assertEqual(info.library_type, "RNA-seq")
+        self.assertEqual(info.single_cell_platform,None)
+        self.assertEqual(info.number_of_cells,None)
+        self.assertEqual(info.paired_end,None)
+        self.assertEqual(info.primary_fastq_dir,None)
+        self.assertEqual(info.samples,None)
+        self.assertEqual(info.biological_samples,None)
+        self.assertEqual(info.multiplexed_samples,None)
+        self.assertEqual(info.sequencer_model, "MiSeq")
+        self.assertEqual(info.comments,None)
+
+    def test_analysis_project_info_read_from_file_extra_items(self):
+        """
+        AnalysisProjectInfo: read from file containing extra items
+        """
+        project_metadata = {
+            "User": "Alison Bell",
+            "Library type": "RNA-seq",
+            "Organism": "Human",
+            "PI": "Audrey Bower",
+            "Sequencer model": "MiSeq",
+            "ICELL8 well list": "."
+        }
+        self.project_info_file = tempfile.mkstemp()[1]
+        with open(self.project_info_file, "wt") as fp:
+            for item in project_metadata:
+                fp.write(f"{item}\t{project_metadata[item]}\n")
+        info = AnalysisProjectInfo(self.project_info_file)
+        self.assertEqual(info.name,None)
+        self.assertEqual(info.run,None)
+        self.assertEqual(info.platform,None)
+        self.assertEqual(info.user, "Alison Bell")
+        self.assertEqual(info.PI, "Audrey Bower")
+        self.assertEqual(info.organism, "Human")
+        self.assertEqual(info.library_type, "RNA-seq")
+        self.assertEqual(info.single_cell_platform,None)
+        self.assertEqual(info.number_of_cells,None)
+        self.assertEqual(info.paired_end,None)
+        self.assertEqual(info.primary_fastq_dir,None)
+        self.assertEqual(info.samples,None)
+        self.assertEqual(info.biological_samples,None)
+        self.assertEqual(info.multiplexed_samples,None)
+        self.assertEqual(info.sequencer_model, "MiSeq")
         self.assertEqual(info.comments,None)
