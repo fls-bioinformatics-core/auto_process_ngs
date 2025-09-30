@@ -68,7 +68,7 @@ class TestReportInfo(unittest.TestCase):
         mockdir.create()
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -152,7 +152,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create()
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -223,7 +223,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -287,7 +287,7 @@ ABM4,CMO304,ABM4
 """ % (fastq_dir,fastq_dir))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -393,7 +393,7 @@ ABM4,CMO304,ABM4
 """ % (fastq_dir,fastq_dir))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -500,7 +500,7 @@ ABF4,BC004,ABF4
 """.format(fastq_dir=fastq_dir))
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : NOVASEQ_240213#87
 Directory    : %s
 Platform     : novaseq
@@ -582,7 +582,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create()
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -653,7 +653,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -693,7 +693,7 @@ No analysis projects found""" % mockdir.dirn
         mockdir.create()
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -764,7 +764,7 @@ Summary of data in 'bcl2fastq' dir:
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
-        # Generate concise report
+        # Generate full report
         expected = """Run ID       : MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
@@ -776,6 +776,89 @@ Summary of data in 'bcl2fastq' dir:
 - CDE: CDE3-4 (2 paired end samples)
 
 No analysis projects found""" % mockdir.dirn
+        for o,e in zip(report_info(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_info_legacy_metadata_items(self):
+        """report: report run in 'info' mode with legacy metadata items
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87, },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "ICELL8 well list": None },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "ICELL8 well list": None }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate full report
+        expected = """Run ID       : MISEQ_170901#87
+Directory    : %s
+Platform     : miseq
+Unaligned dir: bcl2fastq
+
+Summary of data in 'bcl2fastq' dir:
+
+- AB: AB1-2 (2 paired end samples)
+- CDE: CDE3-4 (2 paired end samples)
+
+3 analysis projects:
+
+- AB
+  --
+  User    : Alison Bell
+  PI      : Audrey Bower
+  Library : RNA-seq
+  SC Plat.: None
+  Organism: Human
+  Dir     : AB
+  #samples: 2
+  #cells  : 
+  Samples : AB1-2
+  QC      : not verified
+  Comments: None
+
+- CDE
+  ---
+  User    : Charles David Edwards
+  PI      : Colin Delaney Eccleston
+  Library : ChIP-seq
+  SC Plat.: None
+  Organism: Mouse
+  Dir     : CDE
+  #samples: 2
+  #cells  : 
+  Samples : CDE3-4
+  QC      : not verified
+  Comments: None
+
+- undetermined
+  ------------
+  User    : None
+  PI      : None
+  Library : None
+  SC Plat.: None
+  Organism: None
+  Dir     : undetermined
+  #samples: 1
+  #cells  : 
+  Samples : Undetermined
+  QC      : not verified
+  Comments: None""" % mockdir.dirn
         for o,e in zip(report_info(ap).split('\n'),
                        expected.split('\n')):
             self.assertEqual(o,e)
@@ -1078,6 +1161,38 @@ ABF4,BC004,ABF4
         # Generate concise report
         self.assertEqual(report_concise(ap),
                          "Paired end: 'AB': Alison Bell, Human RNA-seq (PI: Audrey Bower) (? multiplexed samples); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
+
+    def test_report_concise_legacy_metadata_items(self):
+        """report: report run in 'concise' mode with legacy metadata items
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "ICELL8 well list": None },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "ICELL8 well list": None}
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate concise report
+        self.assertEqual(report_concise(ap),
+                         "Paired end: 'AB': Alison Bell, Human RNA-seq (PI: Audrey Bower) (2 samples); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
 
     def test_report_concise_no_projects(self):
         """report: report run with no projects in 'concise' mode
@@ -1700,6 +1815,57 @@ Additional notes/comments:
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_summary_with_legacy_metadata_items(self):
+        """report: report run in 'summary' mode with legacy metadata items
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "ICELL8 well list": None },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "Comments": "Repeat of previous run",
+                         "ICELL8 well list": None }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate summary report
+        expected = """MISEQ run #87 datestamped 170901
+================================
+Run name : 170901_M00879_0087_000000000-AGEW9
+Reference: MISEQ_170901#87
+Platform : MISEQ
+Sequencer: MiSeq
+Directory: %s
+Endedness: Paired end
+Bcl2fastq: Unknown
+
+2 projects:
+- 'AB':  Alison Bell           Human RNA-seq  2 samples (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq 2 samples (PI Colin Delaney Eccleston)
+
+Additional notes/comments:
+- CDE: Repeat of previous run
+""" % mockdir.dirn
+        for o,e in zip(report_summary(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
 class TestReportProjects(unittest.TestCase):
     """
     Tests for the 'report' command ('projects' mode)
@@ -2224,6 +2390,42 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
 MISEQ_170901#87\tCDE\t{path}
 """.format(path=analysis_dir_path)
         for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_projects_with_legacy_metadata(self):
+        """report: report run in 'projects' mode with legacy metadata items
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "ICELL8 well list": None },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "ICELL8 well list": None }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        expected = """MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t2\t\tyes\tAB1-2
+MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
+"""
+        for o,e in zip(report_projects(ap).split('\n'),
                        expected.split('\n')):
             self.assertEqual(o,e)
 

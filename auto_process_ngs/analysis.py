@@ -577,7 +577,7 @@ class AnalysisProject:
             return
         # Get data from info file, if present
         if os.path.isfile(self.info_file):
-            self.info.load(self.info_file)
+            self.info.load(self.info_file, strict=False)
         # Identify possible fastq subdirectories
         fastq_dirs = []
         for d in bcf_utils.list_dirs(self.dirn):
@@ -1046,6 +1046,7 @@ class AnalysisProject:
             return False
         try:
             AnalysisProjectInfo().load(self.info_file,
+                                       strict=False,
                                        fail_on_error=True)
         except Exception:
             # Failed to load valid metadata file

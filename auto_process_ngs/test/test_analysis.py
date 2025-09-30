@@ -1266,7 +1266,19 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(AnalysisProject('PJB',
                                         os.path.join(self.dirn,'PJB'))\
                                         .is_analysis_dir)
-        # Project with README.info file should fail
+        # Project with additional legacy metadata items
+        self.make_mock_project_dir(
+            'PJB_legacy_metadata',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        with open(os.path.join(self.dirn,'PJB_legacy_metadata','README.info'),
+                  "at") as fp:
+            fp.write("ICELL8 well list\t.\n")
+        self.assertTrue(AnalysisProject('PJB',
+                                        os.path.join(self.dirn,
+                                                     'PJB_legacy_metadata'))\
+                                        .is_analysis_dir)
+        # Project without README.info file should fail
         self.make_mock_project_dir(
             'PJB_no_readme',
             ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
@@ -1275,6 +1287,18 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(AnalysisProject('PJB',
                                          os.path.join(self.dirn,
                                                       'PJB_no_readme'))\
+                                         .is_analysis_dir)
+        # Project with README.info containing random text should fail
+        self.make_mock_project_dir(
+            'PJB_random_readme',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        with open(os.path.join(self.dirn,'PJB_random_readme','README.info'),
+                  "wt") as fp:
+            fp.write("Lorum ipsum and all that\njazzy stuff\n")
+        self.assertFalse(AnalysisProject('PJB',
+                                         os.path.join(self.dirn,
+                                                      'PJB_random_readme'))\
                                          .is_analysis_dir)
         # Directory with bcl2fastq output subdirectory
         mock_bcl2fastq = MockIlluminaData(
