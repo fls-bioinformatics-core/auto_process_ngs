@@ -576,7 +576,9 @@ class MakeFastqs(Pipeline):
                                     minimum_trimmed_read_length=10,
                                     mask_short_adapter_reads=0)
             elif protocol == '10x_chromium_sc':
-                # 10xGenomics Chromium SC
+                # 10xGenomics Chromium SC (GEX/Flex)
+                # -- truncate R1 to 28 bases (if not set)
+                # -- truncate R2 to 90 bases (if not set)
                 # -- truncate I1 and I2 to 10 bases
                 # -- minimum trimmed read length 8bp
                 # -- minimum masked read length 8bp
@@ -584,6 +586,8 @@ class MakeFastqs(Pipeline):
                 # -- create Fastqs for index read
                 # -- disable adapter trimming
                 self._update_subset(s,
+                                    r1_length=ifnotset(s["r1_length"], 28),
+                                    r2_length=ifnotset(s["r2_length"], 90),
                                     i1_length=10,
                                     i2_length=10,
                                     minimum_trimmed_read_length=8,

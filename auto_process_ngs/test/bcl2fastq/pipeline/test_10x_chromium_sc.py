@@ -49,7 +49,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,A001,SI-GA-A1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
                                  version="5.0.1",
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -150,7 +150,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
                                  version="6.0.0",
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -250,7 +250,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
                                  version="7.0.0",
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -350,7 +350,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
                                  version="8.0.0",
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -450,7 +450,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
                                  version="9.0.0",
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -547,7 +547,7 @@ TX2,TX2,,,SI-TT-F9,GTCCCATCAA,SI-TT-F9,GTCACGTTCG,10xGenomics,
         # Create mock bcl2fastq
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"),
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -639,7 +639,7 @@ TX2,TX2,,,SI-TT-F9,GTCCCATCAA,SI-TT-F9,GTCACGTTCG,10xGenomics,
             fp.write(samplesheet_chromium_sc_indices)
         # Create mock bcl-convert
         MockBclConvertExe.create(os.path.join(self.bin, "bcl-convert"),
-                                 assert_override_cycles="Y101;I10;I10;Y101")
+                                 assert_override_cycles="Y28N73;I10;I10;Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -738,7 +738,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -838,15 +838,15 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"),
                                  version="8.0.0",
-                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
+                                 assert_bases_mask="Y50N51,I10,I10,Y91N10")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_chromium_sc",
-                       r1_length=28,
-                       r2_length=90)
+                       r1_length=50,
+                       r2_length=91)
         status = p.run(analysis_dir,
                        poll_interval=POLL_INTERVAL)
         self.assertEqual(status,0)
