@@ -31,6 +31,9 @@ Pipeline task classes:
 Utility functions:
 
 - subset
+- verify_run
+- create_placeholder_fastqs
+- ifnotset
 """
 
 ######################################################################
@@ -573,7 +576,9 @@ class MakeFastqs(Pipeline):
                                     minimum_trimmed_read_length=10,
                                     mask_short_adapter_reads=0)
             elif protocol == '10x_chromium_sc':
-                # 10xGenomics Chromium SC
+                # 10xGenomics Chromium SC (GEX/Flex)
+                # -- truncate R1 to 28 bases (if not set)
+                # -- truncate R2 to 90 bases (if not set)
                 # -- truncate I1 and I2 to 10 bases
                 # -- minimum trimmed read length 8bp
                 # -- minimum masked read length 8bp
@@ -581,6 +586,8 @@ class MakeFastqs(Pipeline):
                 # -- create Fastqs for index read
                 # -- disable adapter trimming
                 self._update_subset(s,
+                                    r1_length=ifnotset(s["r1_length"], 28),
+                                    r2_length=ifnotset(s["r2_length"], 90),
                                     i1_length=10,
                                     i2_length=10,
                                     minimum_trimmed_read_length=8,
@@ -591,12 +598,18 @@ class MakeFastqs(Pipeline):
             elif protocol == '10x_atac':
                 # 10xGenomics ATAC-seq
                 # -- convert I2 to R2
+                # -- truncate R1 to 50 bases (if not set)
+                # -- truncate R2 to 16 bases (if not set)
+                # -- truncate R3 to 50 bases (if not set)
                 # -- truncate I1 to 8 bases
                 # -- enable filter single index
                 # -- no lane splitting
                 # -- create Fastqs for index read
                 # -- disable adapter trimming
                 self._update_subset(s,
+                                    r1_length=ifnotset(s["r1_length"], 50),
+                                    r2_length=ifnotset(s["r2_length"], 16),
+                                    r3_length=ifnotset(s["r3_length"], 50),
                                     i1_length=8,
                                     override_template="RIRR",
                                     tenx_filter_single_index=True,
@@ -633,15 +646,18 @@ class MakeFastqs(Pipeline):
             elif protocol == '10x_multiome_atac':
                 # 10xGenomics multiome (ATAC)
                 # -- convert I2 to R2
-                # -- truncate R2 to 24 bases (if not explicitly set)
+                # -- truncate R1 to 50 bases (if not set)
+                # -- truncate R2 to 24 bases (if not set)
+                # -- truncate R3 to 49 bases (if not set)
                 # -- truncate I1 to 8 bases
                 # -- enable filter single index
                 # -- no lane splitting
                 # -- create Fastqs for index read
                 # -- disable adapter trimming
                 self._update_subset(s,
-                                    r2_length=(24 if not s["r2_length"]
-                                               else s["r2_length"]),
+                                    r1_length=ifnotset(s["r1_length"], 50),
+                                    r2_length=ifnotset(s["r2_length"], 24),
+                                    r3_length=ifnotset(s["r3_length"], 49),
                                     i1_length=8,
                                     override_template="RIRR",
                                     tenx_filter_single_index=True,
@@ -651,14 +667,15 @@ class MakeFastqs(Pipeline):
             elif protocol == '10x_multiome_gex':
                 # 10xGenomics multiome (GEX)
                 # -- truncate I1 and I2 to 10 bases
-                # -- truncate R1 to 28 bases (if not explicitly set)
+                # -- truncate R1 to 28 bases (if not set)
+                # -- truncate R2 to 90 bases (if not set)
                 # -- enable filter dual index
                 # -- no lane splitting
                 # -- create Fastqs for index read
                 # -- disable adapter trimming
                 self._update_subset(s,
-                                    r1_length=(28 if not s["r1_length"]
-                                               else s["r1_length"]),
+                                    r1_length=ifnotset(s["r1_length"], 28),
+                                    r2_length=ifnotset(s["r2_length"], 90),
                                     i1_length=10,
                                     i2_length=10,
                                     tenx_filter_dual_index=True,
@@ -4054,3 +4071,19 @@ def create_placeholder_fastqs(fastqs,base_dir=None):
         # Make empty file
         with gzip.open(fastq,'wt') as fp:
             fp.write('')
+
+def ifnotset(value, default):
+    """
+    Returns default value if current value is None
+
+    Arguments:
+      value (object): current value
+      default (object): default value if 'value'
+        is None
+
+    Returns:
+      Object: new value.
+    """
+    if value is None:
+        return default
+    return value
