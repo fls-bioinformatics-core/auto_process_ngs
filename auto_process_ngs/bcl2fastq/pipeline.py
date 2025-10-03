@@ -646,15 +646,18 @@ class MakeFastqs(Pipeline):
             elif protocol == '10x_multiome_atac':
                 # 10xGenomics multiome (ATAC)
                 # -- convert I2 to R2
-                # -- truncate R2 to 24 bases (if not explicitly set)
+                # -- truncate R1 to 50 bases (if not set)
+                # -- truncate R2 to 24 bases (if not set)
+                # -- truncate R3 to 49 bases (if not set)
                 # -- truncate I1 to 8 bases
                 # -- enable filter single index
                 # -- no lane splitting
                 # -- create Fastqs for index read
                 # -- disable adapter trimming
                 self._update_subset(s,
-                                    r2_length=(24 if not s["r2_length"]
-                                               else s["r2_length"]),
+                                    r1_length=ifnotset(s["r1_length"], 50),
+                                    r2_length=ifnotset(s["r2_length"], 24),
+                                    r3_length=ifnotset(s["r3_length"], 49),
                                     i1_length=8,
                                     override_template="RIRR",
                                     tenx_filter_single_index=True,
@@ -664,14 +667,15 @@ class MakeFastqs(Pipeline):
             elif protocol == '10x_multiome_gex':
                 # 10xGenomics multiome (GEX)
                 # -- truncate I1 and I2 to 10 bases
-                # -- truncate R1 to 28 bases (if not explicitly set)
+                # -- truncate R1 to 28 bases (if not set)
+                # -- truncate R2 to 90 bases (if not set)
                 # -- enable filter dual index
                 # -- no lane splitting
                 # -- create Fastqs for index read
                 # -- disable adapter trimming
                 self._update_subset(s,
-                                    r1_length=(28 if not s["r1_length"]
-                                               else s["r1_length"]),
+                                    r1_length=ifnotset(s["r1_length"], 28),
+                                    r2_length=ifnotset(s["r2_length"], 90),
                                     i1_length=10,
                                     i2_length=10,
                                     tenx_filter_dual_index=True,
