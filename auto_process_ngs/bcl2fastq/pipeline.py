@@ -598,12 +598,18 @@ class MakeFastqs(Pipeline):
             elif protocol == '10x_atac':
                 # 10xGenomics ATAC-seq
                 # -- convert I2 to R2
+                # -- truncate R1 to 50 bases (if not set)
+                # -- truncate R2 to 16 bases (if not set)
+                # -- truncate R3 to 50 bases (if not set)
                 # -- truncate I1 to 8 bases
                 # -- enable filter single index
                 # -- no lane splitting
                 # -- create Fastqs for index read
                 # -- disable adapter trimming
                 self._update_subset(s,
+                                    r1_length=ifnotset(s["r1_length"], 50),
+                                    r2_length=ifnotset(s["r2_length"], 16),
+                                    r3_length=ifnotset(s["r3_length"], 50),
                                     i1_length=8,
                                     override_template="RIRR",
                                     tenx_filter_single_index=True,
