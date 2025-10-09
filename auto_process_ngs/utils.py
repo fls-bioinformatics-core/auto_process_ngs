@@ -378,20 +378,26 @@ class ZipArchive:
             raise Exception("ZipArchive: unknown item type for '%s'"
                             % item)
 
-    def add_file(self,filen):
+    def add_file(self, filen, zip_path=None):
         """
         Add a file to the zip archive
+
+        Arguments:
+          filen (str): path to the file to add
+          zip_path (str): if supplied then add the file
+            with this path (instead of the source path)
         """
-        if self._relpath:
-            zip_pth = os.path.relpath(filen,self._relpath)
-            if zip_pth.startswith('..'):
-                raise Exception("Error adding a file outside %s (%s)" %
-                                (self._relpath,filen))
-        else:
-            zip_pth = filen
+        if zip_path is None:
+            if self._relpath:
+                zip_path = os.path.relpath(filen,self._relpath)
+                if zip_path.startswith('..'):
+                    raise Exception(f"Error adding a file outside "
+                                    f"{self._relpath} ({filen})")
+            else:
+                zip_path = filen
         if self._prefix:
-            zip_pth = os.path.join(self._prefix,zip_pth)
-        self._zipfile.write(filen,zip_pth)
+            zip_path = os.path.join(self._prefix, zip_path)
+        self._zipfile.write(filen,zip_path)
 
     def add_dir(self,dirn):
         """
