@@ -142,7 +142,7 @@ from .utils import get_bam_basename
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.metrics import MissingMetricError
 from ..utils import pretty_print_reads
-from ..utils import ZipArchive
+from ..utils import ZipMaker
 from .. import get_version
 
 # Module specific logger
@@ -3750,7 +3750,8 @@ class ToggleButton:
 def report(projects,title=None,filename=None,qc_dir=None,
            report_attrs=None,summary_fields=None,
            relative_links=False,use_data_dir=False,
-           make_zip=False,suppress_warning=False):
+           make_zip=False,shorten_zip_paths=False,
+           suppress_warning=False):
     """
     Report the QC for a project
 
@@ -3767,15 +3768,20 @@ def report(projects,title=None,filename=None,qc_dir=None,
         report for each Fastq pair
       summary_fields (list): optional, list of fields to
         report for each sample in the summary table
-      relative_links (boolean): optional, if set to True
+      relative_links (bool): optional, if set to True
         then use relative paths for links in the report
         (default is to use absolute paths)
-      use_data_dir (boolean): if True then copy QC
+      use_data_dir (bool): if True then copy QC
         artefacts to a data directory parallel to the
         output report file
-      make_zip (boolean): if True then also create a ZIP
+      make_zip (bool): if True then also create a ZIP
         archive of the QC report and outputs (default is
         not to create the ZIP archive)
+      shorten_zip_paths (bool): if True then shorten the
+        paths of files included in the ZIP archive (for
+        unpacking on systems which doesn't support long
+        paths e.g. Windows 11) (default: don't shorten
+        paths in ZIP archive)
       suppress_warning (bool): if True then don't show the
         warning message even when there are missing metrics
         (default: show the warning if there are missing
@@ -3836,30 +3842,12 @@ def report(projects,title=None,filename=None,qc_dir=None,
                                       qc_dir)
         logging.debug("report: qc_dir  = %s" % qc_dir)
         # Create ZIP archive
-        try:
-            tmp_zip = "%s.tmp" % zip_name
-            zip_file = ZipArchive(tmp_zip,
-                                  relpath=os.path.dirname(qc_dir),
-                                  prefix=zip_prefix)
-            # Add the report
-            zip_file.add_file(filename)
-            # Add the QC outputs
-            logging.debug("Adding QC outputs to ZIP archive '%s'" % zip_name)
-            for f in report.output_files:
-                # Output files are absolute paths
-                logging.debug("-- Adding %s" % f)
-                if os.path.exists(f):
-                    zip_file.add(f)
-                else:
-                    raise Exception("Unable to add missing file '%s'" % f)
-            zip_file.close()
-            # Rename temporary ZIP to final location
-            os.rename(tmp_zip,zip_name)
-        except Exception as ex:
-            # Remove temporary ZIP
-            os.remove(tmp_zip)
-            raise Exception("Failed to create ZIP archive '%s': %s" %
-                            (zip_name,ex))
+        if True:
+            ZipMaker(os.path.dirname(qc_dir),
+                     [filename,] + report.output_files).\
+                     make_archive(zip_name,
+                                  prefix=zip_prefix,
+                                  shorten_paths=shorten_zip_paths)
     # Return the output filename
     return filename
 
