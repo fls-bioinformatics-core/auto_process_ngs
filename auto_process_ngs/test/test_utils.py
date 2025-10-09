@@ -7,10 +7,15 @@ import tempfile
 import shutil
 import gzip
 import zipfile
+from textwrap import dedent
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from bcftbx.utils import find_program
 from auto_process_ngs.command import Command
 from auto_process_ngs.utils import *
+
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
 
 class TestZipArchive(unittest.TestCase):
     """
@@ -76,6 +81,51 @@ class TestZipArchive(unittest.TestCase):
                             "'%s' in zip file but shouldn't be"
                             % name)
 
+    def test_create_zip_archive_specify_zip_paths(self):
+        """ZipArchive: create a new zip archive (specify zip paths)
+        """
+        # Make an example directory to zip up
+        src_dir = os.path.join(self.dirn,'source')
+        items = ('test1',
+                 'test2',
+                 'sub1/',
+                 'sub1/test3',
+                 'sub1/test4',
+                 'sub1/sub2/',
+                 'sub1/sub2/test5',
+                 'sub3/',
+                 'sub3/test6')
+        os.mkdir(src_dir)
+        for item in [os.path.join(src_dir,x) for x in items]:
+            if item.endswith('/'):
+                try:
+                    os.mkdir(item)
+                except OSError as ex:
+                    raise OSError("Failed to make %s" % item)
+            else:
+                with open(item,'wt') as fp:
+                    fp.write('')
+        # Create the zip archive (only add files)
+        zip_filename = os.path.join(self.dirn,'test.zip')
+        self.assertFalse(os.path.exists(zip_filename))
+        z = ZipArchive(zip_filename,relpath=src_dir)
+        for item in ("test1", "sub1/sub2/test5", "sub3/test6"):
+            # Make new paths by reversing original path
+            zip_path = item[::-1]
+            z.add_file(os.path.join(src_dir, item), zip_path=zip_path)
+        z.close()
+        # Check the zip archive exists
+        self.assertTrue(os.path.exists(zip_filename),
+                        "zip file not created")
+        self.assertTrue(zipfile.is_zipfile(zip_filename),
+                        "file exists but is not zip file")
+        # Check the contents
+        namelist = zipfile.ZipFile(zip_filename).namelist()
+        print(namelist)
+        for item in ("1tset", "5tset/2bus/1bus", "6tset/3bus"):
+            self.assertTrue((item in namelist),
+                            "Item '%s' not in zip file" % item)
+
     def test_create_zip_archive_fails_for_files_outside_relpath(self):
         """ZipArchive: create a new zip archive fails for item outside relpath
         """
@@ -108,6 +158,598 @@ class TestZipArchive(unittest.TestCase):
         self.assertRaises(Exception,
                           z.add,
                           extra_file)
+
+class TestZipMaker(unittest.TestCase):
+
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_ZipMaker')
+        self.top_dir = None
+
+    def tearDown(self):
+        # Remove temporary working dir
+        if not REMOVE_TEST_OUTPUTS:
+            return
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
+    def test_qc_report_zip(self):
+        """
+        ZipMaker: make ZIP archive
+        """
+        # Make an example directory with files
+        data_dir = os.path.join(self.wd, "example")
+        os.mkdir(data_dir)
+        file_list = ["index.html",
+                     "dir1/example.html",
+                     "dir1/styles/example.css",
+                     "dir1/images/img1.png",
+                     "dir1/images/img2.png",
+                     "dir1/file1.txt",
+                     "dir1/file1.png",
+                     "dir1/example1/example1.html",
+                     "dir1/example1/example1.png"]
+        for f in file_list:
+            dir_path = os.path.dirname(os.path.join(data_dir, f))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            with open(os.path.join(data_dir, f), "wt") as fp:
+                fp.write("")
+        # Populate index.html with links and images
+        index_html = os.path.join(data_dir, "index.html")
+        with open(index_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to CSS
+                <link rel="stylesheet" href="dir1/styles/example.css" />
+                # Links to QC artefacts
+                <a href="dir1/file1.txt">blah</a> <a href="dir1/example1/example1.html">blahblah</a>
+                # External link
+                <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                # Image file
+                <img src="dir1/images/img2.png" />
+                # Inline image
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                """))
+        # Make a ZIP archive
+        zip_file = os.path.join(self.wd, "example.zip")
+        ZipMaker(data_dir,
+                 [os.path.join(data_dir, f)
+                  for f in file_list]).\
+                          make_archive(zip_file)
+        self.assertTrue(os.path.exists(zip_file),
+                        f"{zip_file} not found")
+        # List ZIP contents
+        contents = zipfile.ZipFile(zip_file).namelist()
+        print(contents)
+        # Expected paths in ZIP file
+        expected = ["index.html",
+                    "dir1/example.html",
+                    "dir1/styles/example.css",
+                    "dir1/images/img1.png",
+                    "dir1/images/img2.png",
+                    "dir1/file1.txt",
+                    "dir1/file1.png",
+                    "dir1/example1/example1.html",
+                    "dir1/example1/example1.png"]
+        for f in expected:
+            self.assertTrue(f in contents,
+                            f"{f} missing from ZIP file")
+
+    def test_qc_report_zip_shorten_paths(self):
+        """
+        ZipMaker: make ZIP archive (shorten paths)
+        """
+        # Make an example directory with files
+        data_dir = os.path.join(self.wd, "example")
+        os.mkdir(data_dir)
+        file_list = ["index.html",
+                     "dir1/example.html",
+                     "dir1/styles/example.css",
+                     "dir1/images/img1.png",
+                     "dir1/images/img2.png",
+                     "dir1/file1.txt",
+                     "dir1/file1.png",
+                     "dir1/example1/example1.html",
+                     "dir1/example1/example1.png"]
+        for f in file_list:
+            dir_path = os.path.dirname(os.path.join(data_dir, f))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            with open(os.path.join(data_dir, f), "wt") as fp:
+                fp.write("")
+        # Populate index.html with links and images
+        index_html = os.path.join(data_dir, "index.html")
+        with open(index_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to CSS
+                <link rel="stylesheet" href="dir1/styles/example.css" />
+                # Links to QC artefacts
+                <a href="dir1/file1.txt">blah</a> <a href="dir1/example1/example1.html">blahblah</a>
+                # External link
+                <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                # Image file
+                <img src="dir1/images/img2.png" />
+                # Inline image
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                """))
+        # Populate dir1/example.html with a link to subdir
+        example_html = os.path.join(data_dir, "dir1", "example.html")
+        with open(example_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to subdir
+                <link rel="stylesheet" href="styles/example.css" />
+                """))
+        # Make a ZIP archive using shortened paths
+        zip_file = os.path.join(self.wd, "example.zip")
+        ZipMaker(data_dir,
+                 [os.path.join(data_dir, f)
+                  for f in file_list]).\
+                          make_archive(zip_file,
+                                       shorten_paths=True)
+        self.assertTrue(os.path.exists(zip_file),
+                        f"{zip_file} not found")
+        # List ZIP contents
+        contents = zipfile.ZipFile(zip_file).namelist()
+        print(contents)
+        # Expected paths in ZIP file
+        expected = ["index.html",
+                    "0/example.html",
+                    "0/1/example.css",
+                    "0/2/img1.png",
+                    "0/2/img2.png",
+                    "0/file1.txt",
+                    "0/file1.png",
+                    "0/3/example1.html",
+                    "0/3/example1.png"]
+        for f in expected:
+            self.assertTrue(f in contents,
+                            f"{f} missing from ZIP file")
+        # Check the HTML files were rewritten correctly
+        zipfile.ZipFile(zip_file).extract("index.html",
+                                          path=self.wd)
+        with open(os.path.join(self.wd, "index.html"),
+                  "rt") as fp:
+            html = fp.read()
+            print(html)
+            self.assertEqual(
+                html,
+                dedent(
+                    """
+                    # Link to CSS
+                    <link rel="stylesheet" href="0/1/example.css" />
+                    # Links to QC artefacts
+                    <a href="0/file1.txt">blah</a> <a href="0/3/example1.html">blahblah</a>
+                    # External link
+                    <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                    # Image file
+                    <img src="0/2/img2.png" />
+                    # Inline image
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                    """))
+        zipfile.ZipFile(zip_file).extract("0/example.html",
+                                          path=self.wd)
+        with open(os.path.join(self.wd, "0", "example.html"),
+                  "rt") as fp:
+            html = fp.read()
+            print(html)
+            self.assertEqual(
+                html,
+                dedent("""
+                # Link to subdir
+                <link rel="stylesheet" href="1/example.css" />
+                """))
+
+    def test_qc_report_zip_with_prefix(self):
+        """
+        ZipMaker: make ZIP archive with prefix
+        """
+        # Make an example directory with files
+        data_dir = os.path.join(self.wd, "example")
+        os.mkdir(data_dir)
+        file_list = ["index.html",
+                     "dir1/example.html",
+                     "dir1/styles/example.css",
+                     "dir1/images/img1.png",
+                     "dir1/images/img2.png",
+                     "dir1/file1.txt",
+                     "dir1/file1.png",
+                     "dir1/example1/example1.html",
+                     "dir1/example1/example1.png"]
+        for f in file_list:
+            dir_path = os.path.dirname(os.path.join(data_dir, f))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            with open(os.path.join(data_dir, f), "wt") as fp:
+                fp.write("")
+        # Populate index.html with links and images
+        index_html = os.path.join(data_dir, "index.html")
+        with open(index_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to CSS
+                <link rel="stylesheet" href="dir1/styles/example.css" />
+                # Links to QC artefacts
+                <a href="dir1/file1.txt">blah</a> <a href="dir1/example1/example1.html">blahblah</a>
+                # External link
+                <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                # Image file
+                <img src="dir1/images/img2.png" />
+                # Inline image
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                """))
+        # Make a ZIP archive using prefix
+        zip_file = os.path.join(self.wd, "example.zip")
+        ZipMaker(data_dir,
+                 [os.path.join(data_dir, f)
+                  for f in file_list]).\
+                          make_archive(zip_file,
+                                       prefix="example_data")
+        self.assertTrue(os.path.exists(zip_file),
+                        f"{zip_file} not found")
+        # List ZIP contents
+        contents = zipfile.ZipFile(zip_file).namelist()
+        print(contents)
+        # Expected paths in ZIP file
+        expected = ["example_data/index.html",
+                    "example_data/dir1/example.html",
+                    "example_data/dir1/styles/example.css",
+                    "example_data/dir1/images/img1.png",
+                    "example_data/dir1/images/img2.png",
+                    "example_data/dir1/file1.txt",
+                    "example_data/dir1/file1.png",
+                    "example_data/dir1/example1/example1.html",
+                    "example_data/dir1/example1/example1.png"]
+        for f in expected:
+            self.assertTrue(f in contents,
+                            f"{f} missing from ZIP file")
+
+    def test_qc_report_zip_with_prefix_shorten_paths(self):
+        """
+        ZipMaker: make ZIP archive with prefix (shorten paths)
+        """
+        # Make an example directory with files
+        data_dir = os.path.join(self.wd, "example")
+        os.mkdir(data_dir)
+        file_list = ["index.html",
+                     "dir1/example.html",
+                     "dir1/styles/example.css",
+                     "dir1/images/img1.png",
+                     "dir1/images/img2.png",
+                     "dir1/file1.txt",
+                     "dir1/file1.png",
+                     "dir1/example1/example1.html",
+                     "dir1/example1/example1.png"]
+        for f in file_list:
+            dir_path = os.path.dirname(os.path.join(data_dir, f))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            with open(os.path.join(data_dir, f), "wt") as fp:
+                fp.write("")
+        # Populate index.html with links and images
+        index_html = os.path.join(data_dir, "index.html")
+        with open(index_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to CSS
+                <link rel="stylesheet" href="dir1/styles/example.css" />
+                # Links to QC artefacts
+                <a href="dir1/file1.txt">blah</a> <a href="dir1/example1/example1.html">blahblah</a>
+                # External link
+                <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                # Image file
+                <img src="dir1/images/img2.png" />
+                # Inline image
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                """))
+        # Populate dir1/example.html with a link to subdir
+        example_html = os.path.join(data_dir, "dir1", "example.html")
+        with open(example_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to subdir
+                <link rel="stylesheet" href="styles/example.css" />
+                """))
+        # Make a ZIP archive using prefix and shortened paths
+        zip_file = os.path.join(self.wd, "example.zip")
+        ZipMaker(data_dir,
+                 [os.path.join(data_dir, f)
+                  for f in file_list]).\
+                          make_archive(zip_file,
+                                       prefix="example_data",
+                                       shorten_paths=True)
+        self.assertTrue(os.path.exists(zip_file),
+                        f"{zip_file} not found")
+        # List ZIP contents
+        contents = zipfile.ZipFile(zip_file).namelist()
+        print(contents)
+        # Expected paths in ZIP file
+        expected = ["example_data/index.html",
+                    "example_data/0/example.html",
+                    "example_data/0/1/example.css",
+                    "example_data/0/2/img1.png",
+                    "example_data/0/2/img2.png",
+                    "example_data/0/file1.txt",
+                    "example_data/0/file1.png",
+                    "example_data/0/3/example1.html",
+                    "example_data/0/3/example1.png"]
+        for f in expected:
+            self.assertTrue(f in contents,
+                            f"{f} missing from ZIP file")
+        # Check the HTML files were rewritten correctly
+        zipfile.ZipFile(zip_file).extract("example_data/index.html",
+                                          path=self.wd)
+        with open(os.path.join(self.wd, "example_data", "index.html"),
+                  "rt") as fp:
+            html = fp.read()
+            print(html)
+            self.assertEqual(
+                html,
+                dedent(
+                    """
+                    # Link to CSS
+                    <link rel="stylesheet" href="0/1/example.css" />
+                    # Links to QC artefacts
+                    <a href="0/file1.txt">blah</a> <a href="0/3/example1.html">blahblah</a>
+                    # External link
+                    <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                    # Image file
+                    <img src="0/2/img2.png" />
+                    # Inline image
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                    """))
+        zipfile.ZipFile(zip_file).extract("example_data/0/example.html",
+                                          path=self.wd)
+        with open(os.path.join(self.wd,
+                               "example_data",
+                               "0",
+                               "example.html"),
+                  "rt") as fp:
+            html = fp.read()
+            print(html)
+            self.assertEqual(
+                html,
+                dedent("""
+                # Link to subdir
+                <link rel="stylesheet" href="1/example.css" />
+                """))
+
+    def test_qc_report_zip_add_subdir(self):
+        """
+        ZipMaker: make ZIP archive (add subdirectory)
+        """
+        # Make an example directory with files
+        data_dir = os.path.join(self.wd, "example")
+        os.mkdir(data_dir)
+        file_list = ["index.html",
+                     "dir1/example.html",
+                     "dir1/styles/example.css",
+                     "dir1/images/img1.png",
+                     "dir1/images/img2.png",
+                     "dir1/file1.txt",
+                     "dir1/file1.png",
+                     "dir1/example1/example1.html",
+                     "dir1/example1/example1.png"]
+        for f in file_list:
+            dir_path = os.path.dirname(os.path.join(data_dir, f))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            with open(os.path.join(data_dir, f), "wt") as fp:
+                fp.write("")
+        # Populate index.html with links and images
+        index_html = os.path.join(data_dir, "index.html")
+        with open(index_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to CSS
+                <link rel="stylesheet" href="dir1/styles/example.css" />
+                # Links to QC artefacts
+                <a href="dir1/file1.txt">blah</a> <a href="dir1/example1/example1.html">blahblah</a>
+                # External link
+                <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                # Image file
+                <img src="dir1/images/img2.png" />
+                # Inline image
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                """))
+        # Make a ZIP archive by adding subdir
+        zip_file = os.path.join(self.wd, "example.zip")
+        ZipMaker(data_dir,
+                 [os.path.join(data_dir, f)
+                  for f in ("index.html", "dir1")]).\
+                          make_archive(zip_file)
+        self.assertTrue(os.path.exists(zip_file),
+                        f"{zip_file} not found")
+        # List ZIP contents
+        contents = zipfile.ZipFile(zip_file).namelist()
+        print(contents)
+        # Expected paths in ZIP file
+        expected = ["index.html",
+                    "dir1/example.html",
+                    "dir1/styles/example.css",
+                    "dir1/images/img1.png",
+                    "dir1/images/img2.png",
+                    "dir1/file1.txt",
+                    "dir1/file1.png",
+                    "dir1/example1/example1.html",
+                    "dir1/example1/example1.png"]
+        for f in expected:
+            self.assertTrue(f in contents,
+                            f"{f} missing from ZIP file")
+
+    def test_qc_report_zip_add_subdir_shorten_paths(self):
+        """
+        ZipMaker: make ZIP archive (add subdirectory & shorten paths)
+        """
+        # Make an example directory with files
+        data_dir = os.path.join(self.wd, "example")
+        os.mkdir(data_dir)
+        file_list = ["index.html",
+                     "dir1/example.html",
+                     "dir1/styles/example.css",
+                     "dir1/images/img1.png",
+                     "dir1/images/img2.png",
+                     "dir1/file1.txt",
+                     "dir1/file1.png",
+                     "dir1/example1/example1.html",
+                     "dir1/example1/example1.png"]
+        for f in file_list:
+            dir_path = os.path.dirname(os.path.join(data_dir, f))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            with open(os.path.join(data_dir, f), "wt") as fp:
+                fp.write("")
+        # Populate index.html with links and images
+        index_html = os.path.join(data_dir, "index.html")
+        with open(index_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to CSS
+                <link rel="stylesheet" href="dir1/styles/example.css" />
+                # Links to QC artefacts
+                <a href="dir1/file1.txt">blah</a> <a href="dir1/example1/example1.html">blahblah</a>
+                # External link
+                <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                # Image file
+                <img src="dir1/images/img2.png" />
+                # Inline image
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                """))
+        # Populate dir1/example.html with a link to subdir
+        example_html = os.path.join(data_dir, "dir1", "example.html")
+        with open(example_html, "wt") as fp:
+            fp.write(dedent(
+                """
+                # Link to subdir
+                <link rel="stylesheet" href="styles/example.css" />
+                """))
+        # Make a ZIP archive by adding subdir and shortening paths
+        zip_file = os.path.join(self.wd, "example.zip")
+        ZipMaker(data_dir,
+                 [os.path.join(data_dir, f)
+                  for f in ("index.html", "dir1")]).\
+                          make_archive(zip_file,
+                                       shorten_paths=True)
+        self.assertTrue(os.path.exists(zip_file),
+                        f"{zip_file} not found")
+        # List ZIP contents
+        contents = zipfile.ZipFile(zip_file).namelist()
+        print(contents)
+        # Expected paths in ZIP file
+        expected = ["index.html",
+                    "0/example.html",
+                    "0/1/example.css",
+                    "0/2/img1.png",
+                    "0/2/img2.png",
+                    "0/file1.txt",
+                    "0/file1.png",
+                    "0/3/example1.html",
+                    "0/3/example1.png"]
+        for f in expected:
+            self.assertTrue(f in contents,
+                            f"{f} missing from ZIP file")
+        # Check the HTML files were rewritten correctly
+        zipfile.ZipFile(zip_file).extract("index.html",
+                                          path=self.wd)
+        with open(os.path.join(self.wd, "index.html"),
+                  "rt") as fp:
+            html = fp.read()
+            print(html)
+            self.assertEqual(
+                html,
+                dedent(
+                    """
+                    # Link to CSS
+                    <link rel="stylesheet" href="0/1/example.css" />
+                    # Links to QC artefacts
+                    <a href="0/file1.txt">blah</a> <a href="0/3/example1.html">blahblah</a>
+                    # External link
+                    <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
+                    # Image file
+                    <img src="0/2/img2.png" />
+                    # Inline image
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUh" />
+                    """))
+        zipfile.ZipFile(zip_file).extract("0/example.html",
+                                          path=self.wd)
+        with open(os.path.join(self.wd,
+                               "0",
+                               "example.html"),
+                  "rt") as fp:
+            html = fp.read()
+            print(html)
+            self.assertEqual(
+                html,
+                dedent("""
+                # Link to subdir
+                <link rel="stylesheet" href="1/example.css" />
+                """))
+
+    def test_qc_report_zip_file_outside_data_dir(self):
+        """
+        ZipMaker: raise exception for file outside of data dir
+        """
+        # Make an example directory with files
+        data_dir = os.path.join(self.wd, "example")
+        os.mkdir(data_dir)
+        file_list = ["index.html",
+                     "../external_file"]
+        for f in file_list:
+            dir_path = os.path.dirname(os.path.join(data_dir, f))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            with open(os.path.join(data_dir, f), "wt") as fp:
+                fp.write("")
+        # Make a ZIP archive
+        zip_file = os.path.join(self.wd, "example.zip")
+        self.assertRaises(Exception,
+                          ZipMaker(
+                              data_dir,
+                              [os.path.normpath(os.path.join(data_dir, f))
+                               for f in file_list]).\
+                          make_archive,
+                             zip_file)
+        self.assertFalse(os.path.exists(zip_file),
+                         f"{zip_file} exists, but shouldn't")
+
+    def test_qc_report_zip_duplicated_file(self):
+        """
+        ZipMaker: ignore duplicated duplicated file
+        """
+        # Make an example directory with files
+        data_dir = os.path.join(self.wd, "example")
+        os.mkdir(data_dir)
+        file_list = ["index.html",
+                     "index.html",
+                     "example.html"]
+        for f in file_list:
+            dir_path = os.path.dirname(os.path.join(data_dir, f))
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            with open(os.path.join(data_dir, f), "wt") as fp:
+                fp.write("")
+        # Make a ZIP archive
+        zip_file = os.path.join(self.wd, "example.zip")
+        ZipMaker(data_dir,
+                 [os.path.join(data_dir, f)
+                  for f in file_list]).\
+                          make_archive(zip_file)
+        self.assertTrue(os.path.exists(zip_file),
+                        f"{zip_file} not found")
+        # List ZIP contents
+        contents = zipfile.ZipFile(zip_file).namelist()
+        print(contents)
+        # Expected paths in ZIP file
+        expected = ["index.html",
+                    "example.html"]
+        for f in expected:
+            self.assertTrue(f in contents,
+                            f"{f} missing from ZIP file")
+        # Check duplicated file only appears once
+        self.assertEqual(len(contents),2,
+                         "Wrong number of items in ZIP file")
 
 class TestOutputFiles(unittest.TestCase):
     """
