@@ -173,7 +173,7 @@ class TestZipMaker(unittest.TestCase):
         if self.wd is not None and os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
 
-    def test_qc_report_zip(self):
+    def test_zipmaker(self):
         """
         ZipMaker: make ZIP archive
         """
@@ -236,7 +236,7 @@ class TestZipMaker(unittest.TestCase):
             self.assertTrue(f in contents,
                             f"{f} missing from ZIP file")
 
-    def test_qc_report_zip_shorten_paths(self):
+    def test_zipmaker_shorten_paths(self):
         """
         ZipMaker: make ZIP archive (shorten paths)
         """
@@ -342,7 +342,7 @@ class TestZipMaker(unittest.TestCase):
                 <link rel="stylesheet" href="1/example.css" />
                 """))
 
-    def test_qc_report_zip_with_prefix(self):
+    def test_zipmaker_with_prefix(self):
         """
         ZipMaker: make ZIP archive with prefix
         """
@@ -406,7 +406,7 @@ class TestZipMaker(unittest.TestCase):
             self.assertTrue(f in contents,
                             f"{f} missing from ZIP file")
 
-    def test_qc_report_zip_with_prefix_shorten_paths(self):
+    def test_zipmaker_with_prefix_shorten_paths(self):
         """
         ZipMaker: make ZIP archive with prefix (shorten paths)
         """
@@ -516,7 +516,7 @@ class TestZipMaker(unittest.TestCase):
                 <link rel="stylesheet" href="1/example.css" />
                 """))
 
-    def test_qc_report_zip_add_subdir(self):
+    def test_zipmaker_add_subdir(self):
         """
         ZipMaker: make ZIP archive (add subdirectory)
         """
@@ -579,7 +579,7 @@ class TestZipMaker(unittest.TestCase):
             self.assertTrue(f in contents,
                             f"{f} missing from ZIP file")
 
-    def test_qc_report_zip_add_subdir_shorten_paths(self):
+    def test_zipmaker_add_subdir_shorten_paths(self):
         """
         ZipMaker: make ZIP archive (add subdirectory & shorten paths)
         """
@@ -687,7 +687,7 @@ class TestZipMaker(unittest.TestCase):
                 <link rel="stylesheet" href="1/example.css" />
                 """))
 
-    def test_qc_report_zip_file_outside_data_dir(self):
+    def test_zipmaker_file_outside_data_dir(self):
         """
         ZipMaker: raise exception for file outside of data dir
         """
@@ -714,7 +714,7 @@ class TestZipMaker(unittest.TestCase):
         self.assertFalse(os.path.exists(zip_file),
                          f"{zip_file} exists, but shouldn't")
 
-    def test_qc_report_zip_duplicated_file(self):
+    def test_zipmaker_duplicated_file(self):
         """
         ZipMaker: ignore duplicated duplicated file
         """
