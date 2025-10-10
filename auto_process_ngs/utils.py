@@ -555,7 +555,7 @@ class ZipMaker:
         if self._shorten_paths and f.endswith(".html"):
             # Rewrite links in HTML file
             logger.debug(f"Rewriting links in '{f}'")
-            with tempfile.NamedTemporaryFile(delete_on_close=False) as fp:
+            with tempfile.NamedTemporaryFile(delete=False) as fp:
                 self._rewrite_html_links(f, fp.name)
                 self._zipfile.add_file(fp.name,
                                        zip_path=self._zip_paths[f])
