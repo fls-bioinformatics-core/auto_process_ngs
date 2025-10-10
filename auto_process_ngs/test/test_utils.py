@@ -297,13 +297,13 @@ class TestZipMaker(unittest.TestCase):
         # Expected paths in ZIP file
         expected = ["index.html",
                     "0/example.html",
-                    "0/1/example.css",
-                    "0/2/img1.png",
-                    "0/2/img2.png",
                     "0/file1.txt",
                     "0/file1.png",
-                    "0/3/example1.html",
-                    "0/3/example1.png"]
+                    "0/1/example1.html",
+                    "0/1/example1.png",
+                    "0/2/img1.png",
+                    "0/2/img2.png",
+                    "0/3/example.css"]
         for f in expected:
             self.assertTrue(f in contents,
                             f"{f} missing from ZIP file")
@@ -319,9 +319,9 @@ class TestZipMaker(unittest.TestCase):
                 dedent(
                     """
                     # Link to CSS
-                    <link rel="stylesheet" href="0/1/example.css" />
+                    <link rel="stylesheet" href="0/3/example.css" />
                     # Links to QC artefacts
-                    <a href="0/file1.txt">blah</a> <a href="0/3/example1.html">blahblah</a>
+                    <a href="0/file1.txt">blah</a> <a href="0/1/example1.html">blahblah</a>
                     # External link
                     <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
                     # Image file
@@ -339,7 +339,7 @@ class TestZipMaker(unittest.TestCase):
                 html,
                 dedent("""
                 # Link to subdir
-                <link rel="stylesheet" href="1/example.css" />
+                <link rel="stylesheet" href="3/example.css" />
                 """))
 
     def test_zipmaker_with_prefix(self):
@@ -468,13 +468,13 @@ class TestZipMaker(unittest.TestCase):
         # Expected paths in ZIP file
         expected = ["example_data/index.html",
                     "example_data/0/example.html",
-                    "example_data/0/1/example.css",
-                    "example_data/0/2/img1.png",
-                    "example_data/0/2/img2.png",
                     "example_data/0/file1.txt",
                     "example_data/0/file1.png",
-                    "example_data/0/3/example1.html",
-                    "example_data/0/3/example1.png"]
+                    "example_data/0/1/example1.html",
+                    "example_data/0/1/example1.png",
+                    "example_data/0/2/img1.png",
+                    "example_data/0/2/img2.png",
+                    "example_data/0/3/example.css"]
         for f in expected:
             self.assertTrue(f in contents,
                             f"{f} missing from ZIP file")
@@ -490,9 +490,9 @@ class TestZipMaker(unittest.TestCase):
                 dedent(
                     """
                     # Link to CSS
-                    <link rel="stylesheet" href="0/1/example.css" />
+                    <link rel="stylesheet" href="0/3/example.css" />
                     # Links to QC artefacts
-                    <a href="0/file1.txt">blah</a> <a href="0/3/example1.html">blahblah</a>
+                    <a href="0/file1.txt">blah</a> <a href="0/1/example1.html">blahblah</a>
                     # External link
                     <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
                     # Image file
@@ -513,7 +513,7 @@ class TestZipMaker(unittest.TestCase):
                 html,
                 dedent("""
                 # Link to subdir
-                <link rel="stylesheet" href="1/example.css" />
+                <link rel="stylesheet" href="3/example.css" />
                 """))
 
     def test_zipmaker_add_subdir(self):
@@ -640,13 +640,13 @@ class TestZipMaker(unittest.TestCase):
         # Expected paths in ZIP file
         expected = ["index.html",
                     "0/example.html",
-                    "0/1/example.css",
-                    "0/2/img1.png",
-                    "0/2/img2.png",
                     "0/file1.txt",
                     "0/file1.png",
-                    "0/3/example1.html",
-                    "0/3/example1.png"]
+                    "0/1/example1.html",
+                    "0/1/example1.png",
+                    "0/2/img1.png",
+                    "0/2/img2.png",
+                    "0/3/example.css"]
         for f in expected:
             self.assertTrue(f in contents,
                             f"{f} missing from ZIP file")
@@ -662,9 +662,9 @@ class TestZipMaker(unittest.TestCase):
                 dedent(
                     """
                     # Link to CSS
-                    <link rel="stylesheet" href="0/1/example.css" />
+                    <link rel="stylesheet" href="0/3/example.css" />
                     # Links to QC artefacts
-                    <a href="0/file1.txt">blah</a> <a href="0/3/example1.html">blahblah</a>
+                    <a href="0/file1.txt">blah</a> <a href="0/1/example1.html">blahblah</a>
                     # External link
                     <a href="https://readthedocs.auto-process-ngs.io/">Docs</a>
                     # Image file
@@ -684,7 +684,7 @@ class TestZipMaker(unittest.TestCase):
                 html,
                 dedent("""
                 # Link to subdir
-                <link rel="stylesheet" href="1/example.css" />
+                <link rel="stylesheet" href="3/example.css" />
                 """))
 
     def test_zipmaker_file_outside_data_dir(self):

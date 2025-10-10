@@ -464,6 +464,8 @@ class ZipMaker:
                     self._file_list.append(ff)
             else:
                 self._file_list.append(f)
+        # Sort into order
+        self._file_list = sorted(self._file_list)
 
     def make_archive(self, zip_name, prefix=None,
                      shorten_paths=False):
