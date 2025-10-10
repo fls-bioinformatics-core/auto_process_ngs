@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/reportqc.py: generate reports for auto-process-ngs QC runs
-#     Copyright (C) University of Manchester 2015-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2025 Peter Briggs
 #
 #########################################################################
 #
@@ -110,6 +110,13 @@ def main():
                               help="verify the QC products only (don't "
                               "write the report); returns exit code 0 "
                               "if QC is verified, 1 if not")
+    zip_archive = p.add_argument_group("ZIP archive options")
+    zip_archive.add_argument("--shorten-paths", action="store_true",
+                             dest="shorten_zip_paths",
+                             help="rewrite file paths in the ZIP "
+                             "archive to make them shorter (for "
+                             "unpacking on systems without long "
+                             "filename support e.g. Windows 11)")
     p.add_argument('dirs',metavar="DIR",nargs='+',
                    help="directory to report QC for; can be a project "
                    "directory (in which case the default QC directory "
@@ -317,6 +324,7 @@ def main():
                              relative_links=True,
                              use_data_dir=use_data_dir,
                              make_zip=args.zip,
+                             shorten_zip_paths=args.shorten_zip_paths,
                              suppress_warning=args.suppress_warning)
         print("Wrote QC report to %s" % out_file)
     # Finish with appropriate exit code
