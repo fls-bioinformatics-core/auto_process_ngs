@@ -144,6 +144,7 @@ class QCPipeline(Pipeline):
         self.add_param('force_star_index',type=str)
         self.add_param('force_gtf_annotation',type=str)
         self.add_param('legacy_screens',type=bool,value=False)
+        self.add_param('shorten_zip_paths',type=bool,value=False)
 
         # Define runners
         self.add_runner('verify_runner')
@@ -410,6 +411,7 @@ class QCPipeline(Pipeline):
             project,
             qc_dir,
             report_html=report_html,
+            shorten_zip_paths=self.params.shorten_zip_paths,
             force=True
         )
         self.add_task(report_qc,
@@ -862,7 +864,8 @@ class QCPipeline(Pipeline):
             log_file=None,batch_size=None,batch_limit=None,max_jobs=1,
             max_slots=None,poll_interval=5,runners=None,default_runner=None,
             enable_conda=False,conda=None,conda_env_dir=None,
-            envmodules=None,legacy_screens=False,verbose=False):
+            envmodules=None,shorten_zip_paths=False,legacy_screens=False,
+            verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -975,6 +978,9 @@ class QCPipeline(Pipeline):
             'report_qc'
           default_runner (JobRunner): optional default
             job runner to use
+          shorten_zip_paths (bool): if True then rewrite the
+            the file paths in the ZIP QC reports to shorten
+            them for systems without long filename support
           legacy_screens (bool): if True then use 'legacy'
             naming convention for FastqScreen outputs
           verbose (bool): if True then report additional
@@ -1045,6 +1051,7 @@ class QCPipeline(Pipeline):
                                   'star_indexes': star_indexes,
                                   'force_star_index': force_star_index,
                                   'force_gtf_annotation': force_gtf_annotation,
+                                  'shorten_zip_paths': shorten_zip_paths,
                                   'legacy_screens': legacy_screens,
                               },
                               poll_interval=poll_interval,
@@ -1917,7 +1924,7 @@ class ReportQC(PipelineTask):
     Generate the QC report
     """
     def init(self,project,qc_dir,report_html=None,fastq_dir=None,
-             force=False,zip_outputs=True):
+             force=False,zip_outputs=True,shorten_zip_paths=False):
         """
         Initialise the ReportQC task.
 
@@ -1935,6 +1942,9 @@ class ReportQC(PipelineTask):
             verification (default: don't write report)
           zip_outputs (bool): if True then also generate
             a ZIP archive of the QC reports
+          shorten_zip_paths (bool): if True then rewrites
+            file paths in ZIP archive to short versions
+            (default: don't shorten paths)
         """
         pass
     def setup(self):
@@ -1982,6 +1992,8 @@ class ReportQC(PipelineTask):
             cmd.add_args("--fastq_dir",fastq_dir)
         if self.args.zip_outputs:
             cmd.add_args("--zip")
+            if self.args.shorten_zip_paths:
+                cmd.add_args("--shorten-paths")
         # Add the primary project/QC directory
         if self.args.qc_dir:
             if os.path.isabs(self.args.qc_dir):

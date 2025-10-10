@@ -17,6 +17,7 @@ Classes:
 - OutputFiles:
 - BufferedOutputFiles:
 - ZipArchive:
+- ZipMaker:
 - ProgressChecker:
 - FileLock:
 - FileLockError:
@@ -378,20 +379,26 @@ class ZipArchive:
             raise Exception("ZipArchive: unknown item type for '%s'"
                             % item)
 
-    def add_file(self,filen):
+    def add_file(self, filen, zip_path=None):
         """
         Add a file to the zip archive
+
+        Arguments:
+          filen (str): path to the file to add
+          zip_path (str): if supplied then add the file
+            with this path (instead of the source path)
         """
-        if self._relpath:
-            zip_pth = os.path.relpath(filen,self._relpath)
-            if zip_pth.startswith('..'):
-                raise Exception("Error adding a file outside %s (%s)" %
-                                (self._relpath,filen))
-        else:
-            zip_pth = filen
+        if zip_path is None:
+            if self._relpath:
+                zip_path = os.path.relpath(filen,self._relpath)
+                if zip_path.startswith('..'):
+                    raise Exception(f"Error adding a file outside "
+                                    f"{self._relpath} ({filen})")
+            else:
+                zip_path = filen
         if self._prefix:
-            zip_pth = os.path.join(self._prefix,zip_pth)
-        self._zipfile.write(filen,zip_pth)
+            zip_path = os.path.join(self._prefix, zip_path)
+        self._zipfile.write(filen,zip_path)
 
     def add_dir(self,dirn):
         """
@@ -409,6 +416,245 @@ class ZipArchive:
 
     def __del__(self):
         self.close()
+
+class ZipMaker:
+    """
+    Class to create ZIP archive from a list of files
+
+    Creates a ZIP archive for a list of files and/or
+    subdirectories.
+
+    Example usage:
+
+    >>> z = ZipMaker("/home/pjb",
+    ...              ["/home/pjb/example.txt",
+    ...               "/home/pjb/example.png"])
+    >>> z.make_archive("example.zip")
+    'example.zip'
+
+    Any subdirectories specified in the file list will
+    be expanded recursively to add their contents to
+    the file list.
+
+    By default files will be added to the output ZIP file
+    with paths relative to the ``base`` directory. An
+    exception is raised if any file in the list is outside
+    of the base directory.
+
+    The ``make_archive`` method has additional options
+    to add a prefix to the paths stored in the ZIP file,
+    and to shorten the paths.
+
+    Arguments:
+      base (str): base directory
+      file_list (list): list of files and/or subdirectories
+        to archive
+    """
+    def __init__(self, base, file_list):
+        # Top-level directory
+        self._basedir = os.path.abspath(base)
+        # List of files to store
+        self._file_list = []
+        for f in file_list:
+            if f in self._file_list:
+                logger.warning(f"'{f}': ignoring duplicated entry")
+                continue
+            elif os.path.isdir(f):
+                for ff in self._subdir_contents(f):
+                    self._file_list.append(ff)
+            else:
+                self._file_list.append(f)
+        # Sort into order
+        self._file_list = sorted(self._file_list)
+
+    def make_archive(self, zip_name, prefix=None,
+                     shorten_paths=False):
+        """
+        Create ZIP file
+
+        Arguments:
+          zip_name (str): path to the output ZIP file
+          prefix (str): path to prepend to paths written
+            to the ZIP file
+          shorten_paths (bool): if True then rewrite paths
+            in the ZIP file to shorter versions
+
+        Returns:
+          String: name of output ZIP file.
+        """
+        # Initialise internal variables
+        # -- counter for generating shortened directory names
+        self._counter = 0
+        # -- storage for shortened directory names
+        self._dirs = {}
+        # -- storage for paths of files within ZIP archive
+        self._zip_paths = {}
+        # Whether or not to shorten file paths in archive
+        self._shorten_paths = bool(shorten_paths)
+        # Transform the paths for the ZIP archive
+        self._make_zip_paths(self._file_list)
+        # Check for external paths
+        for f in self._zip_paths:
+            if self._zip_paths[f].startswith('..'):
+                raise Exception(f"won't add path pointing outside "
+                                f"archive: '{f}'->'{self._zip_paths[f]}'")
+        # Check for collisions
+        paths = set()
+        for f in self._zip_paths:
+            zip_path = self._zip_paths[f]
+            if zip_path in paths:
+                raise Exception(f"duplicated name: '{f}'->'{zip_path}'")
+            paths.add(zip_path)
+        # Create the ZIP archive
+        try:
+            # Write to temporary name
+            tmp_zip = f"{zip_name}.tmp"
+            self._zipfile = ZipArchive(tmp_zip,
+                                       relpath=self._basedir,
+                                       prefix=prefix)
+            # Add the output artefacts
+            for f in self._file_list:
+                self._add_file(f)
+        finally:
+            # Close temporary archive and move to
+            # final location
+            self._zipfile.close()
+            os.rename(tmp_zip, zip_name)
+        return zip_name
+
+    def _subdir_contents(self, d):
+        """
+        Recursively yield contents of subdirectory
+        """
+        for f in [os.path.join(d,x) for x in os.listdir(d)]:
+            if not os.path.isdir(f):
+                yield f
+            else:
+                for ff in self._subdir_contents(f):
+                    yield ff
+
+    def _make_zip_paths(self, file_list):
+        """
+        Make alternative paths for all files
+
+        For each file targetted for inclusion in the ZIP
+        archive, create and store a "transformed" path
+        for each file (to use when adding the file to the
+        archive).
+        """
+        self._zip_paths = {}
+        for f in file_list:
+            if os.path.isdir(f):
+                self.make_zip_paths([os.path.join(f, ff)
+                                     for ff in os.listdir(f)])
+            else:
+                self._zip_paths[f] = self._transform_path(f)
+
+    def _add_file(self, f):
+        """
+        Add a file to the ZIP archive
+        """
+        if self._shorten_paths and f.endswith(".html"):
+            # Rewrite links in HTML file
+            logger.debug(f"Rewriting links in '{f}'")
+            with tempfile.NamedTemporaryFile(delete=False) as fp:
+                self._rewrite_html_links(f, fp.name)
+                self._zipfile.add_file(fp.name,
+                                       zip_path=self._zip_paths[f])
+        else:
+            # Add file as-is
+            logger.debug(f"-- Adding '{f}' as '{self._zip_paths[f]}'")
+            self._zipfile.add_file(f, zip_path=self._zip_paths[f])
+
+    def _transform_path(self, f):
+        """
+        Transform a file path for use in the ZIP archive
+        """
+        # Extract the leading (relative) path
+        d = os.path.dirname(os.path.relpath(f, self._basedir))
+        if d:
+            if not self._shorten_paths:
+                # Use relative path
+                return os.path.relpath(f, self._basedir)
+            else:
+                # Transform to shortened version
+                try:
+                    return os.path.join(self._dirs[d],
+                                        os.path.basename(f))
+                except KeyError:
+                    # Assume leading directory doesn't have
+                    # a transformed version, so make one
+                    # (plus all missing intermediates)
+                    subdirs = d.split(os.sep)
+                    for i in range(len(subdirs)):
+                        dd = os.sep.join(subdirs[:i+1])
+                        if dd in self._dirs:
+                            # This level already has a transformed
+                            # version
+                            continue
+                        # Need to create new level
+                        subdir = f"{self._counter}"
+                        self._counter += 1
+                        if i == 0:
+                            # Top level dir
+                            self._dirs[dd] = subdir
+                        else:
+                            # Append to parent dir
+                            parent_dd = os.sep.join(subdirs[:i])
+                            self._dirs[dd] = os.path.join(
+                                self._dirs[parent_dd], subdir)
+                    # Now subdir should exist
+                    return os.path.join(self._dirs[d],
+                                        os.path.basename(f))
+        else:
+            # Keep original filename
+            return os.path.basename(f)
+
+    def _rewrite_html_links(self, infile, outfile):
+        """
+        Rewrite the links in HTML file to match transformed path
+        """
+        # Relative parent directory path for the source HTML file
+        d = os.path.dirname(os.path.relpath(infile, self._basedir))
+        # Transformed parent directory path for relative links
+        dd = os.path.dirname(self._zip_paths[infile])
+        # Rewrite the file contents
+        with open(infile, "rt") as fp:
+            with open(outfile, "wt") as fpp:
+                for line in fp:
+                    # Search for links & sort long to short
+                    links = sorted(
+                        re.findall("<[^<]+ href=[\"']([^#\"']+)", line) +
+                        re.findall("<img .*src=[\"']([^#\"']+)", line),
+                        key=lambda x: len(x),
+                        reverse=True)
+                    # Process and transform links
+                    for lnk in links:
+                        if lnk.startswith("http://") or \
+                           lnk.startswith("https://"):
+                            # Skip external links
+                            continue
+                        if lnk.startswith("data:"):
+                            # Skip inline images
+                            continue
+                        # Expand the link
+                        if d:
+                            full_lnk = os.path.join(d, lnk)
+                        else:
+                            full_lnk = lnk
+                        full_lnk = os.path.join(self._basedir,
+                                                full_lnk)
+                        # Transform link for rewritten HTML file
+                        zip_lnk = self._transform_path(full_lnk)
+                        if dd:
+                            # Make relative to directory containing
+                            # source HTML file
+                            zip_lnk = os.path.relpath(zip_lnk, dd)
+                        # Update the line
+                        line = line.replace(lnk, zip_lnk)
+                    # Output the links
+                    fpp.write(line)
+
 
 class ProgressChecker:
     """
