@@ -614,6 +614,25 @@ parameter, which by default is implicitly set as:
 
 To disable the lane splitting, set this parameter to ``False``.
 
+Shorten paths in QC report ZIP files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By default when the QC pipeline creates a ZIP archive of the
+HTML report and QC outputs, it replicates the original
+directory structure and filenames within the ZIP archive.
+
+As this can result in long file paths for some artefacts (for
+example outputs from Qualimap), the ``shorten_zip_paths``
+option is provided which will use shortened directory paths
+within the QC ZIP archives:
+
+::
+
+   [qc]
+   shorten_zip_paths = True
+
+By default path shortening is disabled.
+
 FastqScreen output file naming conventions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
