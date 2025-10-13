@@ -303,6 +303,7 @@ def run_qc(ap,projects=None,protocols=None,
                        conda_env_dir=conda_env_dir,
                        envmodules=envmodules,
                        working_dir=working_dir,
+                       shorten_zip_paths=ap.settings.qc.shorten_zip_paths,
                        legacy_screens=legacy_screens,
                        verbose=verbose)
     return status

@@ -75,6 +75,7 @@
 ;fastq_subset_size = 100000
 ;nprocessors = None
 ;split_undetermined_fastqs = True
+;shorten_zip_paths = False
 ;use_legacy_screen_names = False
 
 # Fastq screen panels

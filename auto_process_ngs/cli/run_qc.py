@@ -303,7 +303,7 @@ def add_custom_protocol_options(p):
                           help="explicitly specify the QC modules to run "
                           "(e.g. 'fastqc,fastq_screen')")
 
-def add_advanced_options(p,use_legacy_screen_names):
+def add_advanced_options(p, use_legacy_screen_names, shorten_zip_paths):
     """
     Advanced options
     """
@@ -328,6 +328,11 @@ def add_advanced_options(p,use_legacy_screen_names):
                           help="run QC on copies of input Fastqs where "
                           "reads have been split according to lane "
                           "(default is to run QC on original Fastqs)")
+    advanced.add_argument('--shorten-zip-paths',choices=['yes','no'],
+                          dest="shorten_zip_paths",default=None,
+                          help="shorten paths in the QC report ZIP file; "
+                          "can be 'yes' or 'no' (default: %s)" %
+                          ("yes" if shorten_zip_paths else "no"))
     advanced.add_argument('--use-legacy-screen-names',choices=['yes','no'],
                           dest="use_legacy_screen_names",default=None,
                           help="use 'legacy' naming convention for "
@@ -695,7 +700,9 @@ def main(argv=None):
                             max_batches=settings.general.max_batches)
     add_custom_protocol_options(p)
     add_advanced_options(p,use_legacy_screen_names=
-                         settings.qc.use_legacy_screen_names)
+                         settings.qc.use_legacy_screen_names,
+                         shorten_zip_paths=
+                         settings.qc.shorten_zip_paths)
     add_debug_options(p)
     add_deprecated_options(p)
 
@@ -785,6 +792,13 @@ def main(argv=None):
         enable_conda = settings.conda.enable_conda
     else:
         enable_conda = (args.enable_conda == "yes")
+
+    # QC reporting
+    shorten_zip_paths = args.shorten_zip_paths
+    if shorten_zip_paths is None:
+        shorten_zip_paths = settings.qc.shorten_zip_paths
+    else:
+        shorten_zip_paths = (shorten_zip_paths == "yes")
 
     # Fastq screens
     if settings.qc.fastq_screens:
@@ -1167,6 +1181,7 @@ def main(argv=None):
                        working_dir=working_dir,
                        force_star_index=force_star_index,
                        force_gtf_annotation=force_gtf_annotation,
+                       shorten_zip_paths=shorten_zip_paths,
                        legacy_screens=use_legacy_screen_names,
                        verbose=args.verbose)
 

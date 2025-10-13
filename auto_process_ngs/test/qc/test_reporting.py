@@ -568,6 +568,46 @@ class TestReportFunction(unittest.TestCase):
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
 
+    def test_report_single_end_make_zip_file_shorten_paths(self):
+        """
+        report: single-end data: make ZIP file (shorten paths)
+        """
+        analysis_dir = self._make_analysis_project(paired_end=False)
+        project = AnalysisProject('PJB',analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'PJB',
+                                                'report.SE.html'),
+               make_zip=True,
+               shorten_zip_paths=True)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'PJB','report.SE.html')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'PJB','report.SE.PJB.zip')))
+        contents = zipfile.ZipFile(
+            os.path.join(self.top_dir,'PJB',
+                         'report.SE.PJB.zip')).namelist()
+        print(contents)
+        expected = (
+            'report.SE.PJB/report.SE.html',
+            'report.SE.PJB/multiqc_report.html',
+            'report.SE.PJB/0/PJB1_S1_R1_001_fastqc.html',
+            'report.SE.PJB/0/PJB1_S1_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/0/PJB1_S1_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/0/PJB1_S1_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/0/PJB1_S1_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/0/PJB1_S1_R1_001_screen_rRNA.png',
+            'report.SE.PJB/0/PJB1_S1_R1_001_screen_rRNA.txt',
+            'report.SE.PJB/0/PJB2_S2_R1_001_fastqc.html',
+            'report.SE.PJB/0/PJB2_S2_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/0/PJB2_S2_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/0/PJB2_S2_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/0/PJB2_S2_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/0/PJB2_S2_R1_001_screen_rRNA.png',
+            'report.SE.PJB/0/PJB2_S2_R1_001_screen_rRNA.txt')
+        for f in expected:
+            self.assertTrue(f in contents,
+                            f"{f} is missing from ZIP file")
+
     def test_report_single_end_make_zip_file_legacy_screens(self):
         """
         report: single-end data: make ZIP file with legacy screens
@@ -645,6 +685,48 @@ class TestReportFunction(unittest.TestCase):
             'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_other_organisms.txt',
             'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_rRNA.png',
             'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB2_S2_R1_001_screen_rRNA.txt')
+        for f in expected:
+            self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
+
+    def test_report_single_end_make_zip_file_with_data_dir_shorten_paths(self):
+        """
+        report: single-end data: make ZIP file with data directory (shorten paths)
+        """
+        analysis_dir = self._make_analysis_project(paired_end=False)
+        project = AnalysisProject('PJB',analysis_dir)
+        report((project,),filename=os.path.join(self.top_dir,
+                                                'PJB',
+                                                'report.SE.html'),
+               use_data_dir=True,
+               make_zip=True,
+               shorten_zip_paths=True)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'PJB','report.SE.html')))
+        self.assertTrue(os.path.isdir(
+            os.path.join(self.top_dir,'PJB','report.SE_data')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.top_dir,'PJB','report.SE.PJB.zip')))
+        contents = zipfile.ZipFile(
+            os.path.join(self.top_dir,'PJB',
+                         'report.SE.PJB.zip')).namelist()
+        print(contents)
+        expected = (
+            'report.SE.PJB/report.SE.html',
+            'report.SE.PJB/0/1/multiqc_report.html',
+            'report.SE.PJB/0/1/2/PJB1_S1_R1_001_fastqc.html',
+            'report.SE.PJB/0/1/2/PJB1_S1_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/0/1/2/PJB1_S1_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/0/1/2/PJB1_S1_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/0/1/2/PJB1_S1_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/0/1/2/PJB1_S1_R1_001_screen_rRNA.png',
+            'report.SE.PJB/0/1/2/PJB1_S1_R1_001_screen_rRNA.txt',
+            'report.SE.PJB/0/1/2/PJB2_S2_R1_001_fastqc.html',
+            'report.SE.PJB/0/1/2/PJB2_S2_R1_001_screen_model_organisms.png',
+            'report.SE.PJB/0/1/2/PJB2_S2_R1_001_screen_model_organisms.txt',
+            'report.SE.PJB/0/1/2/PJB2_S2_R1_001_screen_other_organisms.png',
+            'report.SE.PJB/0/1/2/PJB2_S2_R1_001_screen_other_organisms.txt',
+            'report.SE.PJB/0/1/2/PJB2_S2_R1_001_screen_rRNA.png',
+            'report.SE.PJB/0/1/2/PJB2_S2_R1_001_screen_rRNA.txt')
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
 
