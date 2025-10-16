@@ -102,26 +102,150 @@ logger = logging.getLogger(__name__)
 # Constants
 ######################################################################
 
-# Protocols
+# Fastq generation protocols
 
-PROTOCOLS = ('standard',
-             'mirna',
-             '10x_chromium_sc',
-             '10x_atac',
-             '10x_visium',
-             '10x_multiome',
-             '10x_multiome_atac',
-             '10x_multiome_gex',
-             'parse_evercode',
-             'biorad_ddseq',)
+PROTOCOLS = {
+    "standard": {
+        "supported_indexes": ("ILLUMINA", "NONE"),
+    },
+    "mirna": {
+        # miRNA-seq protocol
+        # Set minimum trimmed read length and turn off masking
+        "supported_indexes": ("ILLUMINA",),
+        "minimum_trimmed_read_length": 10,
+        "mask_short_adapter_reads": 0,
+    },
+    "10x_chromium_sc": {
+        # 10xGenomics Chromium SC (GEX/Flex)
+        # -- truncate R1 to 28 bases
+        # -- truncate R2 to 90 bases
+        # -- truncate I1 and I2 to 10 bases
+        # -- minimum trimmed read length 8bp
+        # -- minimum masked read length 8bp
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "supported_indexes": ("ILLUMINA", "10X"),
+        "r1_length": 28,
+        "r2_length": 90,
+        "i1_length": 10,
+        "i2_length": 10,
+        "minimum_trimmed_read_length": 8,
+        "mask_short_adapter_reads": 8,
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "10x_atac": {
+        # 10xGenomics ATAC-seq
+        # -- convert I2 to R2
+        # -- truncate R1 to 50 bases
+        # -- truncate R2 to 16 bases
+        # -- truncate R3 to 50 bases
+        # -- truncate I1 to 8 bases
+        # -- enable filter single index
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "supported_indexes": ("10X",),
+        "r1_length": 50,
+        "r2_length": 16,
+        "r3_length": 50,
+        "i1_length": 8,
+        "override_template": "RIRR",
+        "tenx_filter_single_index": True,
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "10x_multiome": {
+        # 10xGenomics multiome
+        # -- set bases mask to "auto"
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "supported_indexes": ("10X",),
+        "bases_mask": "auto",
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "10x_multiome_atac": {
+        # 10xGenomics multiome (ATAC)
+        # -- convert I2 to R2
+        # -- truncate R1 to 50 bases
+        # -- truncate R2 to 24 bases
+        # -- truncate R3 to 49 bases
+        # -- truncate I1 to 8 bases
+        # -- enable filter single index
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "supported_indexes": ("10X",),
+        "r1_length": 50,
+        "r2_length": 24,
+        "r3_length": 49,
+        "i1_length": 8,
+        "override_template": "RIRR",
+        "tenx_filter_single_index": True,
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "10x_multiome_gex": {
+        # 10xGenomics multiome (GEX)
+        # -- truncate I1 and I2 to 10 bases
+        # -- truncate R1 to 28 bases
+        # -- truncate R2 to 90 bases
+        # -- enable filter dual index
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "supported_indexes": ("10X",),
+        "r1_length": 28,
+        "r2_length": 90,
+        "i1_length": 10,
+        "i2_length": 10,
+        "tenx_filter_dual_index": True,
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "10x_visium": {
+        # 10xGenomics Visium
+        # -- truncate I1 and I2 to 10 bases
+        # -- minimum trimmed read length 8bp
+        # -- minimum masked read length 8bp
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "supported_indexes": ("ILLUMINA", "10X"),
+        #"r1_length": 28,
+        #"r2_length": 90,
+        "i1_length": 10,
+        "i2_length": 10,
+        "minimum_trimmed_read_length": 8,
+        "mask_short_adapter_reads": 8,
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "parse_evercode": {
+        # Parse Evercode
+        # Disable adapter trimming
+        "supported_indexes": ("ILLUMINA",),
+        "trim_adapters": False,
+    },
+    "biorad_ddseq": {
+        # Bio-Rad ddSEQ
+        # Disable adapter trimming
+        "supported_indexes": ("ILLUMINA",),
+        "trim_adapters": False,
+    }
+}
 
 # 10xGenomics protocols
-PROTOCOLS_10X = ('10x_chromium_sc',
-                 '10x_atac',
-                 '10x_visium',
-                 '10x_multiome',
-                 '10x_multiome_atac',
-                 '10x_multiome_gex')
+PROTOCOLS_10X = [p for p in PROTOCOLS.keys() if p.startswith("10x_")]
 
 # Valid attribute names for lane subsets
 
@@ -333,7 +457,7 @@ class MakeFastqs(Pipeline):
             except KeyError:
                 adapter_sequence_read2 = ""
         
-        # Defaults
+        # Global pipeline defaults
         self._bcl_converter = bcl_converter
         self._bases_mask = bases_mask
         self._r1_length = r1_length
@@ -347,6 +471,16 @@ class MakeFastqs(Pipeline):
         self._trim_adapters = bool(trim_adapters)
         self._fastq_statistics = bool(fastq_statistics)
         self._analyse_barcodes = bool(analyse_barcodes)
+
+        # Global settings that override protocol settings
+        self._override_params = {
+            "r1_length": r1_length,
+            "r2_length": r2_length,
+            "r3_length": r3_length
+        }
+        self._override_params = { p: self._override_params[p]
+                                  for p in self._override_params.keys()
+                                  if self._override_params[p] is not None }
 
         # Define parameters
         self.add_param('data_dir',value=run_dir,type=str)
@@ -433,8 +567,8 @@ class MakeFastqs(Pipeline):
         # Lane subsets
         self._subsets = []
 
-        # Create default lane subsets based on the lanes and
-        # index sequences in the sample sheet
+        # Automatically identify subsets of lanes based on index sequence
+        # types and lengths from the sample sheet
         sample_sheet_data = SampleSheet(self._sample_sheet)
         if sample_sheet_data.has_lanes:
             # Sample sheet has lanes
@@ -471,8 +605,8 @@ class MakeFastqs(Pipeline):
                              protocol=protocol,
                              masked_index=masked_index)
 
-        # Set pipeline defaults for automatically generated
-        # lane subsets
+        # Set parameters to global pipeline defaults for the automatically
+        # generated lane subsets
         for s in self.subsets:
             self._update_subset(
                 s,
@@ -512,11 +646,13 @@ class MakeFastqs(Pipeline):
                 assigned_subset = None
                 for s in self.subsets:
                     if lanes == s['lanes']:
-                        # Exact match
+                        # Exact match for an automatically
+                        # generated subset
                         assigned_subset = s
                         break
                     else:
-                        # Is it a subset of a subset?
+                        # Check if user subset is part of
+                        # an automatically subset
                         if all([l in s['lanes'] for l in lanes]):
                             # Part of an existing subset
                             # which will be split
@@ -529,7 +665,8 @@ class MakeFastqs(Pipeline):
                             # Remove the original superset
                             self._remove_subset(s['lanes'])
                             break
-                # Check a subset was located or created
+                # Check that a subset was located or created
+                # for the user lane specification
                 if assigned_subset is None:
                     raise Exception("Failed to assign a lane subset for "
                                     "%s" % lanes)
@@ -545,156 +682,27 @@ class MakeFastqs(Pipeline):
             if self._subsets_split_project():
                 raise Exception("Subsets would split a project")
 
-        # Check that barcodes are consistent with protocols
+        # Set parameters on each subset
         for s in self.subsets:
             protocol = s['protocol']
-            if protocol not in PROTOCOLS:
-                raise Exception("Protocol '%s': not recognised" %
-                                protocol)
-            masked_index = s['masked_index']
-            if masked_index == '__10X__':
-                # 10xGenomics barcodes
-                if protocol not in PROTOCOLS_10X:
-                    raise Exception("Protocol '%s': can't handle "
-                                    "10xGenomics barcodes" % protocol)
-            else:
-                # Standard barcodes
-                if protocol in PROTOCOLS_10X and \
-                   protocol not in ("10x_chromium_sc", "10x_visium"):
-                    raise Exception("Protocol '%s': needs 10xGenomics "
-                                    "barcodes ('%s' not valid)" %
-                                    (protocol,masked_index))
-            
-        # Update parameters on each subset according to the
-        # assigned protocol (overriding pipeline defaults)
-        for s in self.subsets:
-            protocol = s['protocol']
-            if protocol == 'mirna':
-                # miRNA-seq protocol
-                # Set minimum trimmed read length and turn off masking
-                self._update_subset(s,
-                                    minimum_trimmed_read_length=10,
-                                    mask_short_adapter_reads=0)
-            elif protocol == '10x_chromium_sc':
-                # 10xGenomics Chromium SC (GEX/Flex)
-                # -- truncate R1 to 28 bases (if not set)
-                # -- truncate R2 to 90 bases (if not set)
-                # -- truncate I1 and I2 to 10 bases
-                # -- minimum trimmed read length 8bp
-                # -- minimum masked read length 8bp
-                # -- no lane splitting
-                # -- create Fastqs for index read
-                # -- disable adapter trimming
-                self._update_subset(s,
-                                    r1_length=ifnotset(s["r1_length"], 28),
-                                    r2_length=ifnotset(s["r2_length"], 90),
-                                    i1_length=10,
-                                    i2_length=10,
-                                    minimum_trimmed_read_length=8,
-                                    mask_short_adapter_reads=8,
-                                    no_lane_splitting=True,
-                                    create_fastq_for_index_read=True,
-                                    trim_adapters=False)
-            elif protocol == '10x_atac':
-                # 10xGenomics ATAC-seq
-                # -- convert I2 to R2
-                # -- truncate R1 to 50 bases (if not set)
-                # -- truncate R2 to 16 bases (if not set)
-                # -- truncate R3 to 50 bases (if not set)
-                # -- truncate I1 to 8 bases
-                # -- enable filter single index
-                # -- no lane splitting
-                # -- create Fastqs for index read
-                # -- disable adapter trimming
-                self._update_subset(s,
-                                    r1_length=ifnotset(s["r1_length"], 50),
-                                    r2_length=ifnotset(s["r2_length"], 16),
-                                    r3_length=ifnotset(s["r3_length"], 50),
-                                    i1_length=8,
-                                    override_template="RIRR",
-                                    tenx_filter_single_index=True,
-                                    no_lane_splitting=True,
-                                    create_fastq_for_index_read=True,
-                                    trim_adapters=False)
-            elif protocol == '10x_visium':
-                # 10xGenomics Visium
-                # -- truncate I1 and I2 to 10 bases
-                # -- minimum trimmed read length 8bp
-                # -- minimum masked read length 8bp
-                # -- no lane splitting
-                # -- create Fastqs for index read
-                # -- disable adapter trimming
-                self._update_subset(s,
-                                    i1_length=10,
-                                    i2_length=10,
-                                    minimum_trimmed_read_length=8,
-                                    mask_short_adapter_reads=8,
-                                    no_lane_splitting=True,
-                                    create_fastq_for_index_read=True,
-                                    trim_adapters=False)
-            elif protocol == '10x_multiome':
-                # 10xGenomics multiome
-                # -- set bases mask to "auto"
-                # -- no lane splitting
-                # -- create Fastqs for index read
-                # -- disable adapter trimming
-                self._update_subset(s,
-                                    bases_mask="auto",
-                                    no_lane_splitting=True,
-                                    create_fastq_for_index_read=True,
-                                    trim_adapters=False)
-            elif protocol == '10x_multiome_atac':
-                # 10xGenomics multiome (ATAC)
-                # -- convert I2 to R2
-                # -- truncate R1 to 50 bases (if not set)
-                # -- truncate R2 to 24 bases (if not set)
-                # -- truncate R3 to 49 bases (if not set)
-                # -- truncate I1 to 8 bases
-                # -- enable filter single index
-                # -- no lane splitting
-                # -- create Fastqs for index read
-                # -- disable adapter trimming
-                self._update_subset(s,
-                                    r1_length=ifnotset(s["r1_length"], 50),
-                                    r2_length=ifnotset(s["r2_length"], 24),
-                                    r3_length=ifnotset(s["r3_length"], 49),
-                                    i1_length=8,
-                                    override_template="RIRR",
-                                    tenx_filter_single_index=True,
-                                    no_lane_splitting=True,
-                                    create_fastq_for_index_read=True,
-                                    trim_adapters=False)
-            elif protocol == '10x_multiome_gex':
-                # 10xGenomics multiome (GEX)
-                # -- truncate I1 and I2 to 10 bases
-                # -- truncate R1 to 28 bases (if not set)
-                # -- truncate R2 to 90 bases (if not set)
-                # -- enable filter dual index
-                # -- no lane splitting
-                # -- create Fastqs for index read
-                # -- disable adapter trimming
-                self._update_subset(s,
-                                    r1_length=ifnotset(s["r1_length"], 28),
-                                    r2_length=ifnotset(s["r2_length"], 90),
-                                    i1_length=10,
-                                    i2_length=10,
-                                    tenx_filter_dual_index=True,
-                                    no_lane_splitting=True,
-                                    create_fastq_for_index_read=True,
-                                    trim_adapters=False)
-            elif protocol == 'parse_evercode':
-                # Parse Evercode
-                # Disable adapter trimming
-                self._update_subset(s,
-                                    trim_adapters=False)
-            elif protocol == 'biorad_ddseq':
-                # Bio-Rad ddSEQ
-                # Disable adapter trimming
-                self._update_subset(s,
-                                    trim_adapters=False)
-        # Finally update parameters for user-defined
-        # lane subsets (overriding both pipeline and
-        # protocol defaults)
+            try:
+                protocol_params = PROTOCOLS[protocol]
+            except KeyError:
+                raise Exception("Unrecognised protocol '%s'" % protocol)
+            # Check barcodes are consistent with protocol
+            index_type = self._index_type(s["masked_index"])
+            if index_type not in protocol_params["supported_indexes"]:
+                raise Exception("Protocol '%s': can't handle index type '%s'" %
+                                (protocol, index_type))
+            # Set parameters from protocol definition
+            # (overriding global settings)
+            self._update_subset(s, **{kw: protocol_params[kw] for kw in protocol_params
+                                      if (kw not in ("supported_indexes",))})
+            # Special cases where global settings override protocol defaults
+            self._update_subset(s, **self._override_params)
+
+        # Update parameters for user-defined lane subsets (overriding both
+        # pipeline and protocol defaults)
         if lane_subsets:
             for s in lane_subsets:
                 lanes = s['lanes']
@@ -757,6 +765,25 @@ class MakeFastqs(Pipeline):
             # Mask bases with 'N's
             s = s.replace(c,'N')
         return s
+
+    def _index_type(self, masked_index):
+        """
+        Internal: classify a masked index into a type
+
+        Arguments:
+            masked_index (str): the masked version of
+            an index sequence
+
+        Returns:
+            str: index type (one of "ILLUMINA", "__10X__",
+            or "NONE")
+        """
+        if masked_index == "__10X__":
+            return "10X"
+        elif masked_index == "__NO_SEQUENCE__":
+            return "NONE"
+        else:
+            return "ILLUMINA"
 
     def _sample_sheet_is_valid(self,sample_sheet):
         """
