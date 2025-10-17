@@ -33,7 +33,6 @@ Utility functions:
 - subset
 - verify_run
 - create_placeholder_fastqs
-- ifnotset
 """
 
 ######################################################################
@@ -4098,19 +4097,3 @@ def create_placeholder_fastqs(fastqs,base_dir=None):
         # Make empty file
         with gzip.open(fastq,'wt') as fp:
             fp.write('')
-
-def ifnotset(value, default):
-    """
-    Returns default value if current value is None
-
-    Arguments:
-      value (object): current value
-      default (object): default value if 'value'
-        is None
-
-    Returns:
-      Object: new value.
-    """
-    if value is None:
-        return default
-    return value
