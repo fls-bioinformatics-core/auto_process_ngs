@@ -7,7 +7,7 @@ import os
 import shutil
 import argparse
 import tempfile
-from .. import applications
+from .. import apps
 from .. import fileops
 from .. import get_version
 from ..settings import Settings
@@ -74,7 +74,7 @@ def run_rsync(src, dst, runner, working_dir):
       working_dir (str): path to the working directory
         (or None to default to CWD)
     """
-    rsync = applications.general.rsync(src, dst, escape_spaces=False)
+    rsync = apps.general.rsync(src, dst, escape_spaces=False)
     print(f"Running {rsync.command_line}")
     return run_command(rsync, runner, working_dir=working_dir)
 

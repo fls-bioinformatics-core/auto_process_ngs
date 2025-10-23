@@ -1,9 +1,8 @@
 #######################################################################
-# Tests for applications.py module
+# Tests for apps.py module
 #######################################################################
-from auto_process_ngs.applications import *
+from auto_process_ngs.apps import general
 import unittest
-from io import StringIO
 
 class TestGeneral(unittest.TestCase):
 

@@ -67,8 +67,7 @@ from .utils import get_sequencer_platform
 from .utils import make_custom_sample_sheet
 from .utils import convert_bases_mask_to_override_cycles
 from ..analysis import AnalysisFastq
-from ..applications import general as general_apps
-from ..applications import bcl2fastq as bcl2fastq_apps
+from ..apps import general as general_apps
 from ..barcodes.pipeline import AnalyseBarcodes
 from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
