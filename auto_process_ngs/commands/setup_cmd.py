@@ -17,7 +17,6 @@ from ..bcl2fastq.utils import get_bases_mask
 from ..bcl2fastq.utils import get_run_config
 from ..bcl2fastq.utils import get_sequencer_platform
 from ..bcl2fastq.utils import make_custom_sample_sheet
-from ..applications import general as general_applications
 from ..fileops import exists
 from ..samplesheet_utils import summarise_outputs
 from ..samplesheet_utils import check_and_warn

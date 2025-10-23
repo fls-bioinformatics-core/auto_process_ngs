@@ -17,7 +17,7 @@ from ..metadata import AnalysisDirMetadata
 from ..metadata import AnalysisDirParameters
 from ..command import Command
 from ..commands.report_cmd import report_concise
-from .. import applications
+from .. import apps
 from .. import fileops
 from .. import simple_scheduler
 from ..tenx.cellplex import CellrangerMultiConfigCsv
@@ -321,7 +321,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 extra_options.append('--include=%s/**' % fastq_dir)
             extra_options.append('--exclude=*')
             # Execute the rsync
-            rsync_fastqs = applications.general.rsync(
+            rsync_fastqs = apps.general.rsync(
                 "%s/" % ap.analysis_dir,
                 os.path.join(archive_dir,staging),
                 prune_empty_dirs=False,
@@ -344,7 +344,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             rsync_fastqs_job = None
             wait_for = ()
         # Main rsync command
-        rsync = applications.general.rsync(
+        rsync = apps.general.rsync(
             "%s/" % ap.analysis_dir,
             os.path.join(archive_dir,staging),
             prune_empty_dirs=True,
