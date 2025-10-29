@@ -781,7 +781,7 @@ class MakeFastqs(Pipeline):
             # Set parameters from protocol definition
             # (overriding global settings)
             self._update_subset(s, **{kw: protocol_params[kw] for kw in protocol_params
-                                      if (kw not in ("supported_indexes",))})
+                                      if (kw not in ("description", "supported_indexes",))})
             # Special cases where global settings override protocol defaults
             self._update_subset(s, **self._override_params)
 
