@@ -49,7 +49,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
                                  version='1.1.0',
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y50N51")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -150,7 +150,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
                                  version='1.3.1',
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y50N51")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -250,7 +250,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
                                  version='2.1.1',
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y50N51")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -350,7 +350,7 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
                                  version='3.0.0',
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y50N51")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -446,7 +446,7 @@ smpl2,smpl2,,,SI-TT-B1,GTCCCATCAA,SI-TT-B1,GTCACGTTCG,10xGenomics,
             fp.write(samplesheet_visium_indices)
         # Create mock bcl2fastq
         MockBcl2fastq2Exe.create(os.path.join(self.bin, "bcl2fastq"),
-                                 assert_bases_mask="Y101,I10,I10,Y101")
+                                 assert_bases_mask="Y28N73,I10,I10,Y50N51")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -538,7 +538,7 @@ smpl2,smpl2,,,SI-TT-B1,GTCCCATCAA,SI-TT-B1,GTCACGTTCG,10xGenomics,
             fp.write(samplesheet_visium_indices)
         # Create mock bcl-convert
         MockBclConvertExe.create(os.path.join(self.bin, "bcl-convert"),
-                                 assert_override_cycles="Y101;I10;I10;Y101")
+                                 assert_override_cycles="Y28N73;I10;I10;Y50N51")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -636,14 +636,14 @@ smpl2,smpl2,,,SI-TT-B1,SI-TT-B1,SI-TT-B1,SI-TT-B1,10xGenomics,
         Mock10xPackageExe.create(os.path.join(self.bin,
                                               "spaceranger"),
                                  version='3.0.0',
-                                 assert_bases_mask="Y28N73,I10,I10,Y90N11")
+                                 assert_bases_mask="Y40N61,I10,I10,Y90N11")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="10x_visium",
-                       r1_length=28,
+                       r1_length=40,
                        r2_length=90)
         status = p.run(analysis_dir,
                        poll_interval=POLL_INTERVAL)
