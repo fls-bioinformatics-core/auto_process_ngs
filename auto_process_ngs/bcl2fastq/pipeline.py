@@ -105,11 +105,13 @@ logger = logging.getLogger(__name__)
 
 PROTOCOLS = {
     "standard": {
+        "description": "Standard Illumina sequencing data (default)",
         "supported_indexes": ("ILLUMINA", "NONE"),
     },
     "mirna": {
         # miRNA-seq protocol
         # Set minimum trimmed read length and turn off masking
+        "description": "miRNA-seq data",
         "supported_indexes": ("ILLUMINA",),
         "minimum_trimmed_read_length": 10,
         "mask_short_adapter_reads": 0,
@@ -124,6 +126,8 @@ PROTOCOLS = {
         # -- no lane splitting
         # -- create Fastqs for index read
         # -- disable adapter trimming
+        "description": "10x Genomics Chromium 3' and 5' single cell "
+                        "gene expression data",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 28,
         "r2_length": 90,
@@ -146,6 +150,7 @@ PROTOCOLS = {
         # -- no lane splitting
         # -- create Fastqs for index read
         # -- disable adapter trimming
+        "description": "10x Genomics Chromium single cell ATAC-seq data",
         "supported_indexes": ("10X",),
         "r1_length": 50,
         "r2_length": 16,
@@ -163,6 +168,8 @@ PROTOCOLS = {
         # -- no lane splitting
         # -- create Fastqs for index read
         # -- disable adapter trimming
+        "description": "10x Genomics single cell multiome data "
+        "(unpooled data i.e. ATAC or GEX data only in single run)",
         "supported_indexes": ("10X",),
         "bases_mask": "auto",
         "no_lane_splitting": True,
@@ -180,6 +187,8 @@ PROTOCOLS = {
         # -- no lane splitting
         # -- create Fastqs for index read
         # -- disable adapter trimming
+        "description": "10x Genomics single cell multiome ATAC-seq data "
+        "(run with pooled GEX and ATAC data)",
         "supported_indexes": ("10X",),
         "r1_length": 50,
         "r2_length": 24,
@@ -200,6 +209,8 @@ PROTOCOLS = {
         # -- no lane splitting
         # -- create Fastqs for index read
         # -- disable adapter trimming
+        "description": "10x Genomics single cell multiome GEX data "
+        "(run with pooled GEX and ATAC data)",
         "supported_indexes": ("10X",),
         "r1_length": 28,
         "r2_length": 90,
@@ -212,15 +223,87 @@ PROTOCOLS = {
     },
     "10x_visium": {
         # 10xGenomics Visium
+        # -- truncate R1 to 28 bases
+        # -- truncate R2 to 50 bases
         # -- truncate I1 and I2 to 10 bases
         # -- minimum trimmed read length 8bp
         # -- minimum masked read length 8bp
         # -- no lane splitting
         # -- create Fastqs for index read
         # -- disable adapter trimming
+        "description": "10x Genomics Visium CytAssist FFPE, Fresh Frozen, Fixed "
+        "Frozen spatial GEX or FFPE PEX data",
         "supported_indexes": ("ILLUMINA", "10X"),
-        #"r1_length": 28,
-        #"r2_length": 90,
+        "r1_length": 28,
+        "r2_length": 50,
+        "i1_length": 10,
+        "i2_length": 10,
+        "minimum_trimmed_read_length": 8,
+        "mask_short_adapter_reads": 8,
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "10x_visium_v1": {
+        # 10xGenomics Visium v1
+        # -- truncate R1 to 28 bases
+        # -- truncate R2 to 90 bases
+        # -- truncate I1 and I2 to 10 bases
+        # -- minimum trimmed read length 8bp
+        # -- minimum masked read length 8bp
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "description": "10x Genomics Visium Fresh Frozen Spatial GEX (v1) "
+        "data (no CytAssist)",
+        "supported_indexes": ("ILLUMINA", "10X"),
+        "r1_length": 28,
+        "r2_length": 90,
+        "i1_length": 10,
+        "i2_length": 10,
+        "minimum_trimmed_read_length": 8,
+        "mask_short_adapter_reads": 8,
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "10x_visium_hd": {
+        # 10xGenomics Visium (HD)
+        # -- truncate R1 to 28 bases
+        # -- truncate R2 to 50 bases
+        # -- truncate I1 and I2 to 10 bases
+        # -- minimum trimmed read length 8bp
+        # -- minimum masked read length 8bp
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "description": "10x Genomics Visium CytAssist FFPE HD spatial GEX "
+        "data",
+        "supported_indexes": ("ILLUMINA", "10X"),
+        "r1_length": 28,
+        "r2_length": 50,
+        "i1_length": 10,
+        "i2_length": 10,
+        "minimum_trimmed_read_length": 8,
+        "mask_short_adapter_reads": 8,
+        "no_lane_splitting": True,
+        "create_fastq_for_index_read": True,
+        "trim_adapters": False
+    },
+    "10x_visium_hd_3prime": {
+        # 10xGenomics Visium (HD 3')
+        # -- truncate R1 to 43 bases
+        # -- truncate R2 to 75 bases
+        # -- truncate I1 and I2 to 10 bases
+        # -- minimum trimmed read length 8bp
+        # -- minimum masked read length 8bp
+        # -- no lane splitting
+        # -- create Fastqs for index read
+        # -- disable adapter trimming
+        "description": "10x Visium CytAssist FFPE HD 3' spatial GEX data",
+        "supported_indexes": ("ILLUMINA", "10X"),
+        "r1_length": 43,
+        "r2_length": 50,
         "i1_length": 10,
         "i2_length": 10,
         "minimum_trimmed_read_length": 8,
@@ -232,12 +315,14 @@ PROTOCOLS = {
     "parse_evercode": {
         # Parse Evercode
         # Disable adapter trimming
+        "description": "Parse Evercode single cell data",
         "supported_indexes": ("ILLUMINA",),
         "trim_adapters": False,
     },
     "biorad_ddseq": {
         # Bio-Rad ddSEQ
         # Disable adapter trimming
+        "description": "Bio-Rad ddSEQ single cell data",
         "supported_indexes": ("ILLUMINA",),
         "trim_adapters": False,
     }
