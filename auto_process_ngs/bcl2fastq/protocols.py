@@ -199,7 +199,7 @@ PROTOCOLS = {
     },
     "10x_visium_hd": {
         # 10xGenomics Visium (HD)
-        # -- truncate R1 to 28 bases
+        # -- truncate R1 to 43 bases
         # -- truncate R2 to 50 bases
         # -- truncate I1 and I2 to 10 bases
         # -- minimum trimmed read length 8bp
@@ -210,7 +210,7 @@ PROTOCOLS = {
         "description": "10x Genomics Visium CytAssist FFPE HD spatial GEX "
         "data",
         "supported_indexes": ("ILLUMINA", "10X"),
-        "r1_length": 28,
+        "r1_length": 43,
         "r2_length": 50,
         "i1_length": 10,
         "i2_length": 10,
@@ -233,7 +233,7 @@ PROTOCOLS = {
         "description": "10x Visium CytAssist FFPE HD 3' spatial GEX data",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 43,
-        "r2_length": 50,
+        "r2_length": 75,
         "i1_length": 10,
         "i2_length": 10,
         "minimum_trimmed_read_length": 8,
