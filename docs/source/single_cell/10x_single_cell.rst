@@ -53,16 +53,16 @@ then all 10x Genomics single cell data should be processed using the
 ``10x_*`` specified via the ``--protocol`` option:
 
 =================================================== =====================
-10x Genomics data                                   Protocol
+Single cell platform                                Protocol
 =================================================== =====================
-Single cell/single nuclei RNA-seq                   ``10x_chromium_sc``
-Single cell ATAC-seq                                ``10x_atac``
-Single cell multiome (unpooled GEX or ATAC)         ``10x_multiome``
-Single cell multiome GEX (pooled GEX and ATAC)      ``10x_multiome_gex``
-Single cell multiome ATAC (pooled GEX and ATAC)     ``10x_multiome_atac``
-Single cell immune profiling                        ``10x_chromium_sc``
-CellPlex (cell multiplexing)                        ``10x_chromium_sc``
-Flex (fixed RNA profiling)                          ``10x_chromium_sc``
+10x Chromium 3' GEX                                 ``10x_chromium_sc``
+10x Chromium 3' CellPlex                            ``10x_chromium_sc``
+10x Chromium Flex                                   ``10x_chromium_sc``
+10x Chromium 5' (immune profiling)                  ``10x_chromium_sc``
+10x Chromium Epi ATAC-seq                           ``10x_atac``
+10x Chromium Multiome (unpooled GEX or ATAC)        ``10x_multiome``
+10x Chromium Multiome GEX (pooled GEX and ATAC)     ``10x_multiome_gex``
+10x Chromium Multiome ATAC (pooled GEX and ATAC)    ``10x_multiome_atac``
 =================================================== =====================
 
 .. note::

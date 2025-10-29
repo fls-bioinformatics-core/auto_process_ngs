@@ -11,29 +11,43 @@ perform Fastq generation and QC for various types of Visium data.
 Requirements
 ------------
 
-10x Genomics' SpaceRanger software is used for Fastq generation for
-Visium data. It should be downloaded and installed before running the
-pipeline. No additional external software is required for the QC.
+10x Genomics' SpaceRanger software is required for Fastq generation for
+Visium data for sample sheets where 10x Genomics index codes have been
+specified; in this case, it should be downloaded and installed before
+running the pipeline.
+
+If the sample sheet uses standard Illumina index sequences then
+SpaceRanger is not needed.
+
+SpaceRanger is not required for the QC.
 
 Fastq generation
 ----------------
 
-If a sample sheet with the appropriate 10x Genomics indexes is provided
-then all Visium data should be processed using the ``10x_visium`` protocol
-with the :doc:`make_fastqs <../using/make_fastqs>` command, for example:
+The following Fastq generation protocols are available for Visium data:
+
+====================== ================================== ========================= ========================
+Spatial platform       Tissue prep                        Library type              Protocol
+====================== ================================== ========================= ========================
+10x Visium             Fresh Frozen                       Spatial GEX (v1)          ``10x_visium_v1``
+10x Visium (CytAssist) FFPE | Fresh Frozen | Fixed Frozen Spatial GEX (v2)          ``10x_visium``
+10x Visium (CytAssist) FFPE                               Spatial GEX | Spatial PEX ``10x_visium``
+10x Visium (CytAssist) FFPE                               HD Spatial GEX            ``10x_visium_hd``
+10x Visium (CytAssist) Fresh Frozen                       HD 3' Spatial GEX         ``10x_visium_hd_3prime``
+====================== ================================== ========================= ========================
+
+The appropriate protocol should be selected from the table above according
+to the spatial platform, tissue preparation method and library type, and
+supplied to the ``make_fastqs`` command - for example:
 
 ::
 
    auto_process.py make_fastqs --protocol=10x_visium
 
-This protocol wraps the ``spaceranger mkfastq`` command.
-
-.. note::
-
-   If the sample sheet contains Illumina index sequences then the
-   ``standard`` protocol should be used instead (note that in this case
-   the defaults used for masking and trimming compared to the defaults
-   may differ from those used by SpaceRanger).
+Depending on the format of the index sequences in the input sample sheet,
+this will either use the ``spaceranger mkfastq`` command (if the indexes
+are 10x Genomics index codes) or ``bcl2fastq`` or ``bcl-convert`` directly
+(if the indexes are standard Illumina sequences).
 
 Analysis project setup and QC
 -----------------------------
