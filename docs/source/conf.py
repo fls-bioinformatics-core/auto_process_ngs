@@ -290,10 +290,10 @@ with open(qc_protocols_tbl,'wt') as fp:
 # -- Make table with Fastq generation protocols -----------------------------------
 
 # Get list of Fastq generation protocols
-from auto_process_ngs.bcl2fastq import pipeline
+from auto_process_ngs.bcl2fastq.protocols import PROTOCOLS as FQ_PROTOCOLS
 fq_protocols = []
-for p in pipeline.PROTOCOLS:
-    fq_protocols.append((p, pipeline.PROTOCOLS[p]["description"]))
+for p in FQ_PROTOCOLS:
+    fq_protocols.append((p, FQ_PROTOCOLS[p]["description"]))
 fq_protocols = sorted(fq_protocols, key=lambda p: p[0])
 # Get width for protocol name column
 pr_width = max([len(p[0])+4 for p in fq_protocols])
