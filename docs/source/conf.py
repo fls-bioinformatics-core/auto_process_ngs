@@ -249,14 +249,17 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
 
-# -- Make table with QC protocols ---------------------------------------------
+# -- Automatic content generation ---------------------------------------------
 
-from auto_process_ngs.qc import protocols
 # Directory for auto-generated content
 auto_content_dir = os.path.join("using","auto")
 if not os.path.exists(auto_content_dir):
     os.makedirs(auto_content_dir)
-# Get list of protocol instances
+
+# -- Make table with QC protocols ---------------------------------------------
+
+# Get list of QC protocol instances
+from auto_process_ngs.qc import protocols
 qc_protocols = []
 for p in protocols.QC_PROTOCOLS:
     qc_protocols.append(protocols.fetch_protocol_definition(p))
@@ -279,6 +282,38 @@ with open(qc_protocols_tbl,'wt') as fp:
         fp.write("{name: <{pr_width}} {description}\n".format(
             name="``{name}``".format(name=p.name),
             description=p.description,
+            pr_width=pr_width))
+    # Write table footer
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
+
+# -- Make table with Fastq generation protocols -----------------------------------
+
+# Get list of Fastq generation protocols
+from auto_process_ngs.bcl2fastq import pipeline
+fq_protocols = []
+for p in pipeline.PROTOCOLS:
+    fq_protocols.append((p, pipeline.PROTOCOLS[p]["description"]))
+fq_protocols = sorted(fq_protocols, key=lambda p: p[0])
+# Get width for protocol name column
+pr_width = max([len(p[0])+4 for p in fq_protocols])
+ds_width = 26
+# Generate file with table of protocol names and descriptions
+fq_protocols_tbl = os.path.join(auto_content_dir, "fq_protocols.rst")
+with open(fq_protocols_tbl, "wt") as fp:
+    # Write table header
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
+    fp.write("{name: <{pr_width}} {desc}\n".format(name="Protocol",
+                                                   desc="Description",
+                                                   pr_width=pr_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
+        x='',pr_width=pr_width,ds_width=ds_width))
+    # Write protocol information
+    for p in fq_protocols:
+        fp.write("{name: <{pr_width}} {description}\n".format(
+            name="``{name}``".format(name=p[0]),
+            description=p[1],
             pr_width=pr_width))
     # Write table footer
     fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
