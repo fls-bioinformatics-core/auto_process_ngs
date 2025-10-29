@@ -1153,7 +1153,11 @@ class MakeFastqs(Pipeline):
                              "mirna",
                              "parse_evercode",
                              "biorad_ddseq")
-                or (protocol in ("10x_chromium_sc", "10x_visium")
+                or (protocol in ("10x_chromium_sc",
+                                 "10x_visium",
+                                 "10x_visium_v1",
+                                 "10x_visium_hd",
+                                 "10x_visium_hd_3prime")
                     and not has_10x_indexes)):
 
                 if converter == "bcl2fastq":
@@ -1469,7 +1473,11 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
 
             # 10x Visium
-            if protocol == "10x_visium" and has_10x_indexes:
+            if (protocol in ("10x_visium",
+                             "10x_visium_v1",
+                             "10x_visium_hd",
+                             "10x_visium_hd_3prime")
+                and has_10x_indexes):
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_visium is None:
                     get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
