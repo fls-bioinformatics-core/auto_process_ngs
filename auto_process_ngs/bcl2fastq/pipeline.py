@@ -191,7 +191,7 @@ class MakeFastqs(Pipeline):
         to generate
     """
     def __init__(self,run_dir,sample_sheet,protocol='standard',
-                 bases_mask="auto",bcl_converter='bcl2fastq',
+                 bases_mask=None,bcl_converter='bcl2fastq',
                  platform=None,minimum_trimmed_read_length=None,
                  mask_short_adapter_reads=None,
                  adapter_sequence=None,adapter_sequence_read2=None,
@@ -209,7 +209,7 @@ class MakeFastqs(Pipeline):
           protocol (str): default protocol to use (defaults to
             "standard")
           bases_mask (str): default bases mask to use (defaults
-            to "auto")
+            to None)
           bcl_converter (str): default BCL-to-Fastq conversion
             software to use (can be one of 'bcl2fastq',
             'bcl-convert'; defaults to "bcl2fastq"). Optionally
@@ -1539,12 +1539,7 @@ class MakeFastqs(Pipeline):
                             "10x_multiome_atac",
                             "10x_multiome_gex"):
                 # Get bases mask
-                if protocol == "10x_multiome":
-                    # Cellranger-arc determines mask implicitly
-                    multiome_bases_mask = None
-                else:
-                    # Use explicitly determined mask
-                    multiome_bases_mask = get_bases_mask.output.bases_mask
+                multiome_bases_mask = get_bases_mask.output.bases_mask
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_multiome is None:
                     get_bcl2fastq_for_10x_multiome = GetBcl2Fastq(
@@ -1554,7 +1549,7 @@ class MakeFastqs(Pipeline):
                     self.add_task(get_bcl2fastq_for_10x_multiome,
                                   envmodules=\
                                   self.envmodules['cellranger_arc_mkfastq'])
-                # Get cellranger-atac information
+                # Get cellranger-arc information
                 if get_cellranger_arc is None:
                     # Create a new task only if one doesn't already
                     # exist
@@ -1564,7 +1559,7 @@ class MakeFastqs(Pipeline):
                     self.add_task(get_cellranger_arc,
                                   envmodules=\
                                   self.envmodules['cellranger_arc_mkfastq'])
-                # Run cellranger mkfastq
+                # Run cellranger-arc mkfastq
                 make_fastqs = Run10xMkfastq(
                     "Run cellranger-arc mkfastq%s" %
                     (" for lanes %s" % ','.join([str(x) for x in lanes])
@@ -2314,7 +2309,7 @@ class GetBasesMask(PipelineTask):
     """
     Sets the bases mask string for bcl2fastq
     """
-    def init(self, run_dir, sample_sheet=None, bases_mask="auto",
+    def init(self, run_dir, sample_sheet=None, bases_mask=None,
              r1_length=None, r2_length=None, r3_length=None,
              i1_length=None, i2_length=None,
              override_template=None):
@@ -2326,8 +2321,8 @@ class GetBasesMask(PipelineTask):
             data from the sequencer run
           sample_sheet (str): path to input samplesheet file
           bases_mask (str): input bases mask string
-            (if set then will passed directly to
-            output)
+            (if set then will be passed directly to
+            output, default is to determine automatically)
           r1_length (int): optional, truncate R1 reads
             to this length (ignored if bases mask is set)
           r2_length (int): optional, truncate R2 reads
@@ -2349,8 +2344,14 @@ class GetBasesMask(PipelineTask):
         self.add_output("bases_mask", Param(type='str'))
     def setup(self):
         # Check if explicit bases mask already supplied
-        if self.args.bases_mask != "auto":
-            bases_mask = self.args.bases_mask
+        if self.args.bases_mask:
+            if self.args.bases_mask == "auto":
+                # Set to None, to force basecalling software
+                # to determine bases mask itself
+                bases_mask = None
+            else:
+                # Set to supplied input mask
+                bases_mask = self.args.bases_mask
         else:
             bases_mask = None
             # Load input data
@@ -2367,7 +2368,7 @@ class GetBasesMask(PipelineTask):
                                         self.args.override_template)
         # Validate
         print(f"Bases mask: {bases_mask}")
-        if not bases_mask_is_valid(bases_mask):
+        if bases_mask is not None and not bases_mask_is_valid(bases_mask):
             raise Exception(f"Invalid bases mask: '{bases_mask}'")
         # Set output bases mask value
         self.output.bases_mask.set(bases_mask)
