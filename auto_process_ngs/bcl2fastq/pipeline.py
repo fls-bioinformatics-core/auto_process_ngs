@@ -103,7 +103,6 @@ logger = logging.getLogger(__name__)
 
 # Fastq generation protocols
 from .protocols import PROTOCOLS
-from .protocols import PROTOCOLS_10X
 
 # Valid attribute names for lane subsets
 

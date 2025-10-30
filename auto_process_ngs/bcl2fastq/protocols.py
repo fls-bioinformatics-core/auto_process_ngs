@@ -273,6 +273,3 @@ PROTOCOLS = {
         "trim_adapters": False,
     }
 }
-
-# 10xGenomics protocols
-PROTOCOLS_10X = [p for p in PROTOCOLS.keys() if p.startswith("10x_")]
