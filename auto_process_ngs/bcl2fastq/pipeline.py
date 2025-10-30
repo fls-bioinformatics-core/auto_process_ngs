@@ -109,6 +109,7 @@ from .protocols import PROTOCOLS_10X
 
 LANE_SUBSET_ATTRS = (
     'protocol',
+    'pipeline_variant',
     'bases_mask',
     'trim_adapters',
     'adapter_sequence',
@@ -986,7 +987,7 @@ class MakeFastqs(Pipeline):
                               requires=(merge_fastq_dirs,))
 
         # For each subset, add the appropriate set of
-        # tasks for the protocol
+        # tasks for the protocol/pipeline variant
         for subset in self.subsets:
 
             # Lanes in this subset
@@ -1001,6 +1002,21 @@ class MakeFastqs(Pipeline):
 
             # 10x indexes in sample sheet?
             has_10x_indexes = (subset['masked_index'] == "__10X__")
+            self.report("- 10x indexes: %s" % "yes" if has_10x_indexes else "no")
+
+            # Pipeline variant
+            pipeline_variant = subset['pipeline_variant']
+            if not pipeline_variant:
+                pipeline_variant = "standard"
+            elif pipeline_variant == "10x_cellranger" and not has_10x_indexes:
+                # Switch to standard pipeline for 10x Chromium GEX without
+                # 10x indexes
+                pipeline_variant = "standard"
+            elif pipeline_variant == "10x_spaceranger" and not has_10x_indexes:
+                # Switch to standard pipeline for 10x Visium without 10x
+                # indexes
+                pipeline_variant = "standard"
+            self.report("- Pipeline variant: %s" % pipeline_variant)
 
             #########################
             # BCL to Fastq converter
@@ -1149,16 +1165,7 @@ class MakeFastqs(Pipeline):
             self.add_task(restore_backup)
 
             # Standard protocols
-            if (protocol in ("standard",
-                             "mirna",
-                             "parse_evercode",
-                             "biorad_ddseq")
-                or (protocol in ("10x_chromium_sc",
-                                 "10x_visium",
-                                 "10x_visium_v1",
-                                 "10x_visium_hd",
-                                 "10x_visium_hd_3prime")
-                    and not has_10x_indexes)):
+            if pipeline_variant == "standard":
 
                 if converter == "bcl2fastq":
                     # Get bcl2fastq information
@@ -1360,7 +1367,7 @@ class MakeFastqs(Pipeline):
                                       requires=(bcl_convert,))
 
             # 10x RNA-seq
-            if protocol == "10x_chromium_sc" and has_10x_indexes:
+            if pipeline_variant == "10x_cellranger":
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x is None:
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
@@ -1416,7 +1423,7 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
 
             # 10x ATAC-seq
-            if protocol == "10x_atac":
+            if pipeline_variant == "10x_cellranger-atac":
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_atac is None:
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
@@ -1473,11 +1480,7 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
 
             # 10x Visium
-            if (protocol in ("10x_visium",
-                             "10x_visium_v1",
-                             "10x_visium_hd",
-                             "10x_visium_hd_3prime")
-                and has_10x_indexes):
+            if pipeline_variant == "10x_spaceranger":
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_visium is None:
                     get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
@@ -1535,9 +1538,7 @@ class MakeFastqs(Pipeline):
                               requires=(restore_backup,))
 
             # 10x multiome
-            if protocol in ("10x_multiome",
-                            "10x_multiome_atac",
-                            "10x_multiome_gex"):
+            if pipeline_variant == "10x_cellranger-arc":
                 # Get bases mask
                 multiome_bases_mask = get_bases_mask.output.bases_mask
                 # Get bcl2fastq information

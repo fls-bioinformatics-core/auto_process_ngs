@@ -14,9 +14,12 @@ of parameters (the dictionary value).
 The following parameters compulsory for each protocol:
 
 * description: free-text string describing the protocol
-* supported_indexes: a sequence (list or tuple) with one or more of:
-  "ILLUMINA", "10X", "NONE" (specifying the types of index that the
-  protocol supports)
+* pipeline_variant: a string specifying which of the implemented sub-pipelines
+  the protocol will use; must be one of: "standard", "10x_cellranger",
+  "10x_cellranger-atc", "10x_cellranger-arc", "10x_spaceranger"
+* supported_indexes: a sequence (list or tuple) which specifies the types
+  of sample sheet index that the protocol supports; must be one or more of:
+  "ILLUMINA", "10X", "NONE"
 
 The remaining parameters can be none or more of any of the possible lane
 subset attributes. Most commonly:
@@ -36,12 +39,14 @@ subset attributes. Most commonly:
 PROTOCOLS = {
     "standard": {
         "description": "Standard Illumina sequencing data (default)",
+        "pipeline_variant": "standard",
         "supported_indexes": ("ILLUMINA", "NONE"),
     },
     "mirna": {
         # miRNA-seq protocol
         # Set minimum trimmed read length and turn off masking
         "description": "miRNA-seq data",
+        "pipeline_variant": "standard",
         "supported_indexes": ("ILLUMINA",),
         "minimum_trimmed_read_length": 10,
         "mask_short_adapter_reads": 0,
@@ -58,6 +63,7 @@ PROTOCOLS = {
         # -- disable adapter trimming
         "description": "10x Genomics Chromium 3' and 5' single cell "
                         "gene expression data",
+        "pipeline_variant": "10x_cellranger",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 28,
         "r2_length": 90,
@@ -81,6 +87,7 @@ PROTOCOLS = {
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics Chromium single cell ATAC-seq data",
+        "pipeline_variant": "10x_cellranger-atac",
         "supported_indexes": ("10X",),
         "r1_length": 50,
         "r2_length": 16,
@@ -100,6 +107,7 @@ PROTOCOLS = {
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome data "
         "(unpooled data i.e. ATAC or GEX data only in single run)",
+        "pipeline_variant": "10x_cellranger-arc",
         "supported_indexes": ("10X",),
         "bases_mask": "auto",
         "no_lane_splitting": True,
@@ -119,6 +127,7 @@ PROTOCOLS = {
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome ATAC-seq data "
         "(run with pooled GEX and ATAC data)",
+        "pipeline_variant": "10x_cellranger-arc",
         "supported_indexes": ("10X",),
         "r1_length": 50,
         "r2_length": 24,
@@ -141,6 +150,7 @@ PROTOCOLS = {
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome GEX data "
         "(run with pooled GEX and ATAC data)",
+        "pipeline_variant": "10x_cellranger-arc",
         "supported_indexes": ("10X",),
         "r1_length": 28,
         "r2_length": 90,
@@ -163,6 +173,7 @@ PROTOCOLS = {
         # -- disable adapter trimming
         "description": "10x Genomics Visium CytAssist FFPE, Fresh Frozen, Fixed "
         "Frozen spatial GEX or FFPE PEX data",
+        "pipeline_variant": "10x_spaceranger",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 28,
         "r2_length": 50,
@@ -186,6 +197,7 @@ PROTOCOLS = {
         # -- disable adapter trimming
         "description": "10x Genomics Visium Fresh Frozen Spatial GEX (v1) "
         "data (no CytAssist)",
+        "pipeline_variant": "10x_spaceranger",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 28,
         "r2_length": 90,
@@ -209,6 +221,7 @@ PROTOCOLS = {
         # -- disable adapter trimming
         "description": "10x Genomics Visium CytAssist FFPE HD spatial GEX "
         "data",
+        "pipeline_variant": "10x_spaceranger",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 43,
         "r2_length": 50,
@@ -231,6 +244,7 @@ PROTOCOLS = {
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Visium CytAssist FFPE HD 3' spatial GEX data",
+        "pipeline_variant": "10x_spaceranger",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 43,
         "r2_length": 75,
@@ -246,6 +260,7 @@ PROTOCOLS = {
         # Parse Evercode
         # Disable adapter trimming
         "description": "Parse Evercode single cell data",
+        "pipeline_variant": "standard",
         "supported_indexes": ("ILLUMINA",),
         "trim_adapters": False,
     },
@@ -253,6 +268,7 @@ PROTOCOLS = {
         # Bio-Rad ddSEQ
         # Disable adapter trimming
         "description": "Bio-Rad ddSEQ single cell data",
+        "pipeline_variant": "standard",
         "supported_indexes": ("ILLUMINA",),
         "trim_adapters": False,
     }
