@@ -2353,6 +2353,8 @@ class GetBasesMask(PipelineTask):
                 # Set to supplied input mask
                 bases_mask = self.args.bases_mask
         else:
+            # Determine bases mask from run info and read and index
+            # length settings
             bases_mask = None
             # Load input data
             illumina_run = IlluminaRun(self.args.run_dir)
