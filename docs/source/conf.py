@@ -12,6 +12,9 @@
 # serve to show the default.
 
 import sys, os
+
+from docutils.nodes import description
+
 sys.path.append('../')
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -293,31 +296,45 @@ with open(qc_protocols_tbl,'wt') as fp:
 from auto_process_ngs.bcl2fastq.protocols import PROTOCOLS as FQ_PROTOCOLS
 fq_protocols = []
 for p in FQ_PROTOCOLS:
-    fq_protocols.append((p, FQ_PROTOCOLS[p]["description"]))
+    name = p
+    description = FQ_PROTOCOLS[p]["description"]
+    reads = []
+    for r in ("r1_length", "r2_length", "r3_length"):
+        try:
+            reads.append(str(FQ_PROTOCOLS[p][r]))
+        except KeyError:
+            pass
+    fq_protocols.append((p, description, " | ".join(reads)))
 fq_protocols = sorted(fq_protocols, key=lambda p: p[0])
 # Get width for protocol name column
 pr_width = max([len(p[0])+4 for p in fq_protocols])
-ds_width = 26
+ds_width = max([len(p[1]) for p in fq_protocols])
+rd_width = 12
 # Generate file with table of protocol names and descriptions
 fq_protocols_tbl = os.path.join(auto_content_dir, "fq_protocols.rst")
 with open(fq_protocols_tbl, "wt") as fp:
     # Write table header
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
-        x='',pr_width=pr_width,ds_width=ds_width))
-    fp.write("{name: <{pr_width}} {desc}\n".format(name="Protocol",
-                                                   desc="Description",
-                                                   pr_width=pr_width))
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
-        x='',pr_width=pr_width,ds_width=ds_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
+        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
+    fp.write("{name: <{pr_width}} {desc: <{ds_width}} {reads}\n".format(
+        name="Protocol",
+        desc="Description",
+        reads="Read lengths (R1 | R2 | R3)",
+        pr_width=pr_width,
+        ds_width=ds_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
+        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
     # Write protocol information
     for p in fq_protocols:
-        fp.write("{name: <{pr_width}} {description}\n".format(
+        fp.write("{name: <{pr_width}} {description: <{ds_width}} {reads}\n".format(
             name="``{name}``".format(name=p[0]),
             description=p[1],
-            pr_width=pr_width))
+            reads=p[2],
+            pr_width=pr_width,
+            ds_width=ds_width))
     # Write table footer
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
-        x='',pr_width=pr_width,ds_width=ds_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
+        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
 
 # -- Make example plot images for QC report -----------------------------------
 
