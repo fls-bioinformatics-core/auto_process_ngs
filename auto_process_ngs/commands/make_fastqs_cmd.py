@@ -291,8 +291,15 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
     # Bases mask
     if bases_mask is not None:
+        # Bases mask was explicitly specified, so update the value stored
+        # in params
         ap.params['bases_mask'] = bases_mask
+    # Use the bases mask from params
     bases_mask = ap.params.bases_mask
+    if bases_mask == "auto":
+        # Interpret "auto" as don't set it explicitly, let the pipeline do it
+        # automatically
+        bases_mask = None
 
     # Default trimming/masking values
     if minimum_trimmed_read_length is None:

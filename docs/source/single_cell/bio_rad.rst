@@ -36,7 +36,7 @@ Single cell platform                      Library types
 ========================================  ==============================
 ``Bio-Rad ddSEQ Single Cell 3' RNA-Seq``  ``scRNA-seq``, ``snRNA-seq``
 ``Bio-Rad ddSEQ Single Cell ATAC``        ``scATAC-seq``, ``snATAC-seq``
-========================================= ==============================
+========================================  ==============================
 
 Running the :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
 command will automatically transfer these values into the project

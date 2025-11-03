@@ -61,30 +61,7 @@ Fastq generation protocols
 The ``--protocol`` option should be set according to the type of data
 that are being processed:
 
-======================== =====================================
-Protocol option          Used for
-======================== =====================================
-``standard``             Standard Illumina sequencing data
-                         (default)
-``mirna``                miRNA-seq data
-``10x_chromium_sc``      10xGenomics Chromium single cell
-                         RNA-seq, CellPlex and Flex data
-``10x_atac``             10xGenomics Chromium single cell
-                         ATAC-seq data
-``10x_visium``           10xGenomics Visium spatial RNA-seq
-                         data
-``10x_multiome``         10xGenomics Multiome single cell
-                         ATAC or GEX data only in single
-                         run
-``10x_multiome_atac``    10xGenomics Multiome single cell
-                         ATAC data (run with pooled GEX
-                         and ATAC data)
-``10x_multiome_gex``     10xGenomics Multiome single cell
-                         GEX data only (run with pooled GEX
-                         and ATAC data)
-``parse_evercode``       Parse Evercode single cell data
-``biorad_ddseq``         Bio-Rad ddSEQ single cell data
-======================== =====================================
+.. include:: auto/fq_protocols.rst
 
 Typically the ``standard`` protocol is sufficient for most types of
 data (RNA-seq, ATAC-seq, ChIP-seq, metagenomics etc) where

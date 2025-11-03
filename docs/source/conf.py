@@ -12,6 +12,9 @@
 # serve to show the default.
 
 import sys, os
+
+from docutils.nodes import description
+
 sys.path.append('../')
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -249,14 +252,17 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
 
-# -- Make table with QC protocols ---------------------------------------------
+# -- Automatic content generation ---------------------------------------------
 
-from auto_process_ngs.qc import protocols
 # Directory for auto-generated content
 auto_content_dir = os.path.join("using","auto")
 if not os.path.exists(auto_content_dir):
     os.makedirs(auto_content_dir)
-# Get list of protocol instances
+
+# -- Make table with QC protocols ---------------------------------------------
+
+# Get list of QC protocol instances
+from auto_process_ngs.qc import protocols
 qc_protocols = []
 for p in protocols.QC_PROTOCOLS:
     qc_protocols.append(protocols.fetch_protocol_definition(p))
@@ -283,6 +289,52 @@ with open(qc_protocols_tbl,'wt') as fp:
     # Write table footer
     fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
         x='',pr_width=pr_width,ds_width=ds_width))
+
+# -- Make table with Fastq generation protocols -----------------------------------
+
+# Get list of Fastq generation protocols
+from auto_process_ngs.bcl2fastq.protocols import PROTOCOLS as FQ_PROTOCOLS
+fq_protocols = []
+for p in FQ_PROTOCOLS:
+    name = p
+    description = FQ_PROTOCOLS[p]["description"]
+    reads = []
+    for r in ("r1_length", "r2_length", "r3_length"):
+        try:
+            reads.append(str(FQ_PROTOCOLS[p][r]))
+        except KeyError:
+            pass
+    fq_protocols.append((p, description, " | ".join(reads)))
+fq_protocols = sorted(fq_protocols, key=lambda p: p[0])
+# Get width for protocol name column
+pr_width = max([len(p[0])+4 for p in fq_protocols])
+ds_width = max([len(p[1]) for p in fq_protocols])
+rd_width = 12
+# Generate file with table of protocol names and descriptions
+fq_protocols_tbl = os.path.join(auto_content_dir, "fq_protocols.rst")
+with open(fq_protocols_tbl, "wt") as fp:
+    # Write table header
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
+        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
+    fp.write("{name: <{pr_width}} {desc: <{ds_width}} {reads}\n".format(
+        name="Protocol",
+        desc="Description",
+        reads="Read lengths (R1 | R2 | R3)",
+        pr_width=pr_width,
+        ds_width=ds_width))
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
+        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
+    # Write protocol information
+    for p in fq_protocols:
+        fp.write("{name: <{pr_width}} {description: <{ds_width}} {reads}\n".format(
+            name="``{name}``".format(name=p[0]),
+            description=p[1],
+            reads=p[2],
+            pr_width=pr_width,
+            ds_width=ds_width))
+    # Write table footer
+    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
+        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
 
 # -- Make example plot images for QC report -----------------------------------
 
