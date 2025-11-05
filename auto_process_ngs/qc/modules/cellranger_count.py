@@ -667,6 +667,7 @@ class RunCellrangerCount(PipelineTask):
         self.add_output('cellranger_version',Param(type=str))
         self.add_output('cellranger_refdata',Param(type=str))
         self.add_output('cellranger_exe',Param(type=str))
+        self.add_output('cellranger_package',Param(type=str))
     def setup(self):
         # Check if there's anything to do
         if not self.args.samples:
@@ -853,6 +854,7 @@ class RunCellrangerCount(PipelineTask):
         self.output.cellranger_exe.set(self.args.cellranger_exe)
         self.output.cellranger_refdata.set(self.args.reference_data_path)
         self.output.cellranger_version.set(self.args.cellranger_version)
+        self.output.cellranger_package.set(os.path.basename(self.args.cellranger_exe))
         # Copy outputs to QC directory
         if self.args.qc_dir and self.args.samples:
             print("Copying outputs to QC directory")
