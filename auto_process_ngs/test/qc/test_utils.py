@@ -613,9 +613,9 @@ class TestSetCellCountForProject(unittest.TestCase):
         m.create(top_dir=self.wd)
         return os.path.join(self.wd,'PJB')
 
-    def test_set_cell_count_for_project_chromium_3v3(self):
+    def test_set_cell_count_for_project_cellranger_count(self):
         """
-        set_cell_count_for_project: test for scRNA-seq (10x Chromium 3'v3)
+        set_cell_count_for_project: "cellranger count" output (defaults)
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -652,165 +652,9 @@ Cellranger version\t8.0.0
                                          project_dir).info.number_of_cells,
                          2272)
 
-    def test_set_cell_count_for_project_chromium_gem_x_3v4(self):
+    def test_set_cell_count_for_project_cellranger_atac_count_1_2_0(self):
         """
-        set_cell_count_for_project: test for scRNA-seq (10x Chromium GEM-X 3'v4)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium GEM-X 3'v4",
-            "scRNA-seq")
-        # Add metrics_summary.csv
-        counts_dir = os.path.join(project_dir,
-                                  "qc",
-                                  "cellranger_count",
-                                  "8.0.0",
-                                  "refdata-gex-GRCh38-2020-A",
-                                  "PJB1",
-                                  "outs")
-        mkdirs(counts_dir)
-        metrics_summary_file = os.path.join(counts_dir,
-                                            "metrics_summary.csv")
-        with open(metrics_summary_file,'wt') as fp:
-            fp.write(METRICS_SUMMARY)
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
-Cellranger version\t8.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         2272)
-
-    def test_set_cell_count_for_project_chromium_gem_x(self):
-        """
-        set_cell_count_for_project: test for scRNA-seq (10x Chromium GEM-X)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium GEM-X",
-            "scRNA-seq")
-        # Add metrics_summary.csv
-        counts_dir = os.path.join(project_dir,
-                                  "qc",
-                                  "cellranger_count",
-                                  "8.0.0",
-                                  "refdata-gex-GRCh38-2020-A",
-                                  "PJB1",
-                                  "outs")
-        mkdirs(counts_dir)
-        metrics_summary_file = os.path.join(counts_dir,
-                                            "metrics_summary.csv")
-        with open(metrics_summary_file,'wt') as fp:
-            fp.write(METRICS_SUMMARY)
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
-Cellranger version\t8.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         2272)
-
-    def test_set_cell_count_for_project_chromium_next_gem(self):
-        """
-        set_cell_count_for_project: test for scRNA-seq (10x Chromium Next GEM)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium Next GEM",
-            "scRNA-seq")
-        # Add metrics_summary.csv
-        counts_dir = os.path.join(project_dir,
-                                  "qc",
-                                  "cellranger_count",
-                                  "8.0.0",
-                                  "refdata-gex-GRCh38-2020-A",
-                                  "PJB1",
-                                  "outs")
-        mkdirs(counts_dir)
-        metrics_summary_file = os.path.join(counts_dir,
-                                            "metrics_summary.csv")
-        with open(metrics_summary_file,'wt') as fp:
-            fp.write(METRICS_SUMMARY)
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
-Cellranger version\t8.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         2272)
-
-    def test_set_cell_count_for_project_chromium_next_gem_3v31(self):
-        """
-        set_cell_count_for_project: test for scRNA-seq (10x Chromium Next GEM 3'v3.1)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium Next GEM 3'v3.1",
-            "scRNA-seq")
-        # Add metrics_summary.csv
-        counts_dir = os.path.join(project_dir,
-                                  "qc",
-                                  "cellranger_count",
-                                  "8.0.0",
-                                  "refdata-gex-GRCh38-2020-A",
-                                  "PJB1",
-                                  "outs")
-        mkdirs(counts_dir)
-        metrics_summary_file = os.path.join(counts_dir,
-                                            "metrics_summary.csv")
-        with open(metrics_summary_file,'wt') as fp:
-            fp.write(METRICS_SUMMARY)
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
-Cellranger version\t8.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         2272)
-
-    def test_set_cell_count_for_atac_project(self):
-        """
-        set_cell_count_for_project: test for scATAC-seq
+        set_cell_count_for_project: "cellranger-atac count" output (1.2.0)
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -841,54 +685,15 @@ Cellranger version\t1.2.0
                          None)
         # Update the cell counts
         print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
+        set_cell_count_for_project(project_dir, tenx_pipeline="cellranger-atac")
         # Check updated cell count
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          5682)
 
-    def test_set_cell_count_for_single_nuclei_atac_project(self):
+    def test_set_cell_count_for_project_cellranger_atac_count_2_0_0(self):
         """
-        set_cell_count_for_project: test for snATAC-seq
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Single Cell ATAC",
-            "snATAC-seq")
-        # Add metrics_summary.csv
-        counts_dir = os.path.join(project_dir,
-                                  "qc",
-                                  "cellranger_count",
-                                  "1.2.0",
-                                  "refdata-cellranger-atac-GRCh38-1.2.0",
-                                  "PJB1",
-                                  "outs")
-        mkdirs(counts_dir)
-        summary_file = os.path.join(counts_dir,
-                                            "summary.csv")
-        with open(summary_file,'w') as fp:
-            fp.write(ATAC_SUMMARY)
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-atac-GRCh38-1.2.0
-Cellranger version\t1.2.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         5682)
-
-    def test_set_cell_count_for_atac_project_2_0_0(self):
-        """
-        set_cell_count_for_project: test for scATAC-seq (Cellranger ATAC 2.0.0)
+        set_cell_count_for_project: "cellranger-atac count" (2.0.0)
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -919,15 +724,15 @@ Cellranger version\t2.0.0
                          None)
         # Update the cell counts
         print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
+        set_cell_count_for_project(project_dir, tenx_pipeline="cellranger-atac")
         # Check updated cell count
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          3582)
 
-    def test_set_cell_count_for_multiome_atac_project(self):
+    def test_set_cell_count_for_project_cellranger_arc_atac(self):
         """
-        set_cell_count_for_project: test for single cell multiome ATAC
+        set_cell_count_for_project: "cellranger-arc count" (single cell multiome ATAC)
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -958,15 +763,15 @@ Cellranger version\t1.0.0
                          None)
         # Update the cell counts
         print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
+        set_cell_count_for_project(project_dir, tenx_pipeline="cellranger-arc")
         # Check updated cell count
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          744)
 
-    def test_set_cell_count_for_multiome_gex_project(self):
+    def test_set_cell_count_for_project_cellranger_arc_multiome_gex(self):
         """
-        set_cell_count_for_project: test for single cell multiome GEX
+        set_cell_count_for_project: "cellranger-arc count" (single cell multiome GEX)
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -997,15 +802,15 @@ Cellranger version\t1.0.0
                          None)
         # Update the cell counts
         print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
+        set_cell_count_for_project(project_dir, tenx_pipeline="cellranger-arc")
         # Check updated cell count
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          744)
 
-    def test_set_cell_count_for_cellplex_project(self):
+    def test_set_cell_count_for_project_cellranger_multi_6_0_0(self):
         """
-        set_cell_count_for_project: test for multiplexed data (CellPlex)
+        set_cell_count_for_project: "cellranger multi" (CellPlex 6.0.0)
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -1050,9 +855,103 @@ Cellranger version\t6.0.0
                                          project_dir).info.number_of_cells,
                          10350)
 
-    def test_set_cell_count_for_cellplex_project_multiple_physical_samples(self):
+    def test_set_cell_count_for_project_cellranger_multi_7_1_0(self):
         """
-        set_cell_count_for_project: test for multiplexed data (CellPlex, multiple physical samples)
+        set_cell_count_for_project: "cellranger multi" (CellPlex 7.1.0)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "CellPlex")
+        # Build mock cellranger multi output directory
+        multi_dir = os.path.join(project_dir,
+                                 "qc",
+                                 "cellranger_multi",
+                                 "7.1.0",
+                                 "refdata-cellranger-gex-GRCh38-2020-A",
+                                 "outs")
+        mkdirs(multi_dir)
+        for sample in ("PBA","PBB",):
+            sample_dir = os.path.join(multi_dir,
+                                      "per_sample_outs",
+                                      sample)
+            mkdirs(sample_dir)
+            summary_file = os.path.join(sample_dir,
+                                        "metrics_summary.csv")
+            with open(summary_file,'wt') as fp:
+                fp.write(CELLPLEX_METRICS_SUMMARY_7_1_0)
+            web_summary = os.path.join(sample_dir,
+                                       "web_summary.html")
+            with open(web_summary,'wt') as fp:
+                fp.write("Placeholder for web_summary.html\n")
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
+Cellranger version\t7.1.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir,source="multi")
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         3138)
+
+    def test_set_cell_count_for_project_cellranger_multi_8_0_0(self):
+        """
+        set_cell_count_for_project: "cellranger multi" (CellPlex 8.0.0)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "CellPlex")
+        # Build mock cellranger multi output directory
+        multi_dir = os.path.join(project_dir,
+                                 "qc",
+                                 "cellranger_multi",
+                                 "8.0.0",
+                                 "refdata-cellranger-gex-GRCh38-2020-A",
+                                 "outs")
+        mkdirs(multi_dir)
+        for sample in ("PBA","PBB",):
+            sample_dir = os.path.join(multi_dir,
+                                      "per_sample_outs",
+                                      sample)
+            mkdirs(sample_dir)
+            summary_file = os.path.join(sample_dir,
+                                        "metrics_summary.csv")
+            with open(summary_file,'wt') as fp:
+                fp.write(CELLPLEX_METRICS_SUMMARY_8_0_0)
+            web_summary = os.path.join(sample_dir,
+                                       "web_summary.html")
+            with open(web_summary,'wt') as fp:
+                fp.write("Placeholder for web_summary.html\n")
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
+Cellranger version\t8.0.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir,source="multi")
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         3164)
+
+    def test_set_cell_count_for_project_cellranger_multi_multiple_physical_samples(self):
+        """
+        set_cell_count_for_project: "cellranger multi" (CellPlex, multiple physical samples)
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -1103,197 +1002,9 @@ Cellranger version\t9.0.0
                                          project_dir).info.number_of_cells,
                          20700)
 
-    def test_set_cell_count_for_cellplex_project_710(self):
+    def test_set_cell_count_for_project_cellranger_multi_9_0_0(self):
         """
-        set_cell_count_for_project: test for multiplexed data (CellPlex 7.1.0)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium 3'v3",
-            "CellPlex")
-        # Build mock cellranger multi output directory
-        multi_dir = os.path.join(project_dir,
-                                 "qc",
-                                 "cellranger_multi",
-                                 "7.1.0",
-                                 "refdata-cellranger-gex-GRCh38-2020-A",
-                                 "outs")
-        mkdirs(multi_dir)
-        for sample in ("PBA","PBB",):
-            sample_dir = os.path.join(multi_dir,
-                                      "per_sample_outs",
-                                      sample)
-            mkdirs(sample_dir)
-            summary_file = os.path.join(sample_dir,
-                                        "metrics_summary.csv")
-            with open(summary_file,'wt') as fp:
-                fp.write(CELLPLEX_METRICS_SUMMARY_7_1_0)
-            web_summary = os.path.join(sample_dir,
-                                       "web_summary.html")
-            with open(web_summary,'wt') as fp:
-                fp.write("Placeholder for web_summary.html\n")
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
-Cellranger version\t7.1.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir,source="multi")
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         3138)
-
-    def test_set_cell_count_for_cellplex_project_800(self):
-        """
-        set_cell_count_for_project: test for multiplexed data (CellPlex 8.0.0)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium 3'v3",
-            "CellPlex")
-        # Build mock cellranger multi output directory
-        multi_dir = os.path.join(project_dir,
-                                 "qc",
-                                 "cellranger_multi",
-                                 "8.0.0",
-                                 "refdata-cellranger-gex-GRCh38-2020-A",
-                                 "outs")
-        mkdirs(multi_dir)
-        for sample in ("PBA","PBB",):
-            sample_dir = os.path.join(multi_dir,
-                                      "per_sample_outs",
-                                      sample)
-            mkdirs(sample_dir)
-            summary_file = os.path.join(sample_dir,
-                                        "metrics_summary.csv")
-            with open(summary_file,'wt') as fp:
-                fp.write(CELLPLEX_METRICS_SUMMARY_8_0_0)
-            web_summary = os.path.join(sample_dir,
-                                       "web_summary.html")
-            with open(web_summary,'wt') as fp:
-                fp.write("Placeholder for web_summary.html\n")
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
-Cellranger version\t8.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir,source="multi")
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         3164)
-
-    def test_set_cell_count_for_cellplex_project_next_gem(self):
-        """
-        set_cell_count_for_project: test for multiplexed data (CellPlex with 10x Next GEM)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium Next GEM",
-            "CellPlex")
-        # Build mock cellranger multi output directory
-        multi_dir = os.path.join(project_dir,
-                                 "qc",
-                                 "cellranger_multi",
-                                 "8.0.0",
-                                 "refdata-cellranger-gex-GRCh38-2020-A",
-                                 "outs")
-        mkdirs(multi_dir)
-        for sample in ("PBA","PBB",):
-            sample_dir = os.path.join(multi_dir,
-                                      "per_sample_outs",
-                                      sample)
-            mkdirs(sample_dir)
-            summary_file = os.path.join(sample_dir,
-                                        "metrics_summary.csv")
-            with open(summary_file,'wt') as fp:
-                fp.write(CELLPLEX_METRICS_SUMMARY_8_0_0)
-            web_summary = os.path.join(sample_dir,
-                                       "web_summary.html")
-            with open(web_summary,'wt') as fp:
-                fp.write("Placeholder for web_summary.html\n")
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
-Cellranger version\t8.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir,source="multi")
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         3164)
-
-    def test_set_cell_count_for_cellplex_project_next_gem_3v31(self):
-        """
-        set_cell_count_for_project: test for multiplexed data (CellPlex with 10x Next GEM 3'v3.1)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium Next GEM 3'v3.1",
-            "CellPlex")
-        # Build mock cellranger multi output directory
-        multi_dir = os.path.join(project_dir,
-                                 "qc",
-                                 "cellranger_multi",
-                                 "8.0.0",
-                                 "refdata-cellranger-gex-GRCh38-2020-A",
-                                 "outs")
-        mkdirs(multi_dir)
-        for sample in ("PBA","PBB",):
-            sample_dir = os.path.join(multi_dir,
-                                      "per_sample_outs",
-                                      sample)
-            mkdirs(sample_dir)
-            summary_file = os.path.join(sample_dir,
-                                        "metrics_summary.csv")
-            with open(summary_file,'wt') as fp:
-                fp.write(CELLPLEX_METRICS_SUMMARY_8_0_0)
-            web_summary = os.path.join(sample_dir,
-                                       "web_summary.html")
-            with open(web_summary,'wt') as fp:
-                fp.write("Placeholder for web_summary.html\n")
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
-Cellranger version\t8.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir,source="multi")
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         3164)
-
-    def test_set_cell_count_for_cellplex_project_900(self):
-        """
-        set_cell_count_for_project: test for multiplexed data (CellPlex 9.0.0)
+        set_cell_count_for_project: "cellranger multi" (CellPlex 9.0.0)
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -1338,9 +1049,9 @@ Cellranger version\t9.0.0
                                          project_dir).info.number_of_cells,
                          3142)
 
-    def test_set_cell_count_for_cellplex_project_with_count(self):
+    def test_set_cell_count_for_project_cellranger_count_and_multi(self):
         """
-        set_cell_count_for_project: test for multiplexed data (CellPlex) with count output
+        set_cell_count_for_project: "cellranger count" and "multi" in same project
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -1406,136 +1117,9 @@ Cellranger version\t6.0.0
         self.assertEqual(AnalysisProject(project_dir).info.number_of_cells,
                          2272)
 
-    def test_set_cell_count_for_immune_profiling_project(self):
-        """
-        set_cell_count_for_project: test for single cell immune profiling data (Chromium 5')
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium 5'",
-            "Single Cell Immune Profiling")
-        # Build mock cellranger multi output directory
-        multi_dir = os.path.join(project_dir,
-                                 "qc",
-                                 "cellranger_multi",
-                                 "9.0.0",
-                                 "refdata-cellranger-gex-GRCh38-2020-A",
-                                 "outs",
-                                 "per_sample_outs",
-                                 "PJB1")
-        mkdirs(multi_dir)
-        summary_file = os.path.join(multi_dir, "metrics_summary.csv")
-        with open(summary_file,'wt') as fp:
-            fp.write(CELLPLEX_METRICS_SUMMARY)
-        web_summary = os.path.join(multi_dir, "web_summary.html")
-        with open(web_summary,'wt') as fp:
-            fp.write("Placeholder for web_summary.html\n")
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
-Cellranger version\t9.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir,source="multi")
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         5175)
-
-    def test_set_cell_count_for_immune_profiling_project_multiple_physical_samples(self):
-        """
-        set_cell_count_for_project: test for single cell immune profiling data (Chromium 5', multiple physical samples)
-        """
-        # Set up mock project
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium 5'",
-            "Single Cell Immune Profiling")
-        # Build mock cellranger multi output directory
-        multi_dir = os.path.join(project_dir,
-                                 "qc",
-                                 "cellranger_multi",
-                                 "9.0.0",
-                                 "refdata-cellranger-gex-GRCh38-2020-A")
-        mkdirs(multi_dir)
-        for sample in ("PJB1", "PJB2"):
-            sub_dir = os.path.join(multi_dir,
-                                   sample,
-                                   "outs",
-                                   "per_sample_outs",
-                                   sample)
-            mkdirs(sub_dir)
-            summary_file = os.path.join(sub_dir, "metrics_summary.csv")
-            with open(summary_file,'wt') as fp:
-                fp.write(CELLPLEX_METRICS_SUMMARY)
-            web_summary = os.path.join(sub_dir, "web_summary.html")
-            with open(web_summary,'wt') as fp:
-                fp.write("Placeholder for web_summary.html\n")
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
-Cellranger version\t9.0.0
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir,source="multi")
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         10350)
-
-    def test_set_cell_count_project_missing_library_type(self):
-        """
-        set_cell_count_for_project: test for scRNA-seq when library not set
-        """
-        # Set up mock project with library type not set
-        project_dir = self._make_mock_analysis_project(
-            "10xGenomics Chromium 3'v3",
-            None)
-        # Add metrics_summary.csv
-        counts_dir = os.path.join(project_dir,
-                                  "qc",
-                                  "cellranger_count",
-                                  "5.0.1",
-                                  "refdata-gex-GRCh38-2020-A",
-                                  "PJB1",
-                                  "outs")
-        mkdirs(counts_dir)
-        metrics_summary_file = os.path.join(counts_dir,
-                                            "metrics_summary.csv")
-        with open(metrics_summary_file,'w') as fp:
-            fp.write(METRICS_SUMMARY)
-        # Add QC info file
-        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
-Cellranger version\t5.0.1
-""")
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         2272)
-
     def test_set_cell_count_for_project_no_subdirs(self):
         """
-        set_cell_count_for_project: test for scRNA-seq (old-style output)
+        set_cell_count_for_project: "cellranger count" outputs with no version/reference subdirs
         """
         # Set up mock project
         project_dir = self._make_mock_analysis_project(
@@ -1565,14 +1149,14 @@ Cellranger version\t5.0.1
                                          project_dir).info.number_of_cells,
                          2272)
 
-    def test_set_cell_count_project_missing_library_type_no_subdirs(self):
+    def test_set_cell_count_for_project_unknown_tenx_pipeline(self):
         """
-        set_cell_count_for_project: test for scRNA-seq when library not set (old-style output)
+        set_cell_count_for_project: exception for unknown 10x package
         """
-        # Set up mock project with library type not set
+        # Set up mock project
         project_dir = self._make_mock_analysis_project(
             "10xGenomics Chromium 3'v3",
-            None)
+            "scRNA-seq")
         # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
                                   "qc",
@@ -1584,57 +1168,53 @@ Cellranger version\t5.0.1
                                             "metrics_summary.csv")
         with open(metrics_summary_file,'w') as fp:
             fp.write(METRICS_SUMMARY)
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Update the cell counts
-        print("Updating number of cells")
-        set_cell_count_for_project(project_dir)
-        # Check updated cell count
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         2272)
+        # Updating the cell counts will fail
+        self.assertRaises(Exception,
+                          set_cell_count_for_project,
+                          project_dir,
+                          tenx_pipeline="unknown_pipeline")
 
-    def test_set_cell_count_fails_for_project_with_no_metadata(self):
+    def test_set_cell_count_for_project_bad_multi_tenx_pipeline_combination(self):
         """
-        set_cell_count_for_project: raises exception for project with no metadata
+        set_cell_count_for_project: exception for incorrect 10x package with "multi"
         """
         # Set up mock project
-        project_dir = self._make_mock_analysis_project(None,None)
-        # Add metrics_summary.csv
-        counts_dir = os.path.join(project_dir,
-                                  "qc",
-                                  "cellranger_count",
-                                  "5.0.1",
-                                  "refdata-gex-GRCh38-2020-A",
-                                  "PJB1",
-                                  "outs")
-        mkdirs(counts_dir)
-        metrics_summary_file = os.path.join(counts_dir,
-                                            "metrics_summary.csv")
-        with open(metrics_summary_file,'wt') as fp:
-            fp.write(METRICS_SUMMARY)
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "CellPlex")
+        # Build mock cellranger multi output directory
+        multi_dir = os.path.join(project_dir,
+                                 "qc",
+                                 "cellranger_multi",
+                                 "9.0.0",
+                                 "refdata-cellranger-gex-GRCh38-2020-A",
+                                 "outs")
+        mkdirs(multi_dir)
+        for sample in ("PBA","PBB",):
+            sample_dir = os.path.join(multi_dir,
+                                      "per_sample_outs",
+                                      sample)
+            mkdirs(sample_dir)
+            summary_file = os.path.join(sample_dir,
+                                        "metrics_summary.csv")
+            with open(summary_file,'wt') as fp:
+                fp.write(CELLPLEX_METRICS_SUMMARY_9_0_0)
+            web_summary = os.path.join(sample_dir,
+                                       "web_summary.html")
+            with open(web_summary,'wt') as fp:
+                fp.write("Placeholder for web_summary.html\n")
         # Add QC info file
         with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
-            fp.write("""Cellranger reference datasets\t/data/refdata-gex-GRCh38-2020-A
-Cellranger version\t5.0.1
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-gex-GRCh38-2020-A
+Cellranger version\t9.0.0
 """)
-        # Check initial cell count
-        print("Checking number of cells")
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
-        # Attempting to update the cell counts should raise
-        # NotImplementedError
-        self.assertRaises(NotImplementedError,
+        # Updating the cell counts will fail
+        self.assertRaises(Exception,
                           set_cell_count_for_project,
-                          project_dir)
-        # Check cell count wasn't updated
-        self.assertEqual(AnalysisProject("PJB1",
-                                         project_dir).info.number_of_cells,
-                         None)
+                          project_dir,
+                          tenx_pipeline="cellranger-arc",
+                          source="multi")
+
 
 class TestReadVersionsFile(unittest.TestCase):
     """

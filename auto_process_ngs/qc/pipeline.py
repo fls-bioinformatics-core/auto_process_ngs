@@ -735,6 +735,7 @@ class QCPipeline(Pipeline):
                             project_name,
                             project,
                             qc_dir,
+                            tenx_pipeline=run_cellranger_count.output.cellranger_package,
                             source="count"
                         )
                     self.add_task(set_cellranger_cell_count,
@@ -792,6 +793,7 @@ class QCPipeline(Pipeline):
                     project_name,
                     project,
                     qc_dir,
+                    tenx_pipeline=run_cellranger_multi.output.cellranger_package,
                     source="multi"
                 )
                 self.add_task(set_cellranger_cell_count,
@@ -1449,7 +1451,8 @@ class Set10xCellCount(PipelineTask):
     Update the number of cells in the project metadata from
     'cellranger* count' or 'cellranger multi' output
     """
-    def init(self,project,qc_dir=None,source="count"):
+    def init(self,project, qc_dir=None, tenx_pipeline="cellranger",
+             source="count"):
         """
         Initialise the Set10xCellCount task.
 
@@ -1458,6 +1461,8 @@ class Set10xCellCount(PipelineTask):
             number of cells for
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
+          tenx_pipeline (str): one of 'cellranger' (the default),
+            'cellranger-atac' or 'cellranger-arc'
           source (str): either 'count' (the default) or
             'multi'
         """
@@ -1468,6 +1473,7 @@ class Set10xCellCount(PipelineTask):
         try:
             set_cell_count_for_project(self.args.project.dirn,
                                        self.args.qc_dir,
+                                       tenx_pipeline=self.args.tenx_pipeline,
                                        source=self.args.source)
         except Exception as ex:
             print("Failed to set the cell count: %s" % ex)

@@ -452,8 +452,8 @@ def filter_fastqs(reads,fastqs,fastq_attrs=AnalysisFastq):
                 fqs.add(fq.basename)
     return sorted(list(fqs))
 
-def set_cell_count_for_project(project_dir,qc_dir=None,
-                               source="count"):
+def set_cell_count_for_project(project_dir, qc_dir=None,
+                               tenx_pipeline="cellranger", source="count"):
     """
     Set the total number of cells for a project
 
@@ -461,7 +461,7 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
     of cells for each sample in a project as determined
     from either 'cellranger* count' or 'cellranger multi'.
 
-    Depending the 10x Genomics package and analysis type
+    Depending on the 10x Genomics package and analysis type
     the cell count for individual samples is extracted
     from the 'metrics_summary.csv' file for scRNA-seq
     (i.e. 'cellranger count' or 'cellranger multi'), or
@@ -475,6 +475,9 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
       project_dir (str): path to the project directory
       qc_dir (str): path to QC directory (if not the default
         QC directory for the project)
+      tenx_pipeline (str): specify the 10x Genomics package,
+        one of: 'cellranger', 'cellranger-atac',
+        'cellranger-arc' (default is 'cellranger')
       source (str): either 'count' or 'multi' (default is
         'count')
 
@@ -490,21 +493,10 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
     print("QC dir: %s" % qc_dir)
     number_of_cells = None
     # Determine which 10x pipeline was used
-    pipeline = None
-    single_cell_platform = project.info.single_cell_platform
-    if single_cell_platform:
-        if single_cell_platform.startswith("10xGenomics Chromium 3'") or \
-           single_cell_platform.startswith("10xGenomics Chromium GEM-X") or \
-           single_cell_platform.startswith("10xGenomics Chromium Next GEM") or \
-           single_cell_platform.startswith("10xGenomics Chromium 5'"):
-            pipeline = "cellranger"
-        elif single_cell_platform == "10xGenomics Single Cell ATAC":
-            pipeline = "cellranger-atac"
-        elif single_cell_platform == "10xGenomics Single Cell Multiome":
-            pipeline = "cellranger-arc"
-    if not pipeline:
-        raise NotImplementedError("Not implemented for platform '%s'"
-                                  % single_cell_platform)
+    if tenx_pipeline not in ("cellranger", "cellranger-atac",
+                             "cellranger-arc"):
+        raise Exception(f"'{tenx_pipeline}': unrecognised 10x package, cannot "
+                        "set cell count")
     # Fetch information on version and reference data
     cellranger_refdata = None
     cellranger_version = None
@@ -524,7 +516,9 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
     # Determine whether we're handling output from 'multi'
     # or from 'count'
     if source == "multi":
-        print("Looking for '%s multi' outputs" % pipeline)
+        if tenx_pipeline != "cellranger":
+            raise Exception(f"'{tenx_pipeline}': doesn't support 'multi'")
+        print("Looking for '%s multi' outputs" % tenx_pipeline)
         if not os.path.exists(os.path.join(qc_dir,"cellranger_multi")):
             logger.warning("Unable to set cell count: no data found")
             return
@@ -544,7 +538,7 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
             # Load output data and extract individual cell counts
             try:
                 multi_outs = CellrangerMulti(multi_dir,
-                                             cellranger_exe=pipeline)
+                                             cellranger_exe=tenx_pipeline)
                 if multi_outs.sample_names:
                     # Collect cell count for each multiplexed
                     # sample
@@ -569,7 +563,7 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
                 logger.warning(f"Unable to set cell count from data in "
                                f"{multi_dir}: {ex}")
     elif source == "count":
-        print("Looking for '%s count' outputs" % pipeline)
+        print("Looking for '%s count' outputs" % tenx_pipeline)
         if not os.path.exists(os.path.join(qc_dir,"cellranger_count")):
             logger.warning("Unable to set cell count: no data found")
             return
@@ -601,7 +595,7 @@ def set_cell_count_for_project(project_dir,qc_dir=None,
                         sample_dir = os.path.join(count_dir,
                                                   sample.name)
                         sample_outs = CellrangerCount(sample_dir,
-                                                      cellranger_exe=pipeline)
+                                                      cellranger_exe=tenx_pipeline)
                         for metric in ('Estimated Number of Cells',
                                        'Estimated number of cells',
                                        'annotated_cells',):
