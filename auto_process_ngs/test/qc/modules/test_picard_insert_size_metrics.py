@@ -208,7 +208,7 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
 
     def test_qcpipeline_qc_modules_picard_insert_size_metrics_pe_with_r1_index_reads(self):
         """
-        QCPipeline: 'picard_insert_size_metrics' QC module fails for PE data, R1 as index reads
+        QCPipeline: 'picard_insert_size_metrics' QC module (psuedo-PE data, R1 as index reads)
         """
         # Make mock QC executables
         MockStar.create(os.path.join(self.bin,"STAR"))
@@ -243,7 +243,7 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        self.assertEqual(status,1)
+        self.assertEqual(status,0)
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
@@ -272,9 +272,9 @@ PJB1_S1_001.bam	153.754829	69.675347	139	37
                         "Missing 'qc'")
         for f in ("qc_report.html",
                   "qc_report.PJB.zip"):
-            self.assertFalse(os.path.exists(os.path.join(self.wd,
-                                                         "PJB",f)),
-                             "Found %s, shouldn't be present" % f)
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Found %s, shouldn't be present" % f)
         # Check collated Picard insert sizes
         collated_insert_sizes = os.path.join(self.wd,
                                              "PJB",
@@ -373,7 +373,7 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
 
     def test_qcpipeline_qc_modules_picard_insert_size_metrics_se(self):
         """
-        QCPipeline: 'picard_insert_size_metrics' QC module fails for SE data
+        QCPipeline: 'picard_insert_size_metrics' QC module (SE data)
         """
         # Make mock QC executables
         MockStar.create(os.path.join(self.bin,"STAR"))
@@ -406,7 +406,7 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
                            poll_interval=POLL_INTERVAL,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
-        self.assertEqual(status,1)
+        self.assertEqual(status,0)
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
@@ -433,9 +433,9 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
                         "Missing 'qc'")
         for f in ("qc_report.html",
                   "qc_report.PJB.zip"):
-            self.assertFalse(os.path.exists(os.path.join(self.wd,
-                                                         "PJB",f)),
-                             "Found %s, shouldn't be present" % f)
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                             "Missing %s, should be present" % f)
         # Check collated Picard insert sizes
         collated_insert_sizes = os.path.join(self.wd,
                                              "PJB",

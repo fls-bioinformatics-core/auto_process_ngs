@@ -147,6 +147,9 @@ class PicardInsertSizeMetrics(QCModule):
         if not params.organism:
             # No organism specified
             return None
+        if len(params.seq_data_reads) != 2:
+            # Insert size metrics only for paired-end data
+            return None
         if not params.star_index:
             # No STAR index
             return None

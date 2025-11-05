@@ -86,6 +86,23 @@ QC_PROTOCOLS = {
         ]
     },
 
+    "standard": {
+        "description": "Standard QC for single and paired-end data",
+        "reads": {
+            "seq_data": ('r*',),
+            "index": ()
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'picard_insert_size_metrics',
+            'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
+            'qualimap_rnaseq'
+        ]
+    },
+
     "standardSE": {
         "description": "Standard single-end data (R1 Fastqs only)",
         "reads": {
