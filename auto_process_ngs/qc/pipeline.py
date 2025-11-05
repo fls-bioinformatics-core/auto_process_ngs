@@ -19,7 +19,7 @@ Pipeline task classes:
 - GetSequenceDataFastqs
 - UpdateQCMetadata
 - VerifyFastqs
-- SetCellCountFromCellranger
+- Set10xCellCount
 - GetReferenceDataset
 - GetBAMFile
 - ConvertGTFToBed
@@ -730,7 +730,7 @@ class QCPipeline(Pipeline):
                 # Set cell count
                 if set_cell_count:
                     set_cellranger_cell_count = \
-                        SetCellCountFromCellranger(
+                        Set10xCellCount(
                             "%s: set cell count from single library analysis" %
                             project_name,
                             project,
@@ -787,7 +787,7 @@ class QCPipeline(Pipeline):
                 update_qc_metadata.requires(run_cellranger_multi)
 
                 # Set cell count
-                set_cellranger_cell_count = SetCellCountFromCellranger(
+                set_cellranger_cell_count = Set10xCellCount(
                     "%s: set cell count from cell multiplexing analysis" %
                     project_name,
                     project,
@@ -1444,14 +1444,14 @@ class VerifyFastqs(PipelineFunctionTask):
         else:
             print("Verified Fastq files")
 
-class SetCellCountFromCellranger(PipelineTask):
+class Set10xCellCount(PipelineTask):
     """
     Update the number of cells in the project metadata from
-    'cellranger count' or 'cellranger multi' output
+    'cellranger* count' or 'cellranger multi' output
     """
     def init(self,project,qc_dir=None,source="count"):
         """
-        Initialise the SetCellCountFromCellranger task.
+        Initialise the Set10xCellCount task.
 
         Arguments:
           project (AnalysisProject): project to update the
