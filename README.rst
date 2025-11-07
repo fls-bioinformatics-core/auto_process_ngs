@@ -80,6 +80,11 @@ installed using::
     pip install git+https://github.com/fls-bioinformatics-core/auto_process_ngs.git@devel
 
 Use the ``-e`` option to install an 'editable' version (see the section on
-`"Editable" installs
-<https://pip.pypa.io/en/latest/reference/pip_install.html#editable-installs>_`
+`"Editable" installs <https://pip.pypa.io/en/latest/reference/pip_install.html#editable-installs>`_
 in the pip documentation).
+
+Contributing
+************
+
+See `CONTRIBUTING.md <CONTRIBUTING.md>`_ file for guidelines on how to
+contribute to the project.
