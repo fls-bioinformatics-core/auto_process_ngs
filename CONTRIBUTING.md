@@ -1,15 +1,15 @@
-# Contributing
+# Contributing guidelines
 
 The `auto-process-ngs` project has been developed specifically for use within the Bioinformatics
 Core Facility at the University of Manchester, and is currently maintained by a single software
 developer with limited time and resources.
 
 As a result, while contributions are welcome, it may take some time before they are reviewed, and
-bugs and feature requests which don't directly impact on our core facility's operations will be
-treated as a lower priority than those which do.
+bugs and feature requests which don't directly impact on our core facility's operations will
+necessarily be treated as a lower priority than those which do.
 
-We ask that you please be patient if your contribution is not addressed immediately, and understand
-responses (or lack of response) are not intended as a reflection on the quality or value of your
+We ask that you please be patient if your contribution is not addressed immediately, or if it's
+rejected: neither of these should be seen as a reflection on the quality or value of your
 contribution, or its importance to you.
 
 If you still wish to contribute, please read the guidelines below for more information on how to do
@@ -19,6 +19,16 @@ so.
 
 Before reporting a bug, please check whether it has already been reported by searching the
 [GitHub issue tracker](https://github.com/fls-bioinformatics-core/auto_process_ngs/issues).
+
+If you're unable to find an open issue addressing the problem then you can
+[open a new one](https://github.com/fls-bioinformatics-core/auto_process_ngs/issues/new).
+
+Please be sure to include **a title and a clear description** of the problem, with as much
+relevant information as possible (for example, describing the commands or code that you ran,
+the expected outcome, and the actual behaviour you observed along with any error messages).
+
+Essentially the more chance we have of reproducing your problem, the more likely is that we
+will be able to solve it.
 
 ## Have you written a patch that fixes a bug?
 
