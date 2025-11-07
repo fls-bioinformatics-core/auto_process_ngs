@@ -1,4 +1,4 @@
-# Contributing guidelines
+# Contributor guidelines
 
 The `auto-process-ngs` project has been developed specifically for use within the Bioinformatics
 Core Facility at the University of Manchester, and is currently maintained by a single software
@@ -27,8 +27,8 @@ Please be sure to include **a title and a clear description** of the problem, wi
 relevant information as possible (for example, describing the commands or code that you ran,
 the expected outcome, and the actual behaviour you observed along with any error messages).
 
-Essentially the more chance we have of reproducing your problem, the more likely is that we
-will be able to solve it.
+Essentially the more chance we have of reproducing your problem, the more likely it is that
+we'll be able to solve it.
 
 ## Have you written a patch that fixes a bug?
 
@@ -37,6 +37,7 @@ Please open a new GitHub pull request with a patch:
 * Fork the repository and create a new branch for your patch
 * Make your changes
 * Ensure that any existing tests pass, and add new tests if appropriate
+* Update the relevant documentation if appropriate
 * Submit a pull request describing your changes
 
 Please ensure the pull request description clearly describes the problem and solution, and include
