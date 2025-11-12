@@ -58,7 +58,7 @@ PROTOCOLS = {
         # -- truncate I1 and I2 to 10 bases
         # -- minimum trimmed read length 8bp
         # -- minimum masked read length 8bp
-        # -- no lane splitting
+        # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics Chromium 3' and 5' single cell "
@@ -71,7 +71,7 @@ PROTOCOLS = {
         "i2_length": 10,
         "minimum_trimmed_read_length": 8,
         "mask_short_adapter_reads": 8,
-        "no_lane_splitting": True,
+        "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
         "trim_adapters": False
     },
@@ -83,7 +83,7 @@ PROTOCOLS = {
         # -- truncate R3 to 50 bases
         # -- truncate I1 to 8 bases
         # -- enable filter single index
-        # -- no lane splitting
+        # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics Chromium single cell ATAC-seq data",
@@ -95,14 +95,14 @@ PROTOCOLS = {
         "i1_length": 8,
         "override_template": "RIRR",
         "tenx_filter_single_index": True,
-        "no_lane_splitting": True,
+        "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
         "trim_adapters": False
     },
     "10x_multiome": {
         # 10xGenomics multiome
         # -- set bases mask to "auto"
-        # -- no lane splitting
+        # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome data "
@@ -110,7 +110,7 @@ PROTOCOLS = {
         "pipeline_variant": "10x_cellranger-arc",
         "supported_indexes": ("10X",),
         "bases_mask": "auto",
-        "no_lane_splitting": True,
+        "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
         "trim_adapters": False
     },
@@ -122,7 +122,7 @@ PROTOCOLS = {
         # -- truncate R3 to 49 bases
         # -- truncate I1 to 8 bases
         # -- enable filter single index
-        # -- no lane splitting
+        # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome ATAC-seq data "
@@ -135,7 +135,7 @@ PROTOCOLS = {
         "i1_length": 8,
         "override_template": "RIRR",
         "tenx_filter_single_index": True,
-        "no_lane_splitting": True,
+        "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
         "trim_adapters": False
     },
@@ -145,7 +145,7 @@ PROTOCOLS = {
         # -- truncate R1 to 28 bases
         # -- truncate R2 to 90 bases
         # -- enable filter dual index
-        # -- no lane splitting
+        # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome GEX data "
@@ -157,7 +157,7 @@ PROTOCOLS = {
         "i1_length": 10,
         "i2_length": 10,
         "tenx_filter_dual_index": True,
-        "no_lane_splitting": True,
+        "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
         "trim_adapters": False
     },
@@ -168,7 +168,7 @@ PROTOCOLS = {
         # -- truncate I1 and I2 to 10 bases
         # -- minimum trimmed read length 8bp
         # -- minimum masked read length 8bp
-        # -- no lane splitting
+        # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics Visium CytAssist FFPE, Fresh Frozen, Fixed "
@@ -181,7 +181,7 @@ PROTOCOLS = {
         "i2_length": 10,
         "minimum_trimmed_read_length": 8,
         "mask_short_adapter_reads": 8,
-        "no_lane_splitting": True,
+        "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
         "trim_adapters": False
     },
@@ -192,7 +192,7 @@ PROTOCOLS = {
         # -- truncate I1 and I2 to 10 bases
         # -- minimum trimmed read length 8bp
         # -- minimum masked read length 8bp
-        # -- no lane splitting
+        # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics Visium Fresh Frozen Spatial GEX (v1) "
@@ -205,7 +205,7 @@ PROTOCOLS = {
         "i2_length": 10,
         "minimum_trimmed_read_length": 8,
         "mask_short_adapter_reads": 8,
-        "no_lane_splitting": True,
+        "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
         "trim_adapters": False
     },
@@ -240,7 +240,7 @@ PROTOCOLS = {
         # -- truncate I1 and I2 to 10 bases
         # -- minimum trimmed read length 8bp
         # -- minimum masked read length 8bp
-        # -- no lane splitting
+        # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Visium CytAssist FFPE HD 3' spatial GEX data",
@@ -252,7 +252,7 @@ PROTOCOLS = {
         "i2_length": 10,
         "minimum_trimmed_read_length": 8,
         "mask_short_adapter_reads": 8,
-        "no_lane_splitting": True,
+        "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
         "trim_adapters": False
     },
