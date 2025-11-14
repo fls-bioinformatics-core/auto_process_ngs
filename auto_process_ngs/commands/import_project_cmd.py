@@ -11,7 +11,7 @@
 
 import os
 import logging
-from ..applications import general as applications_general
+from ..apps import general as applications_general
 from ..analysis import AnalysisProject
 from ..qc.utils import verify_qc
 from ..qc.utils import report_qc

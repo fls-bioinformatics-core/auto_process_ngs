@@ -56,6 +56,7 @@ This module also provides the following classes and functions:
 
 import logging
 from bcftbx.utils import AttributeDictionary
+from auto_process_ngs.applications import identify_application
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -768,101 +769,19 @@ def determine_qc_protocol_from_metadata(library_type,
     Return:
       String: QC protocol for the project
     """
-    # Standard protocols
-    if library_type is None or not library_type:
-        protocol = "minimal"
-    elif library_type in ("DNA-seq", "WGS") or \
-         library_type.startswith("CRISPR"):
-        protocol = "minimal"
-    elif paired_end:
-        protocol = "standardPE"
-    else:
-        protocol = "standardSE"
-    # Single cell protocols
-    if single_cell_platform is not None:
-        # 10x Genomics
-        if single_cell_platform.startswith('10xGenomics Chromium 3\'') or \
-           single_cell_platform.startswith('10xGenomics Chromium GEM-X') or \
-           single_cell_platform.startswith('10xGenomics Chromium Next GEM'):
-            # Default for 10x
-            protocol = "singlecell"
-            # 10xGenomics scRNA-seq
-            if library_type == "scRNA-seq":
-                protocol = "10x_scRNAseq"
-            # 10xGenomics snRNA-seq
-            elif library_type == "snRNA-seq":
-                protocol = "10x_snRNAseq"
-            # 10xGenomics CellPlex (cell multiplexing)
-            elif library_type in ("CellPlex",
-                                  "CellPlex scRNA-seq",
-                                  "CellPlex snRNA-seq"):
-                protocol = "10x_CellPlex"
-            # 10xGenomics Flex (fixed RNA profiling)
-            elif library_type == "Flex":
-                protocol = "10x_Flex"
-        # 10x single cell immune profiling
-        elif single_cell_platform.startswith('10xGenomics Chromium 5\''):
-            if library_type == "Single Cell Immune Profiling":
-                protocol = "10x_ImmuneProfiling"
-        # 10x ATAC
-        elif single_cell_platform == "10xGenomics Single Cell ATAC":
-            if library_type in ("scATAC-seq",
-                                "snATAC-seq",):
-                # 10xGenomics scATAC-seq
-                protocol = "10x_scATAC"
-        # 10x Multiome ATAC+GEX
-        elif single_cell_platform == "10xGenomics Single Cell Multiome":
-            if library_type == "ATAC":
-                # 10xGenomics single cell Multiome ATAC
-                protocol = "10x_Multiome_ATAC"
-            elif library_type == "GEX":
-                # 10xGenomics single cell Multiome gene expression
-                protocol = "10x_Multiome_GEX"
-        # Parse Evercode
-        elif single_cell_platform == 'Parse Evercode':
-            if library_type in ("scRNA-seq",
-                                "snRNA-seq",
-                                "TCR",
-                                "TCR scRNA-seq",
-                                "WT",
-                                "WT scRNA-seq"):
-                # Parse Evercode snRNAseq
-                protocol = "ParseEvercode"
-        # Bio-Rad RNA-Seq
-        elif single_cell_platform == "Bio-Rad ddSEQ Single Cell 3' RNA-Seq":
-            if library_type in ("scRNA-seq",
-                                "snRNA-seq",):
-                # Bio-Rad ddSeq RNA-Seq
-                protocol = "minimal"
-        # Bio-Rad ATAC
-        elif single_cell_platform == "Bio-Rad ddSEQ Single Cell ATAC":
-            if library_type in ("scATAC-seq",
-                                "snATAC-seq",):
-                # Bio-Rad ddSeq ATAC
-                protocol = "BioRad_ddSEQ_ATAC"
-        # Visium/spatial data
-        elif single_cell_platform in ("10xGenomics Visium",
-                                      "10xGenomics Visium (CytAssist)",
-                                      "10xGenomics CytAssist Visium"):
-            if library_type.lower() in ("ffpe spatial pex",
-                                        "ffpe spatial protein expression"):
-                # Spatial protein expression
-                protocol = "10x_Visium_PEX"
-            elif library_type.lower() in \
-                 ("fresh frozen spatial gene expression",
-                  "fresh frozen spatial gex") \
-                  and single_cell_platform == "10xGenomics Visium":
-                # Special case (GEX with 90bp insert in R2)
-                protocol = "10x_Visium_GEX_90bp_insert"
-            elif library_type.lower() == "spatial rna-seq" and \
-                 single_cell_platform in ("10xGenomics Visium",
-                                          "10xGenomics CytAssist Visium"):
-                # Legacy spatial RNA-seq
-                protocol = "10x_Visium_legacy"
+    application = identify_application(single_cell_platform, library_type)
+    if application:
+        qc_protocol = application["qc_protocol"]
+        # FIXME in future we should just return the 'standard' QC protocol
+        # This is implemented for backwards compatibility, for now
+        if qc_protocol == "standard":
+            if paired_end:
+                return "standardPE"
             else:
-                # Default (GEX with 50bp insert in R2)
-                protocol = "10x_Visium_GEX"
-    return protocol
+                return "standardSE"
+        else:
+            return qc_protocol
+    raise QCProtocolError("Could not determine QC protocol (unrecognised sequencing application?)")
 
 def determine_qc_protocol(project):
     """
