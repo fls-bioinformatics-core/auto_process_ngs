@@ -108,9 +108,15 @@ class RstTable:
             divider.extend(["+", divider_char*(width + 2)])
         return "".join(divider) + "+"
 
-    def construct_table(self, header=None):
+    def construct_table(self, header=None, indent=""):
         """
         Returns reStructuredText table
+
+        Arguments:
+            header (list): list of column titles to use in
+                the table header (otherwise no header is made)
+            indent (str): string to use for indenting each
+                line of the table (default: no indentation)
         """
         # Collect the field widths
         field_widths = self.get_field_widths(header=header)
@@ -119,7 +125,7 @@ class RstTable:
         # Add table header
         if header:
             for line in self.make_header(header, field_widths):
-                table.append(line)
+                table.append(indent + line)
         # Add the table contents
         previous_row = None
         for row in self._table_data:
@@ -172,7 +178,7 @@ class RstTable:
                     else:
                         divider += "|"
             # Append the row
-            table.append(divider)
+            table.append(indent + divider)
             line = ""
             for i, col in enumerate(row):
                 if col:
@@ -182,7 +188,7 @@ class RstTable:
                     # Empty cell
                     line += "| " + " "*(field_widths[i]+1)
             line += "|"
-            table.append(line)
+            table.append(indent + line)
         # Closing divider
-        table.append(self.make_divider(field_widths))
+        table.append(indent + self.make_divider(field_widths))
         return table
