@@ -1,6 +1,7 @@
 import unittest
 from unittest import TestCase
 from auto_process_ngs.applications import identify_application
+from auto_process_ngs.applications import fetch_application_data
 from auto_process_ngs.applications import split_library_type
 from auto_process_ngs.applications import match_application
 from auto_process_ngs.applications import score_match
@@ -270,6 +271,46 @@ class TestIdentifyApplication(TestCase):
         application = identify_application("Unknown", "Unknown")
         self.assertEqual(application["fastq_generation"], "standard")
         self.assertEqual(application["qc_protocol"], "minimal")
+
+
+class TestFetchApplicationData(TestCase):
+    def test_fetch_application_data_no_matching_tag(self):
+        """
+        fetch_application_data: no matches for nonexistent tag
+        """
+        no_applications = fetch_application_data(["nonexistent"])
+        self.assertEqual(len(no_applications), 0)
+
+    def test_fetch_application_data_single_tag(self):
+        """
+        fetch_application_data: match single tag
+        """
+        legacy_applications = fetch_application_data(["legacy"])
+        for application in legacy_applications:
+            self.assertTrue("legacy" in application["tags"])
+
+    def test_fetch_application_data_exclude_single_tag(self):
+        """
+        fetch_application_data: exclude single tag
+        """
+        legacy_applications = fetch_application_data(["!legacy"])
+        for application in legacy_applications:
+            self.assertFalse("legacy" in application["tags"] if "tags" in application else False)
+
+    def test_fetch_application_data_multiple_tags(self):
+        """
+        fetch_application_data: match multiple tags
+        """
+        multiple_tags = fetch_application_data(["10x", "single_cell"])
+        for application in multiple_tags:
+            self.assertTrue("10x" in application["tags"])
+            self.assertTrue("single_cell" in application["tags"])
+
+    def test_fetch_application_data_mix_include_and_exclude_tags(self):
+        multiple_tags = fetch_application_data(["!10x", "single_cell"])
+        for application in multiple_tags:
+            self.assertFalse("10x" in application["tags"])
+            self.assertTrue("single_cell" in application["tags"])
 
 
 class TestSplitLibraryType(TestCase):

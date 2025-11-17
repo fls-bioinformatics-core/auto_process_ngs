@@ -41,6 +41,8 @@ The module also defines the following user-facing function:
 
 * ``identify_application``: returns the dictionary defining the application
     which matches a given platform and library type
+* ``fetch_application_data``: returns a list of application definitions
+    matching specified tags
 
 The following functions are also defined for internal use:
 
@@ -514,6 +516,66 @@ def identify_application(platform_name, library_type):
             return filter_matches[0][0]
     # No unique match found for any score
     raise Exception(f"No unique matching platform found for '{platform_name}'/'{library_type}'")
+
+def fetch_application_data(tags, applications=None, expand=False):
+    """
+    Fetch application data matching specified tags
+
+    Arguments:
+        tags (list): list of tags to match; tags starting
+            with '!' are treated as negative tags
+        applications (list): list of application definitions
+            to filter; if None then the default APPLICATIONS
+            list is used
+        expand (bool): if True then applications with multiple
+            platforms/libraries are expanded so there is one
+            entry per platform/library combination
+
+    Returns:
+        list: list of application definitions matching
+        the specified tags.
+    """
+    if applications is None:
+        applications = APPLICATIONS
+    matching_applications = []
+    for application in applications:
+        has_tags = True
+        for tag in tags:
+            if tag.startswith("!"):
+                # Negative tag
+                neg_tag = tag[1:]
+                try:
+                    if neg_tag in application["tags"]:
+                        has_tags = False
+                        break
+                except KeyError:
+                    # No tags defined for this application
+                    pass
+                continue
+            else:
+                # Positive tag
+                try:
+                    if tag not in application["tags"]:
+                        has_tags = False
+                        break
+                except KeyError:
+                    # No tags defined for this application
+                    has_tags = False
+        if has_tags:
+            matching_applications.append(application)
+    if expand:
+        # Expand applications with multiple platforms/libraries
+        # so there is one entry per platform/library combination
+        expanded_applications = []
+        for application in matching_applications:
+            for platform in application["platforms"]:
+                for library in application["libraries"]:
+                    new_application = application.copy()
+                    new_application["platforms"] = [platform]
+                    new_application["libraries"] = [library]
+                    expanded_applications.append(new_application)
+        matching_applications = expanded_applications
+    return matching_applications
 
 def split_library_type(library_type):
     """
