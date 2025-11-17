@@ -14,14 +14,18 @@ are then included in the documentation source files.
 
 Classes:
 
-* ``RstTable``: class for making reStructuredText tables
+* ``RstSimpleTable``: class for making reStructuredText 'simple' tables
+* ``RstGridTable``: class for making reStructuredText 'grid' tables
 
 """
 
 
-class RstTable:
+class RstSimpleTable:
     """
-    Class for making reStructuredText tables.
+    Class for making simple reStructuredText tables.
+
+    See documentation for reStructureText simple tables at:
+    https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#simple-tables
 
     Usage:
 
@@ -31,7 +35,100 @@ class RstTable:
     ...     ['col1_row3','col2_row3','col3_row3'],
     ... ]
     >>> header = ['Column 1','Column 2','Column 3']
-    >>> table = RstTable(table_data)
+    >>> table = RstSimpleTable(table_data)
+    >>> for line in table.construct_table(header=header):
+    ...     print(line)
+    =========  =========  =========
+    Column 1   Column 2   Column 3
+    =========  =========  =========
+    col1_row1  col2_row1  col3_row1
+    col1_row2  col2_row2  col3_row2
+    col1_row3  col2_row3  col3_row3
+    =========  =========  =========
+
+    Arguments:
+        table_data (list): list of table rows, where each
+            row is a list of column values.
+    """
+    def __init__(self, table_data):
+        self._table_data = table_data
+
+    def get_field_widths(self, header=None):
+        """
+        Returns a list of field widths.
+        """
+        field_widths = []
+        for row in self._table_data:
+            for i, col in enumerate(row):
+                try:
+                    field_widths[i] = max(field_widths[i], len(col))
+                except IndexError:
+                    field_widths.append(len(col))
+        if header:
+            for i, title in enumerate(header):
+                field_widths[i] = max(field_widths[i], len(title))
+        return field_widths
+
+    def make_divider(self, field_widths):
+        """
+        Make a row divider
+        """
+        divider = []
+        for width in field_widths:
+            divider.append("="*width)
+        return "  ".join(divider)
+
+    def construct_table(self, header=None, indent=""):
+        """
+        Returns reStructuredText simple table
+
+        Arguments:
+            header (list): list of column titles to use in
+                the table header (otherwise no header is made)
+            indent (str): string to use for indenting each
+                line of the table (default: no indentation)
+        """
+        # Collect the field widths
+        field_widths = self.get_field_widths(header=header)
+        # Start constructing the table
+        table = []
+        # Add top divider
+        table.append(indent + self.make_divider(field_widths))
+        # Add table header
+        if header:
+            line = []
+            for title, width in zip(header, field_widths):
+                line.append(title + " "*(width - len(title)))
+            table.append(indent + "  ".join(line))
+            # Add header divider
+            table.append(indent + self.make_divider(field_widths))
+        # Add the table contents
+        for row in self._table_data:
+            line = []
+            for col, width in zip(row, field_widths):
+                line.append(col + " "*(width - len(col)))
+            table.append(indent + "  ".join(line))
+        # Closing divider
+        table.append(indent + self.make_divider(field_widths))
+        return table
+
+
+class RstGridTable:
+    """
+    Class for making reStructuredText 'grid' tables.
+
+    See documentation for reStructureText grid tables at:
+    https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#grid-tables
+
+    Usage:
+
+    >>> table_data = [
+    ...     ['col1_row1','col2_row1','col3_row1'],
+    ...     ['col1_row2','col2_row2','col3_row2'],
+    ...     ['col1_row3','col2_row3','col3_row3'],
+    ... ]
+    >>> header = ['Column 1','Column 2','Column 3']
+    >>> table = RstGridTable(table_data)
     >>> for line in table.construct_table(header=header):
     ...     print(line)
     +-----------+-----------+-----------+
@@ -52,7 +149,7 @@ class RstTable:
     ...     ['block2','col2_row3','col3_row3'],
     ... ]
     >>> header = ['Block','Column 2','Column 3']
-    >>> table = RstTable(table_data)
+    >>> table = RstGridTable(table_data)
     >>> for line in table.construct_table(header=header):
     ...     print(line)
     +--------+-----------+-----------+
