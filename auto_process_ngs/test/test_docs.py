@@ -2,8 +2,8 @@
 # Tests for docs.py module
 #######################################################################
 
-from auto_process_ngs.docs import RstSimpleTab
-from auto_process_ngs.docs import RstGridTablele
+from auto_process_ngs.docs import RstSimpleTable
+from auto_process_ngs.docs import RstGridTable
 import unittest
 
 
