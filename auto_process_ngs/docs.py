@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#     docs: helpers for auto-process-ngs Sphix documentation generation
+#     docs: helpers for auto-process-ngs Sphinx documentation generation
 #     Copyright (C) University of Manchester 2025 Peter Briggs
 #
 
