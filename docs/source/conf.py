@@ -265,7 +265,7 @@ if not os.path.exists(auto_content_dir):
 # -- Make table with QC protocols ---------------------------------------------
 
 # Table appears in the "using/qc_protocols.rst" page and has columns
-
+# with protocol name and description
 
 from auto_process_ngs.qc import protocols
 qc_protocols_data = []
