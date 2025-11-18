@@ -254,47 +254,37 @@ texinfo_documents = [
 
 # -- Automatic content generation ---------------------------------------------
 
+# Utilities for making auto-generated content
+from auto_process_ngs.docs import RstSimpleTable
+
 # Directory for auto-generated content
-auto_content_dir = os.path.join("using","auto")
+auto_content_dir = os.path.join("using", "auto")
 if not os.path.exists(auto_content_dir):
     os.makedirs(auto_content_dir)
 
 # -- Make table with QC protocols ---------------------------------------------
 
-# Get list of QC protocol instances
+# Table appears in the "using/qc_protocols.rst" page and has columns
+# with protocol name and description
+
 from auto_process_ngs.qc import protocols
-qc_protocols = []
-for p in protocols.QC_PROTOCOLS:
-    qc_protocols.append(protocols.fetch_protocol_definition(p))
-# Get width for protocol name column
-pr_width = max([len(p.name)+4 for p in qc_protocols])
-ds_width = 26
-# Generate file with table of protocol names and descriptions
-qc_protocols_tbl = os.path.join(auto_content_dir,"qc_protocols.rst")
-with open(qc_protocols_tbl,'wt') as fp:
-    # Write table header
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
-        x='',pr_width=pr_width,ds_width=ds_width))
-    fp.write("{name: <{pr_width}} {desc}\n".format(name="QC protocol",
-                                                   desc="Description",
-                                                   pr_width=pr_width))
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
-        x='',pr_width=pr_width,ds_width=ds_width))
-    # Write protocol information
-    for p in qc_protocols:
-        fp.write("{name: <{pr_width}} {description}\n".format(
-            name="``{name}``".format(name=p.name),
-            description=p.description,
-            pr_width=pr_width))
-    # Write table footer
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}}\n".format(
-        x='',pr_width=pr_width,ds_width=ds_width))
+qc_protocols_data = []
+for qc_protocol in protocols.QC_PROTOCOLS:
+    p = protocols.fetch_protocol_definition(qc_protocol)
+    qc_protocols_data.append([f"``{p.name}``", p.description])
+tbl = RstSimpleTable(qc_protocols_data)
+qc_protocols_rst = os.path.join(auto_content_dir,"qc_protocols.rst")
+with open(qc_protocols_rst, "wt") as fp:
+    fp.write("\n".join(tbl.construct_table(
+        header=["QC protocol", "Description"])))
 
 # -- Make table with Fastq generation protocols -----------------------------------
 
-# Get list of Fastq generation protocols
+# Table appears in the "using/make_fastqs.rst" page and has columns
+# with protocol name, description and read lengths
+
 from auto_process_ngs.bcl2fastq.protocols import PROTOCOLS as FQ_PROTOCOLS
-fq_protocols = []
+fq_protocols_data = []
 for p in FQ_PROTOCOLS:
     name = p
     description = FQ_PROTOCOLS[p]["description"]
@@ -304,37 +294,13 @@ for p in FQ_PROTOCOLS:
             reads.append(str(FQ_PROTOCOLS[p][r]))
         except KeyError:
             pass
-    fq_protocols.append((p, description, " | ".join(reads)))
-fq_protocols = sorted(fq_protocols, key=lambda p: p[0])
-# Get width for protocol name column
-pr_width = max([len(p[0])+4 for p in fq_protocols])
-ds_width = max([len(p[1]) for p in fq_protocols])
-rd_width = 12
-# Generate file with table of protocol names and descriptions
-fq_protocols_tbl = os.path.join(auto_content_dir, "fq_protocols.rst")
-with open(fq_protocols_tbl, "wt") as fp:
-    # Write table header
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
-        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
-    fp.write("{name: <{pr_width}} {desc: <{ds_width}} {reads}\n".format(
-        name="Protocol",
-        desc="Description",
-        reads="Read lengths (R1 | R2 | R3)",
-        pr_width=pr_width,
-        ds_width=ds_width))
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
-        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
-    # Write protocol information
-    for p in fq_protocols:
-        fp.write("{name: <{pr_width}} {description: <{ds_width}} {reads}\n".format(
-            name="``{name}``".format(name=p[0]),
-            description=p[1],
-            reads=p[2],
-            pr_width=pr_width,
-            ds_width=ds_width))
-    # Write table footer
-    fp.write("{x:=<{pr_width}} {x:=<{ds_width}} {x:=<{rd_width}}\n".format(
-        x='', pr_width=pr_width, ds_width=ds_width, rd_width=rd_width))
+    fq_protocols_data.append([f"``{p}``", description, " | ".join(reads)])
+fq_protocols_data = sorted(fq_protocols_data, key=lambda p: p[0])
+tbl = RstSimpleTable(fq_protocols_data)
+fq_protocols_rst = os.path.join(auto_content_dir, "fq_protocols.rst")
+with open(fq_protocols_rst, "wt") as fp:
+    fp.write("\n".join(tbl.construct_table(
+        header=["Protocol", "Description", "Read lengths (R1 | R2 | R3)"])))
 
 # -- Make example plot images for QC report -----------------------------------
 
