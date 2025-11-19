@@ -256,6 +256,7 @@ texinfo_documents = [
 
 # Utilities for making auto-generated content
 from auto_process_ngs.docs import RstSimpleTable
+from auto_process_ngs.docs import RstGridTable
 
 # Directory for auto-generated content
 auto_content_dir = "auto"
@@ -301,6 +302,110 @@ fq_protocols_rst = os.path.join(auto_content_dir, "fq_protocols.rst")
 with open(fq_protocols_rst, "wt") as fp:
     fp.write("\n".join(tbl.construct_table(
         header=["Protocol", "Description", "Read lengths (R1 | R2 | R3)"])))
+
+# -- Make tables for permissible platform/library combinations -------------------
+
+from auto_process_ngs.applications import fetch_application_data
+
+# single_cell/10x_single_cell.rst
+# -- Fastq generation protocols
+fq_protocols = set()
+for application in fetch_application_data(tags=["10x", "single_cell", "!legacy"],
+                                          expand=True):
+    fq_protocols.add(application["fastq_generation"])
+fq_protocols_data = []
+for fq_protocol in sorted(fq_protocols):
+    fq_protocols_data.append([FQ_PROTOCOLS[fq_protocol]["description"],
+                              f"``{fq_protocol}``"])
+tbl = RstSimpleTable(fq_protocols_data)
+sc10x_sc_fq_protocols_rst = os.path.join(auto_content_dir,
+                                         "10x_single_cell_fq_protocols.rst")
+with open(sc10x_sc_fq_protocols_rst, "wt") as fp:
+    fp.write("\n".join(tbl.construct_table(
+        header=["Single cell platform", "Protocol"])))
+
+# -- Allowed combinations of single cell platform and library types
+application_data = []
+for application in fetch_application_data(tags=["10x", "single_cell", "!legacy"],
+                                          expand=True):
+    if application["libraries"][0] == "*":
+        continue
+    platform = f"``{application["platforms"][0]}``"
+    library = f"``{application["libraries"][0]}``"
+    try:
+        extensions = application["extensions"]
+        if extensions:
+            extensions = ", ".join([f"``{ext}``" for ext in extensions])
+        else:
+            extensions = ""
+    except KeyError:
+        extensions = ""
+    application_data.append([platform, library, extensions])
+tbl = RstGridTable(application_data)
+sc10x_sc_rst = os.path.join(auto_content_dir, "10x_single_cell_apps.rst")
+with open(sc10x_sc_rst, "wt") as fp:
+    fp.write("\n".join(tbl.construct_table(
+        header=["Single cell platform", "Library type", "Extensions"])))
+
+# single_cell/parse.rst
+# -- Allowed combinations of single cell platform and library types
+application_data = []
+for application in fetch_application_data(tags=["parse", "single_cell"],
+                                          expand=True):
+    platform = f"``{application["platforms"][0]}``"
+    library = f"``{application["libraries"][0]}``"
+    application_data.append([platform, library])
+tbl = RstGridTable(application_data)
+parse_sc_rst = os.path.join(auto_content_dir, "parse_single_cell_apps.rst")
+with open(parse_sc_rst, "wt") as fp:
+    fp.write("\n".join(tbl.construct_table(
+        header=["Single cell platform", "Library type"])))
+
+# single_cell/biorad.rst
+# -- Allowed combinations of single cell platform and library types
+application_data = []
+for application in fetch_application_data(tags=["bio_rad", "single_cell"],
+                                          expand=True):
+    platform = f"``{application["platforms"][0]}``"
+    library = f"``{application["libraries"][0]}``"
+    application_data.append([platform, library])
+tbl = RstGridTable(application_data)
+biorad_sc_rst = os.path.join(auto_content_dir, "bio_rad_single_cell_apps.rst")
+with open(biorad_sc_rst, "wt") as fp:
+    fp.write("\n".join(tbl.construct_table(
+        header=["Single cell platform", "Library type"])))
+
+# spatial/10x_visium.rst
+# -- Fastq generation protocols
+fq_protocols = set()
+for application in fetch_application_data(tags=["10x", "spatial", "!legacy"],
+                                          expand=True):
+    fq_protocols.add(application["fastq_generation"])
+fq_protocols_data = []
+for fq_protocol in sorted(fq_protocols):
+    fq_protocols_data.append([FQ_PROTOCOLS[fq_protocol]["description"],
+                              f"``{fq_protocol}``"])
+tbl = RstSimpleTable(fq_protocols_data)
+sc10x_spatial_fq_protocols_rst = os.path.join(auto_content_dir,
+                                              "10x_spatial_fq_protocols.rst")
+with open(sc10x_spatial_fq_protocols_rst, "wt") as fp:
+    fp.write("\n".join(tbl.construct_table(
+        header=["Spatial platform", "Protocol"])))
+
+# -- Allowed combinations of spatial platform and library types
+application_data = []
+for application in fetch_application_data(tags=["10x", "spatial", "!legacy"],
+                                          expand=True):
+    if application["libraries"][0] == "*":
+        continue
+    platform = f"``{application["platforms"][0]}``"
+    library = f"``{application["libraries"][0]}``"
+    application_data.append([platform, library])
+tbl = RstGridTable(application_data)
+sc10x_visium_rst = os.path.join(auto_content_dir, "10x_visium_apps.rst")
+with open(sc10x_visium_rst, "wt") as fp:
+    fp.write("\n".join(tbl.construct_table(
+        header=["Spatial platform", "Library type"])))
 
 # -- Make example plot images for QC report -----------------------------------
 
