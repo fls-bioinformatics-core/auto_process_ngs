@@ -62,10 +62,14 @@ then all 10x Genomics single cell data should be processed using the
 
 .. note::
 
-   If the sample sheet contains Illumina index sequences then the
-   ``standard`` protocol should be used instead (note that in this case
-   the defaults used for masking and trimming compared to the defaults
-   may differ from those used by the 10x Genomics pipeline).
+   If the sample sheet contains Illumina index sequences then for
+   10x Chromium 3' and 5' data, the ``10x_chromium_sc`` protocol can
+   still be used; however for other types of data (ATAC and multiome),
+   for now the ``standard`` protocol should be used instead.
+
+   In this case it's recommended to explicitly disable adapter trimming
+   and set the lengths for the R1 and R2 (and R3, if appropriate) reads
+   via the command line.
 
 Choosing Fastq generation protocol for single cell multiome data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
