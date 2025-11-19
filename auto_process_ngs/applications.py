@@ -213,6 +213,21 @@ APPLICATIONS = [
         },
         "tags": ["10x", "single_cell"]
     },
+    # Placeholder for "10x_multiome" Fastq generation protocol
+    # In practice one of the two specific single cell multiome
+    # applications would be selected in preference to this one
+    # so this entry is mainly for completeness
+    {
+        "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
+        "libraries": ["*"],
+        "fastq_generation": "10x_multiome",
+        "qc_protocol": "minimal",
+        "setup": {
+            "templates": ["10x_multiome_libraries"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
     # 10x Visium
     {
         "platforms": ["10x Visium"],
