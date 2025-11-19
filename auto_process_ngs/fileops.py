@@ -54,7 +54,7 @@ import psutil
 import collections
 import logging
 import bcftbx.utils as bcftbx_utils
-from . import applications
+from . import apps
 from .utils import Location
 
 # Module specific logger
@@ -102,13 +102,13 @@ def mkdir(newdir,recursive=False):
         to create missing directories)
     """
     newdir = Location(newdir)
-    mkdir_cmd = applications.Command('mkdir')
+    mkdir_cmd = apps.Command('mkdir')
     if recursive:
         mkdir_cmd.add_args('-p')
     mkdir_cmd.add_args(newdir.path)
     if newdir.is_remote:
         # Remote directory
-        mkdir_cmd = applications.general.ssh_command(
+        mkdir_cmd = apps.general.ssh_command(
             newdir.user,
             newdir.server,
             mkdir_cmd.command_line)
@@ -254,12 +254,12 @@ def rename(src,dst):
             raise Exception("Rename: can't rename on different "
                             "servers")
     # Build generic system command
-    rename_cmd = applications.Command('mv',
-                                      src.path,
-                                      dst.path)
+    rename_cmd = apps.Command('mv',
+                              src.path,
+                              dst.path)
     if src.is_remote:
         # Renaming file on remote system
-        rename_cmd = applications.general.ssh_command(
+        rename_cmd = apps.general.ssh_command(
             src.user,
             src.server,
             rename_cmd.command_line)
@@ -272,13 +272,13 @@ def listdir(path):
     List contents of a directory (including hidden files)
     """
     path = Location(path)
-    list_cmd = applications.Command('ls',
+    list_cmd = apps.Command('ls',
                                     '-1',
                                     '-a',
-                                    path.path)
+                            path.path)
     if path.is_remote:
         # Run test on remote system
-        list_cmd = applications.general.ssh_command(
+        list_cmd = apps.general.ssh_command(
             path.user,
             path.server,
             quote_spaces(list_cmd.command_line))
@@ -298,12 +298,12 @@ def exists(path):
         False otherwise.
     """
     path = Location(path)
-    test_cmd = applications.Command('test',
+    test_cmd = apps.Command('test',
                                     '-e',
-                                    path.path)
+                            path.path)
     if path.is_remote:
         # Run test on remote system
-        test_cmd = applications.general.ssh_command(
+        test_cmd = apps.general.ssh_command(
             path.user,
             path.server,
             quote_spaces(test_cmd.command_line))
@@ -322,12 +322,12 @@ def isdir(path):
         False otherwise.
     """
     path = Location(path)
-    test_cmd = applications.Command('test',
+    test_cmd = apps.Command('test',
                                     '-d',
-                                    path.path)
+                            path.path)
     if path.is_remote:
         # Run test on remote system
-        test_cmd = applications.general.ssh_command(
+        test_cmd = apps.general.ssh_command(
             path.user,
             path.server,
             quote_spaces(test_cmd.command_line))
@@ -346,12 +346,12 @@ def remove_file(path):
         failure.
     """
     path = Location(path)
-    rm_cmd = applications.Command('rm',
+    rm_cmd = apps.Command('rm',
                                   '-f',
-                                  path.path)
+                          path.path)
     if path.is_remote:
         # Run removal on remote system
-        rm_cmd = applications.general.ssh_command(
+        rm_cmd = apps.general.ssh_command(
             path.user,
             path.server,
             rm_cmd.command_line)
@@ -372,12 +372,12 @@ def remove_dir(path):
     path = Location(path)
     if not isdir(path.path):
         return 1
-    rm_cmd = applications.Command('rm',
+    rm_cmd = apps.Command('rm',
                                   '-rf',
-                                  path.path)
+                          path.path)
     if path.is_remote:
         # Run removal on remote system
-        rm_cmd = applications.general.ssh_command(
+        rm_cmd = apps.general.ssh_command(
             path.user,
             path.server,
             rm_cmd.command_line)
@@ -409,11 +409,11 @@ def disk_usage(path):
                           path)
         # Run df command on remote system
         # Use --block-size=1 to get same output as
-        df_cmd = applications.Command('df',
+        df_cmd = apps.Command('df',
                                       '--block-size=1',
                                       '--output=size,used,avail,pcent',
-                                      path.path)
-        df_cmd = applications.general.ssh_command(
+                              path.path)
+        df_cmd = apps.general.ssh_command(
             path.user,
             path.server,
             quote_spaces(df_cmd.command_line))
@@ -456,14 +456,14 @@ def copy_command(src,dest,link=False):
     dest = Location(dest)
     if not dest.is_remote:
         # Local-to-local copy
-        copy_cmd = applications.Command('cp')
+        copy_cmd = apps.Command('cp')
         if link:
             copy_cmd.add_args('-l')
         copy_cmd.add_args(src,
                           dest.path)
     if dest.is_remote:
         # Local-to-remote copy
-        copy_cmd = applications.general.scp(
+        copy_cmd = apps.general.scp(
                 dest.user,
                 dest.server,
                 src,dest.path)
@@ -493,14 +493,14 @@ def copytree_command(src,dest):
     dest = Location(dest)
     if not dest.is_remote:
         # Local-to-local copy
-        copytree_cmd = applications.Command('cp',
+        copytree_cmd = apps.Command('cp',
                                             '-a',
                                             '-n',
-                                            src,
-                                            dest.path)
+                                    src,
+                                    dest.path)
     else:
         # Local-to-remote copy
-        copytree_cmd = applications.general.scp(
+        copytree_cmd = apps.general.scp(
             dest.user,
             dest.server,
             src,dest.path,
@@ -543,8 +543,8 @@ def set_group_command(group,path,verbose=False,safe=False):
     username = path.user
     if username is None:
         username = getpass.getuser()
-    chgrp_cmd = applications.Command('find',
-                                     path.path)
+    chgrp_cmd = apps.Command('find',
+                             path.path)
     if safe:
         chgrp_cmd.add_args('-user',username)
     chgrp_cmd.add_args('!',
@@ -559,7 +559,7 @@ def set_group_command(group,path,verbose=False,safe=False):
                        '+')
     if path.is_remote:
         # Set group for remote files
-        chgrp_cmd = applications.general.ssh_command(
+        chgrp_cmd = apps.general.ssh_command(
             path.user,
             path.server,
             chgrp_cmd.command_line)
@@ -601,8 +601,8 @@ def set_permissions_command(permissions,path,verbose=False,safe=False):
     username = path.user
     if username is None:
         username = getpass.getuser()
-    chmod_cmd = applications.Command('find',
-                                     path.path)
+    chmod_cmd = apps.Command('find',
+                             path.path)
     if safe:
         chmod_cmd.add_args('-user',username)
     chmod_cmd.add_args('!',
@@ -617,7 +617,7 @@ def set_permissions_command(permissions,path,verbose=False,safe=False):
                        '+')
     if path.is_remote:
         # Set group for remote files
-        chmod_cmd = applications.general.ssh_command(
+        chmod_cmd = apps.general.ssh_command(
             path.user,
             path.server,
             chmod_cmd.command_line)
@@ -643,14 +643,14 @@ def unzip_command(zip_file,dest):
         perform the unzip operation.
     """
     zip_file = Location(zip_file)
-    unzip_cmd = applications.Command('unzip',
+    unzip_cmd = apps.Command('unzip',
                                      '-q',
                                      '-o',
-                                     '-d',dest,
-                                     zip_file.path)
+                                     '-d', dest,
+                             zip_file.path)
     if zip_file.is_remote:
         # Wrap in ssh command for remote zip file
-        unzip_cmd = applications.general.ssh_command(
+        unzip_cmd = apps.general.ssh_command(
             zip_file.user,
             zip_file.server,
             unzip_cmd.command_line)

@@ -61,7 +61,7 @@ Fastq generation protocols
 The ``--protocol`` option should be set according to the type of data
 that are being processed:
 
-.. include:: auto/fq_protocols.rst
+.. include:: ../auto/fq_protocols.rst
 
 Typically the ``standard`` protocol is sufficient for most types of
 data (RNA-seq, ATAC-seq, ChIP-seq, metagenomics etc) where

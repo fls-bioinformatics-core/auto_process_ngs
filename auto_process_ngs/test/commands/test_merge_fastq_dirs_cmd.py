@@ -8,7 +8,7 @@ import shutil
 import os
 import gzip
 from builtins import range
-import auto_process_ngs.applications as applications
+import auto_process_ngs.apps as apps
 from bcftbx.IlluminaData import IlluminaData
 from auto_process_ngs.mock import MockAnalysisDir
 from auto_process_ngs.settings import Settings
@@ -574,7 +574,7 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         # Rsync (with empty directories pruned)
         target_dir = os.path.join(self.dirn,"rsynced")
         os.mkdir(target_dir)
-        applications.general.rsync(
+        apps.general.rsync(
             "%s/bcl2fastq" % self.ap.analysis_dir,
             target_dir,
             prune_empty_dirs=True).run_subprocess(

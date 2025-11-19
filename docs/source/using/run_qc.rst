@@ -30,7 +30,7 @@ contain index data).
 The QC pipeline protocol used for each project will differ slightly
 depending on the nature of the data within that project:
 
-.. include:: auto/qc_protocols.rst
+.. include:: ../auto/qc_protocols.rst
 
 By default the protocol is determined automatically for each project,
 based on the metadata associated with that project.

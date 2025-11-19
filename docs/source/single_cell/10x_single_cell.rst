@@ -52,18 +52,7 @@ then all 10x Genomics single cell data should be processed using the
 :doc:`make_fastqs <../using/make_fastqs>` command, with the appropriate
 ``10x_*`` specified via the ``--protocol`` option:
 
-=================================================== =====================
-Single cell platform                                Protocol
-=================================================== =====================
-10x Chromium 3' GEX                                 ``10x_chromium_sc``
-10x Chromium 3' CellPlex                            ``10x_chromium_sc``
-10x Chromium Flex                                   ``10x_chromium_sc``
-10x Chromium 5' (immune profiling)                  ``10x_chromium_sc``
-10x Chromium Epi ATAC-seq                           ``10x_atac``
-10x Chromium Multiome (unpooled GEX or ATAC)        ``10x_multiome``
-10x Chromium Multiome GEX (pooled GEX and ATAC)     ``10x_multiome_gex``
-10x Chromium Multiome ATAC (pooled GEX and ATAC)    ``10x_multiome_atac``
-=================================================== =====================
+.. include:: ../auto/10x_single_cell_fq_protocols.rst
 
 .. note::
 
@@ -73,10 +62,14 @@ Single cell platform                                Protocol
 
 .. note::
 
-   If the sample sheet contains Illumina index sequences then the
-   ``standard`` protocol should be used instead (note that in this case
-   the defaults used for masking and trimming compared to the defaults
-   may differ from those used by the 10x Genomics pipeline).
+   If the sample sheet contains Illumina index sequences then for
+   10x Chromium 3' and 5' data, the ``10x_chromium_sc`` protocol can
+   still be used; however for other types of data (ATAC and multiome),
+   for now the ``standard`` protocol should be used instead.
+
+   In this case it's recommended to explicitly disable adapter trimming
+   and set the lengths for the R1 and R2 (and R3, if appropriate) reads
+   via the command line.
 
 Choosing Fastq generation protocol for single cell multiome data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -120,28 +113,17 @@ control file.
 The following values are valid options for 10x Genomics single cell
 data within ``auto-process-ngs``:
 
-========================================= ==============================
-Single cell platform                      Library types
-========================================= ==============================
-``10xGenomics Chromium 3'[*]``            ``scRNA-seq``, ``snRNA-seq``,
-                                          ``CellPlex``,
-                                          ``CellPlex scRNA-seq``, ``Flex``
-``10xGenomics Chromium 3'v3``             ``scRNA-seq``, ``snRNA-seq``
-                                          ``CellPlex``,
-                                          ``CellPlex scRNA-seq``, ``Flex``
-``10xGenomics Chromium 3'v2``             ``scRNA-seq``, ``snRNA-seq``
-                                          ``CellPlex``,
-                                          ``CellPlex scRNA-seq``, ``Flex``
-``10xGenomics Chromium GEM-X``            ``Flex``
-``10xGenomics Chromium GEM-X 3'v4``       ``scRNA-seq``
-``10xGenomics Chromium Next GEM``         ``scRNA-seq``,
-                                          ``CellPlex scRNA-seq``, ``Flex``
-``10xGenomics Chromium Next GEM 3'v3.1``  ``scRNA-seq``,
-                                          ``CellPlex scRNA-seq``
-``10xGenomics Chromium 5'``               ``Single Cell Immune Profiling``
-``10xGenomics Single Cell ATAC``          ``scATAC-seq``, ``snATAC-seq``
-``10xGenomics Single Cell Multiome``      ``ATAC``, ``GEX``
-========================================= ==============================
+.. include:: ../auto/10x_single_cell_apps.rst
+
+.. note::
+
+   Extensions are optional additions to the base library type which
+   give additional information about the type of experiment that was
+   performed.
+
+   One or more extensions can be specified as part of the library type,
+   by appending them using a plus symbol (``+``). For example,
+   ``GEX+CSP`` indicates gene expression with cell surface proteins.
 
 Running the :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
 command will automatically transfer these values into the single cell

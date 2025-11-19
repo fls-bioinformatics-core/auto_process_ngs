@@ -62,7 +62,7 @@ PROTOCOLS = {
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics Chromium 3' and 5' single cell "
-                        "gene expression data",
+                       "GEX data",
         "pipeline_variant": "10x_cellranger",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 28,
@@ -106,7 +106,7 @@ PROTOCOLS = {
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome data "
-        "(unpooled data i.e. ATAC or GEX data only in single run)",
+        "(unpooled data ATAC or GEX data)",
         "pipeline_variant": "10x_cellranger-arc",
         "supported_indexes": ("10X",),
         "bases_mask": "auto",
@@ -126,7 +126,7 @@ PROTOCOLS = {
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome ATAC-seq data "
-        "(run with pooled GEX and ATAC data)",
+        "(pooled with GEX data)",
         "pipeline_variant": "10x_cellranger-arc",
         "supported_indexes": ("10X",),
         "r1_length": 50,
@@ -149,7 +149,7 @@ PROTOCOLS = {
         # -- create Fastqs for index read
         # -- disable adapter trimming
         "description": "10x Genomics single cell multiome GEX data "
-        "(run with pooled GEX and ATAC data)",
+        "(pooled with ATAC data)",
         "pipeline_variant": "10x_cellranger-arc",
         "supported_indexes": ("10X",),
         "r1_length": 28,
@@ -171,8 +171,8 @@ PROTOCOLS = {
         # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
-        "description": "10x Genomics Visium CytAssist FFPE, Fresh Frozen, Fixed "
-        "Frozen spatial GEX or FFPE PEX data",
+        "description": "10x Visium CytAssist FFPE | Fresh Frozen | Fixed "
+        "Frozen spatial GEX, or FFPE PEX data",
         "pipeline_variant": "10x_spaceranger",
         "supported_indexes": ("ILLUMINA", "10X"),
         "r1_length": 28,
@@ -195,7 +195,7 @@ PROTOCOLS = {
         # -- split by lane
         # -- create Fastqs for index read
         # -- disable adapter trimming
-        "description": "10x Genomics Visium Fresh Frozen Spatial GEX (v1) "
+        "description": "10x Visium Fresh Frozen Spatial GEX (v1) "
         "data (no CytAssist)",
         "pipeline_variant": "10x_spaceranger",
         "supported_indexes": ("ILLUMINA", "10X"),
@@ -219,7 +219,7 @@ PROTOCOLS = {
         # -- no lane splitting
         # -- create Fastqs for index read
         # -- disable adapter trimming
-        "description": "10x Genomics Visium CytAssist FFPE HD spatial GEX "
+        "description": "10x Visium CytAssist FFPE HD spatial GEX "
         "data",
         "pipeline_variant": "10x_spaceranger",
         "supported_indexes": ("ILLUMINA", "10X"),
