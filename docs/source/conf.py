@@ -398,8 +398,8 @@ for application in fetch_application_data(tags=["10x", "spatial", "!legacy"],
                                           expand=True):
     if application["libraries"][0] == "*":
         continue
-    platform = f"``{application["platforms"][0]}``"
-    library = f"``{application["libraries"][0]}``"
+    platform = f"``{application['platforms'][0]}``"
+    library = f"``{application['libraries'][0]}``"
     application_data.append([platform, library])
 tbl = RstGridTable(application_data)
 sc10x_visium_rst = os.path.join(auto_content_dir, "10x_visium_apps.rst")
