@@ -128,6 +128,8 @@ def setup_analysis_dirs(ap,
             new_project_name = project_name + '_' + name
         else:
             new_project_name = project_name
+        print("Setting up analysis directory for project '%s'" %
+              new_project_name)
         # Look up the application that matches the platform and library
         platform = line["SC_Platform"]
         if platform == ".":
@@ -135,9 +137,10 @@ def setup_analysis_dirs(ap,
         library_type = line["Library"]
         if library_type == ".":
             library_type = None
+        print(f"-- Platform: '{platform}' Library: '{library_type}'")
         application = identify_application(platform, library_type)
         if application:
-            print("Identified application from platform and library")
+            print("-- identified application from platform and library")
             try:
                 templates = application["setup"]["templates"]
             except KeyError:
@@ -151,7 +154,7 @@ def setup_analysis_dirs(ap,
             logger.error("Unknown application for platform/library combination for '%s': "
                          "'%s/%s'" % (line['Project'], platform, library_type))
             raise Exception("Unable to identify matching application")
-        # Legacy failure for identified 10x applications
+        # Legacy failure for unidentified 10x applications
         if platform and application["platforms"] == ["*"]:
             logger.error("Unidentified platform for '%s': '%s'" % (line['Project'],
                                                                    platform))
@@ -174,7 +177,7 @@ def setup_analysis_dirs(ap,
             logging.warning("Project '%s' already exists, skipping" %
                             project.name)
             continue
-        print("Creating project: '%s'" % new_project_name)
+        print("-- creating project: '%s'" % new_project_name)
         try:
             project.create_directory(
                 illumina_data.get_project(project_name),
