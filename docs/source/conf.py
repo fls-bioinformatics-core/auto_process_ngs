@@ -330,8 +330,8 @@ for application in fetch_application_data(tags=["10x", "single_cell", "!legacy"]
                                           expand=True):
     if application["libraries"][0] == "*":
         continue
-    platform = f"``{application["platforms"][0]}``"
-    library = f"``{application["libraries"][0]}``"
+    platform = f"``{application['platforms'][0]}``"
+    library = f"``{application['libraries'][0]}``"
     try:
         extensions = application["extensions"]
         if extensions:
@@ -352,8 +352,8 @@ with open(sc10x_sc_rst, "wt") as fp:
 application_data = []
 for application in fetch_application_data(tags=["parse", "single_cell"],
                                           expand=True):
-    platform = f"``{application["platforms"][0]}``"
-    library = f"``{application["libraries"][0]}``"
+    platform = f"``{application['platforms'][0]}``"
+    library = f"``{application['libraries'][0]}``"
     application_data.append([platform, library])
 tbl = RstGridTable(application_data)
 parse_sc_rst = os.path.join(auto_content_dir, "parse_single_cell_apps.rst")
@@ -366,8 +366,8 @@ with open(parse_sc_rst, "wt") as fp:
 application_data = []
 for application in fetch_application_data(tags=["bio_rad", "single_cell"],
                                           expand=True):
-    platform = f"``{application["platforms"][0]}``"
-    library = f"``{application["libraries"][0]}``"
+    platform = f"``{application['platforms'][0]}``"
+    library = f"``{application['libraries'][0]}``"
     application_data.append([platform, library])
 tbl = RstGridTable(application_data)
 biorad_sc_rst = os.path.join(auto_content_dir, "bio_rad_single_cell_apps.rst")
