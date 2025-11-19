@@ -258,7 +258,7 @@ texinfo_documents = [
 from auto_process_ngs.docs import RstSimpleTable
 
 # Directory for auto-generated content
-auto_content_dir = os.path.join("using", "auto")
+auto_content_dir = "auto"
 if not os.path.exists(auto_content_dir):
     os.makedirs(auto_content_dir)
 
