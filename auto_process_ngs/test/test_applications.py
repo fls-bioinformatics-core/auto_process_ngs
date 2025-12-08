@@ -154,7 +154,7 @@ class TestIdentifyApplication(TestCase):
         """
         application = identify_application("10x Visium (CytAssist)", "FFPE HD 3' Spatial GEX")
         self.assertEqual(application["fastq_generation"], "10x_visium_hd_3prime")
-        self.assertEqual(application["qc_protocol"], "10x_Visium_GEX_75bp_insert")
+        self.assertEqual(application["qc_protocol"], "10x_Visium_GEX")
 
     def test_identify_application_parse_evercode(self):
         """

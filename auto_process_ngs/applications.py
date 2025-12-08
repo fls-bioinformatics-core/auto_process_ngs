@@ -280,7 +280,7 @@ APPLICATIONS = [
         "platforms": ["10x Visium (CytAssist)"],
         "libraries": ["FFPE HD 3' Spatial GEX",],
         "fastq_generation": "10x_visium_hd_3prime",
-        "qc_protocol": "10x_Visium_GEX_75bp_insert",
+        "qc_protocol": "10x_Visium_GEX",
         "setup": {
             "templates": [],
             "directories": ["Visium_images"],
