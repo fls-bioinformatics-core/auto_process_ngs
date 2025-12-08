@@ -290,7 +290,7 @@ for p in FQ_PROTOCOLS:
     name = p
     description = FQ_PROTOCOLS[p]["description"]
     reads = []
-    for r in ("r1_length", "r2_length", "r3_length"):
+    for r in ("r1_length", "i1_length", "i2_length", "r2_length", "r3_length"):
         try:
             reads.append(str(FQ_PROTOCOLS[p][r]))
         except KeyError:
