@@ -301,7 +301,7 @@ tbl = RstSimpleTable(fq_protocols_data)
 fq_protocols_rst = os.path.join(auto_content_dir, "fq_protocols.rst")
 with open(fq_protocols_rst, "wt") as fp:
     fp.write("\n".join(tbl.construct_table(
-        header=["Protocol", "Description", "Read lengths (R1 | R2 | R3)"])))
+        header=["Protocol", "Description", "Read lengths"],)))
 
 # -- Make tables for permissible platform/library combinations -------------------
 
