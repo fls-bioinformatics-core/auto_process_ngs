@@ -26,15 +26,7 @@ Fastq generation
 
 The following Fastq generation protocols are available for Visium data:
 
-====================== ================================== ========================= ========================
-Spatial platform       Tissue prep                        Library type              Protocol
-====================== ================================== ========================= ========================
-10x Visium             Fresh Frozen                       Spatial GEX (v1)          ``10x_visium_v1``
-10x Visium (CytAssist) FFPE | Fresh Frozen | Fixed Frozen Spatial GEX (v2)          ``10x_visium``
-10x Visium (CytAssist) FFPE                               Spatial GEX | Spatial PEX ``10x_visium``
-10x Visium (CytAssist) FFPE                               HD Spatial GEX            ``10x_visium_hd``
-10x Visium (CytAssist) Fresh Frozen                       HD 3' Spatial GEX         ``10x_visium_hd_3prime``
-====================== ================================== ========================= ========================
+.. include:: ../auto/10x_spatial_fq_protocols.rst
 
 The appropriate protocol should be selected from the table above according
 to the spatial platform, tissue preparation method and library type, and
@@ -58,17 +50,7 @@ for the Visium project(s) in the ``projects.info`` control file.
 
 The following values are valid options for spatial data:
 
-===================================== ==============================
-Single cell platform                  Library types
-===================================== ==============================
-``10xGenomics Visium``                ``FFPE Spatial GEX``,
-                                      ``Fresh Frozen Spatial GEX``
-``10xGenomics Visium (CytAssist)``    ``FFPE HD Spatial GEX``
-                                      ``FFPE Spatial GEX``,
-                                      ``Fixed Frozen Spatial GEX``,
-                                      ``Fresh Frozen Spatial GEX``,
-                                      ``FFPE Spatial PEX``
-===================================== ==============================
+.. include:: ../auto/10x_visium_apps.rst
 
 .. note::
 

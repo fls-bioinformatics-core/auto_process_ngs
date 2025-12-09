@@ -18,6 +18,7 @@ import logging
 import bcftbx.IlluminaData as IlluminaData
 from .. import analysis
 from .. import tenx
+from ..applications import identify_application
 from ..utils import normalise_organism_name
 
 # Module specific logger
@@ -40,6 +41,7 @@ def setup_analysis_dirs(ap,
     Construct and populate project analysis directories
 
     Arguments:
+      ap (AutoProcess): AutoProcess instance
       unaligned_dir (str): optional, name of 'unaligned'
         subdirectory (defaults to value stored in parameters)
       name (str): (optional) identifier to append to output
@@ -104,28 +106,6 @@ def setup_analysis_dirs(ap,
         else:
             logger.error("Missing project metadata")
             raise Exception("Missing project metadata")
-    # Validate the single cell data
-    for line in project_metadata:
-        sc_platform = line['SC_Platform']
-        if sc_platform and sc_platform != '.':
-            if not sc_platform in tenx.PLATFORMS and \
-               not sc_platform in ('Parse Evercode',) and \
-               not sc_platform in ('Bio-Rad ddSEQ Single Cell ATAC',) and \
-               not sc_platform in ('Bio-Rad ddSEQ Single Cell 3\' RNA-Seq',):
-                logger.error("Unknown single cell platform for '%s': "
-                             "'%s'" % (line['Project'],sc_platform))
-                raise Exception("Unknown single cell platform")
-            if sc_platform in tenx.PLATFORMS:
-                library_type = line['Library']
-                for pltfrm in tenx.LIBRARIES:
-                    if fnmatch.fnmatch(sc_platform,pltfrm):
-                        if not library_type in tenx.LIBRARIES[pltfrm]:
-                            # Warn if library is not recognised but carry on
-                            logger.warning("Unrecognised platform/library "
-                                           "combination for '%s': '%s/%s'"
-                                           % (line['Project'],
-                                              sc_platform,
-                                              library_type))
     # Create the projects
     n_projects = 0
     for line in project_metadata:
@@ -148,6 +128,37 @@ def setup_analysis_dirs(ap,
             new_project_name = project_name + '_' + name
         else:
             new_project_name = project_name
+        print("Setting up analysis directory for project '%s'" %
+              new_project_name)
+        # Look up the application that matches the platform and library
+        platform = line["SC_Platform"]
+        if platform == ".":
+            platform = None
+        library_type = line["Library"]
+        if library_type == ".":
+            library_type = None
+        print(f"-- Platform: '{platform}' Library: '{library_type}'")
+        application = identify_application(platform, library_type)
+        if application:
+            print("-- identified application from platform and library")
+            try:
+                templates = application["setup"]["templates"]
+            except KeyError:
+                templates = []
+            try:
+                subdirs = application["setup"]["directories"]
+            except KeyError:
+                subdirs = []
+        else:
+            # Unable to identify application
+            logger.error("Unknown application for platform/library combination for '%s': "
+                         "'%s/%s'" % (line['Project'], platform, library_type))
+            raise Exception("Unable to identify matching application")
+        # Legacy failure for unidentified 10x applications
+        if platform and application["platforms"] == ["*"]:
+            logger.error("Unidentified platform for '%s': '%s'" % (line['Project'],
+                                                                   platform))
+            raise Exception("Unable to identify matching application for specific platform")
         # Create the project
         project = analysis.AnalysisProject(
             new_project_name,
@@ -166,7 +177,7 @@ def setup_analysis_dirs(ap,
             logging.warning("Project '%s' already exists, skipping" %
                             project.name)
             continue
-        print("Creating project: '%s'" % new_project_name)
+        print("-- creating project: '%s'" % new_project_name)
         try:
             project.create_directory(
                 illumina_data.get_project(project_name),
@@ -177,103 +188,117 @@ def setup_analysis_dirs(ap,
             logger.warning("Failed to create project '%s': %s" %
                            (new_project_name,ex))
             continue
-        # Create template control files for 10xGenomics projects
-        if single_cell_platform == "10xGenomics Single Cell Multiome":
-            # Make template 10x_multiome_libraries.info file
-            f = "10x_multiome_libraries.info.template"
-            print("-- making %s" % f)
-            f = os.path.join(project.dirn,f)
-            try:
-                with open(f,'wt') as fp:
-                    fp.write("## 10x_multiome_libraries.info\n"
-                             "## Link samples with complementary samples\n"
-                             "## (can be in other runs and/or projects)\n"
-                             "## See https://auto-process-ngs.readthedocs.io/en/latest/using/setup_analysis_dirs.html#xgenomics-single-cell-multiome-linked-samples\n")
-                    for sample in project.samples:
-                        fp.write("#%s\t[RUN:][PROJECT][/SAMPLE]\n" % sample)
-            except Exception as ex:
-                logger.warning("Failed to create '%s': %s" % (f,ex))
-        elif single_cell_platform.startswith("10xGenomics Chromium") and \
-           (library_type.startswith("CellPlex") or
-            library_type == "Flex" or
-            library_type == "Single Cell Immune Profiling"):
-            print("-- setting up 'multi' config file for '%s'" % library_type)
-            # Determine target Cellranger version
-            try:
-                processing_software = ast.literal_eval(
-                    ap.metadata.processing_software)
-                cellranger_version = processing_software['cellranger'][2]
-            except Exception as ex:
-                print("-- unable to determine Cellranger version used "
-                      "for processing: %s" % ex)
-                cellranger_version = None
-            if not cellranger_version:
-                cellranger_version = tenx.DEFAULT_CELLRANGER_VERSION
-            print("-- target Cellranger version: %s" % cellranger_version)
-            # Acquire reference transcriptome dataset
-            print("-- looking up transcriptome for '%s'" % organism)
-            try:
-                organism_id = normalise_organism_name(organism)
-                print("-- ...using ID '%s'" % organism_id)
-                reference_dataset = ap.settings.organisms[organism_id].\
-                                    cellranger_reference
-                if reference_dataset:
-                    print("-- ...found %s" % reference_dataset)
-                else:
-                    print("-- ...no matching transcriptome data")
-            except Exception as ex:
-                logger.warning("Failed to locate 10xGenomics reference "
-                               "transcriptome for project '%s': %s" %
-                               (project_name,ex))
-                reference_dataset = None
-            # Acquire probe set
-            if library_type == "Flex":
-                print("-- looking up probe set for '%s'" % organism)
+        # Create template files
+        for template in templates:
+            # Parse template definition
+            if "(" in template and template.endswith(")"):
                 try:
-                    organism_id = normalise_organism_name(organism)
-                    print("-- ...using ID '%s'" % organism_id)
-                    probe_set = ap.settings.organisms[organism_id].\
-                                cellranger_probe_set
-                    if probe_set:
-                        print("-- ...found %s" % probe_set)
+                    template, params = template.rstrip(")").split("(")
+                    params = [p.strip().split("=") for p in params.split(",")]
+                except Exception:
+                    raise Exception("Could not parse template '%s'" % template)
+            else:
+                params = []
+            # Set parameters
+            include_probeset = False
+            for param in params:
+                if param[0] == "include_probeset":
+                    include_probeset = bool(param[1].lower() in ("true", "yes"))
+            # Set up the templates
+            if template == "10x_multiome_libraries":
+                # Config file for 10x single cell multiome
+                # analyses
+                f = "10x_multiome_libraries.info.template"
+                print("-- making %s" % f)
+                f = os.path.join(project.dirn,f)
+                try:
+                    with open(f,'wt') as fp:
+                        fp.write(
+                            "## 10x_multiome_libraries.info\n"
+                            "## Link samples with complementary samples\n"
+                            "## (can be in other runs and/or projects)\n"
+                            "## See https://auto-process-ngs.readthedocs.io/en/latest/using/"
+                            "setup_analysis_dirs.html#xgenomics-single-cell-multiome-linked-samples\n")
+                        for sample in project.samples:
+                            fp.write("#%s\t[RUN:][PROJECT][/SAMPLE]\n" % sample)
+                except Exception as ex:
+                    logger.warning("Failed to create '%s': %s" % (f,ex))
+            elif template == "10x_multi_config":
+                # Config file for running 10x cellranger multi
+                print("-- setting up cellranger 'multi' config file for '%s/%s'" %
+                      (single_cell_platform, library_type))
+                # Identify organism
+                organism_id = normalise_organism_name(organism)
+                print("-- ...organism '%s' (ID '%s')" % (organism, organism_id,))
+                # Target cellranger version
+                try:
+                    processing_software = ast.literal_eval(
+                        ap.metadata.processing_software)
+                    cellranger_version = processing_software['cellranger'][2]
+                except Exception as ex:
+                    print("-- unable to determine Cellranger version used "
+                        "for processing: %s" % ex)
+                    cellranger_version = None
+                if not cellranger_version:
+                    cellranger_version = tenx.DEFAULT_CELLRANGER_VERSION
+                print("-- ...target Cellranger version '%s'" % cellranger_version)
+                # Reference transcriptome
+                try:
+                    reference_dataset = ap.settings.organisms[organism_id]. \
+                        cellranger_reference
+                    if reference_dataset:
+                        print("-- ...found %s" % reference_dataset)
                     else:
-                        print("-- ...no matching probe set")
+                        print("-- ...no matching transcriptome data")
                 except Exception as ex:
                     logger.warning("Failed to locate 10xGenomics reference "
-                                   "probe set for project '%s': %s" %
-                                   (project_name,ex))
-                    probe_set = None
-            else:
-                probe_set = None
-            # Make template 10x_multi_config.csv file
-            f = "10x_multi_config.csv.template"
-            print("-- making %s" % f)
-            f = os.path.join(project.dirn,f)
-            try:
-                tenx.utils.make_multi_config_template(
-                    f,
-                    reference=reference_dataset,
-                    probe_set=probe_set,
-                    fastq_dir=project.fastq_dir,
-                    samples=[s.name for s in project.samples],
-                    library_type=library_type,
-                    cellranger_version=cellranger_version)
-            except Exception as ex:
-                logger.warning("Error when attempting to create '%s': "
-                               "%s" % (f,ex))
-                if os.path.exists(f):
-                    logger.warning("Template file was created but may be "
-                                   "incomplete")
+                                   "transcriptome for project '%s': %s" %
+                                   (project_name, ex))
+                    reference_dataset = None
+                # Probe set
+                if include_probeset:
+                    try:
+                        probe_set = ap.settings.organisms[organism_id].\
+                                    cellranger_probe_set
+                        if probe_set:
+                            print("-- ...found %s" % probe_set)
+                        else:
+                            print("-- ...no matching probe set")
+                    except Exception as ex:
+                        logger.warning("Failed to locate 10xGenomics reference "
+                                       "probe set for project '%s': %s" %
+                                       (project_name,ex))
+                        probe_set = None
                 else:
-                    logger.warning("Template file was not created")
-        # Additional subdir for Visium images
-        if single_cell_platform in ("10xGenomics Visium",
-                                    "10xGenomics Visium (CytAssist)",
-                                    "10xGenomics CytAssist Visium"):
-            print("-- making 'Visium_images' directory")
-            d = os.path.join(project.dirn,"Visium_images")
+                    probe_set = None
+                # Make the template file
+                f = "10x_multi_config.csv.template"
+                print("-- making %s" % f)
+                f = os.path.join(project.dirn,f)
+                try:
+                    tenx.utils.make_multi_config_template(
+                        f,
+                        reference=reference_dataset,
+                        probe_set=probe_set,
+                        fastq_dir=project.fastq_dir,
+                        samples=[s.name for s in project.samples],
+                        library_type=library_type,
+                        cellranger_version=cellranger_version)
+                except Exception as ex:
+                    logger.warning("Error when attempting to create '%s': "
+                                   "%s" % (f,ex))
+                    if os.path.exists(f):
+                        logger.warning("Template file was created but may be "
+                                       "incomplete")
+                    else:
+                        logger.warning("Template file was not created")
+
+        # Create subdirectories
+        for subdir in subdirs:
+            print(f"-- making '{subdir}' directory")
+            d = os.path.join(project.dirn, subdir)
             os.mkdir(d)
-    # Tell us how many were made
+    # Report how many projects were made
     print("Created %d project%s" % (n_projects,
                                     's' if n_projects != 1 else ''))
     # Also set up analysis directory for undetermined reads

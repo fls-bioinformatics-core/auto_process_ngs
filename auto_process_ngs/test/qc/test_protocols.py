@@ -360,7 +360,8 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
     """
     Tests for determine_qc_protocol_from_metadata function
     """
-    def test_determine_qc_protocol_from_metadata_minimal(self):
+    #@unittest.skip("Test fails for now")
+    def test_determine_qc_protocol_from_metadata_no_platform_or_library(self):
         """
         determine_qc_protocol_from_metadata: no library type defined
         """
@@ -429,12 +430,6 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
         """
         determine_qc_protocol_from_metadata: 10xGenomics Chromium 3' data
         """
-        # Default
-        self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="any",
-            single_cell_platform="10xGenomics Chromium 3'",
-            paired_end=True),
-                         "singlecell")
         # scRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
@@ -471,16 +466,17 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             single_cell_platform="10xGenomics Chromium 3'",
             paired_end=True),
                          "10x_Flex")
+        # Default if precise application is unknown
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="any",
+            single_cell_platform="10xGenomics Chromium 3'",
+            paired_end=True),
+                         "minimal")
 
     def test_determine_qc_protocol_from_metadata_10xchromium3v2(self):
         """
         determine_qc_protocol_from_metadata: 10xGenomics Chromium 3'v2 data
         """
-        self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="any",
-            single_cell_platform="10xGenomics Chromium 3'v2",
-            paired_end=True),
-                         "singlecell")
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
             single_cell_platform="10xGenomics Chromium 3'v2",
@@ -491,16 +487,17 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             single_cell_platform="10xGenomics Chromium 3'v2",
             paired_end=True),
                          "10x_snRNAseq")
+        # Default if precise application is unknown
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="any",
+            single_cell_platform="10xGenomics Chromium 3'v2",
+            paired_end=True),
+                         "minimal")
 
     def test_determine_qc_protocol_from_metadata_10xchromium3v3(self):
         """
         determine_qc_protocol_from_metadata: 10xGenomics Chromium 3'v3 data
         """
-        self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="Any",
-            single_cell_platform="10xGenomics Chromium 3'v3",
-            paired_end=True),
-                         "singlecell")
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
             single_cell_platform="10xGenomics Chromium 3'v3",
@@ -535,6 +532,12 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             single_cell_platform="10xGenomics Chromium 3'v3",
             paired_end=True),
                          "10x_Flex")
+        # Default if precise application is unknown
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="Any",
+            single_cell_platform="10xGenomics Chromium 3'v3",
+            paired_end=True),
+                         "minimal")
 
     def test_determine_qc_protocol_from_metadata_10xchromium_gemx3(self):
         """
@@ -829,14 +832,12 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",
                                        "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"),
-                                metadata={'Library type':
-                                          "RNA-seq"})
+                                       "PJB2_S2_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "standardPE")
+                         "minimal")
 
     def test_determine_qc_protocol_standardPE(self):
         """determine_qc_protocol: standard paired-end run
@@ -867,54 +868,6 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
                          "standardSE")
-
-    def test_determine_qc_protocol_10xchromium3(self):
-        """determine_qc_protocol: single-cell run (10xGenomics Chromium 3')
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"),
-                                metadata={'Single cell platform':
-                                          "10xGenomics Chromium 3'"})
-        p.create(top_dir=self.wd)
-        project = AnalysisProject("PJB",
-                                  os.path.join(self.wd,"PJB"))
-        self.assertEqual(determine_qc_protocol(project),
-                         "singlecell")
-
-    def test_determine_qc_protocol_10xchromium3v2(self):
-        """determine_qc_protocol: single-cell run (10xGenomics Chromium 3'v2)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"),
-                                metadata={'Single cell platform':
-                                          "10xGenomics Chromium 3'v2"})
-        p.create(top_dir=self.wd)
-        project = AnalysisProject("PJB",
-                                  os.path.join(self.wd,"PJB"))
-        self.assertEqual(determine_qc_protocol(project),
-                         "singlecell")
-
-    def test_determine_qc_protocol_10xchromium3v3(self):
-        """determine_qc_protocol: single-cell run (10xGenomics Chromium 3'v3)
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",
-                                       "PJB2_S2_R1_001.fastq.gz",
-                                       "PJB2_S2_R2_001.fastq.gz"),
-                                metadata={'Single cell platform':
-                                          "10xGenomics Chromium 3'v3"})
-        p.create(top_dir=self.wd)
-        project = AnalysisProject("PJB",
-                                  os.path.join(self.wd,"PJB"))
-        self.assertEqual(determine_qc_protocol(project),
-                         "singlecell")
 
     def test_determine_qc_protocol_10xchromium3_rna_seq(self):
         """determine_qc_protocol: single-cell RNA-seq (10xGenomics Chromium 3')
@@ -1514,7 +1467,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "standardPE")
+                         "minimal")
 
 class TestFetchProtocolDefinition(unittest.TestCase):
 

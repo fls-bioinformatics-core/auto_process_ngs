@@ -31,13 +31,7 @@ for the Parse Evercode project(s) in the ``projects.info`` control file.
 
 The following values are valid options:
 
-===================================== =================================
-Single cell platform                  Library types
-===================================== =================================
-``Parse Evercode``                    ``scRNA-seq``, ``snRNA-seq``,
-                                      ``TCR``, ``TCR scRNA-seq``,
-                                      ``WT``, ``WT scRNA-seq``
-===================================== =================================
+.. include:: ../auto/parse_single_cell_apps.rst
 
 Running the :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
 command will automatically transfer these values into the project

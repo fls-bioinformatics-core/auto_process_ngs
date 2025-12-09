@@ -1,458 +1,739 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
-#     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013-2025 Peter Briggs
+#     applications.py: information about platforms and libraries
+#     Copyright (C) University of Manchester 2025 Peter Briggs
 #
-########################################################################
-#
-# applications.py
-#
-#########################################################################
 
 """
-Utility classes and functions for generating and executing command lines
-to run various command line applications.
+Collects information about sequencing applications (combinations of platform
+and library type).
 
-Static classes provide methods for building command lines for various
-NGS applications, in the form of 'Command' instances.
+Defines the ``APPLICATIONS`` list, which contains dictionaries defining known
+applications, and the ``identify_application()`` function, which can be used
+to identify the appropriate application for a given platform and library type.
 
-For example, to create a Command object representing the command line for
-a simple mirroring 'rsync' job:
+Each application is defined as a dictionary with the following keys:
 
->>> import applications
->>> rsync = applications.general.rsync('source','target',mirror=True)
->>> rsync
-rsync -av --delete-after source target
->>> rsync.command_line
-['rsync', '-av', '--delete-after', 'source', 'target']
+* platforms: list of platform names (with optional wildcards) which
+  correspond to the application; use ["*"] to indicate all platforms, or
+  an empty list to indicate that the platform must not be set
+* libraries: list of library types (with optional wildcards) which
+  correspond to the application; use ["*"] to indicate all library types, or
+  an empty list to indicate that the library type must not be set
+* fastq_generation: name of the Fastq generation protocol to use for
+  this application
+* qc_protocol: name of the QC protocol to use for this application
+* setup: dictionary with information about actions that should be performed
+  as part of setting up analysis project directories for this
+  application; contains the following keys:
+  - templates: list of template names to use for this application; can be
+    one or more of: "10x_multi_config", "10x_multiome_libraries".
+  - directories: list of subdirectory names which will be created in the
+    analysis project directory (for example "Visium_images")
+* tags: optional list of tags to associate with this application; tags can
+  be one or more of: "10x", "bio_rad", "parse", "single_cell", "spatial",
+  "legacy". Tags are used for automated documentation generation.
 
-The resulting command line string or list can be fed to another function
-or class, or it can be executed directly via the subprocess module using
-the 'run_subprocess' method of the Command object, e.g:
+The minimum required keys for each application are ``platforms``, ``libraries``,
+``fastq_generation``, and ``qc_protocol``.
 
->>> rsync.run_subprocess()
+The module also defines the following user-facing function:
+
+* ``identify_application``: returns the dictionary defining the application
+    which matches a given platform and library type
+* ``fetch_application_data``: returns a list of application definitions
+    matching specified tags
+
+The following functions are also defined for internal use:
+
+* ``match_application``: determines whether a given platform and library type
+  match a given application definition
+* ``score_match``: returns a score for a platform/library combination
 """
+from fnmatch import fnmatch
 
-#######################################################################
-# Import modules that this module depends on
-#######################################################################
+# Module specific logger
+import logging
+logger = logging.getLogger(__name__)
 
-import sys
-import re
-from .command import Command
-from .bcl2fastq.utils import get_nmismatches
+APPLICATIONS = [
+    # Minimal (no defined platform or defined library)
+    {
+        "platforms": [],
+        "libraries": [],
+        "fastq_generation": "standard",
+        "qc_protocol": "minimal",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        }
+    },
+    # Minimal (any defined platform & defined library)
+    {
+        "platforms": ["*"],
+        "libraries": ["*"],
+        "fastq_generation": "standard",
+        "qc_protocol": "minimal",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        }
+    },
+    # Standard (no platform, any defined library)
+    {
+        "platforms": [],
+        "libraries": ["*"],
+        "fastq_generation": "standard",
+        "qc_protocol": "standard",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        }
+    },
+    # miRNA
+    {
+        "platforms": [],
+        "libraries": ["miRNA-seq"],
+        "fastq_generation": "mirna",
+        "qc_protocol": "standard",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        }
+    },
+    # WGS/DNA-seq/CRISPR
+    {
+        "platforms": [],
+        "libraries": ["WGS", "DNA-seq", "Amplicon DNA-seq", "CRISPR", "CRISPR-Cas9"],
+        "fastq_generation": "standard",
+        "qc_protocol": "minimal",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        }
+},
+    # 10x Chromium 3' single-cell
+    {
+        "platforms": ["10x Chromium 3' (v4 GEM-X)",
+                      "10x Chromium 3' (v4 GEM-X) OCM",],
+        "libraries": ["GEX", "scRNA-seq"],
+        "extensions": ["CSP", "CRISPR"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_scRNAseq",
+        "setup": {
+            "templates": ["10x_multi_config"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium 3' single-nuclei
+    {
+        "platforms": ["10x Chromium 3' (v4 GEM-X)",
+                      "10x Chromium 3' (v4 GEM-X) OCM",],
+        "libraries": ["snRNA-seq"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_snRNAseq",
+        "setup": {
+            "templates": ["10x_multi_config"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium 5'
+    {
+        "platforms": ["10x Chromium 5' (v3 GEM-X)",
+                      "10x Chromium 5' (v3 GEM-X) OCM",],
+        "libraries": ["GEX", "scRNA-seq", "snRNA-seq"],
+        "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "CRISPR", "BEAM"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_ImmuneProfiling",
+        "setup": {
+            "templates": ["10x_multi_config"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium Flex
+    {
+        "platforms": ["10x Chromium Flex (v1 GEM-X)",],
+        "libraries": ["GEX", "scRNA-seq", "snRNA-seq"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_Flex",
+        "setup": {
+            "templates": ["10x_multi_config(include_probeset=true)"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium CellPlex
+    {
+        "platforms": ["10x Chromium 3' (v3.1 Next GEM ST) CellPlex",
+                      "10x Chromium 3' (v3.1 Next GEM HT) CellPlex",],
+        "libraries": ["GEX", "scRNA-seq"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_CellPlex",
+        "setup": {
+            "templates": ["10x_multi_config"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium ATAC
+    {
+        "platforms": ["10x Chromium Epi ATAC (v2)",],
+        "libraries": ["ATAC"],
+        "fastq_generation": "10x_atac",
+        "qc_protocol": "10x_scATAC", # Should be called 10x_snATAC?
+        "setup": {
+            "templates": [],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium Multiome
+    {
+        "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
+        "libraries": ["ATAC"],
+        "fastq_generation": "10x_multiome_atac",
+        "qc_protocol": "10x_Multiome_ATAC",
+        "setup": {
+            "templates": ["10x_multiome_libraries"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    {
+        "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
+        "libraries": ["GEX"],
+        "fastq_generation": "10x_multiome_gex",
+        "qc_protocol": "10x_Multiome_GEX",
+        "setup": {
+            "templates": ["10x_multiome_libraries"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    # Placeholder for "10x_multiome" Fastq generation protocol
+    # In practice one of the two specific single cell multiome
+    # applications would be selected in preference to this one
+    # so this entry is mainly for completeness
+    {
+        "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
+        "libraries": ["*"],
+        "fastq_generation": "10x_multiome",
+        "qc_protocol": "minimal",
+        "setup": {
+            "templates": ["10x_multiome_libraries"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Visium
+    {
+        "platforms": ["10x Visium"],
+        "libraries": ["Fresh Frozen Spatial GEX (v1)"],
+        "fastq_generation": "10x_visium_v1",
+        "qc_protocol": "10x_Visium_GEX_90bp_insert",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial"]
+    },
+    {
+        "platforms": ["10x Visium (CytAssist)"],
+        "libraries": ["FFPE Spatial GEX",
+                      "FFPE Spatial GEX (v2)",
+                      "Fresh Frozen Spatial GEX (v2)",
+                      "Fixed Frozen Spatial GEX (v2)",],
+        "fastq_generation": "10x_visium",
+        "qc_protocol": "10x_Visium_GEX",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial"]
+    },
+    {
+        "platforms": ["10x Visium (CytAssist)"],
+        "libraries": ["FFPE Spatial PEX",],
+        "fastq_generation": "10x_visium",
+        "qc_protocol": "10x_Visium_PEX",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial"]
+    },
+    {
+        "platforms": ["10x Visium (CytAssist)"],
+        "libraries": ["FFPE HD Spatial GEX",],
+        "fastq_generation": "10x_visium_hd",
+        "qc_protocol": "10x_Visium_GEX",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial"]
+    },
+    {
+        "platforms": ["10x Visium (CytAssist)"],
+        "libraries": ["FFPE HD 3' Spatial GEX",],
+        "fastq_generation": "10x_visium_hd_3prime",
+        "qc_protocol": "10x_Visium_GEX",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial"]
+    },
+    # Parse
+    {
+        "platforms": ["Parse Evercode"],
+        "libraries": ["scRNA-seq",
+                      "snRNA-seq",
+                      "TCR",
+                      "TCR scRNA-seq",
+                      "WT",
+                      "WT scRNA-seq"],
+        "fastq_generation": "parse_evercode",
+        "qc_protocol": "ParseEvercode",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        },
+        "tags": ["parse", "single_cell"]
+    },
+    # Bio-Rad
+    {
+        "platforms": ["Bio-Rad ddSEQ Single Cell 3' RNA-Seq"],
+        "libraries": ["scRNA-seq",
+                      "snRNA-seq"],
+        "fastq_generation": "biorad_ddseq",
+        "qc_protocol": "minimal", # No protocol defined?
+        "setup": {
+            "templates": [],
+            "directories": [],
+        },
+        "tags": ["bio_rad", "single_cell"]
+    },
+    {
+        "platforms": ["Bio-Rad ddSEQ Single Cell ATAC"],
+        "libraries": ["scATAC-seq",
+                      "snATAC-seq"],
+        "fastq_generation": "biorad_ddseq",
+        "qc_protocol": "BioRad_ddSEQ_ATAC",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        },
+        "tags": ["bio_rad", "single_cell"]
+    },
 
-#######################################################################
-# Classes
-#######################################################################
+    # Legacy application definitions below
+    # These are retained for backward compatibility
 
-class bcl2fastq:
-    """Bcl to fastq conversion line applications
- 
-    Provides static methods to create Command instances for command line
-    applications used in bcl to fastq conversion:
+    # 10x Chromium 3' single-cell (legacy)
+    {
+        "platforms": ["10xGenomics Chromium 3'*",
+                      "10xGenomics Chromium GEM-X*",
+                      "10xGenomics Chromium Next GEM*"],
+        "libraries": ["scRNA-seq"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_scRNAseq",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell", "legacy"]
+    },
+    # 10x Chromium 3' single-nuclei (legacy)
+    {
+        "platforms": ["10xGenomics Chromium 3'*",
+                      "10xGenomics Chromium GEM-X*",
+                      "10xGenomics Chromium Next GEM*"],
+        "libraries": ["snRNA-seq"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_snRNAseq",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        }
+    },
+    # 10x Chromium CellPlex (legacy)
+    {
+        "platforms": ["10xGenomics Chromium 3'*",
+                      "10xGenomics Chromium GEM-X*",
+                      "10xGenomics Chromium Next GEM*"],
+        "libraries": ["CellPlex",
+                      "CellPlex scRNA-seq",
+                      "CellPlex snRNA-seq"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_CellPlex",
+        "setup": {
+            "templates": ["10x_multi_config"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell", "legacy"]
+    },
+    # 10x Chromium 5' (legacy)
+    {
+        "platforms": ["10xGenomics Chromium 5'*"],
+        "libraries": ["Single Cell Immune Profiling"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_ImmuneProfiling",
+        "setup": {
+            "templates": ["10x_multi_config"],
+            "directories": [],
+        }
+    },
+    # 10x Chromium Flex (legacy)
+    {
+        "platforms": ["10xGenomics Chromium 3'*",
+                      "10xGenomics Chromium GEM-X*",
+                      "10xGenomics Chromium Next GEM*"],
+        "libraries": ["Flex",],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_Flex",
+        "setup": {
+            "templates": ["10x_multi_config"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell", "legacy"]
+    },
+    # 10x ATAC (legacy)
+    {
+        "platforms": ["10xGenomics Single Cell ATAC",],
+        "libraries": ["scATAC-seq",
+                      "snATAC-seq"],
+        "fastq_generation": "10x_atac",
+        "qc_protocol": "10x_scATAC", # Should be called 10x_snATAC?
+        "setup": {
+            "templates": [],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell", "legacy"]
+    },
+    # 10x Chromium Multiome (legacy)
+    {
+        "platforms": ["10xGenomics Single Cell Multiome"],
+        "libraries": ["ATAC"],
+        "fastq_generation": "10x_multiome_atac",
+        "qc_protocol": "10x_Multiome_ATAC",
+        "setup": {
+            "templates": ["10x_multiome_libraries"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell", "legacy"]
+    },
+    {
+        "platforms": ["10xGenomics Single Cell Multiome"],
+        "libraries": ["GEX"],
+        "fastq_generation": "10x_multiome_gex",
+        "qc_protocol": "10x_Multiome_GEX",
+        "setup": {
+            "templates": ["10x_multiome_libraries"],
+            "directories": [],
+        },
+        "tags": ["10x", "single_cell", "legacy"]
+    },
+    # 10x Visium (legacy)
+    {
+        "platforms": ["10xGenomics Visium",
+                      "10xGenomics Visium (CytAssist)",
+                      "10xGenomics CytAssist Visium"],
+        "libraries": ["FFPE Spatial PEX",
+                      "FFPE Spatial Protein Expression"],
+        "fastq_generation": "10x_visium",
+        "qc_protocol": "10x_Visium_PEX",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial", "legacy"]
+    },
+    {
+        "platforms": ["10xGenomics Visium"],
+        "libraries": ["Fresh Frozen Spatial GEX",
+                      "Fresh Frozen Spatial Gene Expression"],
+        "fastq_generation": "10x_visium_v1",
+        "qc_protocol": "10x_Visium_GEX_90bp_insert",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial", "legacy"]
+    },
+    {
+        "platforms": ["10xGenomics Visium",
+                      "10xGenomics CytAssist Visium"],
+        "libraries": ["Spatial RNA-seq",
+                      "spatial RNA-seq"],
+        "fastq_generation": "10x_visium",
+        "qc_protocol": "10x_Visium_legacy",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial", "legacy"]
+    },
+    # Catch-all for legacy 10x Visium not covered by more
+    # specific applications above
+    {
+        "platforms": ["10xGenomics Visium",
+                      "10xGenomics Visium (CytAssist)",
+                      "10xGenomics CytAssist Visium"],
+        "libraries": ["*"],
+        "fastq_generation": "10x_visium",
+        "qc_protocol": "10x_Visium_GEX",
+        "setup": {
+            "templates": [],
+            "directories": ["Visium_images"],
+        },
+        "tags": ["10x", "spatial", "legacy"]
+    },
+]
 
-    configureBclToFastq
-    bcl2fastq2
-    bclconvert
-
+def identify_application(platform_name, library_type):
     """
+    Returns information about an application
 
-    @staticmethod
-    def configureBclToFastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
-                            mismatches=None,
-                            bases_mask=None,
-                            force=False,
-                            ignore_missing_bcl=False,
-                            ignore_missing_stats=False,
-                            ignore_missing_control=False,
-                            configureBclToFastq_exe=None):
-        """Generate Command instance for 'configureBclToFastq.pl' script
+    Applications are combinations of platforms and libraries.
 
-        Creates a Command instance to run the CASAVA 'configureBclToFastq.pl'
-        script (which generates a Makefile to perform the bcl to fastq
-        conversion).
-        
-        Arguments:
-          basecalls_dir: path to the top-level directory holding the bcl
-            files (typically 'Data/Intensities/Basecalls/' subdirectory)
-          sample_sheet: path to the sample sheet file to use
-          output_dir: optional, path to the output directory. Defaults to
-            'Unaligned'. If this directory already exists then the
-            conversion will fail unless the force option is set to True
-          mismatches: optional, specify maximum number of mismatched bases
-            allowed for matching index sequences during multiplexing.
-            Recommended values are zero for indexes shorter than 6 base
-            pairs, 1 for indexes of 6 or longer
-            (If not specified and bases_mask is supplied then mismatches
-            will be derived automatically from the bases mask string)
-          bases_mask: optional, specify string indicating how to treat
-            each cycle within each read e.g. 'y101,I6,y101'
-          force: optional, if True then force overwrite of an existing
-            output directory (default is False)
-          ignore_missing_bcl: optional, if True then interpret missing bcl
-            files as no call (default is False)
-          ignore_missing_stats: optional, if True then fill in with zeroes
-            when *.stats files are missing (default is False)
-          ignore_missing_control: optional, if True then interpret missing
-            control files as not-set control bits (default is False)
-          configureBclToFastq_exe: optional, if set then will be taken
-            as the name/path for the 'configureBclToFastq.pl' script
+    Arguments:
+        platform_name (str): name of the platform
+        library_type (str): name of the library
 
-        Returns:
-          Command object.
-
-        """
-        if configureBclToFastq_exe is None:
-            configureBclToFastq_exe = 'configureBclToFastq.pl'
-        configure_cmd = Command(configureBclToFastq_exe,
-                                '--input-dir',basecalls_dir,
-                                '--output-dir',output_dir,
-                                '--sample-sheet',sample_sheet,
-                                '--fastq-cluster-count','-1')
-        if bases_mask is not None:
-            configure_cmd.add_args('--use-bases-mask',bases_mask)
-        if mismatches is not None:
-            configure_cmd.add_args('--mismatches',mismatches)
-        else:
-            # Nmismatches not supplied, derive from bases mask
-            if bases_mask is not None:
-                configure_cmd.add_args('--mismatches',get_nmismatches(bases_mask))
-        if force:
-            configure_cmd.add_args('--force')
-        if ignore_missing_bcl:
-            configure_cmd.add_args('--ignore-missing-bcl')
-        if ignore_missing_stats:
-            configure_cmd.add_args('--ignore-missing-stats')
-        if ignore_missing_control:
-            configure_cmd.add_args('--ignore-missing-control')
-        return configure_cmd
-
-    @staticmethod
-    def bcl2fastq2(run_dir,sample_sheet,output_dir="Unaligned",
-                   mismatches=None,
-                   bases_mask=None,
-                   ignore_missing_bcls=False,
-                   no_lane_splitting=False,
-                   minimum_trimmed_read_length=None,
-                   mask_short_adapter_reads=None,
-                   create_fastq_for_index_reads=False,
-                   find_adapters_with_sliding_window=False,
-                   loading_threads=None,
-                   demultiplexing_threads=None,
-                   processing_threads=None,
-                   writing_threads=None,
-                   bcl2fastq_exe=None):
-        """
-        Generate Command instance for 'bcl2fastq' program (v2.*)
-
-        Creates a Command instance to run the Illumina 'bcl2fastq'
-        program (for versions 2.*).
-
-        Arguments:
-          run: path to the top-level directory for the run
-          sample_sheet: path to the sample sheet file to use
-          output_dir: optional, path to the output directory. Defaults to
-            'Unaligned'
-          mismatches: optional, specify maximum number of mismatched bases
-            allowed for matching index sequences during multiplexing.
-            Recommended values are zero for indexes shorter than 6 base
-            pairs, 1 for indexes of 6 or longer
-            (If not specified and bases_mask is supplied then mismatches
-            will be derived automatically from the bases mask string)
-          bases_mask: optional, specify string indicating how to treat
-            each cycle within each read e.g. 'y101,I6,y101'
-          ignore_missing_bcls: optional, if True then interpret missing bcl
-            files as no call (default is False)
-          no_lane_splitting: optional, if True then don't split FASTQ
-            files by lane (--no-lane-splitting) (default is False)
-          minimum_trimmed_read_length: optional, specify minimum length
-            for reads after adapter trimming (shorter reads will be padded
-            with Ns to make them long enough)
-          mask_short_adapter_reads: optional, specify the minimum length
-            of ACGT bases that must be present in a read after adapter
-            trimming for it not to be masked completely with Ns.
-          create_fastq_for_index_reads: optional, if True then also create
-            Fastq files for index reads (default, don't create index read
-            Fastqs) (--create-fastq-for-index-reads)
-          find_adapters_with_sliding_window: optional, if True then
-            use the sliding window algorithm rather than string matching
-            when identifying adapter sequences for trimming (default,
-            don't use sliding window algorithm)
-            (--find-adapters-with-sliding-window)
-          loading_threads: optional, specify number of threads to use
-            for loading bcl data (--loading-threads)
-          demultiplexing_threads: optional, specify number of threads to
-            use for demultiplexing (--demultiplexing-threads)
-          processing_threads: optional, specify number of threads to
-            use for processing (--processing-threads)
-          writing_threads: optional, specify number of threads to
-            use for writing FASTQ data (--writing-threads)
-          bcl2fastq_exe: optional, if set then specifies the name/path
-            of the bcl2fastq executable to use
-
-        Returns:
-          Command object.
-
-        """
-        if bcl2fastq_exe is None:
-            bcl2fastq_exe = 'bcl2fastq'
-        bcl2fastq_cmd = Command(bcl2fastq_exe,
-                                '--runfolder-dir',run_dir,
-                                '--output-dir',output_dir,
-                                '--sample-sheet',sample_sheet)
-        if bases_mask is not None:
-            bcl2fastq_cmd.add_args('--use-bases-mask',bases_mask)
-        if mismatches is not None:
-            bcl2fastq_cmd.add_args('--barcode-mismatches',mismatches)
-        else:
-            # Nmismatches not supplied, derive from bases mask
-            if bases_mask is not None:
-                bcl2fastq_cmd.add_args('--barcode-mismatches',
-                                       get_nmismatches(bases_mask))
-        if ignore_missing_bcls:
-            bcl2fastq_cmd.add_args('--ignore-missing-bcls')
-        if no_lane_splitting:
-            bcl2fastq_cmd.add_args('--no-lane-splitting')
-        if minimum_trimmed_read_length is not None:
-            bcl2fastq_cmd.add_args('--minimum-trimmed-read-length',
-                                   minimum_trimmed_read_length)
-        if mask_short_adapter_reads is not None:
-            bcl2fastq_cmd.add_args('--mask-short-adapter-reads',
-                                   mask_short_adapter_reads)
-        if create_fastq_for_index_reads:
-            bcl2fastq_cmd.add_args('--create-fastq-for-index-read')
-        if find_adapters_with_sliding_window:
-            bcl2fastq_cmd.add_args('--find-adapters-with-sliding-window')
-        if loading_threads is not None:
-            bcl2fastq_cmd.add_args('-r',loading_threads)
-        if demultiplexing_threads is not None:
-            bcl2fastq_cmd.add_args('-d',demultiplexing_threads)
-        if processing_threads is not None:
-            bcl2fastq_cmd.add_args('-p',processing_threads)
-        if  writing_threads is not None:
-            bcl2fastq_cmd.add_args('-w',writing_threads)
-        return bcl2fastq_cmd
-
-    @staticmethod
-    def bclconvert(run_dir,output_dir,sample_sheet=None,
-                   lane=None,no_lane_splitting=False,
-                   sampleproject_subdirectories=False,
-                   num_parallel_tiles=None,
-                   num_conversion_threads=None,
-                   num_compression_threads=None,
-                   num_decompression_threads=None,
-                   bclconvert_exe=None):
-        """
-        Generate Command instance for 'bcl-convert' program (v3.*)
-
-        Creates a Command instance to run the Illumina 'bcl-convert'
-        program (for versions 3.*).
-
-        Arguments:
-          run: path to the top-level directory for the run
-          output_dir: path to the output directory
-          sample_sheet: optional, path to the sample sheet file to use
-            (must be present in top-level of input directory if not
-            specified here)
-          lane (integer): restrict processing to single lane (sample
-            sheet must only contain this lane) (--bcl-only-lane)
-          no_lane_splitting: optional, if True then don't split FASTQ
-            files by lane (--no-lane-splitting) (default is False)
-          sampleproject_subdirectories: optional, if True then create
-            subdirectories with project names in output (default is
-            False) (--bcl-sampleproject-subdirectories)
-          num_parallel_tiles: optional, specify the number of tiles
-            being converted to Fastqs in parallel
-            (--bcl-num-parallel-tiles)
-          num_conversion_threads: optional, specify the number of threads
-            to use for conversion per tile (--bcl-num-conversion-threads)
-          num_compression_threads: optional, specify the number of
-            threads for compressing output Fastq files
-            (--bcl-num-compression-threads)
-          num_decompression_threads: optional, specify the number of
-            threads for decompression input bcl files
-            (--bcl-num-decompression-threads)
-          bclconvert_exe: optional, if set then specifies the name/path
-            of the bcl-convert executable to use
-
-        Returns:
-          Command object.
-        """
-        if bclconvert_exe is None:
-            bclconvert_exe = 'bcl-convert'
-        bclconvert_cmd = Command(bclconvert_exe,
-                                 '--bcl-input-directory',run_dir,
-                                 '--output-dir',output_dir)
-        if sample_sheet is not None:
-            bclconvert_cmd.add_args('--sample-sheet',sample_sheet)
-        if lane is not None:
-            bclconvert_cmd.add_args('--bcl-only-lane',lane)
-        if no_lane_splitting:
-            bclconvert_cmd.add_args('--no-lane-splitting',
-                                    'true')
-        if sampleproject_subdirectories:
-            bclconvert_cmd.add_args('--bcl-sampleproject-subdirectories',
-                                    'true')
-        if num_parallel_tiles is not None:
-            bclconvert_cmd.add_args('--bcl-num-parallel-tiles',
-                                    num_parallel_tiles)
-        if num_conversion_threads is not None:
-            bclconvert_cmd.add_args('--bcl-num-conversion-threads',
-                                    num_conversion_threads)
-        if num_compression_threads is not None:
-            bclconvert_cmd.add_args('--bcl-num-compression-threads',
-                                    num_compression_threads)
-        if num_decompression_threads is not None:
-            bclconvert_cmd.add_args('--bcl-num-decompression-threads',
-                                    num_decompression_threads)
-        return bclconvert_cmd
-
-class general:
-    """General command line applications (e.g. rsync, make)
- 
-    Provides static methods to create Command instances for a class of
-    'general' command line applications:
-
-    rsync
-    make
-
+    Returns:
+        dict: application-specific information
     """
+    # Collect all possible matches
+    matching_applications = []
+    for platform in APPLICATIONS:
+        match = match_application(platform, platform_name, library_type)
+        if match:
+            matching_applications.append(match)
+    if not matching_applications:
+        # Failed to find any matches
+        raise Exception(f"No matching platforms found for '{platform_name}'/'{library_type}'")
+    # Sort matches by score
+    matching_applications = sorted(matching_applications, key=lambda m: score_match(m[1], m[2]))
+    if len(matching_applications) == 1:
+        # If there is a single match then return it
+        return matching_applications[0][0]
+    # Extract unique scores from matches
+    scores = sorted(set([score_match(m[1], m[2]) for m in matching_applications]))
+    # Loop over scores in ascending order looking for unique matches
+    for score in scores:
+        filter_matches = [m for m in matching_applications if score_match(m[1], m[2]) == score]
+        if len(filter_matches) == 1:
+            # Only one match at this score so return it
+            return filter_matches[0][0]
+    # No unique match found for any score
+    raise Exception(f"No unique matching platform found for '{platform_name}'/'{library_type}'")
 
-    @staticmethod
-    def rsync(source,target,dry_run=False,mirror=False,chmod=None,
-              prune_empty_dirs=False,escape_spaces=True,
-              extra_options=None):
-        """Generate Command instance for 'rsync' command
+def fetch_application_data(tags, applications=None, expand=False):
+    """
+    Fetch application data matching specified tags
 
-        Create a Command instance to run the 'rsync' command line, to
-        recursively copy/sync one directory (the 'source') into another
-        (the 'target').
+    Arguments:
+        tags (list): list of tags to match; tags starting
+            with '!' are treated as negative tags
+        applications (list): list of application definitions
+            to filter; if None then the default APPLICATIONS
+            list is used
+        expand (bool): if True then applications with multiple
+            platforms/libraries are expanded so there is one
+            entry per platform/library combination
 
-        The target can be a local directory or on a remote system (in which
-        case it should be qualified with a user and hostname i.e.
-        'user@hostname:target').
+    Returns:
+        list: list of application definitions matching
+        the specified tags.
+    """
+    if applications is None:
+        applications = APPLICATIONS
+    matching_applications = []
+    for application in applications:
+        has_tags = True
+        for tag in tags:
+            if tag.startswith("!"):
+                # Negative tag
+                neg_tag = tag[1:]
+                try:
+                    if neg_tag in application["tags"]:
+                        has_tags = False
+                        break
+                except KeyError:
+                    # No tags defined for this application
+                    pass
+                continue
+            else:
+                # Positive tag
+                try:
+                    if tag not in application["tags"]:
+                        has_tags = False
+                        break
+                except KeyError:
+                    # No tags defined for this application
+                    has_tags = False
+        if has_tags:
+            matching_applications.append(application)
+    if expand:
+        # Expand applications with multiple platforms/libraries
+        # so there is one entry per platform/library combination
+        expanded_applications = []
+        for application in matching_applications:
+            for platform in application["platforms"]:
+                for library in application["libraries"]:
+                    new_application = application.copy()
+                    new_application["platforms"] = [platform]
+                    new_application["libraries"] = [library]
+                    expanded_applications.append(new_application)
+        matching_applications = expanded_applications
+    return matching_applications
 
-        Arguments:
-          source: the directory being copied/sync'ed
-          target: the directory the source will be copied into
-          dry_run: run rsync using --dry-run option i.e. no files will
-            be copied/sync'ed, just reported
-          mirror: if True then run rsync in 'mirror' mode i.e. with
-            --delete-after option (to remove files from the target
-            that have also been removed from the source)
-          chmod: optional, mode specification to be applied to the copied
-            files e.g. chmod='u+rwX,g+rwX,o-w
-          prune_empty_dirs: optional, don't include empty target
-            directories i.e. -m option
-          escape_spaces: optional, if True then add '\' in front of
-            spaces in file name paths to escape them (default)
-          extra_options: optional, a list of additional rsync options to be
-            added to the command (e.g. --include and --exclude filter
-            patterns)
+def split_library_type(library_type):
+    """
+    Splits a library type into its components
 
-        Returns:
-          Command object.
+    Library types are expected to consist of a "base"
+    library type followed by none or more optional
+    "extensions", which are identified by a preceeding
+    '+' character.
 
-        """
-        # Collect rsync command options
-        rsync_cmd = Command('rsync','-av')
-        # Dry run mode
-        if dry_run:
-            rsync_cmd.add_args('--dry-run')
-        # Check for remote source or target (requires ssh protocol)
-        if re.compile(r'^([^@]*@)?[^:]*:').match(target) or \
-           re.compile(r'^([^@]*@)?[^:]*:').match(source):
-            rsync_cmd.add_args('-e','ssh')
-        # Mirroring
-        if mirror:
-            rsync_cmd.add_args('--delete-after')
-        # Don't include empty target directories
-        if prune_empty_dirs:
-            rsync_cmd.add_args('-m')
-        # Set mode of target files and directories
-        if chmod is not None:
-            rsync_cmd.add_args('--chmod=%s' % chmod)
-        # Additional options
-        if extra_options is not None:
-            rsync_cmd.add_args(*extra_options)
-        # Escape spaces in source and target, if required
-        if escape_spaces:
-            if ' ' in source:
-                source = source.replace(' ','\ ')
-            if ' ' in target:
-                target = target.replace(' ','\ ')
-        # Make rsync command
-        rsync_cmd.add_args(source,target)
-        return rsync_cmd
+    For example: "GEX" has a base library type
+    with no extensions; "GEX+CSP" has the base type
+    "GEX" with extensions ["CSP"]; and "GEX+CSP+VDJ"
+    has the base type "GEX" with extensions
+    ["CSP", "VDJ"].
 
-    @staticmethod
-    def make(makefile=None,working_dir=None,nprocessors=None):
-        """Generate Command instance for 'make' command
+    This function returns a tuple of the form:
 
-        Creates a Command instance to run 'make'.
-        
-        Arguments:
-          makefile: optional, name of input Makefile (-f)
-          working_dir: optional, specify the working directory to change to
-            (-C)
-          nprocessors: optional, specify number of processors to use (-j)
+    (BASE, EXTENSIONS)
 
-        Returns:
-          Command object.
+    Arguments:
+        library_type (str): name of the library
 
-        """
-        make_cmd = Command('make')
-        if working_dir is not None:
-            make_cmd.add_args('-C',working_dir)
-        if nprocessors is not None:
-            make_cmd.add_args('-j',nprocessors)
-        if makefile is not None:
-            make_cmd.add_args('-f',makefile)
-        return make_cmd
+    Returns:
+        tuple: tuple with two elements, first is
+        the base library type, the second is
+        a list of the extensions.
+    """
+    if library_type is None:
+        return (None, None)
+    library_components = library_type.split("+")
+    library = library_components[0]
+    try:
+        return (library, [c.strip() for c in library_components[1:]])
+    except IndexError:
+        return (library, None)
 
-    @staticmethod
-    def ssh_command(user,server,cmd):
-        """Generate Command instance for 'ssh' to execute a remote command
+def match_application(application_info, platform_name, library_type):
+    """
+    Determine if platform and library type matches the supplied application
 
-        Creates a Command instance to run 'ssh ... COMMAND'.
+    Given information about an application (supplied as a dictionary with
+    elements ``platforms`` and ``libraries``), determines whether the
+    supplied platform and library match that information.
 
-        Arguments:
-          user: name of the remote user
-          server: name of the server
-          cmd: command to execute on the server via ssh
+    FIXME doesn't currently include matching against the library extensions
 
-        Returns:
-          Command object.
+    Arguments:
+         application_info (dict): information about the application
+         platform_name (str): name of the platform
+         library_type (str): name of the library
 
-        """
-        ssh_command = Command('ssh','%s%s' % ('%s@' % user if user else '',
-                                              server))
-        ssh_command.add_args(*cmd)
-        return ssh_command
+    Returns:
+        tuple: if the platform and library match the application then
+        returns a tuple of the form (application, list of platform matches,
+        list of library matches); otherwise returns None
+    """
+    # See if platform name is a match
+    platform_matches = []
+    if platform_name is None:
+        # No platform specified so only applications which specify all (i.e. '*')
+        # or no platforms can be a match
+        if not application_info["platforms"] or application_info["platforms"] == ["*"]:
+            logger.debug(f"==> matched empty input platform {platform_name}")
+            try:
+                platform_matches.append(application_info["platforms"][0])
+            except IndexError:
+                platform_matches.append(None)
+        else:
+            # Application specifies a platform so it can't be a match
+            logger.debug("=> Platforms defined for application, but platform must be empty")
+            return None
+    else:
+        # Platform was specified so only applications which specify at least
+        # one platform can be a match
+        logger.debug(f"=> looking for match to platform '{platform_name}'")
+        if not application_info["platforms"]:
+            # Application doesn't specify any platforms so cannot be a match
+            logger.debug("=> No platforms defined for application, but looking for a platform")
+            return None
+        # Iterate over platform names looking for matches
+        for platform in application_info["platforms"]:
+            logger.debug(f"==> seeing if '{platform}' matches input '{platform_name}'...")
+            if fnmatch(platform_name, platform):
+                logger.debug("--- yes")
+                platform_matches.append(platform)
+    # Check if any platforms are a match
+    if not platform_matches:
+        # No matches in the application for the platform, so reject
+        logger.debug(f"=> No matching platforms found for input '{platform_name}'")
+        return None
+    # See if base library type is a match
+    library_matches = []
+    library_type, extensions = split_library_type(library_type)
+    if library_type is None:
+        # No library specified so only applications which specify all (i.e. "*") or
+        # no library types can be a match
+        if not application_info["libraries"] or application_info["libraries"] == ["*"]:
+            logger.debug(f"==> matched empty input library type {library_type}")
+            try:
+                library_matches.append(application_info["libraries"][0])
+            except IndexError:
+                library_matches.append(None)
+        else:
+            # Application defines libraries so it can't be a match
+            logger.debug("=> Libraries defined for application, but library type must be empty")
+            return None
+    else:
+        # Library was specified so only applications which specify at least one library
+        # type can be a match
+        if not application_info["libraries"]:
+            return None
+        # Iterate over libraries looking for matches
+        for library in application_info["libraries"]:
+            logger.debug(f"==> seeing if '{library}' matches input '{library_type}'...")
+            if fnmatch(library_type, library):
+                logger.debug("--- yes")
+                library_matches.append(library)
+    # Check if any libraries are a match
+    if not library_matches:
+        # No matches in the application for the library type, so reject
+        return None
+    # FIXME Ignore matching extensions for now
+    # Return matches
+    return (application_info,
+            [m for m in platform_matches if m is not None],
+            [m for m in library_matches if m is not None])
 
-    @staticmethod
-    def scp(user,server,source,target,recursive=False):
-        """Generate Command instance for 'scp'
 
-        Creates a Command instance to run 'scp' to copy to another system.
+def score_match(platforms, libraries):
+    """
+    Return a score for a platform/library combination
 
-        Arguments:
-          user: name of the remote user
-          server: name of the server
-          source: source file on local system
-          target: target destination on remote system
-          recursive: optional, if True then copy source
-            recursively (i.e. specify the '-r' option)
+    The score is calculated as the sum of the minimum number of wildcard
+    characters ('*') in the platform and library lists. A lower score
+    indicates a more specific match.
 
-        Returns:
-          Command object.
-
-        """
-        scp_command = Command('scp')
-        if recursive:
-            scp_command.add_args('-r')
-        scp_command.add_args(source,
-                             '%s%s:%s' % ('%s@' % user if user else '',
-                                          server,target))
-        return scp_command
+    Arguments:
+        platforms (list): list of platforms
+        libraries (list): list of libraries
+    """
+    score = 0
+    for lst in (platforms, libraries):
+        if lst:
+            score += min([str(x).count("*") for x in lst if x is not None])
+    return score

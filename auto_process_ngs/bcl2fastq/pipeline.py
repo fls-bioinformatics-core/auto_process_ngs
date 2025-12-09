@@ -55,20 +55,20 @@ from bcftbx.IlluminaData import list_missing_fastqs
 from bcftbx.utils import find_program
 from bcftbx.utils import mkdirs
 from bcftbx.utils import walk
+from . import apps
+from .utils import available_bcl2fastq_versions
+from .utils import bases_mask_is_valid
+from .utils import bcl_to_fastq_info
+from .utils import bclconvert_info
+from .utils import check_barcode_collisions
+from .utils import get_bases_mask
+from .utils import get_nmismatches
+from .utils import get_sequencer_platform
+from .utils import make_custom_sample_sheet
+from .utils import convert_bases_mask_to_override_cycles
 from ..analysis import AnalysisFastq
-from ..applications import general as general_apps
-from ..applications import bcl2fastq as bcl2fastq_apps
+from ..apps import general as general_apps
 from ..barcodes.pipeline import AnalyseBarcodes
-from ..bcl2fastq.utils import available_bcl2fastq_versions
-from ..bcl2fastq.utils import bases_mask_is_valid
-from ..bcl2fastq.utils import bcl_to_fastq_info
-from ..bcl2fastq.utils import bclconvert_info
-from ..bcl2fastq.utils import check_barcode_collisions
-from ..bcl2fastq.utils import get_bases_mask
-from ..bcl2fastq.utils import get_nmismatches
-from ..bcl2fastq.utils import get_sequencer_platform
-from ..bcl2fastq.utils import make_custom_sample_sheet
-from ..bcl2fastq.utils import convert_bases_mask_to_override_cycles
 from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
 from ..samplesheet_utils import barcode_is_10xgenomics
@@ -2567,7 +2567,7 @@ class RunBcl2Fastq(PipelineTask):
                                            os.path.basename(
                                                self.args.out_dir))
         # Build command to run bcl2fastq
-        bcl2fastq2_cmd = bcl2fastq_apps.bcl2fastq2(
+        bcl2fastq2_cmd = apps.bcl2fastq2(
             self.args.run_dir,
             self.args.sample_sheet,
             output_dir=self.tmp_out_dir,
@@ -2836,7 +2836,7 @@ class RunBclConvert(PipelineTask):
                                            os.path.basename(
                                                self.args.out_dir))
         # Build command to run bcl-convert
-        bclconvert_cmd = bcl2fastq_apps.bclconvert(
+        bclconvert_cmd = apps.bclconvert(
             self.args.run_dir,
             self.tmp_out_dir,
             sample_sheet=self.bclconvert_sample_sheet,

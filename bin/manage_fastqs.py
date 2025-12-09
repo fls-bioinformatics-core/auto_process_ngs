@@ -36,7 +36,7 @@ import fnmatch
 import bcftbx.utils as bcf_utils
 import bcftbx.Md5sum as md5sum
 import auto_process_ngs.utils as utils
-import auto_process_ngs.applications as applications
+import auto_process_ngs.apps as apps
 from auto_process_ngs.analysis import AnalysisDir
 from auto_process_ngs.fileops import exists
 from auto_process_ngs.fileops import copy
@@ -168,7 +168,7 @@ def copy_to_dest(f,dirn,chksum=None,link=False):
             try:
                 # Run md5sum -c on the remote system
                 if chksum is not None:
-                    md5sum_check = applications.general.ssh_command(
+                    md5sum_check = apps.general.ssh_command(
                         user,host,
                         ('echo',
                          '"%s  %s"' % (chksum,
