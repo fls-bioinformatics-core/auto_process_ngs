@@ -121,7 +121,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_scRNAseq",
         "setup": {
-            "templates": ["10x_multi_config"],
+            "templates": [],
             "directories": [],
         },
         "tags": ["10x", "single_cell"]
@@ -134,7 +134,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_snRNAseq",
         "setup": {
-            "templates": ["10x_multi_config"],
+            "templates": [],
             "directories": [],
         },
         "tags": ["10x", "single_cell"]
