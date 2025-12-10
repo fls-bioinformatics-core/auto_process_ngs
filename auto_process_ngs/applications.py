@@ -148,7 +148,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
-            "templates": ["10x_multi_config"],
+            "templates": ["10x_multi_config(library_type=single_cell_immune_profiling)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell"]
@@ -160,7 +160,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
         "setup": {
-            "templates": ["10x_multi_config(include_probeset=true)"],
+            "templates": ["10x_multi_config(library_type=flex,include_probeset=true)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell"]
@@ -173,7 +173,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_CellPlex",
         "setup": {
-            "templates": ["10x_multi_config"],
+            "templates": ["10x_multi_config(library_type=cellplex)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell"]
@@ -371,7 +371,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_CellPlex",
         "setup": {
-            "templates": ["10x_multi_config"],
+            "templates": ["10x_multi_config(library_type=cellplex)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell", "legacy"]
@@ -383,7 +383,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
-            "templates": ["10x_multi_config"],
+            "templates": ["10x_multi_config(library_type=single_cell_immune_profiling)"],
             "directories": [],
         }
     },
@@ -396,7 +396,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
         "setup": {
-            "templates": ["10x_multi_config"],
+            "templates": ["10x_multi_config(library_type=flex,include_probeset=true)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell", "legacy"]
