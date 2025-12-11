@@ -437,10 +437,10 @@ def make_multi_config_template(f,reference=None,probe_set=None,
     # Normalise and check supplied library type
     if library_type.startswith("CellPlex"):
         library_type = "cellplex"
-    library_type = library_type.lower()
+    library_type = library_type.lower().replace(" ","_")
     if library_type not in ("cellplex",
                             "flex",
-                            "single cell immune profiling"):
+                            "single_cell_immune_profiling"):
         raise Exception(f"'{library_type}': unsupported library type for "
                         "multi template generation")
     # Write template file
@@ -456,7 +456,7 @@ def make_multi_config_template(f,reference=None,probe_set=None,
             fp.write("## * Flex: https://support.10xgenomics.com/"
                      "single-cell-gene-expression/software/pipelines/"
                      "latest/using/multi-frp#cellranger-multi\n")
-        elif library_type == "single cell immune profiling":
+        elif library_type == "single_cell_immune_profiling":
             fp.write("## * Single Cell Immune Profiling: "
                      "https://support.10xgenomics.com/"
                      "single-cell-vdj/software/pipelines/latest/using/"
@@ -490,7 +490,7 @@ def make_multi_config_template(f,reference=None,probe_set=None,
                  "#reference,/path/to/feature/reference\n")
         fp.write("\n")
         # V(D)J section
-        if library_type == "single cell immune profiling":
+        if library_type == "single_cell_immune_profiling":
             fp.write("#[vdj]\n"
                      "#reference,/path/to/vdj/reference\n")
             fp.write("\n")
@@ -502,7 +502,7 @@ def make_multi_config_template(f,reference=None,probe_set=None,
                 tenx_library_type = "[Gene Expression|Multiplexing Capture]"
             elif library_type == "flex":
                 tenx_library_type = "[Gene Expression|Antibody Capture]"
-            elif library_type == "single cell immune profiling":
+            elif library_type == "single_cell_immune_profiling":
                 tenx_library_type = "[Gene Expression|Antibody Capture|VDJ-B|VDJ-T]"
             for sample in samples:
                 fp.write("{sample},{fastqs_dir},any,{sample},{tenx_library_type},\n".format(

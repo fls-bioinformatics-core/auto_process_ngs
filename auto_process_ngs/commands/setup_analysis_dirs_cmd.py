@@ -201,9 +201,12 @@ def setup_analysis_dirs(ap,
                 params = []
             # Set parameters
             include_probeset = False
+            template_library_type = library_type
             for param in params:
                 if param[0] == "include_probeset":
                     include_probeset = bool(param[1].lower() in ("true", "yes"))
+                elif param[0] == "library_type":
+                    template_library_type = param[1]
             # Set up the templates
             if template == "10x_multiome_libraries":
                 # Config file for 10x single cell multiome
@@ -282,7 +285,7 @@ def setup_analysis_dirs(ap,
                         probe_set=probe_set,
                         fastq_dir=project.fastq_dir,
                         samples=[s.name for s in project.samples],
-                        library_type=library_type,
+                        library_type=template_library_type,
                         cellranger_version=cellranger_version)
                 except Exception as ex:
                     logger.warning("Error when attempting to create '%s': "
