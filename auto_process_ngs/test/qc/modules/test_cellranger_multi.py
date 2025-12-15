@@ -267,8 +267,8 @@ PBB,CMO302,PBB
                                        "PJB2_MC_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'CellPlex' })
+                                           '10x Chromium 3\' (v3.1 Next GEM ST) CellPlex',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -382,8 +382,8 @@ PBB,CMO302,PBB
                                        "PJB2_MC_S4_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'CellPlex' })
+                                           '10x Chromium 3\' (v3.1 Next GEM ST) CellPlex',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Add cellranger multi config.csv files for two physical
         # samples (PJB1 and PJB2)
@@ -929,8 +929,8 @@ PB2,BC002,PB2
                                        "PJB1_Flex_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'Flex' })
+                                           '10x Chromium Flex (v1 GEM-X)',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -1035,8 +1035,8 @@ PB2,BC002,PB2
                                        "PJB2_Flex_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'Flex' })
+                                           '10x Chromium Flex (v1 GEM-X)',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv files for two physical
         # samples (PJB1 and PJB2)
@@ -1343,8 +1343,8 @@ PJB1_BCR,{fastq_dir},any,PJB1,VDJ-B,
                                        "PJB1_BCR_S3_R2_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'Single Cell Immune Profiling' })
+                                           '10x Chromium 5\' (v3 GEM-X)',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -1452,8 +1452,8 @@ PJB1_BCR,{fastq_dir},any,PJB1,VDJ-B,
                                        "PJB2_BCR_S6_R2_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'Single Cell Immune Profiling' })
+                                           '10x Chromium 5\' (v3 GEM-X)',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv files for two physical
         # samples (PJB1 and PJB2)
