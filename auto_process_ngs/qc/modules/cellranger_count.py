@@ -1071,8 +1071,10 @@ def add_cellranger_count(p,project_name,project,qc_dir,
 
     # Run cellranger count
     run_cellranger_count = RunCellrangerCount(
-        "%s: run single library analysis (%s)" %
-        (project_name,project.info.library_type),
+        "%s: run single library analysis (%s %s)" %
+        (project_name,
+         project.info.single_cell_platform,
+         project.info.library_type),
         check_cellranger_count.output.samples,
         check_cellranger_count.output.fastq_dir,
         get_cellranger_reference_data.output.reference_data_path,

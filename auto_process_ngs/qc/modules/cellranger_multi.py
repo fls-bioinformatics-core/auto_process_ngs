@@ -384,8 +384,9 @@ class CellrangerMulti(QCModule):
 
         # Run cellranger multi
         run_cellranger_multi = RunCellrangerMulti(
-            "%s: run cellranger multi (%s)" %
+            "%s: run cellranger multi (%s %s)" %
             (project_name,
+             project.info.single_cell_platform,
              project.info.library_type),
             project,
             get_cellranger_multi_configs.output.config_csvs,
