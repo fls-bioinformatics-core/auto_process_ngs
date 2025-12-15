@@ -334,6 +334,17 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
     """
     Identify samples with biological (sequencing) data
 
+    If a list of samples is explicitly supplied in the
+    project metadata (via the 'biological_samples' item)
+    then is returned; otherwise if configuration files are
+    identified for 'cellranger multi' then the list of
+    biological samples is taken from these files.
+
+    If neither of these things are found (or if the
+    'cellranger multi' config files don't define any
+    biological samples) then the default is to return
+    the names of all the samples in the project.
+
     Arguments:
       project_dir (str): path to the project directory
       fastq_attrs (BaseFastqAttrs): class for extracting
@@ -362,52 +373,35 @@ def get_seq_data_samples(project_dir,fastq_attrs=None):
             else:
                 bio_samples.append(s)
         return bio_samples
-    # Initial sample list
-    samples = sorted([s.name for s in project.samples])
-    # 10x Genomics CellPlex
-    single_cell_platform = project.info.single_cell_platform
-    if single_cell_platform:
-        if single_cell_platform.startswith("10xGenomics Chromium") and \
-           project.info.library_type in ("CellPlex",
-                                         "CellPlex scRNA-seq",
-                                         "Flex",
-                                         "Single Cell Immune Profiling"):
-            # Look for 10x multi config files ("10x_multi_config*.csv")
-            config_files = [os.path.join(project.dirn,f)
-                            for f in os.listdir(project.dirn)
-                            if (f.startswith("10x_multi_config.") and
-                                f.endswith(".csv"))]
-            # Extract sequence data samples
-            samples_ = []
-            for config_file in config_files:
-                config_csv = CellrangerMultiConfigCsv(config_file,
-                                                      strict=False)
-                if project.info.library_type in ("CellPlex",
-                                                 "CellPlex scRNA-seq",
-                                                 "Flex"):
-                    if not config_csv.is_valid:
-                        for err in config_csv.get_errors():
-                            print(f"- {err}")
-                            raise Exception(f"Invalid cellranger multi "
-                                            f"config file: {config_file}")
-                    else:
-                        samples_.extend([s for s in
-                                         config_csv.gex_libraries
+    else:
+        # Initially assume all samples have biological data
+        samples = sorted([s.name for s in project.samples])
+    # Look for 10x multi config files ("10x_multi_config*.csv")
+    config_files = [os.path.join(project.dirn,f)
+                    for f in os.listdir(project.dirn)
+                    if (f.startswith("10x_multi_config.") and
+                        f.endswith(".csv"))]
+    if config_files:
+        # Extract sequence data samples
+        samples_ = []
+        for config_file in config_files:
+            config_csv = CellrangerMultiConfigCsv(config_file,
+                                                  strict=False)
+            if config_csv.is_valid:
+                for feature_type in ("gene_expression",
+                                     "vdj_b",
+                                     "vdj_t"):
+                    samples_.extend([s for s in
+                                     config_csv.libraries(feature_type)
                                          if s in samples])
-                elif project.info.library_type == \
-                     "Single Cell Immune Profiling":
-                    if not config_csv.is_valid:
-                        logger.warning(f"Invalid cellranger multi config "
-                                       f"file: {config_file} (skipped)")
-                    else:
-                        for feature_type in ("gene_expression",
-                                             "vdj_b",
-                                             "vdj_t"):
-                            samples_.extend([s for s in
-                                             config_csv.libraries(feature_type)
-                                             if s in samples])
-            if samples_:
-                samples = sorted(samples_)
+            else:
+                for err in config_csv.get_errors():
+                    print(f"- {err}")
+                    raise Exception(f"Invalid cellranger multi "
+                                    f"config file: {config_file}")
+        if samples_:
+            samples = sorted(samples_)
+    # Return sample list
     return samples
 
 def filter_fastqs(reads,fastqs,fastq_attrs=AnalysisFastq):

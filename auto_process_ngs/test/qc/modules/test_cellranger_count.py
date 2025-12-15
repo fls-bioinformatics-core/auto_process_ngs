@@ -503,7 +503,7 @@ class TestQCPipelineCellrangerCount(BaseQCPipelineTestCase):
                                        "PJB2_S2_R2_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v2',
+                                           '10x Chromium 3\' (v4 GEM-X)',
                                            'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # QC protocol
@@ -1049,7 +1049,7 @@ class TestQCPipelineCellrangerCount(BaseQCPipelineTestCase):
                                        "PJB2_S2_R2_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v2',
+                                           '10x Chromium 3\' (v4 GEM-X)',
                                            'Library type': 'snRNA-seq' })
         p.create(top_dir=self.wd)
         # QC protocol
