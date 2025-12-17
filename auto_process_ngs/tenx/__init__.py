@@ -2,62 +2,6 @@
 # Data
 #######################################################################
 
-# List of known library types for 10xGenomics
-LIBRARIES = {
-    "10xGenomics Chromium GEM-X 3'*": (
-        "scRNA-seq",
-    ),
-    "10xGenomics Chromium Next GEM*": (
-        "scRNA-seq",
-        "CellPlex scRNA-seq",
-        "Flex",
-    ),
-    "10xGenomics Chromium*": (
-        "scRNA-seq",
-        "snRNA-seq",
-        "CellPlex",
-        "CellPlex scRNA-seq",
-        "Flex",
-        "Single Cell Immune Profiling",
-    ),
-    "10xGenomics Single Cell ATAC": (
-        "scATAC-seq",
-        "snATAC-seq",
-    ),
-    "10xGenomics Single Cell Multiome": (
-        "ATAC",
-        "GEX",
-    ),
-    "10xGenomics Visium": (
-        "Fresh Frozen Spatial GEX",
-        "FFPE Spatial GEX",
-        "Fresh Frozen Spatial Gene Expression",
-        "FFPE Spatial Gene Expression",
-    ),
-    "10xGenomics Visium (CytAssist)": (
-        "FFPE HD Spatial GEX",
-        "FFPE Spatial GEX",
-        "Fixed Frozen Spatial GEX",
-        "Fresh Frozen Spatial GEX",
-        "FFPE Spatial PEX",
-        "FFPE HD Spatial Gene Expression",
-        "FFPE Spatial Gene Expression",
-        "Fixed Frozen Spatial Gene Expression",
-        "Fresh Frozen Spatial Gene Expression",
-        "FFPE Spatial Protein Expression",
-    ),
-    # Legacy Visium platform/application combinations kept for
-    # backwards compatibility
-    "10xGenomics * Visium": (
-        "FFPE Spatial RNA-seq",
-        "Fresh Frozen RNA-seq",
-        "GEX",
-        "PEX",
-        "Spatial RNA-seq",
-        "HD Spatial GEX",
-    ),
-}
-
 # Permissible values for cellranger count --chemistry option
 # See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
 CELLRANGER_ASSAY_CONFIGS = {
