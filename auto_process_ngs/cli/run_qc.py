@@ -31,10 +31,10 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import AttributeDictionary
 from .. import get_version
-from .. import tenx
 from ..analysis import AnalysisProject
 from ..analysis import AnalysisFastq
 from ..analysis import locate_project_info_file
+from ..applications import fetch_application_data
 from ..metadata import AnalysisProjectInfo
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
@@ -383,6 +383,29 @@ def add_deprecated_options(p):
                             help="redundant: MultiQC report is generated "
                             "by default (use --no-multiqc to disable)")
 
+def get_applications(tags):
+    """
+    Return a list of applications matching tags
+
+    Arguments:
+        tags (list): list of tags to match when
+          filtering applications
+
+    Returns:
+        Dictionary of where keys are platforms
+        and values are lists of associated
+        libraries.
+    """
+    apps = {}
+    for app in fetch_application_data(tags, expand=True):
+        for platform in app["platforms"]:
+            if platform not in apps:
+                apps[platform] = []
+            apps[platform].extend(app["libraries"])
+    for platform in apps:
+        apps[platform] = sorted(set(apps[platform]))
+    return apps
+
 def display_info(s):
     """
     Displays information about the current configuration
@@ -406,14 +429,25 @@ def display_info(s):
     else:
         print("\tNo QC protocols defined")
     # Single cell platforms
-    sc_platforms = [p for p in tenx.PLATFORMS]
-    sc_platforms.append('Parse Evercode')
-    print("\nSingle cell platforms:")
+    sc_platforms = get_applications(["single_cell", "!legacy"])
+    print("\nSingle cell platform/library combinations:")
     if sc_platforms:
-        for name in sc_platforms:
-            print("\t{platform}".format(platform=name))
+        for platform in sorted(sc_platforms.keys()):
+            print("\t{platform}\t({libraries})".format(
+                platform=platform,
+                libraries=", ".join(sc_platforms[platform])))
     else:
         print("\tNo single cell platforms defined")
+    # Spatial platforms
+    spatial_platforms = get_applications(["spatial", "!legacy"])
+    print("\nSpatial platform/library combinations:")
+    if spatial_platforms:
+        for platform in sorted(spatial_platforms.keys()):
+            print("\t{platform}\t({libraries})".format(
+                platform=platform,
+                libraries=", ".join(spatial_platforms[platform])))
+    else:
+        print("\tNo spatial platforms defined")
     # Organisms
     print("\nOrganisms:")
     if s.organisms:
