@@ -214,6 +214,16 @@ METRICS_SUMMARY_7_1_0 = """Estimated Number of Cells,Mean Reads per Cell,Median 
 "5,529",551,267,"3,045,784",97.6%,1.7%,97.4%,89.4%,97.1%,94.3%,89.0%,3.9%,30.6%,54.5%,76.5%,8.0%,88.5%,"17,781",331
 """
 
+# CellRanger 9.0.0
+METRICS_SUMMARY_9_0_0 = """Estimated Number of Cells,Mean Reads per Cell,Median Genes per Cell,Number of Reads,Valid Barcodes,Valid UMIs,Sequencing Saturation,Q30 Bases in Barcode,Q30 Bases in RNA Read,Q30 Bases in UMI,Reads Mapped to Genome,Reads Mapped Confidently to Genome,Reads Mapped Confidently to Intergenic Regions,Reads Mapped Confidently to Intronic Regions,Reads Mapped Confidently to Exonic Regions,Reads Mapped Confidently to Transcriptome,Reads Mapped Antisense to Gene,Fraction Reads in Cells,Total Genes Detected,Median UMI Counts per Cell
+"14,680","52,565","2,626","771,660,546",97.6%,99.9%,69.7%,96.2%,92.8%,95.7%,95.3%,91.9%,4.0%,18.9%,69.0%,84.1%,3.4%,96.9%,"25,254","7,580"
+"""
+
+# CellRanger 10.0.0
+METRICS_SUMMARY_10_0_0 = """Estimated Number of Cells,Mean Reads per Cell,Median Genes per Cell,Number of Reads,Valid Barcodes,Valid UMI Sequences,Sequencing Saturation,Q30 Bases in Barcode,Q30 Bases in RNA Read,Q30 Bases in UMI,Reads Mapped to Genome,Reads Mapped Confidently to Genome,Reads Mapped Confidently to Intergenic Regions,Reads Mapped Confidently to Intronic Regions,Reads Mapped Confidently to Exonic Regions,Reads Mapped Confidently to Transcriptome,Reads Mapped Antisense to Gene,Fraction Reads in Cells,Total Genes Detected,Median UMI Counts per Cell
+"14,680","52,565","2,626","771,660,546",97.6%,99.9%,69.7%,96.2%,92.8%,95.7%,95.3%,91.9%,4.0%,18.9%,69.0%,84.1%,3.4%,96.9%,"25,254","7,580"
+"""
+
 # Cellranger ATAC < 2.0.0
 ATAC_SUMMARY = """annotated_cells,bc_q30_bases_fract,cellranger-atac_version,cells_detected,frac_cut_fragments_in_peaks,frac_fragments_nfr,frac_fragments_nfr_or_nuc,frac_fragments_nuc,frac_fragments_overlapping_peaks,frac_fragments_overlapping_targets,frac_mapped_confidently,frac_waste_chimeric,frac_waste_duplicate,frac_waste_lowmapq,frac_waste_mitochondrial,frac_waste_no_barcode,frac_waste_non_cell_barcode,frac_waste_overall_nondup,frac_waste_total,frac_waste_unmapped,median_fragments_per_cell,median_per_cell_unique_fragments_at_30000_RRPC,median_per_cell_unique_fragments_at_50000_RRPC,num_fragments,r1_q30_bases_fract,r2_q30_bases_fract,si_q30_bases_fract,total_usable_fragments,tss_enrichment_score
 5682,0.925226023701,1.0.1,6748,0.512279447992,0.392368676637,0.851506103882,0.459137427245,0.556428090013,0.575082094792,0.534945791083,0.00123066129161,0.160515305655,0.0892973647982,0.00899493352094,0.352907229061,0.0135851297269,0.471714266123,0.632229571777,0.00569894772443,16119.5,5769.94794925,8809.29425158,366582587,0.947387774999,0.941378123188,0.962708567847,134818235,6.91438390781
@@ -911,6 +921,169 @@ Library,Gene Expression,Probe barcode ID,BC015,UMIs per probe barcode,"4,174,363
 Library,Gene Expression,Probe barcode ID,BC016,Cells per probe barcode,"1,157 (2.4%)"
 Library,Gene Expression,Probe barcode ID,BC016,Sample ID,Donor8_CD4
 Library,Gene Expression,Probe barcode ID,BC016,UMIs per probe barcode,"6,380,271 (2.0%)"
+"""
+
+CELLPLEX_METRICS_SUMMARY_10_0_0 = """Category,Library Type,Grouped By,Group Name,Metric Name,Metric Value
+Cells,Gene Expression,,,Cells,1571
+Cells,Gene Expression,,,Confidently mapped antisense,0.036641947005987205
+Cells,Gene Expression,,,Confidently mapped to exonic regions,0.6579080513052549
+Cells,Gene Expression,,,Confidently mapped to genome,0.9283350866131074
+Cells,Gene Expression,,,Confidently mapped to intergenic regions,0.046614025940192344
+Cells,Gene Expression,,,Confidently mapped to intronic regions,0.22381300936766016
+Cells,Gene Expression,,,Confidently mapped to transcriptome,0.8415785517777279
+Cells,Gene Expression,,,Mapped to genome,0.9626959275825768
+Cells,Gene Expression,,,Median UMI counts per cell,6692
+Cells,Gene Expression,,,Median genes per cell,2472
+Cells,Gene Expression,,,Number of reads in cells,61968623
+Cells,Gene Expression,,,Total genes detected,20944
+Library,Gene Expression,Fastq ID,SC_GE,Number of reads,771660546
+Library,Gene Expression,Fastq ID,SC_GE,Q30 RNA read,0.9279107008913702
+Library,Gene Expression,Fastq ID,SC_GE,Q30 UMI,0.9566725847123883
+Library,Gene Expression,Fastq ID,SC_GE,Q30 barcodes,0.961704474150136
+Library,Gene Expression,Physical library ID,SC_GE,Cells,14680
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped antisense,0.03407272554789914
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped reads in cells,0.9694591347685292
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to exonic regions,0.6895621821774467
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to genome,0.9185988938716584
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to intergenic regions,0.04038016348188417
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to intronic regions,0.18865654821232755
+Library,Gene Expression,Physical library ID,SC_GE,Confidently mapped to transcriptome,0.8409228816526795
+Library,Gene Expression,Physical library ID,SC_GE,Mapped to genome,0.952891678616416
+Library,Gene Expression,Physical library ID,SC_GE,Mean reads per cell,52565
+Library,Gene Expression,Physical library ID,SC_GE,Number of reads,771660546
+Library,Gene Expression,Physical library ID,SC_GE,Number of reads in the library,771660546
+Library,Gene Expression,Physical library ID,SC_GE,Sequencing saturation,0.6903867704556981
+Library,Gene Expression,Physical library ID,SC_GE,Valid UMI Sequences,0.9992621587264616
+Library,Gene Expression,Physical library ID,SC_GE,Valid barcodes,0.9760066973801198
+Library,Multiplexing Capture,CMO Name,CMO301,CMO signal-to-noise ratio,4.2508115042448615
+Library,Multiplexing Capture,CMO Name,CMO301,Cells per CMO,1571
+Library,Multiplexing Capture,CMO Name,CMO301,Fraction reads in cell-associated barcodes,0.7237496094903481
+Library,Multiplexing Capture,CMO Name,CMO301,Sample ID,SC1
+Library,Multiplexing Capture,CMO Name,CMO302,CMO signal-to-noise ratio,2.7002557336968165
+Library,Multiplexing Capture,CMO Name,CMO302,Cells per CMO,1204
+Library,Multiplexing Capture,CMO Name,CMO302,Fraction reads in cell-associated barcodes,0.49681439644257686
+Library,Multiplexing Capture,CMO Name,CMO302,Sample ID,SC2
+Library,Multiplexing Capture,CMO Name,CMO303,CMO signal-to-noise ratio,3.5013956824933636
+Library,Multiplexing Capture,CMO Name,CMO303,Cells per CMO,2487
+Library,Multiplexing Capture,CMO Name,CMO303,Fraction reads in cell-associated barcodes,0.7188717791242621
+Library,Multiplexing Capture,CMO Name,CMO303,Sample ID,SC3
+Library,Multiplexing Capture,CMO Name,CMO304,CMO signal-to-noise ratio,4.601298074569876
+Library,Multiplexing Capture,CMO Name,CMO304,Cells per CMO,1313
+Library,Multiplexing Capture,CMO Name,CMO304,Fraction reads in cell-associated barcodes,0.6676144473799795
+Library,Multiplexing Capture,CMO Name,CMO304,Sample ID,SC4
+Library,Multiplexing Capture,CMO Name,CMO305,CMO signal-to-noise ratio,3.3407768573754355
+Library,Multiplexing Capture,CMO Name,CMO305,Cells per CMO,2541
+Library,Multiplexing Capture,CMO Name,CMO305,Fraction reads in cell-associated barcodes,0.7302870678969661
+Library,Multiplexing Capture,CMO Name,CMO305,Sample ID,SC5
+Library,Multiplexing Capture,Fastq ID,SC_CML,Number of reads,204261166
+Library,Multiplexing Capture,Fastq ID,SC_CML,Q30 RNA read,0.9687366295754085
+Library,Multiplexing Capture,Fastq ID,SC_CML,Q30 UMI,0.9640989055930262
+Library,Multiplexing Capture,Fastq ID,SC_CML,Q30 barcodes,0.9630567574864487
+Library,Multiplexing Capture,Physical library ID,SC_CML,Cell-associated barcodes identified as multiplets,1218
+Library,Multiplexing Capture,Physical library ID,SC_CML,Cell-associated barcodes not assigned any CMOs,4346
+Library,Multiplexing Capture,Physical library ID,SC_CML,Cells assigned to a sample,9116
+Library,Multiplexing Capture,Physical library ID,SC_CML,Estimated number of cell-associated barcodes,14680
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction CMO reads,0.9766429317259454
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction CMO reads usable,0.6501063741112689
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction reads from multiplets,0.15979069472358634
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction reads in cell-associated barcodes,0.6695816345055602
+Library,Multiplexing Capture,Physical library ID,SC_CML,Fraction unrecognized CMO,0.0233570682740546
+Library,Multiplexing Capture,Physical library ID,SC_CML,Mean reads per cell-associated barcode,13914
+Library,Multiplexing Capture,Physical library ID,SC_CML,Median CMO UMI Counts per cell assigned to a sample,2987
+Library,Multiplexing Capture,Physical library ID,SC_CML,Number of reads,204261166
+Library,Multiplexing Capture,Physical library ID,SC_CML,Number of samples assigned at least one cell,5
+Library,Multiplexing Capture,Physical library ID,SC_CML,Sequencing saturation,0.29491059009434467
+Library,Multiplexing Capture,Physical library ID,SC_CML,Singlet capture ratio,0.69434077233605
+Library,Multiplexing Capture,Physical library ID,SC_CML,Valid UMI Sequences,0.999932605887504
+Library,Multiplexing Capture,Physical library ID,SC_CML,Valid barcodes,0.9916658166927336
+"""
+
+FLEX_METRICS_SUMMARY_10_0_0 = """Category,Library Type,Grouped By,Group Name,Metric Name,Metric Value
+Cells,Gene Expression,,,Cells,14160
+Cells,Gene Expression,,,Confidently mapped reads in cells,0.953529661654312
+Cells,Gene Expression,,,Estimated UMIs from genomic DNA,0.0003060151687744832
+Cells,Gene Expression,,,Estimated UMIs from genomic DNA per unspliced probe,1
+Cells,Gene Expression,,,Median UMI counts per cell,3152
+Cells,Gene Expression,,,Median genes per cell,1953
+Cells,Gene Expression,,,Number of reads in cells,217870314
+Cells,Gene Expression,,,Reads confidently mapped to filtered probe set,0.9564623613660372
+Cells,Gene Expression,,,Reads confidently mapped to probe set,0.9773804153970238
+Cells,Gene Expression,,,Reads half-mapped to probe set,0.001608319158157545
+Cells,Gene Expression,,,Reads mapped to probe set,0.983706674237409
+Cells,Gene Expression,,,Reads split-mapped to probe set,0.004717939682227658
+Cells,Gene Expression,,,Total genes detected,15671
+Library,Gene Expression,,,Estimated UMIs from genomic DNA,0.0001191120670205178
+Library,Gene Expression,,,Estimated UMIs from genomic DNA per unspliced probe,1
+Library,Gene Expression,Fastq ID,MS_Flex,Number of reads,955352059
+Library,Gene Expression,Fastq ID,MS_Flex,Q30 GEM barcodes,0.9679773037359523
+Library,Gene Expression,Fastq ID,MS_Flex,Q30 RNA read,0.9579204838819083
+Library,Gene Expression,Fastq ID,MS_Flex,Q30 UMI,0.9653982429979387
+Library,Gene Expression,Fastq ID,MS_Flex,Q30 barcodes,0.9602082013904646
+Library,Gene Expression,Fastq ID,MS_Flex,Q30 probe barcodes,0.9446710636908874
+Library,Gene Expression,Physical library ID,MS_Flex,Cells,48419
+Library,Gene Expression,Physical library ID,MS_Flex,Confidently mapped reads in cells,0.9514122074449596
+Library,Gene Expression,Physical library ID,MS_Flex,Fraction of initial cell barcodes passing high occupancy GEM filtering,0.9960092979244235
+Library,Gene Expression,Physical library ID,MS_Flex,Mean reads per cell,19731
+Library,Gene Expression,Physical library ID,MS_Flex,Number of reads,955352059
+Library,Gene Expression,Physical library ID,MS_Flex,Number of reads in the library,955352059
+Library,Gene Expression,Physical library ID,MS_Flex,Reads confidently mapped to filtered probe set,0.9383924738053032
+Library,Gene Expression,Physical library ID,MS_Flex,Reads confidently mapped to probe set,0.9614619682313366
+Library,Gene Expression,Physical library ID,MS_Flex,Reads half-mapped to probe set,0.005264236312280769
+Library,Gene Expression,Physical library ID,MS_Flex,Reads mapped to probe set,0.9725636504856268
+Library,Gene Expression,Physical library ID,MS_Flex,Reads split-mapped to probe set,0.005837445942009531
+Library,Gene Expression,Physical library ID,MS_Flex,Sequencing saturation,0.6476320965420538
+Library,Gene Expression,Physical library ID,MS_Flex,Valid GEM barcodes,0.9850682616260524
+Library,Gene Expression,Physical library ID,MS_Flex,Valid UMI Sequences,0.9999648475138734
+Library,Gene Expression,Physical library ID,MS_Flex,Valid barcodes,0.9630456106024888
+Library,Gene Expression,Physical library ID,MS_Flex,Valid probe barcodes,0.97268610691297
+Library,Gene Expression,Probe barcode ID,BC001,Cells per probe barcode,6372
+Library,Gene Expression,Probe barcode ID,BC001,Sample ID,Donor7_PBMC
+Library,Gene Expression,Probe barcode ID,BC001,UMIs per probe barcode,42932288
+Library,Gene Expression,Probe barcode ID,BC002,Cells per probe barcode,3605
+Library,Gene Expression,Probe barcode ID,BC002,Sample ID,Donor7_PBMC
+Library,Gene Expression,Probe barcode ID,BC002,UMIs per probe barcode,21794816
+Library,Gene Expression,Probe barcode ID,BC003,Cells per probe barcode,5055
+Library,Gene Expression,Probe barcode ID,BC003,Sample ID,Donor7_PBMC
+Library,Gene Expression,Probe barcode ID,BC003,UMIs per probe barcode,34932055
+Library,Gene Expression,Probe barcode ID,BC004,Cells per probe barcode,3045
+Library,Gene Expression,Probe barcode ID,BC004,Sample ID,Donor7_PBMC
+Library,Gene Expression,Probe barcode ID,BC004,UMIs per probe barcode,20758295
+Library,Gene Expression,Probe barcode ID,BC005,Cells per probe barcode,4652
+Library,Gene Expression,Probe barcode ID,BC005,Sample ID,Donor7_CD4
+Library,Gene Expression,Probe barcode ID,BC005,UMIs per probe barcode,22568914
+Library,Gene Expression,Probe barcode ID,BC006,Cells per probe barcode,3341
+Library,Gene Expression,Probe barcode ID,BC006,Sample ID,Donor7_CD4
+Library,Gene Expression,Probe barcode ID,BC006,UMIs per probe barcode,19687385
+Library,Gene Expression,Probe barcode ID,BC007,Cells per probe barcode,3737
+Library,Gene Expression,Probe barcode ID,BC007,Sample ID,Donor7_CD4
+Library,Gene Expression,Probe barcode ID,BC007,UMIs per probe barcode,21783905
+Library,Gene Expression,Probe barcode ID,BC008,Cells per probe barcode,2430
+Library,Gene Expression,Probe barcode ID,BC008,Sample ID,Donor7_CD4
+Library,Gene Expression,Probe barcode ID,BC008,UMIs per probe barcode,14639323
+Library,Gene Expression,Probe barcode ID,BC009,Cells per probe barcode,2979
+Library,Gene Expression,Probe barcode ID,BC009,Sample ID,Donor8_PBMC
+Library,Gene Expression,Probe barcode ID,BC009,UMIs per probe barcode,24641156
+Library,Gene Expression,Probe barcode ID,BC010,Cells per probe barcode,2562
+Library,Gene Expression,Probe barcode ID,BC010,Sample ID,Donor8_PBMC
+Library,Gene Expression,Probe barcode ID,BC010,UMIs per probe barcode,22730019
+Library,Gene Expression,Probe barcode ID,BC011,Cells per probe barcode,1446
+Library,Gene Expression,Probe barcode ID,BC011,Sample ID,Donor8_PBMC
+Library,Gene Expression,Probe barcode ID,BC011,UMIs per probe barcode,12149027
+Library,Gene Expression,Probe barcode ID,BC012,Cells per probe barcode,2693
+Library,Gene Expression,Probe barcode ID,BC012,Sample ID,Donor8_PBMC
+Library,Gene Expression,Probe barcode ID,BC012,UMIs per probe barcode,23912642
+Library,Gene Expression,Probe barcode ID,BC013,Cells per probe barcode,3548
+Library,Gene Expression,Probe barcode ID,BC013,Sample ID,Donor8_CD4
+Library,Gene Expression,Probe barcode ID,BC013,UMIs per probe barcode,17752112
+Library,Gene Expression,Probe barcode ID,BC014,Cells per probe barcode,950
+Library,Gene Expression,Probe barcode ID,BC014,Sample ID,Donor8_CD4
+Library,Gene Expression,Probe barcode ID,BC014,UMIs per probe barcode,5149789
+Library,Gene Expression,Probe barcode ID,BC015,Cells per probe barcode,812
+Library,Gene Expression,Probe barcode ID,BC015,Sample ID,Donor8_CD4
+Library,Gene Expression,Probe barcode ID,BC015,UMIs per probe barcode,4174363
+Library,Gene Expression,Probe barcode ID,BC016,Cells per probe barcode,1192
+Library,Gene Expression,Probe barcode ID,BC016,Sample ID,Donor8_CD4
+Library,Gene Expression,Probe barcode ID,BC016,UMIs per probe barcode,6380271
 """
 
 MULTIOME_LIBRARIES = """#Local sample\tLinked sample
