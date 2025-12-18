@@ -470,6 +470,8 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
             metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY_8_0_0
         elif version == 9:
             metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY_9_0_0
+        elif version == 10:
+            metrics_summary = mock10xdata.CELLPLEX_METRICS_SUMMARY_10_0_0
         else:
             raise Exception("%s: unsupported Cellranger "
                             "version" % cellranger_version)
