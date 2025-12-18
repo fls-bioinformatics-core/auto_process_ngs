@@ -14,6 +14,7 @@ from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.protocols import fetch_protocol_definition
 from auto_process_ngs.qc.verification import QCVerifier
 from auto_process_ngs.qc.verification import verify_project
+from auto_process_ngs.tenx import DEFAULT_CELLRANGER_VERSION
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -642,7 +643,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_count',
             self._create_params_dict(samples=('PJB1','PJB2'),
-                                     cellranger_version='8.0.0',
+                                     cellranger_version=DEFAULT_CELLRANGER_VERSION,
                                      cellranger_refdata='*')))
         # Explicitly match reference with any version
         self.assertTrue(qc_verifier.verify_qc_module(
@@ -878,7 +879,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_multi',
             self._create_params_dict(qc_dir=qc_dir,
-                                     cellranger_version='8.0.0',
+                                     cellranger_version=DEFAULT_CELLRANGER_VERSION,
                                      cellranger_refdata='*')))
         # Explicitly match reference with any version
         self.assertTrue(qc_verifier.verify_qc_module(
@@ -917,7 +918,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_multi',
             self._create_params_dict(qc_dir=qc_dir,
-                                     cellranger_version='8.0.0',
+                                     cellranger_version=DEFAULT_CELLRANGER_VERSION,
                                      cellranger_refdata='*')))
         # Missing outputs for one sample
         qc_dir = self._make_qc_dir('qc.fail',
@@ -977,7 +978,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_multi',
             self._create_params_dict(qc_dir=qc_dir,
-                                     cellranger_version='8.0.0',
+                                     cellranger_version=DEFAULT_CELLRANGER_VERSION,
                                      cellranger_refdata='*')))
         # Explicitly match reference with any version
         self.assertTrue(qc_verifier.verify_qc_module(
@@ -1020,7 +1021,7 @@ class TestQCVerifier(unittest.TestCase):
         self.assertTrue(qc_verifier.verify_qc_module(
             'cellranger_multi',
             self._create_params_dict(qc_dir=qc_dir,
-                                     cellranger_version='8.0.0',
+                                     cellranger_version=DEFAULT_CELLRANGER_VERSION,
                                      cellranger_refdata='*')))
         # Missing outputs for one sample
         qc_dir = self._make_qc_dir('qc.fail',
@@ -1333,7 +1334,7 @@ class TestQCVerifier(unittest.TestCase):
             fastq_screens=('model_organisms',
                            'other_organisms',
                            'rRNA'),
-            cellranger_version="8.0.0",
+            cellranger_version=DEFAULT_CELLRANGER_VERSION,
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_count_different_version(self):
@@ -1730,7 +1731,7 @@ class TestQCVerifier(unittest.TestCase):
             star_index="/data/star/hg38",
             annotation_bed="/data/annotation/hg38.bed",
             annotation_gtf="/data/annotation/hg38.gtf",
-            cellranger_version="8.0.0",
+            cellranger_version=DEFAULT_CELLRANGER_VERSION,
             cellranger_refdata="/data/refdata-cellranger-2020-A"))
 
     def test_qcverifier_verify_10x_cellranger_multi_no_config(self):
