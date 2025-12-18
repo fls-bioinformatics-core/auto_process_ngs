@@ -654,8 +654,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
 
     Example usage:
 
-    >>> m = MockAnalysisProject("PJB",('PJB1_S1_R1_001.fasta.gz,
-    ...                                'PJB1_S1_R2_001.fasta.gz))
+    >>> m = MockAnalysisProject("PJB",('PJB1_S1_R1_001.fasta.gz',
+    ...                                'PJB1_S1_R2_001.fasta.gz'))
     >>> m.create()
     >>> p = AnalysisProject(m.name,m.name)
     >>> UpdateAnalysisProject(p).add_qc_outputs()
@@ -2115,7 +2115,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         elif self._package_name == 'cellranger':
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
-            if version[0] > 6:
+            if version[0] == 10:
+                header = ""
+                if cmd == " --version":
+                    sys.stdout.write(f"cellranger {self._version}\n")
+                    return self._exit_code
+            elif version[0] > 6:
                 header += '\n'
         elif self._package_name == 'cellranger-arc':
             header = "%s %s-%s" % (self._package_name,self._package_name,
@@ -2387,8 +2392,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if self._package_name == "cellranger":
                 if version[0] < 7:
                     metrics_data = mock10xdata.METRICS_SUMMARY
-                else:
+                elif version[0] <= 8:
                     metrics_data = mock10xdata.METRICS_SUMMARY_7_1_0
+                elif version[0] == 9:
+                    metrics_data = mock10xdata.METRICS_SUMMARY_9_0_0
+                else:
+                    metrics_data = mock10xdata.METRICS_SUMMARY_10_0_0
                 metrics_file = os.path.join(outs_dir,"metrics_summary.csv")
                 with open(metrics_file,'w') as fp:
                     fp.write(metrics_data)
@@ -2450,6 +2459,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_8_0_0
             elif version[0] == 9:
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_9_0_0
+            elif version[0] == 10:
+                metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_10_0_0
             else:
                 raise Exception("%s: unsupported version" % self._version)
             sample_names = config.sample_names
