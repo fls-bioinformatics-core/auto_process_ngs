@@ -8,16 +8,25 @@
 Provides utility classes and functions to help with generating Sphinx
 documentation for the ``auto_process_ngs`` package.
 
-The helpers are intended to be called from the Sphinx ``conf.py`` file,
+The helpers are intended to be used within the Sphinx ``conf.py`` file,
 to generate content such as tables of applications and protocols which
-are then included in the documentation source files.
+are then included in the documentation source files, and API and reference
+documentation.
 
 Classes:
 
 * ``RstSimpleTable``: class for making reStructuredText 'simple' tables
 * ``RstGridTable``: class for making reStructuredText 'grid' tables
 
+Functions:
+
+* ``generate_api_docs``: generate developer's API documentation
+* ``get_modules``: list Python modules in a package
+
 """
+
+import os
+from pkgutil import walk_packages
 
 
 class RstSimpleTable:
@@ -289,3 +298,70 @@ class RstGridTable:
         # Closing divider
         table.append(indent + self.make_divider(field_widths))
         return table
+
+
+def generate_api_docs(pkg, docdir):
+    """
+    Generate developer's API documentation
+    """
+    # Ensure the output directory exists
+    if not os.path.exists(docdir):
+        raise Exception("'%s': does not exist" % docdir)
+
+    # Fetch a list of modules
+    modlist = get_modules(pkg)
+
+    # Generate documents for each module
+    for modname in modlist:
+        docname = modname.replace('.', '_')
+        docfile = os.path.join(docdir, f"{docname}.rst")
+        print("Generating %s" % docfile)
+        with open(docfile, "wt") as doc:
+            title = f"``{pkg.__name__}.{modname}``"
+            doc.write("""%s
+%s
+
+.. automodule:: %s.%s
+   :members:
+""" % (title, '=' * len(title), pkg.__name__, modname))
+
+    # Generate an index
+    api_index = os.path.join(docdir, "index.rst")
+    print("Writing %s" % api_index)
+    with open(api_index, 'w') as doc:
+        doc.write("""=============================
+Developers' API documentation
+=============================
+
+.. toctree::
+   :maxdepth: 2
+
+""")
+        for modname in modlist:
+            doc.write("   %s\n" % modname.replace('.', '_'))
+
+
+def get_modules(pkg, exclude_tests=True):
+    """
+    Get a list of modules in a package
+
+    See https://stackoverflow.com/a/1708706/579925
+
+    Arguments:
+        pkg (str): package name
+        exclude_tests (bool): if True (the default)
+          then exclude any modules with names stating
+          with 'test'
+
+    Returns:
+        list: list of module names within the package
+    """
+    modlist = []
+    for importer, modname, ispkg in walk_packages(path=pkg.__path__,
+                                                  prefix=pkg.__name__ + '.',
+                                                  onerror=lambda x: None):
+        modname = '.'.join(modname.split('.')[1:])
+        if modname.startswith("test"):
+            continue
+        modlist.append(modname)
+    return modlist

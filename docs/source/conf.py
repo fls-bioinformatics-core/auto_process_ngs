@@ -810,65 +810,13 @@ for utility in ("analyse_barcodes.py",
             fp.write("    %s\n" % line)
         os.remove(help_text_file)
 
-# -- Make developers reference documents ---------------------------------------
-
-# Fetch a list of modules
-# See https://stackoverflow.com/a/1708706/579925
-from pkgutil import walk_packages
-def get_modules(pkg):
-    modlist = []
-    for importer,modname,ispkg in walk_packages(path=pkg.__path__,
-                                                prefix=pkg.__name__+'.',
-                                                onerror=lambda x: None):
-        modname = '.'.join(modname.split('.')[1:])
-        modlist.append(modname)
-    return modlist
-
+# -- Make developers API reference documents ---------------------------------------
 import auto_process_ngs
-modlist = get_modules(auto_process_ngs)
-
-# Ensure the 'developers' subdir exists
-devdocdir = os.path.join(os.getcwd(),"developers")
-if not os.path.exists(devdocdir):
-    print("Making %s" % devdocdir)
-    os.mkdir(devdocdir)
-
-# Ensure the 'api_docs' subdir exists
+from auto_process_ngs.docs import generate_api_docs
 api_doc_dir = os.path.join(os.getcwd(),
                            "developers",
                            "api_docs")
 if not os.path.exists(api_doc_dir):
     print("Making %s" % api_doc_dir)
-    os.mkdir(api_doc_dir)
-
-# Generate documents for each module
-for modname in modlist:
-    docname = modname.replace('.','_')
-    docfile = os.path.join(api_doc_dir,
-                           "%s.rst" % docname)
-    print("Generating %s" % docfile)
-    with open(docfile,'w') as doc:
-         title = "``auto_process_ngs.%s``" % modname
-         doc.write("""%s
-%s
-
-.. automodule:: auto_process_ngs.%s
-   :members:
-""" % (title,'='*len(title),modname))
-
-# Generate an index
-api_index = os.path.join(api_doc_dir,"index.rst")
-print("Writing %s" % api_index)
-with open(api_index,'w') as doc:
-    doc.write("""=============================
-Developers' API documentation
-=============================
-
-.. toctree::
-   :maxdepth: 2
-
-""")
-    for modname in modlist:
-        doc.write("   %s\n" % modname.replace('.','_'))
-
-
+    os.makedirs(api_doc_dir, exist_ok=True)
+generate_api_docs(auto_process_ngs, api_doc_dir)
