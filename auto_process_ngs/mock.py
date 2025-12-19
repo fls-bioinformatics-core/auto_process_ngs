@@ -84,6 +84,7 @@ from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .analysis import AnalysisFastq
 from .fastq_utils import pair_fastqs_by_name
+from .tenx import DEFAULT_CELLRANGER_VERSION
 from .tenx.cellplex import CellrangerMultiConfigCsv
 from .tenx.utils import flow_cell_id
 from .utils import ZipArchive
@@ -654,8 +655,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
 
     Example usage:
 
-    >>> m = MockAnalysisProject("PJB",('PJB1_S1_R1_001.fasta.gz,
-    ...                                'PJB1_S1_R2_001.fasta.gz))
+    >>> m = MockAnalysisProject("PJB",('PJB1_S1_R1_001.fasta.gz',
+    ...                                'PJB1_S1_R2_001.fasta.gz'))
     >>> m.create()
     >>> p = AnalysisProject(m.name,m.name)
     >>> UpdateAnalysisProject(p).add_qc_outputs()
@@ -1952,7 +1953,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._package_name = os.path.basename(self._path)
         if version is None:
             if self._package_name == 'cellranger':
-                self._version = '7.0.0'
+                self._version = DEFAULT_CELLRANGER_VERSION
             elif self._package_name == 'cellranger-atac':
                 self._version = '2.0.0'
             elif self._package_name == 'cellranger-arc':
@@ -2115,7 +2116,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         elif self._package_name == 'cellranger':
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
-            if version[0] > 6:
+            if version[0] == 10:
+                header = ""
+                if cmd == " --version":
+                    sys.stdout.write(f"cellranger {self._version}\n")
+                    return self._exit_code
+            elif version[0] > 6:
                 header += '\n'
         elif self._package_name == 'cellranger-arc':
             header = "%s %s-%s" % (self._package_name,self._package_name,
@@ -2387,8 +2393,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if self._package_name == "cellranger":
                 if version[0] < 7:
                     metrics_data = mock10xdata.METRICS_SUMMARY
-                else:
+                elif version[0] <= 8:
                     metrics_data = mock10xdata.METRICS_SUMMARY_7_1_0
+                elif version[0] == 9:
+                    metrics_data = mock10xdata.METRICS_SUMMARY_9_0_0
+                else:
+                    metrics_data = mock10xdata.METRICS_SUMMARY_10_0_0
                 metrics_file = os.path.join(outs_dir,"metrics_summary.csv")
                 with open(metrics_file,'w') as fp:
                     fp.write(metrics_data)
@@ -2450,6 +2460,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_8_0_0
             elif version[0] == 9:
                 metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_9_0_0
+            elif version[0] == 10:
+                metrics_data = mock10xdata.CELLPLEX_METRICS_SUMMARY_10_0_0
             else:
                 raise Exception("%s: unsupported version" % self._version)
             sample_names = config.sample_names

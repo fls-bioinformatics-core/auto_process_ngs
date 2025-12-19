@@ -8,15 +8,19 @@ import os
 import shutil
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY_7_1_0
+from auto_process_ngs.mock10xdata import METRICS_SUMMARY_9_0_0
+from auto_process_ngs.mock10xdata import METRICS_SUMMARY_10_0_0
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY_2_0_0
 from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_7_1_0
+from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_9_0_0
+from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_10_0_0
 from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_CSP_7_1_0
 from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_8_0_0
 from auto_process_ngs.mock10xdata import FLEX_METRICS_SUMMARY_8_0_0
-from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_9_0_0
 from auto_process_ngs.mock10xdata import FLEX_METRICS_SUMMARY_9_0_0
+from auto_process_ngs.mock10xdata import FLEX_METRICS_SUMMARY_10_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY_2_0_0
 from auto_process_ngs.tenx.metrics import *
@@ -60,6 +64,30 @@ class TestGexSummary(unittest.TestCase):
         self.assertEqual(m.mean_reads_per_cell,551)
         self.assertEqual(m.median_genes_per_cell,267)
         self.assertEqual(m.frac_reads_in_cells,"88.5%")
+
+    def test_gex_summary_cellranger_9_0_0(self):
+        """GexSummary: check metrics are extracted from CSV file (CellRanger 9.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(METRICS_SUMMARY_9_0_0)
+        m = GexSummary(summary_csv)
+        self.assertEqual(m.estimated_number_of_cells,14680)
+        self.assertEqual(m.mean_reads_per_cell,52565)
+        self.assertEqual(m.median_genes_per_cell,2626)
+        self.assertEqual(m.frac_reads_in_cells,"96.9%")
+
+    def test_gex_summary_cellranger_10_0_0(self):
+        """GexSummary: check metrics are extracted from CSV file (CellRanger 10.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(METRICS_SUMMARY_10_0_0)
+        m = GexSummary(summary_csv)
+        self.assertEqual(m.estimated_number_of_cells,14680)
+        self.assertEqual(m.mean_reads_per_cell,52565)
+        self.assertEqual(m.median_genes_per_cell,2626)
+        self.assertEqual(m.frac_reads_in_cells,"96.9%")
 
 class TestAtacSummary(unittest.TestCase):
     """
@@ -241,6 +269,22 @@ class TestMultiplexSummary(unittest.TestCase):
         self.assertRaises(MissingMetricError,
                           getattr,m,"median_reads_per_cell")
 
+    def test_multiplex_summary_cellranger_10_0_0(self):
+        """
+        MultiplexSummary: extract CellPlex metrics (Cellranger 10.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv, "wt") as fp:
+            fp.write(CELLPLEX_METRICS_SUMMARY_10_0_0)
+        m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.cells, 1571)
+        self.assertEqual(m.mean_reads_per_cell, 52565)
+        self.assertEqual(m.median_genes_per_cell, 2472)
+        self.assertEqual(m.total_genes_detected, 20944)
+        self.assertEqual(m.median_umi_counts_per_cell, 6692)
+        self.assertRaises(MissingMetricError,
+                          getattr,m,"median_reads_per_cell")
+
     def test_flex_summary_cellranger_8_0_0(self):
         """MultiplexSummary: extract Flex metrics (Cellranger 8.0.0)
         """
@@ -268,5 +312,20 @@ class TestMultiplexSummary(unittest.TestCase):
         self.assertEqual(m.median_genes_per_cell, 1956)
         self.assertEqual(m.total_genes_detected, 15480)
         self.assertEqual(m.median_umi_counts_per_cell, 3159)
+        self.assertRaises(MissingMetricError,
+                          getattr,m,"median_reads_per_cell")
+
+    def test_flex_summary_cellranger_10_0_0(self):
+        """MultiplexSummary: extract Flex metrics (Cellranger 10.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(FLEX_METRICS_SUMMARY_10_0_0)
+        m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.cells, 14160)
+        self.assertEqual(m.mean_reads_per_cell, 19731)
+        self.assertEqual(m.median_genes_per_cell, 1953)
+        self.assertEqual(m.total_genes_detected, 15671)
+        self.assertEqual(m.median_umi_counts_per_cell, 3152)
         self.assertRaises(MissingMetricError,
                           getattr,m,"median_reads_per_cell")

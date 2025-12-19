@@ -13,6 +13,7 @@ from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import QCOutputs
 from auto_process_ngs.qc.outputs import ExtraOutputs
+from auto_process_ngs.tenx import DEFAULT_CELLRANGER_VERSION
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -1638,7 +1639,7 @@ class TestQCOutputs(unittest.TestCase):
         self.assertEqual(qc_outputs.physical_samples,[])
         self.assertEqual(qc_outputs.reads,['r1','r2'])
         self.assertEqual(qc_outputs.software,
-                         { 'cellranger': [ '8.0.0' ],
+                         { 'cellranger': [ DEFAULT_CELLRANGER_VERSION ],
                            'cellranger-arc': [ '2.0.0' ],
                            'fastqc': [ '0.11.3' ],
                            'fastq_screen': [ '0.9.2' ],

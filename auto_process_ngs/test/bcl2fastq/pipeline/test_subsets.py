@@ -162,7 +162,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "7.0.0"))
+                          DEFAULT_CELLRANGER_VERSION))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -290,7 +290,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "7.0.0"))
+                          DEFAULT_CELLRANGER_VERSION))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -426,7 +426,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "7.0.0"))
+                          DEFAULT_CELLRANGER_VERSION))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))

@@ -232,6 +232,10 @@ def cellranger_info(path=None,name=None):
                         # Extract version from line of the form
                         # cellranger ... (2.0.1)
                         package_version = line.split('(')[-1].strip(')')
+                    elif line.startswith("%s " % package_name):
+                        # Extract version from line of the form
+                        # cellranger 10.0.0
+                        package_version = line.split(' ')[-1]
                     else:
                         # Raise an exception
                         raise("unrecognised version format")
@@ -477,8 +481,8 @@ def make_multi_config_template(f,reference=None,probe_set=None,
                 fp.write("no-bam,%s\n" % str(no_bam).lower())
             else:
                 fp.write("#no-bam,true|false\n")
-        elif cellranger_major_version in (8, 9):
-            # Cellranger 8.* or 9.* targetted
+        elif cellranger_major_version >= 8:
+            # Cellranger >= 8.* targetted
             if no_bam is not None:
                 fp.write("create-bam,%s\n" % str(not no_bam).lower())
             else:

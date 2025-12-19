@@ -270,6 +270,13 @@ class TestCellrangerInfo(unittest.TestCase):
             fp.write("#!/bin/bash\necho cellranger cellranger-9.0.0")
         os.chmod(cellranger_900,0o775)
         return cellranger_900
+    def _make_mock_cellranger_1000(self):
+        # Make a fake cellranger 10.0.0 executable
+        cellranger_1000 = os.path.join(self.wd,"cellranger")
+        with open(cellranger_1000,'w') as fp:
+            fp.write("#!/bin/bash\necho cellranger 10.0.0")
+        os.chmod(cellranger_1000,0o775)
+        return cellranger_1000
     def _make_mock_cellranger_atac_101(self):
         # Make a fake cellranger-atac 1.0.1 executable
         cellranger_atac_101 = os.path.join(self.wd,"cellranger-atac")
@@ -351,6 +358,13 @@ class TestCellrangerInfo(unittest.TestCase):
         cellranger = self._make_mock_cellranger_900()
         self.assertEqual(cellranger_info(path=cellranger),
                          (cellranger,'cellranger','9.0.0'))
+
+    def test_cellranger_1000(self):
+        """cellranger_info: collect info for cellranger 10.0.0
+        """
+        cellranger = self._make_mock_cellranger_1000()
+        self.assertEqual(cellranger_info(path=cellranger),
+                         (cellranger,'cellranger','10.0.0'))
 
     def test_cellranger_atac_101(self):
         """cellranger_info: collect info for cellranger-atac 1.0.1
@@ -678,44 +692,9 @@ MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
                                         if not line.startswith('##')])
         self.assertEqual(expected_content,actual_content)
 
-    def test_make_multi_config_template_cellplex_scrnaseq_800(self):
+    def test_make_multi_config_template_cellplex_10_0_0(self):
         """
-        make_multi_config_template: check CellPlex scRNA-seq template (8.0.0)
-        """
-        expected_content = """[gene-expression]
-reference,/data/mm10_transcriptome
-#force-cells,n
-create-bam,true
-#cmo-set,/path/to/custom/cmo/reference
-
-#[feature]
-#reference,/path/to/feature/reference
-
-[libraries]
-fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
-PJB_CML,/runs/novaseq_50/fastqs,any,PJB_CML,[Gene Expression|Multiplexing Capture],
-PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,[Gene Expression|Multiplexing Capture],
-
-[samples]
-sample_id,cmo_ids,description
-MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
-"""
-        out_file = os.path.join(self.wd,"10x_multi_config.csv")
-        make_multi_config_template(out_file,
-                                   reference="/data/mm10_transcriptome",
-                                   fastq_dir="/runs/novaseq_50/fastqs",
-                                   samples=("PJB_CML","PJB_GEX"),
-                                   library_type="CellPlex scRNA-seq",
-                                   cellranger_version="8.0.0")
-        self.assertTrue(os.path.exists(out_file))
-        with open(out_file,'rt') as fp:
-            actual_content = '\n'.join([line for line in fp.read().split('\n')
-                                        if not line.startswith('##')])
-        self.assertEqual(expected_content,actual_content)
-
-    def test_make_multi_config_template_cellplex_scrnaseq_900(self):
-        """
-        make_multi_config_template: check CellPlex scRNA-seq template (9.0.0)
+        make_multi_config_template: check CellPlex template (10.0.0)
         """
         expected_content = """[gene-expression]
 reference,/data/mm10_transcriptome
@@ -740,8 +719,8 @@ MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
                                    reference="/data/mm10_transcriptome",
                                    fastq_dir="/runs/novaseq_50/fastqs",
                                    samples=("PJB_CML","PJB_GEX"),
-                                   library_type="CellPlex scRNA-seq",
-                                   cellranger_version="9.0.0")
+                                   library_type="CellPlex",
+                                   cellranger_version="10.0.0")
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:
             actual_content = '\n'.join([line for line in fp.read().split('\n')
