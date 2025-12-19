@@ -21,7 +21,8 @@ Classes:
 Functions:
 
 * ``generate_api_docs``: generate developer's API documentation
-* ``generate_utility_docs``: generate documentation for commands
+* ``generate_utility_docs``: generate documentation for utilities
+* ``generate_command_docs``: generate documentation for 'auto_process' commands
 * ``get_modules``: list Python modules in a package
 * ``get_help_text``: fetch text from running program with '--help'
 
@@ -379,6 +380,46 @@ are available:
         with open(docfile, "a") as doc:
             title = "%s" % utility
             ref = ".. _utilities_%s:" % os.path.splitext(utility)[0]
+            doc.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
+                                                  title,
+                                                  "*"*len(title)))
+            for line in help_text.split('\n'):
+                doc.write("    %s\n" % line)
+
+
+def generate_command_docs(cmds, docfile):
+    """
+    Generate documentation for 'auto_process' commands
+    """
+    with open(docfile, "wt") as doc:
+        doc.write("""
+``auto_process`` commands
+=========================
+
+.. note::
+
+   This documentation has been auto-generated from the
+   command help
+
+``auto_process.py`` implements the following commands:
+
+.. contents:: :local:
+
+""")
+    for subcmd in cmds:
+        # Build command
+        cmd = ["auto_process.py", subcmd]
+        cmdline = " ".join(cmd)
+        # Get help text
+        help_text = get_help_text(*cmd)
+        if not help_text:
+            print("No help text available for '%s'" % cmdline)
+            continue
+        print("Writing documentation for '%s'" % cmdline)
+        # Write into the document
+        with open(docfile, "a") as doc:
+            title = "%s" % subcmd
+            ref = ".. _commands_%s:" % subcmd
             doc.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
                                                   title,
                                                   "*"*len(title)))
