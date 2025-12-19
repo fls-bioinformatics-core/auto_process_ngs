@@ -12,8 +12,7 @@
 # serve to show the default.
 
 import sys, os
-
-from docutils.nodes import description
+from datetime import datetime
 
 sys.path.append('../')
 
@@ -48,7 +47,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'auto_process_ngs'
-copyright = u'2015-2022 University of Manchester'
+copyright = f"2015-{datetime.today().year} University of Manchester"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
