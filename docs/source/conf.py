@@ -758,57 +758,24 @@ for subcmd in ("info",
             fp.write("    %s\n" % line)
         os.remove(help_text_file)
 
-# -- Make utility reference documents ------------------------------------------
-
-utilityref = os.path.join(os.getcwd(),"reference","utilities.rst")
-with open(utilityref,'w') as utilities:
-    utilities.write("""
-Utilities
-=========
-
-.. note::
-
-   This documentation has been auto-generated from the
-   command help
-
-In addition to the main ``auto_process.py`` command, a number of utilities
-are available:
-
-.. contents:: :local:
-
-""")
-for utility in ("analyse_barcodes.py",
-                "assign_barcodes.py",
-                "audit_projects.py",
-                "build_index.py",
-                "concat_fastqs.py",
-                "barcode_splitter.py",
-                "download_fastqs.py",
-                "fastq_statistics.py",
-                "fetch_data.py",
-                "manage_fastqs.py",
-                "run_qc.py",
-                "transfer_data.py",
-                "update_project_metadata.py"):
-    # Capture the output
-    help_text_file = "%s.help" % utility
-    with open(help_text_file,'w') as fp:
-        subprocess.call([utility,'--help'],
-                        stdout=fp,
-                        stderr=subprocess.STDOUT)
-    # Write into the document
-    with open(utilityref,'a') as fp:
-        help_text = open(help_text_file,'r').read()
-        title = "%s" % utility
-        ref = ".. _utilities_%s:" % os.path.splitext(utility)[0]
-        fp.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
-                                             title,
-                                             "*"*len(title)))
-        if not help_text:
-            help_text = "No output from --help command?"
-        for line in help_text.split('\n'):
-            fp.write("    %s\n" % line)
-        os.remove(help_text_file)
+# -- Make command line reference documents ------------------------------------------
+from auto_process_ngs.docs import generate_utility_docs
+utils_docs = os.path.join(os.getcwd(),
+                          "reference",
+                          "utilities.rst")
+generate_utility_docs(["analyse_barcodes.py",
+                       "assign_barcodes.py",
+                       "audit_projects.py",
+                       "build_index.py",
+                       "concat_fastqs.py",
+                       "barcode_splitter.py",
+                       "download_fastqs.py",
+                       "fastq_statistics.py",
+                       "fetch_data.py",
+                       "manage_fastqs.py",
+                       "run_qc.py",
+                       "transfer_data.py",
+                       "update_project_metadata.py"], utils_docs)
 
 # -- Make developers API reference documents ---------------------------------------
 import auto_process_ngs

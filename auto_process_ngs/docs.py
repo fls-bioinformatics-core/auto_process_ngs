@@ -21,11 +21,14 @@ Classes:
 Functions:
 
 * ``generate_api_docs``: generate developer's API documentation
+* ``generate_utility_docs``: generate documentation for commands
 * ``get_modules``: list Python modules in a package
+* ``get_help_text``: fetch text from running program with '--help'
 
 """
 
 import os
+import subprocess
 from pkgutil import walk_packages
 
 
@@ -341,6 +344,48 @@ Developers' API documentation
             doc.write("   %s\n" % modname.replace('.', '_'))
 
 
+def generate_utility_docs(utilities, docfile):
+    """
+    Generate documentation for utility scripts
+
+    Arguments:
+      utilities (list): list of utility scripts
+      docfile (str): path to output document
+    """
+    with open(docfile, "wt") as doc:
+        doc.write("""
+Utilities
+=========
+
+.. note::
+
+   This documentation has been auto-generated from the
+   command help
+
+In addition to the main ``auto_process.py`` command, a number of utilities
+are available:
+
+.. contents:: :local:
+
+""")
+    for utility in utilities:
+        # Get help text
+        help_text = get_help_text(utility)
+        if not help_text:
+            print("No help text available for %s" % utility)
+            continue
+        print("Writing documentation for utility '%s'" % utility)
+        # Write into the document
+        with open(docfile, "a") as doc:
+            title = "%s" % utility
+            ref = ".. _utilities_%s:" % os.path.splitext(utility)[0]
+            doc.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
+                                                  title,
+                                                  "*"*len(title)))
+            for line in help_text.split('\n'):
+                doc.write("    %s\n" % line)
+
+
 def get_modules(pkg, exclude_tests=True):
     """
     Get a list of modules in a package
@@ -365,3 +410,30 @@ def get_modules(pkg, exclude_tests=True):
             continue
         modlist.append(modname)
     return modlist
+
+
+def get_help_text(cmd, *args):
+    """
+    Get help text for a command
+
+    Given a command (and optionally any additional arguments),
+    return a string containing the help text.
+
+    This is acquired by running the command with the '--help'
+    argument appended.
+
+    Arguments:
+        cmd (str): command name
+        args (list): optional additional arguments
+    """
+    cmd = [cmd] + list(args) + ["--help"]
+    help_text_file = "%s.help" % cmd[0]
+    try:
+        with open(help_text_file, "wt") as fp:
+            subprocess.call(cmd,
+                            stdout=fp,
+                            stderr=subprocess.STDOUT)
+        help_text = open(help_text_file, "rt").read()
+        return help_text
+    finally:
+        os.remove(help_text_file)
