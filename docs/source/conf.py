@@ -333,14 +333,14 @@ for application in fetch_application_data(tags=["10x", "single_cell", "!legacy"]
     platform = f"``{application['platforms'][0]}``"
     library = f"``{application['libraries'][0]}``"
     try:
-        extensions = application["extensions"]
-        if extensions:
-            extensions = ", ".join([f"``{ext}``" for ext in extensions])
+        exts = application["extensions"]
+        if exts:
+            exts = ", ".join([f"``{ext}``" for ext in exts])
         else:
-            extensions = ""
+            exts = ""
     except KeyError:
-        extensions = ""
-    application_data.append([platform, library, extensions])
+        exts = ""
+    application_data.append([platform, library, exts])
 tbl = RstGridTable(application_data)
 sc10x_sc_rst = os.path.join(auto_content_dir, "10x_single_cell_apps.rst")
 with open(sc10x_sc_rst, "wt") as fp:
