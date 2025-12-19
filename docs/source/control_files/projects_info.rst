@@ -5,13 +5,13 @@ The ``projects.info`` file is used to define the projects within
 the analysis directory, and associates metadata information with
 each project.
 
-It is initially created when the :doc:`make_fastqs <make_fastqs>`
+It is initially created when the :doc:`make_fastqs <../using/make_fastqs>`
 command completes, and acts as a control file for subsequent
 operations including:
 
-* :doc:`setup_analysis_dirs <setup_analysis_dirs>` (used to
+* :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>` (used to
   populate the project directories)
-* :doc:`publish_qc <publish_qc>` (only publishes data for projects
+* :doc:`publish_qc <../using/publish_qc>` (only publishes data for projects
   that are listed in ``projects.info``)
 
 ``projects.info`` is a tab delimited file with one line for each
@@ -62,8 +62,8 @@ or organism names, however:
   for the QC pipeline in the configuration file, so names that are used
   should be consistent with the configuration;
 * Some combinations of single cell platform and library type are used
-  to determine the appropriate :doc:`QC protocol <run_qc>` for the
-  data, in which case the single cell platform and library values
+  to determine the appropriate :doc:`QC protocol <../using/run_qc>` for
+  the data, in which case the single cell platform and library values
   must be a valid combination; :ref:`single_cell_and_spatial` below.
 
 .. note::
