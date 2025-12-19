@@ -19,6 +19,7 @@ from auto_process_ngs.qc.modules.cellranger_count import check_cellranger_count_
 from auto_process_ngs.qc.modules.cellranger_count import check_cellranger_atac_count_outputs
 from auto_process_ngs.qc.modules.cellranger_count import check_cellranger_arc_count_outputs
 from auto_process_ngs.qc.modules.cellranger_count import filter_10x_pipelines
+from auto_process_ngs.tenx import DEFAULT_CELLRANGER_VERSION
 from ..protocols import BaseQCPipelineTestCase
 
 # Set to False to keep test output dirs
@@ -1712,29 +1713,26 @@ class TestQCPipelineCellrangerCount(BaseQCPipelineTestCase):
         self.assertEqual(status,0)
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB")
-        for f in (
-                "qc/cellranger_count",
-                "qc/cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB1/_cmdline",
-                "qc/cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB1/outs/web_summary.html",
-                "qc/cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB1/outs/metrics_summary.csv",
-                "qc/cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB2/_cmdline",
-                "qc/cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB2/outs/web_summary.html",
-                "qc/cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB2/outs/metrics_summary.csv",
-                "cellranger_count",
-                "cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB1/_cmdline",
-                "cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB1/outs/web_summary.html",
-                "cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB1/outs/metrics_summary.csv",
-                "cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB2/_cmdline",
-                "cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB2/outs/web_summary.html",
-                "cellranger_count/7.0.0/refdata-gex-GRCh38-2020-A/PJB2/outs/metrics_summary.csv"):
-            self.assertTrue(os.path.exists(os.path.join(project_dir,f)),
-                            "%s: missing" % f)
+        for d in ("qc/cellranger_count",
+                  "cellranger_count"):
+            for f in (
+                    "refdata-gex-GRCh38-2020-A/PJB1/_cmdline",
+                    "refdata-gex-GRCh38-2020-A/PJB1/outs/web_summary.html",
+                    "refdata-gex-GRCh38-2020-A/PJB1/outs/metrics_summary.csv",
+                    "refdata-gex-GRCh38-2020-A/PJB2/_cmdline",
+                    "refdata-gex-GRCh38-2020-A/PJB2/outs/web_summary.html",
+                    "refdata-gex-GRCh38-2020-A/PJB2/outs/metrics_summary.csv"):
+                self.assertTrue(os.path.exists(os.path.join(project_dir,
+                                                            d,
+                                                            DEFAULT_CELLRANGER_VERSION,
+                                                            f)),
+                                "%s: missing" % f)
         # Check number of cells
         # NB should be 10000 but this test is correct (as stock
         # data are used for test outputs)
         project_metadata = AnalysisProjectInfo(
             os.path.join(self.wd,"PJB","README.info"))
-        self.assertEqual(project_metadata.number_of_cells,11058)
+        self.assertEqual(project_metadata.number_of_cells, 29360)
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
@@ -1755,7 +1753,8 @@ class TestQCPipelineCellrangerCount(BaseQCPipelineTestCase):
         self.assertEqual(qc_info.star_index,None)
         self.assertEqual(qc_info.annotation_bed,None)
         self.assertEqual(qc_info.annotation_gtf,None)
-        self.assertEqual(qc_info.cellranger_version,"7.0.0")
+        self.assertEqual(qc_info.cellranger_version,
+                         DEFAULT_CELLRANGER_VERSION)
         self.assertEqual(qc_info.cellranger_refdata,
                          "/data/refdata-gex-GRCh38-2020-A")
         self.assertEqual(qc_info.cellranger_probeset,None)

@@ -18,6 +18,7 @@ from auto_process_ngs.bcl2fastq.pipeline import MakeFastqs
 from auto_process_ngs.bcl2fastq.pipeline import subset
 from auto_process_ngs.bcl2fastq.utils import make_custom_sample_sheet
 from auto_process_ngs.stats import FastqStatistics
+from auto_process_ngs.tenx import DEFAULT_CELLRANGER_VERSION
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True

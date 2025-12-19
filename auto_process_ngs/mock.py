@@ -84,6 +84,7 @@ from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .analysis import AnalysisFastq
 from .fastq_utils import pair_fastqs_by_name
+from .tenx import DEFAULT_CELLRANGER_VERSION
 from .tenx.cellplex import CellrangerMultiConfigCsv
 from .tenx.utils import flow_cell_id
 from .utils import ZipArchive
@@ -1952,7 +1953,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._package_name = os.path.basename(self._path)
         if version is None:
             if self._package_name == 'cellranger':
-                self._version = '7.0.0'
+                self._version = DEFAULT_CELLRANGER_VERSION
             elif self._package_name == 'cellranger-atac':
                 self._version = '2.0.0'
             elif self._package_name == 'cellranger-arc':
