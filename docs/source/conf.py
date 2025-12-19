@@ -729,59 +729,6 @@ generate_command_docs(["info",
                        "readme",
                        "clone"], cmds_docs)
 
-# commandref = os.path.join(os.getcwd(),"reference","commands.rst")
-# with open(commandref,'w') as commands:
-#     commands.write("""
-# ``auto_process`` commands
-# =========================
-#
-# .. note::
-#
-#    This documentation has been auto-generated from the
-#    command help
-#
-# ``auto_process.py`` implements the following commands:
-#
-# .. contents:: :local:
-#
-# """)
-#
-# import subprocess
-# for subcmd in ("info",
-#                "setup",
-#                "make_fastqs",
-#                "analyse_barcodes",
-#                "setup_analysis_dirs",
-#                "run_qc",
-#                "publish_qc",
-#                "archive",
-#                "report",
-#                "samplesheet",
-#                "update",
-#                "merge_fastq_dirs",
-#                "update_fastq_stats",
-#                "import_project",
-#                "config",
-#                "params",
-#                "metadata",
-#                "readme",
-#                "clone"):
-#     # Capture the output
-#     help_text_file = "%s.help" % subcmd
-#     with open(help_text_file,'w') as fp:
-#         subprocess.call(['auto_process.py',subcmd,'--help'],stdout=fp)
-#     # Write into the document
-#     with open(commandref,'a') as fp:
-#         help_text = open(help_text_file,'r').read()
-#         title = "%s" % subcmd
-#         ref = ".. _commands_%s:" % subcmd
-#         fp.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
-#                                              title,
-#                                              "*"*len(title)))
-#         for line in help_text.split('\n'):
-#             fp.write("    %s\n" % line)
-#         os.remove(help_text_file)
-
 # -- Make command line reference documents ------------------------------------------
 from auto_process_ngs.docs import generate_utility_docs
 utils_docs = os.path.join(os.getcwd(),
