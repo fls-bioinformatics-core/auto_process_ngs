@@ -20,6 +20,8 @@ Classes:
 
 Functions:
 
+* ``generate_qc_protocols_tbl``: generate table of QC protocols
+* ``generate_fq_protocols_tbl``: generate table of Fastq generation protocols
 * ``generate_api_docs``: generate developer's API documentation
 * ``generate_utility_docs``: generate documentation for utilities
 * ``generate_command_docs``: generate documentation for 'auto_process' commands
@@ -30,6 +32,9 @@ Functions:
 
 import os
 import subprocess
+from .bcl2fastq.protocols import PROTOCOLS as FQ_PROTOCOLS
+from .qc.protocols import fetch_protocol_definition
+from .qc.protocols import QC_PROTOCOLS
 from pkgutil import walk_packages
 
 
@@ -304,9 +309,61 @@ class RstGridTable:
         return table
 
 
+def generate_fq_protocols_tbl(docfile):
+    """
+    Generate table with the Fastq generation protocols
+
+    Table lists the Fastq protocols and has columns
+    with protocol name, description and read lengths.
+
+    Arguments:
+        docfile (str): path to output RST file
+    """
+    fq_protocols_data = []
+    for p in FQ_PROTOCOLS:
+        description = FQ_PROTOCOLS[p]["description"]
+        reads = []
+        for r in ("r1_length", "i1_length", "i2_length", "r2_length", "r3_length"):
+            try:
+                reads.append(str(FQ_PROTOCOLS[p][r]))
+            except KeyError:
+                pass
+        fq_protocols_data.append([f"``{p}``", description, " | ".join(reads)])
+    fq_protocols_data = sorted(fq_protocols_data, key=lambda p: p[0])
+    tbl = RstSimpleTable(fq_protocols_data)
+    with open(docfile, "wt") as fp:
+        fp.write("\n".join(tbl.construct_table(
+            header=["Protocol", "Description", "Read lengths"], )))
+
+
+def generate_qc_protocols_tbl(docfile):
+    """
+    Generate table with the QC protocols
+
+    Table lists the QC protocols and has columns
+    with protocol name and description.
+
+    Arguments:
+        docfile (str): path to output RST file
+    """
+    protocols_data = []
+    for qc_protocol in QC_PROTOCOLS:
+        p = fetch_protocol_definition(qc_protocol)
+        protocols_data.append([f"``{p.name}``", p.description])
+    tbl = RstSimpleTable(protocols_data)
+    with open(docfile, "wt") as fp:
+        fp.write("\n".join(tbl.construct_table(
+            header=["QC protocol", "Description"])))
+
+
 def generate_api_docs(pkg, docdir):
     """
     Generate developer's API documentation
+
+    Arguments:
+        pkg (str): package to generate API docs for
+        docdir (str): path to directory where docs
+          will be written
     """
     # Ensure the output directory exists
     if not os.path.exists(docdir):

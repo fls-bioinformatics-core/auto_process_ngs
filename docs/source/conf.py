@@ -13,8 +13,10 @@
 
 import sys
 import os
-from datetime import datetime
 import auto_process_ngs
+
+from datetime import datetime
+from auto_process_ngs import docs
 
 sys.path.append('../')
 
@@ -269,44 +271,21 @@ if not os.path.exists(auto_content_dir):
 # Table appears in the "using/qc_protocols.rst" page and has columns
 # with protocol name and description
 
-from auto_process_ngs.qc import protocols
-qc_protocols_data = []
-for qc_protocol in protocols.QC_PROTOCOLS:
-    p = protocols.fetch_protocol_definition(qc_protocol)
-    qc_protocols_data.append([f"``{p.name}``", p.description])
-tbl = RstSimpleTable(qc_protocols_data)
-qc_protocols_rst = os.path.join(auto_content_dir,"qc_protocols.rst")
-with open(qc_protocols_rst, "wt") as fp:
-    fp.write("\n".join(tbl.construct_table(
-        header=["QC protocol", "Description"])))
+docs.generate_qc_protocols_tbl(os.path.join(auto_content_dir,
+                                            "qc_protocols.rst"))
 
 # -- Make table with Fastq generation protocols -----------------------------------
 
 # Table appears in the "using/make_fastqs.rst" page and has columns
 # with protocol name, description and read lengths
 
-from auto_process_ngs.bcl2fastq.protocols import PROTOCOLS as FQ_PROTOCOLS
-fq_protocols_data = []
-for p in FQ_PROTOCOLS:
-    name = p
-    description = FQ_PROTOCOLS[p]["description"]
-    reads = []
-    for r in ("r1_length", "i1_length", "i2_length", "r2_length", "r3_length"):
-        try:
-            reads.append(str(FQ_PROTOCOLS[p][r]))
-        except KeyError:
-            pass
-    fq_protocols_data.append([f"``{p}``", description, " | ".join(reads)])
-fq_protocols_data = sorted(fq_protocols_data, key=lambda p: p[0])
-tbl = RstSimpleTable(fq_protocols_data)
-fq_protocols_rst = os.path.join(auto_content_dir, "fq_protocols.rst")
-with open(fq_protocols_rst, "wt") as fp:
-    fp.write("\n".join(tbl.construct_table(
-        header=["Protocol", "Description", "Read lengths"],)))
+docs.generate_fq_protocols_tbl(os.path.join(auto_content_dir,
+                                            "fq_protocols.rst"))
 
 # -- Make tables for permissible platform/library combinations -------------------
 
 from auto_process_ngs.applications import fetch_application_data
+from auto_process_ngs.bcl2fastq.protocols import PROTOCOLS as FQ_PROTOCOLS
 
 # single_cell/10x_single_cell.rst
 # -- Fastq generation protocols
@@ -707,55 +686,52 @@ plots.ugenomicoriginplot({'exonic': (83408, 79.74),
 if not os.path.exists("reference"):
     os.mkdir("reference")
 
-from auto_process_ngs.docs import generate_command_docs
 cmds_docs = os.path.join(os.getcwd(),
                          "reference",
                          "commands.rst")
-generate_command_docs(["info",
-                       "setup",
-                       "make_fastqs",
-                       "analyse_barcodes",
-                       "setup_analysis_dirs",
-                       "run_qc",
-                       "publish_qc",
-                       "archive",
-                       "report",
-                       "samplesheet",
-                       "update",
-                       "merge_fastq_dirs",
-                       "update_fastq_stats",
-                       "import_project",
-                       "config",
-                       "params",
-                       "metadata",
-                       "readme",
-                       "clone"], cmds_docs)
+docs.generate_command_docs(["info",
+                            "setup",
+                            "make_fastqs",
+                            "analyse_barcodes",
+                            "setup_analysis_dirs",
+                            "run_qc",
+                            "publish_qc",
+                            "archive",
+                            "report",
+                            "samplesheet",
+                            "update",
+                            "merge_fastq_dirs",
+                            "update_fastq_stats",
+                            "import_project",
+                            "config",
+                            "params",
+                            "metadata",
+                            "readme",
+                            "clone"], cmds_docs)
 
 # -- Make command line reference documents ------------------------------------------
-from auto_process_ngs.docs import generate_utility_docs
 utils_docs = os.path.join(os.getcwd(),
                           "reference",
                           "utilities.rst")
-generate_utility_docs(["analyse_barcodes.py",
-                       "assign_barcodes.py",
-                       "audit_projects.py",
-                       "build_index.py",
-                       "concat_fastqs.py",
-                       "barcode_splitter.py",
-                       "download_fastqs.py",
-                       "fastq_statistics.py",
-                       "fetch_data.py",
-                       "manage_fastqs.py",
-                       "run_qc.py",
-                       "transfer_data.py",
-                       "update_project_metadata.py"], utils_docs)
+docs.generate_utility_docs(["analyse_barcodes.py",
+                            "assign_barcodes.py",
+                            "audit_projects.py",
+                            "build_index.py",
+                            "concat_fastqs.py",
+                            "barcode_splitter.py",
+                            "download_fastqs.py",
+                            "fastq_statistics.py",
+                            "fetch_data.py",
+                            "manage_fastqs.py",
+                            "run_qc.py",
+                            "transfer_data.py",
+                            "update_project_metadata.py"], utils_docs)
 
 # -- Make developers API reference documents ---------------------------------------
-from auto_process_ngs.docs import generate_api_docs
 api_doc_dir = os.path.join(os.getcwd(),
                            "developers",
                            "api_docs")
 if not os.path.exists(api_doc_dir):
     print("Making %s" % api_doc_dir)
     os.makedirs(api_doc_dir, exist_ok=True)
-generate_api_docs(auto_process_ngs, api_doc_dir)
+docs.generate_api_docs(auto_process_ngs, api_doc_dir)
