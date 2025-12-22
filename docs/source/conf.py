@@ -57,7 +57,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..')))
 from auto_process_ngs import get_version
 #
 # The short X.Y version.
-version = get_version()
+version = ".".join(get_version().split(".")[0:2])
 # The full version, including alpha/beta/rc tags.
 release = get_version()
 
