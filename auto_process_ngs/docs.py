@@ -22,6 +22,9 @@ Functions:
 
 * ``generate_qc_protocols_tbl``: generate table of QC protocols
 * ``generate_fq_protocols_tbl``: generate table of Fastq generation protocols
+* ``generate_fq_prototocols_for_apps``: table of Fastq generation protocols
+  for specified applications
+* ``generate_applications_tbl``: generate table of applications
 * ``generate_api_docs``: generate developer's API documentation
 * ``generate_utility_docs``: generate documentation for utilities
 * ``generate_command_docs``: generate documentation for 'auto_process' commands
@@ -32,6 +35,7 @@ Functions:
 
 import os
 import subprocess
+from .applications import fetch_application_data
 from .bcl2fastq.protocols import PROTOCOLS as FQ_PROTOCOLS
 from .qc.protocols import fetch_protocol_definition
 from .qc.protocols import QC_PROTOCOLS
@@ -334,6 +338,82 @@ def generate_fq_protocols_tbl(docfile):
     with open(docfile, "wt") as fp:
         fp.write("\n".join(tbl.construct_table(
             header=["Protocol", "Description", "Read lengths"], )))
+
+
+def generate_fq_protocols_for_apps(docfile, header=["Application", "Protocol"],
+                                   tags=None):
+    """
+    Fastq generation protocols table for specific applications
+
+    Table lists the Fastq protocols and has columns
+    with application description and protocol name.
+
+    Arguments:
+        docfile (str): path to output RST file
+        header (list): list of column titles to use in the table
+        tags (list): list of tags to include in the table
+    """
+    if tags:
+        # Only include protocols associated with applications
+        # which match the supplied tags
+        fq_protocols = set()
+        for app in fetch_application_data(tags=tags, expand=True):
+            fq_protocols.add(app["fastq_generation"])
+    else:
+        # All protocols
+        fq_protocols = FQ_PROTOCOLS
+    fq_protocols_data = []
+    for fq_protocol in sorted(fq_protocols):
+        fq_protocols_data.append([FQ_PROTOCOLS[fq_protocol]["description"],
+                                  f"``{fq_protocol}``"])
+    tbl = RstSimpleTable(fq_protocols_data)
+    with open(docfile, "wt") as fp:
+        fp.write("\n".join(tbl.construct_table(header=header)))
+
+
+def generate_applications_table(docfile, tags=None):
+    """
+    Generates table of applications
+
+    The table will only include applications which match
+    the specified tags (if supplied), and will have the
+    columns 'Platform', 'Library', and optionally a third
+    column 'Extensions' (if at least one application has
+    extensions defined).
+
+    Arguments:
+        docfile (str): path to output RST file
+        tags (list): list of tags to specify which
+          applications should be included in the table
+    """
+    header = ["Platform", "Library type"]
+    application_data = []
+    has_extensions = False
+    for application in fetch_application_data(tags=tags, expand=True):
+        if application["libraries"][0] == "*":
+            # Skip any wildcard libraries
+            continue
+        platform = f"``{application['platforms'][0]}``"
+        library = f"``{application['libraries'][0]}``"
+        try:
+            extensions = application["extensions"]
+            if extensions:
+                extensions = ", ".join([f"``{ext}``" for ext in extensions])
+                has_extensions = True
+            else:
+                extensions = ""
+        except KeyError:
+            extensions = ""
+        application_data.append([platform, library, extensions])
+    if not has_extensions:
+        # Remove the empty "extensions" column
+        application_data = [[plt, lib] for plt, lib, ext in application_data]
+    else:
+        # Update the header
+        header.append("Extensions")
+    tbl = RstGridTable(application_data)
+    with open(docfile, "wt") as fp:
+        fp.write("\n".join(tbl.construct_table(header=header)))
 
 
 def generate_qc_protocols_tbl(docfile):
