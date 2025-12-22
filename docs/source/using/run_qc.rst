@@ -169,7 +169,7 @@ reads (i.e. reads containing biological data) then the "mapped"
 QC modules (for example, FastqScreen or strandedness) will only
 use those subsequences.
 
-(See the :doc:`QC protocol specification <../reference/qc_protocol_specification.rst>`
+(See the :doc:`QC protocol specification <../reference/qc_protocol_specification>`
 documentation for the subsequence specification syntax.)
 
 -------------------------------------------
