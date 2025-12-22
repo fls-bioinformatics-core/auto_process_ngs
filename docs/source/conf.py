@@ -11,8 +11,10 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys, os
+import sys
+import os
 from datetime import datetime
+import auto_process_ngs
 
 sys.path.append('../')
 
@@ -749,7 +751,6 @@ generate_utility_docs(["analyse_barcodes.py",
                        "update_project_metadata.py"], utils_docs)
 
 # -- Make developers API reference documents ---------------------------------------
-import auto_process_ngs
 from auto_process_ngs.docs import generate_api_docs
 api_doc_dir = os.path.join(os.getcwd(),
                            "developers",
