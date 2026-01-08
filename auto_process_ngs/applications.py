@@ -193,7 +193,7 @@ APPLICATIONS = [
     # 10x Chromium Multiome
     {
         "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
-        "libraries": ["ATAC"],
+        "libraries": ["ATAC", "snATAC"],
         "fastq_generation": "10x_multiome_atac",
         "qc_protocol": "10x_Multiome_ATAC",
         "setup": {
@@ -204,7 +204,7 @@ APPLICATIONS = [
     },
     {
         "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
-        "libraries": ["GEX"],
+        "libraries": ["GEX", "snGEX"],
         "fastq_generation": "10x_multiome_gex",
         "qc_protocol": "10x_Multiome_GEX",
         "setup": {
