@@ -744,8 +744,12 @@ class RunCellrangerCount(PipelineTask):
                                  self.args.force_cells)
                 # Additional options for cellranger 5.0+
                 if cellranger_major_version >= 5:
-                    # Hard-trim the input R1 sequence to 26bp
-                    cmd.add_args("--r1-length=26")
+                    if cellranger_major_version < 10:
+                        # Hard-trim the input R1 sequence to 26bp
+                        # Retained for reproducibility when running
+                        # count with cellranger versions < v10
+                        print("Hard-trimming input R1 sequence to 26bp")
+                        cmd.add_args("--r1-length=26")
                     if self.args.library_type == "snRNA-seq":
                         # For single nuclei RNA-seq specify the
                         if cellranger_major_version >= 7:
