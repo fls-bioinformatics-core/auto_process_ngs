@@ -130,7 +130,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 3' (v4 GEM-X)",
                       "10x Chromium 3' (v4 GEM-X) OCM",],
-        "libraries": ["snRNA-seq"],
+        "libraries": ["snGEX", "snRNA-seq"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_snRNAseq",
         "setup": {
@@ -143,7 +143,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 5' (v3 GEM-X)",
                       "10x Chromium 5' (v3 GEM-X) OCM",],
-        "libraries": ["GEX", "scRNA-seq", "snRNA-seq"],
+        "libraries": ["GEX", "scRNA-seq", "snGEX", "snRNA-seq"],
         "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "CRISPR", "BEAM"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",

@@ -750,8 +750,9 @@ class RunCellrangerCount(PipelineTask):
                         # count with cellranger versions < v10
                         print("Hard-trimming input R1 sequence to 26bp")
                         cmd.add_args("--r1-length=26")
-                    if self.args.library_type == "snRNA-seq":
+                    if self.args.library_type in ("snGEX", "snRNA-seq"):
                         # For single nuclei RNA-seq specify the
+                        # --include-introns option
                         if cellranger_major_version >= 7:
                             # Syntax is --include-introns {true|false}
                             # for cellranger 7.0+
