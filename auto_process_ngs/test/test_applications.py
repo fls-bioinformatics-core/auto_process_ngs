@@ -94,9 +94,10 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Chromium Epi ATAC
         """
-        application = identify_application("10x Chromium Epi ATAC (v2)", "ATAC")
-        self.assertEqual(application["fastq_generation"], "10x_atac")
-        self.assertEqual(application["qc_protocol"], "10x_scATAC")
+        for library_type in ["ATAC", "snATAC"]:
+            application = identify_application("10x Chromium Epi ATAC (v2)", library_type)
+            self.assertEqual(application["fastq_generation"], "10x_atac")
+            self.assertEqual(application["qc_protocol"], "10x_scATAC")
 
     def test_identify_application_10x_chromium_epi_multiome_atac(self):
         """

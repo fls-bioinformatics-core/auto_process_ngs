@@ -181,7 +181,7 @@ APPLICATIONS = [
     # 10x Chromium ATAC
     {
         "platforms": ["10x Chromium Epi ATAC (v2)",],
-        "libraries": ["ATAC"],
+        "libraries": ["ATAC", "snATAC"],
         "fastq_generation": "10x_atac",
         "qc_protocol": "10x_scATAC", # Should be called 10x_snATAC?
         "setup": {
