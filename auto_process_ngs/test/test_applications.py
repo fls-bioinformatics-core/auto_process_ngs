@@ -94,25 +94,28 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Chromium Epi ATAC
         """
-        application = identify_application("10x Chromium Epi ATAC (v2)", "ATAC")
-        self.assertEqual(application["fastq_generation"], "10x_atac")
-        self.assertEqual(application["qc_protocol"], "10x_scATAC")
+        for library_type in ["ATAC", "snATAC"]:
+            application = identify_application("10x Chromium Epi ATAC (v2)", library_type)
+            self.assertEqual(application["fastq_generation"], "10x_atac")
+            self.assertEqual(application["qc_protocol"], "10x_scATAC")
 
     def test_identify_application_10x_chromium_epi_multiome_atac(self):
         """
         identify_application: identify 10x Chromium Epi Multiome ATAC
         """
-        application = identify_application("10x Chromium Epi Multiome ATAC (v1)", "ATAC")
-        self.assertEqual(application["fastq_generation"], "10x_multiome_atac")
-        self.assertEqual(application["qc_protocol"], "10x_Multiome_ATAC")
+        for library_type in ["ATAC", "snATAC"]:
+            application = identify_application("10x Chromium Epi Multiome ATAC (v1)", library_type)
+            self.assertEqual(application["fastq_generation"], "10x_multiome_atac")
+            self.assertEqual(application["qc_protocol"], "10x_Multiome_ATAC")
 
     def test_identify_application_10x_chromium_epi_multiome_gex(self):
         """
         identify_application: identify 10x Chromium Epi Multiome GEX
         """
-        application = identify_application("10x Chromium Epi Multiome ATAC (v1)", "GEX")
-        self.assertEqual(application["fastq_generation"], "10x_multiome_gex")
-        self.assertEqual(application["qc_protocol"], "10x_Multiome_GEX")
+        for library_type in ["GEX", "snGEX"]:
+            application = identify_application("10x Chromium Epi Multiome ATAC (v1)", library_type)
+            self.assertEqual(application["fastq_generation"], "10x_multiome_gex")
+            self.assertEqual(application["qc_protocol"], "10x_Multiome_GEX")
 
     def test_identify_application_10x_visium(self):
         """

@@ -70,9 +70,9 @@ class MultiomeLibraries:
         """
         Internal: get cellranger-arc description of library type
         """
-        if library_type == 'ATAC':
+        if library_type in ('ATAC', 'snATAC'):
             return "Chromatin Accessibility"
-        elif library_type == 'GEX':
+        elif library_type in ('GEX', 'snGEX'):
             return "Gene Expression"
         else:
             raise Exception("Unsupported library: '%s'"

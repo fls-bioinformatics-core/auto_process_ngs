@@ -130,7 +130,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 3' (v4 GEM-X)",
                       "10x Chromium 3' (v4 GEM-X) OCM",],
-        "libraries": ["snRNA-seq"],
+        "libraries": ["snGEX", "snRNA-seq"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_snRNAseq",
         "setup": {
@@ -143,7 +143,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 5' (v3 GEM-X)",
                       "10x Chromium 5' (v3 GEM-X) OCM",],
-        "libraries": ["GEX", "scRNA-seq", "snRNA-seq"],
+        "libraries": ["GEX", "scRNA-seq", "snGEX", "snRNA-seq"],
         "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "CRISPR", "BEAM"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
@@ -181,7 +181,7 @@ APPLICATIONS = [
     # 10x Chromium ATAC
     {
         "platforms": ["10x Chromium Epi ATAC (v2)",],
-        "libraries": ["ATAC"],
+        "libraries": ["ATAC", "snATAC"],
         "fastq_generation": "10x_atac",
         "qc_protocol": "10x_scATAC", # Should be called 10x_snATAC?
         "setup": {
@@ -193,7 +193,7 @@ APPLICATIONS = [
     # 10x Chromium Multiome
     {
         "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
-        "libraries": ["ATAC"],
+        "libraries": ["ATAC", "snATAC"],
         "fastq_generation": "10x_multiome_atac",
         "qc_protocol": "10x_Multiome_ATAC",
         "setup": {
@@ -204,7 +204,7 @@ APPLICATIONS = [
     },
     {
         "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
-        "libraries": ["GEX"],
+        "libraries": ["GEX", "snGEX"],
         "fastq_generation": "10x_multiome_gex",
         "qc_protocol": "10x_Multiome_GEX",
         "setup": {
