@@ -294,7 +294,8 @@ class IndexBuilder:
         return ret_code
 
     def STAR(self,fasta,annotation,out_dir,memory_limit=None,
-             overhang=100,nthreads=None,star_version=None):
+             overhang=100,sa_index_nbases=None,nthreads=None,
+             star_version=None):
         """
         Build index for STAR
 
@@ -307,6 +308,9 @@ class IndexBuilder:
             (optional; default: no limit specified)
           overhang (int): specify overhang (default:
             100)
+          sa_index_nbases (int): specify the length of
+            the pre-indexing string (default: let STAR
+            set the length itself)
           nthreads (int): specify number of threads to
             use when making index (defaults to the
             number defined in the job runner)
@@ -336,6 +340,7 @@ class IndexBuilder:
         build_index_cmd = star_genome_generate_cmd(
             fasta,annotation,star_dir,
             overhang=overhang,
+            sa_index_nbases=sa_index_nbases,
             nthreads=nthreads,
             memory_limit=memory_limit)
         # Run the command
@@ -403,8 +408,8 @@ def bowtie2_build_cmd(fasta,bt2_basename,nthreads=None):
     return build_index_cmd
 
 def star_genome_generate_cmd(fasta,annotation,out_dir,
-                             overhang=None,nthreads=None,
-                             memory_limit=None):
+                             overhang=None,sa_index_nbases=None,
+                             nthreads=None,memory_limit=None):
     """
     Return command to run 'STAR' to build an index
 
@@ -414,7 +419,10 @@ def star_genome_generate_cmd(fasta,annotation,out_dir,
       out_dir (str): path to directory to write index
          files into
       overhang (int): optional, specify the overhang
-         value to use
+         value to use (--sjdbOverhang option)
+      sa_index_nbases (int): optional, specify the
+         length (in bases) of the SA preindexing
+         string (--genomeSAindexNbases option)
       nthreads (int): optional, specify the
         number of threads to run 'STAR' with
       memory_limit (int): optional, specify the memory
@@ -430,6 +438,8 @@ def star_genome_generate_cmd(fasta,annotation,out_dir,
                               "--genomeDir",out_dir)
     if overhang:
         build_index_cmd.add_args("--sjdbOverhang",overhang)
+    if sa_index_nbases:
+        build_index_cmd.add_args("--genomeSAindexNbases",sa_index_nbases)
     if nthreads and nthreads > 1:
         build_index_cmd.add_args("--runThreadN",nthreads)
     if memory_limit:
