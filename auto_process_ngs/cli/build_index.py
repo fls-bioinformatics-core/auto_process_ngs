@@ -73,6 +73,10 @@ def main():
                       dest="overhang",default=100,
                       help="set value for STAR --sjdbOverhang "
                       "option (default: 100)")
+    star.add_argument("--sa_index_nbases",metavar='N',action='store',
+                      dest="sa_index_nbases",default=None,
+                      help="set value for STAR --genomeSAindexNbases "
+                      "option (default: use default in STAR)")
     # Advanced options
     advanced = p.add_argument_group('Advanced options')
     advanced.add_argument('-V','--aligner-version',metavar='VERSION',
@@ -128,4 +132,5 @@ def main():
     elif aligner == "star":
         builder.STAR(args.fasta,args.annotation,args.out_dir,
                      overhang=args.overhang,
+                     sa_index_nbases=args.sa_index_nbases,
                      star_version=aligner_version)
