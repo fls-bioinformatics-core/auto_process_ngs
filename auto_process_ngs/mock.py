@@ -1957,7 +1957,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
             elif self._package_name == 'cellranger-atac':
                 self._version = '2.0.0'
             elif self._package_name == 'cellranger-arc':
-                self._version = '2.0.0'
+                self._version = '2.1.0'
             elif self._package_name == 'spaceranger':
                 self._version = '3.0.0'
         else:
@@ -2214,6 +2214,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         elif self._package_name == "cellranger-arc":
             count.add_argument("--reference",action="store")
             count.add_argument("--libraries",action="store")
+            if version[0] >= 2 and version[1] >= 1:
+                # CellrangerARC 2.1+: explicitly specify BAM creation
+                count.add_argument("--create-bam",
+                                   choices=['true','false'],
+                                   required=True)
         count.add_argument("--jobmode",action="store")
         count.add_argument("--localcores",action="store")
         count.add_argument("--localmem",action="store")
