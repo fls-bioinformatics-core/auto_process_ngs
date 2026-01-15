@@ -129,12 +129,23 @@ class CellrangerCount(QCModule):
             pipeline_name = "cellranger-arc"
         elif self.name == "cellranger-atac_count":
             pipeline_name = "cellranger-atac"
-        cellranger_count_dir = os.path.join(qc_dir.path,
-                                            "cellranger_count")
+        # Determine top-level output directory to examine
+        top_level_dirs = [self.name]
+        if self.name != "cellranger_count":
+            # Add fallback for legacy naming where outputs
+            # from all "count" pipelines were put into a
+            # single 'cellranger_count' directory
+            top_level_dirs.append("cellranger_count")
+        for name in top_level_dirs:
+            cellranger_count_dir = os.path.join(qc_dir.path, name)
+            if os.path.exists(cellranger_count_dir):
+                break
+            else:
+                cellranger_count_dir = None
         ##print("Checking for cellranger* count outputs under %s" %
         ##      cellranger_count_dir)
         cellranger_versioned_samples = {}
-        if os.path.isdir(cellranger_count_dir):
+        if cellranger_count_dir:
             cellranger_name = None
             versions = set()
             # Old-style (unversioned)
