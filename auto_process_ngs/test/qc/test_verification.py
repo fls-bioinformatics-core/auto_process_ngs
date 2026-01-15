@@ -58,7 +58,8 @@ class TestQCVerifier(unittest.TestCase):
                      include_cellranger_count=False,
                      include_cellranger_multi=False,
                      legacy_screens=False,
-                     legacy_cellranger_outs=False):
+                     legacy_cellranger_outs=False,
+                     legacy_cellranger_count_prefix=False):
         # Create working directory and qc dir
         self._make_working_dir()
         return make_mock_qc_dir(
@@ -86,7 +87,8 @@ class TestQCVerifier(unittest.TestCase):
             include_cellranger_count=include_cellranger_count,
             include_cellranger_multi=include_cellranger_multi,
             legacy_screens=legacy_screens,
-            legacy_cellranger_outs=legacy_cellranger_outs)
+            legacy_cellranger_outs=legacy_cellranger_outs,
+            legacy_cellranger_count_prefix=legacy_cellranger_count_prefix)
 
     def _create_params_dict(self,**kws):
         # Return an AttributeDictionary with the
@@ -772,6 +774,85 @@ class TestQCVerifier(unittest.TestCase):
                 self._create_params_dict(samples=('PJB1','PJB2'),
                                          cellranger_refdata='*')))
 
+    def test_qcverifier_verify_qc_module_cellranger_atac_count_legacy_dir(self):
+        """
+        QCVerifier: verify QC module 'cellranger-atac_count' (legacy directory name)
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # QC dir with cellranger count outputs
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-atac',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   legacy_cellranger_count_prefix=True)
+        qc_verifier = QCVerifier(qc_dir)
+        # Implicitly match any version and reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'))))
+        # Explicitly match version with any reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                cellranger_version='2.0.0',
+                                cellranger_refdata='*')))
+        # Explicitly match reference with any version
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                cellranger_version='*',
+                                cellranger_refdata=\
+                                'refdata-cellranger-atac-2020-A')))
+        # Fail if version not found
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='1.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-atac-2020-A')))
+        # Fail if reference not found
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='2.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-atac-2.0.0')))
+        # Missing outputs for one sample
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-atac',),
+                                   cellranger_samples=('PJB1',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='2.0.0',
+                                     cellranger_refdata=\
+                                     'refdata-cellranger-atac-2020-A')))
+        # Empty QC dir
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False)
+        qc_verifier = QCVerifier(qc_dir)
+        # Okay if no reference data specified
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-atac_count',
+            self._create_params_dict(samples=('PJB1','PJB2'))))
+        # Fail if reference data is specified
+        self.assertFalse(
+            qc_verifier.verify_qc_module(
+                'cellranger-atac_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
+                                         cellranger_refdata='*')))
+
     def test_qcverifier_verify_qc_module_cellranger_arc_count(self):
         """
         QCVerifier: verify QC module 'cellranger-arc_count'
@@ -789,6 +870,84 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB1',
                                        'PJB2',
                                    ))
+        qc_verifier = QCVerifier(qc_dir)
+        # Implicitly match any version and reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-arc_count',
+            self._create_params_dict(samples=('PJB1','PJB2'))))
+        # Explicitly match version with any reference
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-arc_count',
+            self._create_params_dict(samples=('PJB1','PJB2'),
+                                     cellranger_version='2.0.0',
+                                     cellranger_refdata='*')))
+        # Explicitly match reference with any version
+        self.assertTrue(
+            qc_verifier.verify_qc_module(
+                'cellranger-arc_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
+                                         cellranger_version='*',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-arc-2020-A')))
+        # Fail if version not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module(
+                'cellranger-arc_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
+                                         cellranger_version='1.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-arc-2020-A')))
+        # Fail if reference not found
+        self.assertFalse(
+            qc_verifier.verify_qc_module(
+                'cellranger-arc_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
+                                         cellranger_version='2.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-arc-2.0.0')))
+        # Missing outputs for one sample
+        qc_dir = self._make_qc_dir('qc.fail',
+                                   fastq_names=fastq_names[:2],
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-arc',),
+                                   cellranger_samples=('PJB1',))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertFalse(
+            qc_verifier.verify_qc_module(
+                'cellranger-arc_count',
+                self._create_params_dict(samples=('PJB1','PJB2'),
+                                         cellranger_version='2.0.0',
+                                         cellranger_refdata=\
+                                         'refdata-cellranger-arc-2020-A')))
+        # Empty QC dir
+        # NB this will verify as True because the multiome CSV config
+        # files are missing (so no outputs are expected)
+        qc_dir = self._make_qc_dir('qc.empty',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=False)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify_qc_module(
+            'cellranger-arc_count',
+            self._create_params_dict(samples=('PJB1','PJB2'))))
+
+    def test_qcverifier_verify_qc_module_cellranger_arc_count_legacy_dir(self):
+        """
+        QCVerifier: verify QC module 'cellranger-arc_count' (legacy directory name)
+        """
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        # QC dir with cellranger count outputs
+        qc_dir = self._make_qc_dir('qc',
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=('cellranger-arc',),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   legacy_cellranger_count_prefix=True)
         qc_verifier = QCVerifier(qc_dir)
         # Implicitly match any version and reference
         self.assertTrue(qc_verifier.verify_qc_module(
@@ -1424,6 +1583,37 @@ class TestQCVerifier(unittest.TestCase):
             cellranger_version="2.0.0",
             cellranger_refdata="/data/refdata-cellranger-atac-2020-A"))
 
+    def test_qcverifier_10x_cellranger_atac_count_legacy_dir(self):
+        """
+        QCVerifier: verify 10xGenomics scATAC-seq data (10x_scATAC) (legacy directory name)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R3_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R3_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_scATAC",
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=(
+                                       'cellranger-atac',
+                                   ),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   legacy_cellranger_count_prefix=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_scATAC"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="/data/refdata-cellranger-atac-2020-A"))
+
     def test_verify_qcverifier_10x_multiome_gex(self):
         """
         QCVerifier: verify 10xGenomics multiome GEX data (10x_Multiome_GEX)
@@ -1445,6 +1635,38 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB1',
                                        'PJB2',
                                    ))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_GEX"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
+
+    def test_verify_qcverifier_10x_multiome_gex_legacy_dir(self):
+        """
+        QCVerifier: verify 10xGenomics multiome GEX data (10x_Multiome_GEX) (legacy directory name)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R2_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R2_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_GEX",
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=(
+                                       'cellranger',
+                                       'cellranger-arc',
+                                   ),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   legacy_cellranger_count_prefix=True)
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(
             fetch_protocol_definition("10x_Multiome_GEX"),
@@ -1549,6 +1771,38 @@ class TestQCVerifier(unittest.TestCase):
             cellranger_version="2.0.0",
             cellranger_refdata="refdata-cellranger-arc-2020-A"))
 
+    def test_qcverifier_10x_multiome_atac_legacy_dir(self):
+        """
+        QCVerifier: verify 10xGenomics multiome ATAC data (10x_Multiome_ATAC) (legacy directory name)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R3_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R3_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_ATAC",
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=(
+                                       'cellranger-arc',
+                                       'cellranger-atac',
+                                   ),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   legacy_cellranger_count_prefix=True)
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_ATAC"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
+
     def test_qcverifier_10x_multiome_atac_no_paired_samples(self):
         """
         QCVerifier: verify 10xGenomics multiome ATAC data (10x_Multiome_ATAC, no paired samples)
@@ -1569,6 +1823,37 @@ class TestQCVerifier(unittest.TestCase):
                                        'PJB1',
                                        'PJB2',
                                    ))
+        qc_verifier = QCVerifier(qc_dir)
+        self.assertTrue(qc_verifier.verify(
+            fetch_protocol_definition("10x_Multiome_ATAC"),
+            fastq_names,
+            fastq_screens=('model_organisms',
+                           'other_organisms',
+                           'rRNA'),
+            cellranger_version="2.0.0",
+            cellranger_refdata="refdata-cellranger-arc-2020-A"))
+
+    def test_qcverifier_10x_multiome_atac_no_paired_samples_legacy_dir(self):
+        """
+        QCVerifier: verify 10xGenomics multiome ATAC data (10x_Multiome_ATAC, no paired samples) (legacy dir name)
+        """
+        ##self.remove_test_outputs = False
+        fastq_names=('PJB1_S1_R1_001.fastq.gz',
+                     'PJB1_S1_R3_001.fastq.gz',
+                     'PJB2_S2_R1_001.fastq.gz',
+                     'PJB2_S2_R3_001.fastq.gz',)
+        qc_dir = self._make_qc_dir('qc',
+                                   protocol="10x_Multiome_ATAC",
+                                   fastq_names=fastq_names,
+                                   include_cellranger_count=True,
+                                   cellranger_pipelines=(
+                                       'cellranger-atac',
+                                   ),
+                                   cellranger_samples=(
+                                       'PJB1',
+                                       'PJB2',
+                                   ),
+                                   legacy_cellranger_count_prefix=True)
         qc_verifier = QCVerifier(qc_dir)
         self.assertTrue(qc_verifier.verify(
             fetch_protocol_definition("10x_Multiome_ATAC"),
