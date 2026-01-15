@@ -558,7 +558,13 @@ def set_cell_count_for_project(project_dir, qc_dir=None,
                                f"{multi_dir}: {ex}")
     elif source == "count":
         print("Looking for '%s count' outputs" % tenx_pipeline)
-        if not os.path.exists(os.path.join(qc_dir,"cellranger_count")):
+        if os.path.exists(os.path.join(qc_dir, f"{tenx_pipeline}_count")):
+            count_dir = f"{tenx_pipeline}_count"
+        elif tenx_pipeline != "cellranger" and \
+                os.path.exists(os.path.join(qc_dir, "cellranger_count")):
+            # Fallback to 'cellranger_count'
+            count_dir = "cellranger_count"
+        else:
             logger.warning("Unable to set cell count: no data found")
             return
         # Handle outputs from 'count'
@@ -567,13 +573,12 @@ def set_cell_count_for_project(project_dir, qc_dir=None,
         # New-style with 'version' and 'reference' subdirectories
         if cellranger_version and cellranger_refdata:
             count_dirs.append(os.path.join(qc_dir,
-                                           "cellranger_count",
+                                           count_dir,
                                            cellranger_version,
                                            os.path.basename(
                                                cellranger_refdata)))
         # Old-style without additional subdirectories
-        count_dirs.append(os.path.join(qc_dir,
-                                       "cellranger_count"))
+        count_dirs.append(os.path.join(qc_dir, count_dir))
         # Check each putative output location in turn
         for count_dir in count_dirs:
             print("Examining %s" % count_dir)

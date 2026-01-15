@@ -549,7 +549,8 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
                      include_cellranger_multi=False,
                      cellranger_version=None,
                      legacy_screens=False,
-                     legacy_cellranger_outs=False):
+                     legacy_cellranger_outs=False,
+                     legacy_cellranger_count_prefix=False):
     """
     Create a mock QC directory with QC artefacts
 
@@ -601,6 +602,10 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
         convention for FastqScreen outputs
       legacy_cellranger_outs (bool): if True then use legacy
         naming convention for 10xGenomics pipeline outputs
+      legacy_cellranger_count_prefix (bool): if True then
+        always use "cellranger_count" as the prefix for
+        Cellranger* outputs (otherwise use
+        "<cellranger_pipeline>_count")
 
     Returns:
       String: path to the mock QC directory that was created.
@@ -753,15 +758,21 @@ def make_mock_qc_dir(qc_dir,fastq_names,fastq_dir=None,
             if cellranger == "cellranger":
                 version = cellranger_version
                 refdata = "/data/refdata-cellranger-2020-A"
+                count_dir = "cellranger_count"
             elif cellranger == "cellranger-atac":
                 version = "2.0.0"
                 refdata = "/data/refdata-cellranger-atac-2020-A"
+                count_dir = "cellranger-atac_count"
             elif cellranger == "cellranger-arc":
                 version = "2.0.0"
                 refdata = "/data/refdata-cellranger-arc-2020-A"
+                count_dir = "cellranger-arc_count"
+            # Legacy prefix
+            if legacy_cellranger_count_prefix:
+                count_dir = "cellranger_count"
             # Set top-level output dir
             if not legacy_cellranger_outs:
-                count_dir = os.path.join("cellranger_count",
+                count_dir = os.path.join(count_dir,
                                          version,
                                          os.path.basename(refdata))
             else:

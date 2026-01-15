@@ -129,12 +129,23 @@ class CellrangerCount(QCModule):
             pipeline_name = "cellranger-arc"
         elif self.name == "cellranger-atac_count":
             pipeline_name = "cellranger-atac"
-        cellranger_count_dir = os.path.join(qc_dir.path,
-                                            "cellranger_count")
+        # Determine top-level output directory to examine
+        top_level_dirs = [self.name]
+        if self.name != "cellranger_count":
+            # Add fallback for legacy naming where outputs
+            # from all "count" pipelines were put into a
+            # single 'cellranger_count' directory
+            top_level_dirs.append("cellranger_count")
+        for name in top_level_dirs:
+            cellranger_count_dir = os.path.join(qc_dir.path, name)
+            if os.path.exists(cellranger_count_dir):
+                break
+            else:
+                cellranger_count_dir = None
         ##print("Checking for cellranger* count outputs under %s" %
         ##      cellranger_count_dir)
         cellranger_versioned_samples = {}
-        if os.path.isdir(cellranger_count_dir):
+        if cellranger_count_dir:
             cellranger_name = None
             versions = set()
             # Old-style (unversioned)
@@ -551,7 +562,7 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
         elif self.args.qc_module == "cellranger-arc_count":
             check_outputs = check_cellranger_arc_count_outputs
         # Set the prefix for cellranger/10x outputs
-        prefix = os.path.join("cellranger_count",
+        prefix = os.path.join(self.args.qc_module,
                               self.args.cellranger_version,
                               os.path.basename(self.args.cellranger_ref_data))
         # Check if the outputs exist
@@ -701,7 +712,7 @@ class RunCellrangerCount(PipelineTask):
             run_cellranger_count = False
             count_dir = os.path.abspath(
                 os.path.join(self.args.out_dir,
-                             "cellranger_count",
+                             f"{cellranger_package}_count",
                              cellranger_version,
                              os.path.basename(self.args.reference_data_path),
                              sample))
@@ -855,18 +866,20 @@ class RunCellrangerCount(PipelineTask):
             print("No reference data: single library analysis was "
                   "skipped")
             return
+        # Package name
+        cellranger_package = os.path.basename(self.args.cellranger_exe)
         # Set outputs
         self.output.cellranger_exe.set(self.args.cellranger_exe)
         self.output.cellranger_refdata.set(self.args.reference_data_path)
         self.output.cellranger_version.set(self.args.cellranger_version)
-        self.output.cellranger_package.set(os.path.basename(self.args.cellranger_exe))
+        self.output.cellranger_package.set(cellranger_package)
         # Copy outputs to QC directory
         if self.args.qc_dir and self.args.samples:
             print("Copying outputs to QC directory")
             # Top level output directory
             count_dir = os.path.abspath(
                 os.path.join(self.args.out_dir,
-                             "cellranger_count",
+                             f"{cellranger_package}_count",
                              self.args.cellranger_version,
                              os.path.basename(
                                  self.args.reference_data_path)))
@@ -878,7 +891,7 @@ class RunCellrangerCount(PipelineTask):
                 # Set location to copy QC outputs to
                 qc_dir = os.path.abspath(
                     os.path.join(self.args.qc_dir,
-                                 "cellranger_count",
+                                 f"{cellranger_package}_count",
                                  self.args.cellranger_version,
                                  os.path.basename(
                                      self.args.reference_data_path),

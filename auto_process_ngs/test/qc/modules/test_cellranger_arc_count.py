@@ -67,8 +67,8 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB_ATAC")
         for f in (
-                "qc/cellranger_count",
-                "cellranger_count"):
+                "qc/cellranger-arc_count",
+                "cellranger-arc_count"):
             self.assertFalse(os.path.exists(os.path.join(project_dir,f)),
                              "%s: present" % f)
         # Check number of cells
@@ -146,8 +146,8 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB_GEX")
         for f in (
-                "qc/cellranger_count",
-                "cellranger_count"):
+                "qc/cellranger-arc_count",
+                "cellranger-arc_count"):
             self.assertFalse(os.path.exists(os.path.join(project_dir,f)),
                              "%s: present" % f)
         # Check number of cells
@@ -253,20 +253,20 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB_ATAC")
         for f in (
-                "qc/cellranger_count",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
-                "cellranger_count",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv"):
+                "qc/cellranger-arc_count",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
+                "cellranger-arc_count",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv"):
             self.assertTrue(os.path.exists(os.path.join(project_dir,f)),
                             "%s: missing" % f)
         # Check number of cells
@@ -374,20 +374,20 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB_ATAC")
         for f in (
-                "qc/cellranger_count",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
-                "cellranger_count",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",):
+                "qc/cellranger-arc_count",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
+                "cellranger-arc_count",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",):
             self.assertTrue(os.path.exists(os.path.join(project_dir,f)),
                             "%s: missing" % f)
         # Check number of cells
@@ -495,20 +495,20 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB_ATAC")
         for f in (
-                "qc/cellranger_count",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
-                "cellranger_count",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",):
+                "qc/cellranger-arc_count",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",
+                "cellranger-arc_count",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/_cmdline",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/web_summary.html",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_ATAC/outs/summary.csv",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/_cmdline",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/web_summary.html",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_ATAC/outs/summary.csv",):
             self.assertTrue(os.path.exists(os.path.join(project_dir,f)),
                             "%s: missing" % f)
         # Check number of cells
@@ -616,20 +616,20 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB_GEX")
         for f in (
-                "qc/cellranger_count",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
-                "qc/cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
-                "cellranger_count",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
-                "cellranger_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv"):
+                "qc/cellranger-arc_count",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                "qc/cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
+                "cellranger-arc_count",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                "cellranger-arc_count/1.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv"):
             self.assertTrue(os.path.exists(os.path.join(project_dir,f)),
                             "%s: missing" % f)
         # Check number of cells
@@ -735,20 +735,20 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB_GEX")
         for f in (
-                "qc/cellranger_count",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
-                "cellranger_count",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv"):
+                "qc/cellranger-arc_count",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
+                "cellranger-arc_count",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv"):
             self.assertTrue(os.path.exists(os.path.join(project_dir,f)),
                             "%s: missing" % f)
         # Check number of cells
@@ -854,20 +854,20 @@ class TestQCPipelineCellrangerArcCount(BaseQCPipelineTestCase):
         # Check outputs
         project_dir = os.path.join(self.wd,"PJB_GEX")
         for f in (
-                "qc/cellranger_count",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
-                "qc/cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
-                "cellranger_count",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
-                "cellranger_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv"):
+                "qc/cellranger-arc_count",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                "qc/cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv",
+                "cellranger-arc_count",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/_cmdline",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/web_summary.html",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB1_GEX/outs/summary.csv",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/_cmdline",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/web_summary.html",
+                "cellranger-arc_count/2.0.0/refdata-cellranger-arc-GRCh38-2020-A/PJB2_GEX/outs/summary.csv"):
             self.assertTrue(os.path.exists(os.path.join(project_dir,f)),
                             "%s: missing" % f)
         # Check number of cells

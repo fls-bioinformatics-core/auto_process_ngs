@@ -767,7 +767,7 @@ Cellranger version\t8.0.0
         # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
                                   "qc",
-                                  "cellranger_count",
+                                  "cellranger-atac_count",
                                   "1.2.0",
                                   "refdata-cellranger-atac-GRCh38-1.2.0",
                                   "PJB1",
@@ -806,7 +806,7 @@ Cellranger version\t1.2.0
         # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
                                   "qc",
-                                  "cellranger_count",
+                                  "cellranger-atac_count",
                                   "2.0.0",
                                   "refdata-cellranger-atac-GRCh38-2020-A-2.0.0",
                                   "PJB1",
@@ -845,7 +845,7 @@ Cellranger version\t2.0.0
         # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
                                   "qc",
-                                  "cellranger_count",
+                                  "cellranger-arc_count",
                                   "1.0.0",
                                   "refdata-cellranger-arc-GRCh38-2020-A",
                                   "PJB1",
@@ -884,7 +884,7 @@ Cellranger version\t1.0.0
         # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
                                   "qc",
-                                  "cellranger_count",
+                                  "cellranger-arc_count",
                                   "1.0.0",
                                   "refdata-cellranger-arc-GRCh38-2020-A",
                                   "PJB1",
@@ -1220,6 +1220,123 @@ Cellranger version\t6.0.0
         # Check updated cell count
         self.assertEqual(AnalysisProject(project_dir).info.number_of_cells,
                          2272)
+
+    def test_set_cell_count_for_project_cellranger_atac_count_legacy_dir(self):
+        """
+        set_cell_count_for_project: "cellranger-atac count" (legacy directory name)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell ATAC",
+            "scATAC-seq")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "2.0.0",
+                                  "refdata-cellranger-atac-GRCh38-2020-A-2.0.0",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                    "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(ATAC_SUMMARY_2_0_0)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-atac-GRCh38-2020-A-2.0.0
+Cellranger version\t2.0.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir, tenx_pipeline="cellranger-atac")
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         3582)
+
+    def test_set_cell_count_for_project_cellranger_arc_atac_legacy_dir(self):
+        """
+        set_cell_count_for_project: "cellranger-arc count" (single cell multiome ATAC) (legacy directory name)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell Multiome",
+            "ATAC")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "1.0.0",
+                                  "refdata-cellranger-arc-GRCh38-2020-A",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                    "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(MULTIOME_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-arc-GRCh38-2020-A
+Cellranger version\t1.0.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir, tenx_pipeline="cellranger-arc")
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         744)
+
+    def test_set_cell_count_for_project_cellranger_arc_multiome_gex_legacy_dir(self):
+        """
+        set_cell_count_for_project: "cellranger-arc count" (single cell multiome GEX) (legacy directory name)
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell Multiome",
+            "GEX")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "1.0.0",
+                                  "refdata-cellranger-arc-GRCh38-2020-A",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                    "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(MULTIOME_SUMMARY)
+        # Add QC info file
+        with open(os.path.join(project_dir,"qc","qc.info"),'wt') as fp:
+            fp.write("""Cellranger reference datasets\t/data/refdata-cellranger-arc-GRCh38-2020-A
+Cellranger version\t1.0.0
+""")
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir, tenx_pipeline="cellranger-arc")
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         744)
 
     def test_set_cell_count_for_project_no_subdirs(self):
         """
