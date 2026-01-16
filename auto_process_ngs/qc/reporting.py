@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 
 """
@@ -2082,26 +2082,28 @@ class SampleQCReporter:
         else:
             self.reads = []
         # 10x single library analyses
-        cellranger_count_dir = os.path.join(qc_dir,
-                                            "cellranger_count")
-        if os.path.isdir(cellranger_count_dir):
-            for dirn in walk(cellranger_count_dir):
-                if os.path.isdir(dirn) and \
-                   os.path.basename(dirn) == sample:
-                    if not os.path.join(cellranger_count_dir,
-                                        sample) == dirn:
-                        # Extract version number and reference from
-                        # the path
-                        reference = dirn.split(os.sep)[-2]
-                        version = dirn.split(os.sep)[-3]
-                    else:
-                        # No version or reference in path
-                        reference = None
-                        version = None
-                    self.cellranger_count.append(
-                        CellrangerCount(dirn,
-                                        version=version,
-                                        reference_data=reference))
+        for name in ("cellranger_count",
+                     "cellranger-atac_count",
+                     "cellranger-arc_count"):
+            cellranger_count_dir = os.path.join(qc_dir, name)
+            if os.path.isdir(cellranger_count_dir):
+                for dirn in walk(cellranger_count_dir):
+                    if os.path.isdir(dirn) and \
+                            os.path.basename(dirn) == sample:
+                        if not os.path.join(cellranger_count_dir,
+                                            sample) == dirn:
+                            # Extract version number and reference from
+                            # the path
+                            reference = dirn.split(os.sep)[-2]
+                            version = dirn.split(os.sep)[-3]
+                        else:
+                            # No version or reference in path
+                            reference = None
+                            version = None
+                        self.cellranger_count.append(
+                            CellrangerCount(dirn,
+                                            version=version,
+                                            reference_data=reference))
         # 10x multiplexing analyses
         cellranger_multi_dir = os.path.join(qc_dir,
                                             "cellranger_multi")
