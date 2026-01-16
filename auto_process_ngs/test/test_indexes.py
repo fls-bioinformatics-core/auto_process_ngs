@@ -175,6 +175,7 @@ class TestStarGenomeGenerateCmdFunction(unittest.TestCase):
                                          "/data/example.gtf",
                                          "/indexes/example/star",
                                          overhang=100,
+                                         sa_index_nbases=14,
                                          nthreads=12,
                                          memory_limit=32)),
             "STAR --runMode genomeGenerate "
@@ -182,5 +183,6 @@ class TestStarGenomeGenerateCmdFunction(unittest.TestCase):
             "--sjdbGTFfile /data/example.gtf "
             "--genomeDir /indexes/example/star "
             "--sjdbOverhang 100 "
+            "--genomeSAindexNbases 14 "
             "--runThreadN 12 "
             "--limitGenomeGenerateRAM 32")

@@ -3295,6 +3295,7 @@ sys.exit(MockStar(path=sys.argv[0],
         p.add_argument('--outFileNamePrefix',action="store",dest='prefix')
         # Indexing options
         p.add_argument('--genomeFastaFiles',action="store",nargs='+')
+        p.add_argument('--genomeSAindexNbases',action="store")
         p.add_argument('--sjdbGTFfile',action="store")
         p.add_argument('--sjdbOverhang',action="store")
         args = p.parse_args(args)
