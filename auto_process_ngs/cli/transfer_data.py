@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2026 Peter Briggs
 #
 #########################################################################
 #
@@ -45,6 +45,8 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 CELLRANGER_DIRS = ("cellranger_count",
+                   "cellranger-atac_count",
+                   "cellranger-arc_count",
                    "cellranger_multi")
 
 def get_templates_dir():
