@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2026 Peter Briggs
 #
 ########################################################################
 
@@ -1957,7 +1957,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
             elif self._package_name == 'cellranger-atac':
                 self._version = '2.0.0'
             elif self._package_name == 'cellranger-arc':
-                self._version = '2.0.0'
+                self._version = '2.1.0'
             elif self._package_name == 'spaceranger':
                 self._version = '3.0.0'
         else:
@@ -2214,6 +2214,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         elif self._package_name == "cellranger-arc":
             count.add_argument("--reference",action="store")
             count.add_argument("--libraries",action="store")
+            if version[0] >= 2 and version[1] >= 1:
+                # CellrangerARC 2.1+: explicitly specify BAM creation
+                count.add_argument("--create-bam",
+                                   choices=['true','false'],
+                                   required=True)
         count.add_argument("--jobmode",action="store")
         count.add_argument("--localcores",action="store")
         count.add_argument("--localmem",action="store")
@@ -2417,9 +2422,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                     if version[0] < 2:
                         # Format for cellranger-arc < 2.0.0
                         fp.write(mock10xdata.MULTIOME_SUMMARY)
-                    else:
-                        # Format for cellranger-arc >= 2.0.0
+                    elif version[0] == 2 and version[1] == 0:
+                        # Format for cellranger-arc == 2.0.0
                         fp.write(mock10xdata.MULTIOME_SUMMARY_2_0_0)
+                    else:
+                        # Format for cellranger-arc >= 2.1.0
+                        fp.write(mock10xdata.MULTIOME_SUMMARY_2_1_0)
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")

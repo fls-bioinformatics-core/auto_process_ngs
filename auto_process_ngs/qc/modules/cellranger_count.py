@@ -697,6 +697,7 @@ class RunCellrangerCount(PipelineTask):
         cellranger_package = os.path.basename(cellranger_exe)
         cellranger_version = self.args.cellranger_version
         cellranger_major_version = int(cellranger_version.split('.')[0])
+        cellranger_minor_version = int(cellranger_version.split('.')[1])
         # Expected outputs from cellranger
         self._top_level_files = ("_cmdline",)
         if cellranger_package in ("cellranger",):
@@ -805,6 +806,11 @@ class RunCellrangerCount(PipelineTask):
                              os.path.join(self.args.qc_dir,
                                           "libraries.%s.csv"
                                           % sample))
+                # Additional options for cellranger-arc 2.1+
+                if cellranger_major_version >= 2 and cellranger_minor_version >= 1:
+                    # --create-bam is compulsory
+                    # Recommended to set to 'true'
+                    cmd.add_args("--create-bam", "true")
             else:
                 # Unimplemented package
                 raise Exception("Don't know how to run 'count' "
