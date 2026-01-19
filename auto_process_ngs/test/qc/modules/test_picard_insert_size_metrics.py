@@ -371,6 +371,93 @@ PJB2_S2_L001_001.bam	153.754829	69.675347	139	37
                                                         "PJB",f)),
                             "Missing %s" % f)
 
+    def test_qcpipeline_qc_modules_picard_insert_size_metrics_pe_fq_files(self):
+        """
+        QCPipeline: 'picard_insert_size_metrics' QC module (PE data, '.fq' Fastq extension)
+        """
+        # Make mock QC executables
+        MockStar.create(os.path.join(self.bin,"STAR"))
+        MockSamtools.create(os.path.join(self.bin,"samtools"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
+        MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fq.gz",
+                                       "PJB1_S1_R2_001.fq.gz",
+                                       "PJB2_S2_R1_001.fq.gz",
+                                       "PJB2_S2_R2_001.fq.gz"),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # QC protocol
+        protocol = QCProtocol(name="picard_insert_size_metrics",
+                              description="Picard_insert_size_metrics test",
+                              seq_data_reads=['r1','r2'],
+                              index_reads=None,
+                              qc_modules=("picard_insert_size_metrics",))
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
+                          protocol)
+        status = runqc.run(fastq_screens=self.fastq_screens,
+                           star_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           annotation_gtf_files=
+                           { 'human': self.ref_data['hg38']['gtf'] },
+                           poll_interval=POLL_INTERVAL,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        self.assertEqual(status,0)
+        # Check outputs
+        qc_dir = os.path.join(self.wd,"PJB","qc")
+        insert_sizes_dir = os.path.join(qc_dir,"picard","human")
+        for f in ("PJB1_S1_001.insert_size_metrics.txt",
+                  "PJB1_S1_001.insert_size_histogram.pdf",
+                  "PJB2_S2_001.insert_size_metrics.txt",
+                  "PJB2_S2_001.insert_size_histogram.pdf"):
+            self.assertTrue(os.path.exists(os.path.join(insert_sizes_dir,f)),
+                            "%s: missing" % f)
+        # Check collated Picard insert sizes
+        collated_insert_sizes = os.path.join(qc_dir,"insert_sizes.human.tsv")
+        self.assertTrue(os.path.exists(collated_insert_sizes),
+                        "Missing collated insert sizes TSV")
+        with open(collated_insert_sizes,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """#Bam file	Mean insert size	Standard deviation	Median insert size	Median absolute deviation
+PJB1_S1_001.bam	153.754829	69.675347	139	37
+PJB2_S2_001.bam	153.754829	69.675347	139	37
+""")
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(
+            os.path.join(self.wd,"PJB","qc","qc.info"))
+        self.assertEqual(qc_info.protocol,"picard_insert_size_metrics")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(protocol))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
+        self.assertEqual(qc_info.fastq_dir,
+                         os.path.join(self.wd,"PJB","fastqs"))
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_R1_001.fq.gz,"
+                         "PJB1_S1_R2_001.fq.gz,"
+                         "PJB2_S2_R1_001.fq.gz,"
+                         "PJB2_S2_R2_001.fq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,None)
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,None)
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        self.assertEqual(qc_info.cellranger_probeset,None)
+        # Check reports
+        for f in ("qc_report.html",
+                  "qc_report.PJB.zip"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+
     def test_qcpipeline_qc_modules_picard_insert_size_metrics_se(self):
         """
         QCPipeline: 'picard_insert_size_metrics' QC module (SE data)
