@@ -392,7 +392,7 @@ class RunFastqScreen(PipelineTask):
                 continue
             # Base name for Fastq file
             fastq_basename = os.path.basename(fastq)
-            while fastq_basename.split('.')[-1] in ('fastq','gz'):
+            while fastq_basename.split('.')[-1] in ('fastq','fq','gz'):
                 fastq_basename = '.'.join(fastq_basename.split('.')[:-1])
             # Run FastqScreen for each screen
             for screen in self.args.screens:

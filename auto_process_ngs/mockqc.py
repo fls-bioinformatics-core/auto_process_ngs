@@ -59,14 +59,31 @@ class MockQCOutputs:
     Utility class for creating mock auto-process QC outputs
     """
     @classmethod
-    def fastq_basename(self,fastq):
+    def fastq_basename(self, fastq, extensions=["fastq"]):
         """
         Return the basename for a FASTQ file
+
+        By default only '.fastq[.gz]' extensions are
+        recognised and removed; to strip additional or
+        alternative extensions, specify all possibilities
+        as a list in the 'extensions' argument.
+
+        Arguments:
+            fastq (str): full file name for Fastq file
+              (can include leading path)
+            extentions (list): optional list of Fastq
+              file extensions that are recognised and
+              removed (default: ["fastq"])
+
+        Returns:
+             String: the basename for the Fastq file with
+             leading path and extension removed.
         """
         basename = os.path.basename(fastq)
         if basename.endswith('.gz'):
             basename = '.'.join(basename.split('.')[:-1])
-        if basename.endswith('.fastq'):
+        ext = basename.split('.')[-1]
+        if ext in extensions:
             basename = '.'.join(basename.split('.')[:-1])
         return basename
 
@@ -76,7 +93,7 @@ class MockQCOutputs:
         Create mock outputs from FastQC v0.11.2
         """
         # Basename for FastQC products
-        basename = self.fastq_basename(fastq)
+        basename = self.fastq_basename(fastq, extensions=["fastq", "fq"])
         # FastQC output directory:
         # - <basename>_fastqc
         fastqc_dir = os.path.join(qc_dir,basename+'_fastqc')
@@ -142,7 +159,7 @@ class MockQCOutputs:
         Create mock outputs from FastQC v0.12.1
         """
         # Basename for FastQC products
-        basename = self.fastq_basename(fastq)
+        basename = self.fastq_basename(fastq, extensions=["fastq", "fq"])
         # FastQC output directory:
         # - <basename>_fastqc
         fastqc_dir = os.path.join(qc_dir,basename+'_fastqc')
@@ -207,7 +224,7 @@ class MockQCOutputs:
         Create mock outputs from Fastq_screen v0.9.2
         """
         # Basename for FastQC products
-        basename = self.fastq_basename(fastq)
+        basename = self.fastq_basename(fastq, extensions=["fastq", "fq"])
         if screen_name is not None:
             screen = "_%s" % screen_name
         else:
@@ -231,7 +248,7 @@ class MockQCOutputs:
         Create mock outputs from Fastq_screen v0.15.3
         """
         # Basename for FastQC products
-        basename = self.fastq_basename(fastq)
+        basename = self.fastq_basename(fastq, extensions=["fastq", "fq"])
         if screen_name is not None:
             screen = "_%s" % screen_name
         else:
