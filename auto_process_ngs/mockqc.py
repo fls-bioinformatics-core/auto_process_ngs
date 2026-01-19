@@ -59,9 +59,25 @@ class MockQCOutputs:
     Utility class for creating mock auto-process QC outputs
     """
     @classmethod
-    def fastq_basename(self,fastq):
+    def fastq_basename(self, fastq, extensions=["fastq"]):
         """
         Return the basename for a FASTQ file
+
+        By default only '.fastq[.gz]' extensions are
+        recognised and removed; to strip additional or
+        alternative extensions, specify all possibilities
+        as a list in the 'extensions' argument.
+
+        Arguments:
+            fastq (str): full file name for Fastq file
+              (can include leading path)
+            extentions (list): optional list of Fastq
+              file extensions that are recognised and
+              removed (default: ["fastq"])
+
+        Returns:
+             String: the basename for the Fastq file with
+             leading path and extension removed.
         """
         basename = os.path.basename(fastq)
         if basename.endswith('.gz'):
