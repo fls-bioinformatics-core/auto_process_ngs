@@ -93,7 +93,7 @@ class MockQCOutputs:
         Create mock outputs from FastQC v0.11.2
         """
         # Basename for FastQC products
-        basename = self.fastq_basename(fastq)
+        basename = self.fastq_basename(fastq, extensions=["fastq", "fq"])
         # FastQC output directory:
         # - <basename>_fastqc
         fastqc_dir = os.path.join(qc_dir,basename+'_fastqc')
@@ -159,7 +159,7 @@ class MockQCOutputs:
         Create mock outputs from FastQC v0.12.1
         """
         # Basename for FastQC products
-        basename = self.fastq_basename(fastq)
+        basename = self.fastq_basename(fastq, extensions=["fastq", "fq"])
         # FastQC output directory:
         # - <basename>_fastqc
         fastqc_dir = os.path.join(qc_dir,basename+'_fastqc')
@@ -224,7 +224,7 @@ class MockQCOutputs:
         Create mock outputs from Fastq_screen v0.9.2
         """
         # Basename for FastQC products
-        basename = self.fastq_basename(fastq)
+        basename = self.fastq_basename(fastq, extensions=["fastq", "fq"])
         if screen_name is not None:
             screen = "_%s" % screen_name
         else:
@@ -248,7 +248,7 @@ class MockQCOutputs:
         Create mock outputs from Fastq_screen v0.15.3
         """
         # Basename for FastQC products
-        basename = self.fastq_basename(fastq)
+        basename = self.fastq_basename(fastq, extensions=["fastq", "fq"])
         if screen_name is not None:
             screen = "_%s" % screen_name
         else:
