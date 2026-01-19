@@ -82,7 +82,8 @@ class MockQCOutputs:
         basename = os.path.basename(fastq)
         if basename.endswith('.gz'):
             basename = '.'.join(basename.split('.')[:-1])
-        if basename.endswith('.fastq'):
+        ext = basename.split('.')[-1]
+        if ext in extensions:
             basename = '.'.join(basename.split('.')[:-1])
         return basename
 
