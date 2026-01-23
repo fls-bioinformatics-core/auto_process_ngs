@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes and functions for QC
-#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 """
 Provides utility classes and functions for analysis project QC.
@@ -11,6 +11,7 @@ Provides the following functions:
 - verify_qc: verify the QC run for a project
 - report_qc: generate report for the QC run for a project
 - get_bam_basename: return the BAM file basename from a Fastq filename
+- get_bam_samplename: return the sample name from a BAM filename
 - get_seq_data_samples: identify samples with biological (sequencing)
   data
 - filter_fastqs: filter list of Fastqs based on read IDs
@@ -332,6 +333,32 @@ def get_bam_basename(fastq, fastq_attrs=None):
     if fastq_attrs is None:
         fastq_attrs = AnalysisFastq
     return fastq_attrs(fastq).bam_basename()
+
+def get_bam_samplename(bam, fastq_attrs=None):
+    """
+    Return sample name extracted from BAM filename
+
+    Arguments:
+        bam (str): BAM filename
+        fastq_attrs (BaseFastqAttrs): class for extracting
+        data from Fastq names (defaults to 'AnalysisFastq')
+
+    Returns:
+        String: sample name extracted from BAM filename.
+    """
+    if fastq_attrs is None:
+        fastq_attrs = AnalysisFastq
+    # Strip off Fastq extensions
+    for ext in (".fastq.gz", ".fastq",
+                ".fq.gz", ".fq.gz"):
+        if bam.endswith(ext):
+            bam = bam[:-len(ext)]
+    # Check name has ".bam" extension (to ensure
+    # 'fastq_attrs' class treats input name as BAM)
+    if not bam.endswith(".bam"):
+        bam += ".bam"
+    return fastq_attrs(bam).sample_name
+
 
 def get_seq_data_samples(project_dir,fastq_attrs=None):
     """
