@@ -306,14 +306,19 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
     # Return the exit code
     return report.exit_code
 
-def get_bam_basename(fastq,fastq_attrs=None):
+def get_bam_basename(fastq, fastq_attrs=None):
     """
     Return basename for BAM file from Fastq filename
 
-    Typically this will be the Fastq basename with the
-    read ID removed, for example the Fastq filename
-    'SM1_S1_L001_R1_001.fastq.gz' will result in the
-    BAM basename of 'SM1_S1_L001_001'.
+    Uses the 'bam_basename' method of the supplied
+    'BaseFastqAttrs' subclass (defaults to
+    'AnalysisFastq' if none is specified) to generate
+    the BAM file basename.
+
+    Typically the BAM basename will be the Fastq
+    basename with the read ID removed, for example the
+    Fastq filename 'SM1_S1_L001_R1_001.fastq.gz' will
+    result in the BAM basename of 'SM1_S1_L001_001'.
 
     Arguments:
       fastq (str): Fastq filename; can include leading
@@ -326,9 +331,7 @@ def get_bam_basename(fastq,fastq_attrs=None):
     """
     if fastq_attrs is None:
         fastq_attrs = AnalysisFastq
-    bam_basename = fastq_attrs(fastq)
-    bam_basename.read_number = None
-    return str(bam_basename)
+    return fastq_attrs(fastq).bam_basename()
 
 def get_seq_data_samples(project_dir,fastq_attrs=None):
     """
