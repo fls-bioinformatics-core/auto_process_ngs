@@ -17,6 +17,7 @@ from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 from auto_process_ngs.fastq_utils import group_fastqs_by_name
 from auto_process_ngs.fastq_utils import remove_index_fastqs
+from auto_process_ngs.fastq_utils import build_custom_fastq_attrs_regex
 
 # Test data
 fastq_data = u"""@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
@@ -1269,3 +1270,34 @@ class TestRemoveIndexFastqs(unittest.TestCase):
                       "PJB2_S2_R2_001.fastq.gz",]
         self.assertEqual(remove_index_fastqs(fastqs_in),fastqs_out)
 
+
+# build_custom_fastq_attrs_regex
+class TestBuildFastqRegex(unittest.TestCase):
+    """
+    Tests for the build_fastq_regex function
+    """
+    def test_build_custom_fastq_attrs_regex(self):
+        """
+        build_custom_fastq_attrs_regex: check returned re patterns and templates
+        """
+        examples = [
+            { "pattern": "{SAMPLE}_{READ}",
+              "regex": "^(?P<sample_name>.+)_(?P<read_number>[1-3])$",
+              "template": "{sample_name}_{read_number}" },
+            { "pattern": "{SAMPLE}_{READ}",
+              "regex": "^(?P<sample_name>.+)_(?P<read_number>[1-3])$",
+              "template": "{sample_name}_{read_number}" },
+            { "pattern": "{SAMPLE}_{READ}_001",
+              "regex": "^(?P<sample_name>.+)_(?P<read_number>[1-3])_001$",
+              "template": "{sample_name}_{read_number}_001" },
+            { "pattern": "{SAMPLE}_*-*_L*_{READ}",
+              "regex": "^(?P<sample_name>.+)_(?P<p1>.*)-(?P<p2>.*)_L(?P<p3>.*)_(?P<read_number>[1-3])$",
+              "template": "{sample_name}_{p1}-{p2}_L{p3}_{read_number}" },
+        ]
+        for example in examples:
+            pattern = example["pattern"]
+            regex = example["regex"]
+            template = example["template"]
+            r, t = build_custom_fastq_attrs_regex(pattern)
+            self.assertEqual(r, regex, f"Pattern '{pattern}': expected '{regex}', got '{r}'")
+            self.assertEqual(t, template, f"Pattern '{pattern}': expected '{template}', got '{t}'")

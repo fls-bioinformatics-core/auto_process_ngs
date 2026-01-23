@@ -25,6 +25,8 @@ Utility classes and functions for operating on Fastq files:
   (more general version of 'pair_fastqs_by_name' which can handle
   arbitrary collections of read IDs)
 - remove_index_fastqs: remove index (I1/I2) Fastqs from a list
+- build_custom_fastq_attrs_regex: make regular expression patterns
+  and format templates for custom 'FastqAttrs' classes
 """
 
 #######################################################################
@@ -764,3 +766,91 @@ def remove_index_fastqs(fastqs,fastq_attrs=IlluminaFastqAttrs):
     return list(filter(lambda fq:
                        not fastq_attrs(fq).is_index_read,
                        fastqs))
+
+
+def build_custom_fastq_attrs_regex(pattern):
+    """
+    Build regex pattern and string templates for Fastq filenames
+
+    Given a glob-like pattern describing a Fastq file name
+    format, returns a tuple of (REGEX_PATTERN, FORMAT_STRING),
+    which can be used to extract attributes from a Fastq file
+    name and regenerate the name using those attributes.
+
+    Patterns are strings which should include the elements
+    '{SAMPLE}' and '{READ}' along with constant characters and
+    wildcard elements '*'.
+
+    For example:
+
+    ::
+
+        {SAMPLE}_*_{READ}
+
+    would generate a regular expression and template for
+    matching and regenerating file names of the form:
+
+    ::
+
+        PJB1_1.fastq
+
+    where the sample name would be 'PJB1' and the read
+    number would be '1'.
+
+    Arguments:
+        pattern (str): glob-like pattern describing a Fastq file
+        name format
+
+    Returns:
+        Tuple: a tuple consisting of regular expression pattern
+        and string template derived from the input pattern.
+    """
+    # Break the pattern into tokens and fixed elements
+    parts = []
+    for item in pattern.split("}"):
+        if not item:
+            continue
+        elif item.startswith("{"):
+            # Token e.g. '{READ}'
+            parts.append(item + "}")
+        elif "{" in item:
+            # Fixed element + trailing token
+            parts.extend([item.split("{")[0], "{" + item.split("{")[1] + "}"])
+        else:
+            # Fixed element without trailing token
+            parts.append(item)
+    # Build the regex pattern and format string
+    re_pattern = []
+    format_str = []
+    idx = 0
+    for part in parts:
+        if part.startswith("{") and part.endswith("}"):
+            # Token
+            token = part[1:-1]
+            if token == "SAMPLE":
+                re_pattern.append("(?P<sample_name>.+)")
+                format_str.append("{sample_name}")
+            elif token == "READ":
+                re_pattern.append("(?P<read_number>[1-3])")
+                format_str.append("{read_number}")
+            else:
+                raise Exception(f"Unrecognised token '{item}'")
+        else:
+            # Interstitial string
+            if "*" in part:
+                # Contains wildcards - break into subparts
+                # and replace with appropriate regex matches
+                subparts = part.split("*")
+                for subpart in subparts[:-1]:
+                    idx += 1
+                    re_pattern.append(f"{subpart}(?P<p{idx}>.*)")
+                    format_str.append("%s{p%s}" % (subpart, idx))
+                if subparts[-1]:
+                    re_pattern.append(f"{subparts[-1]}")
+                    format_str.append(subparts[-1])
+            else:
+                re_pattern.append(part)
+                format_str.append(part)
+    re_pattern = f"^{''.join(re_pattern)}$"
+    format_str = "".join(format_str)
+    return (re_pattern, format_str)
