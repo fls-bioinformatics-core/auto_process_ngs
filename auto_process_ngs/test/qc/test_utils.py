@@ -22,6 +22,7 @@ from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
 from auto_process_ngs.qc.utils import get_bam_basename
+from auto_process_ngs.qc.utils import get_bam_samplename
 from auto_process_ngs.qc.utils import get_seq_data_samples
 from auto_process_ngs.qc.utils import filter_fastqs
 from auto_process_ngs.qc.utils import set_cell_count_for_project
@@ -304,6 +305,33 @@ class TestGetBamBasename(unittest.TestCase):
                          "SM1_S1_L001_001")
         self.assertEqual(get_bam_basename("SM1_S1_R1_001.fastq.gz"),
                          "SM1_S1_001")
+
+
+class TestGetBamSamplename(unittest.TestCase):
+    """
+    Tests for the 'get_bam_samplename' function
+    """
+    def test_get_bam_samplename_from_bam(self):
+        """
+        get_bam_samplename: check correct sample name is returned from .bam file
+        """
+        self.assertEqual(get_bam_samplename("SM1_S1_L001_001.bam"), "SM1")
+
+    def test_get_bam_samplename_from_fastq(self):
+        """
+        get_bam_samplename: check correct sample name is returned from .fastq file
+        """
+        self.assertEqual(get_bam_samplename("SM1_S1_001.fastq.gz"), "SM1")
+        self.assertEqual(get_bam_samplename("SM1_S1_001.fastq"), "SM1")
+        self.assertEqual(get_bam_samplename("SM1_S1_001.fq.gz"), "SM1")
+        self.assertEqual(get_bam_samplename("SM1_S1_001.fq"), "SM1")
+
+    def test_get_bam_samplename_no_extension(self):
+        """
+        get_bam_samplename: check correct sample name is returned without extension
+        """
+        self.assertEqual(get_bam_samplename("SM1_S1_L001_001"), "SM1")
+
 
 class TestGetSeqDataSamples(unittest.TestCase):
     """

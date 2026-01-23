@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 ########################################################################
 #
@@ -165,39 +165,59 @@ class AnalysisFastq(BaseFastqAttrs):
             self.extras = "_%s" % '_'.join(extras[::-1])
         else:
             self.extras = None
+
     @property
     def canonical_name(self):
         """
         Return the 'canonical' part of the name
         """
+        return self.fastq_canonical_basename()
+
+    def fastq_canonical_basename(self, fq_attrs=None):
+        """
+        Reconstruct the canonical basename for Fastq files
+        """
+        if fq_attrs is None:
+            fq_attrs = self.fq_attrs()
         if self.format == "Illumina":
             illumina_fastq_attrs = IlluminaFastqAttrs(self.fastq)
-            illumina_fastq_attrs.sample_name = self.sample_name
-            illumina_fastq_attrs.sample_number = self.sample_number
-            illumina_fastq_attrs.barcode_sequence = self.barcode_sequence
-            illumina_fastq_attrs.lane_number = self.lane_number
-            illumina_fastq_attrs.read_number = self.read_number
-            illumina_fastq_attrs.set_number = self.set_number
-            illumina_fastq_attrs.is_index_read = self.is_index_read
-            if illumina_fastq_attrs.sample_name != \
-               illumina_fastq_attrs.basename:
-                return str(illumina_fastq_attrs)
+            fastq_basename = illumina_fastq_attrs.fastq_basename(fq_attrs)
+            if fq_attrs["sample_name"] != fastq_basename:
+                return fastq_basename
         elif self.format == "SRA":
-            return "%s%s" % (self.sample_name,
-                             "_%s" % self.read_number
-                             if self.read_number and
+            return "%s%s" % (fq_attrs["sample_name"],
+                             "_%s" % fq_attrs["read_number"]
+                             if fq_attrs["read_number"] and
                              not self.implicit_read_number
                              else '')
         return None
-    def __repr__(self):
+
+    def fastq_basename(self, fq_attrs=None):
         """
-        Implement __repr__ built-in
+        Reconstruct the full basename for Fastq files
         """
-        if self.canonical_name:
-            return "%s%s" % (self.canonical_name,
+        if fq_attrs is None:
+            fq_attrs = self.fq_attrs()
+        canonical_basename = self.fastq_canonical_basename(fq_attrs)
+        if canonical_basename:
+            return "%s%s" % (canonical_basename,
                              self.extras if self.extras else '')
         else:
-            return self.basename
+            # No canonical basename so use the sample name
+            return "%s%s" % (fq_attrs["sample_name"],
+                             self.extras if self.extras else '')
+
+    def bam_basename(self, fq_attrs=None):
+        """
+        Return the basename for associated BAM file
+        """
+        if fq_attrs is None:
+            fq_attrs = self.fq_attrs()
+        else:
+            fq_attrs = fq_attrs.copy()
+        fq_attrs["read_number"] = None
+        return self.fastq_basename(fq_attrs)
+
 
 class AnalysisDir:
     """

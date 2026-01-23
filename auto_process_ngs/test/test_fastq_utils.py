@@ -7,6 +7,7 @@ import os
 import tempfile
 import shutil
 import gzip
+from auto_process_ngs.fastq_utils import BaseFastqAttrs
 from auto_process_ngs.fastq_utils import IlluminaFastqAttrs
 from auto_process_ngs.fastq_utils import FastqReadCounter
 from auto_process_ngs.fastq_utils import assign_barcodes_single_end
@@ -89,6 +90,157 @@ CTTATACACATCTCCGAGCCCACGA
 AAAAAEEEEEEEEEEEEEEEE/EE/
 """
 
+# BaseFastqAttrs
+class TestBaseFastqAttrs(unittest.TestCase):
+    """
+    Tests for the BaseFastqAttrs class
+    """
+    def test_base_fastq_attrs_fastq_gz(self):
+        """
+        BaseFastqAttrs: check .fastq.gz file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_R1_001.fastq.gz")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_R1_001")
+        self.assertEqual(fq_attrs.extension, ".fastq.gz")
+        self.assertEqual(fq_attrs.type, "fastq")
+        self.assertEqual(fq_attrs.compression, "gz")
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_R1_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+    def test_base_fastq_attrs_fastq(self):
+        """
+        BaseFastqAttrs: check .fastq file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_R1_001.fastq")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_R1_001")
+        self.assertEqual(fq_attrs.extension, ".fastq")
+        self.assertEqual(fq_attrs.type, "fastq")
+        self.assertEqual(fq_attrs.compression, None)
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_R1_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+    def test_base_fastq_attrs_fq_gz(self):
+        """
+        BaseFastqAttrs: check .fq.gz file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_R1_001.fq.gz")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_R1_001")
+        self.assertEqual(fq_attrs.extension, ".fq.gz")
+        self.assertEqual(fq_attrs.type, "fastq")
+        self.assertEqual(fq_attrs.compression, "gz")
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_R1_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+    def test_base_fastq_attrs_fq(self):
+        """
+        BaseFastqAttrs: check .fq file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_R1_001.fq")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_R1_001")
+        self.assertEqual(fq_attrs.extension, ".fq")
+        self.assertEqual(fq_attrs.type, "fastq")
+        self.assertEqual(fq_attrs.compression, None)
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_R1_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+    def test_base_fastq_attrs_bam(self):
+        """
+        BaseFastqAttrs: check .bam file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_001.bam")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_001")
+        self.assertEqual(fq_attrs.extension, ".bam")
+        self.assertEqual(fq_attrs.type, "bam")
+        self.assertEqual(fq_attrs.compression, None)
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+
 # IlluminaFastqAttrs
 class TestIlluminaFastqAttrs(unittest.TestCase):
     """Tests for the IlluminaFastqAttrs class
@@ -101,12 +253,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.basename,
                          'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_L003_001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
 
     def test_full_name_dual_index(self):
@@ -123,6 +279,8 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
 
     def test_full_name_dual_index_with_plus(self):
@@ -133,12 +291,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.basename,
                          'NH1_ChIP-seq_Gli1_ACAGTG+GTTCAC_L003_R2_001')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG+GTTCAC')
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG+GTTCAC_L003_R2_001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG+GTTCAC_L003_001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG+GTTCAC_L003_R2_001')
 
     def test_full_name_blc2fastq2(self):
@@ -149,12 +311,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.basename,
                          'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,4)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_S4_L003_001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
 
     def test_index_read_blc2fastq2(self):
@@ -162,12 +328,18 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         """
         fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_S4_L003_I1_001')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename, 'NH1_ChIP-seq_Gli1_S4_L003_I1_001')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,4)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,1)
         self.assertEqual(fq.set_number,1)
         self.assertTrue(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_S4_L003_I1_001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_S4_L003_001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_I1_001')
 
     def test_name_no_lane_blc2fastq2(self):
@@ -178,12 +350,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.basename,
                          'NH1_ChIP-seq_Gli1_S4_R2_001')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,4)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_S4_R2_001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_S4_001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_R2_001')
 
     def test_name_only(self):
@@ -193,12 +369,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1')
 
     def test_name_only_paired_end(self):
@@ -208,12 +388,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_R2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_R2')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_R2')
 
     def test_name_and_lane(self):
@@ -223,12 +407,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_L001')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_L001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_L001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_L001')
 
     def test_name_and_lane_paired_end(self):
@@ -238,12 +426,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_L001_R2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_L001_R2')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_L001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_L001_R2')
 
     def test_name_and_tag(self):
@@ -253,12 +445,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG')
 
     def test_name_and_tag_paired_end(self):
@@ -268,12 +464,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_R2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_R2')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_R2')
 
     def test_name_tag_and_lane(self):
@@ -283,12 +483,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L001')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_L001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_L001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001')
 
     def test_name_tag_and_lane_paired_end(self):
@@ -298,12 +502,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_L001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
 
     def test_AGTC_sample_names(self):
@@ -312,12 +520,18 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         for name in ('A','G','T','C','AGCT'):
             fq = IlluminaFastqAttrs('%s_R1' % name)
             self.assertEqual(fq.sample_name,name)
+            self.assertEqual(fq.basename,'%s_R1' % name)
+            self.assertEqual(fq.extension,'')
+            self.assertEqual(fq.type,None)
+            self.assertEqual(fq.compression,None)
             self.assertEqual(fq.sample_number,None)
             self.assertEqual(fq.barcode_sequence,None)
             self.assertEqual(fq.lane_number,None)
             self.assertEqual(fq.read_number,1)
             self.assertEqual(fq.set_number,None)
             self.assertFalse(fq.is_index_read)
+            self.assertEqual(fq.fastq_basename(), '%s_R1' % name)
+            self.assertEqual(fq.bam_basename(), '%s' % name)
             self.assertEqual(str(fq),'%s_R1' % name)
 
     def test_non_standard_sample_name(self):
@@ -327,12 +541,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
         self.assertEqual(fq.basename,'NH1_ChIP-seq.r2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq.r2')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq')
         self.assertEqual(str(fq),'NH1_ChIP-seq.r2')
 
     def test_non_standard_sample_name_with_dots(self):
@@ -342,11 +560,15 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1.2')
         self.assertEqual(fq.basename,'NH1.2.r2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertEqual(fq.fastq_basename(), 'NH1.2.r2')
+        self.assertEqual(fq.bam_basename(), 'NH1.2')
         self.assertEqual(str(fq),'NH1.2.r2')
 
     def test_non_standard_sample_name_and_barcode(self):
@@ -356,10 +578,14 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
         self.assertEqual(fq.basename,'NH1_ChIP-seq.ACAGTG.r2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq.ACAGTG.r2')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq.ACAGTG')
 
     def test_non_standard_sample_name_and_dual_barcode(self):
         """IlluminaFastqAttrs: non-standard Fastq names with sample name and dual barcode
@@ -368,10 +594,14 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
         self.assertEqual(fq.basename,'NH1_ChIP-seq.ACAGTG-GTTCAC.r2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG-GTTCAC')
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq.ACAGTG-GTTCAC.r2')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq.ACAGTG-GTTCAC')
 
     def test_non_standard_sample_name_and_dual_barcode_with_plus(self):
         """IlluminaFastqAttrs: non-standard Fastq names with sample name and dual barcode using '+'
@@ -380,10 +610,14 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
         self.assertEqual(fq.basename,'NH1_ChIP-seq.ACAGTG+GTTCAC.r2')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type,None)
+        self.assertEqual(fq.compression,None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG+GTTCAC')
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq.ACAGTG+GTTCAC.r2')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq.ACAGTG+GTTCAC')
 
     def test_input_is_full_path(self):
         """IlluminaFastqAttrs: input as full path to Fastq file
@@ -392,12 +626,16 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
         self.assertEqual(fq.extension,'.fastq.gz')
+        self.assertEqual(fq.type,'fastq')
+        self.assertEqual(fq.compression,'gz')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
         self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.fastq_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+        self.assertEqual(fq.bam_basename(), 'NH1_ChIP-seq_Gli1_ACAGTG_L003_001')
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
 
 # FastqReadCounter
