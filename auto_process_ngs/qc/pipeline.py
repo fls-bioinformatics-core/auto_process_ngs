@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2026 Peter Briggs
 #
 
 """
@@ -45,6 +45,7 @@ from bcftbx.utils import find_program
 from bcftbx.ngsutils import getreads
 from bcftbx.ngsutils import getreads_subset
 from ..analysis import AnalysisFastq
+from ..analysis import AnalysisProject
 from ..analysis import copy_analysis_project
 from ..command import Command
 from ..fastq_utils import group_fastqs_by_name
@@ -76,6 +77,7 @@ from .modules.strandedness import Strandedness
 from .protocols import determine_qc_protocol
 from .protocols import fetch_protocol_definition
 from .protocols import parse_qc_module_spec
+from .reporting import report as reportqc
 from .utils import get_bam_basename
 from .utils import get_seq_data_samples
 from .utils import set_cell_count_for_project
@@ -1925,7 +1927,7 @@ class RunMultiQC(PipelineTask):
             self.fail(message="Failed to create MultiQC report: %s" %
                       self.multiqc_report)
 
-class ReportQC(PipelineTask):
+class ReportQC(PipelineFunctionTask):
     """
     Generate the QC report
     """
@@ -1964,16 +1966,19 @@ class ReportQC(PipelineTask):
             linked_projects = libraries.linked_projects()
         else:
             linked_projects = None
-        # Build the reportqc.py command
+        # Gather information for reporting
         project = self.args.project
         fastq_dir = self.args.fastq_dir
-        qc_base = os.path.basename(self.args.qc_dir)
+        qc_dir = self.args.qc_dir
+        if not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(project.dirn, qc_dir)
+        # Output HTML file
         if self.args.report_html is None:
-            out_file = '%s_report.html' % qc_base
+            out_file = '%s_report.html' % os.path.basename(qc_dir)
         else:
             out_file = self.args.report_html
         if not os.path.isabs(out_file):
-            out_file = os.path.join(os.path.dirname(self.args.qc_dir),
+            out_file = os.path.join(os.path.dirname(qc_dir),
                                     out_file)
         if project.info.run is None:
             title = "%s" % project.name
@@ -1983,34 +1988,23 @@ class ReportQC(PipelineTask):
         if fastq_dir is not None:
             title = "%s (%s)" % (title,fastq_dir)
         title = "%s: QC report" % title
-        cmd = PipelineCommandWrapper(
-            "Generate QC report for %s" % project.name,
-            "reportqc.py",
-            "--filename",out_file,
-            "--title",title)
-        if self.args.force:
-            cmd.add_args("--force")
-        if self.args.qc_dir is not None:
-            if not os.path.isabs(self.args.qc_dir):
-                # QC dir specified as a relative path
-                cmd.add_args("--qc_dir",self.args.qc_dir)
-        if fastq_dir is not None:
-            cmd.add_args("--fastq_dir",fastq_dir)
-        if self.args.zip_outputs:
-            cmd.add_args("--zip")
-            if self.args.shorten_zip_paths:
-                cmd.add_args("--shorten-paths")
-        # Add the primary project/QC directory
-        if self.args.qc_dir:
-            if os.path.isabs(self.args.qc_dir):
-                # QC dir specified as an absolute path
-                # Use this directly
-                cmd.add_args(self.args.qc_dir)
-            else:
-                # QC dir specified as a relative path
-                # Use the project directory
-                cmd.add_args(project.dirn)
-        # Append the additional linked projects
+        # Set up project for reporting
+        p = AnalysisProject(project.dirn,
+                            fastq_dir=fastq_dir,
+                            fastq_attrs=project.fastq_attrs)
+        # Explicitly set the QC directory
+        p.use_qc_dir(qc_dir)
+        # Make project list
+        projects = [p]
         if linked_projects:
-            cmd.add_args(*[p.dirn for p in linked_projects])
-        self.add_cmd(cmd)
+            projects.extend(linked_projects)
+        # Generate the QC report
+        self.add_call("Generate QC report for %s" % project.name,
+                      reportqc,
+                      projects,
+                      filename=out_file,
+                      title=title,
+                      use_data_dir=(len(projects) > 1),
+                      relative_links=True,
+                      make_zip=self.args.zip_outputs,
+                      shorten_zip_paths=self.args.shorten_zip_paths)
