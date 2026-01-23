@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/run_qc.py: command line interface for standalone QC pipeline
-#     Copyright (C) University of Manchester 2017-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2026 Peter Briggs
 #
 #########################################################################
 #
@@ -38,6 +38,7 @@ from ..applications import fetch_application_data
 from ..metadata import AnalysisProjectInfo
 from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
+from ..fastq_utils import get_custom_fastqattrs_class
 from ..settings import Settings
 from ..settings import fetch_reference_data
 from ..qc.pipeline import QCPipeline
@@ -717,6 +718,12 @@ def main(argv=None):
                    nargs="+",
                    help="directory or list of Fastq files to run the "
                    "QC on")
+    p.add_argument('--fastq-pattern', action="store",
+                   dest="fastq_pattern",metavar="PATTERN",
+                   default=None,
+                   help="specify a custom pattern for identifying "
+                   "sample and read number information from the "
+                   "Fastq names (e.g. '{SAMPLE}_{READ}')")
     # Add option groups
     add_reporting_options(p)
     add_metadata_options(p)
@@ -763,7 +770,12 @@ def main(argv=None):
     out_dir = args.out_dir
     qc_dir = args.qc_dir
     master_fastq_dir = None
-    fastq_attrs = AnalysisFastq
+
+    # How to handle Fastq names
+    if args.fastq_pattern:
+        fastq_attrs = get_custom_fastqattrs_class(args.fastq_pattern)
+    else:
+        fastq_attrs = AnalysisFastq
 
     # Deal with inputs
     announce("Locating inputs")
