@@ -146,6 +146,7 @@ class BaseFastqAttrs:
             # Default
             return self.basename
 
+
 class IlluminaFastqAttrs(BaseFastqAttrs):
     """Class for extracting information about Fastq files
 
@@ -347,27 +348,42 @@ class IlluminaFastqAttrs(BaseFastqAttrs):
         self.sample_name = '_'.join(fields)
         assert(self.sample_name != '')
 
-    def __repr__(self):
-        """Implement __repr__ built-in
+    def fastq_basename(self, fq_attrs=None):
         """
-        # Reconstruct name
-        fq = ["%s" % self.sample_name]
-        if self.sample_number is not None:
-            fq.append("S%d" % self.sample_number)
-        if self.barcode_sequence is not None:
-            fq.append("%s" % self.barcode_sequence)
-        if self.lane_number is not None:
-            fq.append("L%03d" % self.lane_number)
-        if self.read_number is not None:
-            if self.delimiter == '.':
-                fq.append("r%d" % self.read_number)
-            elif self.is_index_read:
-                fq.append("I%d" % self.read_number)
+        Reconstruct basename for Fastq files
+        """
+        if fq_attrs is None:
+            fq_attrs = self.fq_attrs()
+        delimiter = self.delimiter
+        fq = ["%s" % fq_attrs["sample_name"]]
+        if fq_attrs["sample_number"] is not None:
+            fq.append("S%d" % fq_attrs["sample_number"])
+        if fq_attrs["barcode_sequence"] is not None:
+            fq.append("%s" % fq_attrs["barcode_sequence"])
+        if fq_attrs["lane_number"] is not None:
+            fq.append("L%03d" % fq_attrs["lane_number"])
+        if fq_attrs["read_number"] is not None:
+            if delimiter == '.':
+                fq.append("r%d" % fq_attrs["read_number"])
+            elif fq_attrs["is_index_read"]:
+                fq.append("I%d" % fq_attrs["read_number"])
             else:
-                fq.append("R%d" % self.read_number)
-        if self.set_number is not None:
-            fq.append("%03d" % self.set_number)
-        return self.delimiter.join(fq)
+                fq.append("R%d" % fq_attrs["read_number"])
+        if fq_attrs["set_number"] is not None:
+            fq.append("%03d" % fq_attrs["set_number"])
+        return delimiter.join(fq)
+
+    def bam_basename(self, fq_attrs=None):
+        """
+        Construct basename for BAM files
+        """
+        if fq_attrs is None:
+            fq_attrs = self.fq_attrs()
+        else:
+            fq_attrs = fq_attrs.copy()
+        fq_attrs["read_number"] = None
+        return self.fastq_basename(fq_attrs)
+
 
 class FastqReadCounter:
     """
