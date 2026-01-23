@@ -46,6 +46,8 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.sample_name,'PJB-1')
         self.assertEqual(fq.basename,'PJB-1_S1_L001_R1_001')
         self.assertEqual(fq.extension,'.fastq')
+        self.assertEqual(fq.type, 'fastq')
+        self.assertEqual(fq.compression, None)
         self.assertEqual(fq.sample_number,1)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,1)
@@ -54,7 +56,10 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertFalse(fq.is_index_read)
         self.assertEqual(fq.canonical_name,'PJB-1_S1_L001_R1_001')
         self.assertEqual(fq.extras,None)
+        self.assertEqual(fq.fastq_basename(),'PJB-1_S1_L001_R1_001')
+        self.assertEqual(fq.bam_basename(),'PJB-1_S1_L001_001')
         self.assertEqual(str(fq),'PJB-1_S1_L001_R1_001')
+
     def test_illumina_style_with_extras(self):
         """AnalysisFastq: Illumina-style fastq name with extra elements appended
         """
@@ -64,6 +69,8 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.basename,
                          'M_19_0040_S13-A40h-R_D709-D505_L007_R1_001_repeated_1')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type, None)
+        self.assertEqual(fq.compression, None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,7)
@@ -72,8 +79,11 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertFalse(fq.is_index_read)
         self.assertEqual(fq.canonical_name,'M_19_0040_S13-A40h-R_D709-D505_L007_R1_001')
         self.assertEqual(fq.extras,'_repeated_1')
+        self.assertEqual(fq.fastq_basename(),'M_19_0040_S13-A40h-R_D709-D505_L007_R1_001_repeated_1')
+        self.assertEqual(fq.bam_basename(),'M_19_0040_S13-A40h-R_D709-D505_L007_001_repeated_1')
         self.assertEqual(str(fq),
                          'M_19_0040_S13-A40h-R_D709-D505_L007_R1_001_repeated_1')
+
     def test_non_canonical_fastq_name(self):
         """AnalysisFastq: Illumina-style fastq name with extra elements appended
         """
@@ -82,6 +92,8 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.sample_name,'PB04_trimmoPE_bowtie2_notHg38.1')
         self.assertEqual(fq.basename,'PB04_trimmoPE_bowtie2_notHg38.1')
         self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.type, None)
+        self.assertEqual(fq.compression, None)
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
@@ -90,7 +102,10 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertFalse(fq.is_index_read)
         self.assertEqual(fq.canonical_name,None)
         self.assertEqual(fq.extras,None)
+        self.assertEqual(fq.fastq_basename(),'PB04_trimmoPE_bowtie2_notHg38.1')
+        self.assertEqual(fq.bam_basename(),'PB04_trimmoPE_bowtie2_notHg38.1')
         self.assertEqual(str(fq),'PB04_trimmoPE_bowtie2_notHg38.1')
+
     def test_reproduces_illumina_fastq_attrs(self):
         """AnalysisFastq: reproduces IlluminaFastqAttr behaviour
         """
@@ -113,12 +128,17 @@ class TestAnalysisFastq(unittest.TestCase):
             self.assertEqual(fq.sample_name,illumina_fastq_attrs.sample_name)
             self.assertEqual(fq.basename,illumina_fastq_attrs.basename)
             self.assertEqual(fq.extension,illumina_fastq_attrs.extension)
+            self.assertEqual(fq.type, illumina_fastq_attrs.type)
+            self.assertEqual(fq.compression, illumina_fastq_attrs.compression)
             self.assertEqual(fq.sample_number,illumina_fastq_attrs.sample_number)
             self.assertEqual(fq.barcode_sequence,illumina_fastq_attrs.barcode_sequence)
             self.assertEqual(fq.lane_number,illumina_fastq_attrs.lane_number)
             self.assertEqual(fq.read_number,illumina_fastq_attrs.read_number)
             self.assertEqual(fq.is_index_read,illumina_fastq_attrs.is_index_read)
+            self.assertEqual(fq.fastq_basename(), illumina_fastq_attrs.fastq_basename())
+            self.assertEqual(fq.bam_basename(), illumina_fastq_attrs.bam_basename())
             self.assertEqual(str(fq),str(illumina_fastq_attrs))
+
     def test_changing_attribute_updates_canonical_name(self):
         """AnalysisFastq: changing attributes is reflected in canonical name
         """
@@ -126,6 +146,7 @@ class TestAnalysisFastq(unittest.TestCase):
         fq.read_number = 2
         self.assertEqual(fq.canonical_name,
                          'M_19_0040_S13-A40h-R_D709-D505_L007_R2_001')
+
     def test_changing_attribute_updates_repr(self):
         """AnalysisFastq: changing attributes is reflected in repr
         """
@@ -133,6 +154,7 @@ class TestAnalysisFastq(unittest.TestCase):
         fq.read_number = 2
         self.assertEqual(str(fq),
                          'M_19_0040_S13-A40h-R_D709-D505_L007_R2_001_repeated_1')
+
     def test_sra_format(self):
         """AnalysisFastq: handle SRA-style names
         """
@@ -142,6 +164,8 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.sample_name,'SRR6833752')
         self.assertEqual(fq.basename,'SRR6833752_1')
         self.assertEqual(fq.extension,'.fastq.gz')
+        self.assertEqual(fq.type, 'fastq')
+        self.assertEqual(fq.compression, 'gz')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
@@ -150,6 +174,8 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertFalse(fq.is_index_read)
         self.assertEqual(fq.canonical_name,'SRR6833752_1')
         self.assertEqual(fq.extras,None)
+        self.assertEqual(fq.fastq_basename(),'SRR6833752_1')
+        self.assertEqual(fq.bam_basename(),'SRR6833752')
         self.assertEqual(str(fq),'SRR6833752_1')
         # ERR* Fastqs without read ID
         fq = AnalysisFastq('ERR3310320.fastq.gz')
@@ -157,6 +183,8 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.sample_name,'ERR3310320')
         self.assertEqual(fq.basename,'ERR3310320')
         self.assertEqual(fq.extension,'.fastq.gz')
+        self.assertEqual(fq.type, 'fastq')
+        self.assertEqual(fq.compression, 'gz')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
@@ -165,7 +193,10 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertFalse(fq.is_index_read)
         self.assertEqual(fq.canonical_name,'ERR3310320')
         self.assertEqual(fq.extras,None)
+        self.assertEqual(fq.fastq_basename(),'ERR3310320')
+        self.assertEqual(fq.bam_basename(),'ERR3310320')
         self.assertEqual(str(fq),'ERR3310320')
+
 
 class TestAnalysisDir(unittest.TestCase):
     """Tests for the AnalysisDir class
