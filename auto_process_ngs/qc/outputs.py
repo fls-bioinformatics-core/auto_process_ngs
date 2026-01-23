@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc/outputs: utilities to predict and check QC pipeline outputs
-#     Copyright (C) University of Manchester 2019-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2026 Peter Briggs
 #
 """
 Provides utility classes and functions for QC outputs.
@@ -27,6 +27,7 @@ from ..fastq_utils import remove_index_fastqs
 from ..metadata import AnalysisProjectQCDirInfo
 from ..tenx.cellplex import CellrangerMultiConfigCsv
 from .modules import QCDir
+from .utils import get_bam_samplename
 from .modules.cellranger_arc_count import CellrangerArcCount
 from .modules.cellranger_atac_count import CellrangerAtacCount
 from .modules.cellranger_count import CellrangerCount
@@ -284,7 +285,7 @@ class QCOutputs:
         samples = set([self.fastq_attrs(fq).sample_name
                        for fq in self.fastqs])
         for bam in self.bams:
-            samples.add(self.fastq_attrs(bam).sample_name)
+            samples.add(get_bam_samplename(bam, fastq_attrs=self.fastq_attrs))
         for s in cellranger_count.samples:
             samples.add(s)
         self.samples = sorted(list(samples),
