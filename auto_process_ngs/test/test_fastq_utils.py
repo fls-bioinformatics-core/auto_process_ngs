@@ -7,6 +7,7 @@ import os
 import tempfile
 import shutil
 import gzip
+from auto_process_ngs.fastq_utils import BaseFastqAttrs
 from auto_process_ngs.fastq_utils import IlluminaFastqAttrs
 from auto_process_ngs.fastq_utils import FastqReadCounter
 from auto_process_ngs.fastq_utils import assign_barcodes_single_end
@@ -88,6 +89,157 @@ CTTATACACATCTCCGAGCCCACGA
 +
 AAAAAEEEEEEEEEEEEEEEE/EE/
 """
+
+# BaseFastqAttrs
+class TestBaseFastqAttrs(unittest.TestCase):
+    """
+    Tests for the BaseFastqAttrs class
+    """
+    def test_base_fastq_attrs_fastq_gz(self):
+        """
+        BaseFastqAttrs: check .fastq.gz file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_R1_001.fastq.gz")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_R1_001")
+        self.assertEqual(fq_attrs.extension, ".fastq.gz")
+        self.assertEqual(fq_attrs.type, "fastq")
+        self.assertEqual(fq_attrs.compression, "gz")
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_R1_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+    def test_base_fastq_attrs_fastq(self):
+        """
+        BaseFastqAttrs: check .fastq file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_R1_001.fastq")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_R1_001")
+        self.assertEqual(fq_attrs.extension, ".fastq")
+        self.assertEqual(fq_attrs.type, "fastq")
+        self.assertEqual(fq_attrs.compression, None)
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_R1_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+    def test_base_fastq_attrs_fq_gz(self):
+        """
+        BaseFastqAttrs: check .fq.gz file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_R1_001.fq.gz")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_R1_001")
+        self.assertEqual(fq_attrs.extension, ".fq.gz")
+        self.assertEqual(fq_attrs.type, "fastq")
+        self.assertEqual(fq_attrs.compression, "gz")
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_R1_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+    def test_base_fastq_attrs_fq(self):
+        """
+        BaseFastqAttrs: check .fq file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_R1_001.fq")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_R1_001")
+        self.assertEqual(fq_attrs.extension, ".fq")
+        self.assertEqual(fq_attrs.type, "fastq")
+        self.assertEqual(fq_attrs.compression, None)
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_R1_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
+    def test_base_fastq_attrs_bam(self):
+        """
+        BaseFastqAttrs: check .bam file
+        """
+        fq_attrs = BaseFastqAttrs("PB_S1_L001_001.bam")
+        self.assertEqual(fq_attrs.basename, "PB_S1_L001_001")
+        self.assertEqual(fq_attrs.extension, ".bam")
+        self.assertEqual(fq_attrs.type, "bam")
+        self.assertEqual(fq_attrs.compression, None)
+        self.assertEqual(fq_attrs.sample_name, None)
+        self.assertEqual(fq_attrs.barcode_sequence, None)
+        self.assertEqual(fq_attrs.sample_number, None)
+        self.assertEqual(fq_attrs.lane_number, None)
+        self.assertEqual(fq_attrs.read_number, None)
+        self.assertEqual(fq_attrs.set_number, None)
+        self.assertEqual(fq_attrs.is_index_read, False)
+        self.assertEqual(fq_attrs.fq_attrs(),
+                         { "sample_name": None,
+                           "barcode_sequence": None,
+                           "sample_number": None,
+                           "lane_number": None,
+                           "read_number": None,
+                           "set_number": None,
+                           "is_index_read": False,
+                            })
+        self.assertEqual(str(fq_attrs), "PB_S1_L001_001")
+        self.assertRaises(NotImplementedError, fq_attrs.fastq_basename)
+        self.assertRaises(NotImplementedError, fq_attrs.bam_basename)
+
 
 # IlluminaFastqAttrs
 class TestIlluminaFastqAttrs(unittest.TestCase):
