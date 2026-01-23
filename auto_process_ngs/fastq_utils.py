@@ -27,6 +27,8 @@ Utility classes and functions for operating on Fastq files:
 - remove_index_fastqs: remove index (I1/I2) Fastqs from a list
 - build_custom_fastq_attrs_regex: make regular expression patterns
   and format templates for custom 'FastqAttrs' classes
+- get_custom_fastq_attrs_class: create a custom 'FastqAttrs' class
+  for handling non-canonical Fastq filenames.
 """
 
 #######################################################################
@@ -34,6 +36,7 @@ Utility classes and functions for operating on Fastq files:
 #######################################################################
 
 import os
+import re
 import gzip
 import subprocess
 import logging
@@ -854,3 +857,139 @@ def build_custom_fastq_attrs_regex(pattern):
     re_pattern = f"^{''.join(re_pattern)}$"
     format_str = "".join(format_str)
     return (re_pattern, format_str)
+
+
+def get_custom_fastqattrs_class(pattern):
+    """
+    Create and return a custom FastqAttrs class
+
+    This is a factory function that can be used to create
+    custom FastqAttr-type classes (subclassed from the
+    ``BaseFastqAttr`` class) to extract basic sample name
+    and read number information from non-canonical Fastq
+    file names.
+
+    The function takes a single argument which is a basic
+    glob-like pattern describing the expected filename.
+
+    Patterns should include the strings ``{SAMPLE}`` in
+    the position where the sample name is expected, and
+    ``{READ}`` where the read number is expected. The
+    rest of the pattern should consist of some combination
+    of the "fixed" (i.e. invariant) parts of the name
+    and the "*" for the variable parts which are not
+    either sample name or read number.
+
+    Some examples:
+
+    - if the files are "S1-1_1.fastq", "S1-1_2.fastq", etc
+      then the pattern "{SAMPLE}_{READ}" will enable
+      name and read number extraction
+    - if the files are "S1-1_R1.fastq", "S1-1_R2.fastq",
+      etc then the pattern could be "{SAMPLE}_R{READ}"
+    - for simple Illumina-style names (e.g.
+      "SMP1-1_S1_L002_R2_001.fastq"
+      the pattern "{SAMPLE}_S*_L*_R{READ}_001" could be
+      a suitable pattern
+
+    If the pattern includes a recognised Fastq extension
+    then this will be ignored.
+
+    Arguments:
+      pattern (str): basic glob-like pattern to
+        define sample and read number
+
+    Returns:
+      Class: custom subclass of ``BaseFastqAttrs`` for
+      parsing files with the specified name structure.
+    """
+    # Fetch the Fastq regular expression and template
+    fq_re_pattern, fq_format_str = build_custom_fastq_attrs_regex(pattern)
+
+    # Transform Fastq regex pattern for BAM names
+    bam_re_pattern = fq_re_pattern
+    for read_pattern in ("_R(?P<read_number>[1-3])",
+                         "_(?P<read_number>[1-3])",
+                         "(?P<read_number>[1-3])"):
+        # Remove the read pattern
+        bam_re_pattern = bam_re_pattern.replace(read_pattern, "")
+    # Strip any trailing 'separator' characters
+    bam_re_pattern = bam_re_pattern.rstrip("_-.")
+
+    # Transform Fastq format template for BAM names
+    bam_format_str = fq_format_str
+    for read_pattern in ("_R{read_number}",
+                         "_{read_number}",
+                         "{read_number}"):
+        # Remove the read pattern
+        bam_format_str = bam_format_str.replace(read_pattern, "")
+
+    # Compile the regular expressions
+    fq_re_pattern = re.compile(fq_re_pattern)
+    bam_re_pattern = re.compile(bam_re_pattern)
+
+    # Create the custom class
+    class CustomFastqAttrs(BaseFastqAttrs):
+        # Raw pattern
+        fq_pattern = pattern
+        # Regular expressions
+        _fq_re_pattern = fq_re_pattern
+        _bam_re_pattern = bam_re_pattern
+        # Format strings
+        _fq_format_string = fq_format_str
+        _bam_format_string = bam_format_str
+
+        def __init__(self, fastq):
+            BaseFastqAttrs.__init__(self, fastq)
+            if self.type == "bam":
+                # Try matching as a BAM file name
+                self._fq = self._bam_re_pattern.match(self.basename)
+            else:
+                # Default is to match as FASTQ name
+                self._fq = self._fq_re_pattern.match(self.basename)
+            if self._fq is not None:
+                fq_attrs = self._fq.groupdict()
+                self.sample_name = fq_attrs['sample_name']
+                if "read_number" in fq_attrs and fq_attrs['read_number']:
+                    self.read_number = int(fq_attrs['read_number'])
+
+        def fastq_basename(self, fq_attrs=None):
+            if self._fq is not None:
+                # Get attributes
+                if not fq_attrs:
+                    fq_attrs = self.fq_attrs()
+                # If no read number then fallback to BAM
+                if fq_attrs["read_number"] is None:
+                    return self.bam_basename(fq_attrs=fq_attrs)
+                # Add in values for the interstitial components
+                for name in self._fq.groupdict():
+                    if name.startswith("p"):
+                        fq_attrs[name] = self._fq.groupdict()[name]
+                # Make basename
+                return self._fq_format_string.format(**fq_attrs)
+            else:
+                return self.basename
+
+        def bam_basename(self, fq_attrs=None):
+            if self._fq is not None:
+                if not fq_attrs:
+                    fq_attrs = self.fq_attrs()
+                # Add in values for the interstitial components
+                for name in self._fq.groupdict():
+                    if name.startswith("p"):
+                        fq_attrs[name] = self._fq.groupdict()[name]
+                # Make basename
+                return self._bam_format_string.format(**fq_attrs)
+            else:
+                return self.basename
+
+        def __repr__(self):
+            if self._fq is not None:
+                if self.type == "bam":
+                    return self.bam_basename()
+                else:
+                    return self.fastq_basename()
+            else:
+                return self.basename
+
+    return CustomFastqAttrs
