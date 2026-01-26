@@ -1312,7 +1312,7 @@ class TestBuildFastqRegex(unittest.TestCase):
 # get_custom_fastqattrs_class
 class TestGetCustomFastqAttrsClass(unittest.TestCase):
 
-    def test_get_custom_fastqattrs_class_sample_read_fq(self):
+    def test_get_custom_fastqattrs_class_sample_read(self):
         """
         get_custom_fastqattrs_class: check '{SAMPLE}_{READ}'
         """
@@ -1423,3 +1423,87 @@ class TestGetCustomFastqAttrsClass(unittest.TestCase):
         self.assertEqual(bam.sample_name, "PB7")
         self.assertEqual(bam.read_number, None)
         self.assertEqual(str(bam), "PB7_ENDL260000397-1X_23GWMTLS5_L6")
+
+    def test_get_custom_fastqattrs_class_sample_read_r_number(self):
+        """
+        get_custom_fastqattrs_class: check '{SAMPLE}_*_R{READ}'
+        """
+        fastqattrs = get_custom_fastqattrs_class("{SAMPLE}_*_R{READ}")
+        self.assertEqual(fastqattrs.fq_pattern, "{SAMPLE}_*_R{READ}")
+        fq = fastqattrs("PJB-2_AB123_R1")
+        self.assertEqual(fq.sample_name, "PJB-2")
+        self.assertEqual(fq.read_number, 1)
+        self.assertEqual(fq.basename, "PJB-2_AB123_R1")
+        self.assertEqual(fq.extension,  "")
+        self.assertEqual(fq.type, None)
+        self.assertEqual(fq.compression, None)
+        self.assertEqual(fq.fastq_basename(), "PJB-2_AB123_R1")
+        self.assertEqual(fq.bam_basename(), "PJB-2_AB123")
+        self.assertEqual(str(fq), "PJB-2_AB123_R1")
+        # Replace read number
+        fq = fastqattrs("PJB-2_AB123_R1.fq")
+        fq.read_number = 2
+        self.assertEqual(str(fq), "PJB-2_AB123_R2")
+        fq.read_number = None
+        self.assertEqual(str(fq), "PJB-2_AB123")
+        # Match BAM (no read)
+        bam = fastqattrs("PJB-2_AB123.bam")
+        self.assertEqual(bam.sample_name, "PJB-2")
+        self.assertEqual(bam.read_number, None)
+        self.assertEqual(str(bam), "PJB-2_AB123")
+
+    def test_get_custom_fastqattrs_class_sample_read(self):
+        """
+        get_custom_fastqattrs_class: check '{SAMPLE}_{READ}'
+        """
+        fastqattrs = get_custom_fastqattrs_class("{SAMPLE}_{READ}")
+        self.assertEqual(fastqattrs.fq_pattern, "{SAMPLE}_{READ}")
+        fq = fastqattrs("PJB1_1")
+        self.assertEqual(fq.sample_name, "PJB1")
+        self.assertEqual(fq.read_number, 1)
+        self.assertEqual(fq.basename, "PJB1_1")
+        self.assertEqual(fq.extension,  "")
+        self.assertEqual(fq.type, None)
+        self.assertEqual(fq.compression, None)
+        self.assertEqual(fq.fastq_basename(), "PJB1_1")
+        self.assertEqual(fq.bam_basename(), "PJB1")
+        self.assertEqual(str(fq), "PJB1_1")
+        # Replace read number
+        fq = fastqattrs("PJB1_1.fq")
+        fq.read_number = 2
+        self.assertEqual(str(fq), "PJB1_2")
+        fq.read_number = None
+        self.assertEqual(str(fq), "PJB1")
+        # Match BAM (no read)
+        bam = fastqattrs("PJB1.bam")
+        self.assertEqual(bam.sample_name, "PJB1")
+        self.assertEqual(bam.read_number, None)
+        self.assertEqual(str(bam), "PJB1")
+
+    def test_get_custom_fastqattrs_class_psuedo_illumina(self):
+        """
+        get_custom_fastqattrs_class: check '{SAMPLE}_S*_L*_R{READ}' (psuedo-Illumina)
+        """
+        fastqattrs = get_custom_fastqattrs_class("{SAMPLE}_S*_L*_R{READ}")
+        self.assertEqual(fastqattrs.fq_pattern, "{SAMPLE}_S*_L*_R{READ}")
+        fq = fastqattrs("PJB1-1_S2_L003_R1")
+        self.assertEqual(fq.sample_name, "PJB1-1")
+        self.assertEqual(fq.read_number, 1)
+        self.assertEqual(fq.basename, "PJB1-1_S2_L003_R1")
+        self.assertEqual(fq.extension,  "")
+        self.assertEqual(fq.type, None)
+        self.assertEqual(fq.compression, None)
+        self.assertEqual(fq.fastq_basename(), "PJB1-1_S2_L003_R1")
+        self.assertEqual(fq.bam_basename(), "PJB1-1_S2_L003")
+        self.assertEqual(str(fq), "PJB1-1_S2_L003_R1")
+        # Replace read number
+        fq = fastqattrs("PJB1-1_S2_L003_R1.fastq.gz")
+        fq.read_number = 2
+        self.assertEqual(str(fq), "PJB1-1_S2_L003_R2")
+        fq.read_number = None
+        self.assertEqual(str(fq), "PJB1-1_S2_L003")
+        # Match BAM (no read)
+        bam = fastqattrs("PJB1-1_S2_L003.bam")
+        self.assertEqual(bam.sample_name, "PJB1-1")
+        self.assertEqual(bam.read_number, None)
+        self.assertEqual(str(bam), "PJB1-1_S2_L003")
