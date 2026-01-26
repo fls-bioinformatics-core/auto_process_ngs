@@ -257,3 +257,33 @@ metrics will be generated and reported.
    Using ``--sequence-reads``, ``--index-reads`` and
    ``--qc-modules`` will override the relevant parts of the
    specified or automatically determined QC protocol.
+
+Handling non-standard Fastq file names
+--------------------------------------
+
+basic sample name
+    and read number information from non-canonical Fastq
+    file names.
+
+    The function takes a single argument which is a basic
+    glob-like pattern describing the expected filename.
+
+    Patterns should include the strings ``{SAMPLE}`` in
+    the position where the sample name is expected, and
+    ``{READ}`` where the read number is expected. The
+    rest of the pattern should consist of some combination
+    of the "fixed" (i.e. invariant) parts of the name
+    and the "*" for the variable parts which are not
+    either sample name or read number.
+
+    Some examples are given in the table below.
+
+    ===========================  =========================
+    Pattern                      Example matching Fastqs
+    ===========================  =========================
+    ``{SAMPLE}_{READ}``          ``SMP1-1_1.fastq``, ``SMP1-1_2.fastq`` ...
+    ``{SAMPLE}_R{READ}``         ``SMP1-1_R1.fastq``, ``SMP1-1_R2.fastq`` ...
+    ``{SAMPLE}_S*_L*_R{READ}``   ``SMP1-1_S1_L002_R2_001.fq``, ...
+    ``{SAMPLE}_ELK*_L*_{READ}``  ``SMP1_ELK250000280-1B_24EWNTLT3_L2_2.fq.gz``, ...
+    ===========================  =========================
+
