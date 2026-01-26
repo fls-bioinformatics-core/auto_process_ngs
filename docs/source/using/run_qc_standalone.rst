@@ -261,29 +261,44 @@ metrics will be generated and reported.
 Handling non-standard Fastq file names
 --------------------------------------
 
-basic sample name
-    and read number information from non-canonical Fastq
-    file names.
+By default, the pipeline expects Fastq names to be some variant
+of the Illumina-style naming structure. Where a collection of
+Fastq files have names that match one of these variants, the
+standalone QC is able to pair R1 and R2 Fastqs and run the
+appropriate QC protocol.
 
-    The function takes a single argument which is a basic
-    glob-like pattern describing the expected filename.
+Where the Fastqs don't use an Illumina or psuedo-Illumina naming
+format, the pipeline may fail to match R1/R2 read pairs correctly.
+This may result in an inappropriate QC protocol being selected, or
+the correct protocol failing to run correctly.
 
-    Patterns should include the strings ``{SAMPLE}`` in
-    the position where the sample name is expected, and
-    ``{READ}`` where the read number is expected. The
-    rest of the pattern should consist of some combination
-    of the "fixed" (i.e. invariant) parts of the name
-    and the "*" for the variable parts which are not
-    either sample name or read number.
+To handle these "non-standard" Fastq file names, it is possible to
+supply a basic naming pattern to ``run_qc.py`` which will tell the
+utility how to extract sample names and read numbers from the names,
+via the ``--fastq-pattern`` option.
 
-    Some examples are given in the table below.
+The pattern should be a string consisting of the following
+elements:
 
-    ===========================  =========================
-    Pattern                      Example matching Fastqs
-    ===========================  =========================
-    ``{SAMPLE}_{READ}``          ``SMP1-1_1.fastq``, ``SMP1-1_2.fastq`` ...
-    ``{SAMPLE}_R{READ}``         ``SMP1-1_R1.fastq``, ``SMP1-1_R2.fastq`` ...
-    ``{SAMPLE}_S*_L*_R{READ}``   ``SMP1-1_S1_L002_R2_001.fq``, ...
-    ``{SAMPLE}_ELK*_L*_{READ}``  ``SMP1_ELK250000280-1B_24EWNTLT3_L2_2.fq.gz``, ...
-    ===========================  =========================
+* ``{SAMPLE}`` and ``{READ}``, indicating where the sample name
+  and read numbers are expected;
+* Fixed parts of the names which are present in all names;
+* Wildcards (``*``) at positions where there may be variations
+  between names which are not relevant to the sample or read
+  numbers.
 
+Some examples of patterns for different file name structures are
+given in the table below.
+
+  ===========================  =========================
+  Pattern                      Example matching Fastqs
+  ===========================  =========================
+  ``{SAMPLE}_{READ}``          ``SMP1-1_1.fastq``, ``SMP1-1_2.fastq`` ...
+  ``{SAMPLE}_R{READ}``         ``SMP1-1_R1.fastq``, ``SMP1-1_R2.fastq`` ...
+  ``{SAMPLE}_S*_L*_R{READ}``   ``SMP1-1_S1_L002_R2_001.fq``, ...
+  ``{SAMPLE}_ELK*_L*_{READ}``  ``SMP1_ELK250000280-1B_24EWNTLT3_L2_2.fq.gz``, ...
+  ===========================  =========================
+
+Using these patterns will enable the pipeline to correctly pair
+Fastqs for the QC, and to use the appropriate sample names in the
+reporting.
