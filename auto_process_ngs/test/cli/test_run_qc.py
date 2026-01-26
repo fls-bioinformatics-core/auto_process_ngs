@@ -751,3 +751,63 @@ PJB2_S2_001.bam	153.754829	69.675347	139	37
         self.assertEqual(qc_info.cellranger_version,None)
         self.assertEqual(qc_info.cellranger_refdata,None)
         self.assertEqual(qc_info.cellranger_probeset,None)
+
+    def test_run_qc_paired_end_fastqs_non_canonical_file_names(self):
+        """
+        run_qc.py: paired-end Fastqs with non-canonical Fastq names (--fastq-pattern)
+        """
+        # Make directory with Fastqs
+        fastq_dir = os.path.join(self.dirn, "fastqs")
+        os.mkdir(fastq_dir)
+        for fq in ("PJB1_S1_1.fastq.gz",
+                   "PJB1_S1_2.fastq.gz",
+                   "PJB2_S2_1.fastq.gz",
+                   "PJB2_S2_2.fastq.gz"):
+            self._mock_fastq(os.path.join(fastq_dir, fq))
+        # Implicit output and QC directories
+        out_dir = self.dirn
+        qc_dir = os.path.join(out_dir, "qc")
+        # Run the QC
+        self.assertEqual(run_qc([os.path.join(fastq_dir, "*"),
+                                 "--organism", "Human",
+                                 "--fastq-pattern", "{SAMPLE}_S*_{READ}"]), 0)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  f"qc_report.{os.path.basename(out_dir)}.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(out_dir, f)),
+                            f"Missing '{f}' under {out_dir}")
+        # Check collated Picard insert sizes
+        collated_insert_sizes = os.path.join(qc_dir,
+                                             "insert_sizes.human.tsv")
+        self.assertTrue(os.path.exists(collated_insert_sizes),
+                        "Missing collated insert sizes TSV")
+        with open(collated_insert_sizes,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """#Bam file	Mean insert size	Standard deviation	Median insert size	Median absolute deviation
+PJB1_S1.bam	153.754829	69.675347	139	37
+PJB2_S2.bam	153.754829	69.675347	139	37
+""")
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(os.path.join(qc_dir, "qc.info"))
+        self.assertEqual(qc_info.protocol,"standardPE")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("standardPE")))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
+        self.assertEqual(qc_info.fastq_dir, None)
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_S1_1.fastq.gz,"
+                         "PJB1_S1_2.fastq.gz,"
+                         "PJB2_S2_1.fastq.gz,"
+                         "PJB2_S2_2.fastq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
+        self.assertEqual(qc_info.cellranger_version,None)
+        self.assertEqual(qc_info.cellranger_refdata,None)
+        self.assertEqual(qc_info.cellranger_probeset,None)
