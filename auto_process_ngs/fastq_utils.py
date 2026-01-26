@@ -892,8 +892,7 @@ def get_custom_fastqattrs_class(pattern):
       the pattern "{SAMPLE}_S*_L*_R{READ}_001" could be
       a suitable pattern
 
-    If the pattern includes a recognised Fastq extension
-    then this will be ignored.
+    Note that patterns should not include file extensions.
 
     Arguments:
       pattern (str): basic glob-like pattern to
