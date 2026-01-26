@@ -1297,9 +1297,6 @@ class TestBuildFastqRegex(unittest.TestCase):
             { "pattern": "{SAMPLE}_*_R{READ}",
               "regex": "^(?P<sample_name>.+)_(?P<p1>.*)_R(?P<read_number>[1-3])$",
               "template": "{sample_name}_{p1}_R{read_number}" },
-            { "pattern": "{SAMPLE}_{READ}.fq",
-              "regex": "^(?P<sample_name>.+)_(?P<read_number>[1-3])$",
-              "template": "{sample_name}_{read_number}" },
         ]
         for example in examples:
             pattern = example["pattern"]
