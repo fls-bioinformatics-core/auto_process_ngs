@@ -159,6 +159,12 @@ def add_pipeline_options(p,fastq_subset_size,default_nthreads):
                             "protocol will be determined automatically "
                             "based on directory contents and metadata." %
                             ", ".join(["'%s'" % x for x in PROTOCOLS]))
+    qc_options.add_argument('--fastq-pattern', action="store",
+                            dest="fastq_pattern",metavar="PATTERN",
+                            default=None,
+                            help="specify a custom pattern for identifying "
+                            "sample and read number information from the "
+                            "Fastq names (e.g. '{SAMPLE}_{READ}')")
     qc_options.add_argument('--fastq_subset',metavar='SUBSET',
                             action='store',dest='fastq_subset',
                             default=fastq_subset_size,
@@ -718,12 +724,6 @@ def main(argv=None):
                    nargs="+",
                    help="directory or list of Fastq files to run the "
                    "QC on")
-    p.add_argument('--fastq-pattern', action="store",
-                   dest="fastq_pattern",metavar="PATTERN",
-                   default=None,
-                   help="specify a custom pattern for identifying "
-                   "sample and read number information from the "
-                   "Fastq names (e.g. '{SAMPLE}_{READ}')")
     # Add option groups
     add_reporting_options(p)
     add_metadata_options(p)
