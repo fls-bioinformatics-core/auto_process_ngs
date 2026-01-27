@@ -37,8 +37,8 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                        "PJB2_MC_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'CellPlex' })
+                                           '10x Chromium 3\' CellPlex',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -179,8 +179,8 @@ PBB,CMO302,PBB
                                        "PJB2_CML_S4_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'CellPlex' })
+                                           '10x Chromium 3\' CellPlex',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv files
         with open(os.path.join(self.wd,
@@ -359,8 +359,8 @@ PBD,CMO302,PBD
                                        "PJB2_MC_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'CellPlex' })
+                                           '10x Chromium 3\' CellPlex',
+                                           'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
