@@ -215,7 +215,7 @@ APPLICATIONS = [
     # 10x Chromium CellPlex
     {
         "platforms": ["10x Chromium 3' CellPlex"],
-        "libraries": ["scRNA-seq"],
+        "libraries": ["scRNA-seq", "snRNA-seq"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_CellPlex",
         "setup": {
@@ -223,7 +223,9 @@ APPLICATIONS = [
             "directories": [],
         },
         "assays": ["10x Chromium 3' (v3.1 Next GEM ST) CellPlex sc GEX",
-                   "10x Chromium 3' (v3.1 Next GEM HT) CellPlex sc GEX",],
+                   "10x Chromium 3' (v3.1 Next GEM HT) CellPlex sc GEX",
+                   "10x Chromium 3' (v3.1 Next GEM ST) CellPlex sn GEX",
+                   "10x Chromium 3' (v3.1 Next GEM HT) CellPlex sn GEX",],
         "tags": ["10x", "single_cell" , "multiplex"]
     },
     # 10x Chromium ATAC
