@@ -433,37 +433,31 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
         # scRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
-            single_cell_platform="10xGenomics Chromium 3'",
+            single_cell_platform="10x Chromium 3'",
             paired_end=True),
                          "10x_scRNAseq")
         # snRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="snRNA-seq",
-            single_cell_platform="10xGenomics Chromium 3'",
+            single_cell_platform="10x Chromium 3'",
             paired_end=True),
                          "10x_snRNAseq")
-        # CellPlex
-        self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="CellPlex",
-            single_cell_platform="10xGenomics Chromium 3'",
-            paired_end=True),
-                         "10x_CellPlex")
         # CellPlex scRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="CellPlex scRNA-seq",
-            single_cell_platform="10xGenomics Chromium 3'",
+            library_type="scRNA-seq",
+            single_cell_platform="10x Chromium 3' CellPlex",
             paired_end=True),
                          "10x_CellPlex")
         # CellPlex snRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="CellPlex snRNA-seq",
-            single_cell_platform="10xGenomics Chromium 3'",
+            library_type="snRNA-seq",
+            single_cell_platform="10x Chromium 3' CellPlex",
             paired_end=True),
                          "10x_CellPlex")
         # Flex
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="Flex",
-            single_cell_platform="10xGenomics Chromium 3'",
+            library_type="scRNA-seq",
+            single_cell_platform="10x Chromium Flex",
             paired_end=True),
                          "10x_Flex")
         # Default if precise application is unknown
@@ -473,10 +467,11 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             paired_end=True),
                          "minimal")
 
-    def test_determine_qc_protocol_from_metadata_10xchromium3v2(self):
+    def test_determine_qc_protocol_from_metadata_legacy_10xgenomics_chromium3(self):
         """
-        determine_qc_protocol_from_metadata: 10xGenomics Chromium 3'v2 data
+        determine_qc_protocol_from_metadata: legacy 10xGenomics Chromium 3'* platforms
         """
+        # 10xGenomics Chromium 3'v2
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
             single_cell_platform="10xGenomics Chromium 3'v2",
@@ -490,14 +485,10 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
         # Default if precise application is unknown
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="any",
-            single_cell_platform="10xGenomics Chromium 3'v2",
+            single_cell_platform="10x Chromium 3'v2",
             paired_end=True),
                          "minimal")
-
-    def test_determine_qc_protocol_from_metadata_10xchromium3v3(self):
-        """
-        determine_qc_protocol_from_metadata: 10xGenomics Chromium 3'v3 data
-        """
+        # 10xGenomics Chromium 3'v3
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
             single_cell_platform="10xGenomics Chromium 3'v3",
@@ -538,34 +529,19 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             single_cell_platform="10xGenomics Chromium 3'v3",
             paired_end=True),
                          "minimal")
-
-    def test_determine_qc_protocol_from_metadata_10xchromium_gemx3(self):
-        """
-        determine_qc_protocol_from_metadata: 10xGenomics Chromium GEM-X 3' data
-        """
-        # scRNA-seq
+        # 10xGenomics Chromium GEM-X 3' scRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
             single_cell_platform="10xGenomics Chromium GEM-X 3'v4",
             paired_end=True),
                          "10x_scRNAseq")
-
-    def test_determine_qc_protocol_from_metadata_10xchromium_gemx(self):
-        """
-        determine_qc_protocol_from_metadata: 10xGenomics Chromium GEM-X data
-        """
-        # Flex
+        # 10xGenomics Chromium GEM-X Flex
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="Flex",
             single_cell_platform="10xGenomics Chromium GEM-X",
             paired_end=True),
                          "10x_Flex")
-
-    def test_determine_qc_protocol_from_metadata_10xchromium_next_gem(self):
-        """
-        determine_qc_protocol_from_metadata: 10xGenomics Chromium Next GEM data
-        """
-        # scRNA-seq
+        # 10xGenomics Chromium Next GEM data scRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
             single_cell_platform="10xGenomics Chromium Next GEM",
@@ -583,12 +559,7 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             single_cell_platform="10xGenomics Chromium Next GEM",
             paired_end=True),
                          "10x_Flex")
-
-    def test_determine_qc_protocol_from_metadata_10xchromium_next_gem3(self):
-        """
-        determine_qc_protocol_from_metadata: 10xGenomics Chromium Next GEM 3' data
-        """
-        # scRNA-seq
+        # 10xGenomics Chromium Next GEM 3' scRNA-seq
         self.assertEqual(determine_qc_protocol_from_metadata(
             library_type="scRNA-seq",
             single_cell_platform="10xGenomics Chromium Next GEM 3'v3.1",
@@ -617,14 +588,14 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
         """
         # Single cell ATAC
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="scATAC-seq",
-            single_cell_platform="10xGenomics Single Cell ATAC",
+            library_type="ATAC",
+            single_cell_platform="10x Single Cell ATAC",
             paired_end=True),
                          "10x_scATAC")
         # Single nuclei ATAC
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="snATAC-seq",
-            single_cell_platform="10xGenomics Single Cell ATAC",
+            library_type="snATAC",
+            single_cell_platform="10x Single Cell ATAC",
             paired_end=True),
                          "10x_scATAC")
 
