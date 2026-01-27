@@ -36,9 +36,9 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                        "PJB1_TCR_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 5\'',
+                                           '10x Chromium 5\'',
                                            'Library type':
-                                           'Single Cell Immune Profiling' })
+                                           'Immune Profiling' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         # (This is only used to identify the GEX samples)
@@ -155,9 +155,9 @@ PJB1_TCR,%s,any,PJB1,VDJ-T,
                                        "PJB1_TCR_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 5\'',
+                                           '10x Chromium 5\'',
                                            'Library type':
-                                           'Single Cell Immune Profiling' })
+                                           'Immune Profiling' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -278,9 +278,9 @@ PJB1_TCR,%s,any,PJB1,VDJ-T,
                                        "PJB2_TCR_S4_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 5\'',
+                                           '10x Chromium 5\'',
                                            'Library type':
-                                           'Single Cell Immune Profiling' })
+                                           'Immune Profiling' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv files
         # (This is only used to identify the GEX samples)
@@ -431,9 +431,9 @@ PJB2_TCR,%s,any,PJB2,VDJ-T,
                                        "PJB2_TCR_S4_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 5\'',
+                                           '10x Chromium 5\'',
                                            'Library type':
-                                           'Single Cell Immune Profiling' })
+                                           'Immune Profiling' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv files
         # (This is only used to identify the GEX samples)
