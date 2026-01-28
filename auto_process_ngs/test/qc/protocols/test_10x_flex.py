@@ -37,7 +37,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
                                            '10x Chromium Flex',
-                                           'Library type': 'scRNA-seq' })
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -159,7 +159,7 @@ PB2,BC002,PB2
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
                                            '10x Chromium Flex',
-                                           'Library type': 'scRNA-seq' })
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv files
         with open(os.path.join(self.wd,
@@ -311,7 +311,7 @@ PB4,BC002,PB4
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
                                            '10x Chromium Flex',
-                                           'Library type': 'scRNA-seq' })
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()

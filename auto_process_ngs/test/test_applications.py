@@ -120,7 +120,7 @@ class TestIdentifyApplication(TestCase):
         identify_application: identify 10x Chromium Flex sc/snRNA-seq
         """
         platform = "10x Chromium Flex"
-        for library_type in ["scRNA-seq", "snRNA-seq"]:
+        for library_type in ["GEX", "GEX+PEX"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_Flex")

@@ -832,8 +832,8 @@ PBB,CMO302,PBB
                                        "PJB1_Flex_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'Flex' })
+                                           '10xGenomics Chromium Flex',
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -936,8 +936,8 @@ PB2,BC002,PB2
                                        "PJB1_Flex_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'Flex' })
+                                           '10xGenomics Chromium Flex',
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -1040,8 +1040,8 @@ PB2,BC002,PB2
                                        "PJB1_Flex_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10x Chromium Flex (v1 GEM-X)',
-                                           'Library type': 'scRNA-seq' })
+                                           '10x Chromium Flex',
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -1144,8 +1144,8 @@ PB2,BC002,PB2
                                        "PJB1_Flex_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10x Chromium Flex (v1 GEM-X)',
-                                           'Library type': 'scRNA-seq' })
+                                           '10x Chromium Flex',
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv file
         with open(os.path.join(self.wd,
@@ -1250,8 +1250,8 @@ PB2,BC002,PB2
                                        "PJB2_Flex_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10x Chromium Flex (v1 GEM-X)',
-                                           'Library type': 'scRNA-seq' })
+                                           '10x Chromium Flex',
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Add the cellranger multi config.csv files for two physical
         # samples (PJB1 and PJB2)
@@ -1387,8 +1387,8 @@ PB4,BC002,PB4
                                        "PJB1_Flex_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v3',
-                                           'Library type': 'Flex' })
+                                           '10x Chromium 3\' Flex',
+                                           'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # QC protocol
         protocol = QCProtocol(name="cellranger_multi",
