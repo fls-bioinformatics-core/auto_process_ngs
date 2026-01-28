@@ -231,7 +231,7 @@ APPLICATIONS = [
     # 10x Chromium ATAC
     {
         "platforms": ["10x Single Cell ATAC",],
-        "libraries": ["ATAC", "snATAC"],
+        "libraries": ["snATAC-seq"],
         "fastq_generation": "10x_atac",
         "qc_protocol": "10x_scATAC", # Should be called 10x_snATAC?
         "setup": {

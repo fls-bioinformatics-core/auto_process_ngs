@@ -584,11 +584,11 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
 
     def test_determine_qc_protocol_from_metadata_10x_atac(self):
         """
-        determine_qc_protocol_from_metadata: 10xGenomics Single Cell ATAC
+        determine_qc_protocol_from_metadata: 10x Single Cell ATAC metadata
         """
         # Single cell ATAC
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="ATAC",
+            library_type="snATAC-seq",
             single_cell_platform="10x Single Cell ATAC",
             paired_end=True),
                          "10x_scATAC")

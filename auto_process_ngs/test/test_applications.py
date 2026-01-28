@@ -140,10 +140,10 @@ class TestIdentifyApplication(TestCase):
         identify_application: identify 10x Single Cell ATAC
         """
         platform = "10x Single Cell ATAC"
-        for library_type in ["ATAC", "snATAC"]:
-            application = identify_application(platform, library_type)
-            self.assertEqual(application["fastq_generation"], "10x_atac")
-            self.assertEqual(application["qc_protocol"], "10x_scATAC")
+        library_type = "snATAC-seq"
+        application = identify_application(platform, library_type)
+        self.assertEqual(application["fastq_generation"], "10x_atac")
+        self.assertEqual(application["qc_protocol"], "10x_scATAC")
 
     def test_identify_application_10x_single_cell_multiome_atac(self):
         """

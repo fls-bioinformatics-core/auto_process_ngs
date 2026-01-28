@@ -2701,7 +2701,7 @@ class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           "10xGenomics Single Cell ATAC" })
+                                           "10x Single Cell ATAC" })
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         UpdateAnalysisProject(project).add_qc_outputs(
@@ -2720,7 +2720,7 @@ class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           "10xGenomics Single Cell ATAC" })
+                                           "10x Single Cell ATAC" })
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         UpdateAnalysisProject(project).add_qc_outputs(
@@ -2741,7 +2741,7 @@ class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           "10xGenomics Single Cell ATAC" })
+                                           "10x Single Cell ATAC" })
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         cellranger_count_prefix = "cellranger_count/1.2.0/refdata-cellranger-atac-GRCh38-1.2.0"
