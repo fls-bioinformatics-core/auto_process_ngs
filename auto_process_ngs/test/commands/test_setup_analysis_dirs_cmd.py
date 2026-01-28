@@ -602,7 +602,7 @@ AB\tAB1,AB2\tAlan Brown\tFFPE Spatial RNA-seq\t10xGenomics CytAssist Visium\tHum
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\tAlan Brown\tGEX\t10xGenomics Single Cell Multiome\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1,AB2\tAlan Brown\tGEX\t10x Single Cell Multiome\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {

@@ -2800,7 +2800,7 @@ class TestCheckCellrangerArcCountOutputs(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           "10xGenomics Single Cell Multiome",
+                                           "10x Single Cell Multiome",
                                            'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         project = AnalysisProject(os.path.join(self.wd,"PJB"))
@@ -2823,7 +2823,7 @@ class TestCheckCellrangerArcCountOutputs(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           "10xGenomics Single Cell Multiome",
+                                           "10x Single Cell Multiome",
                                            'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         project = AnalysisProject(os.path.join(self.wd,"PJB"))
@@ -2848,7 +2848,7 @@ class TestCheckCellrangerArcCountOutputs(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           "10xGenomics Single Cell Multiome",
+                                           "10x Single Cell Multiome",
                                            'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         project = AnalysisProject(os.path.join(self.wd,"PJB"))

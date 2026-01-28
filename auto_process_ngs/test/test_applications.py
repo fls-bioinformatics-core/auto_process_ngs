@@ -150,20 +150,20 @@ class TestIdentifyApplication(TestCase):
         identify_application: identify 10x Single Cell Multiome ATAC
         """
         platform = "10x Single Cell Multiome"
-        for library_type in ["ATAC", "snATAC"]:
-            application = identify_application(platform, library_type)
-            self.assertEqual(application["fastq_generation"], "10x_multiome_atac")
-            self.assertEqual(application["qc_protocol"], "10x_Multiome_ATAC")
+        library_type = "ATAC"
+        application = identify_application(platform, library_type)
+        self.assertEqual(application["fastq_generation"], "10x_multiome_atac")
+        self.assertEqual(application["qc_protocol"], "10x_Multiome_ATAC")
 
     def test_identify_application_10x_single_cell_multiome_gex(self):
         """
         identify_application: identify 10x Single Cell Multiome GEX
         """
         platform = "10x Single Cell Multiome"
-        for library_type in ["GEX", "snGEX"]:
-            application = identify_application(platform, library_type)
-            self.assertEqual(application["fastq_generation"], "10x_multiome_gex")
-            self.assertEqual(application["qc_protocol"], "10x_Multiome_GEX")
+        library_type = "GEX"
+        application = identify_application(platform, library_type)
+        self.assertEqual(application["fastq_generation"], "10x_multiome_gex")
+        self.assertEqual(application["qc_protocol"], "10x_Multiome_GEX")
 
     def test_identify_application_10x_visium(self):
         """

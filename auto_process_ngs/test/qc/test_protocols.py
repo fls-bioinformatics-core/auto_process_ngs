@@ -592,12 +592,23 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
             single_cell_platform="10x Single Cell ATAC",
             paired_end=True),
                          "10x_scATAC")
-        # Single nuclei ATAC
+
+    def test_determine_qc_protocol_from_metadata_10x_multiome(self):
+        """
+        determine_qc_protocol_from_metadata: 10x single cell multiome data
+        """
+        # ATAC component
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="snATAC",
-            single_cell_platform="10x Single Cell ATAC",
+            library_type="ATAC",
+            single_cell_platform="10x Single Cell Multiome",
             paired_end=True),
-                         "10x_scATAC")
+                         "10x_Multiome_ATAC")
+        # GEX component
+        self.assertEqual(determine_qc_protocol_from_metadata(
+            library_type="GEX",
+            single_cell_platform="10x Single Cell Multiome",
+            paired_end=True),
+                         "10x_Multiome_GEX")
 
     def test_determine_qc_protocol_from_metadata_10x_visium(self):
         """
