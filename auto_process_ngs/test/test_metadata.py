@@ -15,10 +15,13 @@ class TestMetadataDict(unittest.TestCase):
 
     def setUp(self):
         self.metadata_file = None
+        self.output_metadata_file = None
 
     def tearDown(self):
         if self.metadata_file is not None:
             os.remove(self.metadata_file)
+        if self.output_metadata_file is not None:
+            os.remove(self.output_metadata_file)
 
     def test_create_metadata_object(self):
         """Check creation of a metadata object
@@ -136,6 +139,37 @@ chat\tawight
         self.assertEqual(sorted(metadata.keys_in_file()),
                          ['chat','salutation','valediction'])
 
+    def test_enable_fallback_on_init(self):
+        """Check fallback specified in __init__
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        with open(self.metadata_file,'wt') as fp:
+            fp.write("""salutation\thello
+valediction\tgoodbye
+chat\tawight
+""")
+        # No fallback
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'},
+                                filen=self.metadata_file,
+                                enable_fallback=False)
+        self.assertEqual(metadata.salutation,None)
+        self.assertEqual(metadata.valediction,None)
+        self.assertEqual(metadata.chat,None)
+        self.assertEqual(sorted(metadata.keys_in_file()),[])
+        # Enable fallback
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'},
+                                filen=self.metadata_file,
+                                enable_fallback=True)
+        self.assertEqual(metadata.salutation,"hello")
+        self.assertEqual(metadata.valediction,"goodbye")
+        self.assertEqual(metadata.chat,"awight")
+        self.assertEqual(sorted(metadata.keys_in_file()),
+                         ['chat','salutation','valediction'])
+
     def test_get_null_items(self):
         """Check fetching of items with null values
         """
@@ -176,6 +210,15 @@ chat\tawight
         self.assertFalse("chit_chat" in metadata)
         self.assertEqual(metadata.keys_in_file(),
                          ['salutation','valediction'])
+        # Check additional item is not preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                print(line.strip())
+                self.assertFalse(line.startswith("chit_chat\t"))
+                self.assertNotEqual(line.rstrip('\n'),
+                                    "chit_chat\tstuff")
 
     def test_undefined_items_in_file_non_strict(self):
         """Check non-strict handling of additional undefined items in file
@@ -200,6 +243,149 @@ chat\tawight
         self.assertEqual(metadata.chit_chat,'stuff')
         self.assertEqual(metadata.keys_in_file(),
                          ['salutation','valediction'])
+        # Check additional item is preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        preserved_undefined_items = False
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                print(line.strip())
+                if line.startswith("chit_chat\t") and \
+                    line.rstrip('\n') == "chit_chat\tstuff":
+                    preserved_undefined_items = True
+        self.assertTrue(preserved_undefined_items)
+
+    def test_set_default_strict_to_true(self):
+        """Check setting default value for 'strict' to True
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                strict=True)
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertFalse("chit_chat" in metadata)
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+        # Check additional item is not preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                self.assertFalse(line.startswith("chit_chat\t"))
+                self.assertNotEqual(line.rstrip('\n'),
+                                    "chit_chat\tstuff")
+
+    def test_set_default_strict_to_false(self):
+        """Check setting default value for 'strict' to False
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation': 'salutation',
+                                            'valediction': 'valediction'},
+                                strict=False)
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertTrue("chit_chat" in metadata)
+        self.assertEqual(metadata.chit_chat,'stuff')
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+        # Check additional item is preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        preserved_undefined_items = False
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                if line.startswith("chit_chat\t") and \
+                    line.rstrip('\n') == "chit_chat\tstuff":
+                    preserved_undefined_items = True
+        self.assertTrue(preserved_undefined_items)
+
+    def test_set_default_strict_to_true_load_on_init(self):
+        """Check setting default value for 'strict' to True when loading on __init__
+        """
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Set up and load a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=True)
+        # Check that all items are present
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertFalse("chit_chat" in metadata)
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+        # Check additional item is not preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                self.assertFalse(line.startswith("chit_chat\t"))
+                self.assertNotEqual(line.rstrip('\n'),
+                                    "chit_chat\tstuff")
+
+    def test_set_default_strict_to_false_load_on_init(self):
+        """Check setting default value for 'strict' to False when loading on __init__
+        """
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Set up and load a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=False)
+        # Check that all items are present
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertTrue("chit_chat" in metadata)
+        self.assertEqual(metadata.chit_chat,'stuff')
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+        # Check additional item is preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        preserved_undefined_items = False
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                if line.startswith("chit_chat\t") and \
+                    line.rstrip('\n') == "chit_chat\tstuff":
+                    preserved_undefined_items = True
+        self.assertTrue(preserved_undefined_items)
 
     def test_cloudpickle_metadata(self):
         """Check Metadata object can be serialised with 'cloudpickle'
@@ -292,6 +478,65 @@ chat\tawight
         self.assertRaises(Exception,
                           metadata.load,
                           self.metadata_file,
+                          strict=False,
+                          fail_on_error=True)
+
+    def test_fail_on_error_load_at_init(self):
+        """
+        Check setting default value for 'fail_on_error' when loading on __init__
+        """
+        # Create a valid file
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye')
+        with open(self.metadata_file,'wt') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Set up and load a metadata dictionary and check
+        # all items are present
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=False,
+                                fail_on_error=True)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        # Set up and load in 'strict' mode and check
+        # all items are present
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=True,
+                                fail_on_error=True)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        # Create a valid file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'wt') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Instance creation with load should raise exception when
+        # 'strict' is also turned on
+        self.assertRaises(Exception,
+                          MetadataDict,
+                          attributes={'salutation':'salutation',
+                                      'valediction': 'valediction'},
+                          filen=self.metadata_file,
+                          strict=True,
+                          fail_on_error=True)
+        # Instance creation with should raise exception for an
+        # invalid file
+        self.metadata_file = tempfile.mkstemp()[1]
+        with open(self.metadata_file,'wt') as fp:
+            fp.write("This is not valid content\n")
+        self.assertRaises(Exception,
+                          MetadataDict,
+                          attributes={'salutation':'salutation',
+                                      'valediction': 'valediction'},
+                          filen=self.metadata_file,
                           strict=False,
                           fail_on_error=True)
 

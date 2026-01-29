@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     metadata: classes for storing metadata on analysis objects
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 ########################################################################
 #
@@ -10,8 +10,6 @@
 #########################################################################
 
 """
-metadata
-
 Classes for storing, accessing and updating metadata for analysis
 directories, projects and so on.
 
@@ -88,11 +86,12 @@ class MetadataDict(bcf_utils.AttributeDictionary):
 
     """
 
-    def __init__(self,attributes=dict(),order=None,filen=None):
+    def __init__(self, attributes=dict(), order=None, filen=None,
+                 strict=True, fail_on_error=False, enable_fallback=False):
         """Create a new MetadataDict object
 
         By default an empty metadata object is created
-        i.e. all attributes will have be None.
+        i.e. all attributes will be None.
 
         If an input file is specified then the attributes
         will be assigned values according to the key-value
@@ -102,22 +101,27 @@ class MetadataDict(bcf_utils.AttributeDictionary):
           attributes: dictionary defining metadata items
           filen: (optional) name of the tab-delimited file
             with key-value pairs to load in
+          strict (bool): if True then by default discard
+            items from the input file which aren't defined
+            in the 'attributes' dictionary (default: True)
+          fail_on_error (bool): if True then raise an
+            exception if the input file contains invalid
+            content (if 'strict' is also specified then this
+            includes any unrecognised keys) (default:
+            False, errors will be ignored)
           enable_fallback (bool): if True then try matching
             keys directly if lookup fails when reading file
             (default: False, don't enable fallback)
-
         """
         bcf_utils.AttributeDictionary.__init__(self)
         self.__filen = filen
+        self.__strict = bool(strict)
+        self.__fail_on_error = bool(fail_on_error)
+        self.__enable_fallback = bool(enable_fallback)
         # Set up empty metadata attributes
-        self.__attributes = attributes
+        self.__attributes = attributes.copy()
         for key in self.__attributes:
             self[key] = None
-        # Load data from external file
-        self.__file_keys = list()
-        if self.__filen:
-            if os.path.exists(self.__filen):
-                self.load(self.__filen)
         # Set up order of keys for output
         if order is None:
             self.__key_order = sorted(list(self.__attributes.keys()))
@@ -137,12 +141,17 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             if extra_keys:
                 extra_keys.sort()
                 self.__key_order.extend(extra_keys)
+        # Load data from external file
+        self.__file_keys = list()
+        if self.__filen:
+            if os.path.exists(self.__filen):
+                self.load(self.__filen)
 
     def __iter__(self):
         return iter(self.__key_order)
 
-    def load(self,filen,strict=True,fail_on_error=False,
-             enable_fallback=False):
+    def load(self, filen, strict=None, fail_on_error=None,
+             enable_fallback=None):
         """Load key-value pairs from a tab-delimited file
         
         Loads the key-value pairs from a previously created
@@ -154,18 +163,29 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         Arguments:
           filen (str): name of the tab-delimited file with
             key-value pairs
-          strict (bool): if True (default) then discard
-            items in the input file which are missing from
-            the definition; if False then add them to the
-            definition.
+          strict (bool): if True then discard items in the
+            input file which are missing from the definition;
+            if False then add them to the definition. Defaults
+            to the value supplied on creation (or True if not
+            supplied)
           fail_on_error (bool): if True then raise an
             exception if the file contains invalid content
             (if 'strict' is also specified then this
-            includes any unrecognised keys); default is
-            to warn and then ignore these errors.
-
+            includes any unrecognised keys). Defaults to the
+            value supplied on creation (or False if not
+            supplied)
+          enable_fallback (bool): if True then try matching
+            keys directly if lookup fails when reading file.
+            Defaults to the value supplied on creation (or
+            False if not supplied)
         """
         self.__filen = filen
+        if strict is None:
+            strict = self.__strict
+        if fail_on_error is None:
+            fail_on_error = self.__fail_on_error
+        if enable_fallback is None:
+            enable_fallback = self.__enable_fallback
         metadata = TabFile.TabFile(filen)
         for line in metadata:
             try:
@@ -185,32 +205,46 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                         self[key] = value
                         found_key = key
                         break
-                # Fallback to matching keys directly
+                # Key wasn't found
                 if found_key is None and enable_fallback:
+                    # Fallback to matching keys directly
                     if attr in self.__attributes:
                         self[attr] = value
                         found_key = attr
+                # Key still not found (even after fallback
+                # was possibly attempted)
                 if found_key is None:
                     if strict:
-                        logger.warning("Unrecognised key in %s: %s"
-                                       % (filen,attr))
                         if fail_on_error:
-                            raise Exception("%s: failed to load: bad key"
-                                            % filen)
+                            # Raise an exception
+                            raise Exception("%s: failed to load: bad key "
+                                            "'%s'"% (filen, attr))
+                        else:
+                            # Warn and ignore; the item will not be
+                            # added and will be discarded on save
+                            logger.warning("Unrecognised key in %s: '%s'"
+                                           % (filen, attr))
+
                     else:
+                        # Add the item; it will be preserved on save
                         logger.debug("Adding key from %s: %s"
                                      % (filen,attr))
                         self.__attributes[attr] = attr
-                        self.__key_order.append(attr)
                         self[attr] = value
+                        self.__key_order.append(attr)
                 # Store keys found in file
                 if found_key:
                     self.__file_keys.append(found_key)
             except IndexError:
-                logger.warning("Bad line in %s: %s" % (filen,line))
+                # Unable to parse the line
                 if fail_on_error:
+                    # Fatal error
                     raise Exception("%s: failed to load: bad line"
                                     % filen)
+                else:
+                    # Warn and continue
+                    logger.warning("Bad line in %s (ignored): %s" %
+                                   (filen,line))
 
     def save(self,filen=None):
         """Save metadata to tab-delimited file
