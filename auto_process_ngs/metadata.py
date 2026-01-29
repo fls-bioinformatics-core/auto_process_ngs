@@ -10,8 +10,6 @@
 #########################################################################
 
 """
-metadata
-
 Classes for storing, accessing and updating metadata for analysis
 directories, projects and so on.
 
@@ -93,7 +91,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         """Create a new MetadataDict object
 
         By default an empty metadata object is created
-        i.e. all attributes will have be None.
+        i.e. all attributes will be None.
 
         If an input file is specified then the attributes
         will be assigned values according to the key-value
