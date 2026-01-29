@@ -15,10 +15,13 @@ class TestMetadataDict(unittest.TestCase):
 
     def setUp(self):
         self.metadata_file = None
+        self.output_metadata_file = None
 
     def tearDown(self):
         if self.metadata_file is not None:
             os.remove(self.metadata_file)
+        if self.output_metadata_file is not None:
+            os.remove(self.output_metadata_file)
 
     def test_create_metadata_object(self):
         """Check creation of a metadata object
@@ -176,6 +179,15 @@ chat\tawight
         self.assertFalse("chit_chat" in metadata)
         self.assertEqual(metadata.keys_in_file(),
                          ['salutation','valediction'])
+        # Check additional item is not preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                print(line.strip())
+                self.assertFalse(line.startswith("chit_chat\t"))
+                self.assertNotEqual(line.rstrip('\n'),
+                                    "chit_chat\tstuff")
 
     def test_undefined_items_in_file_non_strict(self):
         """Check non-strict handling of additional undefined items in file
@@ -200,6 +212,17 @@ chat\tawight
         self.assertEqual(metadata.chit_chat,'stuff')
         self.assertEqual(metadata.keys_in_file(),
                          ['salutation','valediction'])
+        # Check additional item is preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        preserved_undefined_items = False
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                print(line.strip())
+                if line.startswith("chit_chat\t") and \
+                    line.rstrip('\n') == "chit_chat\tstuff":
+                    preserved_undefined_items = True
+        self.assertTrue(preserved_undefined_items)
 
     def test_cloudpickle_metadata(self):
         """Check Metadata object can be serialised with 'cloudpickle'
