@@ -224,6 +224,138 @@ chat\tawight
                     preserved_undefined_items = True
         self.assertTrue(preserved_undefined_items)
 
+    def test_set_default_strict_to_true(self):
+        """Check setting default value for 'strict' to True
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                strict=True)
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertFalse("chit_chat" in metadata)
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+        # Check additional item is not preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                self.assertFalse(line.startswith("chit_chat\t"))
+                self.assertNotEqual(line.rstrip('\n'),
+                                    "chit_chat\tstuff")
+
+    def test_set_default_strict_to_false(self):
+        """Check setting default value for 'strict' to False
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation': 'salutation',
+                                            'valediction': 'valediction'},
+                                strict=False)
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertTrue("chit_chat" in metadata)
+        self.assertEqual(metadata.chit_chat,'stuff')
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+        # Check additional item is preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        preserved_undefined_items = False
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                if line.startswith("chit_chat\t") and \
+                    line.rstrip('\n') == "chit_chat\tstuff":
+                    preserved_undefined_items = True
+        self.assertTrue(preserved_undefined_items)
+
+    def test_set_default_strict_to_true_load_on_init(self):
+        """Check setting default value for 'strict' to True when loading on __init__
+        """
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Set up and load a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=True)
+        # Check that all items are present
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertFalse("chit_chat" in metadata)
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+        # Check additional item is not preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                self.assertFalse(line.startswith("chit_chat\t"))
+                self.assertNotEqual(line.rstrip('\n'),
+                                    "chit_chat\tstuff")
+
+    def test_set_default_strict_to_false_load_on_init(self):
+        """Check setting default value for 'strict' to False when loading on __init__
+        """
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Set up and load a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=False)
+        # Check that all items are present
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertTrue("chit_chat" in metadata)
+        self.assertEqual(metadata.chit_chat,'stuff')
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation','valediction'])
+        # Check additional item is preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        preserved_undefined_items = False
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                if line.startswith("chit_chat\t") and \
+                    line.rstrip('\n') == "chit_chat\tstuff":
+                    preserved_undefined_items = True
+        self.assertTrue(preserved_undefined_items)
+
     def test_cloudpickle_metadata(self):
         """Check Metadata object can be serialised with 'cloudpickle'
         """

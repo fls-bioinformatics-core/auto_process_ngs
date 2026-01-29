@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     metadata: classes for storing metadata on analysis objects
-#     Copyright (C) University of Manchester 2018-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 ########################################################################
 #
@@ -88,7 +88,8 @@ class MetadataDict(bcf_utils.AttributeDictionary):
 
     """
 
-    def __init__(self,attributes=dict(),order=None,filen=None):
+    def __init__(self, attributes=dict(), order=None, filen=None,
+                 strict=True):
         """Create a new MetadataDict object
 
         By default an empty metadata object is created
@@ -102,22 +103,18 @@ class MetadataDict(bcf_utils.AttributeDictionary):
           attributes: dictionary defining metadata items
           filen: (optional) name of the tab-delimited file
             with key-value pairs to load in
-          enable_fallback (bool): if True then try matching
-            keys directly if lookup fails when reading file
-            (default: False, don't enable fallback)
+          strict (bool): if True then by default discard
+            items from the input file which aren't defined
+            in the 'attributes' dictionary (default: True)
 
         """
         bcf_utils.AttributeDictionary.__init__(self)
         self.__filen = filen
+        self.__strict = bool(strict)
         # Set up empty metadata attributes
-        self.__attributes = attributes
+        self.__attributes = attributes.copy()
         for key in self.__attributes:
             self[key] = None
-        # Load data from external file
-        self.__file_keys = list()
-        if self.__filen:
-            if os.path.exists(self.__filen):
-                self.load(self.__filen)
         # Set up order of keys for output
         if order is None:
             self.__key_order = sorted(list(self.__attributes.keys()))
@@ -137,11 +134,16 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             if extra_keys:
                 extra_keys.sort()
                 self.__key_order.extend(extra_keys)
+        # Load data from external file
+        self.__file_keys = list()
+        if self.__filen:
+            if os.path.exists(self.__filen):
+                self.load(self.__filen)
 
     def __iter__(self):
         return iter(self.__key_order)
 
-    def load(self,filen,strict=True,fail_on_error=False,
+    def load(self, filen, strict=None, fail_on_error=False,
              enable_fallback=False):
         """Load key-value pairs from a tab-delimited file
         
@@ -154,18 +156,23 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         Arguments:
           filen (str): name of the tab-delimited file with
             key-value pairs
-          strict (bool): if True (default) then discard
-            items in the input file which are missing from
-            the definition; if False then add them to the
-            definition.
+          strict (bool): if True then discard items in the
+            input file which are missing from the definition;
+            if False then add them to the definition. Defaults
+            to the value supplied on creation (or True if not
+            supplied)
           fail_on_error (bool): if True then raise an
             exception if the file contains invalid content
             (if 'strict' is also specified then this
             includes any unrecognised keys); default is
             to warn and then ignore these errors.
-
+          enable_fallback (bool): if True then try matching
+            keys directly if lookup fails when reading file
+            (default: False, don't enable fallback)
         """
         self.__filen = filen
+        if strict is None:
+            strict = self.__strict
         metadata = TabFile.TabFile(filen)
         for line in metadata:
             try:
