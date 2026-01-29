@@ -139,6 +139,37 @@ chat\tawight
         self.assertEqual(sorted(metadata.keys_in_file()),
                          ['chat','salutation','valediction'])
 
+    def test_enable_fallback_on_init(self):
+        """Check fallback specified in __init__
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        with open(self.metadata_file,'wt') as fp:
+            fp.write("""salutation\thello
+valediction\tgoodbye
+chat\tawight
+""")
+        # No fallback
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'},
+                                filen=self.metadata_file,
+                                enable_fallback=False)
+        self.assertEqual(metadata.salutation,None)
+        self.assertEqual(metadata.valediction,None)
+        self.assertEqual(metadata.chat,None)
+        self.assertEqual(sorted(metadata.keys_in_file()),[])
+        # Enable fallback
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'},
+                                filen=self.metadata_file,
+                                enable_fallback=True)
+        self.assertEqual(metadata.salutation,"hello")
+        self.assertEqual(metadata.valediction,"goodbye")
+        self.assertEqual(metadata.chat,"awight")
+        self.assertEqual(sorted(metadata.keys_in_file()),
+                         ['chat','salutation','valediction'])
+
     def test_get_null_items(self):
         """Check fetching of items with null values
         """

@@ -89,7 +89,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     """
 
     def __init__(self, attributes=dict(), order=None, filen=None,
-                 strict=True, fail_on_error=False):
+                 strict=True, fail_on_error=False, enable_fallback=False):
         """Create a new MetadataDict object
 
         By default an empty metadata object is created
@@ -111,12 +111,15 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             content (if 'strict' is also specified then this
             includes any unrecognised keys) (default:
             False, errors will be ignored)
-
+          enable_fallback (bool): if True then try matching
+            keys directly if lookup fails when reading file
+            (default: False, don't enable fallback)
         """
         bcf_utils.AttributeDictionary.__init__(self)
         self.__filen = filen
         self.__strict = bool(strict)
         self.__fail_on_error = bool(fail_on_error)
+        self.__enable_fallback = bool(enable_fallback)
         # Set up empty metadata attributes
         self.__attributes = attributes.copy()
         for key in self.__attributes:
@@ -150,7 +153,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         return iter(self.__key_order)
 
     def load(self, filen, strict=None, fail_on_error=None,
-             enable_fallback=False):
+             enable_fallback=None):
         """Load key-value pairs from a tab-delimited file
         
         Loads the key-value pairs from a previously created
@@ -174,14 +177,17 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             value supplied on creation (or False if not
             supplied)
           enable_fallback (bool): if True then try matching
-            keys directly if lookup fails when reading file
-            (default: False, don't enable fallback)
+            keys directly if lookup fails when reading file.
+            Defaults to the value supplied on creation (or
+            False if not supplied)
         """
         self.__filen = filen
         if strict is None:
             strict = self.__strict
         if fail_on_error is None:
             fail_on_error = self.__fail_on_error
+        if enable_fallback is None:
+            enable_fallback = self.__enable_fallback
         metadata = TabFile.TabFile(filen)
         for line in metadata:
             try:
