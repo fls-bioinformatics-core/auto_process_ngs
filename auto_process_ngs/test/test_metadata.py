@@ -450,6 +450,65 @@ chat\tawight
                           strict=False,
                           fail_on_error=True)
 
+    def test_fail_on_error_load_at_init(self):
+        """
+        Check setting default value for 'fail_on_error' when loading on __init__
+        """
+        # Create a valid file
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye')
+        with open(self.metadata_file,'wt') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Set up and load a metadata dictionary and check
+        # all items are present
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=False,
+                                fail_on_error=True)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        # Set up and load in 'strict' mode and check
+        # all items are present
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=True,
+                                fail_on_error=True)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        # Create a valid file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'wt') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Instance creation with load should raise exception when
+        # 'strict' is also turned on
+        self.assertRaises(Exception,
+                          MetadataDict,
+                          attributes={'salutation':'salutation',
+                                      'valediction': 'valediction'},
+                          filen=self.metadata_file,
+                          strict=True,
+                          fail_on_error=True)
+        # Instance creation with should raise exception for an
+        # invalid file
+        self.metadata_file = tempfile.mkstemp()[1]
+        with open(self.metadata_file,'wt') as fp:
+            fp.write("This is not valid content\n")
+        self.assertRaises(Exception,
+                          MetadataDict,
+                          attributes={'salutation':'salutation',
+                                      'valediction': 'valediction'},
+                          filen=self.metadata_file,
+                          strict=False,
+                          fail_on_error=True)
+
     def test_len(self):
         """
         Metadata: check 'len' functionality

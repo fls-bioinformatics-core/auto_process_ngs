@@ -89,7 +89,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     """
 
     def __init__(self, attributes=dict(), order=None, filen=None,
-                 strict=True):
+                 strict=True, fail_on_error=False):
         """Create a new MetadataDict object
 
         By default an empty metadata object is created
@@ -106,11 +106,17 @@ class MetadataDict(bcf_utils.AttributeDictionary):
           strict (bool): if True then by default discard
             items from the input file which aren't defined
             in the 'attributes' dictionary (default: True)
+          fail_on_error (bool): if True then raise an
+            exception if the input file contains invalid
+            content (if 'strict' is also specified then this
+            includes any unrecognised keys) (default:
+            False, errors will be ignored)
 
         """
         bcf_utils.AttributeDictionary.__init__(self)
         self.__filen = filen
         self.__strict = bool(strict)
+        self.__fail_on_error = bool(fail_on_error)
         # Set up empty metadata attributes
         self.__attributes = attributes.copy()
         for key in self.__attributes:
@@ -143,7 +149,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     def __iter__(self):
         return iter(self.__key_order)
 
-    def load(self, filen, strict=None, fail_on_error=False,
+    def load(self, filen, strict=None, fail_on_error=None,
              enable_fallback=False):
         """Load key-value pairs from a tab-delimited file
         
@@ -164,8 +170,9 @@ class MetadataDict(bcf_utils.AttributeDictionary):
           fail_on_error (bool): if True then raise an
             exception if the file contains invalid content
             (if 'strict' is also specified then this
-            includes any unrecognised keys); default is
-            to warn and then ignore these errors.
+            includes any unrecognised keys). Defaults to the
+            value supplied on creation (or False if not
+            supplied)
           enable_fallback (bool): if True then try matching
             keys directly if lookup fails when reading file
             (default: False, don't enable fallback)
@@ -173,6 +180,8 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         self.__filen = filen
         if strict is None:
             strict = self.__strict
+        if fail_on_error is None:
+            fail_on_error = self.__fail_on_error
         metadata = TabFile.TabFile(filen)
         for line in metadata:
             try:
