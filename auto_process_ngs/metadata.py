@@ -207,32 +207,46 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                         self[key] = value
                         found_key = key
                         break
-                # Fallback to matching keys directly
+                # Key wasn't found
                 if found_key is None and enable_fallback:
+                    # Fallback to matching keys directly
                     if attr in self.__attributes:
                         self[attr] = value
                         found_key = attr
+                # Key still not found (even after fallback
+                # was possibly attempted)
                 if found_key is None:
                     if strict:
-                        logger.warning("Unrecognised key in %s: %s"
-                                       % (filen,attr))
                         if fail_on_error:
-                            raise Exception("%s: failed to load: bad key"
-                                            % filen)
+                            # Raise an exception
+                            raise Exception("%s: failed to load: bad key "
+                                            "'%s'"% (filen, attr))
+                        else:
+                            # Warn and ignore; the item will not be
+                            # added and will be discarded on save
+                            logger.warning("Unrecognised key in %s: '%s'"
+                                           % (filen, attr))
+
                     else:
+                        # Add the item; it will be preserved on save
                         logger.debug("Adding key from %s: %s"
                                      % (filen,attr))
                         self.__attributes[attr] = attr
-                        self.__key_order.append(attr)
                         self[attr] = value
+                        self.__key_order.append(attr)
                 # Store keys found in file
                 if found_key:
                     self.__file_keys.append(found_key)
             except IndexError:
-                logger.warning("Bad line in %s: %s" % (filen,line))
+                # Unable to parse the line
                 if fail_on_error:
+                    # Fatal error
                     raise Exception("%s: failed to load: bad line"
                                     % filen)
+                else:
+                    # Warn and continue
+                    logger.warning("Bad line in %s (ignored): %s" %
+                                   (filen,line))
 
     def save(self,filen=None):
         """Save metadata to tab-delimited file
