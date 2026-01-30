@@ -1195,3 +1195,132 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.multiplexed_samples,None)
         self.assertEqual(info.sequencer_model, "MiSeq")
         self.assertEqual(info.comments,None)
+
+    def test_analysis_project_info_read_custom_metadata_item(self):
+        """
+        AnalysisProjectInfo: read custom metadata item
+        """
+        # Read in metadata with custom data item
+        project_metadata = {
+            "User": "Alison Bell",
+            "Library type": "RNA-seq",
+            "Organism": "Human",
+            "PI": "Audrey Bower",
+            "Sequencer model": "MiSeq",
+            "Order numbers": "#0001287,#0001293"
+        }
+        self.project_info_file = tempfile.mkstemp()[1]
+        with open(self.project_info_file, "wt") as fp:
+            for item in project_metadata:
+                fp.write(f"{item}\t{project_metadata[item]}\n")
+        info = AnalysisProjectInfo(self.project_info_file,
+                                   custom_items=["order_numbers"])
+        self.assertEqual(info.name,None)
+        self.assertEqual(info.run,None)
+        self.assertEqual(info.platform,None)
+        self.assertEqual(info.user, "Alison Bell")
+        self.assertEqual(info.PI, "Audrey Bower")
+        self.assertEqual(info.organism, "Human")
+        self.assertEqual(info.library_type, "RNA-seq")
+        self.assertEqual(info.single_cell_platform,None)
+        self.assertEqual(info.number_of_cells,None)
+        self.assertEqual(info.paired_end,None)
+        self.assertEqual(info.primary_fastq_dir,None)
+        self.assertEqual(info.samples,None)
+        self.assertEqual(info.biological_samples,None)
+        self.assertEqual(info.multiplexed_samples,None)
+        self.assertEqual(info.sequencer_model, "MiSeq")
+        self.assertEqual(info.comments,None)
+        self.assertEqual(info.order_numbers, "#0001287,#0001293")
+
+    def test_analysis_project_info_write_custom_metadata_item(self):
+        """
+        AnalysisProjectInfo: set and write custom metadata item
+        """
+        # Create empty metadata instance with custom item
+        info = AnalysisProjectInfo(self.project_info_file,
+                                   custom_items=["order_numbers"])
+        self.assertEqual(info.order_numbers, None)
+        # Set value for custom metadata
+        info["order_numbers"] = "#0001287"
+        self.assertEqual(info.order_numbers, "#0001287")
+        # Save to file and check contents include custom item
+        self.project_info_file = tempfile.mkstemp()[1]
+        info.save(self.project_info_file)
+        with open(self.project_info_file, "rt") as fp:
+            got_custom_items = False
+            for line in fp:
+                if line == "Order numbers\t#0001287\n":
+                    got_custom_items = True
+                    break
+        self.assertTrue(got_custom_items)
+
+    def test_analysis_project_info_custom_metadata_item_is_preserved(self):
+        """
+        AnalysisProjectInfo: custom metadata item is preserved
+        """
+        # Read in metadata with custom data item
+        project_metadata = {
+            "User": "Alison Bell",
+            "Library type": "RNA-seq",
+            "Organism": "Human",
+            "PI": "Audrey Bower",
+            "Sequencer model": "MiSeq",
+            "Order numbers": "#0001287,#0001293"
+        }
+        self.project_info_file = tempfile.mkstemp()[1]
+        with open(self.project_info_file, "wt") as fp:
+            for item in project_metadata:
+                fp.write(f"{item}\t{project_metadata[item]}\n")
+        info = AnalysisProjectInfo(self.project_info_file)
+        # Check standard items
+        self.assertEqual(info.name,None)
+        self.assertEqual(info.run,None)
+        self.assertEqual(info.platform,None)
+        self.assertEqual(info.user, "Alison Bell")
+        self.assertEqual(info.PI, "Audrey Bower")
+        self.assertEqual(info.organism, "Human")
+        self.assertEqual(info.library_type, "RNA-seq")
+        self.assertEqual(info.single_cell_platform,None)
+        self.assertEqual(info.number_of_cells,None)
+        self.assertEqual(info.paired_end,None)
+        self.assertEqual(info.primary_fastq_dir,None)
+        self.assertEqual(info.samples,None)
+        self.assertEqual(info.biological_samples,None)
+        self.assertEqual(info.multiplexed_samples,None)
+        self.assertEqual(info.sequencer_model, "MiSeq")
+        self.assertEqual(info.comments,None)
+        # Check custom data - raw value should be available via dictionary
+        # but not as an attribute
+        self.assertEqual(info["Order numbers"], "#0001287,#0001293")
+        self.assertRaises(AttributeError,
+                          getattr,
+                          info,
+                          "order_numbers")
+        # Save to file and check contents include custom item
+        self.project_info_file = tempfile.mkstemp()[1]
+        info.save(self.project_info_file)
+        with open(self.project_info_file, "rt") as fp:
+            got_custom_items = False
+            for line in fp:
+                if line == "Order numbers\t#0001287,#0001293\n":
+                    got_custom_items = True
+                    break
+        self.assertTrue(got_custom_items)
+
+    def test_analysis_project_info_bad_custom_metadata_item_names(self):
+        """
+        AnalysisProjectInfo: check 'bad' custom metadata item names are caught
+        """
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["HasUpperCase"])
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["123_starts_with_digit"])
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["has white spaces"])
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["has-non.alpha*chars(is[bad!])"])

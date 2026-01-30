@@ -478,7 +478,7 @@ class AnalysisProjectInfo(MetadataDict):
     Provides a set of metadata items which are loaded from
     and saved to an external file.
 
-    The data items are:
+    The core data items are:
 
     name: the project name
     run: the name of the sequencing run
@@ -497,53 +497,83 @@ class AnalysisProjectInfo(MetadataDict):
     multiplexed_samples: comma-separated names of multiplexed samples
     comments: free-text comments
 
+    Additional user-defined metadata items can be specified
+    via the 'custom_items' argument; if supplied then this
+    should be a list of metadata item names (e.g.
+    'order_numbers').
+
+    Custom metadata item names:
+
+     - can only contain lowercase characters and underscores
+     - cannot start with a number (numbers elsewhere are okay)
+
+    When the custom items are written to file the names are
+    converted so that underscores become spaces, and the first
+    letter is capitalized (e.g. "Order Numbers").
+
+    Arguments:
+      filen (str): name of a tab-delimited file with key-value
+        pairs to load in
+      custom_items (list): list of additional custom metadata
+        items to add
     """
-    def __init__(self,filen=None):
-        """Create a new AnalysisProjectInfo object
-
-        Arguments:
-          filen: (optional) name of the tab-delimited file
-            with key-value pairs to load in.
-
-        """
+    def __init__(self, filen=None, custom_items=None):
+        # Core metadata
+        data_items = {
+            'name': 'Project name',
+            'run': 'Run',
+            'platform': 'Platform',
+            'sequencer_model': 'Sequencer model',
+            'user': 'User',
+            'PI': 'PI',
+            'organism': 'Organism',
+            'library_type': 'Library type',
+            'single_cell_platform': 'Single cell platform',
+            'number_of_cells': 'Number of cells',
+            'paired_end': 'Paired_end',
+            'primary_fastq_dir': 'Primary fastqs',
+            'samples': 'Samples',
+            'biological_samples': 'Biological samples',
+            'multiplexed_samples': 'Multiplexed samples',
+            'comments': 'Comments'
+        }
+        order = ['name',
+                 'run',
+                 'platform',
+                 'user',
+                 'PI',
+                 'organism',
+                 'library_type',
+                 'single_cell_platform',
+                 'number_of_cells',
+                 'paired_end',
+                 'primary_fastq_dir',
+                 'samples',
+                 'biological_samples',
+                 'multiplexed_samples',
+                 'sequencer_model',
+                 'comments']
+        # Additional custom items
+        if custom_items:
+            for item in custom_items:
+                # Create a name for writing to file, by replacing
+                # underscores with spaces and then capitalizing
+                # e.g. "order_number" -> "Order number"
+                name = str(item)
+                if name.lower() != name:
+                    raise Exception(f"'{name}': metadata items must be lowercase")
+                if name[0].isdigit():
+                    raise Exception(f"'{name}': metadata items must not start with a number")
+                if any([not (c.isalnam() or c == "_") for c in name]):
+                    raise Exception(f"'{name}': metadata items must only contain letters and underscores")
+                name = str(item.replace("_", " ").capitalize())
+                data_items[item] = name
+                order.append(item)
         MetadataDict.__init__(self,
-                              attributes = {
-                                  'name':'Project name',
-                                  'run':'Run',
-                                  'platform':'Platform',
-                                  'sequencer_model':'Sequencer model',
-                                  'user':'User',
-                                  'PI':'PI',
-                                  'organism':'Organism',
-                                  'library_type':'Library type',
-                                  'single_cell_platform':'Single cell platform',
-                                  'number_of_cells':'Number of cells',
-                                  'paired_end':'Paired_end',
-                                  'primary_fastq_dir':'Primary fastqs',
-                                  'samples':'Samples',
-                                  'biological_samples': 'Biological samples',
-                                  'multiplexed_samples': 'Multiplexed samples',
-                                  'comments':'Comments',
-                              },
-                              order = (
-                                  'name',
-                                  'run',
-                                  'platform',
-                                  'user',
-                                  'PI',
-                                  'organism',
-                                  'library_type',
-                                  'single_cell_platform',
-                                  'number_of_cells',
-                                  'paired_end',
-                                  'primary_fastq_dir',
-                                  'samples',
-                                  'biological_samples',
-                                  'multiplexed_samples',
-                                  'sequencer_model',
-                                  'comments',
-                              ),
-                              filen=filen)
+                              attributes=data_items,
+                              order=order,
+                              filen=filen,
+                              strict=False)
 
 class ProjectMetadataFile(TabFile.TabFile):
     """File containing metadata about multiple projects in analysis dir
