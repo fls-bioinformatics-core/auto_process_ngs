@@ -84,10 +84,30 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     are automatically converted back to the Python equivalents
     on reload.
 
+    In 'strict' mode when data items are loaded from a file,
+    any items which are not in the list of attributes will be
+    discarded: they will not be accessible as attributes or
+    keys, and will not be preserved on save.
+
+    If 'strict' mode is turned off then any extra data items
+    loaded from the file will be preserved on save, however
+    they will still be inaccessible as attributes or keys.
+
+    If 'include_undefined' is turned on then any extra data items
+    will become accessible as attributes and keys, as well as
+    being preserved on save. (Note that this functionality only
+    works if 'strict' mode is turned off, otherwise an exception
+    is raised when file load is attempted.)
+
+    The attribute/key names for these extra data items within the
+    MetadataDict object are created by replacing spaces in the
+    item names to underscores and converting to lowercase (for
+    example 'Bioinformatics Analyst' -> 'bioinformatics_analyst').
     """
 
     def __init__(self, attributes=dict(), order=None, filen=None,
-                 strict=True, fail_on_error=False, enable_fallback=False):
+                 strict=True, fail_on_error=False, enable_fallback=False,
+                 include_undefined=False):
         """Create a new MetadataDict object
 
         By default an empty metadata object is created
@@ -118,6 +138,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         self.__strict = bool(strict)
         self.__fail_on_error = bool(fail_on_error)
         self.__enable_fallback = bool(enable_fallback)
+        self.__include_undefined = bool(include_undefined)
         # Set up empty metadata attributes
         self.__attributes = attributes.copy()
         for key in self.__attributes:
@@ -141,6 +162,8 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             if extra_keys:
                 extra_keys.sort()
                 self.__key_order.extend(extra_keys)
+        # Store any undefined keys
+        self.__undefined_items = []
         # Load data from external file
         self.__file_keys = list()
         if self.__filen:
@@ -151,7 +174,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         return iter(self.__key_order)
 
     def load(self, filen, strict=None, fail_on_error=None,
-             enable_fallback=None):
+             enable_fallback=None, include_undefined=None):
         """Load key-value pairs from a tab-delimited file
         
         Loads the key-value pairs from a previously created
@@ -186,6 +209,12 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             fail_on_error = self.__fail_on_error
         if enable_fallback is None:
             enable_fallback = self.__enable_fallback
+        if include_undefined is None:
+            include_undefined = self.__include_undefined
+        if include_undefined and strict:
+            # Can't have both together
+            raise Exception("MetadataDict.load: 'include_undefined' is "
+                            "incompatible with 'strict'")
         metadata = TabFile.TabFile(filen)
         for line in metadata:
             try:
@@ -226,12 +255,22 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                                            % (filen, attr))
 
                     else:
-                        # Add the item; it will be preserved on save
-                        logger.debug("Adding key from %s: %s"
-                                     % (filen,attr))
-                        self.__attributes[attr] = attr
-                        self[attr] = value
-                        self.__key_order.append(attr)
+                        if include_undefined:
+                            # Add the item; it will be preserved on save
+                            logger.debug("Adding key from %s: %s"
+                                        % (filen,attr))
+                            # Construct attribute name: replace spaces with
+                            # underscores and convert to lower case
+                            name = attr.replace(" ", "_").lower()
+                            # Add the undefined item
+                            self.__attributes[name] = attr
+                            self[name] = value
+                            self.__key_order.append(name)
+                            found_key = name
+                        else:
+                            # Store undefined item (so it can be preserved
+                            # on output) but don't make it available
+                            self.__undefined_items.append((attr, value))
                 # Store keys found in file
                 if found_key:
                     self.__file_keys.append(found_key)
@@ -276,11 +315,14 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             attr = self.__attributes[key]
             # Store in the file
             metadata.append(data=(attr,value))
+        # Add undefined data from input
+        for item, value in self.__undefined_items:
+            metadata.append(data=(item, value))
         # Write data to temporary file
         if filen is not None:
             self.__filen = filen
         if self.__filen is None:
-            # Nowehere to write to
+            # Nowhere to write to
             logger.warning("Cannot save metadata: no destination file "
                            "defined")
             return
