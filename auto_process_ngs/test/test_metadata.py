@@ -215,7 +215,6 @@ chat\tawight
         metadata.save(self.output_metadata_file)
         with open(self.output_metadata_file, 'r') as fp:
             for line in fp:
-                print(line.strip())
                 self.assertFalse(line.startswith("chit_chat\t"))
                 self.assertNotEqual(line.rstrip('\n'),
                                     "chit_chat\tstuff")
