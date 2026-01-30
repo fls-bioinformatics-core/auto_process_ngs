@@ -96,7 +96,13 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     If 'include_undefined' is turned on then any extra data items
     will become accessible as attributes and keys, as well as
     being preserved on save. (Note that this functionality only
-    works if 'strict' mode is turned off.)
+    works if 'strict' mode is turned off, otherwise an exception
+    is raised when file load is attempted.)
+
+    The attribute/key names for these extra data items within the
+    MetadataDict object are created by replacing spaces in the
+    item names to underscores and converting to lowercase (for
+    example 'Bioinformatics Analyst' -> 'bioinformatics_analyst').
     """
 
     def __init__(self, attributes=dict(), order=None, filen=None,
@@ -253,10 +259,14 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                             # Add the item; it will be preserved on save
                             logger.debug("Adding key from %s: %s"
                                         % (filen,attr))
-                            self.__attributes[attr] = attr
-                            self[attr] = value
-                            self.__key_order.append(attr)
-                            found_key = attr
+                            # Construct attribute name: replace spaces with
+                            # underscores and convert to lower case
+                            name = attr.replace(" ", "_").lower()
+                            # Add the undefined item
+                            self.__attributes[name] = attr
+                            self[name] = value
+                            self.__key_order.append(name)
+                            found_key = name
                         else:
                             # Store undefined item (so it can be preserved
                             # on output) but don't make it available
