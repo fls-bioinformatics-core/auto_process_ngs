@@ -235,12 +235,13 @@ chat\tawight
             for line in contents:
                 fp.write("%s\n" % line)
         # Load into the dictionary and check that all
-        # items are present
+        # expected items are present
         metadata.load(self.metadata_file,strict=False)
         self.assertEqual(metadata.salutation,'hello')
         self.assertEqual(metadata.valediction,'goodbye')
-        self.assertTrue("chit_chat" in metadata)
-        self.assertEqual(metadata.chit_chat,'stuff')
+        # Check undefined items are not available
+        self.assertFalse("chit_chat" in metadata)
+        self.assertRaises(AttributeError, getattr, metadata, "chit_chat")
         self.assertEqual(metadata.keys_in_file(),
                          ['salutation','valediction'])
         # Check additional item is preserved on save
@@ -249,7 +250,6 @@ chat\tawight
         preserved_undefined_items = False
         with open(self.output_metadata_file, 'r') as fp:
             for line in fp:
-                print(line.strip())
                 if line.startswith("chit_chat\t") and \
                     line.rstrip('\n') == "chit_chat\tstuff":
                     preserved_undefined_items = True
@@ -302,13 +302,14 @@ chat\tawight
         with open(self.metadata_file,'w') as fp:
             for line in contents:
                 fp.write("%s\n" % line)
-        # Load into the dictionary and check that all
+        # Load into the dictionary and check that defined
         # items are present
         metadata.load(self.metadata_file)
         self.assertEqual(metadata.salutation,'hello')
         self.assertEqual(metadata.valediction,'goodbye')
-        self.assertTrue("chit_chat" in metadata)
-        self.assertEqual(metadata.chit_chat,'stuff')
+        # Undefined item will not be available
+        self.assertFalse("chit_chat" in metadata)
+        self.assertRaises(AttributeError, getattr, metadata, "chit_chat")
         self.assertEqual(metadata.keys_in_file(),
                          ['salutation','valediction'])
         # Check additional item is preserved on save
@@ -369,11 +370,12 @@ chat\tawight
                                             'valediction': 'valediction'},
                                 filen=self.metadata_file,
                                 strict=False)
-        # Check that all items are present
+        # Check that all defined items are present
         self.assertEqual(metadata.salutation,'hello')
         self.assertEqual(metadata.valediction,'goodbye')
-        self.assertTrue("chit_chat" in metadata)
-        self.assertEqual(metadata.chit_chat,'stuff')
+        # Check that undefined items are not available
+        self.assertFalse("chit_chat" in metadata)
+        self.assertRaises(AttributeError, getattr, metadata, "chit_chat")
         self.assertEqual(metadata.keys_in_file(),
                          ['salutation','valediction'])
         # Check additional item is preserved on save
@@ -539,6 +541,107 @@ chat\tawight
                           filen=self.metadata_file,
                           strict=False,
                           fail_on_error=True)
+
+    def test_make_undefined_items_from_file_available(self):
+        """
+        MetadataDict: make undefined items from file available via 'load'
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'})
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file, strict=False,
+                      include_undefined=True)
+        # Check defined items
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        # Check undefined items
+        self.assertEqual(metadata.chit_chat,'stuff')
+        self.assertTrue("chit_chat" in metadata)
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation', 'valediction', 'chit_chat'])
+        # Check additional item is preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        preserved_undefined_items = False
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                if line.startswith("chit_chat\t") and \
+                    line.rstrip('\n') == "chit_chat\tstuff":
+                    preserved_undefined_items = True
+        self.assertTrue(preserved_undefined_items)
+
+    def test_make_undefined_items_from_file_available_via_init(self):
+        """
+        MetadataDict: make undefined items from file available via __init__
+        """
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Set up a metadata dictionary and read in data
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'},
+                                filen=self.metadata_file,
+                                strict=False,
+                                include_undefined=True)
+        # Check defined items
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        # Check undefined items
+        self.assertEqual(metadata.chit_chat,'stuff')
+        self.assertTrue("chit_chat" in metadata)
+        self.assertEqual(metadata.keys_in_file(),
+                         ['salutation', 'valediction', 'chit_chat'])
+        # Check additional item is preserved on save
+        self.output_metadata_file = tempfile.mkstemp()[1]
+        metadata.save(self.output_metadata_file)
+        preserved_undefined_items = False
+        with open(self.output_metadata_file, 'r') as fp:
+            for line in fp:
+                if line.startswith("chit_chat\t") and \
+                    line.rstrip('\n') == "chit_chat\tstuff":
+                    preserved_undefined_items = True
+        self.assertTrue(preserved_undefined_items)
+
+    def test_make_undefined_available_fails_when_strict_enabled(self):
+        """
+        Metadata: fail when 'include_undefined' is combined with 'strict'
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Fail on init with file
+        self.assertRaises(Exception,
+                          MetadataDict,
+                          attributes={'salutation':'salutation',},
+                          filen=self.metadata_file,
+                          strict=True,
+                          include_undefined=True)
+        # Fail on load
+        metadata = MetadataDict(attributes={'salutation':'salutation',})
+        self.assertRaises(Exception,
+                          metadata.load,
+                          self.metadata_file,
+                          strict=True,
+                          include_undefined=True)
 
     def test_len(self):
         """
