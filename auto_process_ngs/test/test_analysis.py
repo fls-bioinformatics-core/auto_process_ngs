@@ -383,7 +383,8 @@ class TestAnalysisProject(unittest.TestCase):
             self.fastqs.append(fastq)
 
     def make_mock_project_dir(self,name,fastq_list,fastq_dir='fastqs',
-                              primary_fastq_dir=None,project_name=None):
+                              primary_fastq_dir=None,project_name=None,
+                              metadata=None):
         # Make a mock project directory
         if primary_fastq_dir is None:
             primary_fastq_dir = fastq_dir
@@ -395,8 +396,13 @@ class TestAnalysisProject(unittest.TestCase):
                        (n_samples,
                         '' if n_samples == 1 else 's',
                         ', '.join(sample_names))
-        metadata = { 'Primary fastqs': primary_fastq_dir,
-                     'Samples': sample_names }
+        default_metadata = { "Primary fastqs": primary_fastq_dir,
+                             "Samples": sample_names }
+        if not metadata:
+            metadata = {}
+        for item in default_metadata:
+            if item not in metadata:
+                metadata[item] = default_metadata[item]
         if project_name:
             metadata['Project name'] = project_name
         MockAnalysisProject(name,
@@ -607,6 +613,36 @@ class TestAnalysisProject(unittest.TestCase):
                          os.path.join(project.dirn,'fastqs'))
         self.assertEqual(project.fastq_dirs,['fastqs',])
 
+    def test_create_analysis_project_with_custom_metadata(self):
+        """
+        Check creation of new AnalysisProject directory with custom metadata items
+        """
+        self.make_data_dir(('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn,
+                                  custom_metadata_items=["order_numbers",
+                                                         "analysts",
+                                                         "linked_datasets"])
+        project.create_directory(fastqs=self.fastqs)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
+        self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
+        # Custom items should also be available
+        self.assertEqual(project.info.order_numbers,None)
+        self.assertEqual(project.info.analysts,None)
+        self.assertEqual(project.info.linked_datasets,None)
+
     def test_load_single_end_analysis_project(self):
         """Check loading of an existing single-end AnalysisProject directory
         """
@@ -781,6 +817,42 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.fastq_dirs,
                          ['fastqs','fastqs.untrimmed'])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+
+    def test_load_project_with_custom_metadata(self):
+        """
+        Check loading an existing AnalysisProject directory with custom metadata
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',),
+            metadata={ "Order numbers": "#00123",
+                       "Bioinformatics analysts": None,
+                       "Linked datasets": "NOVASEQ6000_260202#376:PJB" })
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.read_numbers, [1])
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
+        self.assertEqual(project.fastq_dirs,['fastqs',])
+        self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        # Check the custom metadata items
+        self.assertEqual(project.info.order_numbers, "#00123")
+        self.assertEqual(project.info.bioinformatics_analysts, None)
+        self.assertEqual(project.info.linked_datasets, "NOVASEQ6000_260202#376:PJB")
+        # Check that undefined metadata item raises an exception
+        self.assertRaises(AttributeError,
+                          getattr,
+                          project.info,
+                          "not_defined")
 
     def test_analysis_project_switch_fastq_dir(self):
         """Check AnalysisProject can switch between multiple fastqs directories
