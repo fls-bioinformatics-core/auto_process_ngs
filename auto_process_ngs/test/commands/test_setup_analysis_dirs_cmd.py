@@ -72,7 +72,23 @@ CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Ecclesto
             "undetermined": ["Undetermined_S0_R1_001.fastq.gz",
                              "Undetermined_S0_R1_001.fastq.gz"]
         }
-        # Setup the project dirs
+        project_metadata_items = { "Project name",
+                                   "Run",
+                                   "Platform",
+                                   "Sequencer model",
+                                   "User",
+                                   "PI",
+                                   "Organism",
+                                   "Library type",
+                                   "Single cell platform",
+                                   "Number of cells",
+                                   "Paired_end",
+                                   "Primary fastqs",
+                                   "Samples",
+                                   "Biological samples",
+                                   "Multiplexed samples",
+                                   "Comments" }
+        # Set up the project dirs
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         setup_analysis_dirs(ap)
         # Check project dirs and contents
@@ -90,6 +106,18 @@ CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Ecclesto
             for fq in projects[project]:
                 fastq = os.path.join(fastqs_dir,fq)
                 self.assertTrue(os.path.exists(fastq))
+            # Check metadata items in README.info
+            expected_metadata = project_metadata_items.copy()
+            with open(readme_file, "rt") as fp:
+                for line in fp:
+                    item = line.split("\t")[0]
+                    # Check that item is expected
+                    self.assertTrue(item in expected_metadata,
+                                    f"Found unexpected metadata item: '{item}'")
+                    expected_metadata.remove(item)
+            # Check no items are missing
+            self.assertTrue(len(expected_metadata) == 0,
+                            f"Missing project metadata items: '{expected_metadata}'")
 
     def test_setup_analysis_dirs_with_identifier(self):
         """
@@ -202,6 +230,87 @@ CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Ecclesto
         for project in ('AB','#AB'):
             self.assertFalse(os.path.exists(
                 os.path.join(mockdir.dirn,project)))
+
+    def test_setup_analysis_dirs_with_custom_metadata(self):
+        """
+        setup_analysis_dirs: test create new analysis dirs with custom metadata
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Check project dirs don't exist
+        for project in ("AB","CDE"):
+            project_dir_path = os.path.join(mockdir.dirn,project)
+            self.assertFalse(os.path.exists(project_dir_path))
+        # Add required metadata to 'projects.info'
+        projects_info = os.path.join(mockdir.dirn,"projects.info")
+        with open(projects_info,"w") as fp:
+            fp.write(
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+AB\tAB1,AB2\tAlan Brown\tRNA-seq\t.\tHuman\tAudrey Benson\t1% PhiX
+CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Eccleston\t1% PhiX
+""")
+        # Expected data
+        projects = {
+            "AB": ["AB1_S1_R1_001.fastq.gz",
+                   "AB1_S1_R2_001.fastq.gz",
+                   "AB2_S2_R1_001.fastq.gz",
+                   "AB2_S2_R2_001.fastq.gz"],
+            "CDE": ["CDE3_S3_R1_001.fastq.gz",
+                    "CDE3_S3_R2_001.fastq.gz",
+                    "CDE4_S4_R1_001.fastq.gz",
+                    "CDE4_S4_R2_001.fastq.gz"],
+            "undetermined": ["Undetermined_S0_R1_001.fastq.gz",
+                             "Undetermined_S0_R1_001.fastq.gz"]
+        }
+        project_metadata_items = { "Project name",
+                                   "Run",
+                                   "Platform",
+                                   "Sequencer model",
+                                   "User",
+                                   "PI",
+                                   "Organism",
+                                   "Library type",
+                                   "Single cell platform",
+                                   "Number of cells",
+                                   "Paired_end",
+                                   "Primary fastqs",
+                                   "Samples",
+                                   "Biological samples",
+                                   "Multiplexed samples",
+                                   "Comments",
+                                   "Order numbers",
+                                   "Bioinformatics analysts",
+                                   "External analysts"}
+        # Set up the project dirs with additional custom metadata items
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        setup_analysis_dirs(ap, custom_metadata_items=["order_numbers",
+                                                       "bioinformatics_analysts",
+                                                       "external_analysts"])
+        # Check project dirs and contents
+        for project in projects:
+            project_dir_path = os.path.join(mockdir.dirn,project)
+            self.assertTrue(os.path.exists(project_dir_path))
+            # Check README.info file
+            readme_file = os.path.join(project_dir_path,
+                                       "README.info")
+            self.assertTrue(os.path.exists(readme_file))
+            # Check metadata items
+            expected_metadata = project_metadata_items.copy()
+            with open(readme_file, "rt") as fp:
+                for line in fp:
+                    item = line.split("\t")[0]
+                    # Check that item is expected
+                    self.assertTrue(item in expected_metadata,
+                                    f"{project}: found unexpected metadata item: '{item}'")
+                    expected_metadata.remove(item)
+            # Check no items are missing
+            self.assertTrue(len(expected_metadata) == 0,
+                            f"{project}: missing project metadata items: '{expected_metadata}'")
 
     def test_setup_analysis_dirs_10x_visium(self):
         """

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     setup_analysis_dirs_cmd.py: implement 'setup_analysis_dirs' command
-#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 #########################################################################
 
@@ -36,7 +36,8 @@ def setup_analysis_dirs(ap,
                         short_fastq_names=False,
                         link_to_fastqs=False,
                         projects=None,
-                        undetermined_project=None):
+                        undetermined_project=None,
+                        custom_metadata_items=None):
     """
     Construct and populate project analysis directories
 
@@ -65,6 +66,9 @@ def setup_analysis_dirs(ap,
       undetermined_project (str): optional, specify name for
          project directory to create with 'undetermined' Fastqs
         (defaults to 'undetermined')
+      custom_metadata_items (list): optional, list of strings
+        defining additional custom metadata items to add to the
+        core metadata items for each project
     """
     # Source location for fastq files
     if unaligned_dir is None:
@@ -172,7 +176,8 @@ def setup_analysis_dirs(ap,
             run=run_name,
             comments=comments,
             platform=ap.metadata.platform,
-            sequencer_model=ap.metadata.sequencer_model)
+            sequencer_model=ap.metadata.sequencer_model,
+            custom_metadata_items=custom_metadata_items)
         if project.exists:
             logging.warning("Project '%s' already exists, skipping" %
                             project.name)
@@ -319,7 +324,8 @@ def setup_analysis_dirs(ap,
             run=run_name,
             comments="Analysis of reads "
             "with undetermined indices",
-            platform=ap.metadata.platform)
+            platform=ap.metadata.platform,
+            custom_metadata_items=custom_metadata_items)
         if not undetermined.exists:
             print("Creating directory '%s' for analysing reads "
                   "with undetermined indices" % undetermined.name)
