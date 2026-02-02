@@ -1290,13 +1290,9 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.multiplexed_samples,None)
         self.assertEqual(info.sequencer_model, "MiSeq")
         self.assertEqual(info.comments,None)
-        # Check custom data - raw value should be available via dictionary
-        # but not as an attribute
-        self.assertEqual(info["Order numbers"], "#0001287,#0001293")
-        self.assertRaises(AttributeError,
-                          getattr,
-                          info,
-                          "order_numbers")
+        # Check custom data
+        self.assertEqual(info["order_numbers"], "#0001287,#0001293")
+        self.assertEqual(info.order_numbers,"#0001287,#0001293")
         # Save to file and check contents include custom item
         self.project_info_file = tempfile.mkstemp()[1]
         info.save(self.project_info_file)

@@ -573,7 +573,8 @@ class AnalysisProjectInfo(MetadataDict):
                               attributes=data_items,
                               order=order,
                               filen=filen,
-                              strict=False)
+                              strict=False,
+                              include_undefined=True)
 
 class ProjectMetadataFile(TabFile.TabFile):
     """File containing metadata about multiple projects in analysis dir
