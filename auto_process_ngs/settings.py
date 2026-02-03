@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2026 Peter Briggs
 #
 
 """
@@ -1021,7 +1021,8 @@ class Settings(GenericSettings):
                                  "nprocessors": int,
                                  "no_lane_splitting": bool,
                                  "create_empty_fastqs": bool },
-                "metadata": { "default_data_source": str },
+                "metadata": { "default_data_source": str,
+                              "custom_project_metadata": str },
                 "10xgenomics": { "cellranger_jobmode": str,
                                  "cellranger_maxjobs": int,
                                  "cellranger_mempercore": int,
