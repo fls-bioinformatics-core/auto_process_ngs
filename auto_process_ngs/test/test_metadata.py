@@ -1343,6 +1343,18 @@ class TestAnalysisProjectInfo(unittest.TestCase):
                 self.assertEqual(value, expected_custom_metadata[item])
             self.assertEqual(expected_items, [])
 
+    def test_analysis_project_info_exception_for_duplicated_custom_metadata_item(self):
+        """
+        AnalysisProjectInfo: raise exception if custom metadata item duplicates existing item
+        """
+        # Exception if custom item duplicates existing item
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["platform",])
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["order_numbers", "order_numbers"])
+
     def test_analysis_project_info_bad_custom_metadata_item_names(self):
         """
         AnalysisProjectInfo: check 'bad' custom metadata item names are caught

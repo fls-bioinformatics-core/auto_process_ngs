@@ -573,6 +573,8 @@ class AnalysisProjectInfo(MetadataDict):
                     raise Exception(f"'{item}': metadata items cannot be capitalized (use '{item.lower()}' instead)")
                 # Create a name for writing to file
                 name = item_to_name(item)
+                if item in data_items:
+                    raise Exception(f"Custom metadata item '{item}' duplicates an existing item")
                 data_items[item] = name
                 order.append(item)
         MetadataDict.__init__(self,
