@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2026 Peter Briggs
 #
 #########################################################################
 #
@@ -107,6 +107,7 @@ class AutoProcess:
         atexit.register(self.remove_tmp_dir,ignore_errors=True)
         # Set where the analysis directory actually is
         self.analysis_dir = analysis_dir
+        # Load analysis directory data if present
         if self.analysis_dir is not None:
             # Load parameters
             self.analysis_dir = os.path.abspath(self.analysis_dir)
@@ -136,6 +137,13 @@ class AutoProcess:
                 logging.error("Failed to load metadata: %s" % ex)
                 logging.error("Stopping")
                 sys.exit(1)
+        # Assign information from settings
+        if self.settings.metadata.custom_project_metadata:
+            metadata_items = [item.strip() for item in
+                              str(self.settings.metadata.custom_project_metadata).split(",")]
+            self.custom_project_metadata = metadata_items
+        else:
+            self.custom_project_metadata = []
 
     def add_directory(self,sub_dir):
         # Add a directory to the AutoProcess object

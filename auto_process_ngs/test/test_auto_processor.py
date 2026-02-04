@@ -6,11 +6,13 @@ import unittest
 import tempfile
 import shutil
 import os
+from textwrap import dedent
 from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.settings import Settings
 
 # Unit tests
 
@@ -841,3 +843,92 @@ class TestAutoProcessUndeterminedMethod(unittest.TestCase):
         # Check that undetermined is returned
         undetermined = AutoProcess(mockdir.dirn).undetermined()
         self.assertEqual(undetermined,None)
+
+class TestAutoProcessCustomProjectMetadata(unittest.TestCase):
+    """
+    Tests for the 'custom_project_metadata' property
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+        # Store original location
+        self.pwd = os.getcwd()
+        # Move to working directory
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_no_custom_metadata_items_defined(self):
+        """
+        AutoProcess.custom_project_metadata: no custom metadata items
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a minimal settings file
+        local_settings_file = os.path.join(self.dirn, "local_settings.ini")
+        with open(local_settings_file, "wt") as fp:
+            fp.write(dedent("""[metadata]
+            #custom_project_metadata = None
+            """))
+        # Check no custom metadata items set
+        ap = AutoProcess(mockdir.dirn, settings=Settings(local_settings_file))
+        self.assertEqual(ap.custom_project_metadata, [])
+
+    def test_single_custom_metadata_item_defined(self):
+        """
+        AutoProcess.custom_project_metadata: single custom metadata item
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a minimal settings file
+        local_settings_file = os.path.join(self.dirn, "local_settings.ini")
+        with open(local_settings_file, "wt") as fp:
+            fp.write(dedent("""[metadata]
+            custom_project_metadata = order_numbers
+            """))
+        # Check no custom metadata items set
+        ap = AutoProcess(mockdir.dirn, settings=Settings(local_settings_file))
+        self.assertEqual(ap.custom_project_metadata, ["order_numbers"])
+
+    def test_multiple_custom_metadata_items_defined(self):
+        """
+        AutoProcess.custom_project_metadata: multiple custom metadata items
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a minimal settings file
+        local_settings_file = os.path.join(self.dirn, "local_settings.ini")
+        with open(local_settings_file, "wt") as fp:
+            fp.write(dedent("""[metadata]
+            custom_project_metadata = order_numbers,sample_submission_date,assigned_to
+            """))
+        # Check no custom metadata items set
+        ap = AutoProcess(mockdir.dirn, settings=Settings(local_settings_file))
+        self.assertEqual(ap.custom_project_metadata, ["order_numbers",
+                                                      "sample_submission_date",
+                                                      "assigned_to"])
