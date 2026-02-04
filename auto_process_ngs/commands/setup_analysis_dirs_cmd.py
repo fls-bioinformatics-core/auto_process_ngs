@@ -68,7 +68,8 @@ def setup_analysis_dirs(ap,
         (defaults to 'undetermined')
       custom_metadata_items (list): optional, list of strings
         defining additional custom metadata items to add to the
-        core metadata items for each project
+        core metadata items for each project (overrides custom
+        items specified in configuration file)
     """
     # Source location for fastq files
     if unaligned_dir is None:
@@ -163,6 +164,11 @@ def setup_analysis_dirs(ap,
             logger.error("Unidentified platform for '%s': '%s'" % (line['Project'],
                                                                    platform))
             raise Exception("Unable to identify matching application for specific platform")
+        # Custom project metadata items
+        if custom_metadata_items is None:
+            custom_metadata_items = ap.custom_project_metadata
+        if custom_metadata_items:
+            print(f"-- including extra metadata items for projects: {', '.join(custom_metadata_items)}")
         # Create the project
         project = analysis.AnalysisProject(
             new_project_name,
