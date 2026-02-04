@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     report_cmd.py: implement auto process 'report' command
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 #########################################################################
 
@@ -525,7 +525,7 @@ def report_summary(ap):
 def report_projects(ap,fields=None):
     """Generate one line reports suitable for pasting into spreadsheet
 
-    Generate one-line report for each each project with tab-separated
+    Generate one-line report for each project with tab-separated
     data items, suitable for injection into a spreadsheet.
 
     By default each line has the following information:
@@ -558,6 +558,11 @@ def report_projects(ap,fields=None):
     enclosing the new delimiter, followed by a colon (e.g.
     '[_]:user+PI' will use an underscore instead of a space).
 
+    In addition to the 'standard' reporting items, any custom
+    project metadata items that have been defined in the
+    configuration can also be specified in the list of fields
+    (or used as elements in composite fields).
+
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the
         analysis directory to be reported on
@@ -583,6 +588,11 @@ def report_projects(ap,fields=None):
                   'no_of_cells',
                   'paired_end',
                   'sample_names',)
+    # Custom project metadata items
+    if ap.settings.metadata.custom_project_metadata:
+        custom_metadata = str(ap.settings.metadata.custom_project_metadata).split(",")
+    else:
+        custom_metadata = []
     # Acquire data
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     # Generate report, one line per project
@@ -603,7 +613,15 @@ def report_projects(ap,fields=None):
             # joined with '+')
             value = []
             for subfield in field.split('+'):
-                subvalue = fetch_value(ap,project,subfield)
+                try:
+                    subvalue = fetch_value(ap,project,subfield)
+                except KeyError as ex:
+                    # Not found explicitly in project metadata
+                    if subfield not in ap.custom_project_metadata:
+                        # No matching custom fields so re-raise exception
+                        raise ex
+                    # Return null value
+                    subvalue = ''
                 if subvalue:
                     # Only append if there is a value
                     value.append(subvalue)
