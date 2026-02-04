@@ -224,9 +224,11 @@ def add_metadata_command(cmdparser):
                                help="Query and update analysis metadata",
                                description="Query and change metadata "
                                "associated with ANALYSIS_DIR.")
-    p.add_argument('--set',action='append',dest='key_value',default=None,
-                   help="Set the value of a metadata item. KEY_VALUE should "
-                   "be of the form '<param>=<value>'. Multiple --set options "
+    p.add_argument('--set',action='append',dest='key_value',
+                   metavar="[PROJECT:]PARAM=VALUE",default=None,
+                   help="Set metadata item PARAM to VALUE for ANALYSIS_DIR, "
+                   "or if the PROJECT identifier is also specified, then for "
+                   "item PARAM in that project. Multiple --set options "
                    "can be specified.")
     p.add_argument('--update',action='store_true',dest='update',default=False,
                    help="Automatically update metadata items where possible "
@@ -1362,7 +1364,26 @@ def metadata(args):
                 i = key_value.index('=')
                 key = key_value[:i]
                 value = key_value[i+1:].strip("'").strip('"')
-                d.set_metadata(key,value)
+                try:
+                    # See if key specifies a project name
+                    i = key.index(':')
+                    project_name, key = key[:i], key[i+1:]
+                    print(f"Looking up projects matching '{project_name}'...")
+                    projects = d.get_analysis_projects(project_name)
+                    if not projects:
+                        logger.warning(f"'{project_name}': no matching projects found")
+                    for project in projects:
+                        print(f"Setting '{key}' to '{value}' in project '{project_name}'...")
+                        if key in project.info:
+                            project.info[key] = value
+                            project.info.save()
+                        else:
+                            logger.warning(f"'{key}' not found in metadata for '{project_name}'")
+                except KeyError:
+                    raise
+                except ValueError:
+                    # No project, set top-level metadata
+                    d.set_metadata(key,value)
             except ValueError:
                 logging.error("Can't process '%s'" % args.key_value)
         # Save updates to file
