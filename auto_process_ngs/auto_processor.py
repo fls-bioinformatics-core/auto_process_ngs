@@ -859,7 +859,10 @@ class AutoProcess:
             # Look for a matching project directory
             project_dir = os.path.join(self.analysis_dir,name)
             if os.path.exists(project_dir):
-                projects.append(AnalysisProject(project_dir))
+                projects.append(
+                    AnalysisProject(project_dir,
+                                    custom_metadata_items=\
+                                        self.custom_project_metadata))
             else:
                 logging.warning("Matching project '%s': no associated "
                                 "directory" % name)
@@ -918,7 +921,9 @@ class AutoProcess:
                               "(ignored): %s" % (dirn,ex))
             # Try loading as a project
             test_project = AnalysisProject(
-                dirn,os.path.join(self.analysis_dir,dirn))
+                dirn,
+                os.path.join(self.analysis_dir,dirn),
+                custom_metadata_items=self.custom_project_metadata)
             if strict:
                 # Apply strict checks
                 if not test_project.is_analysis_dir:
@@ -942,7 +947,9 @@ class AutoProcess:
         # or None if not found
         undetermined_dir = os.path.join(self.analysis_dir,'undetermined')
         if os.path.isdir(undetermined_dir):
-            return AnalysisProject(undetermined_dir)
+            return AnalysisProject(
+                undetermined_dir,
+                custom_metadata_items=self.custom_project_metadata)
         else:
             logging.debug("No undetermined analysis directory found")
             return None

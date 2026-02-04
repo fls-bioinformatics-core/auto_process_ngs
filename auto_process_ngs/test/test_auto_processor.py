@@ -567,6 +567,35 @@ CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Ecclesto
             matched_projects = [x for x in projects if x.name == p]
             self.assertEqual(len(matched_projects),1)
 
+    def test_project_dirs_include_custom_metadata(self):
+        """AutoProcess.get_analysis_projects: project dirs include custom metadata
+        """
+        # Make a minimal settings file which defines custom metadata
+        local_settings_file = os.path.join(self.dirn, "auto_process.ini")
+        with open(local_settings_file, "wt") as fp:
+            fp.write(dedent("""[metadata]
+            custom_project_metadata = order_numbers,submission_date
+            """))
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # List the projects
+        projects = (AutoProcess(
+            mockdir.dirn,
+            settings=Settings(local_settings_file)).get_analysis_projects())
+        expected = ('AB','CDE','undetermined')
+        self.assertEqual(len(projects),len(expected))
+        for p in projects:
+            self.assertTrue(p.name in expected)
+            self.assertTrue("order_numbers" in p.info, f"Missing order_numbers in '{p.name}'")
+            self.assertTrue("submission_date" in p.info, f"Missing submission_date in '{p.name}'")
+            self.assertFalse("undefined_key_doesnt_exist" in p.info)
+
 class TestAutoProcessGetAnalysisProjectsFromDirsMethod(unittest.TestCase):
     """
     Tests for the 'get_analysis_projects_from_dirs' method
@@ -643,6 +672,35 @@ class TestAutoProcessGetAnalysisProjectsFromDirsMethod(unittest.TestCase):
         for p in expected:
             matched_projects = [x for x in projects if x.name == p]
             self.assertEqual(len(matched_projects),1)
+
+    def test_with_projects_include_custom_metadata(self):
+        """AutoProcess.get_analysis_projects_from_dirs: includes custom metadata
+        """
+        # Make a minimal settings file which defines custom metadata
+        local_settings_file = os.path.join(self.dirn, "auto_process.ini")
+        with open(local_settings_file, "wt") as fp:
+            fp.write(dedent("""[metadata]
+            custom_project_metadata = order_numbers,submission_date
+            """))
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # List the projects
+        projects = AutoProcess(
+            mockdir.dirn,
+            settings=Settings(local_settings_file)).get_analysis_projects()
+        expected = ('AB','CDE','undetermined')
+        self.assertEqual(len(projects),len(expected))
+        for p in projects:
+            self.assertTrue(p.name in expected)
+            self.assertTrue("order_numbers" in p.info, f"Missing order_numbers in '{p.name}'")
+            self.assertTrue("submission_date" in p.info, f"Missing submission_date in '{p.name}'")
+            self.assertFalse("undefined_key_doesnt_exist" in p.info)
 
 class TestAutoProcessPairedEndMethod(unittest.TestCase):
     """
