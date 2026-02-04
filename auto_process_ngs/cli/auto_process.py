@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/auto_process.py: command line interface for auto_process_ngs
-#     Copyright (C) University of Manchester 2013-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2026 Peter Briggs
 #
 #########################################################################
 #
@@ -1917,9 +1917,22 @@ def set_debug(debug_flag):
 
 # Main function
 
-def main():
+def main(argv=None):
     """
+    Run 'auto_process.py COMMAND...'
+
+    Arguments:
+      argv (list): optional, command line arguments to
+        process (otherwise take arguments from
+        'sys.argv')
+
+    Returns:
+      Integer: 0 on success, 1 on failure.
     """
+    # Command line arguments
+    if argv is None:
+        argv = sys.argv[1:]
+
     # Set up the command line parser
     p = CommandParser(
         description="Automated processing & QC for Illumina sequencing data",
@@ -1971,7 +1984,7 @@ def main():
     }
     
     # Process command line
-    cmd,args = p.parse_args()
+    cmd,args = p.parse_args(argv)
 
     # Report name and version
     print("%s version %s" % (os.path.basename(sys.argv[0]),__version__))
@@ -1986,7 +1999,16 @@ def main():
         allow_save = True
 
     # Locate and run the requested command
-    try:
-        commands[cmd](args)
-    except KeyError:
-        raise Exception("Unrecognised command: '%s'" % cmd)
+    if cmd in commands:
+        try:
+            status = commands[cmd](args)
+            if status is not None:
+                return status
+            else:
+                return 0
+        except Exception as ex:
+            logger.fatal(ex)
+            return 1
+    else:
+        logger.fatal("Unrecognised command: '%s'" % cmd)
+        return 1
