@@ -713,6 +713,12 @@ def fetch_value(ap,project,field):
     elif field == 'null' or field == '':
         return ''
     else:
+        if info:
+            try:
+                # Try fetching the data item directly
+                return str(info[field]) if info[field] is not None else ""
+            except KeyError:
+                pass
         raise KeyError("'%s': unrecognised field for reporting"
                        % field)
 
