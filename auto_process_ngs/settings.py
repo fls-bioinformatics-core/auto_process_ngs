@@ -156,7 +156,6 @@ specifically to handle the ``auto_process.ini`` configuration file
 
 The simplest usage example is:
 
->>> from settings import Settings
 >>> s = Settings()
 
 The 'locate_settings_file' function is used implicitly to locate the
@@ -174,7 +173,6 @@ Two 'type' functions are also included:
 #######################################################################
 
 import os
-import sys
 from bcftbx.JobRunner import BaseJobRunner
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.utils import AttributeDictionary
