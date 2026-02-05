@@ -805,7 +805,7 @@ class AutoProcess:
             print("Setting metadata item '%s' to '%s'" % (key,value))
             self.metadata[key] = value
         else:
-            raise KeyError("Metadata item 'key' not found" % key)
+            raise KeyError("Metadata item '%s' not found" % key)
 
     def print_metadata(self):
         """
