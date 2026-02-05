@@ -41,6 +41,15 @@ class TestMetadataDict(unittest.TestCase):
         self.assertEqual(metadata.salutation,"hello")
         self.assertEqual(metadata.valediction,"goodbye")
 
+    def test_keys(self):
+        """
+        Check 'keys' method returns metadata item names
+        """
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction'})
+        self.assertEqual(list(metadata.keys()), ['salutation','valediction'])
+
+
     def test_save_and_load(self):
         """Check metadata can be saved to file and reloaded
         """
