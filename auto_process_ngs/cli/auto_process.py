@@ -1637,7 +1637,8 @@ def setup_analysis_dirs(args):
                           args.ignore_missing_metadata,
                           undetermined_project=args.undetermined,
                           short_fastq_names=args.short_fastq_names,
-                          link_to_fastqs=args.link_to_fastqs)
+                          link_to_fastqs=args.link_to_fastqs,
+                          custom_metadata_items=d.custom_project_metadata)
 
 def run_qc(args):
     """
