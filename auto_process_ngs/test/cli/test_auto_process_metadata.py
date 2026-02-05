@@ -19,7 +19,7 @@ REMOVE_TEST_OUTPUTS = True
 
 class TestMetadataCommand(unittest.TestCase):
     """
-    Tests for the 'auto_process.py metadatarun_qc' command
+    Tests for the 'auto_process.py metadata' command
     """
     def setUp(self):
         # Create a temp working dir
