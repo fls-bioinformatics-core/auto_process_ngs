@@ -1378,12 +1378,19 @@ def metadata(args):
                             project.info[key] = value
                             project.info.save()
                         else:
-                            logger.warning(f"'{key}' not found in metadata for '{project_name}'")
-                except KeyError:
-                    raise
+                            logger.warning(f"Failed: '{key}' not found in project '{project_name}'")
+                            logger.warning(f"Available metadata items are: "
+                                           f"{', '.join(list(project.info.keys()))}")
+                            raise KeyError(f"'{key}' not found in project '{project_name}'")
                 except ValueError:
                     # No project, set top-level metadata
-                    d.set_metadata(key,value)
+                    try:
+                        d.set_metadata(key,value)
+                    except KeyError:
+                        logger.warning(f"Failed: '{key}' not found in top-level metadata")
+                        logger.warning(f"Available metadata items are: "
+                                       f"{', '.join(list(d.metadata.keys()))}")
+                        raise KeyError(f"'{key}' not found in top-level metadata")
             except ValueError:
                 logging.error("Can't process '%s'" % args.key_value)
         # Save updates to file
