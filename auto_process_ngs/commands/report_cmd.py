@@ -732,8 +732,8 @@ def fetch_value(ap,project,field):
                 return str(info[field]) if info[field] is not None else ""
             except KeyError:
                 pass
-        raise KeyError("'%s': unrecognised field for reporting"
-                       % field)
+    # Nothing found so raise KeyError
+    raise KeyError("'%s': unrecognised field for reporting" % field)
 
 def default_value(s,default=""):
     """
