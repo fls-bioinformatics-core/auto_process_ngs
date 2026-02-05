@@ -588,11 +588,6 @@ def report_projects(ap,fields=None):
                   'no_of_cells',
                   'paired_end',
                   'sample_names',)
-    # Custom project metadata items
-    if ap.settings.metadata.custom_project_metadata:
-        custom_metadata = str(ap.settings.metadata.custom_project_metadata).split(",")
-    else:
-        custom_metadata = []
     # Acquire data
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     # Generate report, one line per project
