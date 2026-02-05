@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2026 Peter Briggs
 #
 #########################################################################
 #
@@ -107,6 +107,7 @@ class AutoProcess:
         atexit.register(self.remove_tmp_dir,ignore_errors=True)
         # Set where the analysis directory actually is
         self.analysis_dir = analysis_dir
+        # Load analysis directory data if present
         if self.analysis_dir is not None:
             # Load parameters
             self.analysis_dir = os.path.abspath(self.analysis_dir)
@@ -136,6 +137,13 @@ class AutoProcess:
                 logging.error("Failed to load metadata: %s" % ex)
                 logging.error("Stopping")
                 sys.exit(1)
+        # Assign information from settings
+        if self.settings.metadata.custom_project_metadata:
+            metadata_items = [item.strip() for item in
+                              str(self.settings.metadata.custom_project_metadata).split(",")]
+            self.custom_project_metadata = metadata_items
+        else:
+            self.custom_project_metadata = []
 
     def add_directory(self,sub_dir):
         # Add a directory to the AutoProcess object
@@ -797,7 +805,7 @@ class AutoProcess:
             print("Setting metadata item '%s' to '%s'" % (key,value))
             self.metadata[key] = value
         else:
-            raise KeyError("Metadata item 'key' not found" % key)
+            raise KeyError("Metadata item '%s' not found" % key)
 
     def print_metadata(self):
         """
@@ -851,7 +859,10 @@ class AutoProcess:
             # Look for a matching project directory
             project_dir = os.path.join(self.analysis_dir,name)
             if os.path.exists(project_dir):
-                projects.append(AnalysisProject(project_dir))
+                projects.append(
+                    AnalysisProject(project_dir,
+                                    custom_metadata_items=\
+                                        self.custom_project_metadata))
             else:
                 logging.warning("Matching project '%s': no associated "
                                 "directory" % name)
@@ -910,7 +921,9 @@ class AutoProcess:
                               "(ignored): %s" % (dirn,ex))
             # Try loading as a project
             test_project = AnalysisProject(
-                dirn,os.path.join(self.analysis_dir,dirn))
+                dirn,
+                os.path.join(self.analysis_dir,dirn),
+                custom_metadata_items=self.custom_project_metadata)
             if strict:
                 # Apply strict checks
                 if not test_project.is_analysis_dir:
@@ -934,7 +947,9 @@ class AutoProcess:
         # or None if not found
         undetermined_dir = os.path.join(self.analysis_dir,'undetermined')
         if os.path.isdir(undetermined_dir):
-            return AnalysisProject(undetermined_dir)
+            return AnalysisProject(
+                undetermined_dir,
+                custom_metadata_items=self.custom_project_metadata)
         else:
             logging.debug("No undetermined analysis directory found")
             return None

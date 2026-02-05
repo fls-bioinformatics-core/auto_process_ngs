@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import shutil
 import os
+from textwrap import dedent
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisDirFactory
@@ -18,6 +19,7 @@ from auto_process_ngs.commands.report_cmd import report_projects
 from auto_process_ngs.commands.report_cmd import fetch_value
 from auto_process_ngs.commands.report_cmd import default_value
 from auto_process_ngs.commands.report_cmd import get_multiplexed_samples
+from auto_process_ngs.settings import Settings
 
 # Unit tests
 
@@ -2429,6 +2431,167 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_projects_with_custom_metadata_explicit_values(self):
+        """report: report run in 'projects' mode with custom metadata & explicit values
+        """
+        # Make local settings file and define custom project metadata items
+        local_settings_file = os.path.join(self.dirn, "auto_process_test.ini")
+        with open(local_settings_file, "wt") as fp:
+            fp.write(dedent("""[metadata]
+            custom~_project_metadata: order_numbers,assigned_to
+            """))
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Order numbers": "#000124",
+                        "Assigned to": "Stephen Taylor" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "Order numbers": None,
+                         "Assigned to": None }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=Settings(local_settings_file))
+        # Generate projects report
+        expected = """MISEQ_170901#87\tAB\tStephen Taylor\t#000124
+MISEQ_170901#87\tCDE\t\t
+"""
+        for o,e in zip(report_projects(ap, fields=["run_id","project","assigned_to","order_numbers"]).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_projects_with_custom_metadata_missing_values(self):
+        """report: report run in 'projects' mode with custom metadata & missing values
+        """
+        # Make local settings file and define custom project metadata items
+        local_settings_file = os.path.join(self.dirn, "auto_process_test.ini")
+        with open(local_settings_file, "wt") as fp:
+            fp.write(dedent("""[metadata]
+            custom_project_metadata: order_numbers,assigned_to
+            """))
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Order numbers": "#000124",
+                        "Assigned to": "Stephen Taylor" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=Settings(local_settings_file))
+        # Generate projects report
+        expected = """MISEQ_170901#87\tAB\tStephen Taylor\t#000124
+MISEQ_170901#87\tCDE\t\t
+"""
+        for o,e in zip(report_projects(ap,fields=["run_id","project","assigned_to","order_numbers"]).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_projects_with_custom_metadata_no_config_explicit_values(self):
+        """report: report run in 'projects' mode with custom metadata, no config & explicit values
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Order numbers": "#000124",
+                        "Assigned to": "Stephen Taylor" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
+                         "Order numbers": None,
+                         "Assigned to": None }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        expected = """MISEQ_170901#87\tAB\tStephen Taylor\t#000124
+MISEQ_170901#87\tCDE\t\t
+"""
+        for o,e in zip(report_projects(ap, fields=["run_id","project","assigned_to","order_numbers"]).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
+    def test_report_projects_with_custom_metadata_no_config_missing_values(self):
+        """report: report run in 'projects' mode with custom metadata, no config & missing values
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq",
+                        "Order numbers": "#000124",
+                        "Assigned to": "Stephen Taylor" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Attempt to generate projects report should fail
+        self.assertRaises(KeyError,
+                          report_projects,
+                          ap,
+                          fields=["run_id","project","assigned_to","order_numbers"])
+
+
 class TestReport(unittest.TestCase):
     """
     Tests for the 'report' command invoked directly
@@ -2580,6 +2743,55 @@ class TestFetchValueFunction(unittest.TestCase):
         self.assertEqual(fetch_value(ap,project,'samples'),'AB1-2')
         self.assertEqual(fetch_value(ap,project,'sample_names'),'AB1-2')
         self.assertEqual(fetch_value(ap,project,'null'),'')
+        self.assertRaises(KeyError, fetch_value, ap, project,'doesnt_exist')
+
+    def test_fetch_value_custom_items(self):
+        """
+        report: test the fetch_value function with custom metadata
+        """
+        # Make local settings file and define custom project metadata items
+        local_settings_file = os.path.join(self.dirn, "auto_process_test.ini")
+        with open(local_settings_file, "wt") as fp:
+            fp.write(dedent("""[metadata]
+            custom_fields: order_numbers,assigned_to
+            """))
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "sequencer_model": "MiSeq",
+                       "analysis_number": 2 },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "scRNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Single cell platform": "10xGenomics Chromium 3'",
+                        "Number of cells": 1311,
+                        "Sequencer model": "MiSeq",
+                        "Order numbers": "#000124",
+                        "Assigned to": "Stephen Taylor"},
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq"},
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=Settings(local_settings_file))
+        # Check the custom metadata
+        project = AnalysisProject(os.path.join(mockdir.dirn, "AB"))
+        self.assertEqual(fetch_value(ap, project, "order_numbers"), "#000124")
+        self.assertEqual(fetch_value(ap, project, "assigned_to"), "Stephen Taylor")
+        project = AnalysisProject(os.path.join(mockdir.dirn, "CDE"))
+        self.assertRaises(KeyError, fetch_value, ap, project, "order_numbers")
+        self.assertRaises(KeyError, fetch_value, ap, project, "assigned_to")
+
 
 class TestDefaultValueFunction(unittest.TestCase):
     """

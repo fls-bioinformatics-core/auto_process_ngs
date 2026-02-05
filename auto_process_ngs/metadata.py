@@ -259,9 +259,8 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                             # Add the item; it will be preserved on save
                             logger.debug("Adding key from %s: %s"
                                         % (filen,attr))
-                            # Construct attribute name: replace spaces with
-                            # underscores and convert to lower case
-                            name = attr.replace(" ", "_").lower()
+                            # Construct attribute name for save
+                            name = name_to_item(attr)
                             # Add the undefined item
                             self.__attributes[name] = attr
                             self[name] = value
@@ -478,7 +477,7 @@ class AnalysisProjectInfo(MetadataDict):
     Provides a set of metadata items which are loaded from
     and saved to an external file.
 
-    The data items are:
+    The core data items are:
 
     name: the project name
     run: the name of the sequencing run
@@ -497,53 +496,93 @@ class AnalysisProjectInfo(MetadataDict):
     multiplexed_samples: comma-separated names of multiplexed samples
     comments: free-text comments
 
+    Additional user-defined metadata items can be specified
+    via the 'custom_items' argument; if supplied then this
+    should be a list of metadata item names (e.g.
+    'order_numbers').
+
+    Custom metadata item names:
+
+     - can only contain alphanumeric characters (i.e. letters
+       and numbers)
+     - cannot start with a number
+
+    These names are used to access and update the metadata
+    through the object's attributes and keys.
+
+    When the custom items are saved to file then the names are
+    converted as follows:
+
+     - underscores become spaces
+     - for all-lowercase items, the first letter is capitalized
+       (e.g. "order_numbers" becomes "Order numbers")
+     - for items containing uppercase letters, the case of the
+       elements are preserved (e.g. "EOL_date" becomes "EOL date")
+
+    Arguments:
+      filen (str): name of a tab-delimited file with key-value
+        pairs to load in
+      custom_items (list): list of additional custom metadata
+        items to add
     """
-    def __init__(self,filen=None):
-        """Create a new AnalysisProjectInfo object
-
-        Arguments:
-          filen: (optional) name of the tab-delimited file
-            with key-value pairs to load in.
-
-        """
+    def __init__(self, filen=None, custom_items=None):
+        # Core metadata
+        data_items = {
+            'name': 'Project name',
+            'run': 'Run',
+            'platform': 'Platform',
+            'sequencer_model': 'Sequencer model',
+            'user': 'User',
+            'PI': 'PI',
+            'organism': 'Organism',
+            'library_type': 'Library type',
+            'single_cell_platform': 'Single cell platform',
+            'number_of_cells': 'Number of cells',
+            'paired_end': 'Paired_end',
+            'primary_fastq_dir': 'Primary fastqs',
+            'samples': 'Samples',
+            'biological_samples': 'Biological samples',
+            'multiplexed_samples': 'Multiplexed samples',
+            'comments': 'Comments'
+        }
+        order = ['name',
+                 'run',
+                 'platform',
+                 'user',
+                 'PI',
+                 'organism',
+                 'library_type',
+                 'single_cell_platform',
+                 'number_of_cells',
+                 'paired_end',
+                 'primary_fastq_dir',
+                 'samples',
+                 'biological_samples',
+                 'multiplexed_samples',
+                 'sequencer_model',
+                 'comments']
+        # Additional custom items
+        if custom_items:
+            for item in custom_items:
+                # Check custom item name
+                if item[0].isdigit():
+                    raise Exception(f"'{item}': metadata items must not start with a number")
+                if any([not (c.isalnum() or c == "_") for c in item]):
+                    raise Exception(f"'{item}': metadata items must only contain letters and underscores")
+                if item[0].isupper() and not any([c.isupper() if c.isalpha() else False for c in item[1:]]):
+                    raise Exception(f"'{item}': metadata items cannot be capitalized (use '{item.lower()}' instead)")
+                # Create a name for writing to file
+                name = item_to_name(item)
+                if item in data_items:
+                    raise Exception(f"Custom metadata item '{item}' duplicates an existing item")
+                data_items[item] = name
+                order.append(item)
         MetadataDict.__init__(self,
-                              attributes = {
-                                  'name':'Project name',
-                                  'run':'Run',
-                                  'platform':'Platform',
-                                  'sequencer_model':'Sequencer model',
-                                  'user':'User',
-                                  'PI':'PI',
-                                  'organism':'Organism',
-                                  'library_type':'Library type',
-                                  'single_cell_platform':'Single cell platform',
-                                  'number_of_cells':'Number of cells',
-                                  'paired_end':'Paired_end',
-                                  'primary_fastq_dir':'Primary fastqs',
-                                  'samples':'Samples',
-                                  'biological_samples': 'Biological samples',
-                                  'multiplexed_samples': 'Multiplexed samples',
-                                  'comments':'Comments',
-                              },
-                              order = (
-                                  'name',
-                                  'run',
-                                  'platform',
-                                  'user',
-                                  'PI',
-                                  'organism',
-                                  'library_type',
-                                  'single_cell_platform',
-                                  'number_of_cells',
-                                  'paired_end',
-                                  'primary_fastq_dir',
-                                  'samples',
-                                  'biological_samples',
-                                  'multiplexed_samples',
-                                  'sequencer_model',
-                                  'comments',
-                              ),
-                              filen=filen)
+                              attributes=data_items,
+                              order=order,
+                              filen=filen,
+                              strict=False,
+                              include_undefined=True)
 
 class ProjectMetadataFile(TabFile.TabFile):
     """File containing metadata about multiple projects in analysis dir
@@ -798,3 +837,65 @@ class AnalysisProjectQCDirInfo(MetadataDict):
                 'fastqs',
             ),
             filen=filen)
+
+
+def item_to_name(item):
+    """
+    Convert a metadata item to its name when writing to file
+
+    Replaces underscores with spaces, then:
+
+     - if item is all lowercase then capitalize
+     - otherwise preserve case
+
+    For example:
+
+    - 'order_name' converts to 'Order name'
+    - 'EOL_date_stamp' converts to 'EOL date stamp'
+
+    The operation can be reversed by calling 'name_to_item'.
+
+    Arguments:
+      item: metadata item name
+
+    Returns:
+      String: converted name for the metadata item.
+    """
+    name = str(item)
+    if name.islower():
+        # Replace underscores with spaces and capitalize
+        return name.replace("_", " ").capitalize()
+    else:
+        # Only replace spaces
+        return name.replace("_", " ")
+
+
+def name_to_item(name):
+    """
+    Convert a metadata item name for accessing in objects
+
+    Replaces spaces with underscores, then:
+
+     - if starts with capital letter but is otherwise
+       lowercase then convert to lowercase
+     - otherwise preserve case
+
+    For example:
+
+    - 'Order name' converts to 'order_name'
+    - 'EOL date stamp' converts to 'EOL_date_stamp'
+
+    The operation can be reversed by calling 'item_to_name'.
+
+    Arguments:
+      name: metadata item name used in file
+
+    Returns:
+      String: converted item name for internal use.
+    """
+    item = str(name)
+    if name[0].isupper() and all([c.islower() if c.isalpha() else True for c in name[1:]]):
+        # Convert to lowercase
+        name = name.lower()
+    # Replace spaces with underscores
+    return name.replace(" ", "_")

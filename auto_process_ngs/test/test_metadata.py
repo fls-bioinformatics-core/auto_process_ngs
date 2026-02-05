@@ -41,6 +41,15 @@ class TestMetadataDict(unittest.TestCase):
         self.assertEqual(metadata.salutation,"hello")
         self.assertEqual(metadata.valediction,"goodbye")
 
+    def test_keys(self):
+        """
+        Check 'keys' method returns metadata item names
+        """
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction'})
+        self.assertEqual(list(metadata.keys()), ['salutation','valediction'])
+
+
     def test_save_and_load(self):
         """Check metadata can be saved to file and reloaded
         """
@@ -627,7 +636,8 @@ chat\tawight
         self.metadata_file = tempfile.mkstemp()[1]
         contents = ('salutation\thello',
                     'valediction\tgoodbye',
-                    'Chit Chat\tstuff')
+                    'Chit chat\tstuff',
+                    'EOL date stamp\t2026-02-02')
         with open(self.metadata_file,'w') as fp:
             for line in contents:
                 fp.write("%s\n" % line)
@@ -640,9 +650,11 @@ chat\tawight
         self.assertEqual(metadata.valediction,'goodbye')
         # Check undefined items
         self.assertEqual(metadata.chit_chat,'stuff')
+        self.assertEqual(metadata.EOL_date_stamp, '2026-02-02')
         self.assertTrue("chit_chat" in metadata)
+        self.assertTrue("EOL_date_stamp" in metadata)
         self.assertEqual(metadata.keys_in_file(),
-                         ['salutation', 'valediction', 'chit_chat'])
+                         ['salutation', 'valediction', 'chit_chat', 'EOL_date_stamp'])
         # Change undefined item value
         metadata["chit_chat"] = "nonsense"
         # Check additional item is preserved on save
@@ -651,8 +663,8 @@ chat\tawight
         preserved_undefined_items = False
         with open(self.output_metadata_file, 'r') as fp:
             for line in fp:
-                if line.startswith("Chit Chat\t") and \
-                    line.rstrip('\n') == "Chit Chat\tnonsense":
+                if line.startswith("Chit chat\t") and \
+                    line.rstrip('\n') == "Chit chat\tnonsense":
                     preserved_undefined_items = True
         self.assertTrue(preserved_undefined_items)
 
@@ -1195,3 +1207,206 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.multiplexed_samples,None)
         self.assertEqual(info.sequencer_model, "MiSeq")
         self.assertEqual(info.comments,None)
+
+    def test_analysis_project_info_read_custom_metadata_item(self):
+        """
+        AnalysisProjectInfo: read custom metadata item
+        """
+        # Read in metadata with custom data item
+        project_metadata = {
+            "User": "Alison Bell",
+            "Library type": "RNA-seq",
+            "Organism": "Human",
+            "PI": "Audrey Bower",
+            "Sequencer model": "MiSeq",
+            "Order numbers": "#0001287,#0001293"
+        }
+        self.project_info_file = tempfile.mkstemp()[1]
+        with open(self.project_info_file, "wt") as fp:
+            for item in project_metadata:
+                fp.write(f"{item}\t{project_metadata[item]}\n")
+        info = AnalysisProjectInfo(self.project_info_file,
+                                   custom_items=["order_numbers"])
+        self.assertEqual(info.name,None)
+        self.assertEqual(info.run,None)
+        self.assertEqual(info.platform,None)
+        self.assertEqual(info.user, "Alison Bell")
+        self.assertEqual(info.PI, "Audrey Bower")
+        self.assertEqual(info.organism, "Human")
+        self.assertEqual(info.library_type, "RNA-seq")
+        self.assertEqual(info.single_cell_platform,None)
+        self.assertEqual(info.number_of_cells,None)
+        self.assertEqual(info.paired_end,None)
+        self.assertEqual(info.primary_fastq_dir,None)
+        self.assertEqual(info.samples,None)
+        self.assertEqual(info.biological_samples,None)
+        self.assertEqual(info.multiplexed_samples,None)
+        self.assertEqual(info.sequencer_model, "MiSeq")
+        self.assertEqual(info.comments,None)
+        self.assertEqual(info.order_numbers, "#0001287,#0001293")
+
+    def test_analysis_project_info_write_custom_metadata_item(self):
+        """
+        AnalysisProjectInfo: set and write custom metadata item
+        """
+        # Create empty metadata instance with custom item
+        info = AnalysisProjectInfo(self.project_info_file,
+                                   custom_items=["order_numbers"])
+        self.assertEqual(info.order_numbers, None)
+        # Set value for custom metadata
+        info["order_numbers"] = "#0001287"
+        self.assertEqual(info.order_numbers, "#0001287")
+        # Save to file and check contents include custom item
+        self.project_info_file = tempfile.mkstemp()[1]
+        info.save(self.project_info_file)
+        with open(self.project_info_file, "rt") as fp:
+            got_custom_items = False
+            for line in fp:
+                if line == "Order numbers\t#0001287\n":
+                    got_custom_items = True
+                    break
+        self.assertTrue(got_custom_items)
+
+    def test_analysis_project_info_custom_metadata_item_is_preserved(self):
+        """
+        AnalysisProjectInfo: custom metadata item is preserved
+        """
+        # Read in metadata with custom data item
+        project_metadata = {
+            "User": "Alison Bell",
+            "Library type": "RNA-seq",
+            "Organism": "Human",
+            "PI": "Audrey Bower",
+            "Sequencer model": "MiSeq",
+            "Order numbers": "#0001287,#0001293"
+        }
+        self.project_info_file = tempfile.mkstemp()[1]
+        with open(self.project_info_file, "wt") as fp:
+            for item in project_metadata:
+                fp.write(f"{item}\t{project_metadata[item]}\n")
+        info = AnalysisProjectInfo(self.project_info_file)
+        # Check standard items
+        self.assertEqual(info.name,None)
+        self.assertEqual(info.run,None)
+        self.assertEqual(info.platform,None)
+        self.assertEqual(info.user, "Alison Bell")
+        self.assertEqual(info.PI, "Audrey Bower")
+        self.assertEqual(info.organism, "Human")
+        self.assertEqual(info.library_type, "RNA-seq")
+        self.assertEqual(info.single_cell_platform,None)
+        self.assertEqual(info.number_of_cells,None)
+        self.assertEqual(info.paired_end,None)
+        self.assertEqual(info.primary_fastq_dir,None)
+        self.assertEqual(info.samples,None)
+        self.assertEqual(info.biological_samples,None)
+        self.assertEqual(info.multiplexed_samples,None)
+        self.assertEqual(info.sequencer_model, "MiSeq")
+        self.assertEqual(info.comments,None)
+        # Check custom data
+        self.assertEqual(info["order_numbers"], "#0001287,#0001293")
+        self.assertEqual(info.order_numbers,"#0001287,#0001293")
+        # Save to file and check contents include custom item
+        self.project_info_file = tempfile.mkstemp()[1]
+        info.save(self.project_info_file)
+        with open(self.project_info_file, "rt") as fp:
+            got_custom_items = False
+            for line in fp:
+                if line == "Order numbers\t#0001287,#0001293\n":
+                    got_custom_items = True
+                    break
+        self.assertTrue(got_custom_items)
+
+    def test_analysis_project_info_custom_metadata_item_names(self):
+        """
+        AnalysisProjectInfo: check custom metadata item names are correctly transformed
+        """
+        # Create info object with custom items
+        info = AnalysisProjectInfo(custom_items=["order_numbers",
+                                                 "bioinformatics_analysts",
+                                                 "ICELL8_well_list"])
+        # Check custom names
+        self.assertTrue("order_numbers" in info)
+        self.assertTrue("bioinformatics_analysts" in info)
+        self.assertTrue("ICELL8_well_list" in info)
+        # Set values
+        info["order_numbers"] = "#0001287,#0001293"
+        info["bioinformatics_analysts"] = "Isaac Jones"
+        info["ICELL8_well_list"] = "/mnt/data/well_list.txt"
+        # Write to file
+        self.project_info_file = tempfile.mkstemp()[1]
+        info.save(self.project_info_file)
+        # Check values
+        expected_custom_metadata = {
+            "Order numbers": "#0001287,#0001293",
+            "Bioinformatics analysts": "Isaac Jones",
+            "ICELL8 well list": "/mnt/data/well_list.txt",
+        }
+        with open(self.project_info_file, "rt") as fp:
+            expected_items = list(expected_custom_metadata.keys())
+            for line in fp:
+                item, value = line.strip().split("\t")
+                print(f"{item}\t{value}")
+                if item not in expected_items:
+                    continue
+                expected_items.remove(item)
+                self.assertEqual(value, expected_custom_metadata[item])
+            self.assertEqual(expected_items, [])
+
+    def test_analysis_project_info_exception_for_duplicated_custom_metadata_item(self):
+        """
+        AnalysisProjectInfo: raise exception if custom metadata item duplicates existing item
+        """
+        # Exception if custom item duplicates existing item
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["platform",])
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["order_numbers", "order_numbers"])
+
+    def test_analysis_project_info_bad_custom_metadata_item_names(self):
+        """
+        AnalysisProjectInfo: check 'bad' custom metadata item names are caught
+        """
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["123_starts_with_digit"])
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["has white spaces"])
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["has-non.alpha*chars(is[bad!])"])
+        self.assertRaises(Exception,
+                          AnalysisProjectInfo,
+                          custom_items=["Only_first_character_is_uppercase"])
+
+
+class TestItemToName(unittest.TestCase):
+    """
+    Test the 'item_to_name' function
+    """
+    def test_item_to_name(self):
+        """
+        item_to_name: check metadata item names are converted correctly
+        """
+        self.assertEqual(item_to_name("order_number"), "Order number")
+        self.assertEqual(item_to_name("EOL_date_stamp"), "EOL date stamp")
+        self.assertEqual(item_to_name("PI"), "PI")
+        self.assertEqual(item_to_name("ICELL8_well_list"), "ICELL8 well list")
+        self.assertEqual(item_to_name("icell8_well_list"), "Icell8 well list")
+
+
+class TestNameToItem(unittest.TestCase):
+    """
+    Test the 'name_to_item' function
+    """
+    def test_name_to_item(self):
+        """
+        name_to_item: check converted metadata item names are correctly converted back
+        """
+        self.assertEqual(name_to_item("Order number"), "order_number")
+        self.assertEqual(name_to_item("EOL date stamp"), "EOL_date_stamp")
+        self.assertEqual(name_to_item("PI"), "PI")
+        self.assertEqual(name_to_item("ICELL8 well list"), "ICELL8_well_list")
+        self.assertEqual(name_to_item("Icell8 well list"), "icell8_well_list")

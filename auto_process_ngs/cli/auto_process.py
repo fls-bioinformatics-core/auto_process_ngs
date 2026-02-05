@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/auto_process.py: command line interface for auto_process_ngs
-#     Copyright (C) University of Manchester 2013-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2026 Peter Briggs
 #
 #########################################################################
 #
@@ -224,9 +224,11 @@ def add_metadata_command(cmdparser):
                                help="Query and update analysis metadata",
                                description="Query and change metadata "
                                "associated with ANALYSIS_DIR.")
-    p.add_argument('--set',action='append',dest='key_value',default=None,
-                   help="Set the value of a metadata item. KEY_VALUE should "
-                   "be of the form '<param>=<value>'. Multiple --set options "
+    p.add_argument('--set',action='append',dest='key_value',
+                   metavar="[PROJECT:]PARAM=VALUE",default=None,
+                   help="Set metadata item PARAM to VALUE for ANALYSIS_DIR, "
+                   "or if the PROJECT identifier is also specified, then for "
+                   "item PARAM in that project. Multiple --set options "
                    "can be specified.")
     p.add_argument('--update',action='store_true',dest='update',default=False,
                    help="Automatically update metadata items where possible "
@@ -1362,7 +1364,33 @@ def metadata(args):
                 i = key_value.index('=')
                 key = key_value[:i]
                 value = key_value[i+1:].strip("'").strip('"')
-                d.set_metadata(key,value)
+                try:
+                    # See if key specifies a project name
+                    i = key.index(':')
+                    project_name, key = key[:i], key[i+1:]
+                    print(f"Looking up projects matching '{project_name}'...")
+                    projects = d.get_analysis_projects(project_name)
+                    if not projects:
+                        logger.warning(f"'{project_name}': no matching projects found")
+                    for project in projects:
+                        print(f"Setting '{key}' to '{value}' in project '{project_name}'...")
+                        if key in project.info:
+                            project.info[key] = value
+                            project.info.save()
+                        else:
+                            logger.warning(f"Failed: '{key}' not found in project '{project_name}'")
+                            logger.warning(f"Available metadata items are: "
+                                           f"{', '.join(list(project.info.keys()))}")
+                            raise KeyError(f"'{key}' not found in project '{project_name}'")
+                except ValueError:
+                    # No project, set top-level metadata
+                    try:
+                        d.set_metadata(key,value)
+                    except KeyError:
+                        logger.warning(f"Failed: '{key}' not found in top-level metadata")
+                        logger.warning(f"Available metadata items are: "
+                                       f"{', '.join(list(d.metadata.keys()))}")
+                        raise KeyError(f"'{key}' not found in top-level metadata")
             except ValueError:
                 logging.error("Can't process '%s'" % args.key_value)
         # Save updates to file
@@ -1616,7 +1644,8 @@ def setup_analysis_dirs(args):
                           args.ignore_missing_metadata,
                           undetermined_project=args.undetermined,
                           short_fastq_names=args.short_fastq_names,
-                          link_to_fastqs=args.link_to_fastqs)
+                          link_to_fastqs=args.link_to_fastqs,
+                          custom_metadata_items=d.custom_project_metadata)
 
 def run_qc(args):
     """
@@ -1917,9 +1946,22 @@ def set_debug(debug_flag):
 
 # Main function
 
-def main():
+def main(argv=None):
     """
+    Run 'auto_process.py COMMAND...'
+
+    Arguments:
+      argv (list): optional, command line arguments to
+        process (otherwise take arguments from
+        'sys.argv')
+
+    Returns:
+      Integer: 0 on success, 1 on failure.
     """
+    # Command line arguments
+    if argv is None:
+        argv = sys.argv[1:]
+
     # Set up the command line parser
     p = CommandParser(
         description="Automated processing & QC for Illumina sequencing data",
@@ -1971,7 +2013,7 @@ def main():
     }
     
     # Process command line
-    cmd,args = p.parse_args()
+    cmd,args = p.parse_args(argv)
 
     # Report name and version
     print("%s version %s" % (os.path.basename(sys.argv[0]),__version__))
@@ -1986,7 +2028,16 @@ def main():
         allow_save = True
 
     # Locate and run the requested command
-    try:
-        commands[cmd](args)
-    except KeyError:
-        raise Exception("Unrecognised command: '%s'" % cmd)
+    if cmd in commands:
+        try:
+            status = commands[cmd](args)
+            if status is not None:
+                return status
+            else:
+                return 0
+        except Exception as ex:
+            logger.fatal(ex)
+            return 1
+    else:
+        logger.fatal("Unrecognised command: '%s'" % cmd)
+        return 1

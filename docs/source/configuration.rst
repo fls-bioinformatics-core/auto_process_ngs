@@ -165,24 +165,56 @@ For example:
    [platform:hiseq4000]
    bcl_converter = bcl2fastq>=2.20
 
-----------------
-Default metadata
-----------------
+--------
+Metadata
+--------
 
-The ``metadata`` section of the configuration file allows defaults
-to be specified for metadata items associated with each run.
+The ``metadata`` section of the configuration file allows various
+site-specific metadata options to be set for runs and projects.
+
+Metadata defaults
+^^^^^^^^^^^^^^^^^
 
 Currently it is possible to set a default for the ``source``
-metadata item, which specifies where the data was received from,
-for example:
+metadata item associated with each run, which can be used to specify
+where the data was received from, for example:
 
 ::
 
    [metadata]
    default_data_source = "Local sequencing facility"
 
-If no default is set then the values can be updated using the
-``metadata`` command (see :ref:`commands_metadata`).
+If no default is set then the values can be updated for individual
+runs using the ``metadata`` command (see :ref:`commands_metadata`).
+
+Custom project metadata
+^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to the built-in "core" metadata items associated with each
+project, it is possible to specify additional site-specific metadata
+items via the ``custom_project_metadata`` setting.
+
+If set then this should specify one or more custom metadata items,
+with each item separated by a comma.
+
+For example:
+
+::
+
+    [metadata]
+    custom_project_metadata = assay_type,order_numbers
+
+The custom metadata items are added when projects are created. Their
+values can then be updated using the ``metadata`` command (see
+:ref:`commands_metadata`), and referenced as fields in the ``report``
+command (see :ref:`commands_report`).
+
+The custom metadata items names must conform to the following rules:
+
+ * Names can only contain of alphanumeric characters and the underscore
+   character;
+ * Names cannot start with a digit;
+ * Custom items must not duplicate any of the core metadata items.
 
 .. _job_runners:
 

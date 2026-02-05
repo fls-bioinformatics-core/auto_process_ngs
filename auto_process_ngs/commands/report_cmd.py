@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     report_cmd.py: implement auto process 'report' command
-#     Copyright (C) University of Manchester 2018-2024 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 #########################################################################
 
@@ -525,7 +525,7 @@ def report_summary(ap):
 def report_projects(ap,fields=None):
     """Generate one line reports suitable for pasting into spreadsheet
 
-    Generate one-line report for each each project with tab-separated
+    Generate one-line report for each project with tab-separated
     data items, suitable for injection into a spreadsheet.
 
     By default each line has the following information:
@@ -557,6 +557,11 @@ def report_projects(ap,fields=None):
     prefacing the composite field with a pair of square braces
     enclosing the new delimiter, followed by a colon (e.g.
     '[_]:user+PI' will use an underscore instead of a space).
+
+    In addition to the 'standard' reporting items, any custom
+    project metadata items that have been defined in the
+    configuration can also be specified in the list of fields
+    (or used as elements in composite fields).
 
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the
@@ -603,7 +608,15 @@ def report_projects(ap,fields=None):
             # joined with '+')
             value = []
             for subfield in field.split('+'):
-                subvalue = fetch_value(ap,project,subfield)
+                try:
+                    subvalue = fetch_value(ap,project,subfield)
+                except KeyError as ex:
+                    # Not found explicitly in project metadata
+                    if subfield not in ap.custom_project_metadata:
+                        # No matching custom fields so re-raise exception
+                        raise ex
+                    # Return null value
+                    subvalue = ''
                 if subvalue:
                     # Only append if there is a value
                     value.append(subvalue)
@@ -713,8 +726,14 @@ def fetch_value(ap,project,field):
     elif field == 'null' or field == '':
         return ''
     else:
-        raise KeyError("'%s': unrecognised field for reporting"
-                       % field)
+        if info:
+            try:
+                # Try fetching the data item directly
+                return str(info[field]) if info[field] is not None else ""
+            except KeyError:
+                pass
+    # Nothing found so raise KeyError
+    raise KeyError("'%s': unrecognised field for reporting" % field)
 
 def default_value(s,default=""):
     """

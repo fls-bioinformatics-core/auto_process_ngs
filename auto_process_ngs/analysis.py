@@ -526,11 +526,14 @@ class AnalysisProject:
         subdirectory holding the set of Fastq files to load;
         defaults to 'fastq' (if present) or to the top-level
         of the project directory (if absent).
+      custom_metadata_items (list): optional, specify a list
+        of additional item names which will be explicitly
+        added to the metadata in addition to the core items.
     """
     def __init__(self,name,dirn=None,user=None,PI=None,library_type=None,
                  single_cell_platform=None,organism=None,run=None,
                  comments=None,platform=None,sequencer_model=None,
-                 fastq_attrs=None,fastq_dir=None):
+                 fastq_attrs=None,fastq_dir=None,custom_metadata_items=None):
         """
         Create a new AnalysisProject instance
         """
@@ -543,7 +546,7 @@ class AnalysisProject:
         self.fastq_format = None
         self.samples = []
         self._qc_dir = None
-        self.info = AnalysisProjectInfo()
+        self.info = AnalysisProjectInfo(custom_items=custom_metadata_items)
         self.info_file = os.path.join(self.dirn,"README.info")
         # Function to use for getting Fastq information
         if fastq_attrs is None:

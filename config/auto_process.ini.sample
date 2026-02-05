@@ -141,6 +141,7 @@
 # See https://auto-process-ngs.readthedocs.io/en/latest/configuration.html#default-metadata
 ;[metadata]
 ;default_data_source = None
+;custom_project_metadata = None
 
 # Settings for archiving analyses
 # - dirn is the top-level directory in the form [[user@]host:]path

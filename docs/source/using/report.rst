@@ -158,8 +158,16 @@ the ``--templates`` option of the ``report`` command.
 
 .. note::
 
-   Custom fields are only available for the ``--projects``
+   Custom sets of fields are only available for the ``--projects``
    reporting mode.
+
+Reporting custom project metadata items
+---------------------------------------
+
+If site-specific metadata items have been associated with projects
+(via the ``custom_project_metadata`` option in the ``metadata`` section
+of the configuration file) then these can also be included when
+specifying fields for reporting.
 
 Writing reports to a file
 -------------------------

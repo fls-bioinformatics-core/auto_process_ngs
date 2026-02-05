@@ -1786,6 +1786,21 @@ no_lane_splitting = False
         self.assertEqual(s.platform['miseq'].no_lane_splitting,False)
         self.assertEqual(s.platform['miseq'].create_empty_fastqs,None)
 
+    def test_metadata_custom_project_metadata(self):
+        """
+        Settings: handle 'custom_project_metadata' in 'metadata' section
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[metadata]
+custom_project_metadata = analyst,order_numbers
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check custom_fields setting
+        self.assertEqual(s.metadata.custom_project_metadata, "analyst,order_numbers")
+
 
 class TestLocateSettingsFile(unittest.TestCase):
     """

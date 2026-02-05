@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2026 Peter Briggs
 #
 
 """
@@ -156,7 +156,6 @@ specifically to handle the ``auto_process.ini`` configuration file
 
 The simplest usage example is:
 
->>> from settings import Settings
 >>> s = Settings()
 
 The 'locate_settings_file' function is used implicitly to locate the
@@ -174,7 +173,6 @@ Two 'type' functions are also included:
 #######################################################################
 
 import os
-import sys
 from bcftbx.JobRunner import BaseJobRunner
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.utils import AttributeDictionary
@@ -1021,7 +1019,8 @@ class Settings(GenericSettings):
                                  "nprocessors": int,
                                  "no_lane_splitting": bool,
                                  "create_empty_fastqs": bool },
-                "metadata": { "default_data_source": str },
+                "metadata": { "default_data_source": str,
+                              "custom_project_metadata": str },
                 "10xgenomics": { "cellranger_jobmode": str,
                                  "cellranger_maxjobs": int,
                                  "cellranger_mempercore": int,
