@@ -41,87 +41,135 @@ class TestIdentifyApplication(TestCase):
         self.assertEqual(application["fastq_generation"], "mirna")
         self.assertEqual(application["qc_protocol"], "standard")
 
-    def test_identify_application_10x_chromium_3prime_v4_gem_x(self):
+    def test_identify_application_10x_chromium_3prime_scrnaseq(self):
         """
-        identify_application: identify 10x Chromium 3' v4 GEM-X single-cell
+        identify_application: identify 10x Chromium 3' scRNA-seq
         """
-        for platform in ["10x Chromium 3' (v4 GEM-X)", "10x Chromium 3' (v4 GEM-X) OCM"]:
-            for library_type in ["scRNA-seq", "GEX+CSP", "GEX+CRISPR"]:
-                application = identify_application(platform, library_type)
-                self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
-                self.assertEqual(application["qc_protocol"], "10x_scRNAseq")
+        platform = "10x Chromium 3'"
+        for library_type in ["scRNA-seq",
+                             "scRNA-seq+CSP",
+                             "scRNA-seq+CRISPR"]:
+            application = identify_application(platform, library_type)
+            self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+            self.assertEqual(application["qc_protocol"], "10x_scRNAseq")
 
-    def test_identify_application_10x_chromium_3prime_v4_gem_x_sn(self):
+    def test_identify_application_10x_chromium_3prime_ocm_scrnaseq(self):
         """
-        identify_application: identify 10x Chromium 3' v4 GEM-X single-nuclei
+        identify_application: identify 10x Chromium 3' OCM scRNA-seq
         """
-        for platform in ["10x Chromium 3' (v4 GEM-X)", "10x Chromium 3' (v4 GEM-X) OCM"]:
-            application = identify_application(platform, "snRNA-seq")
+        platform = "10x Chromium 3' OCM"
+        for library_type in ["scRNA-seq",
+                             "scRNA-seq+CSP",
+                             "scRNA-seq+CRISPR"]:
+            application = identify_application(platform, library_type)
+            self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+            self.assertEqual(application["qc_protocol"], "10x_scRNAseq")
+
+    def test_identify_application_10x_chromium_3prime_snrnaseq(self):
+        """
+        identify_application: identify 10x Chromium 3' snRNA-seq
+        """
+        platform = "10x Chromium 3'"
+        for library_type in ["snRNA-seq",
+                             "snRNA-seq+CSP",
+                             "snRNA-seq+CRISPR"]:
+            application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_snRNAseq")
 
-    def test_identify_application_10x_chromium_5prime_v3_gem_x(self):
+    def test_identify_application_10x_chromium_3prime_ocm_snrnaseq(self):
         """
-        identify_application: identify 10x Chromium 5' v3 GEM-X single-cell
+        identify_application: identify 10x Chromium 3' OCM snRNA-seq
         """
-        for platform in ["10x Chromium 5' (v3 GEM-X)", "10x Chromium 5' (v3 GEM-X) OCM"]:
-            for library_type in ["scRNA-seq", "snRNA-seq", "GEX+CSP", "GEX+VDJ", "GEX+VDJ+CSP"]:
-                application = identify_application(platform, library_type)
-                self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
-                self.assertEqual(application["qc_protocol"], "10x_ImmuneProfiling")
+        platform = "10x Chromium 3' OCM"
+        for library_type in ["snRNA-seq",
+                             "snRNA-seq+CSP",
+                             "snRNA-seq+CRISPR"]:
+            application = identify_application(platform, library_type)
+            self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+            self.assertEqual(application["qc_protocol"], "10x_snRNAseq")
 
-    def test_identify_application_10x_chromium_flex_v1_gem_x(self):
+    def test_identify_application_10x_chromium_5prime_immune_profiling(self):
         """
-        identify_application: identify 10x Chromium Flex v1 GEM-X single-cell
+        identify_application: identify 10x Chromium 5' Immune Profiling
         """
-        for library_type in ["scRNA-seq", "snRNA-seq", "GEX"]:
-            application = identify_application("10x Chromium Flex (v1 GEM-X)", library_type)
+        platform = "10x Chromium 5'"
+        for library_type in ["Immune Profiling",
+                             "Immune Profiling+CSP",
+                             "Immune Profiling+VDJ",
+                             "Immune Profiling+VDJ+CSP"]:
+            application = identify_application(platform, library_type)
+            self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+            self.assertEqual(application["qc_protocol"], "10x_ImmuneProfiling")
+
+    def test_identify_application_10x_chromium_5prime_ocm_immune_profiling(self):
+        """
+        identify_application: identify 10x Chromium 5' OCM Immune Profiling
+        """
+        platform = "10x Chromium 5' OCM"
+        for library_type in ["Immune Profiling",
+                             "Immune Profiling+CSP",
+                             "Immune Profiling+VDJ",
+                             "Immune Profiling+VDJ+CSP"]:
+            application = identify_application(platform, library_type)
+            self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+            self.assertEqual(application["qc_protocol"], "10x_ImmuneProfiling")
+
+    def test_identify_application_10x_chromium_flex(self):
+        """
+        identify_application: identify 10x Chromium Flex sc/snRNA-seq
+        """
+        platform = "10x Chromium Flex"
+        for library_type in ["GEX", "GEX+PEX"]:
+            application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_Flex")
 
-    def test_identify_application_10x_chromium_3prime_v31_next_gem_cellplex(self):
+    def test_identify_application_10x_chromium_3prime_cellplex(self):
         """
-        identify_application: identify 10x Chromium 3' v3.1 Next GEM CellPlex
+        identify_application: identify 10x Chromium 3' CellPlex
         """
-        for platform in ["10x Chromium 3' (v3.1 Next GEM ST) CellPlex",
-                         "10x Chromium 3' (v3.1 Next GEM HT) CellPlex"]:
-            for library_type in ["scRNA-seq", "GEX"]:
-                application = identify_application(platform, library_type)
-                self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
-                self.assertEqual(application["qc_protocol"], "10x_CellPlex")
+        platform = "10x Chromium 3' CellPlex"
+        library_type = "scRNA-seq"
+        application = identify_application(platform, library_type)
+        self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+        self.assertEqual(application["qc_protocol"], "10x_CellPlex")
 
-    def test_identify_application_10x_chromium_epi_atac(self):
+    def test_identify_application_10x_single_cell_atac(self):
         """
-        identify_application: identify 10x Chromium Epi ATAC
+        identify_application: identify 10x Single Cell ATAC
         """
-        for library_type in ["ATAC", "snATAC"]:
-            application = identify_application("10x Chromium Epi ATAC (v2)", library_type)
-            self.assertEqual(application["fastq_generation"], "10x_atac")
-            self.assertEqual(application["qc_protocol"], "10x_scATAC")
+        platform = "10x Single Cell ATAC"
+        library_type = "snATAC-seq"
+        application = identify_application(platform, library_type)
+        self.assertEqual(application["fastq_generation"], "10x_atac")
+        self.assertEqual(application["qc_protocol"], "10x_scATAC")
 
-    def test_identify_application_10x_chromium_epi_multiome_atac(self):
+    def test_identify_application_10x_single_cell_multiome_atac(self):
         """
-        identify_application: identify 10x Chromium Epi Multiome ATAC
+        identify_application: identify 10x Single Cell Multiome ATAC
         """
-        for library_type in ["ATAC", "snATAC"]:
-            application = identify_application("10x Chromium Epi Multiome ATAC (v1)", library_type)
-            self.assertEqual(application["fastq_generation"], "10x_multiome_atac")
-            self.assertEqual(application["qc_protocol"], "10x_Multiome_ATAC")
+        platform = "10x Single Cell Multiome"
+        library_type = "ATAC"
+        application = identify_application(platform, library_type)
+        self.assertEqual(application["fastq_generation"], "10x_multiome_atac")
+        self.assertEqual(application["qc_protocol"], "10x_Multiome_ATAC")
 
-    def test_identify_application_10x_chromium_epi_multiome_gex(self):
+    def test_identify_application_10x_single_cell_multiome_gex(self):
         """
-        identify_application: identify 10x Chromium Epi Multiome GEX
+        identify_application: identify 10x Single Cell Multiome GEX
         """
-        for library_type in ["GEX", "snGEX"]:
-            application = identify_application("10x Chromium Epi Multiome ATAC (v1)", library_type)
-            self.assertEqual(application["fastq_generation"], "10x_multiome_gex")
-            self.assertEqual(application["qc_protocol"], "10x_Multiome_GEX")
+        platform = "10x Single Cell Multiome"
+        library_type = "GEX"
+        application = identify_application(platform, library_type)
+        self.assertEqual(application["fastq_generation"], "10x_multiome_gex")
+        self.assertEqual(application["qc_protocol"], "10x_Multiome_GEX")
 
     def test_identify_application_10x_visium(self):
         """
         identify_application: identify 10x Visium applications
         """
-        application = identify_application("10x Visium", "Fresh Frozen Spatial GEX (v1)")
+        application = identify_application("10x Visium", "Fresh Frozen Spatial RNA-seq")
         self.assertEqual(application["fastq_generation"], "10x_visium_v1")
         self.assertEqual(application["qc_protocol"], "10x_Visium_GEX_90bp_insert")
 
@@ -129,8 +177,9 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Visium CytAssist GEX applications
         """
-        for library_type in ["FFPE Spatial GEX (v2)", "Fresh Frozen Spatial GEX (v2)", "Fixed Frozen Spatial GEX (v2)",
-                             "FFPE Spatial GEX"]:
+        for library_type in ["FFPE Spatial RNA-seq",
+                             "Fresh Frozen Spatial RNA-seq",
+                             "Fixed Frozen Spatial RNA-seq"]:
             application = identify_application("10x Visium (CytAssist)", library_type)
             self.assertEqual(application["fastq_generation"], "10x_visium")
             self.assertEqual(application["qc_protocol"], "10x_Visium_GEX")
@@ -147,7 +196,7 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Visium CytAssist HD GEX applications
         """
-        application = identify_application("10x Visium (CytAssist)", "FFPE HD Spatial GEX")
+        application = identify_application("10x Visium (CytAssist)", "FFPE HD Spatial RNA-seq")
         self.assertEqual(application["fastq_generation"], "10x_visium_hd")
         self.assertEqual(application["qc_protocol"], "10x_Visium_GEX")
 
@@ -155,7 +204,7 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Visium CytAssist HD 3' GEX applications
         """
-        application = identify_application("10x Visium (CytAssist)", "FFPE HD 3' Spatial GEX")
+        application = identify_application("10x Visium (CytAssist)", "Fresh Frozen HD 3' Spatial RNA-seq")
         self.assertEqual(application["fastq_generation"], "10x_visium_hd_3prime")
         self.assertEqual(application["qc_protocol"], "10x_Visium_GEX")
 

@@ -602,7 +602,7 @@ AB\tAB1,AB2\tAlan Brown\tFFPE Spatial RNA-seq\t10xGenomics CytAssist Visium\tHum
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\tAlan Brown\tGEX\t10xGenomics Single Cell Multiome\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1,AB2\tAlan Brown\tGEX\t10x Single Cell Multiome\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
@@ -676,7 +676,7 @@ AB\tAB1,AB2\tAlan Brown\tGEX\t10xGenomics Single Cell Multiome\tHuman\tAudrey Be
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\tAlan Brown\tscRNA-seq\t10x Chromium 3' (v3.1 Next GEM ST) CellPlex\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1,AB2\tAlan Brown\tscRNA-seq\t10x Chromium 3' CellPlex\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
@@ -756,7 +756,7 @@ AB\tAB1,AB2\tAlan Brown\tscRNA-seq\t10x Chromium 3' (v3.1 Next GEM ST) CellPlex\
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\tAlan Brown\tscRNA-seq\t10x Chromium 3' (v3.1 Next GEM ST) CellPlex\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1,AB2\tAlan Brown\tscRNA-seq\t10x Chromium 3' CellPlex\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
@@ -1077,7 +1077,7 @@ AB\tAB1,AB2\tAlan Brown\tCellPlex scRNA-seq\t10xGenomics Chromium 3'v3\tHuman\tA
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tscRNA-seq\t10x Chromium Flex (v1 GEM-X)\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1\tAlan Brown\tGEX\t10x Chromium Flex\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
@@ -1154,7 +1154,7 @@ AB\tAB1\tAlan Brown\tscRNA-seq\t10x Chromium Flex (v1 GEM-X)\tHuman\tAudrey Bens
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tscRNA-seq\t10x Chromium Flex (v1 GEM-X)\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1\tAlan Brown\tGEX\t10x Chromium Flex\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
@@ -1538,7 +1538,7 @@ AB\tAB1\tAlan Brown\tFlex\t10xGenomics Chromium GEM-X\tHuman\tAudrey Benson\t1% 
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tscRNA-seq\t10x Chromium 5' (v3 GEM-X)\tMouse\tAudrey Benson\t1% PhiX
+AB\tAB1\tAlan Brown\tImmune Profiling\t10x Chromium 5'\tMouse\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
@@ -1614,7 +1614,7 @@ AB\tAB1\tAlan Brown\tscRNA-seq\t10x Chromium 5' (v3 GEM-X)\tMouse\tAudrey Benson
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tscRNA-seq\t10x Chromium 5' (v3 GEM-X)\tMouse\tAudrey Benson\t1% PhiX
+AB\tAB1\tAlan Brown\tImmune Profiling\t10x Chromium 5'\tMouse\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
@@ -1663,161 +1663,9 @@ AB\tAB1\tAlan Brown\tscRNA-seq\t10x Chromium 5' (v3 GEM-X)\tMouse\tAudrey Benson
                 self.assertFalse(os.path.exists(template_multi_config_file),
                                  "Found %s" % template_multi_config_file)
 
-    def test_setup_analysis_dirs_10x_immune_profiling_710_legacy_metadata(self):
+    def test_setup_analysis_dirs_10x_immune_profiling_legacy_metadata(self):
         """
-        setup_analysis_dirs: create new analysis dir for 10x Single Cell Immune Profiling (7.1.0, legacy metadata)
-        """
-        # Make a mock auto-process directory
-        mockdir = MockAnalysisDirFactory.bcl2fastq2(
-            '170901_M00879_0087_000000000-AGEW9',
-            'miseq',
-            metadata={ "instrument_datestamp": "170901",
-                "processing_software": {
-                    "cellranger" : (
-                        "/usr/local/cellranger/7.1.0/cellranger",
-                        "cellranger",
-                        "7.1.0"
-                    )
-                }
-            },
-            reads=('R1','R2','I1','I2'),
-            top_dir=self.dirn)
-        mockdir.create(no_project_dirs=True)
-        print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq")))
-        print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq","AB")))
-        # Add required metadata to 'projects.info'
-        projects_info = os.path.join(mockdir.dirn,"projects.info")
-        with open(projects_info,"w") as fp:
-            fp.write(
-"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tSingle Cell Immune Profiling\t10xGenomics Chromium 5'\tMouse\tAudrey Benson\t1% PhiX
-""")
-        # Expected data
-        projects = {
-            "AB": ["AB1_S1_R1_001.fastq.gz",
-                   "AB1_S1_R2_001.fastq.gz",
-                   "AB1_S1_I1_001.fastq.gz",
-                   "AB1_S1_I2_001.fastq.gz",],
-            "undetermined": ["Undetermined_S0_R1_001.fastq.gz",]
-        }
-        # Check project dirs don't exist
-        for project in projects:
-            project_dir_path = os.path.join(mockdir.dirn,project)
-            self.assertFalse(os.path.exists(project_dir_path))
-        # Setup the project dirs
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
-        setup_analysis_dirs(ap)
-        # Check project dirs and contents
-        for project in projects:
-            project_dir_path = os.path.join(mockdir.dirn,project)
-            self.assertTrue(os.path.exists(project_dir_path))
-            # Check README.info file
-            readme_file = os.path.join(project_dir_path,
-                                       "README.info")
-            self.assertTrue(os.path.exists(readme_file))
-            # Check Fastqs
-            fastqs_dir = os.path.join(project_dir_path,
-                                      "fastqs")
-            self.assertTrue(os.path.exists(fastqs_dir))
-            for fq in projects[project]:
-                fastq = os.path.join(fastqs_dir,fq)
-                self.assertTrue(os.path.exists(fastq))
-            # Check template 10x_multi_config.csv
-            template_multi_config_file = os.path.join(
-                project_dir_path,
-                "10x_multi_config.csv.template")
-            if project == "AB":
-                # Template file should exist
-                self.assertTrue(os.path.exists(template_multi_config_file),
-                                "Missing %s" % template_multi_config_file)
-                # Template should contain '#no-bam'
-                with open(template_multi_config_file,'rt') as fp:
-                    template = fp.read()
-                    self.assertTrue(template.find("\n#no-bam,") != -1)
-            else:
-                # No template file
-                self.assertFalse(os.path.exists(template_multi_config_file),
-                                 "Found %s" % template_multi_config_file)
-
-    def test_setup_analysis_dirs_10x_immune_profiling_800_legacy_metadata(self):
-        """
-        setup_analysis_dirs: create new analysis dir for 10x Single Cell Immune Profiling (8.0.0, legacy metadata)
-        """
-        # Make a mock auto-process directory
-        mockdir = MockAnalysisDirFactory.bcl2fastq2(
-            '170901_M00879_0087_000000000-AGEW9',
-            'miseq',
-            metadata={ "instrument_datestamp": "170901",
-                "processing_software": {
-                    "cellranger" : (
-                        "/usr/local/cellranger/8.0.0/cellranger",
-                        "cellranger",
-                        "8.0.0"
-                    )
-                }
-            },
-            reads=('R1','R2','I1','I2'),
-            top_dir=self.dirn)
-        mockdir.create(no_project_dirs=True)
-        print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq")))
-        print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq","AB")))
-        # Add required metadata to 'projects.info'
-        projects_info = os.path.join(mockdir.dirn,"projects.info")
-        with open(projects_info,"w") as fp:
-            fp.write(
-"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tSingle Cell Immune Profiling\t10xGenomics Chromium 5'\tMouse\tAudrey Benson\t1% PhiX
-""")
-        # Expected data
-        projects = {
-            "AB": ["AB1_S1_R1_001.fastq.gz",
-                   "AB1_S1_R2_001.fastq.gz",
-                   "AB1_S1_I1_001.fastq.gz",
-                   "AB1_S1_I2_001.fastq.gz",],
-            "undetermined": ["Undetermined_S0_R1_001.fastq.gz",]
-        }
-        # Check project dirs don't exist
-        for project in projects:
-            project_dir_path = os.path.join(mockdir.dirn,project)
-            self.assertFalse(os.path.exists(project_dir_path))
-        # Setup the project dirs
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
-        setup_analysis_dirs(ap)
-        # Check project dirs and contents
-        for project in projects:
-            project_dir_path = os.path.join(mockdir.dirn,project)
-            self.assertTrue(os.path.exists(project_dir_path))
-            # Check README.info file
-            readme_file = os.path.join(project_dir_path,
-                                       "README.info")
-            self.assertTrue(os.path.exists(readme_file))
-            # Check Fastqs
-            fastqs_dir = os.path.join(project_dir_path,
-                                      "fastqs")
-            self.assertTrue(os.path.exists(fastqs_dir))
-            for fq in projects[project]:
-                fastq = os.path.join(fastqs_dir,fq)
-                self.assertTrue(os.path.exists(fastq))
-            # Check template 10x_multi_config.csv
-            template_multi_config_file = os.path.join(
-                project_dir_path,
-                "10x_multi_config.csv.template")
-            if project == "AB":
-                # Template file should exist
-                self.assertTrue(os.path.exists(template_multi_config_file),
-                                "Missing %s" % template_multi_config_file)
-                # Template should contain 'create-bam'
-                with open(template_multi_config_file,'rt') as fp:
-                    template = fp.read()
-                    self.assertTrue(template.find("\ncreate-bam,") != -1)
-            else:
-                # No template file
-                self.assertFalse(os.path.exists(template_multi_config_file),
-                                 "Found %s" % template_multi_config_file)
-
-    def test_setup_analysis_dirs_10x_immune_profiling_900_legacy_metadata(self):
-        """
-        setup_analysis_dirs: create new analysis dir for 10x Single Cell Immune Profiling (9.0.0, legacy metadata)
+        setup_analysis_dirs: create new analysis dir for 10x Single Cell Immune Profiling (legacy metadata)
         """
         # Make a mock auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(

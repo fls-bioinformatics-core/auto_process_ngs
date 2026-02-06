@@ -36,8 +36,8 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                        "PJB2_S2_R3_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Single Cell ATAC',
-                                           'Library type': 'scATAC-seq' })
+                                           '10x Single Cell ATAC',
+                                           'Library type': 'snATAC-seq' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()

@@ -36,7 +36,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                        "PJB2_S2_R2_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v2',
+                                           '10x Chromium 3\'',
                                            'Library type': 'scRNA-seq' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
@@ -132,7 +132,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                        "PJB2_S2_R2_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Chromium 3\'v2',
+                                           '10x Chromium 3\'',
                                            'Library type': 'snRNA-seq' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
