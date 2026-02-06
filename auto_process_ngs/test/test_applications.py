@@ -169,7 +169,7 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Visium applications
         """
-        application = identify_application("10x Visium", "Fresh Frozen Spatial GEX (v1)")
+        application = identify_application("10x Visium", "Fresh Frozen Spatial RNA-seq")
         self.assertEqual(application["fastq_generation"], "10x_visium_v1")
         self.assertEqual(application["qc_protocol"], "10x_Visium_GEX_90bp_insert")
 
@@ -177,8 +177,9 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Visium CytAssist GEX applications
         """
-        for library_type in ["FFPE Spatial GEX (v2)", "Fresh Frozen Spatial GEX (v2)", "Fixed Frozen Spatial GEX (v2)",
-                             "FFPE Spatial GEX"]:
+        for library_type in ["FFPE Spatial RNA-seq",
+                             "Fresh Frozen Spatial RNA-seq",
+                             "Fixed Frozen Spatial RNA-seq"]:
             application = identify_application("10x Visium (CytAssist)", library_type)
             self.assertEqual(application["fastq_generation"], "10x_visium")
             self.assertEqual(application["qc_protocol"], "10x_Visium_GEX")
@@ -195,7 +196,7 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Visium CytAssist HD GEX applications
         """
-        application = identify_application("10x Visium (CytAssist)", "FFPE HD Spatial GEX")
+        application = identify_application("10x Visium (CytAssist)", "FFPE HD Spatial RNA-seq")
         self.assertEqual(application["fastq_generation"], "10x_visium_hd")
         self.assertEqual(application["qc_protocol"], "10x_Visium_GEX")
 
@@ -203,7 +204,7 @@ class TestIdentifyApplication(TestCase):
         """
         identify_application: identify 10x Visium CytAssist HD 3' GEX applications
         """
-        application = identify_application("10x Visium (CytAssist)", "FFPE HD 3' Spatial GEX")
+        application = identify_application("10x Visium (CytAssist)", "Fresh Frozen HD 3' Spatial RNA-seq")
         self.assertEqual(application["fastq_generation"], "10x_visium_hd_3prime")
         self.assertEqual(application["qc_protocol"], "10x_Visium_GEX")
 

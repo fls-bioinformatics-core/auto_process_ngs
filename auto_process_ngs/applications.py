@@ -269,27 +269,30 @@ APPLICATIONS = [
     # 10x Visium
     {
         "platforms": ["10x Visium"],
-        "libraries": ["Fresh Frozen Spatial GEX (v1)"],
+        "libraries": ["Fresh Frozen Spatial RNA-seq"],
         "fastq_generation": "10x_visium_v1",
         "qc_protocol": "10x_Visium_GEX_90bp_insert",
         "setup": {
             "templates": [],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium Fresh Frozen Spatial GEX (v1)",],
         "tags": ["10x", "spatial"]
     },
     {
         "platforms": ["10x Visium (CytAssist)"],
-        "libraries": ["FFPE Spatial GEX",
-                      "FFPE Spatial GEX (v2)",
-                      "Fresh Frozen Spatial GEX (v2)",
-                      "Fixed Frozen Spatial GEX (v2)",],
+        "libraries": ["FFPE Spatial RNA-seq",
+                      "Fresh Frozen Spatial RNA-seq",
+                      "Fixed Frozen Spatial RNA-seq",],
         "fastq_generation": "10x_visium",
         "qc_protocol": "10x_Visium_GEX",
         "setup": {
             "templates": [],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium (CytAssist) FFPE Spatial GEX (v2)",
+                   "10x Visium (CytAssist) Fresh Frozen Spatial GEX (v2)",
+                   "10x Visium (CytAssist) Fixed Frozen Spatial GEX (v2)",],
         "tags": ["10x", "spatial"]
     },
     {
@@ -301,28 +304,31 @@ APPLICATIONS = [
             "templates": [],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium (CytAssist) FFPE Spatial PEX",],
         "tags": ["10x", "spatial"]
     },
     {
         "platforms": ["10x Visium (CytAssist)"],
-        "libraries": ["FFPE HD Spatial GEX",],
+        "libraries": ["FFPE HD Spatial RNA-seq",],
         "fastq_generation": "10x_visium_hd",
         "qc_protocol": "10x_Visium_GEX",
         "setup": {
-            "templates": [],
+            "templates": ["10x Visium (CytAssist) FFPE Spatial GEX",],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium (CytAssist) FFPE HD Spatial GEX",],
         "tags": ["10x", "spatial"]
     },
     {
         "platforms": ["10x Visium (CytAssist)"],
-        "libraries": ["FFPE HD 3' Spatial GEX",],
+        "libraries": ["Fresh Frozen HD 3' Spatial RNA-seq",],
         "fastq_generation": "10x_visium_hd_3prime",
         "qc_protocol": "10x_Visium_GEX",
         "setup": {
             "templates": [],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium (CytAssist) Fresh Frozen HD 3' Spatial GEX",],
         "tags": ["10x", "spatial"]
     },
     # Parse
