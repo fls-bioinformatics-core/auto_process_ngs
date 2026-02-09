@@ -124,7 +124,7 @@ APPLICATIONS = [
             "templates": [],
             "directories": [],
         },
-        "assays": ["10x Chromium 3' (v4 GEM-X) OCM sc GEX",],
+        "assays": ["10x Chromium 3' (v4 GEM-X) sc GEX",],
         "tags": ["10x", "single_cell"]
     },
     # 10x Chromium 3' OCM single-cell
