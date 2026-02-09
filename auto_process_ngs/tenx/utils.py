@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx/utils.py: utility functions for handling 10xGenomics data
-#     Copyright (C) University of Manchester 2023-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2026 Peter Briggs
 #
 
 """
@@ -25,6 +25,7 @@ pipelines:
 import os
 import re
 import json
+from textwrap import dedent
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import split_run_name_full
 from bcftbx.utils import find_program
@@ -393,40 +394,54 @@ def add_cellranger_args(cellranger_cmd,
         cellranger_cmd.add_args("--disable-ui")
     return cellranger_cmd
 
-def make_multi_config_template(f,reference=None,probe_set=None,
-                               fastq_dir=None,samples=None,
-                               no_bam=None,library_type="CellPlex",
+
+def make_multi_config_template(f, reference=None, fastq_dir=None,
+                               samples=None, multiplexing=None, extensions=None,
+                               no_bam=None, include_probe_set=None, probe_set=None,
                                cellranger_version=None):
     """
     Write a template configuration file for 'cellranger multi'
 
     Generates a template for the 'cellranger multi'
-    configuration file, which can be used with either CellPlex
-    or fixed RNA profiling (Flex) data.
+    configuration file. Specific options and sections are
+    included or omitted depending on the arguments supplied
+    to this function.
 
     The format and parameters for different data types are
     described in the 10x Genomics 'cellranger' documentation:
 
-    * CellPlex: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi#cellranger-multi
-    * Flex: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/multi-frp#cellranger-multi
+    * https://www.10xgenomics.com/support/software/cell-ranger/latest/analysis/inputs/cr-multi-config-csv-opts
 
     Arguments:
       f (str): path that output template file will be
         written to
       reference (str): path to reference transcriptome
-      probe_set (str): path to probe set CSV file
       fastq_dir (str): path to directory with Fastq files
       samples (list): list of sample names
+      multiplexing (str): type of multiplexing (one of
+        'cellplex', 'flex' or 'ocm', or None for singleplex
+        data)
+      extensions (list): list of "product extensions" (one
+        or more of 'CSP', 'VDJ-T', 'VDJ-B') or None if there
+        are no extensions
       no_bam (bool): if set then will be the value of the
         'no-bam' setting
-      library_type (str): specify the library type of data
-        that the configuration file will be used with;
-        should be one of 'CellPlex[...]' (the default),
-        'Flex' or 'Single Cell Immune Profiling'
+      include_probe_set (bool): if set then the 'probe-set'
+        setting will be included in the template (defaults
+        to False; if 'probe_set' is defined then will be
+        set to True automatically)
+      probe_set (str): path to probe set CSV file
       cellranger_version (str): optionally specify the
-        target Cellranger version number (or None)
+        target CellRanger version number (or None to use
+        the default version)
     """
-    # Target version
+    if not samples:
+        samples = []
+    if not extensions:
+        extensions = []
+    if probe_set:
+        include_probe_set = True
+    # Target CellRanger version
     if cellranger_version is None:
         cellranger_version = DEFAULT_CELLRANGER_VERSION
     else:
@@ -436,44 +451,24 @@ def make_multi_config_template(f,reference=None,probe_set=None,
         cellranger_major_version = int(cellranger_version.split(".")[0])
     except Exception as ex:
         raise Exception(f"'{cellranger_version}': unable to extract "
-                        f"Cellranger major  version from version string: "
+                        f"Cellranger major version from version string: "
                         f"{ex}")
-    # Normalise and check supplied library type
-    if library_type.startswith("CellPlex"):
-        library_type = "cellplex"
-    library_type = library_type.lower().replace(" ","_")
-    if library_type not in ("cellplex",
-                            "flex",
-                            "single_cell_immune_profiling"):
-        raise Exception(f"'{library_type}': unsupported library type for "
-                        "multi template generation")
+    if extensions is None:
+        extensions = []
     # Write template file
     with open(f,'wt') as fp:
         # Header
         fp.write("## 10x_multi_config.csv\n"
-                 "## See:\n")
-        if library_type == "cellplex":
-                 fp.write("## * CellPlex: https://support.10xgenomics.com/"
-                          "single-cell-gene-expression/software/pipelines/"
-                          "latest/using/multi#cellranger-multi\n")
-        elif library_type == "flex":
-            fp.write("## * Flex: https://support.10xgenomics.com/"
-                     "single-cell-gene-expression/software/pipelines/"
-                     "latest/using/multi-frp#cellranger-multi\n")
-        elif library_type == "single_cell_immune_profiling":
-            fp.write("## * Single Cell Immune Profiling: "
-                     "https://support.10xgenomics.com/"
-                     "single-cell-vdj/software/pipelines/latest/using/"
-                     "multi\n")
+                 "## See: https://www.10xgenomics.com/support/"
+                 "software/cell-ranger/latest/analysis/inputs/cr-multi-config-csv-opts\n")
         # Gene expression section
         fp.write("[gene-expression]\n")
         fp.write("reference,%s\n" %
                  (reference if reference
                   else "/path/to/transcriptome"))
-        if library_type == "flex":
+        if include_probe_set:
             fp.write("probe-set,%s\n" %
-                     (probe_set if probe_set
-                      else "/path/to/probe/set"))
+                     (probe_set if probe_set else "/path/to/probe_set"))
         fp.write("#force-cells,n\n")
         if cellranger_major_version == 7:
             # Cellranger 7.* targetted
@@ -488,37 +483,53 @@ def make_multi_config_template(f,reference=None,probe_set=None,
             else:
                 fp.write("create-bam,true\n")
         fp.write("#cmo-set,/path/to/custom/cmo/reference\n")
-        fp.write("\n")
         # Feature section
-        fp.write("#[feature]\n"
-                 "#reference,/path/to/feature/reference\n")
-        fp.write("\n")
+        if "CSP" in extensions:
+            fp.write(dedent("""
+            #[feature]
+            #reference,/path/to/feature_ref
+            """))
         # V(D)J section
-        if library_type == "single_cell_immune_profiling":
-            fp.write("#[vdj]\n"
-                     "#reference,/path/to/vdj/reference\n")
-            fp.write("\n")
+        if "VDJ-B" in extensions or "VDJ-T" in extensions:
+            fp.write(dedent("""
+            [vdj]
+            #reference,/path/to/vdj_reference
+            """))
         # Libraries section
-        fp.write("[libraries]\n"
-                 "fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate\n")
-        if samples:
-            if library_type == "cellplex":
-                tenx_library_type = "[Gene Expression|Multiplexing Capture]"
-            elif library_type == "flex":
-                tenx_library_type = "[Gene Expression|Antibody Capture]"
-            elif library_type == "single_cell_immune_profiling":
-                tenx_library_type = "[Gene Expression|Antibody Capture|VDJ-B|VDJ-T]"
-            for sample in samples:
-                fp.write("{sample},{fastqs_dir},any,{sample},{tenx_library_type},\n".format(
-                    sample=sample,
-                    fastqs_dir=(fastq_dir if fastq_dir else "/path/to/fastqs"),
-                    tenx_library_type=tenx_library_type))
+        fp.write(dedent("""
+        [libraries]
+        fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+        """))
+        tenx_library_types = ["Gene Expression",]
+        if samples and multiplexing:
+            if multiplexing in ("cellplex", "ocm", "flex"):
+                tenx_library_types.append("Multiplexing Capture")
+        if extensions:
+            if "CSP" in extensions:
+                tenx_library_types.append("Antibody Capture")
+            if "VDJ-B" in extensions or "VDJ-T" in extensions:
+                tenx_library_types.extend(["VDJ-B", "VDJ-T"])
+        for sample in samples:
+            library_type = "[%s]" % "|".join(tenx_library_types)
+            fp.write("{sample},{fastqs_dir},any,{sample},{library_type},\n".format(
+                sample=sample,
+                fastqs_dir=(fastq_dir if fastq_dir else "/path/to/fastqs"),
+                library_type=library_type))
         # Multiplexed samples section
-        if library_type == "cellplex":
-            fp.write("\n[samples]\n")
-            fp.write("sample_id,cmo_ids,description\n"
-                     "MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION\n")
-        elif library_type == "flex":
-            fp.write("\n[samples]\n")
-            fp.write("sample_id,probe_barcode_ids,description\n"
-                     "MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION\n")
+        if multiplexing == "cellplex":
+            fp.write(dedent("""
+            [samples]
+            sample_id,cmo_ids,description
+            MULTIPLEXED_SAMPLE,CMO1|CMO2|...,DESCRIPTION
+            """))
+        elif multiplexing == "flex":
+            fp.write(dedent("""
+            [samples]
+            sample_id,probe_barcode_ids,description
+            MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
+            """))
+        elif multiplexing == "ocm":
+            fp.write(dedent("""[samples]
+            sample_id,ocm_barcode_ids,description
+            MULTIPLEXED_SAMPLE,OB1|OB2|...,DESCRIPTION
+            """))
