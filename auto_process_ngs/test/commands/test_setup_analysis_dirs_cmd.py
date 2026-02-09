@@ -9,6 +9,7 @@ import shutil
 from textwrap import dedent
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
+from auto_process_ngs.mock import MockAnalysisDir
 from auto_process_ngs.commands.setup_analysis_dirs_cmd import setup_analysis_dirs
 from auto_process_ngs.settings import Settings
 
@@ -904,7 +905,7 @@ AB\tAB1\tAlan Brown\tGEX\t10x Chromium Flex\tHuman\tAudrey Benson\t1% PhiX
 
     def test_setup_analysis_dirs_10x_immune_profiling_800(self):
         """
-        setup_analysis_dirs: create new analysis dir for 10x Single Cell Immune Profiling (8.0.0)
+        setup_analysis_dirs: create new analysis dir for 10x Immune Profiling (8.0.0)
         """
         # Make a mock auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -980,23 +981,26 @@ AB\tAB1\tAlan Brown\tImmune Profiling\t10x Chromium 5'\tMouse\tAudrey Benson\t1%
 
     def test_setup_analysis_dirs_10x_immune_profiling_900(self):
         """
-        setup_analysis_dirs: create new analysis dir for 10x Single Cell Immune Profiling (9.0.0)
+        setup_analysis_dirs: create new analysis dir for 10x Immune Profiling (9.0.0)
         """
         # Make a mock auto-process directory
-        mockdir = MockAnalysisDirFactory.bcl2fastq2(
-            '170901_M00879_0087_000000000-AGEW9',
-            'miseq',
-            metadata={ "instrument_datestamp": "170901",
-                "processing_software": {
-                    "cellranger" : (
-                        "/usr/local/cellranger/9.0.0/cellranger",
-                        "cellranger",
-                        "9.0.0"
-                    )
-                }
-            },
-            reads=('R1','R2','I1','I2'),
-            top_dir=self.dirn)
+        mockdir = MockAnalysisDir("170901_M00879_0087_000000000-AGEW9",
+                                  "miseq",
+                                  metadata={
+                                      "instrument_datestamp": "170901",
+                                      "processing_software": {
+                                          "cellranger" : (
+                                              "/usr/local/cellranger/9.0.0/cellranger",
+                                              "cellranger",
+                                              "9.0.0" )
+                                      }
+                                  },
+                                  unaligned_dir="bcl2fastq",
+                                  fmt="bcl2fastq2",
+                                  paired_end=True,
+                                  no_lane_splitting=True,
+                                  top_dir=self.dirn)
+        mockdir.add_fastq_batch("AB", "AB1_GEX", "AB1_GEX_S1", reads=["R1","R2","I1","I2"])
         mockdir.create(no_project_dirs=True)
         print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq")))
         print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq","AB")))
@@ -1005,14 +1009,14 @@ AB\tAB1\tAlan Brown\tImmune Profiling\t10x Chromium 5'\tMouse\tAudrey Benson\t1%
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tImmune Profiling\t10x Chromium 5'\tMouse\tAudrey Benson\t1% PhiX
+AB\tAB1_GEX\tAlan Brown\tImmune Profiling\t10x Chromium 5'\tMouse\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
-            "AB": ["AB1_S1_R1_001.fastq.gz",
-                   "AB1_S1_R2_001.fastq.gz",
-                   "AB1_S1_I1_001.fastq.gz",
-                   "AB1_S1_I2_001.fastq.gz",],
+            "AB": ["AB1_GEX_S1_R1_001.fastq.gz",
+                   "AB1_GEX_S1_R2_001.fastq.gz",
+                   "AB1_GEX_S1_I1_001.fastq.gz",
+                   "AB1_GEX_S1_I2_001.fastq.gz",],
             "undetermined": ["Undetermined_S0_R1_001.fastq.gz",]
         }
         # Check project dirs don't exist
@@ -1045,10 +1049,99 @@ AB\tAB1\tAlan Brown\tImmune Profiling\t10x Chromium 5'\tMouse\tAudrey Benson\t1%
                 # Template file should exist
                 self.assertTrue(os.path.exists(template_multi_config_file),
                                 "Missing %s" % template_multi_config_file)
-                # Template should contain 'create-bam'
                 with open(template_multi_config_file,'rt') as fp:
                     template = fp.read()
+                    # Template should contain 'create-bam'
                     self.assertTrue(template.find("\ncreate-bam,") != -1)
+                    # Template should contain samples
+                    self.assertTrue(template.find("\nAB1_GEX,") != -1)
+            else:
+                # No template file
+                self.assertFalse(os.path.exists(template_multi_config_file),
+                                 "Found %s" % template_multi_config_file)
+
+    def test_setup_analysis_dirs_10x_immune_profiling_with_csp_900(self):
+        """
+        setup_analysis_dirs: create new analysis dir for 10x Immune Profiling with CSP (9.0.0)
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDir("170901_M00879_0087_000000000-AGEW9",
+                                  "miseq",
+                                  metadata={
+                                      "instrument_datestamp": "170901",
+                                      "processing_software": {
+                                          "cellranger" : (
+                                              "/usr/local/cellranger/9.0.0/cellranger",
+                                              "cellranger",
+                                              "9.0.0" )
+                                      }
+                                  },
+                                  unaligned_dir="bcl2fastq",
+                                  fmt="bcl2fastq2",
+                                  paired_end=True,
+                                  no_lane_splitting=True,
+                                  top_dir=self.dirn)
+        mockdir.add_fastq_batch("AB", "AB1_GEX", "AB1_GEX_S1", reads=["R1","R2","I1","I2"])
+        mockdir.add_fastq_batch("AB", "AB1_CSP", "AB1_CSP_S2", reads=["R1","R2","I1","I2"])
+        mockdir.create(no_project_dirs=True)
+        print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq")))
+        print(os.listdir(os.path.join(mockdir.dirn,"bcl2fastq","AB")))
+        # Add required metadata to 'projects.info'
+        projects_info = os.path.join(mockdir.dirn,"projects.info")
+        with open(projects_info,"w") as fp:
+            fp.write(
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+AB\tAB1_GEX,AB1_CSP\tAlan Brown\tImmune Profiling+CSP\t10x Chromium 5'\tMouse\tAudrey Benson\t1% PhiX
+""")
+        # Expected data
+        projects = {
+            "AB": ["AB1_GEX_S1_R1_001.fastq.gz",
+                   "AB1_GEX_S1_R2_001.fastq.gz",
+                   "AB1_GEX_S1_I1_001.fastq.gz",
+                   "AB1_GEX_S1_I2_001.fastq.gz",
+                   "AB1_CSP_S2_R1_001.fastq.gz",
+                   "AB1_CSP_S2_R2_001.fastq.gz",
+                   "AB1_CSP_S2_I1_001.fastq.gz",
+                   "AB1_CSP_S2_I2_001.fastq.gz",],
+            "undetermined": ["Undetermined_S0_R1_001.fastq.gz",]
+        }
+        # Check project dirs don't exist
+        for project in projects:
+            project_dir_path = os.path.join(mockdir.dirn,project)
+            self.assertFalse(os.path.exists(project_dir_path))
+        # Setup the project dirs
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        setup_analysis_dirs(ap)
+        # Check project dirs and contents
+        for project in projects:
+            project_dir_path = os.path.join(mockdir.dirn,project)
+            self.assertTrue(os.path.exists(project_dir_path))
+            # Check README.info file
+            readme_file = os.path.join(project_dir_path,
+                                       "README.info")
+            self.assertTrue(os.path.exists(readme_file))
+            # Check Fastqs
+            fastqs_dir = os.path.join(project_dir_path,
+                                      "fastqs")
+            self.assertTrue(os.path.exists(fastqs_dir))
+            for fq in projects[project]:
+                fastq = os.path.join(fastqs_dir,fq)
+                self.assertTrue(os.path.exists(fastq))
+            # Check template 10x_multi_config.csv
+            template_multi_config_file = os.path.join(
+                project_dir_path,
+                "10x_multi_config.csv.template")
+            if project == "AB":
+                # Template file should exist
+                self.assertTrue(os.path.exists(template_multi_config_file),
+                                "Missing %s" % template_multi_config_file)
+                with open(template_multi_config_file,'rt') as fp:
+                    template = fp.read()
+                    # Template should contain 'create-bam'
+                    self.assertTrue(template.find("\ncreate-bam,") != -1)
+                    # Template should contain samples
+                    self.assertTrue(template.find("\nAB1_GEX,") != -1)
+                    self.assertTrue(template.find("\nAB1_CSP,") != -1)
             else:
                 # No template file
                 self.assertFalse(os.path.exists(template_multi_config_file),

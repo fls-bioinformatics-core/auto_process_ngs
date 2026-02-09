@@ -135,7 +135,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_scRNAseq",
         "setup": {
-            "templates": [],
+            "templates": ["10x_multi_config(multiplexing=ocm)"],
             "directories": [],
         },
         "assays": ["10x Chromium 3' (v4 GEM-X) OCM sc GEX",],
@@ -161,7 +161,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_snRNAseq",
         "setup": {
-            "templates": [],
+            "templates": ["10x_multi_config(multiplexing=ocm)"],
             "directories": [],
         },
         "assays": ["10x Chromium 3' (v4 GEM-X) OCM sn GEX",],
@@ -175,7 +175,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
-            "templates": ["10x_multi_config(library_type=single_cell_immune_profiling)"],
+            "templates": ["10x_multi_config()"],
             "directories": [],
         },
         "assays": ["10x Chromium 5' (v3 GEM-X) sc GEX",
@@ -190,7 +190,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
-            "templates": ["10x_multi_config(library_type=single_cell_immune_profiling)"],
+            "templates": ["10x_multi_config(multiplexing=ocm)"],
             "directories": [],
         },
         "assays": ["10x Chromium 5' (v3 GEM-X) OCM sc GEX",
@@ -205,7 +205,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
         "setup": {
-            "templates": ["10x_multi_config(library_type=flex,include_probeset=true)"],
+            "templates": ["10x_multi_config(multiplexing=flex,include_probeset=true)"],
             "directories": [],
         },
         "assays": ["10x Chromium Flex (v1 GEM-X) sc GEX",
@@ -219,7 +219,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_CellPlex",
         "setup": {
-            "templates": ["10x_multi_config(library_type=cellplex)"],
+            "templates": ["10x_multi_config(multiplexing=cellplex)"],
             "directories": [],
         },
         "assays": ["10x Chromium 3' (v3.1 Next GEM ST) CellPlex sc GEX",
@@ -415,7 +415,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_CellPlex",
         "setup": {
-            "templates": ["10x_multi_config(library_type=cellplex)"],
+            "templates": ["10x_multi_config(multiplexing=cellplex)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell", "legacy"]
@@ -427,7 +427,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
-            "templates": ["10x_multi_config(library_type=single_cell_immune_profiling)"],
+            "templates": ["10x_multi_config()"],
             "directories": [],
         }
     },
@@ -440,7 +440,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
         "setup": {
-            "templates": ["10x_multi_config(library_type=flex,include_probeset=true)"],
+            "templates": ["10x_multi_config(multiplexing=flex,include_probeset=true)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell", "legacy"]
