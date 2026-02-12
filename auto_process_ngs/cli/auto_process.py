@@ -736,9 +736,15 @@ def add_run_qc_command(cmdparser):
     qc_options = p.add_argument_group('QC options')
     qc_options.add_argument('--protocol',action='append',
                             dest='protocols',
-                            help="specify QC protocol for a project using "
-                            "the format 'PROJECTNAME=QCPROTOCOL' (overrides "
-                            "the automatic protocol determination for "
+                            metavar='PROJECTNAME=QCPROTOCOL',
+                            help="specify QC protocol for project "
+                            "PROJECTNAME (overrides the automatic "
+                            "protocol determination for that project)")
+    qc_options.add_argument('--organism',action='append',
+                            dest='organisms',
+                            metavar='PROJECTNAME=ORGANISM',
+                            help="specify organism for QC run for project "
+                            "PROJECTNAME (overrides the organism set for "
                             "that project)")
     qc_options.add_argument('--fastq_subset',action='store',
                             dest='subset',type=int,
@@ -1667,6 +1673,18 @@ def run_qc(args):
             except ValueError:
                 raise Exception(f"'{protocol}': invalid syntax for "
                                 f"specifying QC protocol for project")
+    # Organisms
+    organisms = {}
+    if args.organisms:
+        for organism in args.organisms:
+            try:
+                idx = organism.index("=")
+                project = organism[:idx]
+                qc_organism = organism[idx+1:]
+                organisms[project] = qc_organism
+            except ValueError:
+                raise Exception(f"'{organism}': invalid syntax for "
+                                f"specifying organism for project")
     # Fastq screens
     if __settings.qc.fastq_screens:
         fastq_screens = dict()
@@ -1699,6 +1717,7 @@ def run_qc(args):
                        nthreads=args.nthreads,
                        fastq_dir=args.fastq_dir,
                        qc_dir=args.qc_dir,
+                       organisms=organisms,
                        cellranger_exe=args.cellranger_exe,
                        cellranger_chemistry=
                        args.cellranger_chemistry,
