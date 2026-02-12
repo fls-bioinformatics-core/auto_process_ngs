@@ -809,6 +809,7 @@ class QCPipeline(Pipeline):
                 rseqc_gene_body_coverage = RseqcGenebodyCoverage.add_to_pipeline(
                     self,
                     project_name,
+                    project,
                     qc_dir,
                     get_bam_files.output.bam_files,
                     get_reference_gene_model.output.reference_dataset,

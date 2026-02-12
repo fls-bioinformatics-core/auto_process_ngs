@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 #     rseqc_genebody_coverage: implements 'rsecq_genebody_coverage' QC module
-#     Copyright (C) University of Manchester 2024 Peter Briggs
+#     Copyright (C) University of Manchester 2024-2026 Peter Briggs
 
 """
 Implements the 'rseqc_genebody_coverage' QC module:
@@ -138,7 +138,7 @@ class RseqcGenebodyCoverage(QCModule):
         return True
 
     @classmethod
-    def add_to_pipeline(self,p,project_name,qc_dir,bam_files,
+    def add_to_pipeline(self,p,project_name,project,qc_dir,bam_files,
                         reference_gene_model,organism_name,
                         required_tasks=[],rseqc_runner=None):
         """
@@ -147,6 +147,7 @@ class RseqcGenebodyCoverage(QCModule):
         Arguments:
           p (Pipeline): pipeline to extend
           project_name (str): name of project
+          project (AnalysisProject): project to run module on
           qc_dir (str): path to QC directory
           bam_files (list): BAM files to run the module on
           reference_gene_model (str): path to reference gene
@@ -166,7 +167,7 @@ class RseqcGenebodyCoverage(QCModule):
             bam_files,
             reference_gene_model,
             out_dir,
-            name=project_name)
+            name=project.name)
         p.add_task(rseqc_gene_body_coverage,
                    requires=required_tasks,
                    runner=rseqc_runner)
