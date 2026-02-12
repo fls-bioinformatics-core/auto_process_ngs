@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc_cmd.py: implement auto process run_qc command
-#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 #########################################################################
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 def run_qc(ap,projects=None,protocols=None,
            fastq_screens=None,fastq_subset=100000,
            nthreads=None,runner=None,fastq_dir=None,
-           qc_dir=None,cellranger_exe=None,
+           qc_dir=None,organisms=None,cellranger_exe=None,
            cellranger_chemistry='auto',
            cellranger_force_cells=None,
            cellranger_transcriptomes=None,
@@ -75,6 +75,11 @@ def run_qc(ap,projects=None,protocols=None,
       qc_dir (str): specify a non-standard directory to write the
         QC outputs to; will be used for all projects that are
         processed (default: 'qc')
+      organisms (dict): mapping of organism names to QC protocols;
+        where a project name appears the specified organism will
+        be used, overriding the organism defined in the project
+        metadata (default is for all organisms to be taken from
+        the projects)
       cellranger_exe (str): explicitly specify path to cellranger
         executable to use for 10xGenomics projects (default:
         determine appropriate executable automatically)
@@ -253,12 +258,17 @@ def run_qc(ap,projects=None,protocols=None,
             # have an explicit lane number in its name
             split_lanes = any([project.fastq_attrs(fq).lane_number is None
                                for fq in project.fastqs])
+        # Determine organism for QC
+        try:
+            organism = organisms[project.name]
+        except KeyError:
+            organism = project.info.organism
         # Add the project to the QC
         runqc.add_project(project,
                           protocol,
                           qc_dir=qc_dir,
                           fastq_dir=fastq_dir,
-                          organism=project.info.organism,
+                          organism=organism,
                           sample_pattern=sample_pattern,
                           split_fastqs_by_lane=split_lanes,
                           multiqc=True)
