@@ -48,6 +48,8 @@ class TestIdentifyApplication(TestCase):
         platform = "10x Chromium 3'"
         for library_type in ["scRNA-seq",
                              "scRNA-seq+CSP",
+                             "scRNA-seq+Antibody Capture",
+                             "scRNA-seq+Feature Barcode",
                              "scRNA-seq+CRISPR"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
@@ -60,6 +62,8 @@ class TestIdentifyApplication(TestCase):
         platform = "10x Chromium 3' OCM"
         for library_type in ["scRNA-seq",
                              "scRNA-seq+CSP",
+                             "scRNA-seq+Antibody Capture",
+                             "scRNA-seq+Feature Barcode",
                              "scRNA-seq+CRISPR"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
@@ -72,6 +76,8 @@ class TestIdentifyApplication(TestCase):
         platform = "10x Chromium 3'"
         for library_type in ["snRNA-seq",
                              "snRNA-seq+CSP",
+                             "snRNA-seq+Antibody Capture",
+                             "snRNA-seq+Feature Barcode",
                              "snRNA-seq+CRISPR"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
@@ -84,6 +90,8 @@ class TestIdentifyApplication(TestCase):
         platform = "10x Chromium 3' OCM"
         for library_type in ["snRNA-seq",
                              "snRNA-seq+CSP",
+                             "snRNA-seq+Antibody Capture",
+                             "snRNA-seq+Feature Barcode",
                              "snRNA-seq+CRISPR"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
@@ -96,8 +104,12 @@ class TestIdentifyApplication(TestCase):
         platform = "10x Chromium 5'"
         for library_type in ["Immune Profiling",
                              "Immune Profiling+CSP",
+                             "Immune Profiling+Antibody Capture",
+                             "Immune Profiling+Feature Barcode",
                              "Immune Profiling+VDJ",
-                             "Immune Profiling+VDJ+CSP"]:
+                             "Immune Profiling+VDJ+CSP",
+                             "Immune Profiling+VDJ+Antibody Capture",
+                             "Immune Profiling+VDJ+Feature Barcode"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_ImmuneProfiling")
@@ -109,8 +121,12 @@ class TestIdentifyApplication(TestCase):
         platform = "10x Chromium 5' OCM"
         for library_type in ["Immune Profiling",
                              "Immune Profiling+CSP",
+                             "Immune Profiling+Antibody Capture",
+                             "Immune Profiling+Feature Barcode",
                              "Immune Profiling+VDJ",
-                             "Immune Profiling+VDJ+CSP"]:
+                             "Immune Profiling+VDJ+CSP",
+                             "Immune Profiling+VDJ+Antibody Capture",
+                             "Immune Profiling+VDJ+Feature Barcode"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_ImmuneProfiling")
@@ -387,12 +403,14 @@ class TestSplitLibraryType(TestCase):
         split_library_type: single extension
         """
         self.assertEqual(split_library_type("GEX+CSP"), ("GEX", ["CSP"]))
+        self.assertEqual(split_library_type("GEX+Feature Barcode"), ("GEX", ["Feature Barcode"]))
 
     def test_split_library_type_multiple_extensions(self):
         """
         split_library_type: multiple extensions
         """
         self.assertEqual(split_library_type("GEX+CSP+CRISPR"), ("GEX", ["CSP", "CRISPR"]))
+        self.assertEqual(split_library_type("GEX+Feature Barcode+CRISPR"), ("GEX", ["Feature Barcode", "CRISPR"]))
 
     def test_split_library_type_none_type(self):
         """

@@ -117,7 +117,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 3'"],
         "libraries": ["scRNA-seq"],
-        "extensions": ["CSP", "CRISPR"],
+        "extensions": ["CSP", "Antibody Capture", "Feature Barcode", "CRISPR"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_scRNAseq",
         "setup": {
@@ -131,7 +131,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 3' OCM"],
         "libraries": ["scRNA-seq"],
-        "extensions": ["CSP", "CRISPR"],
+        "extensions": ["CSP", "Antibody Capture", "Feature Barcode", "CRISPR"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_scRNAseq",
         "setup": {
@@ -171,7 +171,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 5'"],
         "libraries": ["Immune Profiling"],
-        "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "CRISPR", "BEAM"],
+        "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "Antibody Capture", "Feature Barcode", "CRISPR", "BEAM"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
@@ -186,7 +186,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 5' OCM"],
         "libraries": ["Immune Profiling"],
-        "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "CRISPR", "BEAM"],
+        "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "Antibody Capture", "Feature Barcode", "CRISPR", "BEAM"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
@@ -216,7 +216,7 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium Flex Apex",],
         "libraries": ["GEX"],
-        "extensions": ["CSP"],
+        "extensions": ["CSP", "Antibody Capture", "Feature Barcode"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
         "setup": {
