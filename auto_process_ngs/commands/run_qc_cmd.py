@@ -139,6 +139,14 @@ def run_qc(ap,projects=None,protocols=None,
     if len(projects) == 0:
         logger.warning("No projects found for QC analysis")
         return 1
+    # Set the Fastq dir
+    if fastq_dir:
+        for project in projects:
+            try:
+                project.use_fastq_dir(fastq_dir)
+            except Exception as ex:
+                logger.critical(f"{project.name}: cannot use Fastq directory '{fastq_dir}'")
+                return 1
     # Specific QC protocols
     if protocols is None:
         protocols = {}
