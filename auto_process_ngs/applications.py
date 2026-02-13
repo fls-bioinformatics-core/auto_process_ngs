@@ -197,7 +197,7 @@ APPLICATIONS = [
                    "10x Chromium 5' (v3 GEM-X) OCM sn GEX"],
         "tags": ["10x", "single_cell", "multiplex"]
     },
-    # 10x Chromium Flex
+    # 10x Chromium Flex (v1)
     {
         "platforms": ["10x Chromium Flex",],
         "libraries": ["GEX"],
@@ -209,7 +209,22 @@ APPLICATIONS = [
             "directories": [],
         },
         "assays": ["10x Chromium Flex (v1 GEM-X) sc GEX",
-                   "10x Chromium Flex (v1 GEM-X) sn GEX",],
+                   "10x Chromium Flex (v1 GEM-X) sn GEX"],
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium Flex APEX (v2)
+    {
+        "platforms": ["10x Chromium Flex Apex",],
+        "libraries": ["GEX"],
+        "extensions": ["CSP"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_Flex",
+        "setup": {
+            "templates": ["10x_multi_config(multiplexing=flex,include_probeset=true)"],
+            "directories": [],
+        },
+        "assays": ["10x Chromium Flex Apex (v2 GEM-X) sc GEX",
+                   "10x Chromium Flex Apex (v2 GEM-X) sn GEX"],
         "tags": ["10x", "single_cell"]
     },
     # 10x Chromium CellPlex

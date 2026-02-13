@@ -125,6 +125,16 @@ class TestIdentifyApplication(TestCase):
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_Flex")
 
+    def test_identify_application_10x_chromium_flex_apex(self):
+        """
+        identify_application: identify 10x Chromium Flex Apex sc/snRNA-seq
+        """
+        platform = "10x Chromium Flex Apex"
+        for library_type in ["GEX", "GEX+CSP"]:
+            application = identify_application(platform, library_type)
+            self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+            self.assertEqual(application["qc_protocol"], "10x_Flex")
+
     def test_identify_application_10x_chromium_3prime_cellplex(self):
         """
         identify_application: identify 10x Chromium 3' CellPlex
