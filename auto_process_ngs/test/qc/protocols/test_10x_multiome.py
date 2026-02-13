@@ -40,7 +40,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                             "PJB2_ATAC_S2_R3_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Single Cell Multiome',
+                                           '10x Single Cell Multiome',
                                            'Library type': 'ATAC' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
@@ -145,7 +145,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                            "PJB2_GEX_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Single Cell Multiome',
+                                           '10x Single Cell Multiome',
                                            'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
@@ -249,7 +249,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                             "PJB2_ATAC_S2_R3_001.fastq.gz"),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Single Cell Multiome',
+                                           '10x Single Cell Multiome',
                                            'Library type': 'ATAC' })
         p.create(top_dir=self.wd)
         # Make mock multiome GEX analysis project (with QC outputs)
@@ -259,7 +259,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                             "PJB2_GEX_S2_R2_001.fastq.gz",),
                                  metadata={ 'Organism': 'Human',
                                             'Single cell platform':
-                                            '10xGenomics Single Cell Multiome',
+                                            '10x Single Cell Multiome',
                                             'Library type': 'GEX' })
         p2.create(top_dir=self.wd)
         UpdateAnalysisProject(
@@ -396,7 +396,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                            "PJB2_GEX_S2_R2_001.fastq.gz",),
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
-                                           '10xGenomics Single Cell Multiome',
+                                           '10x Single Cell Multiome',
                                            'Library type': 'GEX' })
         p.create(top_dir=self.wd)
         # Make mock multiome ATAC analysis project (with QC outputs)
@@ -408,7 +408,7 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                              "PJB2_ATAC_S2_R3_001.fastq.gz"),
                                  metadata={ 'Organism': 'Human',
                                             'Single cell platform':
-                                            '10xGenomics Single Cell Multiome',
+                                            '10x Single Cell Multiome',
                                             'Library type': 'ATAC' })
         p2.create(top_dir=self.wd)
         UpdateAnalysisProject(
