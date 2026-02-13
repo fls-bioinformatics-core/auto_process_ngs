@@ -261,7 +261,7 @@ def run_qc(ap,projects=None,protocols=None,
         # Determine organism for QC
         try:
             organism = organisms[project.name]
-        except KeyError:
+        except (KeyError, TypeError):
             organism = project.info.organism
         # Add the project to the QC
         runqc.add_project(project,
