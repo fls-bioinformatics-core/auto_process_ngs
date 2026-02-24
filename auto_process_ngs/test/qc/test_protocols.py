@@ -456,7 +456,7 @@ class TestDetermineQCProtocolFromMetadataFunction(unittest.TestCase):
                          "10x_CellPlex")
         # Flex
         self.assertEqual(determine_qc_protocol_from_metadata(
-            library_type="GEX",
+            library_type="scRNA Profiling",
             single_cell_platform="10x Chromium Flex",
             paired_end=True),
                          "10x_Flex")
