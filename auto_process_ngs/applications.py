@@ -686,7 +686,7 @@ def split_library_type(library_type):
 
     Library types are expected to consist of a "base"
     library type followed by none or more optional
-    "extensions", which are identified by a preceeding
+    "extensions", which are identified by a preceding
     '+' character.
 
     For example: "GEX" has a base library type

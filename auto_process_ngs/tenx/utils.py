@@ -427,7 +427,8 @@ def make_multi_config_template(f, reference=None, fastq_dir=None,
         or more of 'CSP', 'VDJ-T', 'VDJ-B') or None if there
         are no extensions
       no_bam (bool): if set then will be the value of the
-        'no-bam' setting
+        'no-bam'/'create-bam' setting (depending on the
+        target CellRanger version)
       include_probe_set (bool): if set then the 'probe-set'
         setting will be included in the template (defaults
         to False; if 'probe_set' is defined then will be
