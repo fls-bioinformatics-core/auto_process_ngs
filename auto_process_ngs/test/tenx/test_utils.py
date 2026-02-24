@@ -769,7 +769,42 @@ MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
                                         if not line.startswith('##')])
         self.assertEqual(expected_content,actual_content)
 
-    def test_make_multi_config_template_immune_profiling_710_with_csp(self):
+    def test_make_multi_config_template_flex_from_sample_names_900(self):
+        """
+        make_multi_config_template: check Flex template from sample names (9.0.0)
+        """
+        expected_content = """[gene-expression]
+reference,/data/mm10_transcriptome
+probe-set,/data/mm10_probe_set.csv
+#force-cells,n
+create-bam,false
+#cmo-set,/path/to/custom/cmo/reference
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB_Flex,/runs/novaseq_50/fastqs,any,PJB_Flex,Gene Expression,
+
+[samples]
+sample_id,probe_barcode_ids,description
+MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
+"""
+        out_file = os.path.join(self.wd,"10x_multi_config.csv")
+        make_multi_config_template(out_file,
+                                   reference="/data/mm10_transcriptome",
+                                   probe_set="/data/mm10_probe_set.csv",
+                                   fastq_dir="/runs/novaseq_50/fastqs",
+                                   samples=["PJB_Flex"],
+                                   no_bam=True,
+                                   multiplexing="flex",
+                                   include_probe_set=True,
+                                   cellranger_version="9.0.0")
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            actual_content = '\n'.join([line for line in fp.read().split('\n')
+                                        if not line.startswith('##')])
+        self.assertEqual(expected_content,actual_content)
+
+    def test_make_multi_config_template_immune_profiling_with_csp_710(self):
         """
         make_multi_config_template: check 10x Immune Profiling template with CSP (7.0.0)
         """
@@ -800,7 +835,7 @@ gex1,/runs/novaseq_50/fastqs,any,gex1,[Gene Expression|Antibody Capture],
                                         if not line.startswith('##')])
         self.assertEqual(expected_content,actual_content)
 
-    def test_make_multi_config_template_immune_profiling_900_with_csp(self):
+    def test_make_multi_config_template_immune_profiling_with_csp_900(self):
         """
         make_multi_config_template: check 10x Immune Profiling template with CSP (9.0.0)
         """
@@ -831,8 +866,7 @@ gex1,/runs/novaseq_50/fastqs,any,gex1,[Gene Expression|Antibody Capture],
                                         if not line.startswith('##')])
         self.assertEqual(expected_content,actual_content)
 
-
-    def test_make_multi_config_template_immune_profiling_900_with_vdj(self):
+    def test_make_multi_config_template_immune_profiling_with_vdj_900(self):
         """
         make_multi_config_template: check 10x Immune Profiling template with VDJ (9.0.0)
         """
@@ -857,6 +891,42 @@ gex1,/runs/novaseq_50/fastqs,any,gex1,[Gene Expression|VDJ-B|VDJ-T],
                                    fastq_dir="/runs/novaseq_50/fastqs",
                                    samples=["VDJ_B1", "VDJ_T1", "gex1"],
                                    extensions=["VDJ-B", "VDJ-T"],
+                                   cellranger_version="9.0.0")
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'rt') as fp:
+            actual_content = '\n'.join([line for line in fp.read().split('\n')
+                                        if not line.startswith('##')])
+        self.assertEqual(expected_content,actual_content)
+
+    def test_make_multi_config_template_immune_profiling_from_sample_names_900(self):
+        """
+        make_multi_config_template: check 10x Immune Profiling template using sample names (9.0.0)
+        """
+        expected_content = """[gene-expression]
+reference,/data/mm10_transcriptome
+#force-cells,n
+create-bam,true
+#cmo-set,/path/to/custom/cmo/reference
+
+#[feature]
+#reference,/path/to/feature_ref
+
+[vdj]
+#reference,/path/to/vdj_reference
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB_BCR,/runs/novaseq_50/fastqs,any,PJB_BCR,VDJ-B,
+PJB_TCR,/runs/novaseq_50/fastqs,any,PJB_TCR,VDJ-T,
+PJB_GEX,/runs/novaseq_50/fastqs,any,PJB_GEX,Gene Expression,
+PJB_CSP,/runs/novaseq_50/fastqs,any,PJB_CSP,Antibody Capture,
+"""
+        out_file = os.path.join(self.wd,"10x_multi_config.csv")
+        make_multi_config_template(out_file,
+                                   reference="/data/mm10_transcriptome",
+                                   fastq_dir="/runs/novaseq_50/fastqs",
+                                   samples=["PJB_BCR", "PJB_TCR", "PJB_GEX", "PJB_CSP"],
+                                   extensions=["CSP", "VDJ-B", "VDJ-T"],
                                    cellranger_version="9.0.0")
         self.assertTrue(os.path.exists(out_file))
         with open(out_file,'rt') as fp:

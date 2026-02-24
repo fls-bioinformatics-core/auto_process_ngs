@@ -38,6 +38,8 @@ from .. import css_rules
 
 # Default version of cellranger
 from . import DEFAULT_CELLRANGER_VERSION
+from . import CELLRANGER_MULTI_EXTENSIONS_TO_FEATURE_TYPES
+from . import CELLRANGER_MULTI_FEATURE_TYPES
 
 # Initialise logging
 import logging
@@ -484,17 +486,21 @@ def make_multi_config_template(f, reference=None, fastq_dir=None,
                 fp.write("create-bam,true\n")
         fp.write("#cmo-set,/path/to/custom/cmo/reference\n")
         # Feature section
-        if "CSP" in extensions:
-            fp.write(dedent("""
-            #[feature]
-            #reference,/path/to/feature_ref
-            """))
+        for ext in ("CSP", "Antibody Capture", "Feature Barcode"):
+            if ext in extensions:
+                fp.write(dedent("""
+                #[feature]
+                #reference,/path/to/feature_ref
+                """))
+                break
         # V(D)J section
-        if "VDJ-B" in extensions or "VDJ-T" in extensions:
-            fp.write(dedent("""
-            [vdj]
-            #reference,/path/to/vdj_reference
-            """))
+        for ext in ("VDJ-B", "VDJ-T"):
+            if ext in extensions:
+                fp.write(dedent("""
+                [vdj]
+                #reference,/path/to/vdj_reference
+                """))
+                break
         # Libraries section
         fp.write(dedent("""
         [libraries]
@@ -505,12 +511,19 @@ def make_multi_config_template(f, reference=None, fastq_dir=None,
             if multiplexing in ("cellplex", "ocm", "flex"):
                 tenx_library_types.append("Multiplexing Capture")
         if extensions:
-            if "CSP" in extensions:
-                tenx_library_types.append("Antibody Capture")
-            if "VDJ-B" in extensions or "VDJ-T" in extensions:
-                tenx_library_types.extend(["VDJ-B", "VDJ-T"])
+            for ext in extensions:
+                try:
+                    tenx_library_types.append(CELLRANGER_MULTI_EXTENSIONS_TO_FEATURE_TYPES[ext])
+                except KeyError:
+                    pass
         for sample in samples:
-            library_type = "[%s]" % "|".join(tenx_library_types)
+            # Try to guess the library type from the end of the sample name
+            sample_tail = sample.split("_")[-1].upper()
+            if sample_tail in CELLRANGER_MULTI_FEATURE_TYPES:
+                library_type = CELLRANGER_MULTI_FEATURE_TYPES[sample_tail]
+            else:
+                # Give all the options for user to choose
+                library_type = "[%s]" % "|".join(tenx_library_types)
             fp.write("{sample},{fastqs_dir},any,{sample},{library_type},\n".format(
                 sample=sample,
                 fastqs_dir=(fastq_dir if fastq_dir else "/path/to/fastqs"),
@@ -533,3 +546,5 @@ def make_multi_config_template(f, reference=None, fastq_dir=None,
             sample_id,ocm_barcode_ids,description
             MULTIPLEXED_SAMPLE,OB1|OB2|...,DESCRIPTION
             """))
+        elif multiplexing:
+            raise Exception("Unknown multiplexing type '%s'" % multiplexing)

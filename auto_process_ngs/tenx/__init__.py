@@ -23,3 +23,29 @@ CELLRANGER_ASSAY_CONFIGS = {
 
 # Default Cellranger version
 DEFAULT_CELLRANGER_VERSION = "10.0.0"
+
+# Feature types for different library type extensions for Cellranger multi
+CELLRANGER_MULTI_EXTENSIONS_TO_FEATURE_TYPES = {
+    # Canonical (used in 10x product descriptions)
+    "CSP": "Antibody Capture",
+    "VDJ-T": "VDJ-T",
+    "VDJ-B": "VDJ-B",
+    # Non-canonical (for local usage)
+    "Antibody Capture": "Antibody Capture",
+    "Feature Barcode": "Antibody Capture",
+    "TCR": "VDJ-T",
+    "BCR": "VDJ-B",
+}
+
+# Sample name endings to feature types for Cellranger multi config templates
+# Expect names to be of the form e.g. "<SAMPLE>_CSP"
+# (These are local conventions not canonical names used by 10x)
+CELLRANGER_MULTI_FEATURE_TYPES = {
+    "GEX": "Gene Expression",
+    "GE": "Gene Expression",
+    "FLEX": "Gene Expression",
+    "CML": "Multiplexing Capture",
+    "CSP": "Antibody Capture",
+    "TCR": "VDJ-T",
+    "BCR": "VDJ-B",
+}
