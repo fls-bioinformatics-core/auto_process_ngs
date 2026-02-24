@@ -777,7 +777,7 @@ AB\tAB1,AB2\tAlan Brown\tscRNA-seq\t10x Chromium 3' CellPlex\tHuman\tAudrey Bens
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tGEX\t10x Chromium Flex\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1\tAlan Brown\tscRNA Profiling\t10x Chromium Flex\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
@@ -854,7 +854,7 @@ AB\tAB1\tAlan Brown\tGEX\t10x Chromium Flex\tHuman\tAudrey Benson\t1% PhiX
         with open(projects_info,"w") as fp:
             fp.write(
 """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1\tAlan Brown\tGEX\t10x Chromium Flex\tHuman\tAudrey Benson\t1% PhiX
+AB\tAB1\tAlan Brown\tscRNA Profiling\t10x Chromium Flex\tHuman\tAudrey Benson\t1% PhiX
 """)
         # Expected data
         projects = {
