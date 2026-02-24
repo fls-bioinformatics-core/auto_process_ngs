@@ -225,7 +225,7 @@ APPLICATIONS = [
     # 10x Chromium Flex (v1)
     {
         "platforms": ["10x Chromium Flex",],
-        "libraries": ["GEX"],
+        "libraries": ["scRNA Profiling", "snRNA Profiling"],
         "extensions": ["PEX"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
