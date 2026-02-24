@@ -131,22 +131,42 @@ class TestIdentifyApplication(TestCase):
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_ImmuneProfiling")
 
-    def test_identify_application_10x_chromium_flex(self):
+    def test_identify_application_10x_chromium_flex_scrna_profiling(self):
         """
-        identify_application: identify 10x Chromium Flex sc/snRNA-seq
+        identify_application: identify 10x Chromium Flex scRNA profiling
         """
         platform = "10x Chromium Flex"
-        for library_type in ["GEX", "GEX+PEX"]:
+        for library_type in ["scRNA Profiling", "scRNA Profiling+PEX"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_Flex")
 
-    def test_identify_application_10x_chromium_flex_apex(self):
+    def test_identify_application_10x_chromium_flex_snrna_profiling(self):
         """
-        identify_application: identify 10x Chromium Flex Apex sc/snRNA-seq
+        identify_application: identify 10x Chromium Flex snRNA profiling
+        """
+        platform = "10x Chromium Flex"
+        for library_type in ["snRNA Profiling", "snRNA Profiling+PEX"]:
+            application = identify_application(platform, library_type)
+            self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+            self.assertEqual(application["qc_protocol"], "10x_Flex")
+
+    def test_identify_application_10x_chromium_flex_apex_scrna_profiling(self):
+        """
+        identify_application: identify 10x Chromium Flex Apex scRNA profiling
         """
         platform = "10x Chromium Flex Apex"
-        for library_type in ["GEX", "GEX+CSP"]:
+        for library_type in ["scRNA Profiling", "scRNA Profiling+CSP"]:
+            application = identify_application(platform, library_type)
+            self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
+            self.assertEqual(application["qc_protocol"], "10x_Flex")
+
+    def test_identify_application_10x_chromium_flex_apex_snrna_profiling(self):
+        """
+        identify_application: identify 10x Chromium Flex Apex snRNA profiling
+        """
+        platform = "10x Chromium Flex Apex"
+        for library_type in ["snRNA Profiling", "snRNA Profiling+CSP"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
             self.assertEqual(application["qc_protocol"], "10x_Flex")

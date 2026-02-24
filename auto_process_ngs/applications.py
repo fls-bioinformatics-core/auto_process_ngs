@@ -240,8 +240,12 @@ APPLICATIONS = [
     # 10x Chromium Flex APEX (v2)
     {
         "platforms": ["10x Chromium Flex Apex",],
-        "libraries": ["GEX"],
-        "extensions": ["CSP", "Antibody Capture", "Feature Barcode"],
+        "libraries": ["scRNA Profiling", "snRNA Profiling"],
+        "extensions": ["CSP"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+        },
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
         "setup": {
