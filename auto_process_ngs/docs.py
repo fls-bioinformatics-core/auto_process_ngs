@@ -723,6 +723,11 @@ def generate_applications_table(docfile, tags=None):
             extensions = application["extensions"]
             if extensions:
                 extensions = ", ".join([f"``{ext}``" for ext in extensions])
+                if "alternative_extensions" in application:
+                    # Append alternatives
+                    extensions += ", " + \
+                                  ", ".join([f"``{alt_ext}``" for alt_ext in
+                                             list(application["alternative_extensions"].keys())])
                 has_extensions = True
             else:
                 extensions = ""

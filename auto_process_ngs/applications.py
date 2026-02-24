@@ -20,6 +20,11 @@ Each application is defined as a dictionary with the following keys:
 * libraries: list of library types (with optional wildcards) which
   correspond to the application; use ["*"] to indicate all library types, or
   an empty list to indicate that the library type must not be set
+* extensions: list of library type extensions which can be appended to the
+  library type via the plus symbol ("+")
+* alternative_extensions: dictionary of alternative names for library
+  type extensions mapped to the "canonical" names in the 'extensions'
+  list
 * fastq_generation: name of the Fastq generation protocol to use for
   this application
 * qc_protocol: name of the QC protocol to use for this application
@@ -117,7 +122,11 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 3'"],
         "libraries": ["scRNA-seq"],
-        "extensions": ["CSP", "Antibody Capture", "Feature Barcode", "CRISPR"],
+        "extensions": ["CSP", "CRISPR"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+        },
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_scRNAseq",
         "setup": {
@@ -131,7 +140,11 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 3' OCM"],
         "libraries": ["scRNA-seq"],
-        "extensions": ["CSP", "Antibody Capture", "Feature Barcode", "CRISPR"],
+        "extensions": ["CSP", "CRISPR"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+        },
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_scRNAseq",
         "setup": {
@@ -171,7 +184,13 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 5'"],
         "libraries": ["Immune Profiling"],
-        "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "Antibody Capture", "Feature Barcode", "CRISPR", "BEAM"],
+        "extensions": ["CSP", "TCR", "BCR", "VDJ", "CRISPR", "BEAM"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+            "VDJ-T": "TCR",
+            "VDJ-B": "BCR",
+        },
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
@@ -186,7 +205,13 @@ APPLICATIONS = [
     {
         "platforms": ["10x Chromium 5' OCM"],
         "libraries": ["Immune Profiling"],
-        "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "Antibody Capture", "Feature Barcode", "CRISPR", "BEAM"],
+        "extensions": ["CSP", "TCR", "BCR", "VDJ", "CRISPR", "BEAM"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+            "VDJ-T": "TCR",
+            "VDJ-B": "BCR",
+        },
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
