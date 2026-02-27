@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     docs: helpers for auto-process-ngs Sphinx documentation generation
-#     Copyright (C) University of Manchester 2025 Peter Briggs
+#     Copyright (C) University of Manchester 2025-2026 Peter Briggs
 #
 
 """
@@ -712,6 +712,7 @@ def generate_applications_table(docfile, tags=None):
     header = ["Platform", "Library type"]
     application_data = []
     has_extensions = False
+    has_assays = False
     for application in fetch_application_data(tags=tags, expand=True):
         if application["libraries"][0] == "*":
             # Skip any wildcard libraries
@@ -722,18 +723,38 @@ def generate_applications_table(docfile, tags=None):
             extensions = application["extensions"]
             if extensions:
                 extensions = ", ".join([f"``{ext}``" for ext in extensions])
+                if "alternative_extensions" in application:
+                    # Append alternatives
+                    extensions += ", " + \
+                                  ", ".join([f"``{alt_ext}``" for alt_ext in
+                                             list(application["alternative_extensions"].keys())])
                 has_extensions = True
             else:
                 extensions = ""
         except KeyError:
             extensions = ""
-        application_data.append([platform, library, extensions])
-    if not has_extensions:
-        # Remove the empty "extensions" column
-        application_data = [[plt, lib] for plt, lib, ext in application_data]
-    else:
+        try:
+            assays = application["assays"]
+            if assays:
+                assays = ", ".join([f"``{assay}``" for assay in assays])
+                has_assays = True
+            else:
+                assays = ""
+        except KeyError:
+            assays = ""
+        application_data.append([assays, platform, library, extensions])
+    if has_extensions:
         # Update the header
         header.append("Extensions")
+    else:
+        # Remove the empty "extensions" column
+        application_data = [app[:-1] for app in application_data]
+    if has_assays:
+        # Update the header
+        header = ["Assays"] + header
+    else:
+        # Remove the empty "assays" column
+        application_data = [app[1:] for app in application_data]
     tbl = RstGridTable(application_data)
     with open(docfile, "wt") as fp:
         fp.write("\n".join(tbl.construct_table(header=header)))

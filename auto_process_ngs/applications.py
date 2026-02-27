@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 #     applications.py: information about platforms and libraries
-#     Copyright (C) University of Manchester 2025 Peter Briggs
+#     Copyright (C) University of Manchester 2025-2026 Peter Briggs
 #
 
 """
@@ -20,6 +20,11 @@ Each application is defined as a dictionary with the following keys:
 * libraries: list of library types (with optional wildcards) which
   correspond to the application; use ["*"] to indicate all library types, or
   an empty list to indicate that the library type must not be set
+* extensions: list of library type extensions which can be appended to the
+  library type via the plus symbol ("+")
+* alternative_extensions: dictionary of alternative names for library
+  type extensions mapped to the "canonical" names in the 'extensions'
+  list
 * fastq_generation: name of the Fastq generation protocol to use for
   this application
 * qc_protocol: name of the QC protocol to use for this application
@@ -30,6 +35,7 @@ Each application is defined as a dictionary with the following keys:
     one or more of: "10x_multi_config", "10x_multiome_libraries".
   - directories: list of subdirectory names which will be created in the
     analysis project directory (for example "Visium_images")
+* assays: optional list of assays to associate with this application
 * tags: optional list of tags to associate with this application; tags can
   be one or more of: "10x", "bio_rad", "parse", "single_cell", "spatial",
   "legacy". Tags are used for automated documentation generation.
@@ -111,147 +117,226 @@ APPLICATIONS = [
             "templates": [],
             "directories": [],
         }
-},
+    },
     # 10x Chromium 3' single-cell
     {
-        "platforms": ["10x Chromium 3' (v4 GEM-X)",
-                      "10x Chromium 3' (v4 GEM-X) OCM",],
-        "libraries": ["GEX", "scRNA-seq"],
+        "platforms": ["10x Chromium 3'"],
+        "libraries": ["scRNA-seq"],
         "extensions": ["CSP", "CRISPR"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+        },
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_scRNAseq",
         "setup": {
             "templates": [],
             "directories": [],
         },
+        "assays": ["10x Chromium 3' (v4 GEM-X) sc GEX",],
         "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium 3' OCM single-cell
+    {
+        "platforms": ["10x Chromium 3' OCM"],
+        "libraries": ["scRNA-seq"],
+        "extensions": ["CSP", "CRISPR"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+        },
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_scRNAseq",
+        "setup": {
+            "templates": ["10x_multi_config(multiplexing=ocm)"],
+            "directories": [],
+        },
+        "assays": ["10x Chromium 3' (v4 GEM-X) OCM sc GEX",],
+        "tags": ["10x", "single_cell", "multiplex"]
     },
     # 10x Chromium 3' single-nuclei
     {
-        "platforms": ["10x Chromium 3' (v4 GEM-X)",
-                      "10x Chromium 3' (v4 GEM-X) OCM",],
-        "libraries": ["snGEX", "snRNA-seq"],
+        "platforms": ["10x Chromium 3'"],
+        "libraries": ["snRNA-seq"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_snRNAseq",
         "setup": {
             "templates": [],
             "directories": [],
         },
+        "assays": ["10x Chromium 3' (v4 GEM-X) sn GEX",],
         "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium 3' OCM single-nuclei
+    {
+        "platforms": ["10x Chromium 3' OCM"],
+        "libraries": ["snRNA-seq"],
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_snRNAseq",
+        "setup": {
+            "templates": ["10x_multi_config(multiplexing=ocm)"],
+            "directories": [],
+        },
+        "assays": ["10x Chromium 3' (v4 GEM-X) OCM sn GEX",],
+        "tags": ["10x", "single_cell", "multiplex"]
     },
     # 10x Chromium 5'
     {
-        "platforms": ["10x Chromium 5' (v3 GEM-X)",
-                      "10x Chromium 5' (v3 GEM-X) OCM",],
-        "libraries": ["GEX", "scRNA-seq", "snGEX", "snRNA-seq"],
-        "extensions": ["VDJ", "VDJ-T", "VDJ-B", "CSP", "CRISPR", "BEAM"],
+        "platforms": ["10x Chromium 5'"],
+        "libraries": ["Immune Profiling"],
+        "extensions": ["CSP", "TCR", "BCR", "VDJ", "CRISPR", "BEAM"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+            "VDJ-T": "TCR",
+            "VDJ-B": "BCR",
+        },
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
-            "templates": ["10x_multi_config(library_type=single_cell_immune_profiling)"],
+            "templates": ["10x_multi_config()"],
             "directories": [],
         },
+        "assays": ["10x Chromium 5' (v3 GEM-X) sc GEX",
+                   "10x Chromium 5' (v3 GEM-X) sn GEX"],
         "tags": ["10x", "single_cell"]
     },
-    # 10x Chromium Flex
+    # 10x Chromium 5' OCM
     {
-        "platforms": ["10x Chromium Flex (v1 GEM-X)",],
-        "libraries": ["GEX", "scRNA-seq", "snRNA-seq"],
+        "platforms": ["10x Chromium 5' OCM"],
+        "libraries": ["Immune Profiling"],
+        "extensions": ["CSP", "TCR", "BCR", "VDJ", "CRISPR", "BEAM"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+            "VDJ-T": "TCR",
+            "VDJ-B": "BCR",
+        },
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_ImmuneProfiling",
+        "setup": {
+            "templates": ["10x_multi_config(multiplexing=ocm)"],
+            "directories": [],
+        },
+        "assays": ["10x Chromium 5' (v3 GEM-X) OCM sc GEX",
+                   "10x Chromium 5' (v3 GEM-X) OCM sn GEX"],
+        "tags": ["10x", "single_cell", "multiplex"]
+    },
+    # 10x Chromium Flex (v1)
+    {
+        "platforms": ["10x Chromium Flex",],
+        "libraries": ["scRNA Profiling", "snRNA Profiling"],
+        "extensions": ["PEX"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
         "setup": {
-            "templates": ["10x_multi_config(library_type=flex,include_probeset=true)"],
+            "templates": ["10x_multi_config(multiplexing=flex,include_probeset=true)"],
             "directories": [],
         },
+        "assays": ["10x Chromium Flex (v1 GEM-X) sc GEX",
+                   "10x Chromium Flex (v1 GEM-X) sn GEX"],
+        "tags": ["10x", "single_cell"]
+    },
+    # 10x Chromium Flex APEX (v2)
+    {
+        "platforms": ["10x Chromium Flex Apex",],
+        "libraries": ["scRNA Profiling", "snRNA Profiling"],
+        "extensions": ["CSP"],
+        "alternative_extensions": {
+            "Antibody Capture": "CSP",
+            "Feature Barcode": "CSP",
+        },
+        "fastq_generation": "10x_chromium_sc",
+        "qc_protocol": "10x_Flex",
+        "setup": {
+            "templates": ["10x_multi_config(multiplexing=flex,include_probeset=true)"],
+            "directories": [],
+        },
+        "assays": ["10x Chromium Flex Apex (v2 GEM-X) sc GEX",
+                   "10x Chromium Flex Apex (v2 GEM-X) sn GEX"],
         "tags": ["10x", "single_cell"]
     },
     # 10x Chromium CellPlex
     {
-        "platforms": ["10x Chromium 3' (v3.1 Next GEM ST) CellPlex",
-                      "10x Chromium 3' (v3.1 Next GEM HT) CellPlex",],
-        "libraries": ["GEX", "scRNA-seq"],
+        "platforms": ["10x Chromium 3' CellPlex"],
+        "libraries": ["scRNA-seq", "snRNA-seq"],
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_CellPlex",
         "setup": {
-            "templates": ["10x_multi_config(library_type=cellplex)"],
+            "templates": ["10x_multi_config(multiplexing=cellplex)"],
             "directories": [],
         },
-        "tags": ["10x", "single_cell"]
+        "assays": ["10x Chromium 3' (v3.1 Next GEM ST) CellPlex sc GEX",
+                   "10x Chromium 3' (v3.1 Next GEM HT) CellPlex sc GEX",
+                   "10x Chromium 3' (v3.1 Next GEM ST) CellPlex sn GEX",
+                   "10x Chromium 3' (v3.1 Next GEM HT) CellPlex sn GEX",],
+        "tags": ["10x", "single_cell" , "multiplex"]
     },
     # 10x Chromium ATAC
     {
-        "platforms": ["10x Chromium Epi ATAC (v2)",],
-        "libraries": ["ATAC", "snATAC"],
+        "platforms": ["10x Single Cell ATAC",],
+        "libraries": ["snATAC-seq"],
         "fastq_generation": "10x_atac",
         "qc_protocol": "10x_scATAC", # Should be called 10x_snATAC?
         "setup": {
             "templates": [],
             "directories": [],
         },
+        "assays": ["10x Chromium Epi ATAC (v2) sn ATAC",],
         "tags": ["10x", "single_cell"]
     },
     # 10x Chromium Multiome
     {
-        "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
-        "libraries": ["ATAC", "snATAC"],
+        "platforms": ["10x Single Cell Multiome"],
+        "libraries": ["ATAC"],
         "fastq_generation": "10x_multiome_atac",
         "qc_protocol": "10x_Multiome_ATAC",
         "setup": {
             "templates": ["10x_multiome_libraries"],
             "directories": [],
         },
+        "assays": ["10x Chromium Epi Multiome ATAC (v1) sn ATAC",],
         "tags": ["10x", "single_cell"]
     },
     {
-        "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
-        "libraries": ["GEX", "snGEX"],
+        "platforms": ["10x Single Cell Multiome"],
+        "libraries": ["GEX"],
         "fastq_generation": "10x_multiome_gex",
         "qc_protocol": "10x_Multiome_GEX",
         "setup": {
             "templates": ["10x_multiome_libraries"],
             "directories": [],
         },
-        "tags": ["10x", "single_cell"]
-    },
-    # Placeholder for "10x_multiome" Fastq generation protocol
-    # In practice one of the two specific single cell multiome
-    # applications would be selected in preference to this one
-    # so this entry is mainly for completeness
-    {
-        "platforms": ["10x Chromium Epi Multiome ATAC (v1)"],
-        "libraries": ["*"],
-        "fastq_generation": "10x_multiome",
-        "qc_protocol": "minimal",
-        "setup": {
-            "templates": ["10x_multiome_libraries"],
-            "directories": [],
-        },
+        "assays": ["10x Chromium Epi Multiome ATAC (v1) sn GEX",],
         "tags": ["10x", "single_cell"]
     },
     # 10x Visium
     {
         "platforms": ["10x Visium"],
-        "libraries": ["Fresh Frozen Spatial GEX (v1)"],
+        "libraries": ["Fresh Frozen Spatial RNA-seq"],
         "fastq_generation": "10x_visium_v1",
         "qc_protocol": "10x_Visium_GEX_90bp_insert",
         "setup": {
             "templates": [],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium Fresh Frozen Spatial GEX (v1)",],
         "tags": ["10x", "spatial"]
     },
     {
         "platforms": ["10x Visium (CytAssist)"],
-        "libraries": ["FFPE Spatial GEX",
-                      "FFPE Spatial GEX (v2)",
-                      "Fresh Frozen Spatial GEX (v2)",
-                      "Fixed Frozen Spatial GEX (v2)",],
+        "libraries": ["FFPE Spatial RNA-seq",
+                      "Fresh Frozen Spatial RNA-seq",
+                      "Fixed Frozen Spatial RNA-seq",],
         "fastq_generation": "10x_visium",
         "qc_protocol": "10x_Visium_GEX",
         "setup": {
             "templates": [],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium (CytAssist) FFPE Spatial GEX (v2)",
+                   "10x Visium (CytAssist) Fresh Frozen Spatial GEX (v2)",
+                   "10x Visium (CytAssist) Fixed Frozen Spatial GEX (v2)",],
         "tags": ["10x", "spatial"]
     },
     {
@@ -263,28 +348,31 @@ APPLICATIONS = [
             "templates": [],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium (CytAssist) FFPE Spatial PEX",],
         "tags": ["10x", "spatial"]
     },
     {
         "platforms": ["10x Visium (CytAssist)"],
-        "libraries": ["FFPE HD Spatial GEX",],
+        "libraries": ["FFPE HD Spatial RNA-seq",],
         "fastq_generation": "10x_visium_hd",
         "qc_protocol": "10x_Visium_GEX",
         "setup": {
-            "templates": [],
+            "templates": ["10x Visium (CytAssist) FFPE Spatial GEX",],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium (CytAssist) FFPE HD Spatial GEX",],
         "tags": ["10x", "spatial"]
     },
     {
         "platforms": ["10x Visium (CytAssist)"],
-        "libraries": ["FFPE HD 3' Spatial GEX",],
+        "libraries": ["Fresh Frozen HD 3' Spatial RNA-seq",],
         "fastq_generation": "10x_visium_hd_3prime",
         "qc_protocol": "10x_Visium_GEX",
         "setup": {
             "templates": [],
             "directories": ["Visium_images"],
         },
+        "assays": ["10x Visium (CytAssist) Fresh Frozen HD 3' Spatial GEX",],
         "tags": ["10x", "spatial"]
     },
     # Parse
@@ -371,7 +459,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_CellPlex",
         "setup": {
-            "templates": ["10x_multi_config(library_type=cellplex)"],
+            "templates": ["10x_multi_config(multiplexing=cellplex)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell", "legacy"]
@@ -383,7 +471,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_ImmuneProfiling",
         "setup": {
-            "templates": ["10x_multi_config(library_type=single_cell_immune_profiling)"],
+            "templates": ["10x_multi_config()"],
             "directories": [],
         }
     },
@@ -396,7 +484,7 @@ APPLICATIONS = [
         "fastq_generation": "10x_chromium_sc",
         "qc_protocol": "10x_Flex",
         "setup": {
-            "templates": ["10x_multi_config(library_type=flex,include_probeset=true)"],
+            "templates": ["10x_multi_config(multiplexing=flex,include_probeset=true)"],
             "directories": [],
         },
         "tags": ["10x", "single_cell", "legacy"]
@@ -598,7 +686,7 @@ def split_library_type(library_type):
 
     Library types are expected to consist of a "base"
     library type followed by none or more optional
-    "extensions", which are identified by a preceeding
+    "extensions", which are identified by a preceding
     '+' character.
 
     For example: "GEX" has a base library type

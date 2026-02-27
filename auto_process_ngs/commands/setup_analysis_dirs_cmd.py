@@ -19,6 +19,7 @@ import bcftbx.IlluminaData as IlluminaData
 from .. import analysis
 from .. import tenx
 from ..applications import identify_application
+from ..applications import split_library_type
 from ..utils import normalise_organism_name
 
 # Module specific logger
@@ -142,7 +143,13 @@ def setup_analysis_dirs(ap,
         library_type = line["Library"]
         if library_type == ".":
             library_type = None
+        if library_type:
+            library_type, extensions = split_library_type(library_type)
+        else:
+            extensions = None
         print(f"-- Platform: '{platform}' Library: '{library_type}'")
+        if extensions:
+            print(f"-- Extensions: '{extensions}'")
         application = identify_application(platform, library_type)
         if application:
             print("-- identified application from platform and library")
@@ -212,12 +219,12 @@ def setup_analysis_dirs(ap,
                 params = []
             # Set parameters
             include_probeset = False
-            template_library_type = library_type
+            template_multiplexing = None
             for param in params:
                 if param[0] == "include_probeset":
                     include_probeset = bool(param[1].lower() in ("true", "yes"))
-                elif param[0] == "library_type":
-                    template_library_type = param[1]
+                elif param[0] == "multiplexing":
+                    template_multiplexing = param[1]
             # Set up the templates
             if template == "10x_multiome_libraries":
                 # Config file for 10x single cell multiome
@@ -296,8 +303,10 @@ def setup_analysis_dirs(ap,
                         probe_set=probe_set,
                         fastq_dir=project.fastq_dir,
                         samples=[s.name for s in project.samples],
-                        library_type=template_library_type,
-                        cellranger_version=cellranger_version)
+                        cellranger_version=cellranger_version,
+                        multiplexing=template_multiplexing,
+                        extensions=extensions,
+                        include_probe_set=include_probeset)
                 except Exception as ex:
                     logger.warning("Error when attempting to create '%s': "
                                    "%s" % (f,ex))

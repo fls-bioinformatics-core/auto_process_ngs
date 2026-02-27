@@ -115,15 +115,20 @@ data within ``auto-process-ngs``:
 
 .. include:: ../auto/10x_single_cell_apps.rst
 
-.. note::
+Library types and extensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   Extensions are optional additions to the base library type which
-   give additional information about the type of experiment that was
-   performed.
+Extensions are optional additions to the base library type which
+give additional information about the type of experiment that was
+performed.
 
-   One or more extensions can be specified as part of the library type,
-   by appending them using a plus symbol (``+``). For example,
-   ``GEX+CSP`` indicates gene expression with cell surface proteins.
+One or more extensions can be specified as part of the library type,
+by appending them using a plus symbol (``+``). For example:
+
+* ``scRNA-seq+CSP`` indicates single cell RNA-seq (gene expression)
+  performed with cell surface proteins;
+* ``Immune Profiling+CSP+VDJ`` indicates single cell immune profiling
+  with both cell surface proteins and V(D)J.
 
 Running the :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
 command will automatically transfer these values into the single cell
@@ -139,24 +144,20 @@ also create template control files for use in subsequent QC runs:
 
  * **CellPlex and Flex**: a template
    :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`
-   file, which should be copied, renamed and appropriatedly edited
+   file, which should be copied, renamed and appropriately edited
    for each physical sample in the dataset.
 
  * **Single Cell immune profiling**: a template
    :doc:`10x_multi_config.csv <../control_files/10x_multi_config_csv>`
-   file, which should be copied, renamed and appropriatedly edited
+   file, which should be copied, renamed and appropriately edited
    for each physical sample in the dataset.
+
+For the ``10x_multi_config.csv`` the extensions will determine the form
+of the template (so that only the necessary elements are included).
 
 The :doc:`run_qc <../using/run_qc>` command
 will then determine the appropriate QC protocol to use based on the
 metadata values.
-
-.. note::
-
-   Currently a full QC pipeline is not implemented for single cell
-   immune profiling data: see :ref:`10x_sc-immune-profiling-data`
-   for additional manual steps that can be performed for these types
-   of data.
 
 Troubleshooting
 ---------------
