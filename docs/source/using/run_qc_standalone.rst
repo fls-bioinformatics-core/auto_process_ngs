@@ -200,6 +200,24 @@ with the feature types assigned within the libraries section.
    option should be used to specify the location of the V(D)J
    reference dataset.
 
+If the dataset has multiplexed samples (for example CellPlex or Flex
+data) then their names can be assigned to the appropriate CMO or
+probeset ID using the ``--10x_multiplexed_samples`` option:
+
+::
+
+   --10x_multiplexed_samples [SAMPLE:]MULTIPLEXED_SAMPLE=ID,...
+
+where ``SAMPLE`` is an optional physical sample name (required
+if there is more than one physical sample).
+
+For example:
+
+::
+
+   --10x_multiplexed_samples PJB1:PBA=CMO301,PBB=CMO302
+
+
 Running on different platforms: ``--local``
 -------------------------------------------
 

@@ -246,6 +246,12 @@ def add_10x_options(p):
                             help="assign feature type to a Fastq file ID "
                             "for 'cellranger multi' analysis (optionally "
                             "also specify a physical sample)")
+    cellranger.add_argument("--10x_multiplexed_samples", action="append",
+                            metavar="[SAMPLE:]MULTIPLEXED_SAMPLE=ID[,...]",
+                            dest="cellranger_samples",
+                            help="assign multiplexed samples name to CMO "
+                            "or probe IDs for 'cellranger multi' analysis "
+                            "(optionally also specify a physical sample)")
 
 def add_conda_options(p,enable_conda,conda_env_dir):
     """
@@ -667,7 +673,8 @@ def get_execution_environment():
         mem_per_core=mem_per_core)
 
 def build_10x_multi_config(multi_config_file, fastq_dir, libraries,
-                           gex_reference=None, vdj_reference=None):
+                           samples, gex_reference=None,
+                           vdj_reference=None):
     """
     Constructs a 'cellranger multi' configuration file
 
@@ -677,6 +684,9 @@ def build_10x_multi_config(multi_config_file, fastq_dir, libraries,
         files
       libraries (dict): dictionary where keys are Fastq IDs and
         values are the corresponding 10x library types
+      samples (dict): dictionary where keys are multiplexed
+        sample names and values are the corresponding 10x CMO
+        or probe IDs
       gex_reference (str): path to the gene expression reference
         dataset to use (no 'gene-expression' section will be
         written if not supplied)
@@ -703,6 +713,11 @@ def build_10x_multi_config(multi_config_file, fastq_dir, libraries,
                      f"any,"
                      f"{fastq_id},"
                      f"{libraries[fastq_id]},\n")
+        # Samples section
+        if samples:
+            fp.write(f"\n[samples]\n")
+            for sample in sorted(samples.keys()):
+                fp.write(f"{sample},{samples[sample]}\n")
 
 def announce(title):
     """
@@ -955,6 +970,7 @@ def main(argv=None):
 
     # Cellranger multi samples, Fastqs and feature types
     cellranger_libraries = {}
+    cellranger_samples = {}
     if args.cellranger_library:
         for library in args.cellranger_library:
             try:
@@ -964,6 +980,7 @@ def main(argv=None):
                 fastq_id, feature_type = library.split(":")
             if sample not in cellranger_libraries:
                 cellranger_libraries[sample] = {}
+                cellranger_samples[sample] = {}
             cellranger_libraries[sample][fastq_id] = feature_type
         # Report samples and libraries
         announce("10x Genomics samples and libraries")
@@ -971,6 +988,17 @@ def main(argv=None):
             print(f"{sample}:")
             for fastq_id in cellranger_libraries[sample]:
                 print(f"- {fastq_id}: {cellranger_libraries[sample][fastq_id]}")
+    if args.cellranger_samples:
+        for sample_set in args.cellranger_samples:
+            try:
+                sample, sample_set = sample_set.split(":")
+            except ValueError:
+                sample = None
+            for sample_id_pair in sample_set.split(","):
+                multiplexed_sample, id_ = sample_id_pair.split("=")
+                if sample not in cellranger_samples:
+                    cellranger_samples[sample] = {}
+                cellranger_samples[sample][multiplexed_sample] = id_
 
     # Job runners
     announce("Configuring pipeline parameters")
@@ -1219,6 +1247,7 @@ def main(argv=None):
             print(f"-- {multi_config_file}")
             build_10x_multi_config(multi_config_file, fastq_dir,
                                    cellranger_libraries[sample],
+                                   cellranger_samples[sample],
                                    reference_dataset,
                                    cellranger_vdj_reference)
             # Copy to output directory
