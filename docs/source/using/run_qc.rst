@@ -169,17 +169,20 @@ the following workaround can be used:
    for each subset containing symbolic links to the Fastqs for
    samples belonging to that subset.
 
-   For example: if there are subsets of human and mouse samples,
-   then these could be ``fastqs.human`` and ``fastqs.mouse``,
-   with symbolic links to the Fastqs in the ``fastqs`` directory.
+   For example:
 
-2. For each subset, execute the ``auto_process.py run_qc``
-   command specifying the organism for that subset (via the
-   ``--organism`` option), a subset-specific QC output
-   subdirectory (via ``--qc_dir``), and target the subset by
-   specifying the project and the subdirectory with the links
-   for the subset (via the ``--projects`` and ``--fastq_dir``
-   options).
+   If a dataset has one subset of samples from human and another
+   from mouse, then the two Fastq subdirectories could be named
+   ``fastqs.human`` and ``fastqs.mouse`` respectively, and
+   populated with symbolic links to the appropriate Fastqs from
+   the ``fastqs`` directory.
+
+2. For each subset, execute the ``run_qc`` command, specifying
+   the organism for that subset (via the ``--organism`` option),
+   a subset-specific QC output subdirectory (via ``--qc_dir``),
+   and target the subset by specifying the project and the
+   subdirectory with the links for the subset (via the
+   ``--projects`` and ``--fastq_dir`` options).
 
    For example:
 
@@ -193,8 +196,6 @@ the following workaround can be used:
    This will run the pipeline for just the linked Fastqs in
    the ``fastqs.human`` subdirectory and write outputs to the
    ``qc.human`` subdirectory.
-
-   Repeat this for each subset.
 
 3. After the QC has been run for each of the subsets then
    ``auto_process.py publish_qc`` will handle copying all the
