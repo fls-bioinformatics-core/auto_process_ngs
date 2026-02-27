@@ -156,6 +156,58 @@ biological samples; these metrics will be omitted for non-biological
 samples (even if they have been specified as part of the QC
 protocol).
 
+----------------------------------------------------
+Handling subsets of samples from different organisms
+----------------------------------------------------
+
+Occasionally a dataset may contain a mixture of samples derived
+from different organisms; although currently there is no formal way
+within the pipeline to differentiate samples from each organism,
+the following workaround can be used:
+
+1. Within the analysis project directory, create subdirectories
+   for each subset containing symbolic links to the Fastqs for
+   samples belonging to that subset.
+
+   For example:
+
+   If a dataset has one subset of samples from human and another
+   from mouse, then the two Fastq subdirectories could be named
+   ``fastqs.human`` and ``fastqs.mouse`` respectively, and
+   populated with symbolic links to the appropriate Fastqs from
+   the ``fastqs`` directory.
+
+2. For each subset, execute the ``run_qc`` command, specifying
+   the organism for that subset (via the ``--organism`` option),
+   a subset-specific QC output subdirectory (via ``--qc_dir``),
+   and target the subset by specifying the project and the
+   subdirectory with the links for the subset (via the
+   ``--projects`` and ``--fastq_dir`` options).
+
+   For example:
+
+   ::
+
+      auto_process.py run_qc --projects <PROJECT> \
+                             --fastq_dir fastqs.human \
+			     --organism Human \
+			     --qc_dir qc.human
+
+   This will run the pipeline for just the linked Fastqs in
+   the ``fastqs.human`` subdirectory and write outputs to the
+   ``qc.human`` subdirectory.
+
+3. After the QC has been run for each of the subsets then
+   ``auto_process.py publish_qc`` will handle copying all the
+   QC outputs to the publication area.
+
+.. note::
+
+   Optionally if there are outputs from the original ``run_qc``
+   command (i.e. ``qc`` subdirectory and matching QC and
+   MultiQC reports) then these can be removed manually before
+   running the ``publish_qc`` command.
+
 --------------------------------------
 QC metrics using subsequences in reads
 --------------------------------------
