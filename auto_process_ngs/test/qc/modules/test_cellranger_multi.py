@@ -1452,7 +1452,7 @@ PB4,BC002,PB4
                                  version="8.0.0")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
-        # Make mock 10x Flex analysis project
+        # Make mock 10x immune profiling analysis project
         p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
                                        "PJB1_GEX_S1_R2_001.fastq.gz",
                                        "PJB1_CSP_S2_R1_001.fastq.gz",
@@ -1549,7 +1549,7 @@ PJB1_BCR,{fastq_dir},any,PJB1,VDJ-B,
                                  version="9.0.0")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
-        # Make mock 10x Flex analysis project
+        # Make mock 10x immune profiling analysis project
         p = MockAnalysisProject("PJB",("PJB1_GEX_S1_R1_001.fastq.gz",
                                        "PJB1_GEX_S1_R2_001.fastq.gz",
                                        "PJB1_CSP_S2_R1_001.fastq.gz",
