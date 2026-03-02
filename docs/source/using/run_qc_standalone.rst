@@ -194,12 +194,6 @@ Fastq ID.
 ``cellranger multi`` configuration files for each physical sample,
 with the feature types assigned within the libraries section.
 
-.. note::
-
-   If V(D)J data is present then the ``--cellranger-vdj-reference``
-   option should be used to specify the location of the V(D)J
-   reference dataset.
-
 If the dataset has multiplexed samples (for example CellPlex or Flex
 data) then their names can be assigned to the appropriate CMO or
 probeset ID using the ``--10x_multiplexed_samples`` option:
@@ -216,6 +210,17 @@ For example:
 ::
 
    --10x_multiplexed_samples PJB1:PBA=CMO301,PBB=CMO302
+
+Two additional command options are provided specifically for V(D)J
+and Flex data:
+
+* ``--cellranger-vdj-reference``: if V(D)J data is present then
+  this option should be used to specify the location of the V(D)J
+  reference dataset;
+* ``--cellranger-probest``: for Flex data this option can be used
+  to specify the location of the probe set reference data
+  (otherwise the probe set will be taken from the configuration,
+  if possible).
 
 
 Running on different platforms: ``--local``

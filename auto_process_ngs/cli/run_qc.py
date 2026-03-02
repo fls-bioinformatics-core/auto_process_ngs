@@ -221,6 +221,11 @@ def add_10x_options(p):
                             "dataset to use when running single libary "
                             "analysis (overrides the organism-specific "
                             "references defined in the config file)")
+    cellranger.add_argument('--cellranger-probeset',action='store',
+                            metavar='PROBE_SET',
+                            dest='cellranger_probeset',
+                            help="specify the path to the probe set "
+                            "reference dataset for 'cellranger multi'")
     cellranger.add_argument('--cellranger-vdj-reference',action='store',
                             metavar='VDJ_REFERENCE',
                             dest='cellranger_vdj_reference',
@@ -673,7 +678,7 @@ def get_execution_environment():
         mem_per_core=mem_per_core)
 
 def build_10x_multi_config(multi_config_file, fastq_dir, libraries,
-                           samples, gex_reference=None,
+                           samples, gex_reference=None, probe_set=None,
                            vdj_reference=None):
     """
     Constructs a 'cellranger multi' configuration file
@@ -690,15 +695,20 @@ def build_10x_multi_config(multi_config_file, fastq_dir, libraries,
       gex_reference (str): path to the gene expression reference
         dataset to use (no 'gene-expression' section will be
         written if not supplied)
+      probe_set (str): path to the probe set reference dataset
+        (no 'probe-set' setting will be written if not supplied)
       vdj_reference (str): path to the VDJ reference dataset to
         use (no 'vdj' section will be written if not supplied)
     """
     with open(multi_config_file, "wt") as fp:
         # Gene expression section
-        if gex_reference:
-            fp.write(f"[gene-expression]\n"
-                     f"reference,{gex_reference}\n"
-                     f"create-bam,true\n\n")
+        if gex_reference or probe_set:
+            fp.write(f"[gene-expression]\n")
+            if gex_reference:
+                fp.write(f"reference,{gex_reference}\n")
+            if probe_set:
+                fp.write(f"probe-set,{probe_set}\n")
+            fp.write(f"create-bam,true\n\n")
         # VDJ reference
         if vdj_reference:
             fp.write(f"[vdj]\n"
@@ -949,6 +959,9 @@ def main(argv=None):
     cellranger_premrna_references = fetch_reference_data(
         settings,
         'cellranger_premrna_reference')
+    cellranger_probe_sets = fetch_reference_data(
+        settings,
+        'cellranger_probe_set')
     cellranger_atac_references = fetch_reference_data(
         settings,
         'cellranger_atac_reference')
@@ -956,11 +969,16 @@ def main(argv=None):
         settings,
         'cellranger_arc_reference')
 
-    # Single reference supplied on command line
+    # Single library reference supplied on command line
     cellranger_reference_dataset = args.cellranger_reference_dataset
     if cellranger_reference_dataset:
         cellranger_reference_dataset = os.path.abspath(
             cellranger_reference_dataset)
+
+    # Cellranger probe set dataset
+    cellranger_probeset = args.cellranger_probeset
+    if cellranger_probeset:
+        cellranger_probeset = os.path.abspath(cellranger_probeset)
 
     # Cellranger VDJ reference dataset
     cellranger_vdj_reference = args.cellranger_vdj_reference
@@ -1237,6 +1255,21 @@ def main(argv=None):
                 logger.warning("Failed to locate 10xGenomics reference "
                                "transcriptome for organism '%s': %s" %
                                (project_metadata["organism"], ex))
+        # Determine probe set
+        probe_set = None
+        if cellranger_probeset:
+            # User-defined on command line
+            probe_set = cellranger_probeset
+        elif project_metadata["organism"]:
+            # Use organism
+            organism_id = normalise_organism_name(project_metadata["organism"])
+            try:
+                probe_set = settings.organisms[organism_id].\
+                    cellranger_probeset
+            except Exception as ex:
+                logger.warning("Failed to locate 10xGenomics reference "
+                               "probe set for organism '%s': %s" %
+                               (project_metadata["organism"], ex))
         for sample in cellranger_libraries:
             # Build 10x_multi_config file for each physical sample
             if sample is not None:
@@ -1249,6 +1282,7 @@ def main(argv=None):
                                    cellranger_libraries[sample],
                                    cellranger_samples[sample],
                                    reference_dataset,
+                                   probe_set,
                                    cellranger_vdj_reference)
             # Copy to output directory
             shutil.copy(multi_config_file, out_dir)

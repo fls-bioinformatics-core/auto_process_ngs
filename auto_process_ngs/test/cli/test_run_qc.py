@@ -896,6 +896,87 @@ PBB,CMO302
                 self.assertTrue(re.compile(expected).match(actual),
                                 f"'{actual}': doesn't match '{expected}'")
 
+    def test_run_qc_10x_flex(self):
+        """
+        run_qc.py: run 'cellranger multi' analysis (10x Flex)
+        """
+        # Make mock cellranger and seqtk executables
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"),
+                                 version="9.0.0")
+        MockSeqtk.create(os.path.join(self.bin,"seqtk"))
+        # Make mock 10x CellPlex analysis project
+        p = MockAnalysisProject("PJB",("PJB1_Flex_S1_R1_001.fastq.gz",
+                                       "PJB1_Flex_S1_R2_001.fastq.gz"),
+                                metadata={
+                                    'Organism': 'Human',
+                                    'Single cell platform':
+                                    '10x Chromium Flex',
+                                    'Library type': 'scRNA Profiling' })
+        project_dir = p.create(top_dir=self.dirn)
+        # Implicit output and QC directories
+        out_dir = project_dir
+        qc_dir = os.path.join(out_dir, "qc")
+        # Run the QC
+        self.assertEqual(run_qc(
+            [project_dir,
+             "--cellranger-reference", "/mnt/data/cellranger/human-gex",
+             "--cellranger-probeset", "/mnt/data/cellranger/human-probeset.csv",
+             "--10x_library", "PJB1:PJB1_Flex:Gene Expression",
+             "--10x_multiplexed_samples", "PJB1:PBA=BC001,PBB=BC002"]), 0)
+        # Check output and reports
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(out_dir, f)),
+                            f"Missing '{f}' under {out_dir}")
+        # Check QC metadata
+        qc_info = AnalysisProjectQCDirInfo(os.path.join(qc_dir, "qc.info"))
+        self.assertEqual(qc_info.protocol,"10x_Flex")
+        self.assertEqual(qc_info.protocol_specification,
+                         str(fetch_protocol_definition("10x_Flex")))
+        self.assertEqual(qc_info.organism,"Human")
+        self.assertEqual(qc_info.seq_data_samples,"PJB1_Flex")
+        self.assertEqual(qc_info.fastq_dir, None)
+        self.assertEqual(qc_info.fastqs,
+                         "PJB1_Flex_S1_R1_001.fastq.gz,"
+                         "PJB1_Flex_S1_R2_001.fastq.gz")
+        self.assertEqual(qc_info.fastqs_split_by_lane,False)
+        self.assertEqual(qc_info.fastq_screens,
+                         "model_organisms,other_organisms,rRNA")
+        self.assertEqual(qc_info.star_index,"/data/hg38/star_index")
+        self.assertEqual(qc_info.annotation_bed,self.ref_data['hg38']['bed'])
+        self.assertEqual(qc_info.annotation_gtf,self.ref_data['hg38']['gtf'])
+        self.assertEqual(qc_info.cellranger_version, "9.0.0")
+        self.assertEqual(qc_info.cellranger_refdata,
+                         "/mnt/data/cellranger/human-gex")
+        self.assertEqual(qc_info.cellranger_probeset,
+                         "/mnt/data/cellranger/human-probeset.csv")
+        # Check 10x_multi_config.csv file
+        self.assertTrue(os.path.exists(
+            os.path.join(qc_dir,
+                         "10x_multi_config.PJB1.csv")))
+        re_tenx_multi_config = """\[gene-expression\]
+reference,/mnt/data/cellranger/human-gex
+probe-set,/mnt/data/cellranger/human-probeset.csv
+create-bam,true
+
+\[libraries\]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_Flex,([^,]+),any,PJB1_Flex,Gene Expression,
+
+\[samples\]
+PBA,BC001
+PBB,BC002
+"""
+        with open(os.path.join(qc_dir,
+                               "10x_multi_config.PJB1.csv"), "rt") as fp:
+            output = fp.read()
+            for actual, expected in zip(output.split("\n"),
+                                        re_tenx_multi_config.split("\n")):
+                self.assertTrue(re.compile(expected).match(actual),
+                                f"'{actual}': doesn't match '{expected}'")
+
     def test_run_qc_10x_multi_immune_profiling(self):
         """
         run_qc.py: run 'cellranger multi' analysis (10x immune profiling)
