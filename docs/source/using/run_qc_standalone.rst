@@ -125,11 +125,11 @@ which are set in the configuration.
 Running 10xGenomics single library analyses
 -------------------------------------------
 
-When running the QC pipeline on 10xGenomics data using an
+When running the QC pipeline on 10x Genomics data using an
 :doc:`appropriate protocol <run_qc>`, additional options are
 available for controlling the single library analyses that
-are run using the `count` command of the appropriate
-10xGenomics software package.
+are run using the ``count`` command of the appropriate
+10x Genomics software package.
 
 The following options can be used to override the defaults
 defined in the configuration:
@@ -154,6 +154,74 @@ For single cell RNA-seq additional options are available:
    copied to the ``cellranger_count`` subdirectory of the
    top-level output directory, in addition to the metrics
    and HTML summary files written to the QC directory.
+
+Running 10x Genomics CellRanger ``multi`` analysis
+--------------------------------------------------
+
+When running the QC pipeline on 10x Genomics data using an
+:doc:`appropriate protocol <run_qc>`, additional options are
+available for controlling the CellRanger ``multi`` analyses
+(i.e. the ``cellranger multi`` command). (These options
+supplement those available for the single library analyses
+in the previous section.)
+
+In order to enable the ``multi`` analyses, information on the
+each of the 10x Genomics libraries associated with each physical
+sample must be specified via the ``--10x_library`` option,
+using the syntax:
+
+::
+
+   --10x_library [SAMPLE:]FASTQ_ID:FEATURE_TYPE
+
+where ``SAMPLE`` is an optional physical sample name (required
+if there is more than one physical sample), ``FASTQ_ID`` is
+essentially the "sample name" part of the Fastq name, and
+``FEATURE_TYPE`` is the associated feature type, e.g.
+``Gene expression``).
+
+For example:
+
+::
+
+   --10x_library "PB01:PB01_GEX:Gene Expression" --10x_library PB01:PB01_TCR:VDJ-T ...
+
+
+There should be one ``--10x_library`` option supplied for each
+Fastq ID.
+
+``run_qc.py`` then uses the supplied information to build
+``cellranger multi`` configuration files for each physical sample,
+with the feature types assigned within the libraries section.
+
+If the dataset has multiplexed samples (for example CellPlex or Flex
+data) then their names can be assigned to the appropriate CMO or
+probeset ID using the ``--10x_multiplexed_samples`` option:
+
+::
+
+   --10x_multiplexed_samples [SAMPLE:]MULTIPLEXED_SAMPLE=ID,...
+
+where ``SAMPLE`` is an optional physical sample name (required
+if there is more than one physical sample).
+
+For example:
+
+::
+
+   --10x_multiplexed_samples PJB1:PBA=CMO301,PBB=CMO302
+
+Two additional command options are provided specifically for V(D)J
+and Flex data:
+
+* ``--cellranger-vdj-reference``: if V(D)J data is present then
+  this option should be used to specify the location of the V(D)J
+  reference dataset;
+* ``--cellranger-probest``: for Flex data this option can be used
+  to specify the location of the probe set reference data
+  (otherwise the probe set will be taken from the configuration,
+  if possible).
+
 
 Running on different platforms: ``--local``
 -------------------------------------------

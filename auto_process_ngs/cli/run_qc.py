@@ -46,6 +46,7 @@ from ..qc.protocols import QC_PROTOCOLS
 from ..qc.protocols import determine_qc_protocol
 from ..qc.protocols import fetch_protocol_definition
 from ..qc.utils import report_qc
+from ..utils import normalise_organism_name
 
 # 10x Genomics assays
 from ..tenx import CELLRANGER_ASSAY_CONFIGS
@@ -220,6 +221,16 @@ def add_10x_options(p):
                             "dataset to use when running single libary "
                             "analysis (overrides the organism-specific "
                             "references defined in the config file)")
+    cellranger.add_argument('--cellranger-probeset',action='store',
+                            metavar='PROBE_SET',
+                            dest='cellranger_probeset',
+                            help="specify the path to the probe set "
+                            "reference dataset for 'cellranger multi'")
+    cellranger.add_argument('--cellranger-vdj-reference',action='store',
+                            metavar='VDJ_REFERENCE',
+                            dest='cellranger_vdj_reference',
+                            help="specify the path to the VDJ reference "
+                            "dataset for 'cellranger multi'")
     cellranger.add_argument("--10x_chemistry",
                             choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
                             dest="cellranger_chemistry",default="auto",
@@ -234,6 +245,18 @@ def add_10x_options(p):
                             "scRNA-seq and scATAC-seq, overriding automatic "
                             "cell detection algorithms (default is to use "
                             "built-in cell detection)")
+    cellranger.add_argument("--10x_library", action="append",
+                            metavar="[SAMPLE:]FASTQ_ID:FEATURE_TYPE",
+                            dest="cellranger_library",
+                            help="assign feature type to a Fastq file ID "
+                            "for 'cellranger multi' analysis (optionally "
+                            "also specify a physical sample)")
+    cellranger.add_argument("--10x_multiplexed_samples", action="append",
+                            metavar="[SAMPLE:]MULTIPLEXED_SAMPLE=ID[,...]",
+                            dest="cellranger_samples",
+                            help="assign multiplexed samples name to CMO "
+                            "or probe IDs for 'cellranger multi' analysis "
+                            "(optionally also specify a physical sample)")
 
 def add_conda_options(p,enable_conda,conda_env_dir):
     """
@@ -654,6 +677,58 @@ def get_execution_environment():
         max_mem=max_mem,
         mem_per_core=mem_per_core)
 
+def build_10x_multi_config(multi_config_file, fastq_dir, libraries,
+                           samples, gex_reference=None, probe_set=None,
+                           vdj_reference=None):
+    """
+    Constructs a 'cellranger multi' configuration file
+
+    Arguments:
+      multi_config_file (str): path to the output config file
+      fastq_dir (str): path to the directory holding the Fastq
+        files
+      libraries (dict): dictionary where keys are Fastq IDs and
+        values are the corresponding 10x library types
+      samples (dict): dictionary where keys are multiplexed
+        sample names and values are the corresponding 10x CMO
+        or probe IDs
+      gex_reference (str): path to the gene expression reference
+        dataset to use (no 'gene-expression' section will be
+        written if not supplied)
+      probe_set (str): path to the probe set reference dataset
+        (no 'probe-set' setting will be written if not supplied)
+      vdj_reference (str): path to the VDJ reference dataset to
+        use (no 'vdj' section will be written if not supplied)
+    """
+    with open(multi_config_file, "wt") as fp:
+        # Gene expression section
+        if gex_reference or probe_set:
+            fp.write(f"[gene-expression]\n")
+            if gex_reference:
+                fp.write(f"reference,{gex_reference}\n")
+            if probe_set:
+                fp.write(f"probe-set,{probe_set}\n")
+            fp.write(f"create-bam,true\n\n")
+        # VDJ reference
+        if vdj_reference:
+            fp.write(f"[vdj]\n"
+                     f"reference,{vdj_reference}\n\n")
+        # Libraries section
+        fp.write(f"[libraries]\n"
+                 f"fastq_id,fastqs,lanes,physical_library_id,"
+                 f"feature_types,subsample_rate\n")
+        for fastq_id in sorted(libraries.keys()):
+            fp.write(f"{fastq_id},"
+                     f"{fastq_dir},"
+                     f"any,"
+                     f"{fastq_id},"
+                     f"{libraries[fastq_id]},\n")
+        # Samples section
+        if samples:
+            fp.write(f"\n[samples]\n")
+            for sample in sorted(samples.keys()):
+                fp.write(f"{sample},{samples[sample]}\n")
+
 def announce(title):
     """
     Print arbitrary string as a title
@@ -884,6 +959,9 @@ def main(argv=None):
     cellranger_premrna_references = fetch_reference_data(
         settings,
         'cellranger_premrna_reference')
+    cellranger_probe_sets = fetch_reference_data(
+        settings,
+        'cellranger_probe_set')
     cellranger_atac_references = fetch_reference_data(
         settings,
         'cellranger_atac_reference')
@@ -891,11 +969,54 @@ def main(argv=None):
         settings,
         'cellranger_arc_reference')
 
-    # Single reference supplied on command line
+    # Single library reference supplied on command line
     cellranger_reference_dataset = args.cellranger_reference_dataset
     if cellranger_reference_dataset:
         cellranger_reference_dataset = os.path.abspath(
             cellranger_reference_dataset)
+
+    # Cellranger probe set dataset
+    cellranger_probeset = args.cellranger_probeset
+    if cellranger_probeset:
+        cellranger_probeset = os.path.abspath(cellranger_probeset)
+
+    # Cellranger VDJ reference dataset
+    cellranger_vdj_reference = args.cellranger_vdj_reference
+    if cellranger_vdj_reference:
+        cellranger_vdj_reference = os.path.abspath(
+            cellranger_vdj_reference)
+
+    # Cellranger multi samples, Fastqs and feature types
+    cellranger_libraries = {}
+    cellranger_samples = {}
+    if args.cellranger_library:
+        for library in args.cellranger_library:
+            try:
+                sample, fastq_id, feature_type = library.split(":")
+            except ValueError:
+                sample = None
+                fastq_id, feature_type = library.split(":")
+            if sample not in cellranger_libraries:
+                cellranger_libraries[sample] = {}
+                cellranger_samples[sample] = {}
+            cellranger_libraries[sample][fastq_id] = feature_type
+        # Report samples and libraries
+        announce("10x Genomics samples and libraries")
+        for sample in cellranger_libraries:
+            print(f"{sample}:")
+            for fastq_id in cellranger_libraries[sample]:
+                print(f"- {fastq_id}: {cellranger_libraries[sample][fastq_id]}")
+    if args.cellranger_samples:
+        for sample_set in args.cellranger_samples:
+            try:
+                sample, sample_set = sample_set.split(":")
+            except ValueError:
+                sample = None
+            for sample_id_pair in sample_set.split(","):
+                multiplexed_sample, id_ = sample_id_pair.split("=")
+                if sample not in cellranger_samples:
+                    cellranger_samples[sample] = {}
+                cellranger_samples[sample][multiplexed_sample] = id_
 
     # Job runners
     announce("Configuring pipeline parameters")
@@ -1115,6 +1236,56 @@ def main(argv=None):
     # Load the project
     project = AnalysisProject(project_dir,fastq_attrs=fastq_attrs)
     print("Loaded project '%s'" % project.name)
+
+    # Build cellranger multi config files
+    if cellranger_libraries:
+        announce("Building config 'cellranger multi' configs")
+        # Determine reference dataset
+        reference_dataset = None
+        if cellranger_reference_dataset:
+            # User-defined on command line
+            reference_dataset = cellranger_reference_dataset
+        elif project_metadata["organism"]:
+            # Use organism
+            organism_id = normalise_organism_name(project_metadata["organism"])
+            try:
+                reference_dataset = settings.organisms[organism_id].\
+                                    cellranger_reference
+            except Exception as ex:
+                logger.warning("Failed to locate 10xGenomics reference "
+                               "transcriptome for organism '%s': %s" %
+                               (project_metadata["organism"], ex))
+        # Determine probe set
+        probe_set = None
+        if cellranger_probeset:
+            # User-defined on command line
+            probe_set = cellranger_probeset
+        elif project_metadata["organism"]:
+            # Use organism
+            organism_id = normalise_organism_name(project_metadata["organism"])
+            try:
+                probe_set = settings.organisms[organism_id].\
+                    cellranger_probeset
+            except Exception as ex:
+                logger.warning("Failed to locate 10xGenomics reference "
+                               "probe set for organism '%s': %s" %
+                               (project_metadata["organism"], ex))
+        for sample in cellranger_libraries:
+            # Build 10x_multi_config file for each physical sample
+            if sample is not None:
+                multi_config_file = f"10x_multi_config.{sample}.csv"
+            else:
+                multi_config_file = "10x_multi_config.csv"
+            multi_config_file = os.path.join(project_dir, multi_config_file)
+            print(f"-- {multi_config_file}")
+            build_10x_multi_config(multi_config_file, fastq_dir,
+                                   cellranger_libraries[sample],
+                                   cellranger_samples[sample],
+                                   reference_dataset,
+                                   probe_set,
+                                   cellranger_vdj_reference)
+            # Copy to output directory
+            shutil.copy(multi_config_file, out_dir)
 
     # Fetch the QC protocol
     announce("Building QC protocol")
