@@ -75,7 +75,13 @@ def update(ap):
         save_required = False
         projects = [line['Project'] for line in project_metadata]
         for project in ap.get_analysis_projects_from_dirs():
-            if project.name == "undetermined":
+            if project.name.endswith(".bak") \
+                    or project.name.endswith(".orig") \
+                    or project.name.endswith(".tmp"):
+                # Skip directories with extensions indicating they
+                # should be ignored
+                continue
+            elif project.name == "undetermined":
                 # Skip undetermined
                 continue
             elif project.name not in projects and f"#{project.name}" not in projects:

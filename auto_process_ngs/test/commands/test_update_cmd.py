@@ -459,6 +459,54 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
             for expected, actual in zip(expected_lines, fp.read().split("\n")):
                 self.assertEqual(expected.strip(), actual.strip())
 
+    def test_update_project_metadata_add_unlisted_projects_ignore_special_names(self):
+        """
+        update: ignore unlisted project directories (don't add to 'projects.info')
+        """
+        # Metadata for projects
+        project_metadata = {
+            "AB": {
+                "User": "Alan Bailey",
+                "PI": "Archie Ballard",
+                "Library": "RNA-seq",
+                "Organism": "Human"
+            },
+            "CDE.bak": {
+                "User": "Charles Edwards",
+                "PI": "Christian Eggars",
+                "Library": "ChIP-seq",
+                "Organism": "Mouse"
+            }
+        }
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            project_metadata=project_metadata,
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Remove entry for CDE.bak in projects.info
+        projects_info_contents = []
+        with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
+            for line in fp:
+                if not line.startswith("CDE.bak"):
+                    projects_info_contents.append(line)
+        with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
+            fp.write("".join(projects_info_contents))
+        # Set up AutoProcess instance and do the update
+        ap = AutoProcess(mockdir.dirn)
+        update(ap)
+        # Check contents of projects.info
+        with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
+            expected_lines = [
+                "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments",
+                "AB\tAB1,AB2\tAlan Bailey\tRNA-seq\t.\tHuman\tArchie Ballard\t."
+            ]
+            for expected, actual in zip(expected_lines, fp.read().split("\n")):
+                self.assertEqual(expected.strip(), actual.strip())
+
     def test_update_regenerate_qc_reports(self):
         """
         update: regenerate QC reports with stale metadata
