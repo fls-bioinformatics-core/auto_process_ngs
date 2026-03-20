@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     update_cmd.py: implement 'update' command
-#     Copyright (C) University of Manchester 2023 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2026 Peter Briggs
 #
 #########################################################################
 
@@ -119,6 +119,11 @@ def update(ap):
                     print("...updating sample list in projects.info")
                     line['Samples'] = sample_list
                     save_required = True
+            else:
+                # Project doesn't exist - comment out
+                print(f"Commenting out missing project '{name}'")
+                line['Project'] = f"#{name}"
+                save_required = True
         # Save master project metadata
         if save_required:
             print("Saving projects.info")

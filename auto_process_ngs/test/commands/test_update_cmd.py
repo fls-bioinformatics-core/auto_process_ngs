@@ -350,6 +350,66 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
             self.assertEqual(project_metadata.paired_end,
                              expected_paired_end[pname])
 
+    def test_update_project_metadata_project_no_longer_exists(self):
+        """
+        update: handle project which no longer exists in analysis dir
+        """
+        # Metadata for projects
+        project_metadata = {
+            "AB": {
+                "User": "Alan Bailey",
+                "PI": "Archie Ballard",
+                "Library": "RNA-seq",
+                "Organism": "Human"
+            }
+        }
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            project_metadata=project_metadata,
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Remove CDE project
+        shutil.rmtree(os.path.join(mockdir.dirn, "CDE"))
+        projects_info_contents = []
+        with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
+            for line in fp:
+                if not line.startswith("CDE"):
+                    projects_info_contents.append(line)
+        with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
+            fp.write("".join(projects_info_contents))
+        # Set up AutoProcess instance
+        ap = AutoProcess(mockdir.dirn)
+        # Check metadata items in projects.info pre-update
+        ap_project_metadata = ap.load_project_metadata()
+        for pname in project_metadata:
+            for item in project_metadata[pname]:
+                self.assertEqual(ap_project_metadata.lookup(pname)[item],
+                                 project_metadata[pname][item])
+        # Check metadata items in projects pre-update
+        for pname in project_metadata:
+            p = ap.get_analysis_projects(pname)[0]
+            for item in project_metadata[pname]:
+                project_item = self.metadata_map[item]
+                expected_value = project_metadata[pname][item]
+                self.assertEqual(p.info[project_item],
+                                 expected_value)
+        # Append info for missing project 'CDE' to projects.info
+        with open(os.path.join(mockdir.dirn,"projects.info"),'at') as fp:
+            fp.write("""CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX spiked in
+""")
+        # Do the update
+        update(ap)
+        # Reload and confirm the updates in projects.info
+        ap = AutoProcess(mockdir.dirn)
+        ap_project_metadata = ap.load_project_metadata()
+        for pname in ["AB", "#CDE"]:
+            self.assertTrue(pname in ap_project_metadata,
+                            f"'{pname}' not in project metadata")
+
     def test_update_regenerate_qc_reports(self):
         """
         update: regenerate QC reports with stale metadata
