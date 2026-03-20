@@ -374,6 +374,7 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
         mockdir.create()
         # Remove CDE project
         shutil.rmtree(os.path.join(mockdir.dirn, "CDE"))
+        # Remove initial entry for CDE in projects.info
         projects_info_contents = []
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             for line in fp:
