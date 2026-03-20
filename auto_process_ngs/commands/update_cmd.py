@@ -80,13 +80,14 @@ def update(ap):
                     or project.name.endswith(".tmp"):
                 # Skip directories with extensions indicating they
                 # should be ignored
+                print(f"Not adding entry for unlisted project '{project.name}'")
                 continue
             elif project.name == "undetermined":
                 # Skip undetermined
                 continue
             elif project.name not in projects and f"#{project.name}" not in projects:
                 # Add new entry
-                print(f"Adding entry for additional project '{project.name}'")
+                print(f"Adding entry for unlisted project '{project.name}'")
                 project_metadata.add_project(project.name,
                                              [s.name for s in project.samples],
                                              user=project.info.user,
