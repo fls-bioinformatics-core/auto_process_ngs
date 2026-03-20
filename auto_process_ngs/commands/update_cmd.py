@@ -33,6 +33,7 @@ def update(ap):
         analysis directory to publish QC for
     """
     update_paths = True
+    update_add_missing_projects = True
     update_projects = True
     update_qc_reports = True
 
@@ -66,6 +67,32 @@ def update(ap):
                     qc_info.save()
             # Save the updated parameter data
             ap.save_parameters(force=True)
+
+    if update_add_missing_projects:
+        # Add any project directories without entries
+        project_metadata = ap.load_project_metadata(
+            ap.params.project_metadata)
+        save_required = False
+        projects = [line['Project'] for line in project_metadata]
+        for project in ap.get_analysis_projects_from_dirs():
+            if project.name == "undetermined":
+                # Skip undetermined
+                continue
+            elif project.name not in projects and f"#{project.name}" not in projects:
+                # Add new entry
+                print(f"Adding entry for additional project '{project.name}'")
+                project_metadata.add_project(project.name,
+                                             [s.name for s in project.samples],
+                                             user=project.info.user,
+                                             PI=project.info.PI,
+                                             organism=project.info.organism,
+                                             library_type=project.info.library_type,
+                                             sc_platform=project.info.single_cell_platform,
+                                             comments=project.info.comments)
+                save_required = True
+        # Save the updated project metadata if required
+        if save_required:
+            project_metadata.save()
 
     if update_projects:
         # Update project metadata
