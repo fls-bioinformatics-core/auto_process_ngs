@@ -1644,7 +1644,9 @@ ABM4,CMO304,ABM4
                         "save.bcl2fastqL1234",
                         "save.bcl2fastqL5678",
                         "tmp.illumina_qc.XYZ",
-                        "__qc.XYZ123.tmp",)
+                        "__qc.XYZ123.tmp",
+                        ".gejobrunner",
+                        ".slurmrunner.iupao01a")
         exclude_files = ("custom_SampleSheet.csv.bak",)
         for d in exclude_dirs:
             os.makedirs(os.path.join(mockdir.dirn,d))
@@ -1681,9 +1683,11 @@ ABM4,CMO304,ABM4
         self.assertTrue(os.path.exists(staging_dir))
         # Check unwanted content not copied across
         for d in exclude_dirs:
-            self.assertFalse(os.path.exists(os.path.join(staging_dir,d)))
+            self.assertFalse(os.path.exists(os.path.join(staging_dir,d)),
+                             f"{d}: is present but should be excluded")
         for f in exclude_files:
-            self.assertFalse(os.path.exists(os.path.join(staging_dir,f)))
+            self.assertFalse(os.path.exists(os.path.join(staging_dir,f)),
+                             f"{f}: is present but should be excluded")
         # Do second archive operation to final
         status = archive(ap,
                          archive_dir=archive_dir,

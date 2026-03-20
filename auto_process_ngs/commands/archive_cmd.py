@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
-#     Copyright (C) University of Manchester 2017-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2026 Peter Briggs
 #
 #########################################################################
 
@@ -258,7 +258,8 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                     '--exclude=*.bak',
                     '--exclude=*.tmp',
                     '--exclude=tmp.*',
-                    '--exclude=__*',]
+                    '--exclude=__*',
+                    '--exclude=.*runner*']
         if not include_bcl2fastq:
             # Determine whether bcl2fastq dir should be included implicitly
             # because there are links from the analysis directories
