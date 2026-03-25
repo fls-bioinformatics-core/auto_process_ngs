@@ -408,7 +408,7 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
         ap = AutoProcess(mockdir.dirn)
         ap_project_metadata = ap.load_project_metadata()
         for pname in ["AB", "#CDE"]:
-            self.assertTrue(pname in ap_project_metadata,
+            self.assertTrue(pname in [p["Project"] for p in ap_project_metadata],
                             f"'{pname}' not in project metadata")
 
     def test_update_project_metadata_add_unlisted_projects(self):
