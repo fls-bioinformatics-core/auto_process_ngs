@@ -1018,6 +1018,9 @@ class MakeFastqs(Pipeline):
             elif pipeline_variant == "10x_cellranger-atac" and not has_10x_indexes:
                 # Switch to standard pipeline for 10x ATAC without 10x indexes
                 pipeline_variant = "standard"
+            elif pipeline_variant == "10x_cellranger-arc" and not has_10x_indexes:
+                # Switch to standard pipeline for 10x multiome without 10x indexes
+                pipeline_variant = "standard"
             self.report("- Pipeline variant: %s" % pipeline_variant)
 
             #########################
