@@ -47,6 +47,10 @@ def update(ap, update_paths=True, update_project_metadata=True,
         older than the project metadata file (default:
         True)
     """
+    if not (update_paths or update_project_metadata or
+            update_sync_projects or update_qc_reports):
+        logger.warning("No updates requested")
+
     if update_paths:
         # Update paths in the top-level parameter file
         # (if analysis dir has been moved or copied)
