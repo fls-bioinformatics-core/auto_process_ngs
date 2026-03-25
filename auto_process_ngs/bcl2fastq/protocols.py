@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 #     bcl2fastq.protocols.py: Fastq generation protocol definitions
-#     Copyright (C) University of Manchester 2025 Peter Briggs
+#     Copyright (C) University of Manchester 2025-2026 Peter Briggs
 #
 
 """
@@ -88,12 +88,14 @@ PROTOCOLS = {
         # -- disable adapter trimming
         "description": "10x Genomics Chromium single cell ATAC-seq data",
         "pipeline_variant": "10x_cellranger-atac",
-        "supported_indexes": ("10X",),
+        "supported_indexes": ("ILLUMINA", "10X",),
         "r1_length": 50,
         "r2_length": 16,
         "r3_length": 50,
         "i1_length": 8,
         "override_template": "RIRR",
+        "minimum_trimmed_read_length": 8,
+        "mask_short_adapter_reads": 8,
         "tenx_filter_single_index": True,
         "no_lane_splitting": False,
         "create_fastq_for_index_read": True,
