@@ -1062,6 +1062,18 @@ def add_update_command(cmdparser):
                               "ANALYSIS_DIR and its projects and QC outputs "
                               "when directory has been moved or copied, "
                               "or project metadata has been updated.")
+    p.add_argument('--paths', action='store_true',
+                   help="update paths stored in the metadata and parameter "
+                        "files for ANALYSIS_DIR")
+    p.add_argument('--project-metadata', action='store_true',
+                   help="propagate modified metadata in 'projects.info' to "
+                   "project directories in ANALYSIS_DIR")
+    p.add_argument('--project-dirs', action='store_true',
+                   help="synchronise project entries in 'projects.info' with "
+                   "project directories within ANALYSIS_DIR")
+    p.add_argument('--qc-reports', action='store_true',
+                   help="regenerate QC reports for projects where metadata "
+                   "has been updated")
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs='?',
                    help="existing auto_process analysis directory to "
@@ -1835,7 +1847,10 @@ def update(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
-    d.update()
+    d.update(update_paths=args.paths,
+             update_project_metadata=args.project_metadata,
+             update_sync_projects=args.project_dirs,
+             update_qc_reports=args.qc_reports)
 
 def readme(args):
     """
