@@ -378,8 +378,7 @@ docs.generate_utility_docs(["analyse_barcodes.py",
                             "fetch_data.py",
                             "manage_fastqs.py",
                             "run_qc.py",
-                            "transfer_data.py",
-                            "update_project_metadata.py"], utils_docs)
+                            "transfer_data.py"], utils_docs)
 
 # -- Make developers API reference documents ---------------------------------------
 api_doc_dir = os.path.join(os.getcwd(),
