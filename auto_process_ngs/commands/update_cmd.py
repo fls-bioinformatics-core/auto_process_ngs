@@ -24,19 +24,29 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def update(ap):
+def update(ap, update_paths=True, update_project_metadata=True,
+           update_sync_projects=True, update_qc_reports=True):
     """
     Update metadata and artefacts in analysis directory
 
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the
         analysis directory to publish QC for
+      update_paths (bool): whether to update analysis
+        directory paths in metadata and parameter files
+        (default: True)
+      update_project_metadata (bool): whether to update
+        metadata stored in 'projects.info' and in the
+        project directories (default: True)
+      update_sync_projects (bool): whether to update
+        projects listed in 'projects.info' against
+        project directories on the filesystem (default:
+        True)
+      update_qc_reports (bool): whether to update QC
+        reports in projects where existing report is
+        older than the project metadata file (default:
+        True)
     """
-    update_paths = True
-    update_add_missing_projects = True
-    update_projects = True
-    update_qc_reports = True
-
     if update_paths:
         # Update paths in the top-level parameter file
         # (if analysis dir has been moved or copied)
@@ -68,10 +78,27 @@ def update(ap):
             # Save the updated parameter data
             ap.save_parameters(force=True)
 
-    if update_add_missing_projects:
-        # Add any project directories without entries
+    if update_sync_projects:
+        # Load information from 'projects.info'
         project_metadata = ap.load_project_metadata(
             ap.params.project_metadata)
+        # Comment out projects which don't exist on filesystem
+        save_required = False
+        for line in project_metadata:
+            # Iterate through the named projects
+            name = line['Project']
+            if name.startswith('#'):
+                # Commented out, ignore
+                continue
+            # Look for a matching project directory
+            project_dir = os.path.join(ap.analysis_dir, name)
+            if not os.path.exists(project_dir):
+                print(f"Commenting out missing project '{name}'")
+                line['Project'] = f"#{name}"
+                save_required = True
+        if save_required:
+            project_metadata.save()
+        # Add any project directories without entries
         save_required = False
         projects = [line['Project'] for line in project_metadata]
         for project in ap.get_analysis_projects_from_dirs():
@@ -101,7 +128,7 @@ def update(ap):
         if save_required:
             project_metadata.save()
 
-    if update_projects:
+    if update_project_metadata:
         # Update project metadata
         project_metadata = ap.load_project_metadata(
             ap.params.project_metadata)
@@ -153,11 +180,6 @@ def update(ap):
                     print("...updating sample list in projects.info")
                     line['Samples'] = sample_list
                     save_required = True
-            else:
-                # Project doesn't exist - comment out
-                print(f"Commenting out missing project '{name}'")
-                line['Project'] = f"#{name}"
-                save_required = True
         # Save master project metadata
         if save_required:
             print("Saving projects.info")

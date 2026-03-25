@@ -78,7 +78,11 @@ class TestUpdate(unittest.TestCase):
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(original_path,"primary_data"))
         # Update the metadata
-        update(ap)
+        update(ap,
+               update_paths=True,
+               update_sync_projects=False,
+               update_project_metadata=False,
+               update_qc_reports=False)
         # Reload and check metadata items post-update
         ap = AutoProcess(new_path)
         self.assertEqual(ap.analysis_dir,new_path)
@@ -138,7 +142,11 @@ class TestUpdate(unittest.TestCase):
                                           proj.name,
                                           "fastqs"))
         # Update the metadata
-        update(ap)
+        update(ap,
+               update_paths=True,
+               update_sync_projects=False,
+               update_project_metadata=False,
+               update_qc_reports=False)
         # Reload and check metadata items post-update
         ap = AutoProcess(new_path)
         self.assertEqual(ap.analysis_dir,new_path)
@@ -215,7 +223,11 @@ class TestUpdate(unittest.TestCase):
 AB\tAB1,AB2\tAlan Bailey\tRNA-seq\t.\tMouse\tArchie Ballard\t1% PhiX spiked in
 CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX spiked in
 """)
-        update(ap)
+        update(ap,
+               update_paths=False,
+               update_sync_projects=False,
+               update_project_metadata=True,
+               update_qc_reports=False)
         # Reload and confirm the updates in projects.info
         ap = AutoProcess(mockdir.dirn)
         ap_project_metadata = ap.load_project_metadata()
@@ -291,7 +303,11 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
             "CDE": ["CDE3"]
         }
         # Update sample lists in metadata
-        update(ap)
+        update(ap,
+               update_paths=False,
+               update_sync_projects=False,
+               update_project_metadata=True,
+               update_qc_reports=False)
         # Reload and check updated sample lists in projects.info
         ap = AutoProcess(mockdir.dirn)
         ap_project_metadata = ap.load_project_metadata()
@@ -337,7 +353,11 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
             os.remove(os.path.join(mockdir.dirn,fq))
         # Set up AutoProcess instance and update metadata
         ap = AutoProcess(mockdir.dirn)
-        update(ap)
+        update(ap,
+               update_paths=False,
+               update_sync_projects=False,
+               update_project_metadata=True,
+               update_qc_reports=False)
         # Reload and check update paired-end metadata in projects
         ap = AutoProcess(mockdir.dirn)
         expected_paired_end = {
@@ -403,7 +423,11 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
             fp.write("""CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX spiked in
 """)
         # Do the update
-        update(ap)
+        update(ap,
+               update_paths=False,
+               update_sync_projects=True,
+               update_project_metadata=False,
+               update_qc_reports=False)
         # Reload and confirm the updates in projects.info
         ap = AutoProcess(mockdir.dirn)
         ap_project_metadata = ap.load_project_metadata()
@@ -449,7 +473,11 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
             fp.write("".join(projects_info_contents))
         # Set up AutoProcess instance and do the update
         ap = AutoProcess(mockdir.dirn)
-        update(ap)
+        update(ap,
+               update_paths=False,
+               update_sync_projects=True,
+               update_project_metadata=False,
+               update_qc_reports=False)
         # Check contents of projects.info
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             expected_lines = [
@@ -498,7 +526,11 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
             fp.write("".join(projects_info_contents))
         # Set up AutoProcess instance and do the update
         ap = AutoProcess(mockdir.dirn)
-        update(ap)
+        update(ap,
+               update_paths=False,
+               update_sync_projects=True,
+               update_project_metadata=False,
+               update_qc_reports=False)
         # Check contents of projects.info
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             expected_lines = [
@@ -558,7 +590,11 @@ CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX s
             self.assertTrue(metadata_mtime <
                             os.path.getmtime(metadata_file))
         # Re-do update and check modification times
-        update(ap)
+        update(ap,
+               update_paths=False,
+               update_sync_projects=False,
+               update_project_metadata=False,
+               update_qc_reports=True)
         for project_name in project_list:
             self.assertTrue(qc_report_mtimes[project_name] <
                             os.path.getmtime(
