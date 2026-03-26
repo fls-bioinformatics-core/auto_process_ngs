@@ -25,6 +25,7 @@ from .analysis import run_id
 from .analysis import run_reference_id
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
+from .metadata import AnalysisProjectQCDirInfo
 from .metadata import ProjectMetadataFile
 from .utils import edit_file
 from .utils import get_numbered_subdir
@@ -139,6 +140,44 @@ class AutoProcess:
                 if not os.path.exists(dir_path):
                     print("Making %s" % dir_path)
                     bcf_utils.mkdir(dir_path)
+
+    def update_paths(self):
+        """
+        Update the paths stored in the analysis directory
+
+        Checks the paths stored in the analysis directory
+        metadata and parameter files, and updates them if
+        they're inconsistent with the current location.
+        """
+        # Update paths in the top-level parameter file
+        # (if analysis dir has been moved or copied)
+        if self.params.analysis_dir != self.analysis_dir:
+            print("Updating analysis directory paths in parameter file")
+            old_dir = self.params.analysis_dir
+            for p in ('analysis_dir',
+                      'primary_data_dir',
+                      'sample_sheet'):
+                if not self.params[p]:
+                    continue
+                print("...updating '%s'" % p)
+                self.params[p] = os.path.normpath(
+                    os.path.join(self.analysis_dir,
+                                 os.path.relpath(self.params[p], old_dir)))
+            # Update paths in QC metadata in projects
+            for project in self.get_analysis_projects_from_dirs():
+                # Iterate through all project directories
+                for qc_dir in project.qc_dirs:
+                    qc_info = AnalysisProjectQCDirInfo(
+                        os.path.join(project.dirn,qc_dir,"qc.info"))
+                    print("...updating QC info for %s/%s" % (project.name,
+                                                             qc_dir))
+                    qc_info['fastq_dir'] = os.path.normpath(
+                        os.path.join(self.analysis_dir,
+                                     os.path.relpath(qc_info.fastq_dir,
+                                                     old_dir)))
+                    qc_info.save()
+            # Save the updated parameter data
+            self.save_parameters(force=True)
 
     def load_parameters(self,allow_save=True):
         """
