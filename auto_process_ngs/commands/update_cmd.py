@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     update_cmd.py: implement 'update' command
-#     Copyright (C) University of Manchester 2023 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2026 Peter Briggs
 #
 #########################################################################
 
@@ -24,17 +24,32 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def update(ap):
+def update(ap, update_paths=True, update_project_metadata=True,
+           update_sync_projects=True, update_qc_reports=True):
     """
     Update metadata and artefacts in analysis directory
 
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the
         analysis directory to publish QC for
+      update_paths (bool): whether to update analysis
+        directory paths in metadata and parameter files
+        (default: True)
+      update_project_metadata (bool): whether to update
+        metadata stored in 'projects.info' and in the
+        project directories (default: True)
+      update_sync_projects (bool): whether to update
+        projects listed in 'projects.info' against
+        project directories on the filesystem (default:
+        True)
+      update_qc_reports (bool): whether to update QC
+        reports in projects where existing report is
+        older than the project metadata file (default:
+        True)
     """
-    update_paths = True
-    update_projects = True
-    update_qc_reports = True
+    if not (update_paths or update_project_metadata or
+            update_sync_projects or update_qc_reports):
+        logger.warning("No updates requested")
 
     if update_paths:
         # Update paths in the top-level parameter file
@@ -67,7 +82,57 @@ def update(ap):
             # Save the updated parameter data
             ap.save_parameters(force=True)
 
-    if update_projects:
+    if update_sync_projects:
+        # Load information from 'projects.info'
+        project_metadata = ap.load_project_metadata(
+            ap.params.project_metadata)
+        # Comment out projects which don't exist on filesystem
+        save_required = False
+        for line in project_metadata:
+            # Iterate through the named projects
+            name = line['Project']
+            if name.startswith('#'):
+                # Commented out, ignore
+                continue
+            # Look for a matching project directory
+            project_dir = os.path.join(ap.analysis_dir, name)
+            if not os.path.exists(project_dir):
+                print(f"Commenting out missing project '{name}'")
+                line['Project'] = f"#{name}"
+                save_required = True
+        if save_required:
+            project_metadata.save()
+        # Add any project directories without entries
+        save_required = False
+        projects = [line['Project'] for line in project_metadata]
+        for project in ap.get_analysis_projects_from_dirs():
+            if project.name.endswith(".bak") \
+                    or project.name.endswith(".orig") \
+                    or project.name.endswith(".tmp"):
+                # Skip directories with extensions indicating they
+                # should be ignored
+                print(f"Not adding entry for unlisted project '{project.name}'")
+                continue
+            elif project.name == "undetermined":
+                # Skip undetermined
+                continue
+            elif project.name not in projects and f"#{project.name}" not in projects:
+                # Add new entry
+                print(f"Adding entry for unlisted project '{project.name}'")
+                project_metadata.add_project(project.name,
+                                             [s.name for s in project.samples],
+                                             user=project.info.user,
+                                             PI=project.info.PI,
+                                             organism=project.info.organism,
+                                             library_type=project.info.library_type,
+                                             sc_platform=project.info.single_cell_platform,
+                                             comments=project.info.comments)
+                save_required = True
+        # Save the updated project metadata if required
+        if save_required:
+            project_metadata.save()
+
+    if update_project_metadata:
         # Update project metadata
         project_metadata = ap.load_project_metadata(
             ap.params.project_metadata)
