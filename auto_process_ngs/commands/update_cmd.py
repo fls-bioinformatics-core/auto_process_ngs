@@ -52,35 +52,8 @@ def update(ap, update_paths=True, update_project_metadata=True,
         logger.warning("No updates requested")
 
     if update_paths:
-        # Update paths in the top-level parameter file
-        # (if analysis dir has been moved or copied)
-        if ap.params.analysis_dir != ap.analysis_dir:
-            print("Updating analysis directory paths in parameter file")
-            old_dir = ap.params.analysis_dir
-            for p in ('analysis_dir',
-                      'primary_data_dir',
-                      'sample_sheet'):
-                if not ap.params[p]:
-                    continue
-                print("...updating '%s'" % p)
-                ap.params[p] = os.path.normpath(
-                    os.path.join(ap.analysis_dir,
-                                 os.path.relpath(ap.params[p],old_dir)))
-            # Update paths in QC metadata in projects
-            for project in ap.get_analysis_projects_from_dirs():
-                # Iterate through all project directories
-                for qc_dir in project.qc_dirs:
-                    qc_info = AnalysisProjectQCDirInfo(
-                        os.path.join(project.dirn,qc_dir,"qc.info"))
-                    print("...updating QC info for %s/%s" % (project.name,
-                                                             qc_dir))
-                    qc_info['fastq_dir'] = os.path.normpath(
-                        os.path.join(ap.analysis_dir,
-                                     os.path.relpath(qc_info.fastq_dir,
-                                                     old_dir)))
-                    qc_info.save()
-            # Save the updated parameter data
-            ap.save_parameters(force=True)
+        # Update paths if analysis dir has been moved or copied
+        ap.update_paths()
 
     if update_sync_projects:
         # Load information from 'projects.info'
