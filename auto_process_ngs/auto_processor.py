@@ -3,11 +3,6 @@
 #     auto_processor.py: automated processing of Illumina sequence data
 #     Copyright (C) University of Manchester 2013-2026 Peter Briggs
 #
-#########################################################################
-#
-# auto_processor.py
-#
-#########################################################################
 
 #######################################################################
 # Imports
@@ -24,16 +19,10 @@ import ast
 import gzip
 import atexit
 import bcftbx.IlluminaData as IlluminaData
-import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
-import bcftbx.htmlpagewriter as htmlpagewriter
-from bcftbx.JobRunner import fetch_runner
-from bcftbx.FASTQFile import FastqIterator
-from . import commands
 from .analysis import AnalysisProject
 from .analysis import run_id
 from .analysis import run_reference_id
-from .decorators import add_command
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
 from .metadata import ProjectMetadataFile
@@ -41,53 +30,42 @@ from .utils import edit_file
 from .utils import get_numbered_subdir
 from .utils import sort_sample_names
 from .bcl2fastq.utils import get_sequencer_platform
-from .samplesheet_utils import check_and_warn
 from .settings import Settings
 from .exceptions import MissingParameterFileException
 from functools import reduce
-from . import get_version
 
 #######################################################################
 # Classes
 #######################################################################
 
-@add_command("setup",commands.setup)
-@add_command("make_fastqs",commands.make_fastqs)
-@add_command("analyse_barcodes",commands.analyse_barcodes)
-@add_command("merge_fastq_dirs",commands.merge_fastq_dirs)
-@add_command("setup_analysis_dirs",commands.setup_analysis_dirs)
-@add_command("run_qc",commands.run_qc)
-@add_command("publish_qc",commands.publish_qc)
-@add_command("archive",commands.archive)
-@add_command("update",commands.update)
-@add_command("report",commands.report)
-@add_command("update_fastq_stats",commands.update_fastq_stats)
-@add_command("import_project",commands.import_project)
-@add_command("clone",commands.clone)
-@add_command("samplesheet",commands.samplesheet)
+
 class AutoProcess:
     """
     Class implementing an automatic fastq generation and QC
     processing procedure for Illumina sequencing data
 
+    The 'AutoProcess' class provides an interface to a directory
+    being used for processing Illumina sequencing data, including
+    Fastq generation and QC operations.
+
+    The auto_process data processing and QC pipelines are
+    constructed around this class, which allows the current state
+    of the processing directory (and associated metadata) to be
+    accessed and modified.
+
+    Arguments:
+      analysis_dir (str): name/path for existing analysis
+        directory
+      settings (Settings): optional, if supplied then should
+        be a Settings instance; otherwise use a default
+        instance populated from the installation-specific
+        'auto_process.ini' file
+      allow_save_params (bool): if True then allow updates
+        to parameters to be saved back to the parameter file
+        (this is the default)
     """
     def __init__(self,analysis_dir=None,settings=None,
                  allow_save_params=True):
-        """
-        Create a new AutoProcess instance
-
-        Arguments:
-          analysis_dir (str): name/path for existing analysis
-            directory
-          settings (Settings): optional, if supplied then should
-            be a Settings instance; otherwise use a default
-            instance populated from the installation-specific
-            'auto_process.ini' file
-          allow_save_params (bool): if True then allow updates
-            to parameters to be saved back to the parameter file
-            (this is the default)
-
-        """
         # Initialise
         self._master_log_dir = "logs"
         self._log_dir = self._master_log_dir

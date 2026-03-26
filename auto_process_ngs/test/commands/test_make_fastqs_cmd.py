@@ -15,6 +15,7 @@ from auto_process_ngs.mock import MockBclConvertExe
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import Mock10xPackageExe
 from auto_process_ngs.commands.make_fastqs_cmd import make_fastqs
+from auto_process_ngs.commands.setup_cmd import setup
 from auto_process_ngs.bcl2fastq.pipeline import subset
 
 # Set to False to keep test output dirs
@@ -76,8 +77,7 @@ poll_interval = 0.01
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -133,8 +133,7 @@ poll_interval = 0.01
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -190,8 +189,7 @@ poll_interval = 0.01
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -249,8 +247,7 @@ poll_interval = 0.01
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -306,8 +303,7 @@ poll_interval = 0.01
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -373,8 +369,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
@@ -440,9 +435,8 @@ smpl2,smpl2,,,A005,CTTAGGAC,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -510,9 +504,8 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -577,9 +570,8 @@ smpl2,smpl2,,,SI-NA-B1,AGTCCCATCA,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -646,9 +638,8 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -716,9 +707,8 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -788,9 +778,8 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -860,9 +849,8 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -927,9 +915,8 @@ smpl2,smpl2,,,SI-TT-B1,AGTCCCATCA,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -997,9 +984,8 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1064,9 +1050,8 @@ smpl2,smpl2,,,SI-TT-B1,AGTCCCATCA,10xGenomics,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1139,9 +1124,8 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
+        setup(ap, os.path.join(self.wd, "171020_NB500968_00002_AHGXXXX"),
+              sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1199,8 +1183,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1271,8 +1254,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1337,8 +1319,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1400,8 +1381,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_UNKNOWN_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_UNKNOWN_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1463,8 +1443,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_UNKNOWN_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_UNKNOWN_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertTrue(ap.metadata.platform is None)
         ap.metadata["platform"] = "miseq"
@@ -1526,8 +1505,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1559,8 +1537,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_SN7001250_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_SN7001250_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1624,8 +1601,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
+        setup(ap, os.path.join(self.wd, "171020_M00879_00002_AHGXXXX"))
         # Make a projects.info file
         with open(os.path.join(ap.analysis_dir,'projects.info'),"wt") as fp:
             fp.write(
