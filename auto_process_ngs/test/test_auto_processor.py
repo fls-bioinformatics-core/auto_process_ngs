@@ -1167,3 +1167,189 @@ class TestAutoProcessUpdatePaths(unittest.TestCase):
                              os.path.join(new_path,
                                           proj.name,
                                           "fastqs"))
+
+
+class TestAutoProcessSyncProjectMetadataFile(unittest.TestCase):
+    """
+    Tests for the 'sync_project_metadata_file' method
+    """
+    def setUp(self):
+        # Project metadata items mapping
+        self.metadata_map = {
+            "User": "user",
+            "PI": "PI",
+            "Library": "library_type",
+            "SC_Platform": "single_cell_platform",
+            "Organism": "organism",
+            "Comments": "comments"
+        }
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+        # Store original location
+        self.pwd = os.getcwd()
+        # Move to working directory
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_sync_project_metadata_file_project_no_longer_exists(self):
+        """
+        AutoProcess.sync_project_metadata_file: remove non-existent project
+        """
+        # Metadata for projects
+        project_metadata = {
+            "AB": {
+                "User": "Alan Bailey",
+                "PI": "Archie Ballard",
+                "Library": "RNA-seq",
+                "Organism": "Human"
+            }
+        }
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            project_metadata=project_metadata,
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Remove CDE project
+        shutil.rmtree(os.path.join(mockdir.dirn, "CDE"))
+        # Remove initial entry for CDE in projects.info
+        projects_info_contents = []
+        with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
+            for line in fp:
+                if not line.startswith("CDE"):
+                    projects_info_contents.append(line)
+        with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
+            fp.write("".join(projects_info_contents))
+        # Set up AutoProcess instance
+        ap = AutoProcess(mockdir.dirn)
+        # Check metadata items in projects.info pre-update
+        ap_project_metadata = ap.load_project_metadata()
+        for pname in project_metadata:
+            for item in project_metadata[pname]:
+                self.assertEqual(ap_project_metadata.lookup(pname)[item],
+                                 project_metadata[pname][item])
+        # Check metadata items in projects pre-update
+        for pname in project_metadata:
+            p = ap.get_analysis_projects(pname)[0]
+            for item in project_metadata[pname]:
+                project_item = self.metadata_map[item]
+                expected_value = project_metadata[pname][item]
+                self.assertEqual(p.info[project_item],
+                                 expected_value)
+        # Append info for missing project 'CDE' to projects.info
+        with open(os.path.join(mockdir.dirn,"projects.info"),'at') as fp:
+            fp.write("""CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX spiked in
+""")
+        # Do the update
+        ap.sync_project_metadata_file()
+        # Reload and confirm the updates in projects.info
+        ap = AutoProcess(mockdir.dirn)
+        ap_project_metadata = ap.load_project_metadata()
+        for pname in ["AB", "#CDE"]:
+            self.assertTrue(pname in [p["Project"] for p in ap_project_metadata],
+                            f"'{pname}' not in project metadata")
+
+    def test_sync_project_metadata_file_add_unlisted_projects(self):
+        """
+        AutoProcess.sync_project_metadata_file: add unlisted projects
+        """
+        # Metadata for projects
+        project_metadata = {
+            "AB": {
+                "User": "Alan Bailey",
+                "PI": "Archie Ballard",
+                "Library": "RNA-seq",
+                "Organism": "Human"
+            },
+            "CDE": {
+                "User": "Charles Edwards",
+                "PI": "Christian Eggars",
+                "Library": "ChIP-seq",
+                "Organism": "Mouse"
+            }
+        }
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            project_metadata=project_metadata,
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Remove initial entry for CDE in projects.info
+        projects_info_contents = []
+        with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
+            for line in fp:
+                if not line.startswith("CDE"):
+                    projects_info_contents.append(line)
+        with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
+            fp.write("".join(projects_info_contents))
+        # Set up AutoProcess instance and do the update
+        ap = AutoProcess(mockdir.dirn)
+        ap.sync_project_metadata_file()
+        # Check contents of projects.info
+        with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
+            expected_lines = [
+                "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments",
+                "AB\tAB1,AB2\tAlan Bailey\tRNA-seq\t.\tHuman\tArchie Ballard\t.",
+                "CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t."
+            ]
+            for expected, actual in zip(expected_lines, fp.read().split("\n")):
+                self.assertEqual(expected.strip(), actual.strip())
+
+    def test_sync_project_metadata_file_add_unlisted_projects_ignore_special_names(self):
+        """
+        AutoProcess.sync_project_metadata_file: ignore projects with "special" names
+        """
+        # Metadata for projects
+        project_metadata = {
+            "AB": {
+                "User": "Alan Bailey",
+                "PI": "Archie Ballard",
+                "Library": "RNA-seq",
+                "Organism": "Human"
+            },
+            "CDE.bak": {
+                "User": "Charles Edwards",
+                "PI": "Christian Eggars",
+                "Library": "ChIP-seq",
+                "Organism": "Mouse"
+            }
+        }
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            project_metadata=project_metadata,
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Remove entry for CDE.bak in projects.info
+        projects_info_contents = []
+        with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
+            for line in fp:
+                if not line.startswith("CDE.bak"):
+                    projects_info_contents.append(line)
+        with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
+            fp.write("".join(projects_info_contents))
+        # Set up AutoProcess instance and do the update
+        ap = AutoProcess(mockdir.dirn)
+        ap.sync_project_metadata_file()
+        # Check contents of projects.info
+        with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
+            expected_lines = [
+                "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments",
+                "AB\tAB1,AB2\tAlan Bailey\tRNA-seq\t.\tHuman\tArchie Ballard\t."
+            ]
+            for expected, actual in zip(expected_lines, fp.read().split("\n")):
+                self.assertEqual(expected.strip(), actual.strip())

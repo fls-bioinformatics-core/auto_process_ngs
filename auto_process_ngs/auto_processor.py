@@ -531,6 +531,58 @@ class AutoProcess:
         print("Updated project metadata file '%s'" %
               self.params.project_metadata)
 
+    def sync_project_metadata_file(self):
+        """
+        Synchronise 'projects.info' file with directory contents
+        """
+        # Load information from 'projects.info'
+        project_metadata = self.load_project_metadata()
+        # Comment out projects which don't exist on filesystem
+        save_required = False
+        for line in project_metadata:
+            # Iterate through the named projects
+            name = line['Project']
+            if name.startswith('#'):
+                # Commented out, ignore
+                continue
+            # Look for a matching project directory
+            project_dir = os.path.join(self.analysis_dir, name)
+            if not os.path.exists(project_dir):
+                print(f"Commenting out missing project '{name}'")
+                line['Project'] = f"#{name}"
+                save_required = True
+        if save_required:
+            project_metadata.save()
+        # Add any project directories without entries
+        save_required = False
+        projects = [line['Project'] for line in project_metadata]
+        for project in self.get_analysis_projects_from_dirs():
+            if project.name.endswith(".bak") \
+                    or project.name.endswith(".orig") \
+                    or project.name.endswith(".tmp"):
+                # Skip directories with extensions indicating they
+                # should be ignored
+                print(f"Not adding entry for unlisted project '{project.name}'")
+                continue
+            elif project.name == "undetermined":
+                # Skip undetermined
+                continue
+            elif project.name not in projects and f"#{project.name}" not in projects:
+                # Add new entry
+                print(f"Adding entry for unlisted project '{project.name}'")
+                project_metadata.add_project(project.name,
+                                             [s.name for s in project.samples],
+                                             user=project.info.user,
+                                             PI=project.info.PI,
+                                             organism=project.info.organism,
+                                             library_type=project.info.library_type,
+                                             sc_platform=project.info.single_cell_platform,
+                                             comments=project.info.comments)
+                save_required = True
+        # Save the updated project metadata if required
+        if save_required:
+            project_metadata.save()
+
     def detect_unaligned_dir(self):
         # Attempt to detect an existing 'bcl2fastq' or 'Unaligned' directory
         # containing data from bcl2fastq
