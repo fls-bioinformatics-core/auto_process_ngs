@@ -47,10 +47,9 @@ Fastq generation
 General
 ~~~~~~~
 
-If a sample sheet with the appropriate 10x Genomics indexes is provided
-then all 10x Genomics single cell data should be processed using the
-:doc:`make_fastqs <../using/make_fastqs>` command, with the appropriate
-``10x_*`` specified via the ``--protocol`` option:
+Fastq generation for 10x Genomics single cell data should be performed
+using the :doc:`make_fastqs <../using/make_fastqs>` command with the
+appropriate ``10x_*`` protocol specified via the ``--protocol`` option:
 
 .. include:: ../auto/10x_single_cell_fq_protocols.rst
 
@@ -60,16 +59,17 @@ then all 10x Genomics single cell data should be processed using the
    ``10x_*`` protocols, by removing any adapter sequences specified
    in the sample sheet.
 
+Sample sheets for 10x Genomics data can specify either Illumina index
+sequences (recommended) or 10x Genomics-style index IDs (now deprecated by
+10x Genomics); generally the ``10x_*`` protocols can operate with either.
+
 .. note::
 
-   If the sample sheet contains Illumina index sequences then for
-   10x Chromium 3' and 5' data, the ``10x_chromium_sc`` protocol can
-   still be used; however for other types of data (ATAC and multiome),
-   for now the ``standard`` protocol should be used instead.
-
-   In this case it's recommended to explicitly disable adapter trimming
-   and set the lengths for the R1 and R2 (and R3, if appropriate) reads
-   via the command line.
+   The ``10x_multiome`` protocol (which can be used for "unpooled" 10x
+   single cell multiome data) still requires 10x Genomics indexes. However
+   it is recommended that even for unpooled data the specific protocol
+   is used (i.e. either ``10x_multiome_gex`` or ``10x_multiome_atac``) as
+   outlined in the following section.
 
 Choosing Fastq generation protocol for single cell multiome data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -78,18 +78,21 @@ There are three Fastq generation protocols for single cell
 multiome data; which should be used will depend on the specific
 configuration of the sequencing run:
 
- * **Run only has either the GEX or the ATAC component of the single
-   cell multiome experiment:** the ``10x_multiome`` protocol is
-   preferred as Cellranger-ARC should be able to automatically
-   determine which component the data are.
+ * **Run only has either the GEX or the ATAC component of the
+   single cell multiome experiment (unpooled):** use the appropriate
+   ``10x_multiome_*`` protocol (i.e. ``10x_multiome_gex`` or
+   ``10x_multiome_atac``) according to the type of data in the run.
+
+   For example:
+
+   ::
+
+       auto_process.py make_fastqs --protocol 10x_multiome_gex
 
  * **Run has both GEX and ATAC components of the single cell
-   multiome experiment in different lanes:** in this situation
-   Cellranger-ARC cannot automatically determine which component
-   is in which lane, so the ``10x_multiome_gex`` protocol should be
-   explicitly specified for the lanes with the GEX data, and the
-   ``10x_multiome_atac`` specified for those with the ATAC data,
-   via the ``--lanes`` option.
+   multiome experiment in different lanes (pooled):** use the
+   ``--lanes`` option to assign the appropriate Fastq generation
+   protocol to each of the lane subsets.
 
    For example:
 
@@ -99,8 +102,12 @@ configuration of the sequencing run:
       --lanes=1:10x_multiome_atac \
       --lanes=2:10x_multiome_gex
 
-   See :ref:`10x_multiome-pooled-data` for more information on
-   how the multiome protocols are implemented and used.
+
+.. note::
+
+   While the ``10x_multiome`` protocol is still supported for
+   unpooled data with 10x Genomics index IDs, it is now deprecated
+   and should not be used.
 
 Analysis project setup and QC
 -----------------------------
@@ -249,63 +256,3 @@ For example:
 
 Rerunning ``run_qc`` will force update of the QC report which should
 then also link in these additional reports.
-
-.. _10x_multiome-pooled-data:
-
-Details for handling pooled single cell multiome ATAC and GEX data
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If 10x Genomics single cell multiome ATAC and multiome GEX libraries
-are sequenced together in the same run then the standard ``10x_multiome``
-protocol of the ``make_fastqs`` command is unable to correctly process
-the data.
-
-Pooling the ATAC and GEX components of a single cell multiome experiment
-is not officially supported by 10x Genomics, and this limitation is due
-to this configuration not being supported by the ``cellranger-arc``
-pipeline. However they do provide information on how to handle this
-situation in this knowledge base article:
-
-https://kb.10xgenomics.com/hc/en-us/articles/360049373331-Can-Multiome-ATAC-and-Multiome-GEX-libraries-be-sequenced-together-
-
-and the two sub-protocols outlined in that article have been implemented
-within ``make_fastqs`` as the ``10x_multiome_atac`` and ``10_multiome_gex``
-protocols, which should be used as follows:
-
- 1. Ensure that ATAC and GEX data are assigned to separate projects
-    in the input sample sheet
- 2. Use the ``--lanes`` option to explicitly specify the appropriate
-    sub-protocol for the lanes with the ATAC and GEX samples
-
-For example:
-
-::
-
-   auto_process.py make_fastqs \
-      --lanes=1:10x_multiome_atac \
-      --lanes=2:10x_multiome_gex
-
-assuming that the ATAC data are in lane 1 and the GEX data in lane 2.
-
-.. warning::
-
-   These protocols should only be used when the single cell
-   multiome data has been pooled with other types of data;
-   when the single cell multiome data for a single component
-   (either GEX or ATAC) comprises the whole sequencing run
-   then the ``10x_multiome`` protocol should be used instead.
-
-The ``10x_multiome_atac`` protocol then runs ``cellranger-arc mkfastq``
-with the following custom options:
-
- 1. ``--use-bases-mask`` with a bases mask string that has been
-    adjusted appropriately to match the template ``Y*,I8n*,Y24,Y*``
- 2. ``--filter-single-index`` is explicitly specified
-
-The ``10x_multiome_gex`` protocol runs ``cellranger-arc mkfastq`` with
-the following custom options:
-
- 1. ``--use-bases-mask`` with a bases mask string that has been
-    adjusted appropriately to match the template
-    ``Y28n*,I10,I10n*,Y*``
- 2. ``--filter-dual-index`` is explicitly specified
