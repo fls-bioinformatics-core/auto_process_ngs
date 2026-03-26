@@ -3,11 +3,6 @@
 #     cli/auto_process.py: command line interface for auto_process_ngs
 #     Copyright (C) University of Manchester 2013-2026 Peter Briggs
 #
-#########################################################################
-#
-# auto_process.py
-#
-#########################################################################
 
 """
 Automated data processing & QC pipeline for Illumina sequence data
@@ -60,19 +55,16 @@ special cases and testing.
 
 import sys
 import os
-import subprocess
 import argparse
 import time
 import logging
 import bcftbx.utils as bcf_utils
-import bcftbx.platforms
 from bcftbx.cmdparse import CommandParser
 from bcftbx.cmdparse import add_debug_option
 from bcftbx.cmdparse import add_no_save_option
 from bcftbx.cmdparse import add_dry_run_option
 from bcftbx.cmdparse import add_nprocessors_option
 from bcftbx.cmdparse import add_runner_option
-from bcftbx.cmdparse import add_arg
 from bcftbx.JobRunner import fetch_runner
 from .. import get_version
 from .. import auto_processor
@@ -83,7 +75,6 @@ from ..commands.make_fastqs_cmd import BCL2FASTQ_DEFAULTS
 from ..commands.report_cmd import ReportingMode
 from ..commands.samplesheet_cmd import SampleSheetOperation
 from ..decorators import add_command
-from ..samplesheet_utils import predict_outputs
 from ..settings import Settings
 from ..settings import locate_auto_process_settings_file
 from ..tenx import CELLRANGER_ASSAY_CONFIGS
@@ -117,7 +108,7 @@ __settings = Settings()
 @add_command("samplesheet", commands.samplesheet)
 class AutoProcess(auto_processor.AutoProcess):
     """
-    Augmented AutoProcess class with commands
+    Augmented AutoProcess class with commands attached
     """
 
 #######################################################################
