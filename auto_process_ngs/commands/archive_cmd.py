@@ -412,13 +412,16 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             sched.stop()
     # Perform final archiving operations
     if final:
-        # Update the final stored Fastq paths and metadata
-        # FIXME Probably shouldn't update metadata in 'dry_run' mode?
+        # Paths to staging and final directories
         staged_analysis_dir = os.path.join(archive_dir,staging)
         archived_analysis_dir = os.path.join(archive_dir,final_dest)
-        AutoProcess(staged_analysis_dir).update_paths(
-            base_path=ap.params.analysis_dir,
-            new_path=archived_analysis_dir)
+        # Update the final stored Fastq paths and metadata
+        if not dry_run:
+            AutoProcess(staged_analysis_dir).update_paths(
+                base_path=ap.params.analysis_dir,
+                new_path=archived_analysis_dir)
+        else:
+            print("Updating paths skipped for dry run")
         # Run ID and reference
         metadata_file = os.path.join(staged_analysis_dir,
                                      "metadata.info")
@@ -432,7 +435,10 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 metadata['run_reference_id'] = ap.run_reference_id
                 print("...storing run reference ID ('%s')" %
                       metadata.run_reference_id)
-            metadata.save()
+            if not dry_run:
+                metadata.save()
+            else:
+                print("Run ID/reference ID not updated for dry run")
         # Project metadata and QC info
         analysis_dir =  AnalysisDir(staged_analysis_dir)
         # FIXME AnalysisDir.get_projects method might not get all
@@ -465,13 +471,16 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                           project.name)
             # Save the updated information
             if project_info_updated:
-                project.info.save()
-                # Bail out if there was a problem
-                if retval != 0:
-                    if not force:
-                        raise Exception("Finalising archive failed")
-                    else:
-                        logger.warning("Finalising archive failed (ignored)")
+                if not dry_run:
+                    project.info.save()
+                else:
+                    print("Project metadata not updated for dry run")
+        # Bail out if there was a problem
+        if retval != 0:
+            if not force:
+                raise Exception("Finalising archive failed")
+            else:
+                logger.warning("Finalising archive failed (ignored)")
         # Complete archiving
         print("Moving to final location: %s" % final_dest)
         if not dry_run:
