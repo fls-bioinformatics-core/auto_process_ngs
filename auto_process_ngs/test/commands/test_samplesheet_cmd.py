@@ -10,7 +10,7 @@ from bcftbx.IlluminaData import SampleSheet
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDir
 from auto_process_ngs.commands.samplesheet_cmd import SampleSheetOperation
-from auto_process_ngs.commands.samplesheet_cmd import samplesheet
+from auto_process_ngs.commands.samplesheet_cmd import samplesheet as samplesheet_cmd
 from auto_process_ngs.commands.samplesheet_cmd import import_samplesheet
 
 # Unit tests
@@ -65,17 +65,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Update sample sheet project for lane 3
-        ap.samplesheet(SampleSheetOperation.SET_PROJECT,
-                       "CarlDewey",
-                       lanes=[3])
+        samplesheet_cmd(ap, SampleSheetOperation.SET_PROJECT,
+                        "CarlDewey",
+                        lanes=[3])
         for line in SampleSheet(sample_sheet_file):
             if line['Lane'] == 3:
                 self.assertEqual(line["Sample_Project"],"CarlDewey")
         # Update sample sheet project matching on sample ID
-        ap.samplesheet(SampleSheetOperation.SET_PROJECT,
-                       "AndrewBloggs",
-                       where=("SAMPLE_ID",
-                              "AB*"))
+        samplesheet_cmd(ap, SampleSheetOperation.SET_PROJECT,
+                        "AndrewBloggs",
+                        where=("SAMPLE_ID", "AB*"))
         for line in SampleSheet(sample_sheet_file):
             if line['Lane'] in (1,2):
                 self.assertEqual(line["Sample_Project"],"AndrewBloggs")
@@ -130,17 +129,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Update sample sheet name for lane 3
-        ap.samplesheet(SampleSheetOperation.SET_SAMPLE_NAME,
-                       "SAMPLE_ID",
-                       lanes=[3])
+        samplesheet_cmd(ap, SampleSheetOperation.SET_SAMPLE_NAME,
+                        "SAMPLE_ID",
+                        lanes=[3])
         for line in SampleSheet(sample_sheet_file):
             if line['Lane'] == 3:
                 self.assertEqual(line["Sample_Name"],"CD1")
         # Update sample sheet name matching on project name
-        ap.samplesheet(SampleSheetOperation.SET_SAMPLE_NAME,
-                       "SAMPLE_ID",
-                       where=("SAMPLE_PROJECT",
-                              "AndrewBloggs"))
+        samplesheet_cmd(ap,SampleSheetOperation.SET_SAMPLE_NAME,
+                        "SAMPLE_ID",
+                        where=("SAMPLE_PROJECT", "AndrewBloggs"))
         for line in SampleSheet(sample_sheet_file):
             if line['Lane'] in (1,2):
                 self.assertEqual(line["Sample_Name"],
@@ -196,17 +194,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         # Make autoprocess instance
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Update sample sheet name for lane 3
-        ap.samplesheet(SampleSheetOperation.SET_SAMPLE_ID,
-                       "SAMPLE_NAME",
-                       lanes=[3])
+        samplesheet_cmd(ap, SampleSheetOperation.SET_SAMPLE_ID,
+                        "SAMPLE_NAME",
+                        lanes=[3])
         for line in SampleSheet(sample_sheet_file):
             if line['Lane'] == 3:
                 self.assertEqual(line["Sample_ID"],"CD1")
         # Update sample sheet name matching on project name
-        ap.samplesheet(SampleSheetOperation.SET_SAMPLE_ID,
-                       "SAMPLE_NAME",
-                       where=("SAMPLE_PROJECT",
-                              "AndrewBloggs"))
+        samplesheet_cmd(ap,SampleSheetOperation.SET_SAMPLE_ID,
+                        "SAMPLE_NAME",
+                        where=("SAMPLE_PROJECT", "AndrewBloggs"))
         for line in SampleSheet(sample_sheet_file):
             if line['Lane'] in (1,2):
                 self.assertEqual(line["Sample_Name"],
