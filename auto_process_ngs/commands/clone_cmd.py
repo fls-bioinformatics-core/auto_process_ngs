@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     clone_cmd.py: implement auto process clone command
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2026 Peter Briggs
 #
 #########################################################################
 
@@ -13,7 +13,7 @@ import os
 import logging
 import shutil
 from ..analysis import AnalysisProject
-from ..metadata import AnalysisDirParameters
+from ..auto_processor import AutoProcess
 import bcftbx.utils as bcf_utils
 
 # Module specific logger
@@ -141,17 +141,5 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
     for subdir in ('logs','ScriptCode',):
         print("[Subdirectories] making %s" % subdir)
         bcf_utils.mkdir(os.path.join(clone_dir,subdir))
-    # Update the settings
-    parameter_file = os.path.join(clone_dir,
-                                  os.path.basename(ap.parameter_file))
-    params = AnalysisDirParameters(filen=os.path.join(
-        clone_dir,
-        os.path.basename(ap.parameter_file)))
-    for p in ("sample_sheet","primary_data_dir"):
-        if not params[p]:
-            continue
-        print("[Parameters] updating '%s'" % p)
-        params[p] = os.path.join(clone_dir,
-                                 os.path.relpath(params[p],
-                                                 ap.analysis_dir))
-    params.save()
+    # Update the paths
+    AutoProcess(clone_dir).update_paths()
