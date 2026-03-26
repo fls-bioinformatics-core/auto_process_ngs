@@ -75,12 +75,14 @@ from bcftbx.cmdparse import add_runner_option
 from bcftbx.cmdparse import add_arg
 from bcftbx.JobRunner import fetch_runner
 from .. import get_version
-from ..auto_processor import AutoProcess
+from .. import auto_processor
+from .. import commands
 from ..bcl2fastq.pipeline import PROTOCOLS
 from ..bcl2fastq.pipeline import subset
 from ..commands.make_fastqs_cmd import BCL2FASTQ_DEFAULTS
 from ..commands.report_cmd import ReportingMode
 from ..commands.samplesheet_cmd import SampleSheetOperation
+from ..decorators import add_command
 from ..samplesheet_utils import predict_outputs
 from ..settings import Settings
 from ..settings import locate_auto_process_settings_file
@@ -94,6 +96,29 @@ logger = logging.getLogger(__name__)
 # Version and configuration
 __version__ = get_version()
 __settings = Settings()
+
+#######################################################################
+# Classes
+#######################################################################
+
+@add_command("setup", commands.setup)
+@add_command("make_fastqs", commands.make_fastqs)
+@add_command("analyse_barcodes", commands.analyse_barcodes)
+@add_command("merge_fastq_dirs", commands.merge_fastq_dirs)
+@add_command("setup_analysis_dirs", commands.setup_analysis_dirs)
+@add_command("run_qc", commands.run_qc)
+@add_command("publish_qc", commands.publish_qc)
+@add_command("archive", commands.archive)
+@add_command("update", commands.update)
+@add_command("report", commands.report)
+@add_command("update_fastq_stats", commands.update_fastq_stats)
+@add_command("import_project", commands.import_project)
+@add_command("clone", commands.clone)
+@add_command("samplesheet", commands.samplesheet)
+class AutoProcess(auto_processor.AutoProcess):
+    """
+    Augmented AutoProcess class with commands
+    """
 
 #######################################################################
 # Functions

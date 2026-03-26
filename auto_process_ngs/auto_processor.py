@@ -29,11 +29,9 @@ import bcftbx.utils as bcf_utils
 import bcftbx.htmlpagewriter as htmlpagewriter
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.FASTQFile import FastqIterator
-from . import commands
 from .analysis import AnalysisProject
 from .analysis import run_id
 from .analysis import run_reference_id
-from .decorators import add_command
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
 from .metadata import ProjectMetadataFile
@@ -51,20 +49,7 @@ from . import get_version
 # Classes
 #######################################################################
 
-@add_command("setup",commands.setup)
-@add_command("make_fastqs",commands.make_fastqs)
-@add_command("analyse_barcodes",commands.analyse_barcodes)
-@add_command("merge_fastq_dirs",commands.merge_fastq_dirs)
-@add_command("setup_analysis_dirs",commands.setup_analysis_dirs)
-@add_command("run_qc",commands.run_qc)
-@add_command("publish_qc",commands.publish_qc)
-@add_command("archive",commands.archive)
-@add_command("update",commands.update)
-@add_command("report",commands.report)
-@add_command("update_fastq_stats",commands.update_fastq_stats)
-@add_command("import_project",commands.import_project)
-@add_command("clone",commands.clone)
-@add_command("samplesheet",commands.samplesheet)
+
 class AutoProcess:
     """
     Class implementing an automatic fastq generation and QC
