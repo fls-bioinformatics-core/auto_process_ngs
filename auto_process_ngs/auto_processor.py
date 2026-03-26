@@ -25,7 +25,6 @@ from .analysis import run_id
 from .analysis import run_reference_id
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
-from .metadata import AnalysisProjectQCDirInfo
 from .metadata import ProjectMetadataFile
 from .utils import edit_file
 from .utils import get_numbered_subdir
@@ -167,8 +166,7 @@ class AutoProcess:
             for project in self.get_analysis_projects_from_dirs():
                 # Iterate through all project directories
                 for qc_dir in project.qc_dirs:
-                    qc_info = AnalysisProjectQCDirInfo(
-                        os.path.join(project.dirn,qc_dir,"qc.info"))
+                    qc_info = project.qc_info(qc_dir)
                     print("...updating QC info for %s/%s" % (project.name,
                                                              qc_dir))
                     qc_info['fastq_dir'] = os.path.normpath(
