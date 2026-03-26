@@ -10,13 +10,9 @@
 
 import sys
 import os
-import subprocess
 import logging
 import shutil
-import uuid
 import time
-import ast
-import gzip
 import atexit
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils

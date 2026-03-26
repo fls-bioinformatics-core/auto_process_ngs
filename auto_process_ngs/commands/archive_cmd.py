@@ -10,7 +10,6 @@
 #######################################################################
 
 import os
-import time
 import logging
 from ..analysis import AnalysisDir
 from ..auto_processor import AutoProcess
