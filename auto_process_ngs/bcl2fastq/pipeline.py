@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq.pipeline.py: pipelines for Fastq generation
-#     Copyright (C) University of Manchester 2020-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2020-2026 Peter Briggs
 #
 
 """
@@ -1014,6 +1014,12 @@ class MakeFastqs(Pipeline):
             elif pipeline_variant == "10x_spaceranger" and not has_10x_indexes:
                 # Switch to standard pipeline for 10x Visium without 10x
                 # indexes
+                pipeline_variant = "standard"
+            elif pipeline_variant == "10x_cellranger-atac" and not has_10x_indexes:
+                # Switch to standard pipeline for 10x ATAC without 10x indexes
+                pipeline_variant = "standard"
+            elif pipeline_variant == "10x_cellranger-arc" and not has_10x_indexes:
+                # Switch to standard pipeline for 10x multiome without 10x indexes
                 pipeline_variant = "standard"
             self.report("- Pipeline variant: %s" % pipeline_variant)
 
