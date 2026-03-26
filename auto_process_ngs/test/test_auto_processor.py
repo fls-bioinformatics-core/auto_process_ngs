@@ -1011,6 +1011,49 @@ class TestAutoProcessUpdatePaths(unittest.TestCase):
         # Remove the temporary test directory
         shutil.rmtree(self.dirn)
 
+    def test_update_paths_explicitly_supply_new_path(self):
+        """
+        AutoProcess.update_paths: explicitly supply new base path
+        """
+        # Make an auto-process directory
+        top_dir1 = os.path.join(self.dirn,"original")
+        os.mkdir(top_dir1)
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=top_dir1)
+        mockdir.create(no_project_dirs=True)
+        original_path = mockdir.dirn
+        # Relocate to intermediate "staging" location
+        top_dir2 = os.path.join(self.dirn, "intermediate")
+        os.mkdir(top_dir2)
+        intermediate_path = os.path.join(top_dir2,
+                                         f"__{os.path.basename(mockdir.dirn)}.staged")
+        os.rename(original_path, intermediate_path)
+        # Set up AutoProcess instance
+        ap = AutoProcess(intermediate_path)
+        # Check metadata items pre-update
+        self.assertEqual(ap.analysis_dir, intermediate_path)
+        self.assertEqual(ap.params.analysis_dir, original_path)
+        self.assertEqual(ap.params.sample_sheet,
+                         os.path.join(original_path,
+                                      "custom_SampleSheet.csv"))
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(original_path,"primary_data"))
+        # Update the metadata
+        final_path = os.path.join(self.dirn, "final", os.path.basename(mockdir.dirn))
+        ap.update_paths(new_path=final_path)
+        # Reload and check metadata items post-update
+        ap = AutoProcess(intermediate_path)
+        self.assertEqual(ap.analysis_dir, intermediate_path)
+        self.assertEqual(ap.params.analysis_dir, final_path)
+        self.assertEqual(ap.params.sample_sheet,
+                         os.path.join(final_path, "custom_SampleSheet.csv"))
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(final_path, "primary_data"))
+
     def test_update_paths_relocated_analysis_dir(self):
         """
         AutoProcess.update_paths: handle relocated analysis dir

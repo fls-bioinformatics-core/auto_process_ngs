@@ -140,39 +140,60 @@ class AutoProcess:
                     print("Making %s" % dir_path)
                     bcf_utils.mkdir(dir_path)
 
-    def update_paths(self):
+    def update_paths(self, base_path=None, new_path=None):
         """
         Update the paths stored in the analysis directory
 
         Checks the paths stored in the analysis directory
         metadata and parameter files, and updates them if
         they're inconsistent with the current location.
+
+        By default the original 'base' path is taken from
+        the path stored in the analysis directory parameters,
+        and the new 'base' path is assumed to be the current
+        path for the analysis directory (these settings
+        are sensible if the directory has been relocated or
+        copied).
+
+        Arguments:
+            base_path (str): current 'base' directory path
+            (defaults to path stored in analysis directory
+            parameters)
+            new_path (str): new 'base' directory path
+            (defaults to the current path of the analysis
+            directory)
         """
         # Update paths in the top-level parameter file
         # (if analysis dir has been moved or copied)
-        if self.params.analysis_dir != self.analysis_dir:
+        if base_path is None:
+            # Use stored path as original base path
+            base_path = self.params.analysis_dir
+        if new_path is None:
+            # Use current path as new base path
+            new_path = self.analysis_dir
+        if base_path != new_path:
             print("Updating analysis directory paths in parameter file")
-            old_dir = self.params.analysis_dir
+            print(f"-- old base path: {base_path}")
+            print(f"-- new base path: {new_path}")
             for p in ('analysis_dir',
                       'primary_data_dir',
                       'sample_sheet'):
                 if not self.params[p]:
                     continue
-                print("...updating '%s'" % p)
                 self.params[p] = os.path.normpath(
-                    os.path.join(self.analysis_dir,
-                                 os.path.relpath(self.params[p], old_dir)))
+                    os.path.join(new_path,
+                                 os.path.relpath(self.params[p], base_path)))
+                print(f"...updated '{p}' (set to '{self.params[p]}'")
             # Update paths in QC metadata in projects
             for project in self.get_analysis_projects_from_dirs():
                 # Iterate through all project directories
                 for qc_dir in project.qc_dirs:
                     qc_info = project.qc_info(qc_dir)
-                    print("...updating QC info for %s/%s" % (project.name,
-                                                             qc_dir))
                     qc_info['fastq_dir'] = os.path.normpath(
-                        os.path.join(self.analysis_dir,
+                        os.path.join(new_path,
                                      os.path.relpath(qc_info.fastq_dir,
-                                                     old_dir)))
+                                                     base_path)))
+                    print(f"...updated QC info for {project.name}/{qc_dir}")
                     qc_info.save()
             # Save the updated parameter data
             self.save_parameters(force=True)
