@@ -10,11 +10,10 @@
 #######################################################################
 
 import os
-import time
 import logging
 from ..analysis import AnalysisDir
+from ..auto_processor import AutoProcess
 from ..metadata import AnalysisDirMetadata
-from ..metadata import AnalysisDirParameters
 from ..command import Command
 from ..commands.report_cmd import report_concise
 from .. import apps
@@ -412,37 +411,16 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             sched.stop()
     # Perform final archiving operations
     if final:
-        # Update the final stored Fastq paths and metadata
-        # FIXME this is essentially duplicating functionality
-        # FIXME in the 'update' command
-        # FIXME (Also probably shouldn't update metadata for
-        # FIXME 'dry_run' mode?)
-        print("Updating stored paths and metadata")
+        # Paths to staging and final directories
         staged_analysis_dir = os.path.join(archive_dir,staging)
         archived_analysis_dir = os.path.join(archive_dir,final_dest)
-        parameter_file = os.path.join(staged_analysis_dir,
-                                      "auto_process.info")
-        if os.path.exists(parameter_file):
-            params = AnalysisDirParameters()
-            params.load(parameter_file,strict=False)
-            base_path = params.analysis_dir
-            print("Stored base path: %s" % base_path)
-            for p in ('analysis_dir',
-                      'primary_data_dir',
-                      'sample_sheet'):
-                if not params[p]:
-                    continue
-                params[p] = os.path.normpath(
-                    os.path.join(archived_analysis_dir,
-                                 os.path.relpath(params[p],
-                                                 base_path)))
-                print("...updated '%s' (set to '%s')" % (p,params[p]))
-            params.save()
+        # Update the final stored Fastq paths and metadata
+        if not dry_run:
+            AutoProcess(staged_analysis_dir).update_paths(
+                base_path=ap.params.analysis_dir,
+                new_path=archived_analysis_dir)
         else:
-            base_path = ap.analysis_dir
-            logger.warning("Unable to get old base path from parameters")
-            logger.warning("Using base path: %s (may be incorrect)" %
-                           base_path)
+            print("Updating paths skipped for dry run")
         # Run ID and reference
         metadata_file = os.path.join(staged_analysis_dir,
                                      "metadata.info")
@@ -456,7 +434,10 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 metadata['run_reference_id'] = ap.run_reference_id
                 print("...storing run reference ID ('%s')" %
                       metadata.run_reference_id)
-            metadata.save()
+            if not dry_run:
+                metadata.save()
+            else:
+                print("Run ID/reference ID not updated for dry run")
         # Project metadata and QC info
         analysis_dir =  AnalysisDir(staged_analysis_dir)
         # FIXME AnalysisDir.get_projects method might not get all
@@ -489,28 +470,16 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                           project.name)
             # Save the updated information
             if project_info_updated:
-                project.info.save()
-            # QC metadata
-            # FIXME should do all QC dirs (not just the primary one)
-            qc_info = project.qc_info(project.qc_dir)
-            if qc_info.fastq_dir:
-                print("Project '%s': updating stored Fastq directory for QC" %
-                      project.name)
-                # FIXME could we just set it to the current Fastq path?
-                new_fastq_dir = os.path.normpath(
-                    os.path.join(archived_analysis_dir,
-                                 os.path.relpath(qc_info.fastq_dir,
-                                                 base_path)))
-                print("...updated Fastq directory: %s" % new_fastq_dir)
-                qc_info['fastq_dir'] = new_fastq_dir
                 if not dry_run:
-                    qc_info.save()
-                # Bail out if there was a problem
-                if retval != 0:
-                    if not force:
-                        raise Exception("Finalising archive failed")
-                    else:
-                        logger.warning("Finalising archive failed (ignored)")
+                    project.info.save()
+                else:
+                    print("Project metadata not updated for dry run")
+        # Bail out if there was a problem
+        if retval != 0:
+            if not force:
+                raise Exception("Finalising archive failed")
+            else:
+                logger.warning("Finalising archive failed (ignored)")
         # Complete archiving
         print("Moving to final location: %s" % final_dest)
         if not dry_run:

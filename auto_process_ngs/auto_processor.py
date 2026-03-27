@@ -10,13 +10,9 @@
 
 import sys
 import os
-import subprocess
 import logging
 import shutil
-import uuid
 import time
-import ast
-import gzip
 import atexit
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
@@ -25,6 +21,7 @@ from .analysis import run_id
 from .analysis import run_reference_id
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
+from .metadata import AnalysisProjectInfo
 from .metadata import ProjectMetadataFile
 from .utils import edit_file
 from .utils import get_numbered_subdir
@@ -139,6 +136,64 @@ class AutoProcess:
                 if not os.path.exists(dir_path):
                     print("Making %s" % dir_path)
                     bcf_utils.mkdir(dir_path)
+
+    def update_paths(self, base_path=None, new_path=None):
+        """
+        Update the paths stored in the analysis directory
+
+        Checks the paths stored in the analysis directory
+        metadata and parameter files, and updates them if
+        they're inconsistent with the current location.
+
+        By default the original 'base' path is taken from
+        the path stored in the analysis directory parameters,
+        and the new 'base' path is assumed to be the current
+        path for the analysis directory (these settings
+        are sensible if the directory has been relocated or
+        copied).
+
+        Arguments:
+            base_path (str): current 'base' directory path
+            (defaults to path stored in analysis directory
+            parameters)
+            new_path (str): new 'base' directory path
+            (defaults to the current path of the analysis
+            directory)
+        """
+        # Update paths in the top-level parameter file
+        # (if analysis dir has been moved or copied)
+        if base_path is None:
+            # Use stored path as original base path
+            base_path = self.params.analysis_dir
+        if new_path is None:
+            # Use current path as new base path
+            new_path = self.analysis_dir
+        if base_path != new_path:
+            print("Updating analysis directory paths in parameter file")
+            print(f"-- old base path: {base_path}")
+            print(f"-- new base path: {new_path}")
+            for p in ('analysis_dir',
+                      'primary_data_dir',
+                      'sample_sheet'):
+                if not self.params[p]:
+                    continue
+                self.params[p] = os.path.normpath(
+                    os.path.join(new_path,
+                                 os.path.relpath(self.params[p], base_path)))
+                print(f"...updated '{p}' (set to '{self.params[p]}'")
+            # Update paths in QC metadata in projects
+            for project in self.get_analysis_projects_from_dirs():
+                # Iterate through all project directories
+                for qc_dir in project.qc_dirs:
+                    qc_info = project.qc_info(qc_dir)
+                    qc_info['fastq_dir'] = os.path.normpath(
+                        os.path.join(new_path,
+                                     os.path.relpath(qc_info.fastq_dir,
+                                                     base_path)))
+                    print(f"...updated QC info for {project.name}/{qc_dir}")
+                    qc_info.save()
+            # Save the updated parameter data
+            self.save_parameters(force=True)
 
     def load_parameters(self,allow_save=True):
         """
@@ -476,6 +531,58 @@ class AutoProcess:
         project_metadata.save(filen)
         print("Updated project metadata file '%s'" %
               self.params.project_metadata)
+
+    def sync_project_metadata_file(self):
+        """
+        Synchronise 'projects.info' file with directory contents
+        """
+        # Load information from 'projects.info'
+        project_metadata = self.load_project_metadata()
+        # Comment out projects which don't exist on filesystem
+        save_required = False
+        for line in project_metadata:
+            # Iterate through the named projects
+            name = line['Project']
+            if name.startswith('#'):
+                # Commented out, ignore
+                continue
+            # Look for a matching project directory
+            project_dir = os.path.join(self.analysis_dir, name)
+            if not os.path.exists(project_dir):
+                print(f"Commenting out missing project '{name}'")
+                line['Project'] = f"#{name}"
+                save_required = True
+        if save_required:
+            project_metadata.save()
+        # Add any project directories without entries
+        save_required = False
+        projects = [line['Project'] for line in project_metadata]
+        for project in self.get_analysis_projects_from_dirs():
+            if project.name.endswith(".bak") \
+                    or project.name.endswith(".orig") \
+                    or project.name.endswith(".tmp"):
+                # Skip directories with extensions indicating they
+                # should be ignored
+                print(f"Not adding entry for unlisted project '{project.name}'")
+                continue
+            elif project.name == "undetermined":
+                # Skip undetermined
+                continue
+            elif project.name not in projects and f"#{project.name}" not in projects:
+                # Add new entry
+                print(f"Adding entry for unlisted project '{project.name}'")
+                project_metadata.add_project(project.name,
+                                             [s.name for s in project.samples],
+                                             user=project.info.user,
+                                             PI=project.info.PI,
+                                             organism=project.info.organism,
+                                             library_type=project.info.library_type,
+                                             sc_platform=project.info.single_cell_platform,
+                                             comments=project.info.comments)
+                save_required = True
+        # Save the updated project metadata if required
+        if save_required:
+            project_metadata.save()
 
     def detect_unaligned_dir(self):
         # Attempt to detect an existing 'bcl2fastq' or 'Unaligned' directory
@@ -919,6 +1026,65 @@ class AutoProcess:
                                       pattern):
                 projects.append(test_project)
         return projects
+
+    def sync_project_metadata(self):
+        """
+        Update metadata stored in project dirs with 'projects.info'
+        """
+        # Load information from 'projects.info'
+        project_metadata = self.load_project_metadata()
+        save_required = False
+        for line in project_metadata:
+            # Iterate through the named projects
+            name = line['Project']
+            if name.startswith('#'):
+                # Commented out, ignore
+                continue
+            # Look for a matching project directory
+            project_dir = os.path.join(self.analysis_dir, name)
+            if os.path.exists(project_dir):
+                project = AnalysisProject(project_dir)
+                print(f"Checking metadata for project '{name}'")
+                # Synchronise metadata in projects with projects.info
+                metadata_items = dict(
+                    name=name,
+                    user=line['User'],
+                    PI=line['PI'],
+                    organism=line['Organism'],
+                    library_type=line['Library'],
+                    single_cell_platform=line['SC_Platform'],
+                    comments=line['Comments'],
+                    samples=project.sample_summary()
+                )
+                # Only update items where values differ
+                project_metadata_updated = False
+                for item in metadata_items:
+                    new_value = (metadata_items[item]
+                                 if metadata_items[item] != '.' else None)
+                    if project.info[item] != new_value:
+                        print("...updating '%s' => %r" % (item, new_value))
+                        project.info[item] = new_value
+                        project_metadata_updated = True
+                # Check paired-end info
+                project_info = AnalysisProjectInfo(project.info_file)
+                if project_info.paired_end != project.info.paired_end:
+                    print("...updating paired-end info")
+                    project_metadata_updated = True
+                # Save the updated project metadata if required
+                if project_metadata_updated:
+                    print(f"...saving project metadata for {project.name}")
+                    project.info.save()
+                # Update list of sample names in projects.info
+                sample_list = ','.join(sort_sample_names(
+                    [s.name for s in project.samples]))
+                if line['Samples'] != sample_list:
+                    print("...updating sample list in projects.info")
+                    line['Samples'] = sample_list
+                    save_required = True
+        # Save master project metadata
+        if save_required:
+            print("Saving projects.info")
+            project_metadata.save()
 
     def undetermined(self):
         # Return analysis project directory for undetermined indices
