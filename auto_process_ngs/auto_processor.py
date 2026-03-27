@@ -21,6 +21,7 @@ from .analysis import run_id
 from .analysis import run_reference_id
 from .metadata import AnalysisDirParameters
 from .metadata import AnalysisDirMetadata
+from .metadata import AnalysisProjectInfo
 from .metadata import ProjectMetadataFile
 from .utils import edit_file
 from .utils import get_numbered_subdir
@@ -1025,6 +1026,65 @@ class AutoProcess:
                                       pattern):
                 projects.append(test_project)
         return projects
+
+    def sync_project_metadata(self):
+        """
+        Update metadata stored in project dirs with 'projects.info'
+        """
+        # Load information from 'projects.info'
+        project_metadata = self.load_project_metadata()
+        save_required = False
+        for line in project_metadata:
+            # Iterate through the named projects
+            name = line['Project']
+            if name.startswith('#'):
+                # Commented out, ignore
+                continue
+            # Look for a matching project directory
+            project_dir = os.path.join(self.analysis_dir, name)
+            if os.path.exists(project_dir):
+                project = AnalysisProject(project_dir)
+                print(f"Checking metadata for project '{name}'")
+                # Synchronise metadata in projects with projects.info
+                metadata_items = dict(
+                    name=name,
+                    user=line['User'],
+                    PI=line['PI'],
+                    organism=line['Organism'],
+                    library_type=line['Library'],
+                    single_cell_platform=line['SC_Platform'],
+                    comments=line['Comments'],
+                    samples=project.sample_summary()
+                )
+                # Only update items where values differ
+                project_metadata_updated = False
+                for item in metadata_items:
+                    new_value = (metadata_items[item]
+                                 if metadata_items[item] != '.' else None)
+                    if project.info[item] != new_value:
+                        print("...updating '%s' => %r" % (item, new_value))
+                        project.info[item] = new_value
+                        project_metadata_updated = True
+                # Check paired-end info
+                project_info = AnalysisProjectInfo(project.info_file)
+                if project_info.paired_end != project.info.paired_end:
+                    print("...updating paired-end info")
+                    project_metadata_updated = True
+                # Save the updated project metadata if required
+                if project_metadata_updated:
+                    print(f"...saving project metadata for {project.name}")
+                    project.info.save()
+                # Update list of sample names in projects.info
+                sample_list = ','.join(sort_sample_names(
+                    [s.name for s in project.samples]))
+                if line['Samples'] != sample_list:
+                    print("...updating sample list in projects.info")
+                    line['Samples'] = sample_list
+                    save_required = True
+        # Save master project metadata
+        if save_required:
+            print("Saving projects.info")
+            project_metadata.save()
 
     def undetermined(self):
         # Return analysis project directory for undetermined indices

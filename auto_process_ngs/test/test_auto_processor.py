@@ -10,6 +10,7 @@ from textwrap import dedent
 from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.metadata import AnalysisProjectInfo
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockAnalysisProject
@@ -1353,3 +1354,220 @@ class TestAutoProcessSyncProjectMetadataFile(unittest.TestCase):
             ]
             for expected, actual in zip(expected_lines, fp.read().split("\n")):
                 self.assertEqual(expected.strip(), actual.strip())
+
+
+class TestAutoProcessSyncProjectMetadata(unittest.TestCase):
+    """
+    Tests for the 'sync_project_metadata' method
+    """
+    def setUp(self):
+        # Project metadata items mapping
+        self.metadata_map = {
+            "User": "user",
+            "PI": "PI",
+            "Library": "library_type",
+            "SC_Platform": "single_cell_platform",
+            "Organism": "organism",
+            "Comments": "comments"
+        }
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+        # Store original location
+        self.pwd = os.getcwd()
+        # Move to working directory
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_sync_project_metadata_changed(self):
+        """
+        AutoProcess.sync_project_metadata: project metadata changed
+        """
+        # Metadata for projects
+        project_metadata = {
+            "AB": {
+                "User": "Alan Bailey",
+                "PI": "Archie Ballard",
+                "Library": "RNA-seq",
+                "Organism": "Human"
+            },
+            "CDE": {
+                "User": "Charles Edwards",
+                "PI": "Christian Eggars",
+                "Library": "ChIP-seq",
+                "Organism": "Mouse"
+            }
+        }
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            project_metadata=project_metadata,
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Set up AutoProcess instance
+        ap = AutoProcess(mockdir.dirn)
+        # Check metadata items in projects.info pre-update
+        ap_project_metadata = ap.load_project_metadata()
+        for pname in project_metadata:
+            for item in project_metadata[pname]:
+                self.assertEqual(ap_project_metadata.lookup(pname)[item],
+                                 project_metadata[pname][item])
+        # Check metadata items in projects pre-update
+        for pname in project_metadata:
+            p = ap.get_analysis_projects(pname)[0]
+            for item in project_metadata[pname]:
+                print(item)
+                project_item = self.metadata_map[item]
+                expected_value = project_metadata[pname][item]
+                self.assertEqual(p.info[project_item],
+                                 expected_value)
+        # Overwrite projects.info and update metadata
+        project_metadata["AB"]["Organism"] = "Mouse"
+        project_metadata["AB"]["Comments"] = "1% PhiX spiked in"
+        project_metadata["CDE"]["Comments"] = "1% PhiX spiked in"
+        with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
+            fp.write("""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+AB\tAB1,AB2\tAlan Bailey\tRNA-seq\t.\tMouse\tArchie Ballard\t1% PhiX spiked in
+CDE\tCDE3,CDE4\tCharles Edwards\tChIP-seq\t.\tMouse\tChristian Eggars\t1% PhiX spiked in
+""")
+        ap.sync_project_metadata()
+        # Reload and confirm the updates in projects.info
+        ap = AutoProcess(mockdir.dirn)
+        ap_project_metadata = ap.load_project_metadata()
+        for pname in project_metadata:
+            for item in project_metadata[pname]:
+                self.assertEqual(ap_project_metadata.lookup(pname)[item],
+                                 project_metadata[pname][item])
+        # Confirm the updates in the projects
+        for pname in project_metadata:
+            p = ap.get_analysis_projects(pname)[0]
+            for item in project_metadata[pname]:
+                print(item)
+                project_item = self.metadata_map[item]
+                expected_value = project_metadata[pname][item]
+                self.assertEqual(p.info[project_item],
+                                 expected_value)
+
+    def test_sync_project_metadata_sample_list_changed(self):
+        """
+        AutoProcess.sync_project_metadata: synchronise sample list metadata
+        """
+        # Metadata for projects
+        project_metadata = {
+            "AB": {
+                "User": "Alan Bailey",
+                "PI": "Archie Ballard",
+                "Library": "RNA-seq",
+                "Organism": "Human"
+            },
+            "CDE": {
+                "User": "Charles Edwards",
+                "PI": "Christian Eggars",
+                "Library": "ChIP-seq",
+                "Organism": "Mouse"
+            }
+        }
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            project_metadata=project_metadata,
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Set up AutoProcess instance
+        ap = AutoProcess(mockdir.dirn)
+        # Check sample lists in projects.info
+        expected_samples = {
+            "AB": ["AB1","AB2"],
+            "CDE": ["CDE3","CDE4"]
+        }
+        ap_project_metadata = ap.load_project_metadata()
+        for pname in expected_samples:
+            self.assertEqual(ap_project_metadata.lookup(pname)["Samples"],
+                             ','.join(expected_samples[pname]))
+        # Check sample lists in project metadata
+        for pname in expected_samples:
+            p = ap.get_analysis_projects(pname)[0]
+            self.assertEqual(p.info.samples,
+                             "%s sample%s (%s)" %
+                             (len(expected_samples[pname]),
+                              's' if len(expected_samples[pname]) != 1 else '',
+                              ', '.join(expected_samples[pname])))
+        # Remove samples from projects
+        for fq in ("AB/fastqs/AB1_S1_R1_001.fastq.gz",
+                   "AB/fastqs/AB1_S1_R2_001.fastq.gz",
+                   "CDE/fastqs/CDE4_S4_R1_001.fastq.gz",
+                   "CDE/fastqs/CDE4_S4_R2_001.fastq.gz"):
+            os.remove(os.path.join(mockdir.dirn,fq))
+        expected_samples = {
+            "AB": ["AB2"],
+            "CDE": ["CDE3"]
+        }
+        # Update sample lists in metadata
+        ap.sync_project_metadata()
+        # Reload and check updated sample lists in projects.info
+        ap = AutoProcess(mockdir.dirn)
+        ap_project_metadata = ap.load_project_metadata()
+        for pname in expected_samples:
+            self.assertEqual(ap_project_metadata.lookup(pname)["Samples"],
+                             ','.join(expected_samples[pname]))
+        # Check updated sample lists in project metadata
+        for pname in expected_samples:
+            p = ap.get_analysis_projects(pname)[0]
+            self.assertEqual(p.info.samples,
+                             "%s sample%s (%s)" %
+                             (len(expected_samples[pname]),
+                              's' if len(expected_samples[pname]) != 1 else '',
+                              ', '.join(expected_samples[pname])))
+
+    def test_sync_project_metadata_paired_end_changed(self):
+        """
+        AutoProcess.sync_project_metadata: synchronise paired-end metadata
+        """
+        # Make an auto-process directory with projects
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '231021_A00879_0087_000000000-AGEW9',
+            'novaseq',
+            #project_metadata=project_metadata,
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Check paired-end metadata in projects
+        # NB check the metadata directly (not via other objects)
+        expected_paired_end = {
+            "AB": True,
+            "CDE": True
+        }
+        for pname in expected_paired_end:
+            project_metadata = AnalysisProjectInfo(
+                os.path.join(mockdir.dirn,pname,"README.info"))
+            self.assertEqual(project_metadata.paired_end,
+                             expected_paired_end[pname])
+        # Remove R2 Fastqs from one of the projects
+        for fq in ("AB/fastqs/AB1_S1_R2_001.fastq.gz",
+                   "AB/fastqs/AB2_S2_R2_001.fastq.gz"):
+            os.remove(os.path.join(mockdir.dirn,fq))
+        # Set up AutoProcess instance and update metadata
+        ap = AutoProcess(mockdir.dirn)
+        ap.sync_project_metadata()
+        # Reload and check update paired-end metadata in projects
+        ap = AutoProcess(mockdir.dirn)
+        expected_paired_end = {
+            "AB": False,
+            "CDE": True
+        }
+        for pname in expected_paired_end:
+            project_metadata = AnalysisProjectInfo(
+                os.path.join(mockdir.dirn,pname,"README.info"))
+            self.assertEqual(project_metadata.paired_end,
+                             expected_paired_end[pname])
