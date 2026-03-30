@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx/metrics.py: classes for handling 10xGenomics metric summaries
-#     Copyright (C) University of Manchester 2023 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2026 Peter Briggs
 #
 
 """
@@ -365,6 +365,7 @@ class MultiplexSummary(MetricsSummary):
 
     The following properties are available:
 
+    - reads_in_cells
     - cells
     - mean_reads_per_cell
     - median_reads_per_cell
@@ -419,6 +420,23 @@ class MultiplexSummary(MetricsSummary):
         # No matching library
         raise KeyError("No value for metric '%s' associated with "
                        "library type '%s'" % (name,library_type))
+    @property
+    def reads_in_cells(self):
+        """
+        Returns the number of reads in cells
+        """
+        try:
+            # Cellranger 10
+            return self.fetch('Number of reads in cells')
+        except MissingMetricError:
+            pass
+        try:
+            # Cellranger <= 9
+            return self.fetch('Number of reads from cells called from this sample')
+        except MissingMetricError:
+            pass
+        # Legacy (pre-7)
+        return self.fetch('Number of reads assigned to the sample')
     @property
     def cells(self):
         """

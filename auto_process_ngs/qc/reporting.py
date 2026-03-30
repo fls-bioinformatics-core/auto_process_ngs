@@ -2433,13 +2433,21 @@ class SampleQCReporter:
                     # Not sure if this fallback is redundant?
                     value = metrics.median_reads_per_cell
             elif cellranger_data.mode == "multi":
-                # Default is median for Cellranger>=7
+                # Calculate from number of reads/number of cells
                 try:
-                    value = metrics.median_reads_per_cell
-                except (AttributeError,MissingMetricError):
-                    # Cellranger 8.0.0 doesn't output median
-                    # reads so fall back to mean
-                    value = metrics.mean_reads_per_cell
+                    value = int(metrics.reads_in_cells)/int(metrics.cells)
+                except (ZeroDivisionError, ValueError):
+                    # No cells, or number of cells is not a number?
+                    value = "N/A"
+                except (AttributeError, MissingMetricError):
+                    # Fallbacks
+                    # Default is median for Cellranger<=7
+                    try:
+                        value = metrics.median_reads_per_cell
+                    except (AttributeError, MissingMetricError):
+                        # Cellranger 8.0.0 doesn't output median
+                        # reads so fall back to mean
+                        value = metrics.mean_reads_per_cell
             try:
                 # Assume that reads per cell is an
                 # integer and trap if it isn't (e.g.
