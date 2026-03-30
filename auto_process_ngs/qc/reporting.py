@@ -2436,6 +2436,9 @@ class SampleQCReporter:
                 # Calculate from number of reads/number of cells
                 try:
                     value = int(metrics.reads_in_cells)/int(metrics.cells)
+                except (ZeroDivisionError, ValueError):
+                    # No cells, or number of cells is not a number?
+                    value = "N/A"
                 except (AttributeError, MissingMetricError):
                     # Fallbacks
                     # Default is median for Cellranger<=7
