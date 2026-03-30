@@ -201,6 +201,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv,'w') as fp:
             fp.write(CELLPLEX_METRICS_SUMMARY)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 114898392)
         self.assertEqual(m.cells,5175)
         self.assertEqual(m.mean_reads_per_cell,28322)
         self.assertEqual(m.median_reads_per_cell,20052)
@@ -215,6 +216,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv,'w') as fp:
             fp.write(CELLPLEX_METRICS_SUMMARY_7_1_0)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 61845367)
         self.assertEqual(m.cells,1569)
         self.assertEqual(m.mean_reads_per_cell,52483)
         self.assertEqual(m.median_reads_per_cell,26198)
@@ -229,6 +231,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv,'w') as fp:
             fp.write(CELLPLEX_METRICS_SUMMARY_CSP_7_1_0)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 32611101)
         self.assertEqual(m.cells,1582)
         self.assertEqual(m.mean_reads_per_cell,24975)
         self.assertEqual(m.median_reads_per_cell,18376)
@@ -245,6 +248,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv,'w') as fp:
             fp.write(CELLPLEX_METRICS_SUMMARY_8_0_0)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 32611101)
         self.assertEqual(m.cells,1582)
         self.assertEqual(m.mean_reads_per_cell,20614)
         self.assertEqual(m.median_genes_per_cell,2042)
@@ -261,6 +265,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv, "wt") as fp:
             fp.write(CELLPLEX_METRICS_SUMMARY_9_0_0)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 61968623)
         self.assertEqual(m.cells, 1571)
         self.assertEqual(m.mean_reads_per_cell, 39445)
         self.assertEqual(m.median_genes_per_cell, 2472)
@@ -277,6 +282,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv, "wt") as fp:
             fp.write(CELLPLEX_METRICS_SUMMARY_10_0_0)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 61968623)
         self.assertEqual(m.cells, 1571)
         self.assertEqual(m.mean_reads_per_cell, 52565)
         self.assertEqual(m.median_genes_per_cell, 2472)
@@ -292,6 +298,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv,'w') as fp:
             fp.write(FLEX_METRICS_SUMMARY_8_0_0)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 63271140)
         self.assertEqual(m.cells,2302)
         self.assertEqual(m.mean_reads_per_cell,27485)
         self.assertEqual(m.median_genes_per_cell,2465)
@@ -307,6 +314,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv,'w') as fp:
             fp.write(FLEX_METRICS_SUMMARY_9_0_0)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 215425674)
         self.assertEqual(m.cells, 13958)
         self.assertEqual(m.mean_reads_per_cell, 15434)
         self.assertEqual(m.median_genes_per_cell, 1956)
@@ -322,6 +330,7 @@ class TestMultiplexSummary(unittest.TestCase):
         with open(summary_csv,'w') as fp:
             fp.write(FLEX_METRICS_SUMMARY_10_0_0)
         m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 217870314)
         self.assertEqual(m.cells, 14160)
         self.assertEqual(m.mean_reads_per_cell, 19731)
         self.assertEqual(m.median_genes_per_cell, 1953)
