@@ -3297,9 +3297,12 @@ class ProcessingSoftwareTable():
                 version = project.processing_software[pkg][2]
                 # Store package and version information
                 try:
-                    self._processing_software[program].append(version)
+                    self._processing_software[program].add(version)
                 except KeyError:
-                    self._processing_software[program] = [version]
+                    self._processing_software[program] = set([version])
+        # Finalise stored version information
+        for pkg in self._processing_software:
+            self._processing_software[pkg] = sorted(self._processing_software[pkg])
 
     def table(self):
         """
