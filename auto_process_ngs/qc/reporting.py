@@ -443,7 +443,7 @@ class QCReport(Document):
         # Initialise tables
         self._init_metadata_table(projects)
         self.processing_software_table = ProcessingSoftwareTable(projects).table()
-        self._init_qc_software_table()
+        self.qc_software_table = QCSoftwareTable(projects).table()
         self._init_reference_data_table(projects)
         # Initialise report sections
         self.preamble = self._init_preamble_section()
@@ -536,7 +536,6 @@ class QCReport(Document):
             self.report_metadata(project,
                                  self.metadata_table,
                                  self.metadata_items)
-            self.report_qc_software(project)
             self.report_comments(project)
             self.report_metadata(project,
                                  self.reference_data_table,
@@ -909,23 +908,6 @@ class QCReport(Document):
         self.reference_data_table = reference_data_table
         self.reference_data_items = reference_data_items
 
-    def _init_qc_software_table(self):
-        """
-        Internal: set up a table for QC software information
-
-        Associated CSS class is 'metadata'
-        """
-        # Determine what software packages were used across
-        # all projects
-        software_table = Table(('program','version',))
-        software_table.no_header()
-        software_table.add_css_classes('metadata')
-        for pkg in self.software:
-            software_table.add_row(
-                program=self.software_names[pkg],
-                version=None)
-        self.qc_software_table = software_table
-
     def _init_preamble_section(self):
         """
         Internal: set up a "preamble" section
@@ -955,9 +937,10 @@ class QCReport(Document):
                 "Processing software",
                 css_classes=("info",))
             processing_software_info.add(self.processing_software_table)
-        qc_software_info = info.add_subsection("QC software",
-                                               css_classes=("info",))
-        qc_software_info.add(self.qc_software_table)
+        if self.qc_software_table:
+            qc_software_info = info.add_subsection("QC software",
+                                                   css_classes=("info",))
+            qc_software_info.add(self.qc_software_table)
         reference_data_info = info.add_subsection(
             "Reference data",
             css_classes=("info",))
@@ -1282,26 +1265,6 @@ class QCReport(Document):
             tbl.set_value(idx,
                           project.id,
                           value)
-
-    def report_qc_software(self,project):
-        """
-        Report the software versions used in the QC
-
-        Adds entries for the software versions to the
-        "qc_software" table in the report
-        """
-        # Report software packages
-        for pkg in self.software_packages:
-            # Acquire the value
-            value = project.software_info(pkg,
-                                          exclude_processing=True)
-            if value is None:
-                continue
-            # Get row index in the metadata table
-            idx = self.software.index(pkg)
-            self.qc_software_table.set_value(idx,
-                                             "version",
-                                             value)
 
     def report_comments(self,project):
         """
@@ -3325,6 +3288,56 @@ class ProcessingSoftwareTable():
                         version="".join([str(x) for x in self._processing_software[pkg]]))
         return tbl
 
+
+class QCSoftwareTable():
+    """
+    Table summarising software packages used for QC
+
+    Lists which software packages were used for QC
+    across all projects in the report.
+
+    Arguments:
+      projects (list): list of QCProject instances
+        to summarise processing software from
+    """
+    def __init__(self, projects):
+        # Look up table for names of software packages
+        self._software_names = SOFTWARE_PACKAGE_NAMES
+        # Store information on QC software
+        self._qc_software = {}
+        for project in projects:
+            for pkg in project.software.keys():
+                version = project.software_info(pkg, exclude_processing=True)
+                if version is not None:
+                    try:
+                        program = self._software_names[pkg]
+                    except KeyError:
+                        # Unknown software package
+                        program = pkg
+                    try:
+                        self._qc_software[program].add(version)
+                    except KeyError:
+                        self._qc_software[program] = set([version])
+        # Sort and tidy
+        for pkg in self._qc_software:
+            self._qc_software[pkg] = sorted(list(self._qc_software[pkg]))
+
+    def table(self):
+        """
+        Return table of QC software packages
+
+        Returns:
+          Table: a Table instance summarising the packages
+            and versions (or None if none were specified).
+        """
+        tbl = Table(("program", "version",))
+        tbl.no_header()
+        tbl.add_css_classes("metadata")
+        for pkg in sorted(list(self._qc_software.keys())):
+            tbl.add_row(
+                program=pkg,
+                version=",".join([str(x) for x in self._qc_software[pkg]]))
+        return tbl
 
 class FastqQCReporter:
     """
