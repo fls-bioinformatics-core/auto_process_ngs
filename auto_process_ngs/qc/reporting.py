@@ -287,7 +287,10 @@ SUMMARY_FIELD_DESCRIPTIONS = {
                       'Corresponding sample for single cell multiome analysis'),
     'physical_sample': ('Physical sample',
                         'Name of physical sample associated with the '
-                        'multiplexed sample')
+                        'multiplexed sample'),
+    'barcode_ids': ('Barcode IDs',
+                    'List of barcode IDs (CMOs, probes etc) associated with the '
+                    'multiplexed sample')
 }
 
 # Fields that are only applicable for biological data
@@ -653,7 +656,11 @@ class QCReport(Document):
                     multiplex_analysis_fields = ["physical_sample"]
                 else:
                     multiplex_analysis_fields = []
+                multiplex_analysis_fields.append('sample')
+                #if project.multiplexed_samples:
+                #    multiplex_analysis_fields.append('barcode_ids')
                 multiplex_analysis_fields.extend(['sample',
+                                                  'barcode_ids',
                                                   '10x_cells',
                                                   '10x_reads_per_cell',
                                                   '10x_genes_per_cell',
@@ -2387,6 +2394,7 @@ class SampleQCReporter:
         - 10x_web_summary
         - linked_sample
         - physical_sample
+        - barcode_ids
 
         Arguments:
           field (str): name of the field to report; if the
@@ -2415,6 +2423,12 @@ class SampleQCReporter:
                              self.sample)])
             except AttributeError:
                 value = '?'
+        elif field == "barcode_ids":
+            try:
+                value = cellranger_data.config.sample(self.sample)["cmo"]
+            except (KeyError, AttributeError) as ex:
+                # Couldn't acquire associated barcode or probe ID
+                value = "-"
         elif field == "10x_cells":
             try:
                 value = metrics.estimated_number_of_cells
