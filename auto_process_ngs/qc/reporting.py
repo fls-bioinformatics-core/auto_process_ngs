@@ -17,6 +17,7 @@ In addition there are a number of supporting classes:
 - SampleQCReporter: reports the QC for a sample
 - FastqGroupQCReporter: reports the QC for a group of Fastqs
 - FastqQCReporter: interface to QC outputs for a single Fastq
+- ProcessingSoftwareTable: utility class for reporting processing software
 
 There are also a number of utility functions:
 
@@ -441,7 +442,7 @@ class QCReport(Document):
         self.suppress_warning = bool(suppress_warning)
         # Initialise tables
         self._init_metadata_table(projects)
-        self._init_processing_software_table()
+        self.processing_software_table = ProcessingSoftwareTable(projects).table()
         self._init_qc_software_table()
         self._init_reference_data_table(projects)
         # Initialise report sections
@@ -535,7 +536,6 @@ class QCReport(Document):
             self.report_metadata(project,
                                  self.metadata_table,
                                  self.metadata_items)
-            self.report_processing_software(project)
             self.report_qc_software(project)
             self.report_comments(project)
             self.report_metadata(project,
@@ -909,19 +909,6 @@ class QCReport(Document):
         self.reference_data_table = reference_data_table
         self.reference_data_items = reference_data_items
 
-    def _init_processing_software_table(self):
-        """
-        Internal: set up a table for processing software information
-
-        Associated CSS class is 'metadata'
-        """
-        # Determine what software packages were used across
-        # all projects
-        software_table = Table(('program','version',))
-        software_table.no_header()
-        software_table.add_css_classes('metadata')
-        self.processing_software_table = software_table
-
     def _init_qc_software_table(self):
         """
         Internal: set up a table for QC software information
@@ -963,10 +950,11 @@ class QCReport(Document):
         general_info = info.add_subsection("General information",
                                            css_classes=("info",))
         general_info.add(self.metadata_table)
-        processing_software_info = info.add_subsection(
-            "Processing software",
-            css_classes=("info",))
-        processing_software_info.add(self.processing_software_table)
+        if self.processing_software_table:
+            processing_software_info = info.add_subsection(
+                "Processing software",
+                css_classes=("info",))
+            processing_software_info.add(self.processing_software_table)
         qc_software_info = info.add_subsection("QC software",
                                                css_classes=("info",))
         qc_software_info.add(self.qc_software_table)
@@ -1294,26 +1282,6 @@ class QCReport(Document):
             tbl.set_value(idx,
                           project.id,
                           value)
-
-    def report_processing_software(self,project):
-        """
-        Report the software versions used in the processing
-
-        Adds entries for the software versions to the
-        "processing software" table in the report
-        """
-        # Report processing software packages
-        for pkg in project.processing_software:
-            # Acquire the value
-            try:
-                program = self.software_names[pkg]
-            except KeyError:
-                # Unknown software package
-                program = pkg
-            value = project.processing_software[pkg][2]
-            self.processing_software_table.add_row(
-                program=program,
-                version=value)
 
     def report_qc_software(self,project):
         """
@@ -3300,6 +3268,66 @@ class FastqGroupQCReporter:
             raise KeyError("'%s': unrecognised field for summary "
                            "table" % field)
         return value
+
+
+class ProcessingSoftwareTable():
+    """
+    Table summarising the processing software for a project
+
+    List which software packages were used for processing
+    (i.e. Fastq generation) across all projects
+
+    Arguments:
+      projects (list): list of QCProject instances
+        to summarise processing software from
+    """
+    def __init__(self, projects):
+        # Look up table for names of software packages
+        self._software_names = SOFTWARE_PACKAGE_NAMES
+        # Gather information on software packages
+        self._processing_software = {}
+        for project in projects:
+            for pkg in project.processing_software:
+                # Look up full name
+                try:
+                    program = self._software_names[pkg]
+                except KeyError:
+                    # Unknown software package
+                    program = pkg
+                version = project.processing_software[pkg][2]
+                # Store package and version information
+                try:
+                    self._processing_software[program].append(version)
+                except KeyError:
+                    self._processing_software[program] = [version]
+
+    def table(self):
+        """
+        Return table of processing software packages
+
+        Returns:
+          Table: a Table instance summarising the packages
+            and versions (or None if none were specified).
+        """
+        if not self._processing_software:
+            # Nothing to report
+            return None
+        # Create initial table
+        tbl = Table(("program", "version",))
+        tbl.no_header()
+        tbl.add_css_classes('metadata')
+        # Populate
+        for pkg in sorted(list(self._processing_software.keys())):
+            tbl.add_row(program=pkg,
+                        version="".join([str(x) for x in self._processing_software[pkg]]))
+        return tbl
+
+    def __bool__(self):
+        """
+        Return True if there is at least one software package
+        """
+        return bool(self._processing_software)
+
 
 class FastqQCReporter:
     """
