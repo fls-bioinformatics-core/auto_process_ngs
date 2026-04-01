@@ -3325,12 +3325,6 @@ class ProcessingSoftwareTable():
                         version="".join([str(x) for x in self._processing_software[pkg]]))
         return tbl
 
-    def __bool__(self):
-        """
-        Return True if there is at least one software package
-        """
-        return bool(self._processing_software)
-
 
 class FastqQCReporter:
     """
