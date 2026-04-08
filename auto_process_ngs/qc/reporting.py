@@ -3609,29 +3609,6 @@ class FastqQCReporter:
                            "| ".join(raw_data))
         return screens_report
 
-    def report_program_versions(self,document):
-        """
-        Report the program versions to a document
-
-        Creates a new subsection called "Program versions"
-        with a table listing the versions of the QC
-        programs.
-
-        Arguments:
-          document (Section): section to add report to
-          relpath (str): if set then make link paths
-            relative to 'relpath'
-        """
-        versions = document.add_subsection("Program versions")
-        programs = Table(("Program","Version"))
-        programs.add_css_classes("programs","summary")
-        programs.add_row(Program='fastqc',
-                         Version=self.program_versions.fastqc)
-        programs.add_row(Program='fastq_screen',
-                         Version=self.program_versions.fastq_screen)
-        versions.add(programs)
-        return versions
-
     def fastqc_summary(self):
         """
         Return plaintext version of the FastQC summary
