@@ -69,7 +69,6 @@ automatically within the QC report.
 # Imports
 #######################################################################
 
-import sys
 import os
 import re
 import logging
@@ -78,12 +77,8 @@ import ast
 import shutil
 import textwrap
 from collections import defaultdict
-from bcftbx.IlluminaData import IlluminaFastq
-from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
-from bcftbx.utils import extract_prefix
-from bcftbx.utils import extract_index
 from bcftbx.utils import pretty_print_names
 from bcftbx.utils import walk
 from ..analysis import AnalysisFastq
@@ -103,7 +98,6 @@ from ..docwriter import DocumentIcon
 from ..docwriter import LinkIcon
 from ..docwriter import DownloadIcon
 from ..metadata import AnalysisDirMetadata
-from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from .apps.fastqc import Fastqc
 from .apps.fastqc import fastqc_output_files
@@ -136,7 +130,6 @@ from .plots import uinsertsizeplot
 from .plots import ucoverageprofileplot
 from .plots import ugenomicoriginplot
 from .plots import encode_png
-from .protocols import QCProtocol
 from .protocols import fetch_protocol_definition
 from ..settings import get_install_dir
 from .utils import get_bam_basename
