@@ -460,7 +460,7 @@ class QCReport(Document):
         # Initialise report sections
         self.preamble = self._init_preamble_section()
         self.warnings = self._init_warnings_section()
-        self.summary = self._init_summary_section(project)
+        self.summary = self._init_summary_section()
         # Initialise data directory
         self._init_data_dir(projects)
         # Report each project
@@ -855,7 +855,7 @@ class QCReport(Document):
                      (get_version(),time.asctime()))
         return preamble
 
-    def _init_summary_section(self,project):
+    def _init_summary_section(self):
         """
         Internal: set up a summary section for the report
 
