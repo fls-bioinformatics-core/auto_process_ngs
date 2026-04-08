@@ -660,9 +660,6 @@ class QCReport(Document):
                     multiplex_analysis_fields = ["physical_sample"]
                 else:
                     multiplex_analysis_fields = []
-                multiplex_analysis_fields.append('sample')
-                #if project.multiplexed_samples:
-                #    multiplex_analysis_fields.append('barcode_ids')
                 multiplex_analysis_fields.extend(['sample',
                                                   'barcode_ids',
                                                   '10x_cells',
