@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     protocols: define and handle QC protocols
-#     Copyright (C) University of Manchester 2022-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2022-2026 Peter Briggs
 #
 
 """
@@ -239,6 +239,26 @@ QC_PROTOCOLS = {
                                   'cellranger_refdata=*;'
                                   'set_cell_count=false;'
                                   'set_metadata=False)'
+        ]
+    },
+
+    "10x_OCM": {
+        "description": "10xGenomics OCM (on-chip multiplexing) data",
+        "reads": {
+            "seq_data": ('r2',),
+            "index": ('r1',)
+        },
+        "qc_modules": [
+            'fastqc',
+            'fastq_screen',
+            'sequence_lengths',
+            'rseqc_genebody_coverage',
+            'rseqc_infer_experiment',
+            'qualimap_rnaseq',
+            'cellranger_count(cellranger_use_multi_config=True;'
+                             'set_cell_count=false;'
+                             'set_metadata=False)',
+            'cellranger_multi'
         ]
     },
 
