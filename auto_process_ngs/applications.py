@@ -136,22 +136,23 @@ APPLICATIONS = [
         "assays": ["10x Chromium 3' (v4 GEM-X) sc GEX",],
         "tags": ["10x", "single_cell"]
     },
-    # 10x Chromium 3' OCM single-cell
+    # 10x Chromium 3' OCM single-cell & single-nuclei
     {
         "platforms": ["10x Chromium 3' OCM"],
-        "libraries": ["scRNA-seq"],
+        "libraries": ["scRNA-seq", "snRNA-seq"],
         "extensions": ["CSP", "CRISPR"],
         "alternative_extensions": {
             "Antibody Capture": "CSP",
             "Feature Barcode": "CSP",
         },
         "fastq_generation": "10x_chromium_sc",
-        "qc_protocol": "10x_scRNAseq",
+        "qc_protocol": "10x_OCM",
         "setup": {
             "templates": ["10x_multi_config(multiplexing=ocm)"],
             "directories": [],
         },
-        "assays": ["10x Chromium 3' (v4 GEM-X) OCM sc GEX",],
+        "assays": ["10x Chromium 3' (v4 GEM-X) OCM sc GEX",
+                   "10x Chromium 3' (v4 GEM-X) OCM sn GEX",],
         "tags": ["10x", "single_cell", "multiplex"]
     },
     # 10x Chromium 3' single-nuclei
@@ -166,19 +167,6 @@ APPLICATIONS = [
         },
         "assays": ["10x Chromium 3' (v4 GEM-X) sn GEX",],
         "tags": ["10x", "single_cell"]
-    },
-    # 10x Chromium 3' OCM single-nuclei
-    {
-        "platforms": ["10x Chromium 3' OCM"],
-        "libraries": ["snRNA-seq"],
-        "fastq_generation": "10x_chromium_sc",
-        "qc_protocol": "10x_snRNAseq",
-        "setup": {
-            "templates": ["10x_multi_config(multiplexing=ocm)"],
-            "directories": [],
-        },
-        "assays": ["10x Chromium 3' (v4 GEM-X) OCM sn GEX",],
-        "tags": ["10x", "single_cell", "multiplex"]
     },
     # 10x Chromium 5'
     {

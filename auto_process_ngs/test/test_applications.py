@@ -67,7 +67,7 @@ class TestIdentifyApplication(TestCase):
                              "scRNA-seq+CRISPR"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
-            self.assertEqual(application["qc_protocol"], "10x_scRNAseq")
+            self.assertEqual(application["qc_protocol"], "10x_OCM")
 
     def test_identify_application_10x_chromium_3prime_snrnaseq(self):
         """
@@ -95,7 +95,7 @@ class TestIdentifyApplication(TestCase):
                              "snRNA-seq+CRISPR"]:
             application = identify_application(platform, library_type)
             self.assertEqual(application["fastq_generation"], "10x_chromium_sc")
-            self.assertEqual(application["qc_protocol"], "10x_snRNAseq")
+            self.assertEqual(application["qc_protocol"], "10x_OCM")
 
     def test_identify_application_10x_chromium_5prime_immune_profiling(self):
         """
