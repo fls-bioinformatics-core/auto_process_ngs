@@ -37,8 +37,8 @@ Adding support for new metadata
 -------------------------------
 
 Support for new metadata items should be implemented within the
-``_init_metadata_table`` method of ``QCReport``. Descriptions of
-new items should also be added to the ``METADATA_FIELD_DESCRIPTIONS``
+``ProjectMetadataTable`` class, and descriptions of new items
+should also be added to the ``METADATA_FIELD_DESCRIPTIONS``
 module constant.
 
 Adding support for new QC outputs
@@ -69,7 +69,6 @@ automatically within the QC report.
 # Imports
 #######################################################################
 
-import sys
 import os
 import re
 import logging
@@ -78,12 +77,8 @@ import ast
 import shutil
 import textwrap
 from collections import defaultdict
-from bcftbx.IlluminaData import IlluminaFastq
-from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
-from bcftbx.utils import extract_prefix
-from bcftbx.utils import extract_index
 from bcftbx.utils import pretty_print_names
 from bcftbx.utils import walk
 from ..analysis import AnalysisFastq
@@ -103,7 +98,6 @@ from ..docwriter import DocumentIcon
 from ..docwriter import LinkIcon
 from ..docwriter import DownloadIcon
 from ..metadata import AnalysisDirMetadata
-from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from .apps.fastqc import Fastqc
 from .apps.fastqc import fastqc_output_files
@@ -136,7 +130,6 @@ from .plots import uinsertsizeplot
 from .plots import ucoverageprofileplot
 from .plots import ugenomicoriginplot
 from .plots import encode_png
-from .protocols import QCProtocol
 from .protocols import fetch_protocol_definition
 from ..settings import get_install_dir
 from .utils import get_bam_basename
@@ -441,14 +434,33 @@ class QCReport(Document):
         # Suppress warning?
         self.suppress_warning = bool(suppress_warning)
         # Initialise tables
-        self._init_metadata_table(projects)
+        self.metadata_table = ProjectMetadataTable(projects,
+                                                   items=["run_id",
+                                                          "project_id",
+                                                          "run",
+                                                          "sequencer_model",
+                                                          "flow_cell_mode",
+                                                          "user",
+                                                          "PI",
+                                                          "library_type",
+                                                          "organism",
+                                                          "single_cell_platform",
+                                                          "number_of_cells",
+                                                          "protocol"]).table()
         self.processing_software_table = ProcessingSoftwareTable(projects).table()
-        self._init_qc_software_table()
-        self._init_reference_data_table(projects)
+        self.qc_software_table = QCSoftwareTable(projects).table()
+        self.reference_data_table = ProjectMetadataTable(projects,
+                                                         items=["project_id",
+                                                                "star_index",
+                                                                "annotation_bed",
+                                                                "annotation_gtf",
+                                                                "cellranger_reference",
+                                                                "cellranger_probe_set"],
+                                                         drop_project_id=True).table()
         # Initialise report sections
         self.preamble = self._init_preamble_section()
         self.warnings = self._init_warnings_section()
-        self.summary = self._init_summary_section(project)
+        self.summary = self._init_summary_section()
         # Initialise data directory
         self._init_data_dir(projects)
         # Report each project
@@ -533,15 +545,7 @@ class QCReport(Document):
                                                       expected_outputs)
             # Add data for this project to the report
             print("Adding project '%s' to the report..." % project.name)
-            self.report_metadata(project,
-                                 self.metadata_table,
-                                 self.metadata_items)
-            self.report_qc_software(project)
             self.report_comments(project)
-            self.report_metadata(project,
-                                 self.reference_data_table,
-                                 self.reference_data_items)
-            # Create a summary subsection for multi-project reporting
             if self.multi_project:
                 project_summary = self.summary.add_subsection(
                     project.id,
@@ -656,9 +660,6 @@ class QCReport(Document):
                     multiplex_analysis_fields = ["physical_sample"]
                 else:
                     multiplex_analysis_fields = []
-                multiplex_analysis_fields.append('sample')
-                #if project.multiplexed_samples:
-                #    multiplex_analysis_fields.append('barcode_ids')
                 multiplex_analysis_fields.extend(['sample',
                                                   'barcode_ids',
                                                   '10x_cells',
@@ -840,92 +841,6 @@ class QCReport(Document):
             report_attrs_.append('qualimap_rnaseq')
         return report_attrs_
 
-    def _init_metadata_table(self,projects):
-        """
-        Internal: set up a table for project metadata
-
-        Associated CSS class is 'metadata'
-        """
-        # Identify metadata items
-        metadata_items = ['run_id',
-                          'run',
-                          'sequencer_model',
-                          'flow_cell_mode',
-                          'user',
-                          'PI',
-                          'library_type',
-                          'organism',
-                          'protocol']
-        if self.has_single_cell:
-            for item in ('single_cell_platform',
-                         'number_of_cells',):
-                metadata_items.insert(metadata_items.index('organism'),
-                                      item)
-        if self.multi_project:
-            metadata_items[metadata_items.index('run_id')] = 'project_id'
-        # Make table with one column per project
-        columns = ['item']
-        for project in projects:
-            columns.append(project.id)
-        metadata_table = Table(columns)
-        metadata_table.no_header()
-        metadata_table.add_css_classes('metadata')
-        # Add rows for metadata items
-        for item in metadata_items:
-            metadata_table.add_row(item=self.metadata_titles[item])
-        # Store table and metadata items as attribute
-        self.metadata_table = metadata_table
-        self.metadata_items = metadata_items
-
-    def _init_reference_data_table(self,projects):
-        """
-        Internal: set up a table for reference data
-
-        Associated CSS class is 'metadata'
-        """
-        # Identify reference data items
-        reference_data_items = ['star_index',
-                                'annotation_bed',
-                                'annotation_gtf']
-        if 'cellranger_count' in self.outputs or \
-           'cellranger_multi' in self.outputs:
-            reference_data_items.append('cellranger_reference')
-        for project in projects:
-            if project.cellranger_probe_sets:
-                reference_data_items.append('cellranger_probe_set')
-        if self.multi_project:
-            reference_data_items.insert(0,'project_id')
-        # Make table with one column per project
-        columns = ['item']
-        for project in projects:
-            columns.append(project.id)
-        reference_data_table = Table(columns)
-        reference_data_table.no_header()
-        reference_data_table.add_css_classes('metadata')
-        # Add rows for metadata items
-        for item in reference_data_items:
-            reference_data_table.add_row(item=self.metadata_titles[item])
-        # Store table and metadata items as attribute
-        self.reference_data_table = reference_data_table
-        self.reference_data_items = reference_data_items
-
-    def _init_qc_software_table(self):
-        """
-        Internal: set up a table for QC software information
-
-        Associated CSS class is 'metadata'
-        """
-        # Determine what software packages were used across
-        # all projects
-        software_table = Table(('program','version',))
-        software_table.no_header()
-        software_table.add_css_classes('metadata')
-        for pkg in self.software:
-            software_table.add_row(
-                program=self.software_names[pkg],
-                version=None)
-        self.qc_software_table = software_table
-
     def _init_preamble_section(self):
         """
         Internal: set up a "preamble" section
@@ -937,7 +852,7 @@ class QCReport(Document):
                      (get_version(),time.asctime()))
         return preamble
 
-    def _init_summary_section(self,project):
+    def _init_summary_section(self):
         """
         Internal: set up a summary section for the report
 
@@ -955,13 +870,15 @@ class QCReport(Document):
                 "Processing software",
                 css_classes=("info",))
             processing_software_info.add(self.processing_software_table)
-        qc_software_info = info.add_subsection("QC software",
-                                               css_classes=("info",))
-        qc_software_info.add(self.qc_software_table)
-        reference_data_info = info.add_subsection(
-            "Reference data",
-            css_classes=("info",))
-        reference_data_info.add(self.reference_data_table)
+        if self.qc_software_table:
+            qc_software_info = info.add_subsection("QC software",
+                                                   css_classes=("info",))
+            qc_software_info.add(self.qc_software_table)
+        if self.reference_data_table:
+            reference_data_info = info.add_subsection(
+                "Reference data",
+                css_classes=("info",))
+            reference_data_info.add(self.reference_data_table)
         # Add an empty section to clear HTML floats
         clear = summary.add_subsection(css_classes=("clear",))
         # Add additional subsections for comments etc
@@ -1192,116 +1109,6 @@ class QCReport(Document):
         # Append to the summary section
         section.add(multiplexing_tbl)
         return multiplexing_tbl
-
-    def report_metadata(self,project,tbl,items):
-        """
-        Report project metadata to a table
-
-        Adds entries for project metadata items to the
-        specified table
-
-        Arguments:
-          project (QCProject): project to report
-          tbl (Table): table to report the metadata
-            items to
-          items (list): list of metadata items to
-            report to the table
-        """
-        # Determine the root directory for QC outputs
-        if self.data_dir:
-            project_data_dir = os.path.join(self.data_dir,
-                                            sanitize_name(project.id))
-        else:
-            project_data_dir = project.dirn
-        if self.relpath:
-            project_data_dir = os.path.relpath(project_data_dir,
-                                               self.relpath)
-        # Add metadata items
-        for idx,item in enumerate(items):
-            # Try to acquire the value from QC metadata
-            try:
-                value = project.qc_info[item]
-            except KeyError:
-                # Fall back to project metadata
-                try:
-                    if project.info[item]:
-                        value = project.info[item]
-                    else:
-                        # No value set, skip this item
-                        continue
-                except KeyError:
-                    # Additional non-metadata items, or items
-                    # requiring additional processing
-                    if item == 'project_id':
-                        value = Link(project.id,
-                                     "#%s" % sanitize_name(project.id))
-                    elif item == 'run_id':
-                        value = project.run_id
-                        if value is None:
-                            # Unable to determine run id
-                            continue
-                    elif item == 'flow_cell_mode':
-                        value = project.run_metadata['flow_cell_mode']
-                        if value is None:
-                            # Unable to determine flow cell mode
-                            value = '&nbsp;'
-                    elif item == 'cellranger_reference':
-                        if len(project.cellranger_references) == 1:
-                            # Single reference dataset
-                            value = os.path.basename(
-                                project.cellranger_references[0])
-                        elif len(project.cellranger_references) > 1:
-                            # Many reference datasets
-                            value = List()
-                            for ref in project.cellranger_references:
-                                value.add_item(os.path.basename(ref))
-                        else:
-                            # No reference datasets
-                            continue
-                    elif item == 'cellranger_probe_set':
-                        if len(project.cellranger_probe_sets) == 1:
-                            # Single probe set
-                            value = os.path.basename(
-                                project.cellranger_probe_sets[0])
-                        elif len(project.cellranger_probe_sets) > 1:
-                            # Many probe sets
-                            value = List()
-                            for prb in project.cellranger_probe_sets:
-                                value.add_item(os.path.basename(prb))
-                        else:
-                            # No probe sets
-                            continue
-                    elif item == 'multiqc':
-                        multiqc_report = "multi%s_report.html" \
-                                         % os.path.basename(project.qc_dir)
-                        value = Link(multiqc_report)
-                    else:
-                        raise Exception("Unrecognised item to report: '%s'"
-                                        % item)
-            # Update the value in the metadata table
-            tbl.set_value(idx,
-                          project.id,
-                          value)
-
-    def report_qc_software(self,project):
-        """
-        Report the software versions used in the QC
-
-        Adds entries for the software versions to the
-        "qc_software" table in the report
-        """
-        # Report software packages
-        for pkg in self.software_packages:
-            # Acquire the value
-            value = project.software_info(pkg,
-                                          exclude_processing=True)
-            if value is None:
-                continue
-            # Get row index in the metadata table
-            idx = self.software.index(pkg)
-            self.qc_software_table.set_value(idx,
-                                             "version",
-                                             value)
 
     def report_comments(self,project):
         """
@@ -3270,6 +3077,178 @@ class FastqGroupQCReporter:
         return value
 
 
+class ProjectMetadataTable():
+    """
+    Table summarising the top-level metadata for a project
+
+    Available item names that can be included in the table:
+
+    * project_id
+    * run_id
+    * run
+    * sequencer_model
+    * flow_cell_mode
+    * user
+    * PI
+    * library_type
+    * organism
+    * single_cell_platform
+    * number_of_cells
+    * protocol
+    * cellranger_reference
+    * cellranger_probe_set
+    * multiqc
+
+    Arguments:
+      projects (list): list of QCProject instances
+        to summarise processing software from
+      items (list): list of item names to include
+      drop_project_id (bool): if True then the 'project_id'
+        item will be dropped for tables which only have
+        data from a single project (default is False,
+        keep the 'project_id' item if specified)
+    """
+    def __init__(self, projects, items=None, drop_project_id=False):
+        self._metadata_titles = METADATA_FIELD_DESCRIPTIONS
+        if items is None:
+            # Default items
+            self._metadata_items = ["run_id",
+                                    "project_id",
+                                    "run",
+                                    "sequencer_model",
+                                    "flow_cell_mode",
+                                    "user",
+                                    "PI",
+                                    "library_type",
+                                    "organism",
+                                    "single_cell_platform",
+                                    "number_of_cells",
+                                    "protocol"]
+        else:
+            # Custom items
+            self._metadata_items = [item for item in items]
+        self._drop_project_id = bool(drop_project_id)
+        self._projects = []
+        self._project_metadata = {}
+        for project in projects:
+            self.add_project_to_table(project)
+
+    def add_project_to_table(self, project):
+        """
+        Add details for a project to the table
+
+        Arguments:
+          project (QCProject): QCProject object with
+            data to add
+        """
+        metadata = {}
+        for item in self._metadata_items:
+            value = None
+            try:
+                # Try QC metadata
+                value = project.qc_info[item]
+            except KeyError:
+                # Fall back to project metadata
+                try:
+                    if project.info[item]:
+                        value = project.info[item]
+                except KeyError:
+                    # Additional non-metadata items, or
+                    # items requiring additional processing
+                    if item == "project_id":
+                        value = project.id
+                    elif item == "run_id":
+                        value = project.run_id
+                    elif item == "flow_cell_mode":
+                        value = project.run_metadata['flow_cell_mode']
+                    elif item == 'cellranger_reference':
+                        if len(project.cellranger_references) == 1:
+                            # Single reference dataset
+                            value = os.path.basename(
+                                project.cellranger_references[0])
+                        elif len(project.cellranger_references) > 1:
+                            # Many reference datasets
+                            value = List()
+                            for ref in project.cellranger_references:
+                                value.add_item(os.path.basename(ref))
+                    elif item == 'cellranger_probe_set':
+                        if len(project.cellranger_probe_sets) == 1:
+                            # Single probe set
+                            value = os.path.basename(
+                                project.cellranger_probe_sets[0])
+                        elif len(project.cellranger_probe_sets) > 1:
+                            # Many probe sets
+                            value = List()
+                            for prb in project.cellranger_probe_sets:
+                                value.add_item(os.path.basename(prb))
+                        else:
+                            # No probe sets
+                            continue
+                    elif item == 'multiqc':
+                        multiqc_report = "multi%s_report.html" \
+                                         % os.path.basename(project.qc_dir)
+                        value = Link(multiqc_report)
+                    else:
+                        raise Exception(f"Unrecognised item to report: '{item}'")
+            if value is not None:
+                metadata[item] = value
+        self._projects.append(project.id)
+        self._project_metadata[project.id] = metadata
+
+    def table(self):
+        """
+        Return table reporting project metadata
+
+        Returns:
+          Table: a Table instance summarising the project
+            metadata (or None if there is no information
+            to report).
+        """
+        # Determine which rows to include
+        row_items = []
+        for item in self._metadata_items:
+            for project_id in self._projects:
+                if item in self._project_metadata[project_id]:
+                    row_items.append(item)
+                    break
+        # Check if there is content to report
+        if len(row_items) == 1 and "project_id" in row_items:
+            # Nothing to report
+            return None
+        # Update or drop "project_id" for multiple/single projects
+        is_multi_project = len(self._projects) > 1
+        if "project_id" in row_items:
+            if is_multi_project:
+                # Update project ID to make into a link
+                for project_id in self._projects:
+                    value = Link(project_id, f"#{sanitize_name(project_id)}")
+                    self._project_metadata[project_id]["project_id"] = value
+            elif self._drop_project_id:
+                # Remove project ID from reporting
+                row_items.remove("project_id")
+        # Set up columns ("item" followed by projects)
+        columns = ["item"]
+        for project_id in self._projects:
+            columns.append(project_id)
+        # Initialise the table
+        tbl = Table(columns)
+        tbl.no_header()
+        tbl.add_css_classes("metadata")
+        # Add items
+        for item in row_items:
+            idx = tbl.add_row(item=self._metadata_titles[item])
+            for project_id in self._projects:
+                try:
+                    value = self._project_metadata[project_id][item]
+                except KeyError:
+                    value = None
+                if value is None:
+                    value = "&nbsp;"
+                tbl.set_value(idx, project_id, value)
+        # Return the table
+        return tbl
+
+
 class ProcessingSoftwareTable():
     """
     Table summarising the processing software for a project
@@ -3325,6 +3304,56 @@ class ProcessingSoftwareTable():
                         version="".join([str(x) for x in self._processing_software[pkg]]))
         return tbl
 
+
+class QCSoftwareTable():
+    """
+    Table summarising software packages used for QC
+
+    Lists which software packages were used for QC
+    across all projects in the report.
+
+    Arguments:
+      projects (list): list of QCProject instances
+        to summarise processing software from
+    """
+    def __init__(self, projects):
+        # Look up table for names of software packages
+        self._software_names = SOFTWARE_PACKAGE_NAMES
+        # Store information on QC software
+        self._qc_software = {}
+        for project in projects:
+            for pkg in project.software.keys():
+                version = project.software_info(pkg, exclude_processing=True)
+                if version is not None:
+                    try:
+                        program = self._software_names[pkg]
+                    except KeyError:
+                        # Unknown software package
+                        program = pkg
+                    try:
+                        self._qc_software[program].add(version)
+                    except KeyError:
+                        self._qc_software[program] = set([version])
+        # Sort and tidy
+        for pkg in self._qc_software:
+            self._qc_software[pkg] = sorted(list(self._qc_software[pkg]))
+
+    def table(self):
+        """
+        Return table of QC software packages
+
+        Returns:
+          Table: a Table instance summarising the packages
+            and versions (or None if none were specified).
+        """
+        tbl = Table(("program", "version",))
+        tbl.no_header()
+        tbl.add_css_classes("metadata")
+        for pkg in sorted(list(self._qc_software.keys())):
+            tbl.add_row(
+                program=pkg,
+                version=",".join([str(x) for x in self._qc_software[pkg]]))
+        return tbl
 
 class FastqQCReporter:
     """
@@ -3569,29 +3598,6 @@ class FastqQCReporter:
         screens_report.add("Raw screen data: " +
                            "| ".join(raw_data))
         return screens_report
-
-    def report_program_versions(self,document):
-        """
-        Report the program versions to a document
-
-        Creates a new subsection called "Program versions"
-        with a table listing the versions of the QC
-        programs.
-
-        Arguments:
-          document (Section): section to add report to
-          relpath (str): if set then make link paths
-            relative to 'relpath'
-        """
-        versions = document.add_subsection("Program versions")
-        programs = Table(("Program","Version"))
-        programs.add_css_classes("programs","summary")
-        programs.add_row(Program='fastqc',
-                         Version=self.program_versions.fastqc)
-        programs.add_row(Program='fastq_screen',
-                         Version=self.program_versions.fastq_screen)
-        versions.add(programs)
-        return versions
 
     def fastqc_summary(self):
         """
