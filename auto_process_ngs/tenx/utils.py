@@ -543,7 +543,8 @@ def make_multi_config_template(f, reference=None, fastq_dir=None,
             MULTIPLEXED_SAMPLE,BC001|BC002|...,DESCRIPTION
             """))
         elif multiplexing == "ocm":
-            fp.write(dedent("""[samples]
+            fp.write(dedent("""
+            [samples]
             sample_id,ocm_barcode_ids,description
             MULTIPLEXED_SAMPLE,OB1|OB2|...,DESCRIPTION
             """))
