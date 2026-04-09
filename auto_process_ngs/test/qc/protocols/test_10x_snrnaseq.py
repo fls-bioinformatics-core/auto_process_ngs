@@ -1,5 +1,5 @@
 #######################################################################
-# Unit tests for qc/pipeline.py (10x single cell RNA-seq data)
+# Unit tests for qc/pipeline.py (10x single nuclei RNA-seq data)
 #######################################################################
 
 # All imports declared in __init__.py file
@@ -7,19 +7,19 @@ from . import *
 
 class TestQCPipeline(BaseQCPipelineTestCase):
     """
-    Tests for 10xGenomics single cell RNA-seq data
+    Tests for 10xGenomics single nuclei RNA-seq data
     """
-    def test_qcpipeline_with_10x_sc_rnaseq_data(self):
+    def test_qcpipeline_with_10x_sn_rnaseq_data(self):
         """
-        QCPipeline: 10xGenomics scRNA-seq run (10x_scRNAseq)
+        QCPipeline: 10xGenomics snRNA-seq run (10x_snRNAseq)
         """
         # Make mock QC executables
         MockFastqScreen.create(os.path.join(self.bin,"fastq_screen"))
         MockFastQC.create(os.path.join(self.bin,"fastqc"))
         MockStar.create(os.path.join(self.bin,"STAR"))
         MockSamtools.create(os.path.join(self.bin,"samtools"))
-        MockPicard.create(os.path.join(self.bin,"picard"))
         MockGtf2bed.create(os.path.join(self.bin,"gtf2bed"))
+        MockPicard.create(os.path.join(self.bin,"picard"))
         MockRSeQC.create(os.path.join(self.bin,"infer_experiment.py"))
         MockRSeQC.create(os.path.join(self.bin,"geneBody_coverage.py"))
         MockQualimap.create(os.path.join(self.bin,"qualimap"))
@@ -37,12 +37,12 @@ class TestQCPipeline(BaseQCPipelineTestCase):
                                 metadata={ 'Organism': 'Human',
                                            'Single cell platform':
                                            '10x Chromium 3\'',
-                                           'Library type': 'scRNA-seq' })
+                                           'Library type': 'snRNA-seq' })
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB")),
-                          fetch_protocol_definition("10x_scRNAseq"),
+                          fetch_protocol_definition("10x_snRNAseq"),
                           multiqc=True)
         status = runqc.run(fastq_screens=self.fastq_screens,
                            star_indexes=
@@ -60,9 +60,9 @@ class TestQCPipeline(BaseQCPipelineTestCase):
         # Check QC metadata
         qc_info = AnalysisProjectQCDirInfo(
             os.path.join(self.wd,"PJB","qc","qc.info"))
-        self.assertEqual(qc_info.protocol,"10x_scRNAseq")
+        self.assertEqual(qc_info.protocol,"10x_snRNAseq")
         self.assertEqual(qc_info.protocol_specification,
-                         str(fetch_protocol_definition("10x_scRNAseq")))
+                         str(fetch_protocol_definition("10x_snRNAseq")))
         self.assertEqual(qc_info.organism,"Human")
         self.assertEqual(qc_info.seq_data_samples,"PJB1,PJB2")
         self.assertEqual(qc_info.fastq_dir,

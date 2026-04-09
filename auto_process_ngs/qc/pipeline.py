@@ -639,6 +639,12 @@ class QCPipeline(Pipeline):
                 except KeyError:
                     library_type = project.info.library_type
 
+                # Single nuclei flag
+                try:
+                    single_nuclei = qc_module_params['single_nuclei']
+                except KeyError:
+                    single_nuclei = False
+
                 # Set chemistry
                 try:
                     chemistry = qc_module_params['chemistry']
@@ -693,6 +699,7 @@ class QCPipeline(Pipeline):
                     organism,
                     fastq_dir,
                     qc_module_name,
+                    single_nuclei=single_nuclei,
                     library_type=library_type,
                     transcriptome_references=\
                     self.params.cellranger_transcriptomes,

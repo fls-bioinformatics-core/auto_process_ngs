@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 #     cellranger_count: implements 'cellranger_count' QC module
-#     Copyright (C) University of Manchester 2024-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2024-2026 Peter Briggs
 
 """
 Implements the 'cellranger_count' QC module:
@@ -614,7 +614,7 @@ class RunCellrangerCount(PipelineTask):
     Run 'cellranger* count'
     """
     def init(self,samples,fastq_dir,reference_data_path,library_type,
-             out_dir,qc_dir=None,cellranger_exe=None,
+             out_dir,single_nuclei=None,qc_dir=None,cellranger_exe=None,
              cellranger_version=None,chemistry='auto',fastq_dirs=None,
              force_cells=None,cellranger_jobmode='local',
              cellranger_maxjobs=None,cellranger_mempercore=None,
@@ -637,6 +637,8 @@ class RunCellrangerCount(PipelineTask):
           out_dir (str): top-level directory to copy all
             final 'count' outputs into. Outputs won't be
             copied if no value is supplied
+          single_nuclei (bool): explicitly indicate that
+            data are single nuclei rather than single cell
           qc_dir (str): top-level QC directory to put
             'count' QC outputs (e.g. metrics CSV and summary
             HTML files) into. Outputs won't be copied if
@@ -762,12 +764,15 @@ class RunCellrangerCount(PipelineTask):
                         # count with cellranger versions < v10
                         print("Hard-trimming input R1 sequence to 26bp")
                         cmd.add_args("--r1-length=26")
-                    if self.args.library_type in ("snGEX", "snRNA-seq"):
+                    if self.args.single_nuclei or self.args.library_type in ("snGEX", "snRNA-seq"):
                         # For single nuclei RNA-seq specify the
                         # --include-introns option
+                        print("-- including some form of intron inclusion...")
                         if cellranger_major_version >= 7:
                             # Syntax is --include-introns {true|false}
                             # for cellranger 7.0+
+                            # NB From Cellranger 7 onwards '--include-introns true' is the default
+                            # See https://www.10xgenomics.com/support/software/cell-ranger/latest/miscellaneous/cr-intron-mode-rec
                             cmd.add_args("--include-introns",
                                          "true")
                         else:
@@ -927,7 +932,8 @@ def add_cellranger_count(p,project_name,project,qc_dir,
                          library_type,chemistry,
                          transcriptome_references,premrna_references,
                          atac_references,multiome_references,
-                         force_cells,samples=None,fastq_dirs=None,
+                         force_cells,single_nuclei=None,
+                         samples=None,fastq_dirs=None,
                          cellranger_exe=None,reference_dataset=None,
                          extra_projects=None,cellranger_out_dir=None,
                          cellranger_jobmode=None,cellranger_maxjobs=None,
@@ -970,6 +976,8 @@ def add_cellranger_count(p,project_name,project,qc_dir,
         the cell detection algorithm in 'cellranger'
         and 'cellranger-atac' using the '--force-cells'
         option (does nothing for 'cellranger-arc')
+      single_nuclei (bool): if set then indicates data
+        are single nuclei rather than single cell
       samples (list): optional, list of samples to
         restrict single library analyses to (or None
         to use all samples in project)
@@ -1110,6 +1118,7 @@ def add_cellranger_count(p,project_name,project,qc_dir,
         chemistry=chemistry,
         fastq_dirs=fastq_dirs,
         force_cells=force_cells,
+        single_nuclei=single_nuclei,
         cellranger_jobmode=cellranger_jobmode,
         cellranger_maxjobs=cellranger_maxjobs,
         cellranger_mempercore=cellranger_mempercore,

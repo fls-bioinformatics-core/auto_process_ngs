@@ -167,7 +167,7 @@ QC_PROTOCOLS = {
             'rseqc_genebody_coverage',
             'rseqc_infer_experiment',
             'qualimap_rnaseq',
-            'cellranger_count'
+            'cellranger_count(single_nuclei=true)'
         ]
     },
 
@@ -203,11 +203,11 @@ QC_PROTOCOLS = {
             'rseqc_infer_experiment',
             'qualimap_rnaseq',
             'cellranger-arc_count',
-            # Also run Cellranger
-            # Set the chemistry to 'ARC-v1' and library to 'snRNA-seq'
+            # Also run Cellranger on GEX data
+            # Set the chemistry to 'ARC-v1' and single nuclei mode to 'true'
             # See https://kb.10xgenomics.com/hc/en-us/articles/360059656912
             'cellranger_count(chemistry=ARC-v1;'
-                             'library=snRNA-seq;'
+                             'single_nuclei=true;'
                              'cellranger_version=*;'
                              'cellranger_refdata=*;'
                              'set_cell_count=false;'
