@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx/cellplex.py: utilities for handling 10xGenomics Cellplex data
-#     Copyright (C) University of Manchester 2023-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2023-2026 Peter Briggs
 #
 
 """
@@ -145,7 +145,8 @@ class CellrangerMultiConfigCsv:
                     continue
                 if current_section == "samples":
                     if line.startswith('sample_id,cmo_ids') or \
-                       line.startswith('sample_id,probe_barcode_ids'):
+                       line.startswith('sample_id,probe_barcode_ids') or \
+                       line.startswith('sample_id,ocm_barcode_ids'):
                         # Header line, skip
                         continue
                     else:
