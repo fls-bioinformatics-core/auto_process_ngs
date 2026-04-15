@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 #     cellranger_multi: implements 'cellranger_multi' QC module
-#     Copyright (C) University of Manchester 2024-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2024-2026 Peter Briggs
 
 """
 Implements the 'cellranger_multi' QC module:
@@ -737,10 +737,11 @@ class RunCellrangerMulti(PipelineTask):
                 qc_files = [f for f in expected_outputs(config_csv, multi_id)]
                 qc_files.append(os.path.join("outs",
                                              "config.csv"))
-                qc_files.append(os.path.join("outs",
-                                             "multi",
-                                             "multiplexing_analysis",
-                                             "tag_calls_summary.csv"))
+                for f in ("tag_calls_summary.csv",
+                          "cells_per_tag.json",):
+                    qc_files.append(os.path.join("outs",
+                                                 "multi",
+                                                 "multiplexing_analysis", f))
                 # Prefix dirs
                 prefix = multi_dir
                 if config.physical_sample:

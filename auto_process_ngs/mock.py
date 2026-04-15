@@ -1877,7 +1877,7 @@ class Mock10xPackageExe:
             'ATAC' (when mocking 'cellranger-arc')
           multi_outputs (str): set type of
             outputs for 'cellranger multi' (either
-            'cellplex' or 'flex')
+            'ocm', 'flex' or 'cellplex')
           version (str): version of package to
             report
         """
@@ -2491,14 +2491,16 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 with open(web_summary_file,'wt') as fp:
                     fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
             # Multiplexing outs
-            if self._multi_outputs == 'cellplex':
+            if self._multi_outputs == 'ocm':
+                multi_outputs = ("cells_per_tag.json",)
+            elif self._multi_outputs == 'flex':
+                multi_outputs = ("cells_per_tag.json",
+                                 "frp_gem_barcode_overlap.csv")
+            elif self._multi_outputs == 'cellplex':
                 multi_outputs = ("assignment_confidence_table.csv",
                                  "cells_per_tag.json",
                                  "tag_calls_per_cell.csv",
                                  "tag_calls_summary.csv")
-            elif self._multi_outputs == 'flex':
-                multi_outputs = ("cells_per_tag.json",
-                                 "frp_gem_barcode_overlap.csv")
             else:
                 multi_outputs = ()
             for f in multi_outputs:
