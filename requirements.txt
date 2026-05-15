@@ -4,4 +4,4 @@ matplotlib
 pandas
 pillow
 psutil
-git+https://github.com/fls-bioinformatics-core/genomics.git#egg=genomics-bcftbx
+git+https://github.com/fls-bioinformatics-core/genomics.git@1.14.0#egg=genomics-bcftbx
