@@ -425,11 +425,12 @@ class MultiplexSummary(MetricsSummary):
         """
         Returns the number of reads in cells
         """
-        try:
-            # Cellranger 10
-            return self.fetch('Number of reads in cells')
-        except MissingMetricError:
-            pass
+        # Cellranger 10
+        for library_type in ("Gene Expression", "Antibody Capture"):
+            try:
+                return self.fetch('Number of reads in cells', library_type)
+            except (KeyError, MissingMetricError):
+                pass
         try:
             # Cellranger <= 9
             return self.fetch('Number of reads from cells called from this sample')
