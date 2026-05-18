@@ -1090,6 +1090,80 @@ Library,Gene Expression,Probe barcode ID,BC016,Sample ID,Donor8_CD4
 Library,Gene Expression,Probe barcode ID,BC016,UMIs per probe barcode,6380271
 """
 
+IMMUNE_PROFILING_METRICS_SUMMARY_10_0_0 = """ategory,Library Type,Grouped By,Group Name,Metric Name,Metric Value
+Cells,Antibody Capture,,,Cells,37930
+Cells,Antibody Capture,,,Fraction antibody reads,0.9576988178341168
+Cells,Antibody Capture,,,Mean antibody reads usable per cell,1149
+Cells,Antibody Capture,,,Median UMI counts per cell,142
+Cells,Antibody Capture,,,Number of reads in cells,45523645
+Cells,Gene Expression,,,Cells,37930
+Cells,Gene Expression,,,Confidently mapped reads in cells,0.7742347721158955
+Cells,Gene Expression,,,Median UMI counts per cell,738
+Cells,Gene Expression,,,Median genes per cell,572
+Cells,Gene Expression,,,Total genes detected,20846
+Cells,VDJ T,,,Cells with productive TRA contig,0.7531598114824336
+Cells,VDJ T,,,Cells with productive TRB contig,0.9378748928877464
+Cells,VDJ T,,,"Cells with productive V-J spanning (TRA, TRB) pair",0.69103470437018
+Cells,VDJ T,,,Cells with productive V-J spanning pair,0.69103470437018
+Cells,VDJ T,,,Fraction reads in cells,0.5911548487701712
+Cells,VDJ T,,,Median TRA UMIs per Cell,2
+Cells,VDJ T,,,Median TRB UMIs per Cell,5
+Cells,VDJ T,,,Number of cells with productive V-J spanning pair,12903
+Cells,VDJ T,,,Paired clonotype diversity,216.346707175433
+Cells,VDJ T,,,VDJ cells,18672
+Library,Antibody Capture,Fastq ID,JB1_CSP,Number of reads,69811606
+Library,Antibody Capture,Fastq ID,JB1_CSP,Q30 RNA read,0.9762437927935841
+Library,Antibody Capture,Fastq ID,JB1_CSP,Q30 UMI,0.9846448251503244
+Library,Antibody Capture,Fastq ID,JB1_CSP,Q30 barcodes,0.9847557022976466
+Library,Antibody Capture,Physical library ID,JB1_CSP,Antibody reads in cells,0.6876445113931148
+Library,Antibody Capture,Physical library ID,JB1_CSP,Cells,37930
+Library,Antibody Capture,Physical library ID,JB1_CSP,Fraction antibody reads,0.9214780132690258
+Library,Antibody Capture,Physical library ID,JB1_CSP,Fraction antibody reads in aggregate barcodes,0
+Library,Antibody Capture,Physical library ID,JB1_CSP,Fraction antibody reads usable,0.6245014331857657
+Library,Antibody Capture,Physical library ID,JB1_CSP,Mean reads per cell,1841
+Library,Antibody Capture,Physical library ID,JB1_CSP,Number of reads,69811606
+Library,Antibody Capture,Physical library ID,JB1_CSP,Number of reads in the library,69811606
+Library,Antibody Capture,Physical library ID,JB1_CSP,Sequencing saturation,0.78188226038764
+Library,Antibody Capture,Physical library ID,JB1_CSP,Valid UMI Sequences,0.9999924367876596
+Library,Antibody Capture,Physical library ID,JB1_CSP,Valid barcodes,0.9711250304139972
+Library,Gene Expression,Fastq ID,JB1_GEX,Number of reads,242078038
+Library,Gene Expression,Fastq ID,JB1_GEX,Q30 RNA read,0.9234313591844349
+Library,Gene Expression,Fastq ID,JB1_GEX,Q30 UMI,0.9832914420899814
+Library,Gene Expression,Fastq ID,JB1_GEX,Q30 barcodes,0.9770024510131342
+Library,Gene Expression,Physical library ID,JB1_GEX,Cells,37930
+Library,Gene Expression,Physical library ID,JB1_GEX,Confidently mapped antisense,0.07467201547626555
+Library,Gene Expression,Physical library ID,JB1_GEX,Confidently mapped reads in cells,0.7742347721158955
+Library,Gene Expression,Physical library ID,JB1_GEX,Confidently mapped to exonic regions,0.36597524390048136
+Library,Gene Expression,Physical library ID,JB1_GEX,Confidently mapped to genome,0.6986533284774887
+Library,Gene Expression,Physical library ID,JB1_GEX,Confidently mapped to intergenic regions,0.19662931587375143
+Library,Gene Expression,Physical library ID,JB1_GEX,Confidently mapped to intronic regions,0.13604876870325594
+Library,Gene Expression,Physical library ID,JB1_GEX,Confidently mapped to transcriptome,0.4246487531429844
+Library,Gene Expression,Physical library ID,JB1_GEX,Mapped to genome,0.8234203550509609
+Library,Gene Expression,Physical library ID,JB1_GEX,Mean reads per cell,6382
+Library,Gene Expression,Physical library ID,JB1_GEX,Number of reads,242078038
+Library,Gene Expression,Physical library ID,JB1_GEX,Number of reads in the library,242078038
+Library,Gene Expression,Physical library ID,JB1_GEX,Sequencing saturation,0.5154908866258822
+Library,Gene Expression,Physical library ID,JB1_GEX,Valid UMI Sequences,0.9988716572463298
+Library,Gene Expression,Physical library ID,JB1_GEX,Valid barcodes,0.8568153382009813
+Library,VDJ T,Fastq ID,JB1_TCR,Number of reads,68621222
+Library,VDJ T,Fastq ID,JB1_TCR,Q30 RNA read,0.9348689369272873
+Library,VDJ T,Fastq ID,JB1_TCR,Q30 UMI,0.9812304967404981
+Library,VDJ T,Fastq ID,JB1_TCR,Q30 barcodes,0.9713749279974111
+Library,VDJ T,Physical library ID,JB1_TCR,Cells with productive TRA contig,0.7531598114824336
+Library,VDJ T,Physical library ID,JB1_TCR,Cells with productive TRB contig,0.9378748928877464
+Library,VDJ T,Physical library ID,JB1_TCR,"Cells with productive V-J spanning (TRA, TRB) pair",0.69103470437018
+Library,VDJ T,Physical library ID,JB1_TCR,Cells with productive V-J spanning pair,0.69103470437018
+Library,VDJ T,Physical library ID,JB1_TCR,Fraction reads in cells,0.5911548487701712
+Library,VDJ T,Physical library ID,JB1_TCR,Mean reads per cell,3675
+Library,VDJ T,Physical library ID,JB1_TCR,Mean used reads per cell,1886
+Library,VDJ T,Physical library ID,JB1_TCR,Number of reads,68621222
+Library,VDJ T,Physical library ID,JB1_TCR,Reads mapped to TRA,0.2795949172716168
+Library,VDJ T,Physical library ID,JB1_TCR,Reads mapped to TRB,0.5598595479538795
+Library,VDJ T,Physical library ID,JB1_TCR,Reads mapped to any V(D)J gene,0.84426033700563
+Library,VDJ T,Physical library ID,JB1_TCR,VDJ Cells,18672
+Library,VDJ T,Physical library ID,JB1_TCR,Valid barcodes,0.9304403381216382
+"""
+
 MULTIOME_LIBRARIES = """#Local sample\tLinked sample
 PB2_ATAC\tNEXTSEQ_210111/12:PB_GEX/PB2_GEX
 PB1_ATAC\tNEXTSEQ_210111/12:PB_GEX/PB1_GEX

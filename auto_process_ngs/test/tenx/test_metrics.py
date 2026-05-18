@@ -21,6 +21,7 @@ from auto_process_ngs.mock10xdata import CELLPLEX_METRICS_SUMMARY_8_0_0
 from auto_process_ngs.mock10xdata import FLEX_METRICS_SUMMARY_8_0_0
 from auto_process_ngs.mock10xdata import FLEX_METRICS_SUMMARY_9_0_0
 from auto_process_ngs.mock10xdata import FLEX_METRICS_SUMMARY_10_0_0
+from auto_process_ngs.mock10xdata import IMMUNE_PROFILING_METRICS_SUMMARY_10_0_0
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY_2_0_0
 from auto_process_ngs.tenx.metrics import *
@@ -336,5 +337,21 @@ class TestMultiplexSummary(unittest.TestCase):
         self.assertEqual(m.median_genes_per_cell, 1953)
         self.assertEqual(m.total_genes_detected, 15671)
         self.assertEqual(m.median_umi_counts_per_cell, 3152)
+        self.assertRaises(MissingMetricError,
+                          getattr,m,"median_reads_per_cell")
+
+    def test_immune_profiling_summary_cellranger_10_0_0(self):
+        """MultiplexSummary: extract Immune Profiling metrics (Cellranger 10.0.0)
+        """
+        summary_csv = os.path.join(self.wd,"metrics_summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(IMMUNE_PROFILING_METRICS_SUMMARY_10_0_0)
+        m = MultiplexSummary(summary_csv)
+        self.assertEqual(m.reads_in_cells, 45523645)
+        self.assertEqual(m.cells, 37930)
+        self.assertEqual(m.mean_reads_per_cell, 6382)
+        self.assertEqual(m.median_genes_per_cell, 572)
+        self.assertEqual(m.total_genes_detected, 20846)
+        self.assertEqual(m.median_umi_counts_per_cell, 738)
         self.assertRaises(MissingMetricError,
                           getattr,m,"median_reads_per_cell")
