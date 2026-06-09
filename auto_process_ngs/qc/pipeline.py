@@ -452,7 +452,7 @@ class QCPipeline(Pipeline):
             get_star_index = GetReferenceDataset(
                 "%s: get STAR index for '%s'" % (project.name,
                                                  organism),
-                organism,
+                organism_name,
                 self.params.star_indexes,
                 force_reference=self.params.force_star_index)
             self.add_task(get_star_index)
@@ -480,7 +480,7 @@ class QCPipeline(Pipeline):
                 "%s: get RSeQC reference gene model for '%s'" %
                 (project.name,
                  organism),
-                organism,
+                organism_name,
                 self.params.annotation_bed_files)
             self.add_task(get_reference_gene_model)
             qc_metadata['annotation_bed'] = \
@@ -490,7 +490,7 @@ class QCPipeline(Pipeline):
             get_annotation_gtf = GetReferenceDataset(
                 "%s: get GTF annotation for '%s'" % (project.name,
                                                      organism),
-                organism,
+                organism_name,
                 self.params.annotation_gtf_files,
                 force_reference=self.params.force_gtf_annotation)
             self.add_task(get_annotation_gtf)

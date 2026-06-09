@@ -82,7 +82,7 @@ class BaseQCPipelineTestCase(unittest.TestCase):
             self.fastq_screens[screen] = conf_file
         # Add (empty) reference data files
         self.ref_data = dict()
-        for build in ('hg38','mm10',):
+        for build in ('hg38','mm10', 'chok1'):
             self.ref_data[build] = {}
             build_dir = os.path.join(self.data,build)
             os.mkdir(build_dir)
