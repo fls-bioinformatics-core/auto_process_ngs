@@ -207,6 +207,13 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             extra_bcl2fastq_dirs.append(dirn)
         except Exception:
             pass
+    # Set up runners
+    if runner is None:
+        rsync_runner = ap.settings.runners.rsync
+        default_runner = ap.settings.general.default_runner
+    else:
+        rsync_runner = runner
+        default_runner = runner
     if not is_staging:
         # Are there any projects to archive?
         try:
@@ -284,13 +291,6 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         if dry_run:
             log_dir += '_dry_run'
         ap.set_log_dir(ap.get_log_subdir(log_dir))
-        # Set up runners
-        if runner is None:
-            rsync_runner = ap.settings.runners.rsync
-            default_runner = ap.settings.general.default_runner
-        else:
-            rsync_runner = runner
-            default_runner = runner
         # Set log directory
         for r in (rsync_runner,
                   default_runner,):
