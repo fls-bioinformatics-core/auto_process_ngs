@@ -722,8 +722,10 @@ Parameter              Function
 ``zip_fastqs``         Whether to bundle Fastqs into ZIP archives
 ``max_zip_size``       Maximum size for each ZIP archive (if Fastqs
                        are bundled)
+``short_names``        Use shortened base name where possible for the
+                       shared files
 ``readme_template``    Template file to generate ``README`` from
-``url``                Base URL to access copied data at
+``url``                Base URL to access copied data from
 ``include_downloader`` Whether to include ``download_fastqs.py``
 ``include_qc_report``  Whether to include zipped QC reports
 ``hard_links``         Whether to hard link to Fastqs rather making

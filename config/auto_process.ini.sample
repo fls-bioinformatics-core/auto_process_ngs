@@ -182,6 +182,7 @@
 #   * 'run_id': creates new subdir 'PLATFORM_DATESTAMP.RUN_ID-PROJECT'
 # - zip_fastqs: whether to bundle Fastqs into ZIP archives
 # - max_zip_size: maximum size for each ZIP archive
+# - short_names: use shorter naming scheme for shared files
 # - readme_template: template file to generate README file from
 #   (either full path or the name of a file in the 'templates'
 #   directory of the installation
@@ -199,6 +200,7 @@
 ;subdir = random_bin
 ;zip_fastqs = true
 ;max_zip_size = 5G
+;short_names = true
 ;readme_template = README.webserver.txt
 ;url = http://awesome.com/data
 ;include_downloader = true
