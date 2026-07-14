@@ -750,6 +750,7 @@ def main(argv=None):
                     analysis_dir.metadata.run_number,
                     analysis_dir.metadata.instrument_datestamp,
                     analysis_dir.run_id))
+    summary.append(f"Project '{project.name}'")
     summary.append("%s%s dataset" %
                    ("%s " % project.info.single_cell_platform
                     if project.info.single_cell_platform else '',
