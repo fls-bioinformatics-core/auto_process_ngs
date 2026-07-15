@@ -1350,6 +1350,12 @@ def main(argv=None):
     if not working_dir:
         working_dir = os.path.join(project_dir,'__run_qc')
 
+    # Location for conda environments
+    conda_env_dir = args.conda_env_dir
+    if conda_env_dir is None:
+        # Explicitly set to a subdirectory of the working directory
+        conda_env_dir = os.path.join(working_dir, "__conda", "envs")
+
     # Set up and run the QC pipeline
     announce("Running QC pipeline")
     runqc = QCPipeline()
@@ -1394,7 +1400,7 @@ def main(argv=None):
                        default_runner=default_runner,
                        envmodules=envmodules,
                        enable_conda=enable_conda,
-                       conda_env_dir=args.conda_env_dir,
+                       conda_env_dir=conda_env_dir,
                        working_dir=working_dir,
                        force_star_index=force_star_index,
                        force_gtf_annotation=force_gtf_annotation,
@@ -1413,6 +1419,7 @@ def main(argv=None):
                   out_dir=out_dir,
                   zip_outputs=True,
                   multiqc=(not args.no_multiqc),
+                  conda_env_dir=conda_env_dir,
                   force=True,
                   runner=runners['report_runner'])
 
