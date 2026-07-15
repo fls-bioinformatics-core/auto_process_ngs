@@ -868,7 +868,7 @@ def main(argv=None):
             if analysis_dir.metadata.analysis_number is not None:
                 run_number += "_" + str(analysis_dir.metadata.analysis_number)
             if short_names:
-                final_zip_basename = f"{project.name}"
+                final_zip_basename = f"{project.name}-fastqs"
             else:
                 final_zip_basename = \
                     "{platform}_{datestamp}.{run_number}-{project}-fastqs".\
