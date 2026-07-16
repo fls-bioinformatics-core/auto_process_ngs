@@ -244,10 +244,11 @@ def run_qc(ap,projects=None,protocols=None,
         enable_conda = ap.settings.conda.enable_conda
     if conda_env_dir is None:
         # Use value from configuration
-        conda_env_dir = ap.settings.conda.env_dir
-    else:
-        # Use subdirectory of analysis dir
-        conda_env_dir = os.path.join(ap.analysis_dir, "__conda", "envs")
+        if ap.settings.conda.env_dir is not None:
+            conda_env_dir = ap.settings.conda.env_dir
+        else:
+            # Use subdirectory of analysis dir
+            conda_env_dir = os.path.join(ap.analysis_dir, "__conda", "envs")
     # Set scheduler parameters
     if poll_interval is None:
         poll_interval = ap.settings.general.poll_interval
