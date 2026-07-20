@@ -103,7 +103,7 @@ def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
 def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
               report_html=None,zip_outputs=True,multiqc=False,
               out_dir=None,force=False,runner=None,log_dir=None,
-              suppress_warning=False):
+              conda_env_dir=None,suppress_warning=False):
     """
     Generate report for the QC run for a project
 
@@ -132,6 +132,9 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         for running the reporting
       log_dir (str): optional, specify a directory to
         write logs to
+      conda_env_dir (str): optional, specify the directory
+        to create conda environments under (default: use
+        value supplied in settings)
       suppress_warning (bool): if True then don't show the
         warning message even when there are missing metrics
         (default: show the warning if there are missing
@@ -183,7 +186,8 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
     if Settings().conda.enable_conda:
         print("Attempting to acquire conda environment for reporting")
         # Get location for conda environments
-        conda_env_dir = Settings().conda.env_dir
+        if conda_env_dir is None:
+            conda_env_dir = Settings().conda.env_dir
         # Set up conda wrapper
         conda = CondaWrapper(env_dir=conda_env_dir)
         # Get environment for MultiQC reporting
