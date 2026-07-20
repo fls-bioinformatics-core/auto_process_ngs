@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2025 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2026 Peter Briggs
 #
 #########################################################################
 
@@ -392,7 +392,12 @@ def make_fastqs(ap,protocol='standard',platform=None,
     if enable_conda is None:
         enable_conda = ap.settings.conda.enable_conda
     if conda_env_dir is None:
-        conda_env_dir = ap.settings.conda.env_dir
+        if ap.settings.conda.env_dir is not None:
+            # Use value from configuration
+            conda_env_dir = ap.settings.conda.env_dir
+        else:
+            # Use subdirectory of analysis dir
+            conda_env_dir = os.path.join(ap.analysis_dir, "__conda", "envs")
 
     # Other pipeline settings
     poll_interval = ap.settings.general.poll_interval
