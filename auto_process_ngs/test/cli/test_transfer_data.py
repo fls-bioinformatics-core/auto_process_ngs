@@ -664,3 +664,78 @@ poll_interval = 0.5
              "--dry-run" ]), 0)
         # Check nothing was transferred
         self.assertEqual(len(os.listdir(target_dir)), 0)
+
+    def test_transfer_data_fastqs_with_qc_report_short_names(self):
+        """
+        transfer_data: copy Fastqs and QC report with shortened names
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901",
+                       "run_number": "89" },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "Human" } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add QC outputs
+        project = AnalysisProject(os.path.join(mockdir.dirn, "AB"))
+        UpdateAnalysisProject(project).add_qc_outputs()
+        # Make a target directory
+        target_dir = os.path.join(self.dirn, "shared")
+        os.makedirs(target_dir)
+        # Do data transfer (--include_qc_report)
+        self.assertEqual(transfer_data(
+            [target_dir,
+             os.path.join(mockdir.dirn, "AB"),
+             "--include_qc_report",
+             "--short_names"]), 0)
+        # Check transferred artefacts
+        print(os.listdir(target_dir))
+        expected_files = ("AB1_S1_R1_001.fastq.gz",
+                          "AB1_S1_R2_001.fastq.gz",
+                          "AB2_S2_R2_001.fastq.gz",
+                          "AB2_S2_R1_001.fastq.gz",
+                          "AB.chksums",
+                          "qc_report.AB.zip")
+        for f in expected_files:
+            self.assertTrue(os.path.exists(os.path.join(target_dir, f)),
+                            f"'{f}': missing, should be present")
+        for f in os.listdir(target_dir):
+            self.assertTrue(f in expected_files,
+                            f"'{f}': present, but not expected")
+
+    def test_transfer_data_zip_fastqs_short_names(self):
+        """
+        transfer_data: put Fastqs into ZIP archive using shortened names
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901",
+                       "run_number": "89" },
+            project_metadata={ "AB": { "Library type": "RNA-seq",
+                                       "Organism": "Human" } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a target directory
+        target_dir = os.path.join(self.dirn, "shared")
+        os.makedirs(target_dir)
+        # Do data transfer (--zip_fastqs)
+        self.assertEqual(transfer_data(
+            [target_dir,
+             os.path.join(mockdir.dirn, "AB"),
+             "--zip_fastqs",
+             "--short_names"]), 0)
+        # Check transferred artefacts
+        print(os.listdir(target_dir))
+        expected_files = ("AB-fastqs.zip",
+                          "AB-fastqs.checksums")
+        for f in expected_files:
+            self.assertTrue(os.path.exists(os.path.join(target_dir, f)),
+                            f"'{f}': missing, should be present")
+        for f in os.listdir(target_dir):
+            self.assertTrue(f in expected_files,
+                            f"'{f}': present, but not expected")

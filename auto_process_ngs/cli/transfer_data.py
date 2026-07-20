@@ -291,6 +291,10 @@ def main(argv=None):
                    help="copy the 'download_fastqs.py' utility to the "
                     "final location")
     sp = p.add_argument_group("Advanced options")
+    sp.add_argument('--short_names',action='store_true',
+                    default=None,
+                    help="use shortened base names where possible for "
+                    "shared files")
     sp.add_argument('--link',action='store_true',
                     help="hard link files instead of copying")
     sp.add_argument('--runner',action='store',
@@ -337,6 +341,7 @@ def main(argv=None):
         subdir = dest.subdir
         zip_fastqs = dest.zip_fastqs
         max_zip_size = dest.max_zip_size
+        short_names = dest.short_names
         include_downloader = dest.include_downloader
         include_qc_report = dest.include_qc_report
         hard_links = dest.hard_links
@@ -347,6 +352,7 @@ def main(argv=None):
         subdir = None
         zip_fastqs = False
         max_zip_size = None
+        short_names = False
         include_downloader = False
         include_qc_report = False
         hard_links = False
@@ -361,6 +367,8 @@ def main(argv=None):
         zip_fastqs = True
     if args.max_zip_size:
         max_zip_size = args.max_zip_size
+    if args.short_names:
+        short_names = args.short_names
     if args.include_downloader:
         include_downloader = True
     if args.include_qc_report:
@@ -392,6 +400,7 @@ def main(argv=None):
     print(f"Hard link Fastqs     : {hard_links}")
     print(f"Zip Fastqs           : {zip_fastqs}")
     print(f"Max ZIP size         : {max_zip_size}")
+    print(f"Shorten file names   : {short_names}")
     print(f"Dry run              : {dry_run}")
 
     # Check at least one artefact is being transferred
@@ -741,6 +750,7 @@ def main(argv=None):
                     analysis_dir.metadata.run_number,
                     analysis_dir.metadata.instrument_datestamp,
                     analysis_dir.run_id))
+    summary.append(f"Project '{project.name}'")
     summary.append("%s%s dataset" %
                    ("%s " % project.info.single_cell_platform
                     if project.info.single_cell_platform else '',
@@ -857,13 +867,16 @@ def main(argv=None):
             run_number = str(analysis_dir.metadata.run_number)
             if analysis_dir.metadata.analysis_number is not None:
                 run_number += "_" + str(analysis_dir.metadata.analysis_number)
-            final_zip_basename = \
-                "{platform}_{datestamp}.{run_number}-{project}-fastqs".\
-                format(
-                    platform=analysis_dir.metadata.platform.upper(),
-                    datestamp=analysis_dir.metadata.instrument_datestamp,
-                    run_number=run_number,
-                    project=project.name)
+            if short_names:
+                final_zip_basename = f"{project.name}-fastqs"
+            else:
+                final_zip_basename = \
+                    "{platform}_{datestamp}.{run_number}-{project}-fastqs".\
+                    format(
+                        platform=analysis_dir.metadata.platform.upper(),
+                        datestamp=analysis_dir.metadata.instrument_datestamp,
+                        run_number=run_number,
+                        project=project.name)
             job_ix = 0
             for f in listdir(working_dir):
                 if f == "%s.chksums" % project_name:
@@ -907,11 +920,14 @@ def main(argv=None):
     if qc_zips:
         for qc_zip in qc_zips:
             print("Copying '%s'" % os.path.basename(qc_zip))
+            qc_zip_basename = os.path.basename(qc_zip)
+            if short_names:
+                # Hack to remove run name from QC report ZIP name
+                qc_zip_basename = f"{'.'.join(qc_zip_basename.split('.')[:-2])}.zip"
             td.run_job(
-                f"copy_qc_zip.{job_id}.{os.path.basename(qc_zip)}",
+                f"copy_qc_zip.{job_id}.{qc_zip_basename}",
                 copy_command(qc_zip,
-                             os.path.join(target_dir,
-                                          os.path.basename(qc_zip)),
+                             os.path.join(target_dir, qc_zip_basename),
                              link=hard_links))
 
     # Tar and copy 10xGenomics outputs
@@ -920,12 +936,13 @@ def main(argv=None):
             print("Tar gzipping and copying '%s'" %
                   os.path.basename(cellranger_dir))
             # Tar & gzip data
-            targz = os.path.join(working_dir,
-                                 "%s.%s.%s.tgz" % (
-                                     os.path.basename(
-                                         cellranger_dir),
-                                     project_name,
-                                     project.info.run))
+            if short_names:
+                targz = f"{os.path.basename(cellranger_dir)}.{project_name}.tgz"
+            else:
+                targz = "%s.%s.%s.tgz" % (os.path.basename(cellranger_dir),
+                                          project_name,
+                                          project.info.run)
+            targz = os.path.join(working_dir, targz)
             targz_job = td.run_job(
                 f"targz_10x_output.{job_id}.{os.path.basename(cellranger_dir)}",
                 Command("tar",
@@ -980,11 +997,13 @@ def main(argv=None):
     if visium_images_dir:
         print(f"Tar gzipping and copying '{visium_images_dir}'")
         # Tar & gzip data
-        targz = os.path.join(working_dir,
-                             "%s.%s.%s.tgz" % (
-                                 os.path.basename(visium_images_dir),
-                                 project_name,
-                                 project.info.run))
+        if short_names:
+            targz = f"{os.path.basename(visium_images_dir)}.{project_name}.tgz"
+        else:
+            targz = "%s.%s.%s.tgz" % (os.path.basename(visium_images_dir),
+                                      project_name,
+                                      project.info.run)
+        targz = os.path.join(working_dir, targz)
         targz_job = td.run_job(
             f"targz_visium_images.{job_id}.{os.path.basename(visium_images_dir)}",
             Command("tar",
