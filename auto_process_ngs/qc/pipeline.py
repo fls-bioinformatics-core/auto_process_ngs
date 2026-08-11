@@ -36,12 +36,8 @@ import logging
 import tempfile
 import shutil
 import random
-from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.FASTQFile import FastqIterator
-from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
-from bcftbx.utils import mkdirs
-from bcftbx.utils import find_program
 from bcftbx.ngsutils import getreads
 from bcftbx.ngsutils import getreads_subset
 from ..analysis import AnalysisFastq
@@ -57,10 +53,8 @@ from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineParam as Param
 from ..pipeliner import ListParam
 from ..pipeliner import PipelineFailure
-from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..tenx.multiome import MultiomeLibraries
-from ..tenx.utils import add_cellranger_args
-from ..utils import get_organism_list
+from ..utils import normalise_organism_name
 from .modules.cellranger_atac_count import CellrangerAtacCount
 from .modules.cellranger_arc_count import CellrangerArcCount
 from .modules.cellranger_count import CellrangerCount
@@ -74,8 +68,6 @@ from .modules.rseqc_genebody_coverage import RseqcGenebodyCoverage
 from .modules.rseqc_infer_experiment import RseqcInferExperiment
 from .modules.sequence_lengths import SequenceLengths
 from .modules.strandedness import Strandedness
-from .protocols import determine_qc_protocol
-from .protocols import fetch_protocol_definition
 from .protocols import parse_qc_module_spec
 from .reporting import report as reportqc
 from .utils import get_bam_basename
@@ -286,10 +278,7 @@ class QCPipeline(Pipeline):
             organism = project.info.organism
 
         # Sanitised organism name
-        organism_name = str(organism).\
-                        strip().\
-                        lower().\
-                        replace(' ','_')
+        organism_name = normalise_organism_name(organism)
 
         # Report details
         self.report("-- Protocol   : %s" % protocol.name)
