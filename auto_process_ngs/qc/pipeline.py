@@ -61,6 +61,7 @@ from ..tenx.cellplex import CellrangerMultiConfigCsv
 from ..tenx.multiome import MultiomeLibraries
 from ..tenx.utils import add_cellranger_args
 from ..utils import get_organism_list
+from ..utils import normalise_organism_name
 from .modules.cellranger_atac_count import CellrangerAtacCount
 from .modules.cellranger_arc_count import CellrangerArcCount
 from .modules.cellranger_count import CellrangerCount
@@ -80,7 +81,6 @@ from .protocols import parse_qc_module_spec
 from .reporting import report as reportqc
 from .utils import get_bam_basename
 from .utils import get_seq_data_samples
-from .utils import normalise_organism_name
 from .utils import set_cell_count_for_project
 from .verification import verify_project
 
