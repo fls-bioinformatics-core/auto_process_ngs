@@ -1386,6 +1386,7 @@ class TestNormaliseOrganismName(unittest.TestCase):
                          "mus_musculus")
         self.assertEqual(normalise_organism_name(" Mus  musculus "),
                          "mus_musculus")
+        self.assertEqual(normalise_organism_name("C. elegans"), "c_elegans")
 
 class TestSplitUserHostDir(unittest.TestCase):
     """Tests for the split_user_host_dir function

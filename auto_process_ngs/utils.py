@@ -1100,9 +1100,9 @@ def normalise_organism_name(name):
       String: normalised organism name
     """
     # Make lowercase, split on commas and replace whitespace
-    # with single underscore, then strip leading/trailing
-    # underscores
-    return re.sub(r'\s+','_',str(name).lower()).strip('_')
+    # and other non-alphanumeric characters with single underscore,
+    # finally strip leading/trailing underscores
+    return re.sub(r'\W+','_',str(name).lower()).strip('_')
 
 def split_user_host_dir(location):
     # Split a location of the form [[user@]host:]dir into its
