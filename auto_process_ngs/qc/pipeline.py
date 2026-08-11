@@ -80,6 +80,7 @@ from .protocols import parse_qc_module_spec
 from .reporting import report as reportqc
 from .utils import get_bam_basename
 from .utils import get_seq_data_samples
+from .utils import normalise_organism_name
 from .utils import set_cell_count_for_project
 from .verification import verify_project
 
@@ -286,10 +287,7 @@ class QCPipeline(Pipeline):
             organism = project.info.organism
 
         # Sanitised organism name
-        organism_name = str(organism).\
-                        strip().\
-                        lower().\
-                        replace(' ','_')
+        organism_name = normalise_organism_name(organism)
 
         # Report details
         self.report("-- Protocol   : %s" % protocol.name)
