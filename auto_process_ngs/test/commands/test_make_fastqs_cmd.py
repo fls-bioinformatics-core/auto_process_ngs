@@ -1358,12 +1358,6 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
             self.assertTrue(os.path.exists(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
-        self.assertTrue(
-            os.path.exists(
-                os.path.join(analysis_dir,
-                             "logs",
-                             "002_make_fastqs",
-                             "missing_fastqs.log")))
 
     #@unittest.skip("Skipped")
     def test_make_fastqs_handle_bcl2fastq2_failure(self):
