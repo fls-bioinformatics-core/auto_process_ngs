@@ -53,6 +53,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 analyse_barcodes=True,barcode_analysis_dir=None,
                 force_copy_of_primary_data=False,
                 create_empty_fastqs=False,
+                no_undetermined_fastqs=False,
                 ignore_missing_bcls=False,runner=None,
                 cellranger_jobmode=None,
                 cellranger_mempercore=None,
@@ -165,6 +166,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
       create_empty_fastqs (bool): if True then create empty 'placeholder'
         fastq files for any missing fastqs after bcl2fastq
         (must have completed with zero exit status)
+      no_undetermined_fastqs (bool): if True then don't keep the
+        "undetermined" fastq files
       runner (JobRunner): (optional) specify a non-default job runner
         to use for fastq generation
       cellranger_jobmode (str): (optional) job mode to run cellranger in
@@ -440,6 +443,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              find_adapters_with_sliding_window,
                              create_empty_fastqs=create_empty_fastqs,
                              ignore_missing_bcls=ignore_missing_bcls,
+                             no_undetermined_fastqs=no_undetermined_fastqs,
                              stats_file=stats_file,
                              per_lane_stats=per_lane_stats_file,
                              nprocessors=nprocessors,
