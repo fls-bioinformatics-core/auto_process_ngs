@@ -453,6 +453,13 @@ def add_make_fastqs_command(cmdparser):
                               dest='create_fastq_for_index_read',
                               default=False,
                               help="also create FASTQs for index reads")
+    # Don't include 'undetermined' Fastqs
+    bcl_to_fastq.add_argument('--no-undetermined-fastqs',
+                              action='store_true',
+                              dest='no_undetermined_fastqs',
+                              default=False,
+                              help="don't create or keept the 'undetermined' FASTQs "
+                              "with unassigned reads from demultiplexing")
     # Ignore missing or corrupted BCL files
     bcl_to_fastq.add_argument("--ignore-missing-bcls", action="store_true",
                               dest="ignore_missing_bcls", default=False,
@@ -1639,6 +1646,7 @@ def make_fastqs(args):
         adapter_sequence=args.adapter_sequence,
         adapter_sequence_read2=args.adapter_sequence_read2,
         create_fastq_for_index_read=args.create_fastq_for_index_read,
+        no_undetermined_reads=args.no_undetermined_reads,
         ignore_missing_bcls=args.ignore_missing_bcls,
         find_adapters_with_sliding_window=\
         args.find_adapters_with_sliding_window,
