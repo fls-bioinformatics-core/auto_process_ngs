@@ -124,6 +124,7 @@ LANE_SUBSET_ATTRS = (
     'i2_length',
     'override_template',
     'no_lane_splitting',
+    'no_undetermined_fastqs',
     'tenx_filter_single_index',
     'tenx_filter_dual_index',
     'spaceranger_rc_i2_override',
@@ -355,6 +356,7 @@ class MakeFastqs(Pipeline):
         self.add_param('find_adapters_with_sliding_window',value=False,
                        type=bool)
         self.add_param('create_empty_fastqs',value=False,type=bool)
+        self.add_param('no_undetermined_fastqs',value=False,type=bool)
         self.add_param('ignore_missing_bcls',value=False,type=bool)
         self.add_param('name',type=str)
         self.add_param('stats_file',type=str)
@@ -484,6 +486,7 @@ class MakeFastqs(Pipeline):
                 adapter_sequence=self._adapter_sequence,
                 adapter_sequence2=self._adapter_sequence_read2,
                 no_lane_splitting=self.params.no_lane_splitting,
+                no_undetermined_fastqs=self.params.no_undetermined_fastqs,
                 create_fastq_for_index_read=\
                 self.params.create_fastq_for_index_read,
                 find_adapters_with_sliding_window=\
@@ -1086,6 +1089,11 @@ class MakeFastqs(Pipeline):
             create_fastq_for_index_read = \
                 subset['create_fastq_for_index_read']
 
+            #########################
+            # No undetermined Fastqs
+            #########################
+            no_undetermined_fastqs = subset['no_undetermined_fastqs']
+
             # Use sliding window for adapter trimming
             find_adapters_with_sliding_window = \
                 subset['find_adapters_with_sliding_window']
@@ -1200,6 +1208,7 @@ class MakeFastqs(Pipeline):
                         no_lane_splitting=self.params.no_lane_splitting,
                         create_fastq_for_index_read=\
                         create_fastq_for_index_read,
+                        no_undetermined_fastqs=no_undetermined_fastqs,
                         find_adapters_with_sliding_window=\
                         find_adapters_with_sliding_window,
                         create_empty_fastqs=self.params.create_empty_fastqs,
@@ -1284,6 +1293,7 @@ class MakeFastqs(Pipeline):
                                 create_fastq_for_index_read=\
                                 create_fastq_for_index_read,
                                 create_empty_fastqs=False,
+                                no_undetermined_fastqs=no_undetermined_fastqs,
                                 ignore_missing_fastqs=True,
                                 platform=identify_platform.output.platform,
                                 bclconvert_exe=\
@@ -1342,6 +1352,8 @@ class MakeFastqs(Pipeline):
                             create_fastq_for_index_read,
                             create_empty_fastqs=\
                             self.params.create_empty_fastqs,
+                            no_undetermined_fastqs=\
+                            self.params.no_undetermined_fastqs,
                             platform=identify_platform.output.platform,
                             bclconvert_exe=\
                             get_bclconvert.output.bclconvert_exe,
@@ -1684,9 +1696,9 @@ class MakeFastqs(Pipeline):
             primary_data_dir=None,force_copy_of_primary_data=False,
             no_lane_splitting=None,create_fastq_for_index_read=None,
             find_adapters_with_sliding_window=None,
-            create_empty_fastqs=None,ignore_missing_bcls=None,
-            name=None,stats_file=None,stats_full=None,
-            per_lane_stats=None,per_lane_sample_stats=None,
+            create_empty_fastqs=None, no_undetermined_fastqs=None,
+            ignore_missing_bcls=None, name=None,stats_file=None,
+            stats_full=None, per_lane_stats=None,per_lane_sample_stats=None,
             nprocessors=None,cellranger_jobmode='local',
             cellranger_mempercore=None,cellranger_maxjobs=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
@@ -1722,6 +1734,8 @@ class MakeFastqs(Pipeline):
             sequences (--find-adapters-with-sliding-window)
           create_empty_fastqs (bool): if True then create empty
             "placeholder" Fastqs if not created by bcl2fastq
+          no_undetermined_fastqs (bool): if True then don't keep
+            the "undetermined" Fastqs if created
           ignore_missing_bcls (bool): if True then ignore missing
             or corrupted BCL files
           name (str): optional identifier for output
@@ -1905,6 +1919,7 @@ class MakeFastqs(Pipeline):
             'find_adapters_with_sliding_window':
             find_adapters_with_sliding_window,
             'create_empty_fastqs': create_empty_fastqs,
+            'no_undetermined_fastqs': no_undetermined_fastqs,
             'ignore_missing_bcls': ignore_missing_bcls,
             'name': name,
             'stats_file': stats_file,
@@ -2391,7 +2406,7 @@ class RunBcl2Fastq(PipelineTask):
              mask_short_adapter_reads=None,
              create_fastq_for_index_read=False,
              find_adapters_with_sliding_window=False,nprocessors=None,
-             create_empty_fastqs=False,
+             create_empty_fastqs=False, no_undetermined_fastqs=False,
              platform=None,bcl2fastq_exe=None,bcl2fastq_version=None,
              skip_bcl2fastq=False,conda_pkgs=None):
         """
@@ -2414,6 +2429,9 @@ class RunBcl2Fastq(PipelineTask):
           create_fastq_for_index_read (boolean): if True then
             also create Fastq files for index reads (default,
             don't create index read Fastqs)
+          no_undetermined_fastqs (bool): if True then don't
+            keep any 'undetermined' Fastq files (default, do
+            keep the 'undetermined' Fastqs)
           find_adapters_with_sliding_window (bool): if True
             then use sliding window algorith for identifying
             adapter sequences (default is to use string
@@ -2600,6 +2618,17 @@ class RunBcl2Fastq(PipelineTask):
                     # Terminate with an exception
                     raise Exception("Failed to verify outputs against "
                                     "samplesheet")
+            # Remove undetermined Fastqs
+            if self.args.no_undetermined_fastqs:
+                illumina_data = IlluminaData(os.path.dirname(self.tmp_out_dir),
+                                             os.path.basename(self.tmp_out_dir))
+                if illumina_data.undetermined:
+                    print("Removing undetermined fastqs")
+                    for undetermined_sample in illumina_data.undetermined.samples:
+                        for fq in undetermined_sample.fastq:
+                            fq = os.path.join(undetermined_sample.dirn, fq)
+                            if os.path.exists(fq):
+                                os.remove(fq)
             # Move to final location
             print("Moving output to final location: %s" % self.args.out_dir)
             os.rename(self.tmp_out_dir,self.args.out_dir)
@@ -2613,9 +2642,9 @@ class RunBclConvert(PipelineTask):
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
              create_fastq_for_index_read=False,nprocessors=None,
-             create_empty_fastqs=False,ignore_missing_fastqs=False,
-             platform=None,bclconvert_exe=None,bclconvert_version=None,
-             skip_bclconvert=False):
+             create_empty_fastqs=False, no_undetermined_fastqs=False,
+             ignore_missing_fastqs=False, platform=None, bclconvert_exe=None,
+             bclconvert_version=None, skip_bclconvert=False):
         """
         Initialise the RunBclConvert task
 
@@ -2636,6 +2665,8 @@ class RunBclConvert(PipelineTask):
           create_fastq_for_index_read (boolean): if True then
             also create Fastq files for index reads (default,
             don't create index read Fastqs)
+          no_undetermined_fastqs (bool): if True then don't
+            create 'undetermined' Fastq files
           nprocessors (int): number of processors to use
             (taken from job runner by default)
           create_empty_fastqs (bool): if True then create empty
@@ -2869,6 +2900,17 @@ class RunBclConvert(PipelineTask):
                     # Terminate with an exception
                     raise Exception("Failed to verify outputs against "
                                     "samplesheet")
+            # Remove undetermined Fastqs
+            if self.args.no_undetermined_fastqs:
+                illumina_data = IlluminaData(os.path.dirname(self.tmp_out_dir),
+                                             os.path.basename(self.tmp_out_dir))
+                if illumina_data.undetermined:
+                    print("Removing undetermined fastqs")
+                    for undetermined_sample in illumina_data.undetermined.samples:
+                        for fq in undetermined_sample.fastq:
+                            fq = os.path.join(undetermined_sample.dirn, fq)
+                            if os.path.exists(fq):
+                                os.remove(fq)
             # Move to final location
             print("Moving output to final location: %s" % self.args.out_dir)
             os.rename(self.tmp_out_dir,self.args.out_dir)

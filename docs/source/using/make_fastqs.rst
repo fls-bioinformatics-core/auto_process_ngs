@@ -275,8 +275,8 @@ be used with the other lanes:
 
    auto_process.py make_fastqs \
             --lanes=1-4,7-8:standard \
-	    --lanes=5,6:10x_chromium_sc \
-	    --sample-sheet=SampleSheet.updated.csv
+            --lanes=5,6:10x_chromium_sc \
+            --sample-sheet=SampleSheet.updated.csv
 
 
 .. note::
@@ -294,8 +294,8 @@ specify the adapter sequences for lane 8:
 
    auto_process.py make_fastqs \
             --lanes=1-7 \
-	    --lanes=8:adapter=CTGTCTCTTATACACATCT \
-	    --sample-sheet=SampleSheet.updated.csv
+            --lanes=8:adapter=CTGTCTCTTATACACATCT \
+            --sample-sheet=SampleSheet.updated.csv
 
 The general form of the ``--lanes`` option is:
 
@@ -328,6 +328,8 @@ Option                                Description
                                       for ``spaceranger`` (can be
                                       either ``true`` or ``false``)
 ``analyse_barcodes=yes|no``           Turn barcode analysis on or off
+``no_undetermined_fastqs=yes|no``     Turn undetermined Fastqs generation
+                                      on or off
 ===================================== ==================================
 
 These options will override the defaults and any global values
