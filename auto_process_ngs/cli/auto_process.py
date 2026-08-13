@@ -1646,7 +1646,7 @@ def make_fastqs(args):
         adapter_sequence=args.adapter_sequence,
         adapter_sequence_read2=args.adapter_sequence_read2,
         create_fastq_for_index_read=args.create_fastq_for_index_read,
-        no_undetermined_reads=args.no_undetermined_reads,
+        no_undetermined_fastqs=args.no_undetermined_fastqs,
         ignore_missing_bcls=args.ignore_missing_bcls,
         find_adapters_with_sliding_window=\
         args.find_adapters_with_sliding_window,
