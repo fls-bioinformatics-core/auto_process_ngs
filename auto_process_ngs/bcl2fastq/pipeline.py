@@ -124,6 +124,7 @@ LANE_SUBSET_ATTRS = (
     'i2_length',
     'override_template',
     'no_lane_splitting',
+    'no_undetermined_fastqs',
     'tenx_filter_single_index',
     'tenx_filter_dual_index',
     'spaceranger_rc_i2_override',
@@ -485,6 +486,7 @@ class MakeFastqs(Pipeline):
                 adapter_sequence=self._adapter_sequence,
                 adapter_sequence2=self._adapter_sequence_read2,
                 no_lane_splitting=self.params.no_lane_splitting,
+                no_undetermined_fastqs=self.params.no_undetermined_fastqs,
                 create_fastq_for_index_read=\
                 self.params.create_fastq_for_index_read,
                 find_adapters_with_sliding_window=\
@@ -1087,6 +1089,11 @@ class MakeFastqs(Pipeline):
             create_fastq_for_index_read = \
                 subset['create_fastq_for_index_read']
 
+            #########################
+            # No undetermined Fastqs
+            #########################
+            no_undetermined_fastqs = subset['no_undetermined_fastqs']
+
             # Use sliding window for adapter trimming
             find_adapters_with_sliding_window = \
                 subset['find_adapters_with_sliding_window']
@@ -1201,8 +1208,7 @@ class MakeFastqs(Pipeline):
                         no_lane_splitting=self.params.no_lane_splitting,
                         create_fastq_for_index_read=\
                         create_fastq_for_index_read,
-                        no_undetermined_fastqs=
-                        self.params.no_undetermined_fastqs,
+                        no_undetermined_fastqs=no_undetermined_fastqs,
                         find_adapters_with_sliding_window=\
                         find_adapters_with_sliding_window,
                         create_empty_fastqs=self.params.create_empty_fastqs,
@@ -1287,8 +1293,7 @@ class MakeFastqs(Pipeline):
                                 create_fastq_for_index_read=\
                                 create_fastq_for_index_read,
                                 create_empty_fastqs=False,
-                                no_undetermined_fastqs=
-                                self.params.no_undetermined_fastqs,
+                                no_undetermined_fastqs=no_undetermined_fastqs,
                                 ignore_missing_fastqs=True,
                                 platform=identify_platform.output.platform,
                                 bclconvert_exe=\
