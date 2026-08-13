@@ -2623,6 +2623,7 @@ class RunBcl2Fastq(PipelineTask):
                 illumina_data = IlluminaData(os.path.dirname(self.tmp_out_dir),
                                              os.path.basename(self.tmp_out_dir))
                 if illumina_data.undetermined:
+                    print("Removing undetermined fastqs")
                     for undetermined_sample in illumina_data.undetermined.samples:
                         for fq in undetermined_sample.fastq:
                             fq = os.path.join(undetermined_sample.dirn, fq)
@@ -2904,6 +2905,7 @@ class RunBclConvert(PipelineTask):
                 illumina_data = IlluminaData(os.path.dirname(self.tmp_out_dir),
                                              os.path.basename(self.tmp_out_dir))
                 if illumina_data.undetermined:
+                    print("Removing undetermined fastqs")
                     for undetermined_sample in illumina_data.undetermined.samples:
                         for fq in undetermined_sample.fastq:
                             fq = os.path.join(undetermined_sample.dirn, fq)
