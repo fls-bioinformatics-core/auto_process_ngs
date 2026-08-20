@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analyse_barcodes.py: analyse index sequences from Illumina FASTQs
-#     Copyright (C) University of Manchester 2016-2023 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2026 Peter Briggs
 #
 """
 analyse_barcodes.py
@@ -39,7 +39,7 @@ __version__ = get_version()
 # Functions
 #######################################################################
 
-def count_barcodes_bcl2fastq(dirn):
+def count_barcodes_bcl2fastq(dirn, i1_length=None, i2_length=None):
     """
     Count the barcodes from bcl2fastq output
 
@@ -60,21 +60,37 @@ def count_barcodes_bcl2fastq(dirn):
         for s in illumina_data.undetermined.samples:
             for fq in s.fastq_subset(read_number=1,full_path=True):
                 fqs.append(fq)
-    return count_barcodes(fqs)
+    return count_barcodes(fqs, i1_length=i1_length, i2_length=i2_length)
 
-def count_barcodes(fastqs):
+def count_barcodes(fastqs, i1_length=None, i2_length=None):
     """
     Count the barcodes from multiple fastqs
 
+    Arguments:
+        fastqs (list): list of FASTQ file paths
+        i1_length (int): maximum length of first index barcode
+        i2_length (int): maximum length of second index barcode
     """
     print("Reading in %s fastq%s" % (len(fastqs),
                                      ('' if len(fastqs) == 1
                                       else 's')))
+    if i1_length is not None:
+        if i1_length:
+            print(f"I1 index sequences will be truncated to {i1_length} bp")
+        else:
+            print(f"I1 index sequences will be ignored")
+    if i2_length is not None:
+        if i2_length:
+            print(f"I2 index sequences will be truncated to {i2_length} bp")
+        else:
+            print(f"I2 index sequences will be ignored")
     counts = BarcodeCounter()
     for fq in fastqs:
         print("%s" % os.path.basename(fq))
         for r in FastqIterator(fq):
-            seq = r.seqid.index_sequence
+            seq = truncate_index_sequence(r.seqid.index_sequence,
+                                          i1_length=i1_length,
+                                          i2_length=i2_length)
             lane = int(r.seqid.flowcell_lane)
             counts.count_barcode(seq,lane)
     return counts
@@ -102,6 +118,32 @@ def count_sequences(fastqs,start=None,end=None):
             lane = int(r.seqid.flowcell_lane)
             counts.count_barcode(seq,lane)
     return counts
+
+
+def truncate_index_sequence(seq, i1_length=None, i2_length=None):
+    """
+    Truncate an index sequence
+    """
+    if i1_length is None and i2_length is None:
+        # Return the original index sequence
+        return seq
+    # Split into I1 and I2 components
+    if '+' in seq:
+        i1, i2 = seq.split("+")
+    else:
+        i1 = seq
+        i2 = ""
+    # Truncate I1 and I2
+    if i1_length is not None:
+       i1 = i1[:i1_length]
+    if i2_length is not None:
+        i2 = i2[:i2_length]
+    # Reassemble into the final sequence
+    seq = []
+    for ix in [i1, i2]:
+        if ix:
+            seq.append(ix)
+    return "+".join(seq)
 
 # Main program
 if __name__ == '__main__':
@@ -135,6 +177,17 @@ if __name__ == '__main__':
         help="output all counts to tab-delimited file "
         "COUNTS_FILE_OUT. This can be used again in another "
         "run by specifying the '-c' option")
+    counting = p.add_argument_group("Counting options")
+    counting.add_argument(
+        '--i1_length',action='store',dest='i1_length',default=None,
+        type=int,
+        help="truncate length of I1 index sequences in FASTQs (bp);"
+             "set to 0 to ignore I1 indexes")
+    counting.add_argument(
+        '--i2_length',action='store',dest='i2_length',default=None,
+        type=int,
+        help="truncate length of I2 index sequences in FASTQs (bp);"
+             "set to 0 to ignore I2 indexes")
     reporting = p.add_argument_group("Reporting options")
     reporting.add_argument(
         '-l','--lanes',action='store',dest='lanes',default=None,
@@ -228,7 +281,9 @@ if __name__ == '__main__':
         counts = BarcodeCounter(*extra_args)
     elif len(extra_args) == 1 and os.path.isdir(extra_args[0]):
         # Generate counts from bcl2fastq output
-        counts = count_barcodes_bcl2fastq(extra_args[0])
+        counts = count_barcodes_bcl2fastq(extra_args[0],
+                                          i1_length=args.i1_length,
+                                          i2_length=args.i2_length)
     elif args.count_seqs:
         # Count sequences from fastq files
         counts = count_sequences(extra_args,
@@ -246,7 +301,9 @@ if __name__ == '__main__':
             if len(grp) > 1:
                 print("Keeping %s from group of %d" % (fq,len(grp)))
             fastqs.append(fq)
-        counts = count_barcodes(fastqs)
+        counts = count_barcodes(fastqs,
+                                i1_length=args.i1_length,
+                                i2_length=args.i2_length)
     # Determine subset of lanes to examine
     if args.lanes is not None:
         print("Lanes supplied on command line: %s" % args.lanes)
@@ -269,6 +326,8 @@ if __name__ == '__main__':
     print("Sample sheet: %s" % sample_sheet)
     print("Lanes       : %s" % lanes)
     print("Cutoff      : %s" % cutoff)
+    print("I1 length   : %s" % args.i1_length)
+    print("I2 length   : %s" % args.i2_length)
     print("Mismatches  : %s" % args.mismatches)
     # Report the counts
     if not args.no_report:
