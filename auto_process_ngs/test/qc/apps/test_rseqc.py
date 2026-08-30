@@ -41,6 +41,7 @@ Fraction of reads explained by "1+-,1-+,2++,2--": 0.4925
         self.assertEqual(infer_expt.forward,0.4903)
         self.assertEqual(infer_expt.reverse,0.4925)
         self.assertEqual(infer_expt.unstranded,0.0172)
+        self.assertFalse(infer_expt.unknown)
 
     def test_infer_experiment_single_end(self):
         """
@@ -58,6 +59,22 @@ Fraction of reads explained by "+-,-+": 0.0161
         self.assertEqual(infer_expt.forward,0.9669)
         self.assertEqual(infer_expt.reverse,0.0161)
         self.assertEqual(infer_expt.unstranded,0.0170)
+        self.assertFalse(infer_expt.unknown)
+
+    def test_infer_experiment_unknown(self):
+        """
+        InferExperiment: unknown data type
+        """
+        log = self._make_file("infer_experiment.log",
+                              """Unknown Data type
+""")
+        infer_expt = InferExperiment(log)
+        self.assertEqual(infer_expt.log_file,log)
+        self.assertEqual(infer_expt.paired_end, None)
+        self.assertEqual(infer_expt.forward, None)
+        self.assertEqual(infer_expt.reverse, None)
+        self.assertEqual(infer_expt.unstranded, None)
+        self.assertTrue(infer_expt.unknown)
 
 class TestRseqcGeneBodyCoverageOutputFunction(unittest.TestCase):
 
