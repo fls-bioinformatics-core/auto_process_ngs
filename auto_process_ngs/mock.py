@@ -2611,6 +2611,8 @@ sys.exit(MockFastqScreen(version=%s,
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
+        p.add_argument("--aligner",choices=["bwa", "bowtie", "bowtie2", "minimap2"],
+                       default="bowtie2")
         p.add_argument("--conf",action="store")
         p.add_argument("--outdir",action="store")
         p.add_argument("--threads",action="store")
