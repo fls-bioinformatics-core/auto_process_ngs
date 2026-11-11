@@ -56,7 +56,7 @@ PROTOCOLS = {
         # Disable adapter trimming and turn off masking
         "description": "Alamar Biosciences ARGO HT data",
         "pipeline_variant": "standard",
-        "supported_indexes": ("ILLUMINA",),
+        "supported_indexes": ("ILLUMINA", "NONE",),
         "trim_adapters": False,
         "minimum_trimmed_read_length": 10,
         "mask_short_adapter_reads": 0
