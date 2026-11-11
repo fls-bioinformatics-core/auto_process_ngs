@@ -33,6 +33,14 @@ class TestIdentifyApplication(TestCase):
             self.assertEqual(application["fastq_generation"], "standard")
             self.assertEqual(application["qc_protocol"], "minimal")
 
+    def test_identify_application_argo_ht(self):
+        """
+        identify_application: identify Alamar ARGO HT
+        """
+        application = identify_application(None, "ARGO HT")
+        self.assertEqual(application["fastq_generation"], "argo_ht")
+        self.assertEqual(application["qc_protocol"], "minimal")
+
     def test_identify_application_mirnaseq(self):
         """
         identify_application: identify miRNA-seq
