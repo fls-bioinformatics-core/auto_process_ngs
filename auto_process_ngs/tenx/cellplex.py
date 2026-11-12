@@ -159,7 +159,7 @@ class CellrangerMultiConfigCsv:
                         sample = values[0]
                         cmos = values[1]
                         for cmo in cmos.split("|"):
-                            if not re.fullmatch("[A-Za-z0-9_]+", cmo):
+                            if not re.fullmatch("([A-D]-)?[A-Za-z0-9_]+", cmo):
                                 self._error("samples",
                                             f"L{lineno}: bad CMO or probe ID "
                                             f"'{cmo}': {line}")
