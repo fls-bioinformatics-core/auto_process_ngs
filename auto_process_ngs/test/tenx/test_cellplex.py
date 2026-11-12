@@ -370,6 +370,40 @@ PB1,CMO3,PB1
         self.assertFalse(config_csv.is_valid)
         self.assertEqual(len(config_csv.get_errors()), 1)
 
+    def test_cellranger_multi_config_csv_check_valid_cmo_ids(self):
+        """
+        CellrangerMultiConfigCsv: check that valid CMO IDs are recognised
+        """
+        sample_cmos = ["FXB1A01",
+                       "FXB1H12",
+                       "A-A01",
+                       "D-H12",
+                       "OB1",
+                       "OB4",
+                       "AB001",
+                       "AB016",
+                       "CR001",
+                       "CR016",
+                       "BC001",
+                       "BC016"]
+        for cmo in sample_cmos:
+            multi_config = os.path.join(self.wd, f"10x_multi_config-{cmo}.csv")
+            with open(multi_config, "wt") as fp:
+                fp.write(f"""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
+
+[samples]
+PB1,{cmo}
+""")
+            try:
+                config_csv = CellrangerMultiConfigCsv(multi_config)
+            except Exception as ex:
+                self.fail(f"Failed for ID: '{cmo}': {ex}")
+
     def test_cellranger_multi_config_csv_duplicated_cmo(self):
         """
         CellrangerMultiConfigCsv: handle duplicated CMO
