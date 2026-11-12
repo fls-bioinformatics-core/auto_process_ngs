@@ -285,6 +285,9 @@ QC_PROTOCOLS = {
     "10x_Flex": {
         "description": "10xGenomics fixed RNA profiling (Flex) data",
         "reads": {
+            # Bases 1-50 in R2 are the ligated probe insert (the actual 50 bp gene-specific sequence)
+            # The remainder of R2 consists of non-biological sequence information (probe barcode, spacer,
+            # UMI etc)
             "seq_data": ('r2:1-50',),
             "index": ('r1',)
         },
