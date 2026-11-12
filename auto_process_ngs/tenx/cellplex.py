@@ -158,6 +158,14 @@ class CellrangerMultiConfigCsv:
                             continue
                         sample = values[0]
                         cmos = values[1]
+                        if not re.fullmatch("[A-Za-z0-9\-_]+", sample):
+                            self._error("samples",
+                                        f"L{lineno}: bad sample name "
+                                        f"'{sample}': {line}")
+                        if len(sample) > 64:
+                            self._error("samples",
+                                        f"L{lineno}: sample name too long (>64 characters) "
+                                        f"'{sample}': {line}")
                         for cmo in cmos.split("|"):
                             if not re.fullmatch("([A-D]-)?[A-Za-z0-9_]+", cmo):
                                 self._error("samples",

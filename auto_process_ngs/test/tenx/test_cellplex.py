@@ -370,6 +370,54 @@ PB1,CMO3,PB1
         self.assertFalse(config_csv.is_valid)
         self.assertEqual(len(config_csv.get_errors()), 1)
 
+    def test_cellranger_multi_config_csv_valid_sample_names(self):
+        """
+        CellrangerMultiConfigCsv: ok for valid sample names
+        """
+        sample_names = ["PJB_1",
+                        "PJB1-2",
+                        "PJB_long_sample_name_is_okay_for_cellranger_multi"]
+        for name in sample_names:
+            multi_config = os.path.join(self.wd, f"10x_multi_config-{name}.csv")
+            with open(multi_config, "wt") as fp:
+                fp.write(f"""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
+
+[samples]
+{name},CMO1
+""")
+            csv_config = CellrangerMultiConfigCsv(multi_config)
+            self.assertEqual(csv_config.sample_names, [name])
+
+    def test_cellranger_multi_config_csv_invalid_sample_names(self):
+        """
+        CellrangerMultiConfigCsv: fail on invalid sample names
+        """
+        sample_names = ["PJB 1",
+                        "PJB1&2",
+                        "PJB1+2",
+                        "PJB_sample_name_is_far_too_long_for_cellranger_multi_and_will_fail"]
+        for name in sample_names:
+            multi_config = os.path.join(self.wd, f"10x_multi_config-{name}.csv")
+            with open(multi_config, "wt") as fp:
+                fp.write(f"""[gene-expression]
+reference,/data/refdata-cellranger-gex-GRCh38-2020-A
+
+[libraries]
+fastq_id,fastqs,lanes,physical_library_id,feature_types,subsample_rate
+PJB1_GEX,/data/runs/fastqs_gex,any,PJB1,Gene Expression,
+
+[samples]
+{name},CMO1
+""")
+            self.assertRaises(Exception,
+                              CellrangerMultiConfigCsv,
+                              multi_config)
+
     def test_cellranger_multi_config_csv_check_valid_cmo_ids(self):
         """
         CellrangerMultiConfigCsv: check that valid CMO IDs are recognised
