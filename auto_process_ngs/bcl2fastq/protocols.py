@@ -51,6 +51,16 @@ PROTOCOLS = {
         "minimum_trimmed_read_length": 10,
         "mask_short_adapter_reads": 0,
     },
+    "argo_ht": {
+        # Alamar ARGO HT
+        # Disable adapter trimming and turn off masking
+        "description": "Alamar Biosciences ARGO HT data",
+        "pipeline_variant": "standard",
+        "supported_indexes": ("ILLUMINA", "NONE",),
+        "trim_adapters": False,
+        "minimum_trimmed_read_length": 10,
+        "mask_short_adapter_reads": 0
+    },
     "10x_chromium_sc": {
         # 10xGenomics Chromium SC (GEX/Flex)
         # -- truncate R1 to 28 bases

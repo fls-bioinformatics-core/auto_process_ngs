@@ -118,6 +118,19 @@ APPLICATIONS = [
             "directories": [],
         }
     },
+    # Alamar Biosciences ARGO HT System (high-throughput proteomics)
+    {
+        "platforms": [],
+        "libraries": ["ARGO HT"],
+        "fastq_generation": "argo_ht",
+        "qc_protocol": "minimal",
+        "setup": {
+            "templates": [],
+            "directories": [],
+        },
+        "assays": ["Alamar ARGO HT"],
+        "tags": ["proteomics"],
+    },
     # 10x Chromium 3' single-cell
     {
         "platforms": ["10x Chromium 3'"],
