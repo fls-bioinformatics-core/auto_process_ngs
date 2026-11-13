@@ -1890,7 +1890,7 @@ class RunMultiQC(PipelineTask):
           fastq_dir (str): directory holding Fastq files
             (defaults to current fastq_dir in project)
         """
-        self.conda("multiqc=1.24")
+        self.conda("multiqc=1.35")
         # Specify Python version to use to avoid similar
         # issue as reported here:
         # https://github.com/ewels/MultiQC/issues/1413
